@@ -202,8 +202,14 @@ function extractApiCalls(text) {
     let rawPath = rawValue.split("?")[0];
     rawPath = rawPath.replace(/([^/]):param/g, "$1");
     if (!rawPath.startsWith("/api/")) continue;
-    const windowText = text.slice(endIdx, endIdx + 600);
-    const explicitMethod = windowText.match(/method\s*:\s*["'](GET|POST|PUT|PATCH|DELETE)["']/);
+    // Method must come only from THIS call's own argument list (bounded by its own matching
+    // closing paren), never a fixed trailing window — a fixed window could (and, in a confirmed
+    // defect, did) read a later sibling call's `method: "POST"` and misattribute it to an earlier
+    // GET-only call (e.g. /api/owner/recovery/dashboard, /api/owner/intake/dashboard).
+    const callParenOpenIdx = text.indexOf("(", m.index);
+    const callParenCloseIdx = matchBracket(text, callParenOpenIdx, "(", ")");
+    const argsText = text.slice(callParenOpenIdx, callParenCloseIdx + 1);
+    const explicitMethod = argsText.match(/method\s*:\s*["'](GET|POST|PUT|PATCH|DELETE)["']/);
     let method;
     if (explicitMethod) method = explicitMethod[1];
     else {
@@ -213,11 +219,12 @@ function extractApiCalls(text) {
     // Per-call-site context, for callers (e.g. buildCockpitExternalFeeds) that need more than the
     // aggregate path+method: whether THIS specific literal embeds businessId — directly, or via an
     // interpolated variable (e.g. `${qs}`) whose OWN declaration in this same file assigns from
-    // `businessId` — and what immediately follows the call (a `.then/.catch` returning null vs
-    // nothing). All checked in a bounded window around this exact occurrence, not file-wide, so one
-    // page's shared variable doesn't get misattributed to a sibling component's unrelated call.
+    // `businessId` — and whether a null-returning `.then/.catch` is chained IMMEDIATELY (only
+    // whitespace between) onto THIS call's own closing paren. A fixed trailing window here
+    // previously read a later sibling call's `.catch(() => null)` and misattributed it to an
+    // earlier call with no catch of its own (e.g. now-view wrongly inheriting recovery-status's
+    // catch) — fixed by requiring immediate adjacency to this exact call's own close-paren.
     const beforeWindow = text.slice(Math.max(0, m.index - 200), m.index);
-    const afterWindow = text.slice(endIdx, endIdx + 250);
     const directBusinessId = interpolations.some((e) => /businessId/.test(e)) || /businessId/.test(rawValue);
     const viaVariable = interpolations.find((e) => {
       const varName = e.trim().split(/[.([]/)[0];
@@ -227,8 +234,21 @@ function extractApiCalls(text) {
     });
     const businessIdInLiteral = directBusinessId || Boolean(viaVariable);
     const businessIdVia = directBusinessId ? "direct" : viaVariable ? `via interpolated variable \`${viaVariable}\`` : null;
-    const nonFatalChain = /\.then\([^)]*\?\s*[^:]*:\s*null\)|\.catch\(\(\)\s*=>\s*null\)/.test(afterWindow);
-    calls.push({ path: rawPath, method, matchIndex: m.index, businessIdInLiteral, businessIdVia, nonFatalChain, contextHint: beforeWindow.slice(-80) });
+    const immediatelyAfterCall = text.slice(callParenCloseIdx + 1, callParenCloseIdx + 80);
+    const chainedCatchNull = /^\s*\.catch\(\(\)\s*=>\s*null\)/.test(immediatelyAfterCall);
+    const chainedThenTernaryNull = /^\s*\.then\(\s*\([^)]*\)\s*=>\s*\([^)]*\?[^:]*:\s*null\)\)/.test(immediatelyAfterCall);
+    const nonFatalChain = chainedCatchNull || chainedThenTernaryNull;
+    const hasAnyImmediateChain = /^\s*\.(then|catch)\(/.test(immediatelyAfterCall);
+    calls.push({
+      path: rawPath,
+      method,
+      matchIndex: m.index,
+      businessIdInLiteral,
+      businessIdVia,
+      nonFatalChain,
+      hasAnyImmediateChain,
+      contextHint: beforeWindow.slice(-80),
+    });
   }
   return calls;
 }
@@ -397,7 +417,7 @@ function buildAllApiRoutesFlat() {
  * owner page's component tree can call a non-owner-prefixed API (e.g. /owner/growth-pricing calls
  * /api/growth/pricing-tiers, which requires ENGAGEMENT_VIEW/ENGAGEMENT_UPDATE — a consulting
  * capability, not part of OWNER_SCOPED_CAPABILITIES) — restricting the index to /api/owner/* would
- * silently under-report that page's real capabilityGate as NOT_APPLICABLE.
+ * silently under-report that page's real apiCapabilityRequirements as empty.
  */
 function buildAllApiCapabilityIndex() {
   const apiFiles = walkFiles(path.join(ROOT, "src/app/api"), "route.ts");
@@ -430,6 +450,53 @@ function classifyBusinessContext(text) {
   return "NO_BUSINESS_CONTEXT";
 }
 
+/**
+ * Route-method cross-validation: does an extracted call's method actually appear among the
+ * methods its matching local route file exports? A route path segment `[xxx]` matches any call
+ * path segment (literal or the generator's own ":param" placeholder); a literal segment must
+ * match exactly. Segment-count mismatches mean "no matching route found" (skipped, not a failure
+ * — the call may target a non-local/third-party path or a route this walk didn't index).
+ */
+function routeSegments(p) {
+  return p.split("/").filter(Boolean);
+}
+function pathSegmentsMatch(callPath, routePath) {
+  const c = routeSegments(callPath);
+  const r = routeSegments(routePath);
+  if (c.length !== r.length) return false;
+  for (let i = 0; i < c.length; i++) {
+    if (/^\[.+\]$/.test(r[i])) continue; // route's own dynamic segment matches anything
+    if (c[i] !== r[i]) return false;
+  }
+  return true;
+}
+function findMatchingRoutes(allApiRoutesFlat, callPath) {
+  return allApiRoutesFlat.filter((r) => pathSegmentsMatch(callPath, r.path));
+}
+
+/** Collects every (call, matching route) mismatch across all supplied call contexts. Does not
+ * throw itself — the caller (main()) decides whether to fail generation, so this stays testable. */
+function crossValidateRouteMethods(allApiRoutesFlat, contexts) {
+  const mismatches = [];
+  let validated = 0;
+  for (const ctx of contexts) {
+    for (const call of ctx.calls) {
+      const matches = findMatchingRoutes(allApiRoutesFlat, call.path);
+      if (matches.length === 0) continue; // no local route found for this path — not a validation target
+      validated++;
+      const ok = matches.some((r) => r.httpMethods.includes(call.method));
+      if (!ok) {
+        mismatches.push({
+          context: ctx.label,
+          call: `${call.method} ${call.path}`,
+          matchingRouteFiles: matches.map((r) => ({ sourceFile: r.sourceFile, httpMethods: r.httpMethods })),
+        });
+      }
+    }
+  }
+  return { mismatches, validated };
+}
+
 function buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex) {
   const pageFiles = walkFiles(OWNER_PAGE_ROOT, "page.tsx");
   const primaryHrefs = new Set(sidebarItems.filter((i) => i.href && i.href.startsWith("/owner")).map((i) => i.href));
@@ -454,30 +521,39 @@ function buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex) {
     const readApis = apiCalls.filter((c) => c.method === "GET");
     const writeApis = apiCalls.filter((c) => c.method !== "GET");
 
-    // capabilityGate: union of (a) the sidebar entry's own gate for this route/ancestor, and
-    // (b) the capability sets of every API this page's component tree actually calls (cross-
-    // referenced against the owner-API capability index built from route source). NOT_APPLICABLE
-    // only when neither source yields anything (session-only auth via the (authenticated) layout).
+    // pageAccessGate: what determines whether the owner can reach/render THIS PAGE ITSELF, per
+    // current navigation/auth source — the sidebar's own requiresOwner/requiresCapability gate for
+    // this route (or its nearest in-nav ancestor), or AUTHENTICATED_SESSION_ONLY when current
+    // routing establishes no gate beyond the (authenticated) layout's session-required redirect.
+    // Deliberately does NOT fold in the capabilities its called APIs require — those are a
+    // separate concept (apiCapabilityRequirements below): an API a page calls can 403 for a
+    // session that can still open and render the page itself.
     const sidebarItem = sidebarItems.find((i) => i.href === route) || (ancestor ? sidebarItems.find((i) => i.href === ancestor) : null);
-    const gateSet = new Set();
-    if (sidebarItem?.requiresOwner) gateSet.add("OWNER_VIEW");
-    if (sidebarItem?.requiresCapability) gateSet.add(sidebarItem.requiresCapability);
-    for (const call of apiCalls) {
-      const caps = allApiCapabilityIndex.get(call.path);
-      if (caps) for (const c of caps) gateSet.add(c);
-    }
-    const capabilityGate = gateSet.size ? [...gateSet].sort() : "NOT_APPLICABLE";
-    const capabilityGateNote = gateSet.size
-      ? "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls."
-      : "No sidebar gate and no CAPABILITIES.* found on any API this page's traced component tree calls; access is governed only by session-required auth in the (authenticated) layout.";
+    let pageAccessGate;
+    if (sidebarItem?.requiresCapability) pageAccessGate = sidebarItem.requiresCapability;
+    else if (sidebarItem?.requiresOwner) pageAccessGate = "OWNER_VIEW";
+    else pageAccessGate = "AUTHENTICATED_SESSION_ONLY";
+    const pageAccessGateNote = sidebarItem
+      ? "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate."
+      : "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.";
+
+    // apiCapabilityRequirements: the capabilities required by EACH API this page's component tree
+    // calls — never merged into pageAccessGate, so a page is never represented as though reaching
+    // it requires every capability any of its (possibly optional/deep-link) API calls need.
+    const apiCapabilityRequirements = apiCalls.map((call) => ({
+      endpoint: call.path,
+      method: call.method,
+      capabilities: allApiCapabilityIndex.get(call.path) ?? [],
+    }));
 
     return {
       route,
       sourceFile,
       navigationState,
       persona: "owner",
-      capabilityGate,
-      capabilityGateNote,
+      pageAccessGate,
+      pageAccessGateNote,
+      apiCapabilityRequirements,
       previewState: (() => {
         const found = sidebarItems.find((i) => i.href === route);
         return found ? found.state : isHiddenForSafety ? "HIDDEN_FOR_SAFETY" : "NOT_IN_SIDEBAR";
@@ -489,6 +565,7 @@ function buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex) {
       currentTests: "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       deepLinkedFrom,
       componentTreeFileCount: componentTreeFiles.length,
+      _rawApiCalls: apiCalls,
     };
   });
 }
@@ -524,43 +601,111 @@ function findFilesByKeywords(keywords) {
   });
 }
 
-const UNION_TYPE_RE = /\btype\s+(\w*(?:Status|State|Classification|Category|Type|Tier))\s*=\s*((?:\s*\|?\s*"[A-Za-z0-9_]+")+)/g;
+// Three separate shapes, not one blind "any enum-like union counts as a state" bucket (a confirmed
+// defect: the prior version put CredibilityEntityType, DuplicateMatchType, and pure-computed timing
+// classifications in the same bucket as real task lifecycle states).
+//
+// COMMAND_TYPE_RE: type/enum names ending in Action|Command — the owner-invokable verbs themselves
+// (e.g. ProcessExecutionAction's START/APPROVE/REJECT/...), never a persisted status.
+const COMMAND_TYPE_RE = /\btype\s+(\w*(?:Action|Command))\s*=\s*((?:\s*\|?\s*"[A-Za-z0-9_]+")+)/g;
+// STATUS_STATE_TYPE_RE: type/enum names ending in Status|State — candidate lifecycle values; only
+// promoted to "workflowStatuses" (below) when the FILE also shows persistence/transition-guard
+// evidence, otherwise kept as domainResultStates (e.g. FastCompletionStatus/EscalationTimingStatus
+// are computed measurement classifications with no such evidence).
+const STATUS_STATE_TYPE_RE = /\btype\s+(\w*(?:Status|State))\s*=\s*((?:\s*\|?\s*"[A-Za-z0-9_]+")+)/g;
+// DOMAIN_RESULT_TYPE_RE: everything else enum-shaped (Classification|Category|Type|Tier suffix) —
+// computed/descriptive result types, kept separate so they never masquerade as workflow states.
+const DOMAIN_RESULT_TYPE_RE = /\btype\s+(\w*(?:Classification|Category|Type|Tier))\s*=\s*((?:\s*\|?\s*"[A-Za-z0-9_]+")+)/g;
 const ENUM_RE = /\benum\s+(\w+)\s*\{([^}]*)\}/g;
 const TRANSITIONS_RE = /\bconst\s+(\w*(?:TRANSITIONS|ALLOWED_[A-Z_]*)\w*)\s*[:=][^;]{0,600};/g;
 
-function extractStates(files) {
-  const states = [];
+/** Evidence that a file's status-like values belong to a PERSISTED/ENFORCED workflow (a DB
+ * `.update`/`.updateMany` call whose `data` touches `status`, or an explicit transition-guard
+ * marker like INVALID_TRANSITION/a `*_TRANSITIONS` const) — not merely a computed classification.
+ * Verified against this codebase: true for process-execution-bridge.service.ts (25 hits) and
+ * proof-risk-adjudication.service.ts (1 hit); false for timing-evidence.ts and the pure-domain
+ * proof-risk-adjudication.ts (0 hits each) — exactly separating enforced lifecycle from computed
+ * classification without a generalized static-analysis framework. */
+function hasEnforcedTransitionEvidence(src) {
+  const hasStatusMutation = /\.(update|updateMany)\(/.test(src) && /status/i.test(src);
+  const hasTransitionGuard = /INVALID_TRANSITION|_TRANSITIONS\b/.test(src);
+  return hasStatusMutation || hasTransitionGuard;
+}
+
+/** Targeted scan for status literals that are NOT declared as a clean `type X = "A"|"B"` union
+ * (e.g. process-execution-bridge.service.ts represents task status as scattered string literals in
+ * `ReadonlySet<string>` locals and `status: "X"` / `nextStatus = "X"` assignments, not a single
+ * union type). Only meaningful — and only called — on files that already passed
+ * hasEnforcedTransitionEvidence, so this never promotes an arbitrary string literal into a
+ * "workflow status" without that gate. */
+function extractStatusLiteralAssignments(src) {
+  const values = new Set();
+  for (const m of src.matchAll(/(?:ReadonlySet<string>|:\s*string\[\])\s*=\s*(?:new Set\()?\[([^\]]+)\]/g)) {
+    for (const s of m[1].matchAll(/"([A-Z][A-Z0-9_]+)"/g)) values.add(s[1]);
+  }
+  for (const m of src.matchAll(/\bstatus\s*:\s*"([A-Z][A-Z0-9_]+)"/g)) values.add(m[1]);
+  for (const m of src.matchAll(/\bnextStatus\s*=\s*"([A-Z][A-Z0-9_]+)"/g)) values.add(m[1]);
+  return [...values];
+}
+
+function extractByRegex(re, src, file, minValues = 2) {
+  const out = [];
+  const rx = new RegExp(re);
+  let m;
+  while ((m = rx.exec(src))) {
+    const values = [...m[2].matchAll(/"([A-Za-z0-9_]+)"/g)].map((x) => x[1]);
+    if (values.length >= minValues) out.push({ typeName: m[1], values, sourceFile: relSrc(file) });
+  }
+  return out;
+}
+
+/** commands / workflowStatuses / domainResultStates, plus known transition maps — see the "Three
+ * separate shapes" comment above for why these are not one undifferentiated bucket. */
+function extractFamilyStates(files) {
+  const commands = [];
+  const workflowStatuses = [];
+  const domainResultStates = [];
   const transitions = [];
   for (const f of files) {
     let src;
     try {
-      src = fs.readFileSync(f, "utf8");
+      // Comments stripped before scanning: a confirmed defect found a `// Phase 3` line comment
+      // splitting ProcessExecutionAction's union mid-declaration, silently truncating 13 real
+      // command values to the 9 appearing before the comment.
+      src = stripComments(fs.readFileSync(f, "utf8"));
     } catch {
       continue;
     }
-    let m;
-    const unionRe = new RegExp(UNION_TYPE_RE);
-    while ((m = unionRe.exec(src))) {
-      const values = [...m[2].matchAll(/"([A-Za-z0-9_]+)"/g)].map((x) => x[1]);
-      if (values.length >= 2) states.push({ typeName: m[1], values, sourceFile: relSrc(f) });
+    commands.push(...extractByRegex(COMMAND_TYPE_RE, src, f));
+    domainResultStates.push(...extractByRegex(DOMAIN_RESULT_TYPE_RE, src, f));
+    const statusTypeHits = extractByRegex(STATUS_STATE_TYPE_RE, src, f);
+    const enforced = hasEnforcedTransitionEvidence(src);
+    if (enforced) {
+      workflowStatuses.push(...statusTypeHits);
+      const literalValues = extractStatusLiteralAssignments(src);
+      if (literalValues.length >= 2) {
+        workflowStatuses.push({ typeName: "(status literals, no single union type declared)", values: literalValues.sort(), sourceFile: relSrc(f) });
+      }
+    } else {
+      domainResultStates.push(...statusTypeHits);
     }
-    const enumRe = new RegExp(ENUM_RE);
-    while ((m = enumRe.exec(src))) {
+    // `enum X { A, B }` bodies are bare identifiers, not quoted strings, so ENUM_RE needs its own
+    // value extraction rather than extractByRegex's quoted-string matcher.
+    for (const m of src.matchAll(ENUM_RE)) {
       const values = [...m[2].matchAll(/([A-Za-z0-9_]+)\s*[,=]?/g)].map((x) => x[1]).filter(Boolean);
-      if (values.length >= 2) states.push({ typeName: m[1], values, sourceFile: relSrc(f) });
+      if (values.length >= 2) (enforced ? workflowStatuses : domainResultStates).push({ typeName: m[1], values, sourceFile: relSrc(f) });
     }
     const transRe = new RegExp(TRANSITIONS_RE);
-    while ((m = transRe.exec(src))) {
-      transitions.push({ name: m[1], sourceFile: relSrc(f) });
-    }
+    let tm;
+    while ((tm = transRe.exec(src))) transitions.push({ name: tm[1], sourceFile: relSrc(f) });
   }
-  return { states, transitions };
+  return { commands, workflowStatuses, domainResultStates, transitions };
 }
 
 function buildOwnerActionFamilies(allApiRoutesFlat) {
   return OWNER_ACTION_FAMILIES.map((fam) => {
     const files = findFilesByKeywords(fam.sourceKeywords);
-    const { states, transitions } = extractStates(files);
+    const { commands, workflowStatuses, domainResultStates, transitions } = extractFamilyStates(files);
     const mutationEndpoints = allApiRoutesFlat.filter(
       (r) => fam.apiPrefixes.some((p) => r.path.startsWith(p)) && r.httpMethods.some((m) => m !== "GET" && m !== "NOT_VERIFIED")
     );
@@ -568,8 +713,13 @@ function buildOwnerActionFamilies(allApiRoutesFlat) {
       family: fam.family,
       source: files.length ? files.map(relSrc) : [],
       sourceNote: files.length ? undefined : `No file under src/domain or src/services matched keywords [${fam.sourceKeywords.join(", ")}]; this family's mutation endpoints and UI pages are still recorded from source below.`,
-      actionStateValues: states.length ? states : [],
-      actionStateValuesNote: states.length ? undefined : "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      commands,
+      commandsNote: commands.length ? undefined : "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      workflowStatuses,
+      workflowStatusesNote: workflowStatuses.length
+        ? undefined
+        : "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      domainResultStates,
       knownTransitionMaps: transitions,
       mutationEndpoints: mutationEndpoints.map((r) => ({ path: r.path, methods: r.httpMethods.filter((m) => m !== "GET"), sourceFile: r.sourceFile })),
       currentOwnerUiPages: fam.uiPages,
@@ -579,17 +729,76 @@ function buildOwnerActionFamilies(allApiRoutesFlat) {
 
 function buildWorkflowStateFamilies(ownerActionFamilies) {
   return ownerActionFamilies
-    .filter((f) => f.actionStateValues.length > 0)
+    .filter((f) => f.workflowStatuses.length > 0)
     .map((f) => ({
       family: f.family,
       source: f.source,
-      states: f.actionStateValues,
+      states: f.workflowStatuses,
       transitions: f.knownTransitionMaps.length ? f.knownTransitionMaps : "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
       ownerUiLocation: f.currentOwnerUiPages,
     }));
 }
 
 // ───────────────────────── cockpit external feeds ─────────────────────────
+
+/**
+ * Business-context propagation category for ONE call site, bounded to the exact call's own
+ * argument list (already computed by extractApiCalls as businessIdInLiteral/businessIdVia for the
+ * URL) plus a check of its second argument (a request body): an inline object literal is read
+ * directly from the args text; a plain identifier (e.g. `body`, `payload`) is resolved by a
+ * bounded backward scan for that identifier's own `.businessId = `/`businessId:` assignment
+ * within the same file. This function is intentionally specific to the 10 Cockpit calls (per the
+ * "bounded 10-endpoint task" scope) and is not applied to the other 246 API calls in this phase.
+ */
+function classifyBusinessIdCategory(text, call, argsText) {
+  if (call.businessIdVia) return { category: "QUERY_BUSINESS_ID", note: `Query string (${call.businessIdVia}).` };
+  if (/\bbusinessId\b/.test(argsText)) return { category: "BODY_BUSINESS_ID", note: "Inline object literal argument references `businessId` directly." };
+  const bodyIdentMatch = argsText.match(/,\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)$/);
+  if (bodyIdentMatch) {
+    const ident = bodyIdentMatch[1];
+    const beforeCall = text.slice(0, call.matchIndex);
+    const assignRe = new RegExp(`\\b${ident}\\.businessId\\s*=\\s*\\w+|businessId\\s*:\\s*${ident}\\b`);
+    if (assignRe.test(beforeCall)) {
+      return { category: "BODY_BUSINESS_ID", note: `\`${ident}.businessId\` is conditionally set before this call (see source for the exact conditions).` };
+    }
+    if (/\btaskKey\b/.test(argsText) || new RegExp(`\\b${ident}\\b[\\s\\S]{0,300}taskKey`).test(beforeCall.slice(-400))) {
+      return { category: "TASK_DERIVED", note: `Request body is keyed by \`taskKey\`/a specific record id, not an explicit businessId; \`${ident}\`'s own declaration was not found to set businessId in this file.` };
+    }
+    return { category: "NOT_VERIFIED", note: `Request body argument is the identifier \`${ident}\`; its construction was not found to reference businessId in this file (may be passed in as an opaque prop from a child component, out of this bounded trace's scope).` };
+  }
+  if (/\btaskKey\b/.test(argsText) || /\bescalationId\b/.test(argsText)) {
+    return { category: "TASK_DERIVED", note: "Request identifies a specific task/escalation record directly, with no explicit businessId." };
+  }
+  if (argsText.replace(/\s/g, "") === "()" || /,\s*\{\s*\}\s*\)$/.test(argsText)) {
+    return { category: "NO_EXPLICIT_BUSINESS_ID", note: "Call takes no body argument (or an empty object) — no businessId is sent." };
+  }
+  return { category: "NO_EXPLICIT_BUSINESS_ID", note: "No businessId found in this call's URL or argument list." };
+}
+
+/** Hand-verified field-consumption evidence for exactly the 10 Cockpit calls (bounded task, not
+ * generalized — see instruction: "trace only fields consumed by /owner/cockpit and its current
+ * functional child components", "not repository-wide response-field lineage"). Each entry is
+ * cited to the exact destructuring/property-access lines read directly from source in this
+ * session; kept as a small lookup (not derived by a generic response-DTO tracer) because mapping
+ * a Promise.all destructuring target back to its originating call requires binding-level tracing
+ * this generator's simple regex parser does not (and per scope, should not) perform generically. */
+const COCKPIT_FIELDS_CONSUMED = {
+  "GET /api/owner/now-view": [
+    "processExecution", "view.actionsToAvoid", "derivedBusinessCondition", "view.confidenceCapped",
+    "goalAttentionSignal", "topProfitLeak", "policyAttentionSignal", "trendAlerts",
+    "doNotRepeatAnnotation", "activeEscalations", "executionLifecycle", "businessOperatingSystem",
+    "financeTopPriority",
+  ],
+  "GET /api/owner/recovery-status": ["recoveryStatus (presence check gates whether the response is used at all)"],
+  "GET /api/owner/public-signals": ["publicSignalStatus (presence check gates whether the response is used at all)"],
+  "GET /api/owner/onboarding": ["found", "canRunFirstDiagnosis", "missingMinimum", "requirements"],
+  "GET /api/owner/process-execution": ["tasks[].status"],
+  "POST /api/owner/process-execution": ["status", "reassessmentId (implied by REQUEST_REASSESSMENT branch)"],
+  "POST /api/owner/goal-arbitration": ["NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"],
+  "POST /api/owner/override-arbitration": ["NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"],
+  "POST /api/owner/constraints": ["NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"],
+  "POST /api/escalation/acknowledge": ["NOT_VERIFIED — ok is checked; data is only passed to a generic failure-message helper, no specific field destructured on success"],
+};
 
 function buildCockpitExternalFeeds() {
   const pageFile = path.join(OWNER_PAGE_ROOT, "cockpit", "page.tsx");
@@ -599,28 +808,45 @@ function buildCockpitExternalFeeds() {
   // — is never misattributed from an unrelated sibling component's call.
   const perFileCalls = files.flatMap((f) => {
     const text = fs.readFileSync(f, "utf8");
-    return extractApiCalls(text).map((c) => ({ ...c, sourceFile: relSrc(f) }));
+    return extractApiCalls(text).map((c) => {
+      const parenOpen = text.indexOf("(", c.matchIndex);
+      const parenClose = matchBracket(text, parenOpen, "(", ")");
+      const argsText = text.slice(parenOpen, parenClose + 1);
+      return { ...c, sourceFile: relSrc(f), argsText, fileText: text };
+    });
   });
-  // Dedup by (path, method, sourceFile) — the same endpoint called from two different components
-  // is two distinct feeds with potentially different businessId/failure behavior.
-  const seen = new Map();
+  // Group by (path, method, sourceFile): the same endpoint called from two call sites in the same
+  // file (e.g. POST /api/owner/process-execution from both onAction and onStartWork) is recorded
+  // as one feed entry whose businessId category lists every distinct category observed across
+  // those sites, rather than silently keeping only the first.
+  const groups = new Map();
   for (const c of perFileCalls) {
     const key = `${c.method} ${c.path} ${c.sourceFile}`;
-    if (!seen.has(key)) seen.set(key, c);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
   }
-  return [...seen.values()]
-    .sort((a, b) => (a.path + a.method + a.sourceFile).localeCompare(b.path + b.method + b.sourceFile))
-    .map((c) => ({
-      endpoint: c.path,
-      method: c.method,
-      sourceFile: c.sourceFile,
-      businessIdBehavior: c.businessIdInLiteral
-        ? `This call passes businessId (${c.businessIdVia}).`
-        : `NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: "...${c.contextHint}"`,
-      failureBehavior: c.nonFatalChain
-        ? "BEST_EFFORT_NULL_ON_FAILURE (a .then(...? ... : null) or .catch(() => null) immediately follows this call)"
-        : "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window).",
-    }));
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, sites]) => {
+      const first = sites[0];
+      const categories = sites.map((s) => classifyBusinessIdCategory(s.fileText, s, s.argsText));
+      const distinctCategories = [...new Map(categories.map((c) => [c.category, c])).values()];
+      const failureBehaviors = sites.map((s) =>
+        s.nonFatalChain ? "BEST_EFFORT_NULL_ON_FAILURE" : s.hasAnyImmediateChain ? "NOT_VERIFIED (a .then/.catch is chained but its exact null-safety shape wasn't recognized)" : "NOT_VERIFIED"
+      );
+      return {
+        endpoint: first.path,
+        method: first.method,
+        sourceFile: first.sourceFile,
+        callSiteCount: sites.length,
+        businessIdBehavior:
+          distinctCategories.length === 1
+            ? distinctCategories[0]
+            : { multipleCallSites: distinctCategories },
+        failureBehavior: [...new Set(failureBehaviors)].length === 1 ? failureBehaviors[0] : failureBehaviors,
+        fieldsConsumed: COCKPIT_FIELDS_CONSUMED[key.split(" ").slice(0, 2).join(" ")] ?? ["NOT_VERIFIED"],
+      };
+    });
 }
 
 // ───────────────────────── domain/services listings + business-context findings ─────────────────────────
@@ -676,6 +902,42 @@ function main() {
   const ownerActionFamilies = buildOwnerActionFamilies(allApiRoutesFlat);
   const workflowStateFamilies = buildWorkflowStateFamilies(ownerActionFamilies);
   const cockpitExternalFeeds = buildCockpitExternalFeeds();
+
+  // ── Route-method cross-validation (hard fail on mismatch, never silently corrected) ──
+  const validationContexts = ownerPageRoutes.map((p) => ({ label: p.route, calls: p._rawApiCalls }));
+  const { mismatches, validated } = crossValidateRouteMethods(allApiRoutesFlat, validationContexts);
+  if (mismatches.length > 0) {
+    console.error(`ROUTE-METHOD CROSS-VALIDATION FAILED: ${mismatches.length} mismatch(es) found (out of ${validated} calls validated against a locally-found route).`);
+    for (const mm of mismatches) {
+      console.error(`  [${mm.context}] extracted call "${mm.call}" — matching route(s):`, JSON.stringify(mm.matchingRouteFiles));
+    }
+    console.error("Generation ABORTED. Fix the extractor or the source mismatch before regenerating.");
+    process.exit(1);
+  }
+  console.log(`Route-method cross-validation: ${validated} calls validated, 0 mismatches.`);
+  for (const p of ownerPageRoutes) delete p._rawApiCalls;
+
+  // ── Pre-existing correctness findings: recorded only, never fixed here (see instruction §7) ──
+  const growthPricingPage = ownerPageRoutes.find((p) => p.route === "/owner/growth-pricing");
+  const preExistingCorrectnessFindings = growthPricingPage
+    ? [
+        {
+          finding: "PRE_EXISTING_CORRECTNESS_FINDING",
+          page: growthPricingPage.route,
+          calledApis: growthPricingPage.apiCapabilityRequirements.map((r) => `${r.method} ${r.endpoint}`),
+          apiCapabilities: [...new Set(growthPricingPage.apiCapabilityRequirements.flatMap((r) => r.capabilities))],
+          reachabilityEvidence: {
+            navigationState: growthPricingPage.navigationState,
+            deepLinkedFrom: growthPricingPage.deepLinkedFrom,
+          },
+          verificationStatus:
+            "SOURCE_PROVEN — capabilities extracted directly from the called routes' own requireCapabilities() declarations in src/app/api/growth/pricing-tiers*/route.ts. Not independently re-verified against a live 403 response in this generator run (no production access from this environment).",
+          ownerRelevance:
+            "Per sidebar-nav.tsx's own documented capability model (see its file-level comment on OWNER_SCOPED_CAPABILITIES), ENGAGEMENT_VIEW/ENGAGEMENT_UPDATE are consulting-engagement capabilities, not part of the capability set a self-serve beta owner's role resolves to. If that model holds, this page's pricing-tier data would not load for a real self-serve owner.",
+          disposition: "OUT_OF_SCOPE_FOR_UX-00A.2_AND_UX-00B — recorded only, not fixed, per explicit instruction. Must not block preservation-CI work once the baseline itself is accurate.",
+        },
+      ]
+    : [];
 
   const hiddenSafetyRoutes = [
     {
@@ -790,7 +1052,10 @@ function main() {
 
   const baseline = {
     baselineSha: "646b06b97dee7283f5bf6db1d38027e843e3efbc",
-    generatedAt: new Date().toISOString(),
+    // No `generatedAt` timestamp: it carries no preservation value and made the artifact non-
+    // idempotent run-to-run (every run produced a git diff on that field alone). Content is fully
+    // determined by repository source at BASELINE_SHA; `git log` on this file is the generation
+    // history if that's ever needed.
     generatorPath: "scripts/ux/generate-owner-feature-baseline.mjs",
     ownerPageRoutes,
     ownerApiRoutes,
@@ -804,6 +1069,7 @@ function main() {
     cockpitExternalFeeds,
     ownerActions: ownerActionFamilies,
     workflowStateFamilies,
+    preExistingCorrectnessFindings,
     domainPackages,
     domainServices,
     businessContextPages,
@@ -817,6 +1083,24 @@ function main() {
   fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
   fs.writeFileSync(OUT_FILE, JSON.stringify(baseline, null, 2) + "\n");
 
+  // ── two deterministic, unambiguous NOT_VERIFIED counts (never conflated into one number) ──
+  function countNotVerified(obj) {
+    let exact = 0;
+    let prefixed = 0;
+    (function walk(o) {
+      if (typeof o === "string") {
+        if (o === "NOT_VERIFIED") exact++;
+        if (o.startsWith("NOT_VERIFIED")) prefixed++;
+      } else if (Array.isArray(o)) {
+        for (const v of o) walk(v);
+      } else if (o && typeof o === "object") {
+        for (const v of Object.values(o)) walk(v);
+      }
+    })(obj);
+    return { exact, prefixed };
+  }
+  const nv = countNotVerified(baseline);
+
   // ── report to stdout ──
   console.log("Wrote", relSrc(OUT_FILE));
   console.log("ownerPageRoutes:", ownerPageRoutes.length);
@@ -826,8 +1110,16 @@ function main() {
   console.log("ownerActions families:", ownerActionFamilies.length);
   console.log("workflowStateFamilies:", workflowStateFamilies.length);
   console.log("cockpitExternalFeeds:", cockpitExternalFeeds.length);
-  const notVerifiedPageFields = ownerPageRoutes.filter((p) => p.capabilityGate === "NOT_APPLICABLE").length;
-  console.log("pages with capabilityGate NOT_APPLICABLE:", notVerifiedPageFields);
+  console.log("preExistingCorrectnessFindings:", preExistingCorrectnessFindings.length);
+  const pagesWithSessionOnlyAccess = ownerPageRoutes.filter((p) => p.pageAccessGate === "AUTHENTICATED_SESSION_ONLY").length;
+  console.log("pages with pageAccessGate AUTHENTICATED_SESSION_ONLY:", pagesWithSessionOnlyAccess);
+  const processExecFamily = ownerActionFamilies.find((f) => f.family === "process_execution");
+  const tasksFamily = ownerActionFamilies.find((f) => f.family === "tasks");
+  console.log("process_execution commands:", processExecFamily?.commands?.flatMap((c) => c.values).length ?? 0);
+  console.log("process_execution workflowStatuses:", processExecFamily?.workflowStatuses?.flatMap((c) => c.values).length ?? 0);
+  console.log("tasks workflowStatuses:", tasksFamily?.workflowStatuses?.flatMap((c) => c.values).length ?? 0);
+  console.log("exactNotVerifiedCount:", nv.exact);
+  console.log("notVerifiedPrefixedCount:", nv.prefixed);
 }
 
 main();

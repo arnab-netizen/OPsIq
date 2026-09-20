@@ -1,6 +1,5 @@
 {
   "baselineSha": "646b06b97dee7283f5bf6db1d38027e843e3efbc",
-  "generatedAt": "2026-09-20T10:26:49.509Z",
   "generatorPath": "scripts/ux/generate-owner-feature-baseline.mjs",
   "ownerPageRoutes": [
     {
@@ -8,11 +7,24 @@
       "sourceFile": "src/app/(authenticated)/owner/adjudication/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "EVIDENCE_VALIDATE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/proof-risk/queue",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/proof-risk/adjudicate",
+          "method": "POST",
+          "capabilities": [
+            "EVIDENCE_VALIDATE"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -45,11 +57,28 @@
       "sourceFile": "src/app/(authenticated)/owner/alerts/page.tsx",
       "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/alerts/:param/read",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/alerts/:param/resolve",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/alerts",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "HIDDEN_FOR_SAFETY",
       "businessContextBehavior": "NOT_APPLICABLE",
       "readApis": [
@@ -89,13 +118,40 @@
       "sourceFile": "src/app/(authenticated)/owner/approvals/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "CONSULTING_APPROVE",
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/approval",
+          "method": "GET",
+          "capabilities": [
+            "CONSULTING_APPROVE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/approval",
+          "method": "PATCH",
+          "capabilities": [
+            "CONSULTING_APPROVE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/approval",
+          "method": "POST",
+          "capabilities": [
+            "CONSULTING_APPROVE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -142,10 +198,17 @@
       "sourceFile": "src/app/(authenticated)/owner/automation/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/scheduler-status",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "WORKSPACE_ONLY",
       "readApis": [
@@ -168,12 +231,83 @@
       "sourceFile": "src/app/(authenticated)/owner/budget/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/budget/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/budget/actions",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/authority",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/forecast",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/guidance",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/override",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/snapshots",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/working-capital",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/budget/working-capital",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -248,12 +382,46 @@
       "sourceFile": "src/app/(authenticated)/owner/cashflow/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/cashflow/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/cashflow/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/cashflow/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/cashflow/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -325,12 +493,80 @@
       "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "ACTION_UPDATE",
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/escalation/acknowledge",
+          "method": "POST",
+          "capabilities": [
+            "ACTION_UPDATE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/constraints",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/goal-arbitration",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/now-view",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/onboarding",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/override-arbitration",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/process-execution",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/process-execution",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/public-signals",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery-status",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -413,10 +649,25 @@
       "sourceFile": "src/app/(authenticated)/owner/compliance/[id]/page.tsx",
       "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/compliance)",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/compliance/:param/review",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/compliance/:param/tasks",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/compliance/:param",
+          "method": "GET",
+          "capabilities": []
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "WORKSPACE_ONLY",
       "readApis": [
@@ -456,11 +707,18 @@
       "sourceFile": "src/app/(authenticated)/owner/compliance/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/compliance",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [],
@@ -486,11 +744,31 @@
       "sourceFile": "src/app/(authenticated)/owner/customers/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/sales/customers/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sales/customers",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/sales/customers",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -530,12 +808,31 @@
       "sourceFile": "src/app/(authenticated)/owner/data/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/onboarding",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -575,12 +872,46 @@
       "sourceFile": "src/app/(authenticated)/owner/execution/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/sop/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sop/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sop/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sop/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sop/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -647,10 +978,15 @@
       "sourceFile": "src/app/(authenticated)/owner/feedback/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/feedback",
+          "method": "POST",
+          "capabilities": []
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [],
@@ -676,12 +1012,46 @@
       "sourceFile": "src/app/(authenticated)/owner/finance/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/finance/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -748,10 +1118,17 @@
       "sourceFile": "src/app/(authenticated)/owner/first-value/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/first-value",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "WORKSPACE_ONLY",
       "readApis": [
@@ -771,11 +1148,33 @@
       "sourceFile": "src/app/(authenticated)/owner/goals/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/goals/trajectory",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/goals",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/goals",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -810,11 +1209,35 @@
       "sourceFile": "src/app/(authenticated)/owner/growth-pricing/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "ENGAGEMENT_UPDATE",
-        "ENGAGEMENT_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/growth/pricing-tiers/:param/approve",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/growth/pricing-tiers/:param/supersede",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/growth/pricing-tiers/analysis",
+          "method": "GET",
+          "capabilities": [
+            "ENGAGEMENT_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/growth/pricing-tiers",
+          "method": "POST",
+          "capabilities": [
+            "ENGAGEMENT_UPDATE",
+            "ENGAGEMENT_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NOT_APPLICABLE",
       "readApis": [
@@ -866,10 +1289,9 @@
       "sourceFile": "src/app/(authenticated)/owner/help/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
-      ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [],
       "previewState": "core",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [],
@@ -884,11 +1306,25 @@
       "sourceFile": "src/app/(authenticated)/owner/home/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/alerts",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/home",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -918,21 +1354,39 @@
       "sourceFile": "src/app/(authenticated)/owner/intake/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/intake/businesses/:param/uploads",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/intake/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/intake/uploads/:param/confirm",
+          "method": "POST",
+          "capabilities": []
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
-      "readApis": [],
+      "readApis": [
+        {
+          "method": "GET",
+          "path": "/api/owner/intake/dashboard"
+        }
+      ],
       "writeApis": [
         {
           "method": "POST",
           "path": "/api/owner/intake/businesses/:param/uploads"
-        },
-        {
-          "method": "POST",
-          "path": "/api/owner/intake/dashboard"
         },
         {
           "method": "POST",
@@ -942,11 +1396,6 @@
       "majorActions": [
         {
           "endpoint": "/api/owner/intake/businesses/:param/uploads",
-          "method": "POST",
-          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
-        },
-        {
-          "endpoint": "/api/owner/intake/dashboard",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         },
@@ -976,11 +1425,31 @@
       "sourceFile": "src/app/(authenticated)/owner/inventory/page.tsx",
       "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/inventory/stock-items/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/inventory/stock-items",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/inventory/stock-items",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "HIDDEN_FOR_SAFETY",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1020,11 +1489,60 @@
       "sourceFile": "src/app/(authenticated)/owner/learning/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/learning-candidates/:param/promote",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/learning-candidates/:param/reject",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/learning-candidates",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/learning-reviews",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/learning-reviews",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/learning-rollback-events",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/learning-rollback-events",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -1093,11 +1611,24 @@
       "sourceFile": "src/app/(authenticated)/owner/manual-entry/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/manual-entry",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -1134,12 +1665,40 @@
       "sourceFile": "src/app/(authenticated)/owner/marketing/campaigns/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/marketing/campaigns/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/marketing/campaigns",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/marketing/campaigns",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -1183,12 +1742,46 @@
       "sourceFile": "src/app/(authenticated)/owner/marketing/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/marketing/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/marketing/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/marketing/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/marketing/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/marketing/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -1255,10 +1848,24 @@
       "sourceFile": "src/app/(authenticated)/owner/now/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/now-view",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -1288,12 +1895,70 @@
       "sourceFile": "src/app/(authenticated)/owner/onboarding/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/snapshots",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/finance/snapshots/:param/amend",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/onboarding",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/readiness",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1304,6 +1969,10 @@
         {
           "method": "GET",
           "path": "/api/owner/cashflow/businesses/:param/snapshots"
+        },
+        {
+          "method": "GET",
+          "path": "/api/owner/finance/businesses/:param/snapshots"
         },
         {
           "method": "GET",
@@ -1376,12 +2045,56 @@
       "sourceFile": "src/app/(authenticated)/owner/operations/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/operations/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/operations/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/operations/businesses/:param/capacity-snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/operations/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/operations/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/operations/businesses/:param/workload-snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/operations/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1466,11 +2179,87 @@
       "sourceFile": "src/app/(authenticated)/owner/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/action-plan",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/approvals/resolve",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/command-center",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/control-center",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/input-guidance",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/opportunities/decide",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/priorities",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/readiness",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/tasks/complete",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/whole-business-plan",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -1574,10 +2363,17 @@
       "sourceFile": "src/app/(authenticated)/owner/portfolio/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/portfolio/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -1599,12 +2395,39 @@
       "sourceFile": "src/app/(authenticated)/owner/priorities/page.tsx",
       "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
       "persona": "owner",
-      "capabilityGate": [
-        "ENGAGEMENT_VIEW",
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/decisions/list",
+          "method": "GET",
+          "capabilities": [
+            "ENGAGEMENT_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/alerts",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/now-view",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/risks",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "HIDDEN_FOR_SAFETY",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1636,11 +2459,24 @@
       "sourceFile": "src/app/(authenticated)/owner/process-intelligence/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/now-view",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/process-execution",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -1673,11 +2509,31 @@
       "sourceFile": "src/app/(authenticated)/owner/procurement/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/procurement/purchase-orders/:param/transition",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/procurement/purchase-orders",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/procurement/purchase-orders",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1717,15 +2573,54 @@
       "sourceFile": "src/app/(authenticated)/owner/recovery/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/recovery/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/recovery/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses/:param/cycles",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/recovery/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
-      "readApis": [],
+      "readApis": [
+        {
+          "method": "GET",
+          "path": "/api/owner/recovery/dashboard"
+        }
+      ],
       "writeApis": [
         {
           "method": "POST",
@@ -1746,10 +2641,6 @@
         {
           "method": "POST",
           "path": "/api/owner/recovery/businesses"
-        },
-        {
-          "method": "POST",
-          "path": "/api/owner/recovery/dashboard"
         }
       ],
       "majorActions": [
@@ -1777,11 +2668,6 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
-        },
-        {
-          "endpoint": "/api/owner/recovery/dashboard",
-          "method": "POST",
-          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         }
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
@@ -1793,8 +2679,25 @@
       "sourceFile": "src/app/(authenticated)/owner/risks/[id]/page.tsx",
       "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
       "persona": "owner",
-      "capabilityGate": "NOT_APPLICABLE",
-      "capabilityGateNote": "No sidebar gate and no CAPABILITIES.* found on any API this page's traced component tree calls; access is governed only by session-required auth in the (authenticated) layout.",
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/risks/:param/review",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/risks/:param/tasks",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/risks/:param",
+          "method": "GET",
+          "capabilities": []
+        }
+      ],
       "previewState": "HIDDEN_FOR_SAFETY",
       "businessContextBehavior": "NOT_APPLICABLE",
       "readApis": [
@@ -1834,10 +2737,24 @@
       "sourceFile": "src/app/(authenticated)/owner/risks/page.tsx",
       "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/risks",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/risks",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "HIDDEN_FOR_SAFETY",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -1868,12 +2785,46 @@
       "sourceFile": "src/app/(authenticated)/owner/sales/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/sales/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sales/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sales/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sales/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/sales/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1940,11 +2891,29 @@
       "sourceFile": "src/app/(authenticated)/owner/start-here/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/businesses/:param/analyze",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/onboarding",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/process-execution",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -1979,10 +2948,70 @@
       "sourceFile": "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx",
       "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/startup)",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/activate",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/analysis",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/arbitrate",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/blueprint",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/decision",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/decision",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/evidence/freshness",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/explanation",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/ideas/:param/execution-plan",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param/ideas",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param",
+          "method": "GET",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
@@ -2073,15 +3102,36 @@
       "sourceFile": "src/app/(authenticated)/owner/startup/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/startup/sessions",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/startup/sessions",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "NO_BUSINESS_CONTEXT",
-      "readApis": [],
+      "readApis": [
+        {
+          "method": "GET",
+          "path": "/api/owner/startup/sessions"
+        }
+      ],
       "writeApis": [
         {
           "method": "POST",
@@ -2104,12 +3154,46 @@
       "sourceFile": "src/app/(authenticated)/owner/strategy/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW",
-        "SYSTEM_ADMIN"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/recovery/businesses",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW",
+            "SYSTEM_ADMIN"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/strategy/actions/:param/verify",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/strategy/actions/:param",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/strategy/businesses/:param/diagnoses",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/strategy/businesses/:param/snapshots",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/strategy/dashboard",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "preview",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -2176,10 +3260,30 @@
       "sourceFile": "src/app/(authenticated)/owner/tasks/[taskId]/page.tsx",
       "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/tasks)",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/tasks/:param/proof/review",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/tasks/:param/proof/submit",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/tasks/:param/status",
+          "method": "PATCH",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/tasks/:param",
+          "method": "GET",
+          "capabilities": []
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NOT_APPLICABLE",
       "readApis": [
@@ -2228,11 +3332,18 @@
       "sourceFile": "src/app/(authenticated)/owner/tasks/new/page.tsx",
       "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/tasks)",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/tasks",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "NOT_APPLICABLE",
       "readApis": [],
@@ -2258,11 +3369,25 @@
       "sourceFile": "src/app/(authenticated)/owner/tasks/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/process-execution",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/tasks",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -2286,10 +3411,31 @@
       "sourceFile": "src/app/(authenticated)/owner/trust/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/trust/audit-trail",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/trust/cycles",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/trust/explanations",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -2317,11 +3463,36 @@
       "sourceFile": "src/app/(authenticated)/owner/vendor/page.tsx",
       "navigationState": "IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_MANAGE",
-        "OWNER_VIEW"
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/vendor/:param/approve",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/vendor/:param/suspend",
+          "method": "POST",
+          "capabilities": []
+        },
+        {
+          "endpoint": "/api/owner/vendor",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/vendor",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE",
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
@@ -2370,10 +3541,17 @@
       "sourceFile": "src/app/(authenticated)/owner/wealth/page.tsx",
       "navigationState": "NOT_IN_SIDEBAR",
       "persona": "owner",
-      "capabilityGate": [
-        "OWNER_VIEW"
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/wealth-command-center",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
       ],
-      "capabilityGateNote": "Union of this route's sidebar gate (requiresOwner/requiresCapability) and the CAPABILITIES.* required by ANY API (owner-prefixed or not) this page's component tree calls.",
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "LOCAL_BUSINESS_STATE",
       "readApis": [
@@ -6961,74 +8139,168 @@
   ],
   "cockpitExternalFeeds": [
     {
-      "endpoint": "/api/escalation/acknowledge",
-      "method": "POST",
-      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: \"...setBusy(true);\n    setMessage(null);\n    try {\n      const { ok, data } = await \"",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
-    },
-    {
-      "endpoint": "/api/owner/constraints",
-      "method": "POST",
-      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: \"...\", payload);\n      } else if (action === \"constraint\") {\n        result = await \"",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
-    },
-    {
-      "endpoint": "/api/owner/goal-arbitration",
-      "method": "POST",
-      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: \"...ta: unknown };\n      if (action === \"run-arbitration\") {\n        result = await \"",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
-    },
-    {
       "endpoint": "/api/owner/now-view",
       "method": "GET",
       "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "This call passes businessId (via interpolated variable `qs`).",
-      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE (a .then(...? ... : null) or .catch(() => null) immediately follows this call)"
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "QUERY_BUSINESS_ID",
+        "note": "Query string (via interpolated variable `qs`)."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "fieldsConsumed": [
+        "processExecution",
+        "view.actionsToAvoid",
+        "derivedBusinessCondition",
+        "view.confidenceCapped",
+        "goalAttentionSignal",
+        "topProfitLeak",
+        "policyAttentionSignal",
+        "trendAlerts",
+        "doNotRepeatAnnotation",
+        "activeEscalations",
+        "executionLifecycle",
+        "businessOperatingSystem",
+        "financeTopPriority"
+      ]
     },
     {
       "endpoint": "/api/owner/onboarding",
       "method": "GET",
       "sourceFile": "src/components/owner/StartHereContinuationCard.tsx",
-      "businessIdBehavior": "This call passes businessId (direct).",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
-    },
-    {
-      "endpoint": "/api/owner/override-arbitration",
-      "method": "POST",
-      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: \"...tration\", {});\n      } else if (action === \"override\") {\n        result = await \"",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "QUERY_BUSINESS_ID",
+        "note": "Query string (direct)."
+      },
+      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
+      "fieldsConsumed": [
+        "found",
+        "canRunFirstDiagnosis",
+        "missingMinimum",
+        "requirements"
+      ]
     },
     {
       "endpoint": "/api/owner/process-execution",
       "method": "GET",
       "sourceFile": "src/components/owner/StartHereContinuationCard.tsx",
-      "businessIdBehavior": "NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: \"...oarding?businessId=${businessId}`).then((r) => (r.ok ? r.json() : null)),\n      \"",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
-    },
-    {
-      "endpoint": "/api/owner/process-execution",
-      "method": "POST",
-      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "NOT_VERIFIED — no businessId reference found in this call's literal or its interpolated variable's own declaration; nearby source context: \"...usinessId) body.businessId = activeBusinessId;\n      const { ok, data } = await \"",
-      "failureBehavior": "NOT_VERIFIED — no null-returning .then/.catch found immediately chained on this call; may propagate on throw or may be handled further down the function (not traced beyond this window)."
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "NO_EXPLICIT_BUSINESS_ID",
+        "note": "No businessId found in this call's URL or argument list."
+      },
+      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
+      "fieldsConsumed": [
+        "tasks[].status"
+      ]
     },
     {
       "endpoint": "/api/owner/public-signals",
       "method": "GET",
       "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "This call passes businessId (via interpolated variable `qs`).",
-      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE (a .then(...? ... : null) or .catch(() => null) immediately follows this call)"
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "QUERY_BUSINESS_ID",
+        "note": "Query string (via interpolated variable `qs`)."
+      },
+      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
+      "fieldsConsumed": [
+        "publicSignalStatus (presence check gates whether the response is used at all)"
+      ]
     },
     {
       "endpoint": "/api/owner/recovery-status",
       "method": "GET",
       "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
-      "businessIdBehavior": "This call passes businessId (via interpolated variable `qs`).",
-      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE (a .then(...? ... : null) or .catch(() => null) immediately follows this call)"
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "QUERY_BUSINESS_ID",
+        "note": "Query string (via interpolated variable `qs`)."
+      },
+      "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
+      "fieldsConsumed": [
+        "recoveryStatus (presence check gates whether the response is used at all)"
+      ]
+    },
+    {
+      "endpoint": "/api/escalation/acknowledge",
+      "method": "POST",
+      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "TASK_DERIVED",
+        "note": "Request identifies a specific task/escalation record directly, with no explicit businessId."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "fieldsConsumed": [
+        "NOT_VERIFIED — ok is checked; data is only passed to a generic failure-message helper, no specific field destructured on success"
+      ]
+    },
+    {
+      "endpoint": "/api/owner/constraints",
+      "method": "POST",
+      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "NOT_VERIFIED",
+        "note": "Request body argument is the identifier `payload`; its construction was not found to reference businessId in this file (may be passed in as an opaque prop from a child component, out of this bounded trace's scope)."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "fieldsConsumed": [
+        "NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"
+      ]
+    },
+    {
+      "endpoint": "/api/owner/goal-arbitration",
+      "method": "POST",
+      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "NO_EXPLICIT_BUSINESS_ID",
+        "note": "Call takes no body argument (or an empty object) — no businessId is sent."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "fieldsConsumed": [
+        "NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"
+      ]
+    },
+    {
+      "endpoint": "/api/owner/override-arbitration",
+      "method": "POST",
+      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "NOT_VERIFIED",
+        "note": "Request body argument is the identifier `payload`; its construction was not found to reference businessId in this file (may be passed in as an opaque prop from a child component, out of this bounded trace's scope)."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "fieldsConsumed": [
+        "NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"
+      ]
+    },
+    {
+      "endpoint": "/api/owner/process-execution",
+      "method": "POST",
+      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
+      "callSiteCount": 2,
+      "businessIdBehavior": {
+        "multipleCallSites": [
+          {
+            "category": "BODY_BUSINESS_ID",
+            "note": "`body.businessId` is conditionally set before this call (see source for the exact conditions)."
+          },
+          {
+            "category": "TASK_DERIVED",
+            "note": "Request identifies a specific task/escalation record directly, with no explicit businessId."
+          }
+        ]
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "fieldsConsumed": [
+        "status",
+        "reassessmentId (implied by REQUEST_REASSESSMENT branch)"
+      ]
     }
   ],
   "ownerActions": [
@@ -7039,8 +8311,49 @@
         "src/domain/owner-mode/process-execution-bridge.ts",
         "src/services/owner-mode/process-execution-bridge.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [
+        {
+          "typeName": "ProcessExecutionAction",
+          "values": [
+            "START",
+            "APPROVE",
+            "REJECT",
+            "DELEGATE",
+            "SUBMIT_EVIDENCE",
+            "COMPLETE",
+            "REQUEST_REASSESSMENT",
+            "MARK_BLOCKED",
+            "REQUEST_MISSING_DATA",
+            "ACKNOWLEDGE",
+            "RECORD_PROGRESS",
+            "RECORD_OUTCOME",
+            "VERIFY_OUTCOME"
+          ],
+          "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
+        }
+      ],
+      "workflowStatuses": [
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACKNOWLEDGED",
+            "APPROVED",
+            "BLOCKED",
+            "CANCELLED",
+            "COMPLETED",
+            "DELEGATED",
+            "IN_PROGRESS",
+            "NEEDS_DATA",
+            "OUTCOME_DISPUTED",
+            "OUTCOME_RECORDED",
+            "OUTCOME_VERIFIED",
+            "PROPOSED",
+            "REJECTED"
+          ],
+          "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
+        }
+      ],
+      "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
         {
@@ -7063,8 +8376,49 @@
         "src/domain/owner-mode/process-execution-bridge.ts",
         "src/services/owner-mode/process-execution-bridge.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [
+        {
+          "typeName": "ProcessExecutionAction",
+          "values": [
+            "START",
+            "APPROVE",
+            "REJECT",
+            "DELEGATE",
+            "SUBMIT_EVIDENCE",
+            "COMPLETE",
+            "REQUEST_REASSESSMENT",
+            "MARK_BLOCKED",
+            "REQUEST_MISSING_DATA",
+            "ACKNOWLEDGE",
+            "RECORD_PROGRESS",
+            "RECORD_OUTCOME",
+            "VERIFY_OUTCOME"
+          ],
+          "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
+        }
+      ],
+      "workflowStatuses": [
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACKNOWLEDGED",
+            "APPROVED",
+            "BLOCKED",
+            "CANCELLED",
+            "COMPLETED",
+            "DELEGATED",
+            "IN_PROGRESS",
+            "NEEDS_DATA",
+            "OUTCOME_DISPUTED",
+            "OUTCOME_RECORDED",
+            "OUTCOME_VERIFIED",
+            "PROPOSED",
+            "REJECTED"
+          ],
+          "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
+        }
+      ],
+      "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
         {
@@ -7127,7 +8481,11 @@
         "src/services/execution/proof-risk-adjudication.service.ts",
         "src/services/execution/reused-hash-precheck.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "AdjudicationStatus",
           "values": [
@@ -7326,7 +8684,11 @@
         "src/services/owner-finance/snapshot.service.ts",
         "src/services/owner-finance/verification.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "FinancialHealthState",
           "values": [
@@ -7441,8 +8803,11 @@
         "src/services/owner-cashflow/snapshot.service.ts",
         "src/services/owner-cashflow/verification.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
         {
@@ -7499,8 +8864,11 @@
         "src/services/owner-sales/snapshot.service.ts",
         "src/services/owner-sales/verification.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
         {
@@ -7573,8 +8941,11 @@
         "src/services/owner-operations/snapshot.service.ts",
         "src/services/owner-operations/verification.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
         {
@@ -7661,7 +9032,23 @@
         "src/services/owner-sop/snapshot.service.ts",
         "src/services/owner-sop/verification.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [
+        {
+          "typeName": "NextAction",
+          "values": [
+            "KEEP",
+            "MODIFY",
+            "ESCALATE",
+            "RETRAIN",
+            "COLLECT_MORE_DATA",
+            "DISMISS_AS_INEFFECTIVE"
+          ],
+          "sourceFile": "src/domain/owner-mode/sop-training-effectiveness-loop.ts"
+        }
+      ],
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "SopDraftStatus",
           "values": [
@@ -7779,7 +9166,11 @@
         "src/services/founder-recovery/snapshot.service.ts",
         "src/services/founder-recovery/verification.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "VerificationStatus",
           "values": [
@@ -7903,7 +9294,71 @@
         "src/services/owner-strategy/verification.service.ts",
         "src/services/owner-strategy/wealth-path.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [
+        {
+          "typeName": "StartupSessionStatus",
+          "values": [
+            "DRAFT",
+            "CONTEXT_CAPTURE",
+            "DISCOVERY",
+            "IDEA_GENERATION",
+            "SCREENING",
+            "VALIDATION_PLANNED",
+            "VALIDATION_IN_PROGRESS",
+            "ECONOMICS_REVIEW",
+            "READINESS_REVIEW",
+            "OWNER_DECISION_REQUIRED",
+            "APPROVED",
+            "MODIFICATION_REQUIRED",
+            "ON_HOLD",
+            "REJECTED",
+            "EXECUTION_PLANNED",
+            "STALE_REAPPROVAL_REQUIRED",
+            "ACTIVE"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACHIEVED",
+            "ACTIVE",
+            "REVISED"
+          ],
+          "sourceFile": "src/services/owner-strategy/goal.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACTIVE",
+            "ALLOCATED",
+            "CANCELLED",
+            "PENDING",
+            "PROPOSED",
+            "SUPERSEDED"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-execution-blueprint.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACTIVE",
+            "COMPLETED"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-handoff.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACQUIRED",
+            "DRAFT"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
+        }
+      ],
+      "domainResultStates": [
         {
           "typeName": "MarketSizingStatus",
           "values": [
@@ -7984,29 +9439,6 @@
             "CANCELLED"
           ],
           "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
-        },
-        {
-          "typeName": "StartupSessionStatus",
-          "values": [
-            "DRAFT",
-            "CONTEXT_CAPTURE",
-            "DISCOVERY",
-            "IDEA_GENERATION",
-            "SCREENING",
-            "VALIDATION_PLANNED",
-            "VALIDATION_IN_PROGRESS",
-            "ECONOMICS_REVIEW",
-            "READINESS_REVIEW",
-            "OWNER_DECISION_REQUIRED",
-            "APPROVED",
-            "MODIFICATION_REQUIRED",
-            "ON_HOLD",
-            "REJECTED",
-            "EXECUTION_PLANNED",
-            "STALE_REAPPROVAL_REQUIRED",
-            "ACTIVE"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
         },
         {
           "typeName": "ReadinessStatus",
@@ -8099,8 +9531,11 @@
         "src/services/owner-marketing/snapshot.service.ts",
         "src/services/owner-marketing/verification.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
         {
@@ -8160,7 +9595,64 @@
         "src/services/owner-mode/approval-resolution.service.ts",
         "src/services/owner-mode/owner-approval-resolution.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [
+        {
+          "typeName": "ApprovalStatus",
+          "values": [
+            "PENDING",
+            "APPROVED",
+            "REJECTED",
+            "DEFERRED"
+          ],
+          "sourceFile": "src/services/owner-mode/approval-resolution.service.ts"
+        },
+        {
+          "typeName": "DecisionStatus",
+          "values": [
+            "APPROVED",
+            "REJECTED",
+            "DEFERRED"
+          ],
+          "sourceFile": "src/services/owner-mode/approval-resolution.service.ts"
+        }
+      ],
+      "domainResultStates": [
+        {
+          "typeName": "PolicyActionType",
+          "values": [
+            "STAFF_TERMINATION",
+            "PAYROLL_CHANGE",
+            "MISCONDUCT_ACCUSATION",
+            "DELETE_AUDIT_RECORD",
+            "CONTRACT_COMMITMENT",
+            "LOAN_COMMITMENT",
+            "SUPPRESS_RISK",
+            "SCALING_ON_UNVALIDATED_DEMAND",
+            "LEGAL_TERMS_CHANGE",
+            "STAFF_DISCIPLINARY_ACTION",
+            "PRICING_CHANGE",
+            "REFUND_ABOVE_THRESHOLD",
+            "DISCOUNT_GRANT",
+            "B2B_CONTRACT_TERMS",
+            "LARGE_SPEND",
+            "LEGAL_MATTER_REVIEW",
+            "REPUTATION_RESPONSE",
+            "ROUTINE_COACHING",
+            "MINOR_PROCESS_CHANGE",
+            "REQUEST_MISSING_PROOF",
+            "COLLAPSE_DUPLICATE_CLEARED_ALERTS",
+            "DRAFT_CHECKLIST",
+            "PROPOSE_TRAINING",
+            "OPEN_REASSESSMENT",
+            "FLAG_OVERDUE_ITEM",
+            "COLLECT_DATA",
+            "DRAFT_ONLY_RECOMMENDATION",
+            "UNKNOWN"
+          ],
+          "sourceFile": "src/domain/owner-mode/approval-threshold-policy.ts"
+        },
         {
           "typeName": "RiskCategory",
           "values": [
@@ -8191,25 +9683,6 @@
             "NONE"
           ],
           "sourceFile": "src/domain/owner-mode/approval-threshold-policy.ts"
-        },
-        {
-          "typeName": "ApprovalStatus",
-          "values": [
-            "PENDING",
-            "APPROVED",
-            "REJECTED",
-            "DEFERRED"
-          ],
-          "sourceFile": "src/services/owner-mode/approval-resolution.service.ts"
-        },
-        {
-          "typeName": "DecisionStatus",
-          "values": [
-            "APPROVED",
-            "REJECTED",
-            "DEFERRED"
-          ],
-          "sourceFile": "src/services/owner-mode/approval-resolution.service.ts"
         },
         {
           "typeName": "EvidenceType",
@@ -8266,7 +9739,11 @@
         "src/domain/execution/proof-risk-adjudication.ts",
         "src/services/execution/proof-risk-adjudication.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "AdjudicationStatus",
           "values": [
@@ -8350,7 +9827,11 @@
         "src/services/owner-mode/opportunity-decision.service.ts",
         "src/services/owner-mode/opportunity-execution.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "ExternalOpportunityIntakeType",
           "values": [
@@ -8483,16 +9964,6 @@
           "sourceFile": "src/domain/owner-mode/opportunity-execution.ts"
         },
         {
-          "typeName": "EligibilityStatus",
-          "values": [
-            "ELIGIBLE",
-            "NOT_ELIGIBLE",
-            "UNKNOWN",
-            "NEEDS_DATA"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-operating-layer.ts"
-        },
-        {
           "typeName": "ChecklistType",
           "values": [
             "B2B_OPPORTUNITY_PREP",
@@ -8502,6 +9973,16 @@
             "CUSTOMER_SEGMENT_PREP",
             "PARTNERSHIP_PREP",
             "DATA_COLLECTION_PREP"
+          ],
+          "sourceFile": "src/domain/owner-mode/opportunity-operating-layer.ts"
+        },
+        {
+          "typeName": "EligibilityStatus",
+          "values": [
+            "ELIGIBLE",
+            "NOT_ELIGIBLE",
+            "UNKNOWN",
+            "NEEDS_DATA"
           ],
           "sourceFile": "src/domain/owner-mode/opportunity-operating-layer.ts"
         },
@@ -8574,7 +10055,11 @@
         "src/domain/owner-mode/objective-arbitration.ts",
         "src/domain/owner-mode/objective-portfolio.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "ObjectiveType",
           "values": [
@@ -8649,17 +10134,9 @@
         "src/domain/remote-operations/compliance-gate.ts",
         "src/services/owner-mode/compliance.service.ts"
       ],
-      "actionStateValues": [
-        {
-          "typeName": "ComplianceClassification",
-          "values": [
-            "informational",
-            "caution",
-            "professional_review_required",
-            "blocked_until_review"
-          ],
-          "sourceFile": "src/domain/owner-mode/compliance-boundary.ts"
-        },
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [
         {
           "typeName": "ComplianceStatus",
           "values": [
@@ -8680,6 +10157,18 @@
             "overdue"
           ],
           "sourceFile": "src/services/owner-mode/compliance.service.ts"
+        }
+      ],
+      "domainResultStates": [
+        {
+          "typeName": "ComplianceClassification",
+          "values": [
+            "informational",
+            "caution",
+            "professional_review_required",
+            "blocked_until_review"
+          ],
+          "sourceFile": "src/domain/owner-mode/compliance-boundary.ts"
         }
       ],
       "knownTransitionMaps": [
@@ -8728,8 +10217,11 @@
       "source": [
         "src/services/owner-procurement/purchase-order.service.ts"
       ],
-      "actionStateValues": [],
-      "actionStateValuesNote": "No `type X = \"A\" | \"B\"` union or `enum` shape found via keyword-matched files; state values for this family are not encoded as a simple literal-union/enum in the files this generator matched.",
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [],
       "knownTransitionMaps": [
         {
           "name": "VALID_TRANSITIONS",
@@ -8767,7 +10259,11 @@
         "src/domain/scenarios/customer-vendor-market-sources.ts",
         "src/services/owner-budget/vendor.service.ts"
       ],
-      "actionStateValues": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "domainResultStates": [
         {
           "typeName": "VendorRiskClassification",
           "values": [
@@ -8850,379 +10346,72 @@
   ],
   "workflowStateFamilies": [
     {
-      "family": "proof_submit_review",
+      "family": "process_execution",
       "source": [
-        "src/domain/execution/proof-risk-adjudication.ts",
-        "src/domain/execution/reused-hash-precheck.ts",
-        "src/domain/owner-mode/evidence-credibility-graph.ts",
-        "src/domain/owner-mode/timing-evidence.ts",
-        "src/services/execution/proof-risk-adjudication.service.ts",
-        "src/services/execution/reused-hash-precheck.service.ts"
+        "src/domain/owner-mode/process-execution-bridge-expansion.ts",
+        "src/domain/owner-mode/process-execution-bridge.ts",
+        "src/services/owner-mode/process-execution-bridge.service.ts"
       ],
       "states": [
         {
-          "typeName": "AdjudicationStatus",
+          "typeName": "(status literals, no single union type declared)",
           "values": [
-            "ACTIVE",
-            "CLEARED",
-            "CONFIRMED",
-            "INCONCLUSIVE",
-            "TRAINING",
-            "OWNER_REVIEW"
-          ],
-          "sourceFile": "src/domain/execution/proof-risk-adjudication.ts"
-        },
-        {
-          "typeName": "AdjudicationOutcome",
-          "values": [
-            "REQUIRE_FRESH_PROOF",
-            "REQUIRE_FRESH_PROOF",
-            "ACCEPT_AS_VALID",
-            "ACCEPT_AS_VALID",
-            "DISMISS_FALSE_POSITIVE",
-            "DISMISS_FALSE_POSITIVE",
-            "CONFIRM_SUSPICIOUS_PATTERN",
-            "CONFIRM_SUSPICIOUS_PATTERN",
-            "ESCALATE_FOR_TRAINING",
-            "ESCALATE_FOR_TRAINING",
-            "ESCALATE_FOR_OWNER_REVIEW",
-            "ESCALATE_FOR_OWNER_REVIEW",
-            "MARK_INCONCLUSIVE_NEEDS_DATA",
-            "MARK_INCONCLUSIVE_NEEDS_DATA"
-          ],
-          "sourceFile": "src/domain/execution/proof-risk-adjudication.ts"
-        },
-        {
-          "typeName": "AdjudicationSourceType",
-          "values": [
-            "REUSED_HASH_FINDING",
-            "REUSED_HASH_FINDING",
-            "ANTI_GAMING_SIGNAL",
-            "ANTI_GAMING_SIGNAL",
-            "CREDIBILITY_CONCERN",
-            "CREDIBILITY_CONCERN",
-            "PROOF_DISPUTE",
-            "PROOF_DISPUTE"
-          ],
-          "sourceFile": "src/domain/execution/proof-risk-adjudication.ts"
-        },
-        {
-          "typeName": "DuplicateMatchType",
-          "values": [
-            "HASH",
-            "ARTIFACT_REFERENCE",
-            "SIGNATURE"
-          ],
-          "sourceFile": "src/domain/execution/reused-hash-precheck.ts"
-        },
-        {
-          "typeName": "DuplicateProofStatus",
-          "values": [
-            "PASS_NO_DUPLICATE",
-            "PASS_NO_DUPLICATE",
-            "NEEDS_REVIEW_DUPLICATE",
-            "NEEDS_REVIEW_DUPLICATE",
-            "ALLOWED_DUPLICATE",
-            "ALLOWED_DUPLICATE",
-            "BLOCKED_CROSS_WORKSPACE",
-            "BLOCKED_CROSS_WORKSPACE",
-            "DATA_INSUFFICIENT",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/execution/reused-hash-precheck.ts"
-        },
-        {
-          "typeName": "DuplicateSignalType",
-          "values": [
-            "EXACT_REUSED_HASH",
-            "EXACT_REUSED_HASH",
-            "REUSED_ARTIFACT_REFERENCE",
-            "REUSED_ARTIFACT_REFERENCE",
-            "POSSIBLE_DUPLICATE_NEEDS_REVIEW",
-            "POSSIBLE_DUPLICATE_NEEDS_REVIEW",
-            "SAME_TASK_ALLOWED_DUPLICATE",
-            "SAME_TASK_ALLOWED_DUPLICATE",
-            "CROSS_WORKSPACE_REUSE_BLOCKED_OR_IGNORED",
-            "CROSS_WORKSPACE_REUSE_BLOCKED_OR_IGNORED",
-            "DATA_INSUFFICIENT",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/execution/reused-hash-precheck.ts"
-        },
-        {
-          "typeName": "CredibilityEntityType",
-          "values": [
-            "PROOF_ITEM",
-            "PROOF_TYPE",
-            "TASK",
-            "TASK_CATEGORY",
-            "SUBMITTER",
-            "REVIEWER",
-            "PROCESS",
-            "CLIENT",
-            "REVIEWER_SUBMITTER_PAIR",
-            "WORKSPACE"
-          ],
-          "sourceFile": "src/domain/owner-mode/evidence-credibility-graph.ts"
-        },
-        {
-          "typeName": "CredibilitySignalType",
-          "values": [
-            "STRONG_ACCEPTED_PROOF",
-            "WEAK_PROOF_NEEDS_REVIEW",
-            "REJECTED_PROOF",
-            "REUSED_PROOF",
-            "STALE_PROOF",
-            "TAMPER_SUSPECTED_PROOF",
-            "ACCEPTED_PROOF_WITH_BAD_OUTCOME",
-            "ACCEPTED_PROOF_WITH_COMPLAINT",
-            "ACCEPTED_PROOF_WITH_REWORK",
-            "REVIEWER_ACCEPTED_WEAK_PROOF",
-            "SELF_REVIEW_BLOCKED_OR_ATTEMPTED",
-            "REPEATED_OWNER_REVIEW_BURDEN",
-            "RELIABLE_SUBMITTER_PATTERN",
-            "UNRELIABLE_SUBMITTER_PATTERN",
-            "REVIEW_QUALITY_CONCERN",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/owner-mode/evidence-credibility-graph.ts"
-        },
-        {
-          "typeName": "FastCompletionStatus",
-          "values": [
-            "NO_SIGNAL",
-            "TIMING_MISSING",
-            "BASELINE_MISSING",
-            "FAST_COMPLETION_WARNING",
-            "SUSPICIOUS_FAST_COMPLETION_PATTERN",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/owner-mode/timing-evidence.ts"
-        },
-        {
-          "typeName": "EscalationTimingStatus",
-          "values": [
-            "NO_SIGNAL",
-            "ESCALATION_TIMING_MISSING",
-            "NO_MANAGER_ASSIGNMENT",
-            "ESCALATION_ACK_OVERDUE",
-            "ESCALATION_RESOLUTION_OVERDUE",
-            "MANAGER_IGNORES_ESCALATION_PATTERN",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/owner-mode/timing-evidence.ts"
-        }
-      ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
-      "ownerUiLocation": [
-        "/owner/adjudication"
-      ]
-    },
-    {
-      "family": "finance_actions",
-      "source": [
-        "src/domain/owner-finance/actions.ts",
-        "src/domain/owner-finance/cash-safety-gate.ts",
-        "src/domain/owner-finance/data-confidence.ts",
-        "src/domain/owner-finance/diagnosis.ts",
-        "src/domain/owner-finance/index.ts",
-        "src/domain/owner-finance/margin-safety-gate.ts",
-        "src/domain/owner-finance/metrics.ts",
-        "src/domain/owner-finance/opportunity-rules.ts",
-        "src/domain/owner-finance/outcome-signals.ts",
-        "src/domain/owner-finance/pricing-analysis.ts",
-        "src/domain/owner-finance/pricing-analysis.validation.ts",
-        "src/domain/owner-finance/recommendations.ts",
-        "src/domain/owner-finance/risk-rules.ts",
-        "src/domain/owner-finance/thresholds.ts",
-        "src/domain/owner-finance/types.ts",
-        "src/domain/owner-finance/unit-economics.ts",
-        "src/domain/owner-finance/validation.ts",
-        "src/services/owner-finance/action.service.ts",
-        "src/services/owner-finance/dashboard.service.ts",
-        "src/services/owner-finance/diagnosis.service.ts",
-        "src/services/owner-finance/effectiveness.service.ts",
-        "src/services/owner-finance/learning-bridge.service.ts",
-        "src/services/owner-finance/recommendation-cash-safety.service.ts",
-        "src/services/owner-finance/recommendation-margin-safety.service.ts",
-        "src/services/owner-finance/service-economics.service.ts",
-        "src/services/owner-finance/snapshot.service.ts",
-        "src/services/owner-finance/verification.service.ts"
-      ],
-      "states": [
-        {
-          "typeName": "FinancialHealthState",
-          "values": [
-            "SAFE",
-            "WATCH",
-            "AT_RISK",
-            "CRITICAL",
-            "INSOLVENT_RISK"
-          ],
-          "sourceFile": "src/domain/owner-finance/cash-safety-gate.ts"
-        },
-        {
-          "typeName": "CashSafetyOutcome",
-          "values": [
-            "ALLOWED",
-            "ALLOWED",
-            "BLOCKED_CASH_UNSAFE",
-            "BLOCKED_CASH_UNSAFE"
-          ],
-          "sourceFile": "src/domain/owner-finance/cash-safety-gate.ts"
-        },
-        {
-          "typeName": "ConfidenceTier",
-          "values": [
-            "HIGH",
-            "MEDIUM",
-            "LOW",
-            "BLOCKED"
-          ],
-          "sourceFile": "src/domain/owner-finance/data-confidence.ts"
-        },
-        {
-          "typeName": "FreshnessTier",
-          "values": [
-            "FRESH",
-            "AGING",
-            "STALE",
-            "CRITICAL"
-          ],
-          "sourceFile": "src/domain/owner-finance/data-confidence.ts"
-        },
-        {
-          "typeName": "MarginSafetyOutcome",
-          "values": [
-            "ALLOWED",
-            "ALLOWED",
-            "BLOCKED_BELOW_FLOOR",
-            "BLOCKED_BELOW_FLOOR"
-          ],
-          "sourceFile": "src/domain/owner-finance/margin-safety-gate.ts"
-        }
-      ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
-      "ownerUiLocation": [
-        "/owner/finance"
-      ]
-    },
-    {
-      "family": "sop_actions",
-      "source": [
-        "src/domain/owner-mode/sop-checklist-correction-engine.ts",
-        "src/domain/owner-mode/sop-training-effectiveness-loop.ts",
-        "src/domain/owner-mode/staff-training-assignment-engine.ts",
-        "src/domain/owner-sop/actions.ts",
-        "src/domain/owner-sop/data-confidence.ts",
-        "src/domain/owner-sop/diagnosis.ts",
-        "src/domain/owner-sop/index.ts",
-        "src/domain/owner-sop/metrics.ts",
-        "src/domain/owner-sop/opportunity-rules.ts",
-        "src/domain/owner-sop/recommendations.ts",
-        "src/domain/owner-sop/risk-rules.ts",
-        "src/domain/owner-sop/thresholds.ts",
-        "src/domain/owner-sop/types.ts",
-        "src/domain/owner-sop/validation.ts",
-        "src/services/owner-sop/action.service.ts",
-        "src/services/owner-sop/dashboard.service.ts",
-        "src/services/owner-sop/diagnosis.service.ts",
-        "src/services/owner-sop/snapshot.service.ts",
-        "src/services/owner-sop/verification.service.ts"
-      ],
-      "states": [
-        {
-          "typeName": "SopDraftStatus",
-          "values": [
-            "DRAFT",
-            "PROPOSED",
+            "ACKNOWLEDGED",
             "APPROVED",
-            "REJECTED",
-            "NEEDS_DATA"
-          ],
-          "sourceFile": "src/domain/owner-mode/sop-checklist-correction-engine.ts"
-        },
-        {
-          "typeName": "EvaluationType",
-          "values": [
-            "SOP_CHECKLIST_EFFECTIVENESS",
-            "TRAINING_EFFECTIVENESS",
-            "CORRECTION_EFFECTIVENESS",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/owner-mode/sop-training-effectiveness-loop.ts"
-        },
-        {
-          "typeName": "TrainingType",
-          "values": [
-            "PROOF_QUALITY_REVIEW",
-            "PROCESS_STEP_RETRAINING",
-            "MANAGER_REVIEW_QUALITY",
-            "ESCALATION_RESPONSE_REVIEW",
-            "DELIVERY_HANDOFF_REVIEW",
-            "CHECKLIST_CHANGE_BRIEFING",
-            "DATA_COLLECTION_BRIEFING"
-          ],
-          "sourceFile": "src/domain/owner-mode/staff-training-assignment-engine.ts"
-        },
-        {
-          "typeName": "TrainingStatus",
-          "values": [
-            "PROPOSED",
-            "APPROVED",
-            "ASSIGNED",
+            "BLOCKED",
+            "CANCELLED",
             "COMPLETED",
-            "DISMISSED",
-            "NEEDS_DATA"
+            "DELEGATED",
+            "IN_PROGRESS",
+            "NEEDS_DATA",
+            "OUTCOME_DISPUTED",
+            "OUTCOME_RECORDED",
+            "OUTCOME_VERIFIED",
+            "PROPOSED",
+            "REJECTED"
           ],
-          "sourceFile": "src/domain/owner-mode/staff-training-assignment-engine.ts"
+          "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
         }
       ],
       "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
       "ownerUiLocation": [
-        "/owner/execution"
+        "/owner/execution",
+        "/owner/cockpit"
       ]
     },
     {
-      "family": "recovery_actions",
+      "family": "tasks",
       "source": [
-        "src/domain/founder-recovery/action-status.ts",
-        "src/domain/founder-recovery/diagnosis.ts",
-        "src/domain/founder-recovery/legacy-fixture-classification.ts",
-        "src/domain/founder-recovery/metrics.ts",
-        "src/domain/founder-recovery/recovery-actions.ts",
-        "src/domain/founder-recovery/thresholds.ts",
-        "src/domain/founder-recovery/types.ts",
-        "src/domain/founder-recovery/validation.ts",
-        "src/domain/founder-recovery/verification.ts",
-        "src/services/founder-recovery/action.service.ts",
-        "src/services/founder-recovery/business.service.ts",
-        "src/services/founder-recovery/cycle.service.ts",
-        "src/services/founder-recovery/dashboard.service.ts",
-        "src/services/founder-recovery/snapshot.service.ts",
-        "src/services/founder-recovery/verification.service.ts"
+        "src/domain/owner-mode/process-execution-bridge-expansion.ts",
+        "src/domain/owner-mode/process-execution-bridge.ts",
+        "src/services/owner-mode/process-execution-bridge.service.ts"
       ],
       "states": [
         {
-          "typeName": "VerificationStatus",
+          "typeName": "(status literals, no single union type declared)",
           "values": [
-            "unverified",
-            "verified_improved",
-            "verified_not_improved",
-            "inconclusive",
-            "disputed"
+            "ACKNOWLEDGED",
+            "APPROVED",
+            "BLOCKED",
+            "CANCELLED",
+            "COMPLETED",
+            "DELEGATED",
+            "IN_PROGRESS",
+            "NEEDS_DATA",
+            "OUTCOME_DISPUTED",
+            "OUTCOME_RECORDED",
+            "OUTCOME_VERIFIED",
+            "PROPOSED",
+            "REJECTED"
           ],
-          "sourceFile": "src/domain/founder-recovery/types.ts"
+          "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
         }
       ],
-      "transitions": [
-        {
-          "name": "TRANSITIONS",
-          "sourceFile": "src/domain/founder-recovery/action-status.ts"
-        }
-      ],
+      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
       "ownerUiLocation": [
-        "/owner/recovery"
+        "/owner/tasks",
+        "/owner/tasks/new",
+        "/owner/tasks/[taskId]"
       ]
     },
     {
@@ -9284,87 +10473,6 @@
       ],
       "states": [
         {
-          "typeName": "MarketSizingStatus",
-          "values": [
-            "ESTIMATED",
-            "INSUFFICIENT_EVIDENCE_TO_ESTIMATE"
-          ],
-          "sourceFile": "src/domain/owner-strategy/market-sizing.ts"
-        },
-        {
-          "typeName": "EconomicClassification",
-          "values": [
-            "VIABLE",
-            "MARGINAL",
-            "UNVIABLE",
-            "INSUFFICIENT_DATA"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-economics.ts"
-        },
-        {
-          "typeName": "EvidenceFreshnessState",
-          "values": [
-            "FRESH",
-            "NEARING_EXPIRY",
-            "STALE",
-            "CURRENT_VERIFICATION_REQUIRED",
-            "NO_EXPIRY_POLICY"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-evidence-evaluation.ts"
-        },
-        {
-          "typeName": "HypothesisType",
-          "values": [
-            "DEMAND",
-            "PRICING",
-            "DELIVERY",
-            "ACQUISITION",
-            "ECONOMIC",
-            "REGULATORY",
-            "SUPPLIER"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-hypothesis-engine.ts"
-        },
-        {
-          "typeName": "HypothesisMemoryType",
-          "values": [
-            "STARTUP_VALIDATED_HYPOTHESIS",
-            "STARTUP_FAILED_HYPOTHESIS"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-hypothesis-engine.ts"
-        },
-        {
-          "typeName": "IdeaOriginType",
-          "values": [
-            "OWNER_SUBMITTED",
-            "DISCOVERED_FROM_EVIDENCE",
-            "DERIVED_FROM_EXISTING_ASSETS",
-            "DERIVED_FROM_CUSTOMER_PROBLEM",
-            "DERIVED_FROM_EXTERNAL_OPPORTUNITY",
-            "SYSTEM_SYNTHESIZED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-idea-generation.ts"
-        },
-        {
-          "typeName": "StartupInitiativeStatus",
-          "values": [
-            "ACTIVE",
-            "PAUSED",
-            "COMPLETED",
-            "CANCELLED",
-            "SUPERSEDED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
-        },
-        {
-          "typeName": "StartupInitiativeClosedStatus",
-          "values": [
-            "COMPLETED",
-            "CANCELLED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
-        },
-        {
           "typeName": "StartupSessionStatus",
           "values": [
             "DRAFT",
@@ -9388,38 +10496,41 @@
           "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
         },
         {
-          "typeName": "ReadinessStatus",
+          "typeName": "(status literals, no single union type declared)",
           "values": [
-            "READY",
-            "CONDITIONALLY_READY",
-            "NOT_READY",
-            "BLOCKED"
+            "ACHIEVED",
+            "ACTIVE",
+            "REVISED"
           ],
-          "sourceFile": "src/domain/owner-strategy/startup-readiness.ts"
+          "sourceFile": "src/services/owner-strategy/goal.service.ts"
         },
         {
-          "typeName": "OwnerTaskType",
+          "typeName": "(status literals, no single union type declared)",
           "values": [
-            "OWNER_PRIVATE_FACT_REQUIRED",
-            "OWNER_AUTHORIZATION_REQUIRED",
-            "OWNER_CONNECTOR_REQUIRED",
-            "OWNER_OUTREACH_APPROVAL_REQUIRED",
-            "OWNER_PHYSICAL_ACTION_REQUIRED",
-            "OWNER_PROFESSIONAL_ADVICE_REQUIRED",
-            "OWNER_NEGOTIATION_REQUIRED"
+            "ACTIVE",
+            "ALLOCATED",
+            "CANCELLED",
+            "PENDING",
+            "PROPOSED",
+            "SUPERSEDED"
           ],
-          "sourceFile": "src/domain/owner-strategy/startup-research-planner.ts"
+          "sourceFile": "src/services/owner-strategy/startup-execution-blueprint.service.ts"
         },
         {
-          "typeName": "ScreeningStatus",
+          "typeName": "(status literals, no single union type declared)",
           "values": [
-            "PASSED",
-            "CONDITIONALLY_PASSED",
-            "REJECTED",
-            "EVIDENCE_REQUIRED",
-            "UNSCREENED"
+            "ACTIVE",
+            "COMPLETED"
           ],
-          "sourceFile": "src/domain/owner-strategy/startup-screening.ts"
+          "sourceFile": "src/services/owner-strategy/startup-handoff.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACQUIRED",
+            "DRAFT"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
         }
       ],
       "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
@@ -9438,37 +10549,6 @@
       ],
       "states": [
         {
-          "typeName": "RiskCategory",
-          "values": [
-            "FINANCIAL",
-            "STAFF",
-            "LEGAL",
-            "REPUTATION",
-            "CUSTOMER_TRUST",
-            "OPERATIONAL",
-            "DATA_INTEGRITY",
-            "NONE",
-            "UNKNOWN"
-          ],
-          "sourceFile": "src/domain/owner-mode/approval-threshold-policy.ts"
-        },
-        {
-          "typeName": "MissingCapabilityType",
-          "values": [
-            "VERIFIED_AMOUNT_LEDGER",
-            "REFUND_RECONCILIATION",
-            "PAYROLL_INTEGRATION",
-            "CONTRACT_TERMS_REGISTRY",
-            "LEGAL_REVIEW_WORKFLOW",
-            "IDENTITY_EVIDENCE_CHAIN",
-            "MARGIN_SIMULATION",
-            "SPEND_CONTROL_LEDGER",
-            "AUTOMATED_ROLLBACK",
-            "NONE"
-          ],
-          "sourceFile": "src/domain/owner-mode/approval-threshold-policy.ts"
-        },
-        {
           "typeName": "ApprovalStatus",
           "values": [
             "PENDING",
@@ -9484,16 +10564,6 @@
             "APPROVED",
             "REJECTED",
             "DEFERRED"
-          ],
-          "sourceFile": "src/services/owner-mode/approval-resolution.service.ts"
-        },
-        {
-          "typeName": "EvidenceType",
-          "values": [
-            "document",
-            "photo",
-            "data",
-            "testimony"
           ],
           "sourceFile": "src/services/owner-mode/approval-resolution.service.ts"
         }
@@ -9513,323 +10583,6 @@
       ]
     },
     {
-      "family": "adjudication",
-      "source": [
-        "src/domain/execution/proof-risk-adjudication.ts",
-        "src/services/execution/proof-risk-adjudication.service.ts"
-      ],
-      "states": [
-        {
-          "typeName": "AdjudicationStatus",
-          "values": [
-            "ACTIVE",
-            "CLEARED",
-            "CONFIRMED",
-            "INCONCLUSIVE",
-            "TRAINING",
-            "OWNER_REVIEW"
-          ],
-          "sourceFile": "src/domain/execution/proof-risk-adjudication.ts"
-        },
-        {
-          "typeName": "AdjudicationOutcome",
-          "values": [
-            "REQUIRE_FRESH_PROOF",
-            "REQUIRE_FRESH_PROOF",
-            "ACCEPT_AS_VALID",
-            "ACCEPT_AS_VALID",
-            "DISMISS_FALSE_POSITIVE",
-            "DISMISS_FALSE_POSITIVE",
-            "CONFIRM_SUSPICIOUS_PATTERN",
-            "CONFIRM_SUSPICIOUS_PATTERN",
-            "ESCALATE_FOR_TRAINING",
-            "ESCALATE_FOR_TRAINING",
-            "ESCALATE_FOR_OWNER_REVIEW",
-            "ESCALATE_FOR_OWNER_REVIEW",
-            "MARK_INCONCLUSIVE_NEEDS_DATA",
-            "MARK_INCONCLUSIVE_NEEDS_DATA"
-          ],
-          "sourceFile": "src/domain/execution/proof-risk-adjudication.ts"
-        },
-        {
-          "typeName": "AdjudicationSourceType",
-          "values": [
-            "REUSED_HASH_FINDING",
-            "REUSED_HASH_FINDING",
-            "ANTI_GAMING_SIGNAL",
-            "ANTI_GAMING_SIGNAL",
-            "CREDIBILITY_CONCERN",
-            "CREDIBILITY_CONCERN",
-            "PROOF_DISPUTE",
-            "PROOF_DISPUTE"
-          ],
-          "sourceFile": "src/domain/execution/proof-risk-adjudication.ts"
-        }
-      ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
-      "ownerUiLocation": [
-        "/owner/adjudication"
-      ]
-    },
-    {
-      "family": "opportunity_decisions_execution",
-      "source": [
-        "src/domain/owner-cashflow/opportunity-rules.ts",
-        "src/domain/owner-finance/opportunity-rules.ts",
-        "src/domain/owner-marketing/opportunity-rules.ts",
-        "src/domain/owner-mode/external-opportunity-intake.ts",
-        "src/domain/owner-mode/external-opportunity-intelligence.ts",
-        "src/domain/owner-mode/opportunity-contract-guardrails.ts",
-        "src/domain/owner-mode/opportunity-decision-envelope.ts",
-        "src/domain/owner-mode/opportunity-execution.ts",
-        "src/domain/owner-mode/opportunity-operating-layer.ts",
-        "src/domain/owner-mode/opportunity-portfolio-capital-allocation.ts",
-        "src/domain/owner-mode/opportunity-validation-experiment-engine.ts",
-        "src/domain/owner-operations/opportunity-rules.ts",
-        "src/domain/owner-sales/opportunity-rules.ts",
-        "src/domain/owner-sop/opportunity-rules.ts",
-        "src/domain/owner-strategy/opportunity-rules.ts",
-        "src/services/owner-mode/external-opportunity-intake.service.ts",
-        "src/services/owner-mode/opportunity-decision.service.ts",
-        "src/services/owner-mode/opportunity-execution.service.ts"
-      ],
-      "states": [
-        {
-          "typeName": "ExternalOpportunityIntakeType",
-          "values": [
-            "COMPETITOR_REVIEW_GAP",
-            "B2B_DEMAND_SIGNAL",
-            "GOVERNMENT_TENDER",
-            "PUBLIC_PROCUREMENT_NOTICE",
-            "CORPORATE_VENDOR_OPPORTUNITY",
-            "GRANT_OR_SCHEME_SIGNAL",
-            "PRICING_GAP",
-            "SERVICE_GAP",
-            "COMMUNITY_OR_APARTMENT_DEMAND",
-            "SUPPLIER_OR_COST_ADVANTAGE",
-            "MARKET_TREND_SIGNAL",
-            "MANUAL_OWNER_OBSERVATION",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/owner-mode/external-opportunity-intake.ts"
-        },
-        {
-          "typeName": "OpportunityType",
-          "values": [
-            "NEW_SERVICE",
-            "B2B_OFFER",
-            "PRICING_TEST",
-            "CUSTOMER_SEGMENT",
-            "RETENTION_CAMPAIGN",
-            "LOCAL_PARTNERSHIP",
-            "OPERATIONS_ADJACENCY",
-            "MARKETING_CHANNEL",
-            "SUPPLIER_ADVANTAGE",
-            "TENDER_BID",
-            "OTHER"
-          ],
-          "sourceFile": "src/domain/owner-mode/external-opportunity-intelligence.ts"
-        },
-        {
-          "typeName": "SignalSourceType",
-          "values": [
-            "COMPETITOR_REVIEW_GAP",
-            "LOCAL_SEARCH_DEMAND",
-            "CUSTOMER_COMPLAINT_PATTERN",
-            "B2B_DEMAND_SIGNAL",
-            "PRICING_GAP",
-            "SERVICE_GAP",
-            "SEASONAL_DEMAND",
-            "LOCAL_EVENT_SIGNAL",
-            "SUPPLIER_OR_COST_ADVANTAGE",
-            "MARKET_TREND_SIGNAL",
-            "REGULATORY_OR_COMPLIANCE_CHANGE",
-            "COMMUNITY_OR_APARTMENT_DEMAND",
-            "SOCIAL_MEDIA_PAIN_POINT",
-            "MANUAL_OWNER_OBSERVATION",
-            "GOVERNMENT_TENDER",
-            "PUBLIC_PROCUREMENT",
-            "CORPORATE_VENDOR_OPPORTUNITY",
-            "GRANT_OR_SCHEME",
-            "EXPORT_OR_INSTITUTIONAL_DEMAND",
-            "DATA_INSUFFICIENT"
-          ],
-          "sourceFile": "src/domain/owner-mode/external-opportunity-intelligence.ts"
-        },
-        {
-          "typeName": "SignalClassification",
-          "values": [
-            "RAW",
-            "DUPLICATE",
-            "IRRELEVANT",
-            "NEEDS_DATA",
-            "CANDIDATE",
-            "REJECTED",
-            "PARKED"
-          ],
-          "sourceFile": "src/domain/owner-mode/external-opportunity-intelligence.ts"
-        },
-        {
-          "typeName": "KnownState",
-          "values": [
-            "KNOWN",
-            "UNKNOWN"
-          ],
-          "sourceFile": "src/domain/owner-mode/external-opportunity-intelligence.ts"
-        },
-        {
-          "typeName": "ExecutionSourceType",
-          "values": [
-            "PREP_CHECKLIST",
-            "TENDER_READINESS",
-            "PROOF_PACK",
-            "VALIDATION_EXPERIMENT",
-            "PORTFOLIO_DECISION",
-            "CAPABILITY_GAP",
-            "MISSING_DATA",
-            "APPROVAL_POLICY",
-            "CASH_PROFIT_GUARDRAIL"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-execution.ts"
-        },
-        {
-          "typeName": "ExecutionTaskType",
-          "values": [
-            "COLLECT_ELIGIBILITY_DATA",
-            "COLLECT_DOCUMENTS",
-            "COLLECT_COST_DATA",
-            "COLLECT_CAPACITY_DATA",
-            "PREPARE_BID_DRAFT",
-            "PREPARE_PROOF_PACK",
-            "CONTACT_LEADS_MANUALLY",
-            "RECORD_CUSTOMER_RESPONSES",
-            "RECORD_COST_EVIDENCE",
-            "RECORD_VALIDATION_RESULT",
-            "OWNER_APPROVAL_REVIEW",
-            "MANAGER_REVIEW",
-            "STAFF_DATA_COLLECTION",
-            "EXTERNAL_ADVISOR_REVIEW"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-execution.ts"
-        },
-        {
-          "typeName": "ExecutionTaskStatus",
-          "values": [
-            "PROPOSED",
-            "ASSIGNED",
-            "IN_PROGRESS",
-            "BLOCKED",
-            "COMPLETED",
-            "CANCELLED",
-            "REJECTED"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-execution.ts"
-        },
-        {
-          "typeName": "EligibilityStatus",
-          "values": [
-            "ELIGIBLE",
-            "NOT_ELIGIBLE",
-            "UNKNOWN",
-            "NEEDS_DATA"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-operating-layer.ts"
-        },
-        {
-          "typeName": "ChecklistType",
-          "values": [
-            "B2B_OPPORTUNITY_PREP",
-            "TENDER_BID_PREP",
-            "GRANT_SCHEME_PREP",
-            "PRICING_TEST_PREP",
-            "CUSTOMER_SEGMENT_PREP",
-            "PARTNERSHIP_PREP",
-            "DATA_COLLECTION_PREP"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-operating-layer.ts"
-        },
-        {
-          "typeName": "ExperimentType",
-          "values": [
-            "CUSTOMER_INTEREST_TEST",
-            "B2B_OUTREACH_TEST",
-            "PRICING_TEST",
-            "LANDING_OR_FORM_TEST",
-            "WHATSAPP_OR_CALL_SCRIPT_TEST",
-            "MANUAL_SURVEY",
-            "SMALL_BATCH_TRIAL",
-            "PARTNERSHIP_TEST",
-            "DATA_COLLECTION_ONLY"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-validation-experiment-engine.ts"
-        },
-        {
-          "typeName": "ValidationStatus",
-          "values": [
-            "NOT_STARTED",
-            "RUNNING",
-            "PASSED",
-            "FAILED",
-            "INCONCLUSIVE",
-            "ABORTED"
-          ],
-          "sourceFile": "src/domain/owner-mode/opportunity-validation-experiment-engine.ts"
-        }
-      ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
-      "ownerUiLocation": [
-        "/owner/cockpit"
-      ]
-    },
-    {
-      "family": "goal_related",
-      "source": [
-        "src/domain/owner-mode/objective-arbitration.ts",
-        "src/domain/owner-mode/objective-portfolio.ts"
-      ],
-      "states": [
-        {
-          "typeName": "ObjectiveType",
-          "values": [
-            "REVENUE",
-            "COST_REDUCTION",
-            "QUALITY",
-            "COMPLIANCE",
-            "GROWTH",
-            "RESILIENCE",
-            "STRATEGIC"
-          ],
-          "sourceFile": "src/domain/owner-mode/objective-arbitration.ts"
-        },
-        {
-          "typeName": "ObjectiveStatus",
-          "values": [
-            "ACTIVE",
-            "PAUSED",
-            "COMPLETED",
-            "ABANDONED"
-          ],
-          "sourceFile": "src/domain/owner-mode/objective-arbitration.ts"
-        },
-        {
-          "typeName": "ObjectiveHealthStatus",
-          "values": [
-            "ON_TRACK",
-            "AT_RISK",
-            "BLOCKED",
-            "CRITICAL",
-            "COMPLETED",
-            "INACTIVE"
-          ],
-          "sourceFile": "src/domain/owner-mode/objective-portfolio.ts"
-        }
-      ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
-      "ownerUiLocation": [
-        "/owner/goals"
-      ]
-    },
-    {
       "family": "compliance_actions",
       "source": [
         "src/domain/domain-training/domains/risk-compliance.cases.ts",
@@ -9840,16 +10593,6 @@
         "src/services/owner-mode/compliance.service.ts"
       ],
       "states": [
-        {
-          "typeName": "ComplianceClassification",
-          "values": [
-            "informational",
-            "caution",
-            "professional_review_required",
-            "blocked_until_review"
-          ],
-          "sourceFile": "src/domain/owner-mode/compliance-boundary.ts"
-        },
         {
           "typeName": "ComplianceStatus",
           "values": [
@@ -9882,53 +10625,32 @@
         "/owner/compliance",
         "/owner/compliance/[id]"
       ]
-    },
+    }
+  ],
+  "preExistingCorrectnessFindings": [
     {
-      "family": "vendor_actions",
-      "source": [
-        "src/domain/owner-budget/vendor-control.ts",
-        "src/domain/owner-mode/vendor-assess.validation.ts",
-        "src/domain/owner-mode/vendor-risk-boundary.ts",
-        "src/domain/remote-operations/vendor-access.ts",
-        "src/domain/scenarios/customer-vendor-market-pack.ts",
-        "src/domain/scenarios/customer-vendor-market-sources.ts",
-        "src/services/owner-budget/vendor.service.ts"
+      "finding": "PRE_EXISTING_CORRECTNESS_FINDING",
+      "page": "/owner/growth-pricing",
+      "calledApis": [
+        "PATCH /api/growth/pricing-tiers/:param/approve",
+        "POST /api/growth/pricing-tiers/:param/supersede",
+        "GET /api/growth/pricing-tiers/analysis",
+        "POST /api/growth/pricing-tiers"
       ],
-      "states": [
-        {
-          "typeName": "VendorRiskClassification",
-          "values": [
-            "informational",
-            "review_advised",
-            "high_concentration_risk",
-            "blocked_pending_review"
-          ],
-          "sourceFile": "src/domain/owner-mode/vendor-risk-boundary.ts"
-        },
-        {
-          "typeName": "AccessCodeStatus",
-          "values": [
-            "ACCESS_CODE_VIEWED",
-            "ACCESS_CODE_REVOKED"
-          ],
-          "sourceFile": "src/domain/remote-operations/vendor-access.ts"
-        },
-        {
-          "typeName": "TaskAccessState",
-          "values": [
-            "ACTIVE",
-            "COMPLETED_VERIFIED",
-            "CANCELLED",
-            "REASSIGNED",
-            "EXPIRED"
-          ],
-          "sourceFile": "src/domain/remote-operations/vendor-access.ts"
-        }
+      "apiCapabilities": [
+        "ENGAGEMENT_VIEW",
+        "ENGAGEMENT_UPDATE"
       ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
-      "ownerUiLocation": [
-        "/owner/vendor"
-      ]
+      "reachabilityEvidence": {
+        "navigationState": "NOT_IN_SIDEBAR",
+        "deepLinkedFrom": [
+          "src/app/(authenticated)/owner/home/page.tsx",
+          "src/app/(authenticated)/owner/page.tsx"
+        ]
+      },
+      "verificationStatus": "SOURCE_PROVEN — capabilities extracted directly from the called routes' own requireCapabilities() declarations in src/app/api/growth/pricing-tiers*/route.ts. Not independently re-verified against a live 403 response in this generator run (no production access from this environment).",
+      "ownerRelevance": "Per sidebar-nav.tsx's own documented capability model (see its file-level comment on OWNER_SCOPED_CAPABILITIES), ENGAGEMENT_VIEW/ENGAGEMENT_UPDATE are consulting-engagement capabilities, not part of the capability set a self-serve beta owner's role resolves to. If that model holds, this page's pricing-tier data would not load for a real self-serve owner.",
+      "disposition": "OUT_OF_SCOPE_FOR_UX-00A.2_AND_UX-00B — recorded only, not fixed, per explicit instruction. Must not block preservation-CI work once the baseline itself is accurate."
     }
   ],
   "domainPackages": [
