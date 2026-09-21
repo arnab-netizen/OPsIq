@@ -86,6 +86,7 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import { StartHereContinuationCard } from "@/components/owner/StartHereContinuationCard";
+import { OwnerAssessmentSummary } from "@/components/owner/OwnerAssessmentSummary";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
@@ -95,6 +96,9 @@ import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-f
 import type { DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
+import { reconcileOwnerAssessment } from "@/domain/owner-guidance/owner-assessment-reconciliation";
+import { composeOwnerAssessment, type OwnerAssessmentNarrative } from "@/domain/owner-guidance/owner-assessment-composer";
+import type { OwnerNowView } from "@/domain/owner-guidance/guidance-orchestrator";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -194,6 +198,12 @@ export default function OwnerCockpitPage() {
   const [executionLifecycle, setExecutionLifecycle] = useState<OwnerExecutionLifecycleView | null>(null);
   const [businessOperatingSystem, setBusinessOperatingSystem] = useState<BusinessOperatingSystemView | null>(null);
   const [financeTopPriority, setFinanceTopPriority] = useState<CockpitFinancePriority | null>(null);
+  // UX-03: the canonical owner-facing assessment (OwnerNowView -> reconcileOwnerAssessment ->
+  // composeOwnerAssessment). Cleared at the start of every load() (below) so a business switch
+  // never leaves the previous business's assessment visible while the new one is loading, and so
+  // an error never renders alongside a stale assessment -- see load()'s own doc comment for the
+  // generation-guard mechanism this participates in.
+  const [assessmentNarrative, setAssessmentNarrative] = useState<OwnerAssessmentNarrative | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -234,6 +244,9 @@ export default function OwnerCockpitPage() {
     const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
+    // UX-03: never let the previous business's assessment linger while this new load is in
+    // flight or if it fails -- it is only re-set below, inside the generation guard, on success.
+    setAssessmentNarrative(null);
     try {
       // restrictExecutionToBusiness=true (only ever sent here — see now-view/route.ts's doc comment)
       // closes the cockpit business-scoping bug where switching the active business changed the
@@ -270,6 +283,35 @@ export default function OwnerCockpitPage() {
       setExecutionLifecycle((data.executionLifecycle as OwnerExecutionLifecycleView) ?? null);
       setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
       setFinanceTopPriority((data.financeTopPriority as CockpitFinancePriority) ?? null);
+      // UX-03: build the canonical owner-facing assessment from THIS response's own OwnerNowView
+      // (`data.view`) and condition detail (`data.derivedBusinessCondition`) -- never from
+      // `activeBusinessId` (the server response's own businessId is the canonical source; see
+      // reconcileOwnerAssessment's doc comment) and never re-derived from any other signal. Pure
+      // mapping only: reconcileOwnerAssessment -> composeOwnerAssessment, no logic added here.
+      const view = data.view as OwnerNowView | undefined;
+      if (view) {
+        const canonicalAssessment = reconcileOwnerAssessment({
+          businessId: view.businessId,
+          classification: view.classification,
+          confidence: view.confidence,
+          confidenceCapped: view.confidenceCapped,
+          missingDataRequests: view.missingDataRequests,
+          businessHealth: view.businessHealth,
+          cashDangerStatus: view.cashDangerStatus,
+          profitLeakStatus: view.profitLeakStatus,
+          staffOverloadStatus: view.staffOverloadStatus,
+          ownerOverloadStatus: view.ownerOverloadStatus,
+          qualityFailureStatus: view.qualityFailureStatus,
+          customerRetentionStatus: view.customerRetentionStatus,
+          supplierInventoryStatus: view.supplierInventoryStatus,
+          capacityStatus: view.capacityStatus,
+          growthReadinessStatus: view.growthReadinessStatus,
+          topOwnerActions: view.topOwnerActions,
+          urgentRisks: view.urgentRisks,
+          conditionDimensions: (data.derivedBusinessCondition as DerivedBusinessConditionSignals) ?? null,
+        });
+        setAssessmentNarrative(composeOwnerAssessment(canonicalAssessment));
+      }
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
       // Read-only outside signals (best-effort; a failure here must not break the cockpit).
@@ -460,6 +502,7 @@ export default function OwnerCockpitPage() {
         }
       />
       {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
+      {assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
       <StartHereContinuationCard businessId={activeBusinessId} />
       {loading ? (
         <CardDashboardSkeleton label="Loading your business" sections={2} />
