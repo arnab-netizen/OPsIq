@@ -360,7 +360,7 @@ export default function OwnerFinancePage() {
       if (v && typeof v === "string" && v.trim()) body[f.name] = parseFloat(v);
     }
     try {
-      await api(`/api/owner/finance/businesses/${targetBusinessId}/snapshots`, {
+      await api(`/api/owner/finance/businesses/${selected}/snapshots`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -401,7 +401,7 @@ export default function OwnerFinancePage() {
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/owner/finance/businesses/${targetBusinessId}/diagnoses`, {
+      await api(`/api/owner/finance/businesses/${selected}/diagnoses`, {
         method: "POST",
         body: JSON.stringify({ snapshotId }),
       });
