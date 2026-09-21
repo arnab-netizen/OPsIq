@@ -7,6 +7,7 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { useActiveBusiness } from "@/context/active-business-context";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -46,6 +47,9 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   in_progress: "In progress",
   completed: "Completed",
   blocked: "Blocked",
+  // UX-05B Candidate 3: RECOVERY_ACTION_STATUSES (src/domain/founder-recovery/action-status.ts),
+  // reused by sopActionUpdateSchema, includes "cancelled" -- this map was missing it.
+  cancelled: "Cancelled",
 };
 
 const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -112,7 +116,8 @@ export default function OwnerExecutionPage() {
       // of the business selected elsewhere in the app).
       if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      // UX-05B Candidate 2 (display-text only -- see Finance/Sales/Operations for the same pattern).
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -150,7 +155,7 @@ export default function OwnerExecutionPage() {
       await refreshBusinesses();
       await load(created.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create business");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -181,7 +186,7 @@ export default function OwnerExecutionPage() {
       setShowSnapshotForm(false);
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save snapshot");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save snapshot"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -198,7 +203,7 @@ export default function OwnerExecutionPage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to run diagnosis");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -220,7 +225,7 @@ export default function OwnerExecutionPage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update action");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -246,7 +251,7 @@ export default function OwnerExecutionPage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to verify");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
