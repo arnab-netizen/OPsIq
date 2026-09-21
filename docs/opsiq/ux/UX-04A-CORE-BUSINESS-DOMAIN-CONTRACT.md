@@ -318,7 +318,7 @@ as germane to state, by design, before UX-04A ever looked at them.
 
 - Money's snapshot-form grids use `grid-cols-1 sm:grid-cols-2` (responsive).
 - Sales's three form grids (`grid-cols-2`×2, `grid-cols-4`×1) and Operations' five form grids (`grid-cols-2`×4, `grid-cols-4`×1) carry **no responsive breakpoint modifier at all** — verified as classes; actual rendered breakage at 390px was not visually tested by any agent (UNKNOWN, marked explicitly by all three reports) and would require a real/known-person or at minimum a live browser check before this is treated as settled, per Section 19's evidence boundary.
-- All three domains use `flex flex-wrap` on their action-button rows, which is inherently mobile-safe regardless of the grid finding above.
+- All three action-button rows use `flex flex-wrap`, which reduces the risk of a single unbroken horizontal action row forcing page-level overflow. This is a positive implementation signal, not a proof of mobile usability — it does not establish that child elements avoid overflow from their own minimum widths, that the 390px/768px layout reads well, that touch targets land sensibly, that buttons stack in a sensible order, or that there is no clipping or other viewport-level interaction problem. Actual rendered mobile behavior remains UNKNOWN until browser/user testing, consistent with the rest of this section.
 
 ## O. Progressive-disclosure contract — CURRENT order vs. FUTURE first-read hierarchy (not adopted)
 
@@ -370,9 +370,13 @@ particular render position for that capability.
 
 ## P. Existing-feature preservation table
 
-Every item below is `MUST_PRESERVE`. This list is exhaustive per the three
-agents' full-file reads and their explicit "every action/mutation this
-page or its APIs expose" inventories.
+The items below form the preservation inventory derived from the three
+full page reads and the API/action inventories inspected during UX-04A.
+Every listed item is `MUST_PRESERVE`. The existing preservation verifier
+(`scripts/ux/verify-owner-feature-preservation.mjs`) remains the hard
+regression guard against unaccounted feature loss; this document does not
+claim that unresolved supporting-domain internals were exhaustively
+re-audited beyond the scope stated in Sections F-H/W.
 
 ### Money — MUST_PRESERVE
 
@@ -762,8 +766,10 @@ Explicitly NOT converted into implementation scope:
     identifies the Money/Operations error-collapses-into-empty defect as a
     defect to fix, not as acceptable current behavior.
 12. Did I invent success/verification? **No** — Section Q's candidates are
-    all either bug fixes (stale-response guard) or label-mapping fixes
-    (raw-enum leaks), never new verification/success claims.
+    a bug fix (stale-response guard), label-mapping fixes (raw-enum
+    leaks), and an error-governance parity fix (routing existing catch
+    blocks through an already-shipped classifier); none invents a new
+    verification/success claim.
 13. Did I broaden into Tasks/Execution? **No.**
 14. Did I broaden into Evidence & Trust? **No.**
 15. Did I broaden into specialist/Preview features? **No** — Recovery,
@@ -772,26 +778,36 @@ Explicitly NOT converted into implementation scope:
 16. Did I redesign navigation? **No** — `sidebar-nav.tsx` was read
     read-only, for evidence, and was not modified.
 17. Did I treat current code as a substitute for actual user evidence?
-    **No** — Section 19's boundary is honored explicitly in Sections Q
-    item 4, R, and V item 8: every layout/hierarchy/copy-tone change is
-    marked `USER-EVIDENCE NEEDED: YES` or left as a residual unknown rather
-    than decided from code alone.
+    **No** — the real-user-evidence boundary is honored explicitly in
+    Sections Q item 5, R, and V item 8: every layout/hierarchy/copy-tone
+    change is marked `USER-EVIDENCE NEEDED: YES` or left as a residual
+    unknown rather than decided from code alone. (Section Q item 4,
+    operator-safe error governance parity, is itself marked
+    `USER-EVIDENCE NEEDED: NO` because it reuses an existing, already-shipped
+    mechanism — the correctness argument does not depend on visual design;
+    it is not one of the items this boundary is gating.)
 18. Did I optimize aesthetics before truthfulness/comprehension? **No** —
-    the only concrete UX-04B candidates proposed (Section Q) are
-    correctness/truthfulness fixes (stale-response race, raw-enum leaks),
-    not visual polish.
+    the concrete UX-04B candidates proposed in Section Q are all
+    correctness/truthfulness/owner-safety fixes: stale-response protection
+    (item 1), owner-language label fixes (items 2-3), and operator-safe
+    error governance parity (item 4) — none is visual polish.
 19. Did I create generic AI-dashboard styling? **No** — no styling was
     created; this phase produced one markdown document.
-20. Could a low-digital-literacy owner understand the proposed first read
-    without assistance? Section O's candidate FIRST tier (state label,
-    three scores, confidence + missing-data banner, recommended action) is
-    already what each page renders first today, in owner-safe language for
-    9 of the 10 checked leak points (Section M) — the one confirmed
-    remaining leak (Operations' `snap.band` toast) is exactly why Section Q
-    proposes fixing it. This document does not yet answer whether the
-    proposed FIRST tier is comprehensible without assistance for a real
-    low-digital-literacy owner — that is Section 19 evidence, not something
-    code inspection can answer, and is not claimed as answered here.
+20. Could a low-digital-literacy owner understand the current render order
+    without assistance? This document does not claim to have answered
+    that. Section O's CURRENT RENDER ORDER records, factually, that each
+    domain page shows its state label, three 0-100 scores, confidence, and
+    recommended action early in its render order today. That is a
+    description of what exists, not a comprehension claim: UX-04A does
+    **not** assert this order is comprehensible enough for a real
+    low-digital-literacy owner, and does not authorize it, or any
+    alternative, as the FUTURE FIRST-READ HIERARCHY — that remains
+    `USER-EVIDENCE NEEDED` per Section O's own FUTURE FIRST-READ HIERARCHY
+    subsection. Section P's `MUST_PRESERVE` status for the 0-100 score
+    triad is a preservation requirement, not a `MUST_SHOW_FIRST` claim —
+    the two are explicitly distinct per Section O. No leak count is
+    restated here; the owner-language leaks actually found are enumerated
+    in Section M and are not re-tallied against a comprehension score.
 
 ## Revision record (PR #512 amendment)
 
