@@ -193,6 +193,12 @@ export default function OwnerFinancePage() {
   // button instead of at the top of the page, far from where the owner is looking.
   const [snapshotError, setSnapshotError] = useState<{ message: string; retryable: boolean } | null>(null);
   const draftDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // UX-04B: stale business-switch response guard, mirroring the loadGenerationRef pattern already
+  // shipped for Home (owner/cockpit/page.tsx, UX-03). Without this, a slow response for a
+  // previously-active business arriving after a switch could silently overwrite the newer
+  // business's state and re-anchor the shared activeBusinessId back to the stale one -- see
+  // UX-04A Section J item 1.
+  const loadGenerationRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -216,11 +222,16 @@ export default function OwnerFinancePage() {
   }
 
   const load = useCallback(async (businessId?: string | null) => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
     try {
       const qs = businessId ? `?businessId=${businessId}` : "";
       const data = await api(`/api/owner/finance/dashboard${qs}`);
+      // A newer load() has since started (the active business changed again while this request
+      // was in flight) -- this response is stale and must never commit. See the loadGenerationRef
+      // declaration above.
+      if (loadGenerationRef.current !== generation) return;
       setDashboard(data);
       setSelected(data.selectedBusinessId);
       // Keep the shared active-business context in sync with whichever business this page
@@ -229,13 +240,19 @@ export default function OwnerFinancePage() {
       // business rather than each independently re-deriving their own default.
       if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
+      // A stale failure (e.g. a slow request for a business the owner already switched away
+      // from) must never clobber an already-successful, current render with an error screen.
+      if (loadGenerationRef.current !== generation) return;
       // Governed classification, never the raw fetch/exception text -- see the P0-E pattern
       // already used by addSnapshot() below and by the cockpit page's load handler. A thrown
       // Error here can carry a server-side NotFoundError's raw `"<EntityType> not found: <uuid>"`
       // message (see infra/errors.ts), which must never reach the owner verbatim.
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
-      setLoading(false);
+      // A stale request's completion must never toggle the loading flag for a request that's no
+      // longer current -- it could otherwise dismiss the skeleton for a newer request still in
+      // flight.
+      if (loadGenerationRef.current === generation) setLoading(false);
     }
   }, [setActiveBusinessId]);
 

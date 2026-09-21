@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
 import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
@@ -53,6 +54,19 @@ const STATE_LABEL: Record<string, string> = {
   OVERLOADED: "Overloaded",
 };
 
+// UX-04B: OwnerLoadBand (src/domain/execution/owner-workload.ts) previously rendered verbatim in
+// the workload-save toast (e.g. "BOTTLENECK_RISK") -- same leak class STATE_LABEL above exists to
+// close for operationsState, just never applied to this toast. See UX-04A Section M / Section Q
+// item 2. No raw-token fallback: an unmapped future value renders the calm word "unknown" instead
+// of leaking an internal literal.
+const LOAD_BAND_LABEL: Record<string, string> = {
+  UNDERUSED: "Underused",
+  SUSTAINABLE: "Sustainable",
+  HIGH: "High",
+  BOTTLENECK_RISK: "Bottleneck risk",
+  UNSUSTAINABLE: "Unsustainable",
+};
+
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
     ...init,
@@ -93,22 +107,37 @@ export default function OwnerOperationsPage() {
   const [showWorkloadForm, setShowWorkloadForm] = useState(false);
   const [capacityResult, setCapacityResult] = useState<string | null>(null);
   const [workloadResult, setWorkloadResult] = useState<string | null>(null);
+  // UX-04B: stale business-switch response guard, mirroring the loadGenerationRef pattern already
+  // shipped for Home (owner/cockpit/page.tsx, UX-03) and Money (owner/finance/page.tsx). Without
+  // this, a slow response for a previously-active business arriving after a switch could silently
+  // overwrite the newer business's state and re-anchor the shared activeBusinessId back to the
+  // stale one -- see UX-04A Section J item 1.
+  const loadGenerationRef = useRef(0);
 
   const load = useCallback(async (businessId?: string | null) => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
     try {
       const qs = businessId ? `?businessId=${businessId}` : "";
       const data = await api(`/api/owner/operations/dashboard${qs}`);
+      // A newer load() has since started -- this response is stale and must never commit.
+      if (loadGenerationRef.current !== generation) return;
       setDashboard(data);
       setSelected(data.selectedBusinessId);
       // Keep the shared active-business context in sync — see finance/page.tsx for the root
       // cause this closes (each owner page independently defaulting to a different business).
       if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      // A stale failure must never clobber an already-successful, current render with an error.
+      if (loadGenerationRef.current !== generation) return;
+      // UX-04B: governed classification, never the raw fetch/exception text -- mirrors Money's
+      // already-shipped pattern (see UX-04A Section Q item 4).
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
-      setLoading(false);
+      // A stale request's completion must never toggle the loading flag for a request that's no
+      // longer current.
+      if (loadGenerationRef.current === generation) setLoading(false);
     }
   }, [setActiveBusinessId]);
 
@@ -144,7 +173,7 @@ export default function OwnerOperationsPage() {
       await refreshBusinesses();
       await load(created.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create business");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -175,7 +204,7 @@ export default function OwnerOperationsPage() {
       setShowSnapshotForm(false);
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save snapshot");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save snapshot"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -204,7 +233,7 @@ export default function OwnerOperationsPage() {
       );
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save capacity");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save capacity"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -227,10 +256,12 @@ export default function OwnerOperationsPage() {
         }),
       });
       setShowWorkloadForm(false);
-      setWorkloadResult(`Owner workload saved — daily load ${Math.round(snap.dailyLoadPct ?? 0)}% (band ${snap.band ?? "?"}).`);
+      // UX-04B: LOAD_BAND_LABEL translates the raw OwnerLoadBand enum instead of rendering it
+      // verbatim (e.g. "BOTTLENECK_RISK") -- see UX-04A Section M / Section Q item 2.
+      setWorkloadResult(`Owner workload saved — daily load ${Math.round(snap.dailyLoadPct ?? 0)}% (band ${LOAD_BAND_LABEL[snap.band] ?? "unknown"}).`);
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save workload");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save workload"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -247,7 +278,7 @@ export default function OwnerOperationsPage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to run diagnosis");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -269,7 +300,7 @@ export default function OwnerOperationsPage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update action");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -295,7 +326,7 @@ export default function OwnerOperationsPage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to verify");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
