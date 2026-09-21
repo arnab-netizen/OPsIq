@@ -1168,9 +1168,25 @@ in the course of this check.
 ## AC. Evidence-backed UX-05B candidates
 
 Per Section 32's rule, only candidates with `USER-EVIDENCE NEEDED: NO` may enter the concrete future
-manifest (Section AD). Each candidate below follows the required template. **Rebuilt in Revision 1**
-from 4 candidates to 9, per the hostile post-PR audit's re-evaluation instruction — every candidate
-number below is stable across this revision; none of the original 1–4 were dropped, and 5–9 are new.
+manifest (Section AD). Each candidate below follows the required template, plus a `SCOPE CLASS`
+field **added in Revision 2** distinguishing three separately-authorized tiers of future work:
+
+- **PRESENTATION** — a label/text/badge/variant-only change with no control-flow, navigation,
+  retry, state-handling, or recovery-behavior change. Eligible for a cosmetic-only documentation/
+  implementation pass on its own.
+- **FUNCTIONAL CORRECTNESS** — a behavioral fix (a race guard, a request-generation ref) that
+  changes what the page *does*, not merely what it displays. Requires its own, separately-authorized
+  implementation phase; not eligible to ride inside a cosmetic-only pass.
+- **WORKFLOW/NAVIGATION REPAIR** — a fix to a broken user-facing flow (not a broken display value)
+  that touches what action the owner can take, not just how a value is labeled. Requires separate
+  authorization, and — for Candidate 9 specifically — further product specification before any
+  implementation shape can be frozen at all (see that candidate below).
+
+**Rebuilt in Revision 1** from 4 candidates to 9, per the hostile post-PR audit's re-evaluation
+instruction — every candidate number below is stable across both revisions; none of the original
+1–4 were dropped, and 5–9 were added in Revision 1. **Revision 2** adds the `SCOPE CLASS` field
+above and narrows Candidate 9 from "basic shape frozen" to "defect proven, no implementation shape
+frozen" — see that candidate for why.
 
 **Candidate 1 — stale-response and stale-mutation-intent race guards on `/owner/execution`**
 - CURRENT: no `loadGenerationRef`, no `activeBusinessIdRef`, no create-business intent re-check (Section O.A/B/C).
@@ -1180,6 +1196,10 @@ number below is stable across this revision; none of the original 1–4 were dro
 - FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/execution/page.tsx`.
 - FEATURES PRESERVED: all — the fix is additive guard logic only, no field/label/order change.
 - DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (except that a stale race no longer visibly corrupts state — a correctness improvement, not a new behavior). USER-EVIDENCE NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): FUNCTIONAL CORRECTNESS.** This changes control flow and
+  state-commit behavior (which response is allowed to win), not merely a displayed value — it
+  requires its own, separately-authorized implementation phase and is **not** eligible to ride
+  inside a cosmetic-only (label/text/badge) pass.
 - TESTS REQUIRED: a new `owner-execution-business-switch-race.test.tsx`, mirroring the 5 existing scenarios plus the 2 stale-mutation-intent scenarios UX-04B's amendment added, per the established template.
 
 **Candidate 2 — operator-safe error governance on `/owner/execution`**
@@ -1189,6 +1209,15 @@ number below is stable across this revision; none of the original 1–4 were dro
 - SOURCE OF TRUTH: `src/lib/operator-error-governance.ts` (already exists, already imported by the other three pages).
 - FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/execution/page.tsx`.
 - FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (error text becomes governed/calmer, not raw) but this is the exact established precedent, not a new design decision. USER-EVIDENCE NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): COSMETIC-ELIGIBLE, CONDITIONAL.** `classifyOperatorError`
+  only maps an already-caught error to a display string — it does not add a retry, change which
+  branch runs, alter navigation, or change what state is set. This candidate may enter a
+  cosmetic-only pass **only if** its implementation is confined to substituting the *displayed
+  error text* (`setError(classifyOperatorError(e, ...).operatorMessage)` in place of
+  `setError(e.message)`) with **no** accompanying change to control flow, retries, navigation,
+  state handling, or recovery behavior on this page. If any future implementation of this
+  candidate touches more than the displayed string, it no longer qualifies as cosmetic and needs
+  the same separate authorization as Candidates 1/5.
 - TESTS REQUIRED: a new `execution-page-owner-safe-errors.test.tsx`, mirroring the three existing `{finance,sales,operations}-page-owner-safe-errors.test.tsx` files.
 
 **Candidate 3 — `cancelled` label gap on `/owner/execution`'s `ACTION_STATUS_LABEL`**
@@ -1198,6 +1227,8 @@ number below is stable across this revision; none of the original 1–4 were dro
 - SOURCE OF TRUTH: `src/domain/founder-recovery/action-status.ts`'s `RECOVERY_ACTION_STATUSES`.
 - FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/execution/page.tsx`.
 - FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (until/unless a cancelled action ever reaches this page — currently unreachable via this page's own UI). USER-EVIDENCE NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): PRESENTATION.** A pure label-map entry addition; no control
+  flow, navigation, or state-handling change. Eligible for a cosmetic-only pass.
 - TESTS REQUIRED: a real-component regression test asserting the label, added to the same new race-test file as Candidate 1 (mirroring UX-04B's own pattern of bundling the label-parity test into the race-test file).
 
 **Candidate 4 — `/owner/tasks` list-page "Done" badge collapses four materially different terminal
@@ -1236,6 +1267,9 @@ outcomes into identical rendered text — CORRECTED in Revision 1**
   fix against the design direction's own already-adopted color-and-text truthfulness rule (Section Z),
   reusing terminology this same codebase already ships elsewhere, not a new hierarchy/IA/wording
   decision.
+- **SCOPE CLASS (added in Revision 2): PRESENTATION.** A badge-variant-and-text substitution using
+  terminology and color mappings this codebase already ships elsewhere; no control flow, filtering,
+  pagination, or navigation change. Eligible for a cosmetic-only pass.
 - TESTS REQUIRED: a component test asserting that rendered row text distinguishes, at minimum, all
   four of `APPROVED_COMPLETE`/`REJECTED_INCOMPLETE`/`CANCELLED`/`EXPIRED` in **rendered text**, not
   only in badge variant/color — added to the same new file as Candidate 6 (Section AD).
@@ -1257,6 +1291,10 @@ outcomes into identical rendered text — CORRECTED in Revision 1**
   behavior (Section P) are untouched; this is an additive guard only.
 - DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (except that a rare race no longer visibly
   corrupts the list — a correctness improvement, not new behavior). USER-EVIDENCE NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): FUNCTIONAL CORRECTNESS.** Same class as Candidate 1 — a
+  request-generation guard changes which async response is allowed to commit state; it is a
+  behavioral fix, not a display change, and requires its own separately-authorized implementation
+  phase rather than riding inside a cosmetic-only pass.
 - TESTS REQUIRED: a new test file (or an extension of Candidate 4's) covering, at minimum: (1) filter
   A request starts, filter B request starts, B resolves first, A resolves last — B must remain
   displayed; (2) an older page/offset request resolving after a newer one must not un-advance the
@@ -1278,6 +1316,8 @@ outcomes into identical rendered text — CORRECTED in Revision 1**
 - FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (until/unless a
   `ProcessExecutionTask` ever reaches `CANCELLED`, which no current writer produces). USER-EVIDENCE
   NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): PRESENTATION.** A pure label-map entry addition. Eligible
+  for a cosmetic-only pass.
 - TESTS REQUIRED: a label-parity assertion added to the same test file as Candidate 4.
 
 **Candidate 7 — `/owner/tasks/[taskId]` raw assignee UUID leak**
@@ -1293,6 +1333,9 @@ outcomes into identical rendered text — CORRECTED in Revision 1**
 - FEATURES PRESERVED: all — the underlying assignment data is untouched; only its text rendering changes.
 - DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (text only, matching an existing in-app
   pattern). USER-EVIDENCE NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): PRESENTATION.** A fallback-text substitution mirroring an
+  existing in-codebase pattern; no control flow, authorization, or data change. Eligible for a
+  cosmetic-only pass.
 - TESTS REQUIRED: a component test asserting no raw UUID renders when `assignedRole` is null and
   `assignedUserId` is set.
 
@@ -1308,44 +1351,78 @@ outcomes into identical rendered text — CORRECTED in Revision 1**
 - FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx`.
 - FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (text only).
   USER-EVIDENCE NEEDED: NO.
+- **SCOPE CLASS (added in Revision 2): PRESENTATION.** A 1:1 humanizing map over an already-closed
+  enum; no control flow or authorization change. Eligible for a cosmetic-only pass.
 - TESTS REQUIRED: a component test asserting the humanized label renders for each of the 4 roles and
   the raw token never does.
 
-**Candidate 9 — repair the dead "Review & Approve" completion link on `/owner/tasks/[taskId]`**
+**Candidate 9 — repair the dead "Review & Approve" completion link on `/owner/tasks/[taskId]` —
+NARROWED in Revision 2: defect proven, no implementation shape frozen**
 - CURRENT: a `Link` to a nonexistent `/owner/tasks/[taskId]/complete` route (Section L/P) — a
-  confirmed, objectively broken navigation defect, not a usability question.
+  confirmed, objectively broken navigation defect, not a usability question. **This defect finding
+  itself remains fully source-proven and unchanged by this revision.**
 - PROBLEM: an owner with a task in `COMPLETED_PENDING_REVIEW` cannot complete the review-and-approve
   step from the one page built for it.
-- PROPOSED CHANGE (the *whether-it's-safe-to-freeze* question, per the mission's own instruction):
-  the existing backend (`POST /api/owner/tasks/complete`) and the task-detail page's own existing
-  state (`actionLoading`, `actionError`, `actionSuccess`, `apiPost`, `task.id`) are sufficient to
-  replace the dead navigation with an **in-place** action — calling `apiPost("/api/owner/tasks/
-  complete", { taskId: task.id })` and reusing the page's existing success/error rendering — without
-  inventing a new backend endpoint or a second completion lifecycle. **This much is safe to freeze.**
-  What is **not** safe to freeze from source alone: whether the task-detail page's in-place action
-  should expose the `ownerOverride` checkbox the generic `/owner/page.tsx` surface currently exposes.
-  Source proves the backend accepts and gates on it (Section G, L) and that bypassing the proof gate
-  is an audited, owner-only, emergency-only action (`OWNER_TASK_OVERRIDE_USED`) — but source alone
-  does not establish whether exposing that override *on this specific page, at this specific moment
-  in the review flow* is the intended product behavior, or whether it should instead stay confined
-  to the existing generic surface. Per the mission's explicit instruction, this audit does not invent
-  that product decision.
-- SOURCE OF TRUTH: `src/app/api/owner/tasks/complete/route.ts` (unchanged); `src/app/(authenticated)/
-  owner/page.tsx`'s `OwnerActions` component (the existing, working caller, as a reference for the
-  request shape — not to be duplicated as a second endpoint).
-- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` (basic,
-  non-override completion action only — FROZEN); whether the same file also gains an
-  `ownerOverride` control is **NOT YET SAFE TO FREEZE**.
-- FEATURES PRESERVED: all — no new endpoint, no new lifecycle; the existing `completeTask` gating
-  (proof clearance, freshness window, SoD) is reused exactly as-is.
-- DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (a dead link becomes a working action).
-  USER-EVIDENCE NEEDED: NO for the basic repair (a broken link being fixed needs no usability study);
-  the override-exposure question is a **product-scope** question, not a usability-evidence question,
-  and is left `NOT YET SAFE TO FREEZE` rather than mislabeled as user-evidence-gated.
-- TESTS REQUIRED: a component test driving the in-place completion action through the existing
-  `POST /api/owner/tasks/complete` mock, asserting success/blocked/error rendering via the page's
-  existing state, and — separately — a regression assertion that no dead-link `Link` to
-  `/complete` remains.
+- **SCOPE CLASS (added in Revision 2): WORKFLOW/NAVIGATION REPAIR.** This is not a label or a
+  display value — it is what *action* the owner can take at the one moment a task is awaiting their
+  review-and-approve decision. It requires separate authorization from any cosmetic (Candidates
+  3/4/6/7/8) or conditionally-cosmetic (Candidate 2) pass, and — unlike Candidates 1/5's
+  functional-correctness fixes, whose *shape* is already fully specified by an existing proven
+  pattern — this candidate's implementation shape is not yet specified at all.
+- PROPOSED CHANGE: **withdrawn in Revision 2.** The first draft proposed replacing the dead link
+  with an immediate `apiPost("/api/owner/tasks/complete", { taskId: task.id })` call and called that
+  "safe to freeze." On hostile re-audit that proposal is withdrawn, not merely re-labeled: an
+  immediate completion POST silently skips the *reviewing* half of "Review & Approve" — the button's
+  own name promises a review step, and this page's proof panel (Section L) already displays proof
+  status/type/risk-level content that an "approve" action should let the owner look at before
+  approving, not bypass. Before any implementation shape can be frozen, the following must be
+  specified — none of which source alone resolves:
+  1. **The review experience** — does approving require the owner to have the proof panel's
+     content in view first (it already renders on this same page, above where the button lives —
+     Section L), or is a confirmation step needed?
+  2. **The explicit approval action** — is a single button click sufficient given the proof panel
+     is already visible on the same page, or does "Review & Approve" imply a distinct confirm
+     step (e.g. a dialog) beyond what "Accept" already does in the proof-review form immediately
+     above it (Section L)?
+  3. **Proof visibility at the moment of approval** — must the specific accepted proof be
+     re-displayed or re-confirmed as part of the approval action itself, given `COMPLETED_PENDING_REVIEW`
+     is reached only after proof review already happened (Section G's transition graph:
+     `PROOF_SUBMITTED → COMPLETED_PENDING_REVIEW` is a proof-review outcome, not the approval step
+     itself)?
+  4. **Existing server gates** — confirming (not changing) that `completeTask`'s proof-clearance,
+     freshness-window, and separation-of-duty gates (Section G) remain the sole enforcement point,
+     with any UI change being additive around them, never a bypass.
+  None of these four questions is a usability-evidence question in the Section 32 sense (they are
+  product/workflow-specification questions, answerable by a product decision or a design pass, not
+  necessarily a user study) — but source reading alone does not answer them, so no implementation
+  is frozen here.
+- SOURCE OF TRUTH: `src/app/api/owner/tasks/complete/route.ts` (the unchanged backend any eventual
+  fix must reuse, not duplicate); `src/app/(authenticated)/owner/page.tsx`'s `OwnerActions`
+  component (the existing, working caller, as a reference for the request shape only).
+- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` — **likely**, not
+  frozen; the specific change is not yet knowable until the four questions above are answered.
+- FEATURES PRESERVED: whatever the eventual fix is, it must reuse (not duplicate or bypass) the
+  existing `completeTask` gating (proof clearance, freshness window, SoD) — this constraint is fixed
+  even though the implementation is not.
+- DOMAIN SEMANTICS CHANGE: NO (constrained, not yet fully specified). OWNER-VISIBLE CHANGE: YES (a
+  dead link must become *some* working action). USER-EVIDENCE NEEDED: NO for the fact that a dead
+  link is a defect; the implementation itself is `NOT YET SAFE TO FREEZE` for the product-
+  specification reasons above, not for lack of usability evidence — these are two different kinds
+  of "not yet," and this document does not conflate them. **Owner-override exposure remains
+  excluded from consideration under this candidate, unconditionally, regardless of which
+  implementation is eventually chosen** — carried forward from Revision 1 and not reopened here.
+- TESTS REQUIRED: not specified — dependent on the eventual implementation shape. At minimum, any
+  future fix must include a regression assertion that no dead-link `Link` to `/complete` remains,
+  whatever form the working replacement takes.
+
+**Scope-class summary, added in Revision 2** (per-candidate detail above): `PRESENTATION`
+(cosmetic-eligible on its own) — Candidates 3, 4, 6, 7, 8. `COSMETIC-ELIGIBLE, CONDITIONAL` —
+Candidate 2, only if implemented as a display-text-only substitution. `FUNCTIONAL CORRECTNESS`
+(requires separate authorization, not cosmetic) — Candidates 1, 5. `WORKFLOW/NAVIGATION REPAIR`
+(requires separate authorization AND further product specification before any freeze) —
+Candidate 9. This split does not itself authorize implementing any of the presentation/cosmetic
+candidates now — Section AD's manifest remains a specification freeze, not an implementation
+go-ahead, and this revision implements nothing.
 
 **Explicitly disposed, not silently omitted, per the mission's instruction (item 14):**
 - **`/owner/execution` error-vs-empty simultaneous render (Section O.F)**: **PROVEN DEFECT —
@@ -1376,44 +1453,70 @@ outcomes into identical rendered text — CORRECTED in Revision 1**
 
 ## AD. Exact future file manifest, if safely knowable
 
-**UX-05B EXACT FILE MANIFEST: FROZEN, for the basic (non-override) shape of every accepted
-candidate** (Outcome 1) — **rebuilt in Revision 1** from 4 candidates/4 files to 8 candidates/4
-production files + 2 test files, after the hostile post-PR audit added Candidates 5–9 and corrected
-Candidate 4. Candidate 9's `ownerOverride`-exposure question remains explicitly unfrozen (see below)
-— every other accepted candidate (1–8) has its full implementation shape frozen here; no candidate
-in Section AC lacks its needed file/test below.
+**Corrected in Revision 2 — reconciled to the manifest's own actual list: 3 production files, 4
+test files.** The Revision 1 text of this section stated "4 production files + 2 test files," which
+did not match the 3 production + 4 test entries actually listed below — a bare arithmetic
+inconsistency, now fixed. This section also now states plainly which candidates are fully specified
+and which are not, and stops describing any filename as "exactly frozen" where it isn't.
 
-Production files:
-1. `src/app/(authenticated)/owner/execution/page.tsx` — Candidates 1, 2, 3 (race guards, error
-   governance, cancelled label — bundled, exactly as UX-04B bundled its own equivalent fixes into
-   one file per page).
-2. `src/app/(authenticated)/owner/tasks/page.tsx` — Candidates 4, 5, 6 (terminal-state badge
-   text+variant correction, delegated-list filter/pagination race guard, My Work `CANCELLED` label
-   — all three bundled into this one file, the same way Candidates 1–3 bundle into execution's).
-3. `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` — Candidates 7, 8, and the **basic,
-   non-override** shape of Candidate 9 (UUID-leak fix, actor-role humanization, and the dead-link
-   repair using the existing `POST /api/owner/tasks/complete` endpoint with no `ownerOverride`
-   control exposed on this page).
+**Specification status**: Candidates 1–8 are **fully specified** — each has a concrete proposed
+change, an exact production file, and either an exact or a to-be-named-but-fully-scoped test file
+(items 6 and 7 below have their *content* fully specified — which candidates/scenarios they must
+cover — but not a fixed filename; a filename is a naming choice, not an open product question, and
+is called out explicitly as such rather than folded into "frozen"). **Candidate 9 is only partially
+specified**: the defect (a dead link) and two hard constraints (existing server gates must be
+reused; owner-override exposure stays excluded) are fixed, but its implementation shape is not — see
+Section AC's Candidate 9 for the four open product/workflow questions blocking a freeze there.
 
-Test files (new, mirroring established templates exactly):
-4. `src/__tests__/components/owner-execution-business-switch-race.test.tsx` (new) — Candidates 1, 3.
-5. `src/__tests__/owner-execution/execution-page-owner-safe-errors.test.tsx` (new) — Candidate 2.
-6. A new or extended test file for `src/app/(authenticated)/owner/tasks/page.tsx` covering
-   Candidates 4, 5, 6 together (terminal-state text/variant assertions, the three
-   stale-filter/pagination-request scenarios listed under Candidate 5, and the My Work label-parity
-   assertion) — exact filename not frozen (a small naming choice, not a product/implementation
-   question); a plausible name is `src/__tests__/components/owner-tasks-list-correctness.test.tsx`.
-7. A new or extended test file for `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` covering
-   Candidates 7, 8, and the basic Candidate 9 repair (UUID/role-label assertions, plus the in-place
-   completion action's success/blocked/error rendering and the dead-link regression check) — exact
-   filename not frozen; a plausible name is
-   `src/__tests__/components/owner-task-detail-correctness.test.tsx`.
+**Authorization split, added in Revision 2** (Section AC's `SCOPE CLASS` field, summarized here):
+this manifest specifies *what* each candidate's change would touch — it does **not** itself
+authorize implementing any of it, and implementation authority is further split three ways:
+- **Cosmetic-eligible now** (pending its own separate go-ahead, but requiring no further
+  specification beyond what Section AC already gives): Candidates 3, 4, 6, 7, 8, and Candidate 2
+  *only if* confined to a display-text substitution.
+- **Functional correctness — requires separate authorization**, fully specified in shape but not
+  cosmetic: Candidates 1, 5.
+- **Workflow/navigation repair — requires separate authorization AND further specification**:
+  Candidate 9, per the four open questions in Section AC.
 
-**NOT part of this frozen manifest** — explicitly excluded, per Section AC's dispositions, not
-silently omitted: Candidate 9's `ownerOverride`-exposure question (product scope, not source-
-resolvable — Section AC, AF); the `/owner/execution` error-vs-empty simultaneous render; the
+Production files (all 3 fully specified; each bundles candidates from more than one scope class —
+see the authorization split above before treating any of these as a single cosmetic unit):
+1. `src/app/(authenticated)/owner/execution/page.tsx` — Candidates 1 (functional correctness), 2
+   (conditionally cosmetic), 3 (cosmetic). A cosmetic-only pass on this file could carry Candidates
+   2 (if display-text-only) and 3 alone; Candidate 1 needs its own, separately-authorized
+   functional-correctness phase and is not bundled into a cosmetic pass by default.
+2. `src/app/(authenticated)/owner/tasks/page.tsx` — Candidates 4 (cosmetic), 5 (functional
+   correctness), 6 (cosmetic). A cosmetic-only pass on this file could carry Candidates 4 and 6
+   alone; Candidate 5 needs its own separately-authorized phase.
+3. `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` — Candidates 7 (cosmetic), 8 (cosmetic),
+   fully specified. **Candidate 9 is explicitly NOT part of this file's frozen scope** — its defect
+   is recorded (Section AC) but no implementation on this file is frozen for it; a cosmetic-only
+   pass on this file would carry only Candidates 7 and 8.
+
+Test files (4 total; 2 have frozen names matching an established template exactly, 2 have fully
+specified content but no frozen filename):
+4. `src/__tests__/components/owner-execution-business-switch-race.test.tsx` (name frozen, mirrors
+   an established template exactly) — Candidates 1, 3.
+5. `src/__tests__/owner-execution/execution-page-owner-safe-errors.test.tsx` (name frozen, mirrors
+   an established template exactly) — Candidate 2.
+6. A test file for `src/app/(authenticated)/owner/tasks/page.tsx` covering Candidates 4, 5, 6
+   together (terminal-state text/variant assertions, the three stale-filter/pagination-request
+   scenarios under Candidate 5, and the My Work label-parity assertion) — **content fully specified,
+   filename not frozen** (a plausible name: `src/__tests__/components/
+   owner-tasks-list-correctness.test.tsx`).
+7. A test file for `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` covering Candidates 7, 8
+   (UUID/role-label assertions) — **content fully specified, filename not frozen** (a plausible
+   name: `src/__tests__/components/owner-task-detail-correctness.test.tsx`). This file does **not**
+   cover Candidate 9 in this revision, since Candidate 9 has no frozen implementation to test yet;
+   a future test for Candidate 9's eventual fix would be scoped once that fix is specified (Section
+   AC).
+
+**NOT part of this specification** — explicitly excluded, not silently omitted: Candidate 9's
+concrete implementation (Section AC — four open questions, plus the permanently-excluded
+owner-override question); the `/owner/execution` error-vs-empty simultaneous render; the
 `OwnerSopAction` concurrency asymmetry; the "Continue on Home" deep-link gap; `window.prompt()`
-replacement; any IA/hierarchy change.
+replacement; any IA/hierarchy change. **This document authorizes no implementation of any candidate
+above, cosmetic or otherwise — that remains a separate, future decision outside this audit.**
 
 ## AE. Unsafe abstractions explicitly rejected
 
@@ -1458,7 +1561,7 @@ pages, not a new abstraction.
 - **UNKNOWN**: whether `OperatorItem` carries its own `businessId`. WHY UNKNOWN: the delegated
   research pass read only a partial region of that model's schema definition before stopping.
   WHAT WOULD RESOLVE IT: reading the full `OperatorItem` model in `prisma/schema.prisma`. DOES IT
-  BLOCK UX-05B: NO — none of the four frozen candidates depend on this.
+  BLOCK UX-05B: NO — none of the candidates specified in Section AC/AD depend on this.
 - **UNKNOWN**: whether any code path backfills a `businessId` onto a task-originated `Proof` row
   after creation (only `.create` call sites were checked, not every `.update`/`.updateMany`).
   WHAT WOULD RESOLVE IT: an exhaustive grep of every `proof.update`/`proof.updateMany` call site.
@@ -1537,8 +1640,9 @@ pages, not a new abstraction.
     explicitly descriptive-only, and Section X explicitly defaults every hierarchy question to
     `USER-EVIDENCE NEEDED`, following UX-04A's own precedent verbatim.
 15. **Did I recommend visual changes without user evidence?** No new visual/hierarchy/layout change
-    is recommended anywhere; Candidate 4 (Section AC) is a color-correctness fix justified by the
-    design direction's own already-adopted "no invented positive signal" rule, not a new visual
+    is recommended anywhere; Candidate 4 (Section AC), corrected in Revision 1 to require both
+    variant AND text (not color alone), is a `PRESENTATION`-scope correctness fix justified by the
+    design direction's own already-adopted color-and-text truthfulness rule, not a new visual
     preference, and is explicitly framed as such.
 16. **Did I accidentally propose deleting backend-only functionality?** No — Section V's
     `BACKEND_ONLY_MUST_PRESERVE` list explicitly protects named-user assignment, the escalation
@@ -1549,9 +1653,10 @@ pages, not a new abstraction.
     amendment; **it is not claimed exhaustive beyond that verified scope** — this hostile audit
     itself found three capabilities/defects the first draft missed entirely (the dead completion
     route, the detail-page UUID leak, the detail-page actor-role leak), which is direct proof the
-    original "exhaustive" wording was an overclaim, now corrected. None of the 8 frozen candidates
-    (Section AD) removes any capability; all are additive guards, label/text corrections, or a
-    like-for-like navigation repair.
+    original "exhaustive" wording was an overclaim, now corrected. None of the 9 candidates
+    (Section AC/AD) removes any capability; the 8 specified ones are additive guards or label/text
+    corrections, and Candidate 9's still-open navigation repair is explicitly constrained (Revision
+    2) to reuse, never bypass, the existing completion gates.
 18. **Did I treat historical audit docs as current truth without revalidation?** No — every claim
     sourced from UX-04A or the design direction doc was independently re-verified against current
     `main` by this audit's own reads (e.g. re-confirming UX-04A's Section D/E exclusion of Tasks/
@@ -1570,11 +1675,17 @@ pages, not a new abstraction.
     documents the exact validation confirming this.
 22. **Did I weaken or update the feature-preservation baseline?** No — the verifier was run
     read-only, twice, against the unmodified baseline; it was not regenerated or edited.
-23. **Did I invent an exact UX-05B manifest where evidence was insufficient?** No — Section AD froze
-    a manifest only for the four candidates with genuinely sufficient, precedent-matching evidence
-    and `USER-EVIDENCE NEEDED: NO`; every other defect found (the SOP-action concurrency gap, the
-    Home deep-link gap, the Tasks filter-race gap) was explicitly excluded from the manifest and
-    recorded as a residual instead (Section AF).
+23. **Did I invent an exact UX-05B manifest where evidence was insufficient?** No — and this
+    question's own answer was itself corrected in Revision 2. Section AD specifies 8 of 9 candidates
+    fully (each with `USER-EVIDENCE NEEDED: NO` and genuinely sufficient, precedent-matching
+    evidence); Candidate 9 is deliberately left partially specified (defect proven; implementation
+    not frozen) rather than having an implementation invented for it, after Revision 1 over-froze it
+    as "basic shape safe." Every other defect found (the SOP-action concurrency gap, the Home
+    deep-link gap, the `/owner/execution` error-vs-empty gap) remains explicitly excluded from the
+    manifest and recorded as a residual instead (Section AF). Revision 2 additionally split
+    authorization for the 8 specified candidates into cosmetic-eligible (3, 4, 6, 7, 8, and
+    conditionally 2) versus functional-correctness-requiring-separate-authorization (1, 5) — a
+    specification freeze is not an implementation go-ahead for either group.
 24. **Could a low-digital-literacy owner currently distinguish "My work," "Delegated work," and
     "Execution & SOP"?** **UNKNOWN — not guessed.** Section I item 13 already establishes that the
     distinction between "My work" and "Delegated work" exists only as a source-code comment, never
@@ -1610,13 +1721,38 @@ pages, not a new abstraction.
     said "seven" routes / "three" services while naming five; Section AG separately said "9"/"5").
     Corrected in this revision to "nine" routes / "five" services everywhere, matching the
     authoritative filesystem listing.
-32. **Does every accepted UX-05B candidate appear in the future file/test manifest?** Yes — Section
-    AD was rebuilt in this revision to cover all 8 frozen candidates (1–8) across 3 production files
-    and 4 test files (including Candidate 9's explicitly-frozen basic shape, distinct from its
-    explicitly-unfrozen override-exposure question), with nothing accepted in Section AC left
-    without a corresponding entry in Section AD.
+32. **Does every accepted UX-05B candidate appear in the future file/test manifest, with counts
+    that actually add up?** In Revision 1, no — Section AD's own intro line ("4 production files +
+    2 test files") did not match its actual 3-production/4-test list, and Candidate 9 was described
+    as having a frozen "basic shape" even though this revision's own re-audit shows that shape (an
+    immediate completion POST) was never properly specified against the review-workflow questions
+    Section AC now raises. **Corrected in Revision 2**: Section AD's header now states 3 production
+    + 4 test files (matching its own list), explicitly marks Candidates 1–8 as fully specified and
+    Candidate 9 as only partially specified, and Candidate 9 no longer claims any frozen
+    implementation shape — only its defect and two hard constraints (gate-reuse, override-exclusion)
+    are fixed. Nothing accepted in Section AC is missing a corresponding entry in Section AD; the
+    correction is to what each entry honestly claims, not to coverage.
 
-No self-audit failure surfaced by this revision's own re-answering of questions 1–32 was left
+33. **[Added in Revision 2] Did I preserve the requested cosmetic-only scope boundary, rather than
+    let functional or workflow fixes ride inside a "cosmetic" label?** Section AC now tags every
+    candidate with a `SCOPE CLASS`; Candidates 1 and 5 are marked `FUNCTIONAL CORRECTNESS` and
+    explicitly excluded from a cosmetic-only pass; Candidate 2 is marked conditional on a
+    display-text-only implementation; Candidate 9 is marked `WORKFLOW/NAVIGATION REPAIR`, excluded
+    from cosmetic scope entirely, and is not even fully specified yet. Section AD's production-file
+    entries repeat this split per file so a reader cannot mistake "these candidates share a file" for
+    "these candidates share an authorization tier."
+34. **[Added in Revision 2] Did I let Candidate 9's proposed immediate-completion-POST fix stand as
+    an accepted cosmetic-scope answer?** No — it is withdrawn (Section AC), not merely re-tagged.
+    The candidate now states four open review-workflow questions (review experience, explicit
+    approval action, proof visibility, confirmation that existing server gates remain the sole
+    enforcement point) that block freezing any implementation, and repeats that owner-override
+    exposure stays excluded regardless of which implementation is eventually chosen.
+35. **[Added in Revision 2] Did this revision implement anything?** No — every change in this
+    revision is to this one markdown file's own claims about itself and about source already read
+    in prior revisions; no production, test, schema, or config file was touched (Section 39's
+    validation, re-run below, confirms this).
+
+No self-audit failure surfaced by this revision's own re-answering of questions 1–35 was left
 uncorrected before commit; every "no" or partial answer above points to the specific section where
 the correction was made.
 
@@ -1654,5 +1790,40 @@ Corrected:
   updated for the count corrections above; added items 25–32.
 - this section's own heading, from `## Revision record` to `## AH. Revision record`, to match the
   exact section list this document's own Section 34 (mission instruction) requires.
+
+New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
+
+**Revision 2 — narrow documentation correction, applied to the same document, same PR #514.**
+
+Corrected:
+- Section AD's own internal arithmetic (it claimed "4 production files + 2 test files" while
+  actually listing 3 production + 4 test entries) — reconciled to the true 3/4 split, and the
+  section now states explicitly that Candidates 1–8 are fully specified while Candidate 9 is only
+  partially specified, rather than describing any filename as "exactly frozen" where two of the
+  four test files still have no fixed name.
+- withdrew Revision 1's claim that Candidate 9's "basic shape" (an immediate
+  `apiPost("/api/owner/tasks/complete", ...)` call replacing the dead link) was safe to freeze.
+  On further hostile review, that proposal silently skipped the *reviewing* half of "Review &
+  Approve" — this candidate now records four open product/workflow questions (review experience,
+  explicit approval action, proof visibility, confirmation that existing server gates remain the
+  sole enforcement point) that must be answered before any implementation shape can be frozen, and
+  is reclassified as a `WORKFLOW/NAVIGATION REPAIR` requiring its own separate authorization.
+  Owner-override exposure remains excluded, unchanged from Revision 1.
+- added a `SCOPE CLASS` field to every candidate in Section AC (`PRESENTATION`,
+  `COSMETIC-ELIGIBLE, CONDITIONAL`, `FUNCTIONAL CORRECTNESS`, or `WORKFLOW/NAVIGATION REPAIR`),
+  restoring an explicit cosmetic-only/functional/workflow scope boundary: Candidates 3, 4, 6, 7, 8
+  are presentation-only and cosmetic-eligible; Candidate 2 is cosmetic-eligible only if its
+  implementation is confined to the displayed error string with no control-flow/retry/navigation/
+  state/recovery change; Candidates 1 and 5 are functional-correctness race-guard fixes requiring
+  their own separately-authorized implementation phase, not eligible to ride inside a cosmetic
+  pass; Candidate 9 requires separate authorization and further specification before any freeze.
+  Section AD's per-file entries repeat this split so a shared production file is never mistaken for
+  a shared authorization tier.
+- fixed every now-stale reference elsewhere in the document to "four candidates," "8 frozen
+  candidates," or Candidate 9's "explicitly-frozen basic shape" (Section AF, and Section AG items
+  15, 17, 23, 32) to match the corrected Section AC/AD state above; added Section AG items 33–35
+  auditing this revision's own consistency.
+- confirmed no production, test, schema, or config file was touched by this revision (re-run
+  validation below) — this remains a documentation-only correction; nothing was implemented.
 
 New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
