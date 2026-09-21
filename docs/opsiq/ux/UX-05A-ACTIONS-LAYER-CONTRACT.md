@@ -859,6 +859,7 @@ not one system rendered twice.
 | `/owner/tasks` assignee fallback | already safe: role, or "Assigned", or "Not yet assigned" — never a raw UUID (explicit in-source fix comment, line 285-288) | page.tsx:288 | YES | None found | Already applied | NO CHANGE |
 | `/owner/tasks/[taskId]` "Assigned to" | raw `assignedUserId` UUID when `assignedRole` is null | page.tsx:300, `task.assignedRole ?? task.assignedUserId ?? "—"` | YES | Medium — the sibling list page already fixed this exact leak; the detail page did not follow | Yes — the list page's own fallback pattern (role, or "Assigned", or "—") | OWNER-LANGUAGE / OWNER-SAFETY |
 | `/owner/tasks/[taskId]` status-history actor | raw `TaskActorRole` token (`EMPLOYEE`/`MANAGER`/`OWNER`/`SYSTEM`) | page.tsx:451, `{h.actorRole && <span>({h.actorRole})</span>}` | YES | Low-medium — a small, closed, already-known enum, just unhumanized | Yes — direct 1:1 humanization (Employee/Manager/Owner/System) | OWNER-LANGUAGE |
+| `/owner/tasks` "Who" and `/owner/tasks/[taskId]` "Assigned to" primary value | raw `assignedRole` token (`MANAGER`/`STAFF`) when `assignedRole` itself is set (not the null-fallback case) | `owner/tasks/page.tsx:288` (`task.assignedRole ?? ...`), `owner/tasks/[taskId]/page.tsx:300` (`task.assignedRole ?? ...`); values originate from `owner/tasks/new/page.tsx:26-28`'s `<option value="MANAGER">Manager</option>`/`<option value="STAFF">Staff</option>` — the creation form already shows a humanized label to the person picking a role, but persists and later re-renders the raw `value` | YES | Low-medium — a small, closed, already-known enum (identical shape to the `TaskActorRole` leak directly above), just unhumanized on read-back | Yes — the creation form's own `<option>` labels ("Manager"/"Staff") are the exact 1:1 humanization already sitting in the same file family, just never applied on the two pages that read the value back | OWNER-LANGUAGE |
 
 **Corrected in Revision 1**: the first draft of this register claimed "no material UUID leak exists
 beyond the one recommendation-id reference" — that claim was wrong. Two further leaks (both above)
@@ -866,6 +867,21 @@ were found on the task-detail page on re-audit: a raw assignee UUID and raw `Tas
 No `BusinessConditionProfile`/`InterventionMode`/`InterventionPhase`/raw-capability-id leak was found
 on either page; the UUID/role leaks above are the exceptions to that narrower claim, not additional
 instances of it.
+
+**Added in Revision 3**: an adjacent residual found during PR #515 review — `assignedRole`'s primary
+(non-null) value is rendered verbatim on both `/owner/tasks` and `/owner/tasks/[taskId]`, so an owner
+can see "Who: MANAGER"/"Assigned to: MANAGER" (or `STAFF`) instead of "Manager"/"Staff". Verified
+directly against current `main`: `owner/tasks/new/page.tsx` lines 26-28 define the role `<option>`s
+with `value="MANAGER"`/`value="STAFF"` and humanized labels "Manager"/"Staff"; that raw `value` is what
+gets persisted to `assignedRole` and is exactly what the two read surfaces above render back unchanged
+when the field is non-null. This is a distinct code path from the `assignedRole ?? assignedUserId ?? …`
+*fallback* leak already recorded above (which fires only when `assignedRole` is null) — this new row
+covers the primary, non-null value itself. Classification: PRIMARY: OWNER-LANGUAGE; EVIDENCE:
+SOURCE-PROVEN; USER-EVIDENCE NEEDED: NO (simple humanization); IMPLEMENTATION STATUS: NOT PART OF THE
+CURRENT COSMETIC FREEZE — not added to Candidate 7 retroactively (Candidate 7 is scoped to the
+null-fallback UUID leak only, already implemented in PR #515) and not implemented by this revision.
+A future safe humanization would map `MANAGER → Manager` / `STAFF → Staff` on both read surfaces,
+mirroring the creation form's own existing labels — recorded here as a residual, not authorized here.
 
 ## S. Loading/empty/error/partial-state matrix
 
@@ -1130,24 +1146,75 @@ in that journey.
 
 ## AB. Open-PR collision report
 
-**Corrected in Revision 1.** The original audit checked GitHub before PR #514 existed and found
-`30` open PRs, with two internally inconsistent sub-counts (it labeled the Dependabot group "24" and
-the stage7-evidence group "7," which do not sum to 30 alongside `#496`; the actual sub-counts at
-that time, re-derived from the same raw listing, were **17** Dependabot PRs and **12**
-`stage7-evidence` PRs, `17 + 12 + 1 (#496) = 30`, correctly matching the total).
+**Revision 3 — corrected again, this time against a genuinely complete live query.** Both Revision 1's
+"30 total" and this document's own prior "does not support the 48 figure" conclusion were wrong, for
+the same root cause: every earlier check in this document's history called the PR-listing API without
+an explicit page-size parameter, which silently capped the result at a partial page and returned
+30 PRs (or fewer) while omitting a block of older, still-open PRs entirely. Requesting the listing
+with an explicit `perPage: 100` for this revision returns the complete set in a single page (48 < 100,
+so no further pagination is needed, and this was confirmed by checking that the returned count is
+below the requested page size).
 
-The hostile post-PR audit instruction that triggered this revision asserted a different, larger
-figure — 48 open PRs total, 47 pre-existing, including a named group of 15 "legacy" PR numbers
-(`#368, #331, #311, #274, #181, #108, #40, #25, #24, #23, #22, #14, #13, #4, #1`). **A fresh,
-direct re-query of GitHub performed for this revision does not support that claim.** The complete,
-current list of open PR numbers is exactly:
-`413, 414, 415, 421, 422, 423, 424, 425, 426, 427, 428, 452, 455, 456, 457, 458, 459, 460, 461, 462,
-463, 464, 465, 466, 467, 468, 469, 479, 496, 514` — **30 total, including #514 itself.** None of the
-15 "legacy" PR numbers the audit instruction named are currently open (verified directly, not
-inferred). Per this document's own governing rule (Section 30 — current source wins over an
-unverified historical or asserted claim), this section reports the freshly-verified state below
-rather than the asserted 48/47/15-legacy figures, and flags the discrepancy rather than silently
-reconciling it.
+```
+CURRENT OPEN PR TOTAL: 48
+EXCLUDING PR #514 ITSELF: 47
+```
+
+**DIRECT ACTIONS-LAYER COLLISIONS** (against the collision-sensitive paths listed below):
+- `src/app/(authenticated)/owner/tasks/**`, `src/app/(authenticated)/owner/execution/**`
+- `src/domain/execution/**`, `src/services/execution/**`
+- `src/domain/owner-sop/**`, `src/services/owner-sop/**`
+- `src/services/owner-mode/process-execution-bridge.service.ts`
+- `src/app/api/owner/tasks/**`, `src/app/api/owner/process-execution/**`, `src/app/api/owner/sop/**`
+- `prisma/schema.prisma`, `prisma/migrations/**`
+
+| PR | Category | Evidence |
+|---|---|---|
+| **#515** | **DIRECT_SOURCE_COLLISION** | "UX-05B: presentation-only fixes for /owner/tasks and /owner/execution" — directly modifies `src/app/(authenticated)/owner/execution/page.tsx`, `src/app/(authenticated)/owner/tasks/page.tsx`, `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` (plus 3 new test files scoped to those same pages). This is the actual future UX-05B implementation surface — see the dedicated disposition below. |
+
+No other open PR touches any collision-sensitive path listed above. In particular: #4 and #1 touch
+`prisma/schema.prisma` but only to add/modify models unrelated to the Actions layer (see the SCHEMA
+COLLISION row below); #13 touches `prisma/schema.prisma` for the same reason (an `AggregateLock`
+key-shape change); no open PR touches `src/domain/execution/**`, `src/services/execution/**`,
+`src/domain/owner-sop/**`, `src/services/owner-sop/**`,
+`src/services/owner-mode/process-execution-bridge.service.ts`, or any `src/app/api/owner/{tasks,
+process-execution,sop}/**` route.
+
+**OTHER OPEN PR GROUPS** (47 total, excluding #514):
+
+| Group | Count | PRs | Category |
+|---|---|---|---|
+| UX-05B implementation (this document's own downstream PR) | 1 | #515 | DIRECT_SOURCE_COLLISION (disposed above) |
+| Dependabot — npm/yarn version bumps (`package.json`/`package-lock.json` only) | 11 | #479, #469, #467, #466, #465, #464, #463, #462, #461, #460, #452 | DEPENDENCY ONLY |
+| Dependabot — GitHub Actions version bumps (`.github/workflows/**` only) | 5 | #459, #458, #457, #456, #455 | TEST/CI COLLISION (config-only; no Actions-domain source touched) |
+| Stage-7 evidence-capture artifacts (each adds exactly one `docs/opsiq/evidence/stage-7/artifacts/evd_*.json` file, nothing else) | 14 | #428, #427, #426, #425, #424, #423, #422, #421, #415, #414, #413, #412, #411, #410 | EVIDENCE ARTIFACT ONLY |
+| Legacy CI/infrastructure PRs (workflow files, `vitest.config.ts`, `scripts/run-test-ci.ts`, runtime-proof/phase-* test files — no Actions-layer source) | 6 | #311, #274, #25, #23, #14, #13 | TEST/CI COLLISION (#13 additionally touches `prisma/schema.prisma` for an unrelated `AggregateLock` change — see SCHEMA COLLISION note above) |
+| Historical docs/audits (documentation and/or JSON evidence files only, no source) | 4 | #368, #181, #108, #40 | DOCUMENTATION ONLY |
+| Legacy schema/event-sourcing PRs (`prisma/schema.prisma` touched, but only for unrelated event-sourcing models — `SnapshotData`/`Workspace` relation for #4, `AggregateLock` key shape already counted under #13 above) | 1 | #4 | SCHEMA COLLISION (unrelated model; #1 is listed separately below since its full diff could not be fetched) |
+| Unrelated-domain source PRs (real source files touched, but entirely outside the Actions layer: legacy `first-value` engagement service, owner-finance recommendation-safety gates, a self-serve workspace-setup flow, a Startup-Mode browser E2E spec) | 4 | #496, #331, #24, #22 | NO RELEVANT COLLISION |
+| Foundational schema PR, base branch not `main` (`claude/opsiq-domain-foundation-Y7Cqb`), dated 2026-04-25 — ~2 months before the Actions-layer models (`DelegatedTask`/`ProcessExecutionTask`) were introduced (2026-06-25, per the `owner_mode_execution_tables` migration timestamp seen elsewhere in this codebase); GitHub's diff API refused to return this PR's full diff (`406: diff exceeded the maximum number of lines`), so this is inferred from its file list + migration timeline, not from directly reading its `prisma/schema.prisma` hunk | 1 | #1 | SCHEMA COLLISION (unrelated model, inferred — not directly read; see caveat) |
+
+```
+GROUP_COUNT_SUM = 1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47
+GROUP_COUNT_SUM_EXCLUDING_514 = TOTAL_CURRENT_OPEN_PRS(48) - 1 = 47
+```
+The two sides reconcile exactly.
+
+**Legacy PR states, reverified.** All 15 PR numbers the earlier hostile-audit instruction named as
+"still OPEN" — `#368, #331, #311, #274, #181, #108, #40, #25, #24, #23, #22, #14, #13, #4, #1` — were
+independently re-checked against this revision's fresh, complete (`perPage: 100`) listing and are
+confirmed **still open**, individually inspected for their changed files (see the groups above; none
+collide with the Actions layer). This directly reverses this document's own prior "does not support
+that claim" conclusion, which was itself a product of the same unpaginated-query defect, not a
+correct reading of GitHub's actual state at the time it was written.
+
+**PR #515 disposition.** #515 directly modifies the three principal UX-05A production surfaces. This
+does **not** invalidate the UX-05A source audit above, which is based on current `main` — #515 is not
+merged and its changes are not part of the frozen current-state contract. It **does** mean #515 must
+be reviewed/merged on its own terms before or independently of this document, and this document's own
+future-manifest (Sections AC/AD) must not be read as though #515's changes already exist on `main`.
+**ACTION TAKEN: NONE** — #515 is not edited, merged, rebased, closed, or cherry-picked by this
+revision or by this document.
 
 Excluding #514 itself (the PR under audit, not a collision candidate), there are **29** other open
 PRs at the time of this revision:
@@ -1603,6 +1670,16 @@ pages, not a new abstraction.
   for retrofitting this specific guard at the service layer. WHAT WOULD RESOLVE IT: a scoped mission
   explicitly authorizing a service-layer (not page-only) fix, or a first precedent example elsewhere
   in the codebase to model it on. DOES IT BLOCK UX-05B: NO.
+- **Added in Revision 3** — `assignedRole`'s raw `MANAGER`/`STAFF` value rendered verbatim on both
+  `/owner/tasks` ("Who: MANAGER") and `/owner/tasks/[taskId]` ("Assigned to: MANAGER"), found during
+  PR #515 review and recorded in Section R above. PRIMARY: OWNER-LANGUAGE. EVIDENCE: SOURCE-PROVEN
+  (verified directly against current `main`: `owner/tasks/new/page.tsx:26-28` defines the raw
+  `value="MANAGER"`/`value="STAFF"` that gets persisted and read back unchanged). USER-EVIDENCE
+  NEEDED: NO — this is a simple, closed-enum humanization, identical in shape to the already-fixed
+  `TaskActorRole` leak. IMPLEMENTATION STATUS: NOT PART OF THE CURRENT COSMETIC FREEZE — not added to
+  Candidate 7 retroactively, and not implemented anywhere by this revision (this document remains
+  documentation-only). DOES IT BLOCK UX-05B: NO — it is a residual for a future presentation-only
+  pass, not a blocker for the six candidates already authorized and implemented in PR #515.
 
 ## AG. Hostile self-audit
 
@@ -1667,10 +1744,15 @@ pages, not a new abstraction.
 20. **Did I check current open PR collisions?** Yes (Section AB) — and re-checked directly on
     hostile audit, which surfaced that the first draft's sub-counts (24 Dependabot + 7 stage7-
     evidence) did not sum to its own stated 30-PR total. Re-derived the correct sub-counts (17
-    Dependabot + 12 stage7-evidence + #496 = 30, at the pre-#514 mission time) and, separately,
-    froze a fresh 29-PR (excluding #514 itself) count as of this revision, verified directly rather
-    than accepted from the hostile-audit instruction's own (unverified, and on direct re-check,
-    incorrect) claim of 48 total / 15 named "legacy" PRs — none of which are currently open.
+    Dependabot + 12 stage7-evidence + #496 = 30, at the pre-#514 mission time). **Corrected again in
+    Revision 3**: this item (and item 30 below) previously also claimed that the hostile-audit
+    instruction's alternative "48 total / 15 legacy" figure had been independently re-verified and
+    found not to match — that re-verification was itself wrong, for the same root cause described in
+    Section AB: every prior check in this document's history queried the PR list without an explicit
+    page-size parameter and silently received a truncated page. A `perPage: 100` query for Revision 3
+    returns the complete 48-PR set in one page, confirms all 15 named "legacy" PR numbers are in fact
+    still open, and Section AB now reflects that corrected figure rather than the two prior wrong
+    ones.
 21. **Did I modify any file other than the one authorized markdown contract?** No — Section 39
     documents the exact validation confirming this.
 22. **Did I weaken or update the feature-preservation baseline?** No — the verifier was run
@@ -1712,11 +1794,12 @@ pages, not a new abstraction.
     since `loadGenerationRef` guards the latest-request-wins property regardless of what the request
     key is. Corrected in this revision as Candidate 5 (Section AC).
 30. **Is the open-PR count mathematically consistent with the grouped inventory?** The first draft's
-    was not (24 + 7 + 1 ≠ 30, though the stated total of 30 was itself correct). Corrected in this
-    revision (Section AB), and the hostile-audit instruction's own alternative claim (48/47/15-
-    legacy) was independently re-verified and found not to match current GitHub state either — the
-    figures in the corrected Section AB are freshly verified, not merely reconciled between the two
-    prior claims.
+    was not (24 + 7 + 1 ≠ 30, though the stated total of 30 was itself correct). Corrected in Revision
+    1 (Section AB) against a since-discovered-truncated 30-PR query. **Corrected again in Revision
+    3**: the 48-total/15-legacy figure this item previously said "did not match" is, on a genuinely
+    complete `perPage: 100` query, exactly correct — see item 20's correction above and Section AB's
+    new group table, whose counts (`1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47`, excluding #514) do sum
+    to the live total.
 31. **Are the SOP route/service counts consistent everywhere?** The first draft was not (Section N
     said "seven" routes / "three" services while naming five; Section AG separately said "9"/"5").
     Corrected in this revision to "nine" routes / "five" services everywhere, matching the
@@ -1751,8 +1834,40 @@ pages, not a new abstraction.
     revision is to this one markdown file's own claims about itself and about source already read
     in prior revisions; no production, test, schema, or config file was touched (Section 39's
     validation, re-run below, confirms this).
+36. **[Added in Revision 3] Did I query all pages/results necessary to enumerate every currently
+    open PR?** Yes — the query was issued with `perPage: 100`, and the result set (48 items) came
+    back below that page size, which is itself the evidence that nothing further remains on a next
+    page. Prior revisions' checks (including this document's own Revision 1/2 checks and this
+    section's own items 20/30 before this correction) never set an explicit page size and were
+    silently truncated as a result — the root cause corrected in Section AB.
+37. **[Added in Revision 3] Does the open-PR group arithmetic exactly equal the live GitHub total?**
+    Yes — Section AB's `GROUP_COUNT_SUM = 1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47` equals
+    `TOTAL_CURRENT_OPEN_PRS(48) - 1`, checked explicitly rather than asserted.
+38. **[Added in Revision 3] Did I explicitly inspect PR #515 rather than pretending it is outside the
+    collision set?** Yes — its live state, title, head SHA, and full changed-file list were fetched
+    directly (not assumed from its title), confirmed to touch exactly the three principal UX-05A
+    production surfaces, and recorded as `DIRECT_SOURCE_COLLISION` in Section AB rather than being
+    silently excluded as "downstream work" or "not this document's concern."
+39. **[Added in Revision 3] Did I distinguish a future implementation collision from current-main
+    source truth?** Yes — Section AB explicitly states that #515 being open and unmerged does not
+    change what is true about current `main` (the basis for every claim in Sections A–AG), and that
+    Sections AC/AD's future manifest must not be read as though #515's changes are already on `main`.
+    #515 is left unmerged, unmodified, and unmentioned as though it were already-landed fact anywhere
+    else in this document.
+40. **[Added in Revision 3] Did I verify the open/closed state of any legacy PR I mentioned rather
+    than relying on the previous revision?** Yes — all 15 named legacy PR numbers, plus every other
+    PR in the live 48-total set, were checked against this revision's own fresh query and, for every
+    PR touching a plausibly-sensitive path, had their actual changed-file lists inspected directly
+    (Section AB) rather than trusting either this document's own prior "not open" claim or the
+    hostile-audit instruction's assertion at face value.
+41. **[Added in Revision 3] Did I record the raw MANAGER/STAFF owner-language residual without
+    scope-creeping its implementation?** Yes — Sections R and AF record the residual with its full
+    classification (PRIMARY: OWNER-LANGUAGE, EVIDENCE: SOURCE-PROVEN, USER-EVIDENCE NEEDED: NO,
+    IMPLEMENTATION STATUS: NOT PART OF THE CURRENT COSMETIC FREEZE) and explicitly state it is not
+    added to Candidate 7 retroactively and not implemented by this revision; no production file was
+    touched anywhere in this revision (Section 39's validation, re-run below, confirms this).
 
-No self-audit failure surfaced by this revision's own re-answering of questions 1–35 was left
+No self-audit failure surfaced by this revision's own re-answering of questions 1–41 was left
 uncorrected before commit; every "no" or partial answer above points to the specific section where
 the correction was made.
 
@@ -1825,5 +1940,37 @@ Corrected:
   auditing this revision's own consistency.
 - confirmed no production, test, schema, or config file was touched by this revision (re-run
   validation below) — this remains a documentation-only correction; nothing was implemented.
+
+New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
+
+**Revision 3 — final live-GitHub collision reconciliation, applied to the same document, same PR
+#514.**
+
+Corrected:
+- rebuilt the open-PR inventory (Section AB) from a fresh, complete GitHub query — every prior check
+  in this document's history (the original draft's 30-total figure, Revision 1's "does not support
+  [48]" conclusion) queried the PR list without an explicit page-size parameter and was silently
+  truncated as a result. A `perPage: 100` query returns the genuinely complete 48-PR set in one page.
+- corrected the legacy PR open/closed states accordingly: all 15 PR numbers named by the earlier
+  hostile-audit instruction (`#368, #331, #311, #274, #181, #108, #40, #25, #24, #23, #22, #14, #13,
+  #4, #1`) are, in fact, still open — individually re-inspected for their actual changed files, none
+  of which collide with the Actions layer (Section AB's group table).
+- explicitly recorded PR #515 ("UX-05B: presentation-only fixes for /owner/tasks and /owner/execution")
+  as a direct future Actions-layer source collision — it is open, unmerged, and directly modifies the
+  three principal UX-05A production surfaces. This does not invalidate the current-`main`-based source
+  audit in Sections A–AG, and #515 is explicitly left unmodified, unmerged, and untouched by this
+  revision (Section AB's disposition: `ACTION TAKEN: NONE`).
+- mathematically reconciled the open-PR group counts: `1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47`,
+  matching `TOTAL_CURRENT_OPEN_PRS(48) - 1`.
+- recorded the remaining raw `assignedRole` `MANAGER`/`STAFF` owner-language residual (Sections R,
+  AF) found during PR #515's own review — verified directly against current `main`
+  (`owner/tasks/new/page.tsx:26-28`) — without adding it to Candidate 7 retroactively or authorizing
+  any implementation of it here.
+- corrected Section AG items 20 and 30, which had themselves repeated the now-known-wrong "48/15
+  does not match" conclusion; added Section AG items 36–41 auditing this revision's own consistency.
+- no production, test, schema, or config file was touched by this revision (re-run validation below)
+  — this remains a documentation-only correction; UX-05B (already implemented in PR #515, separately
+  from this document) was not started, expanded, or altered by this revision, and PR #515 was not
+  modified in any way.
 
 New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
