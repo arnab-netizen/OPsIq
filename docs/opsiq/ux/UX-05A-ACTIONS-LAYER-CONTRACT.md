@@ -33,7 +33,8 @@ far enough to answer the mission's questions.
 
 Explicitly out of scope for modification or redesign, read only where a direct dependency required
 it: `/owner/cockpit` (read for the "Continue on Home" link and the "Start Work" origin only —
-Section E, F, H), `/owner/finance`, `/owner/sales`, `/owner/operations`, `/owner/trust`,
+Section E, F, H), `/owner/page.tsx` (read in Revision 1 for the completion-backend caller only —
+Section E, L, P), `/owner/finance`, `/owner/sales`, `/owner/operations`, `/owner/trust`,
 `/owner/data`, `/owner/start-here`. No file under any of those pages, no navigation file, no domain
 engine, no API route, no service, no Prisma schema, and no existing test was modified. The only file
 this audit creates is this document.
@@ -89,7 +90,18 @@ VERIFIED, from direct reads and the five research passes below.
  ├─ GET   /api/owner/tasks/[taskId]               → getTaskDetail
  ├─ PATCH /api/owner/tasks/[taskId]/status        → transitionTaskStatus
  ├─ POST  /api/owner/tasks/[taskId]/proof/submit  → submitProofForTask
- └─ POST  /api/owner/tasks/[taskId]/proof/review  → reviewProofForTask
+ ├─ POST  /api/owner/tasks/[taskId]/proof/review  → reviewProofForTask
+ └─ Link  /owner/tasks/[taskId]/complete          → DEAD — no page.tsx exists at this route
+                                                      (Section L/P). The real completion backend,
+                                                      POST /api/owner/tasks/complete, is never called
+                                                      from this file at all.
+
+/owner/page.tsx  (out of scope for modification; read only because it is the ONLY working caller
+                   of the completion backend — Section L)
+ └─ POST  /api/owner/tasks/complete               → completeTask, invoked via a raw taskId text
+                                                      input + an "Owner override" checkbox in the
+                                                      generic `OwnerActions` component — not scoped
+                                                      to any specific task the owner is viewing
 
 /owner/execution/page.tsx
  ├─ GET   /api/owner/sop/dashboard                        → getSopDashboard
@@ -452,23 +464,67 @@ success the owner is routed to `/owner/tasks/{data.taskId}` (the detail page).
 
 The owner can, from this one surface: view task metadata (title, description, assignee, priority,
 due date, work-started time, and — if present — the source recommendation id, shown in monospace,
-not humanized); view the full proof requirement (type, risk level) and proof status; submit proof
-(type + required note) when `status === PROOF_REQUIRED`; review a submitted proof (Accept / Reject
-[reason required] / Request Resubmission / Route to Human Review / Dispute) when the proof is in a
-reviewable state; transition status directly via buttons (`Mark In Progress`, `Require Proof`,
-`Cancel Task`, and a link to a separate `/owner/tasks/{id}/complete` route when
-`COMPLETED_PENDING_REVIEW` — that route was not read, being outside this audit's four in-scope
-files); and read the full status-history timeline (from-status, to-status, actor role, timestamp).
+not humanized — **but see the raw-UUID leak below**); view the full proof requirement (type, risk
+level) and proof status; submit proof (type + required note) when `status === PROOF_REQUIRED`;
+review a submitted proof (Accept / Reject [reason required] / Request Resubmission / Route to Human
+Review / Dispute) when the proof is in a reviewable state; transition status directly via buttons
+(`Mark In Progress`, `Require Proof`, `Cancel Task`); and read the full status-history timeline
+(from-status, to-status, actor role, timestamp — **but see the raw-role leak below**).
 
-The owner **cannot**, from either surface: see or set a business attribution (none exists); assign
-by name (no UI); see escalation state as a first-class object (only as a task status); see the
-proof's AI-precheck outcome/reasoning distinctly (only its resulting `ProofStatus`, e.g.
-`AI_PRECHECK_FAILED`, shown as a badge — the *why* is not surfaced); or invoke the dedicated
+**BLOCKER, corrected in Revision 1 — the "Review & Approve" completion link is dead.** When
+`task.status === COMPLETED_PENDING_REVIEW`, the page renders
+`<Link href={\`/owner/tasks/${task.id}/complete\`}><Button>Review & Approve</Button></Link>`
+(page.tsx lines 425–429). The first draft of this contract incorrectly described this as "a separate
+route ... not read, being outside this audit's four in-scope files" — that was a factual error, not
+a scoping choice. Re-verified directly by filesystem inspection: `src/app/(authenticated)/owner/
+tasks/[taskId]/` contains **only** `page.tsx` — there is no `complete/` subdirectory and no
+`complete/page.tsx` at all. **`/owner/tasks/[taskId]/complete` does not exist as a working page.**
+Clicking "Review & Approve" at the exact moment an owner needs to close the loop on a task's proof
+review — the one action this button exists to perform — leads to a Next.js 404.
+
+The completion **backend** is real and working: `POST /api/owner/tasks/complete` →
+`completeTask` (`src/app/api/owner/tasks/complete/route.ts`, full read) accepts `{ taskId,
+ownerOverride?, maxProofAgeDays? }`, builds a hardcoded owner actor server-side, and returns the new
+status on success or a governed 409/404 on failure — this is the same `completeTask` service
+described in Section G, unchanged. Its **only working caller in the entire codebase** is a generic,
+unscoped surface: `src/app/(authenticated)/owner/page.tsx`'s `OwnerActions` component (lines
+171–252, read for this correction), which renders a raw "Task ID" **text input** the owner must
+know/paste, an "Owner override (audited; bypasses proof gate)" checkbox, and a "Complete task"
+button that POSTs `{ taskId: taskId.trim(), ownerOverride }`. This is a different page entirely from
+either page in this audit's scope, and it requires the owner to already know the task's raw id —
+it is not a substitute continuation for the task-detail page's own dead link.
+
+**Truthful classification**: BACKEND_CAPABLE (completion works, proof-gated, audited, exactly as
+Section G describes) + UI ATTEMPT EXISTS on `/owner/tasks/[taskId]` (the button/link is rendered,
+styled, and reachable in the right status) + DESTINATION IS DEAD (the link target 404s) —
+overall: **PARTIAL**, not YES. See Section P, Q, R, AC for how this propagates.
+
+The owner **cannot**, from either surface: complete a review-pending task from the task-detail page
+itself (the one place this audit would expect it, per the above); see or set a business attribution
+(none exists); assign by name (no UI); see escalation state as a first-class object (only as a task
+status); see the proof's AI-precheck outcome/reasoning distinctly (only its resulting `ProofStatus`,
+e.g. `AI_PRECHECK_FAILED`, shown as a badge — the *why* is not surfaced); or invoke the dedicated
 dispute-category flow (`disputeAcceptedProof`) — the review form's "Dispute" option reaches
 `ProofStatus.DISPUTED` via the simpler generic path (Section G), not the category-driven service.
 **A task list is not "complete task management" merely because deeper routes exist** — per the
 mission's own framing, this audit records exactly what each of the two surfaces exposes above,
 rather than asserting completeness.
+
+**Two further owner-language leaks, missed in the initial draft and corrected in Revision 1** (full
+detail in Section R):
+- **Raw assignee UUID.** The list page (Section F) deliberately never leaks a raw user id — it falls
+  back to role, or "Assigned", or "Not yet assigned" (page.tsx line 288 comment, explicit fix).
+  The **detail** page does not follow its own list page's rule: `<span>{task.assignedRole ??
+  task.assignedUserId ?? "—"}</span>` (page.tsx line 300) — when `assignedRole` is null and
+  `assignedUserId` is set, the owner sees a raw UUID. VERIFIED directly.
+- **Raw actor-role tokens in status history.** `{h.actorRole && <span>({h.actorRole})</span>}`
+  (page.tsx line 451) renders the authoritative `TaskActorRole` enum value
+  (`EMPLOYEE, MANAGER, OWNER, SYSTEM` — `src/domain/execution/delegated-task.ts` lines 73–78)
+  verbatim, uppercase, with no humanizing map. VERIFIED directly.
+
+This contradicts the first draft's claim (formerly in Section R) that "no material UUID leak exists
+beyond the explicitly-labeled source-recommendation reference" — that claim was wrong and is
+corrected here and in Section R.
 
 ## M. `/owner/execution` current contract
 
@@ -497,8 +553,15 @@ calls for notes/evidence), `Block` (in_progress→blocked), and `Verify outcome`
 ## N. Execution & SOP source-of-truth matrix
 
 VERIFIED, from a full read of `src/domain/owner-sop/{diagnosis,types,metrics,data-confidence,
-recommendations,risk-rules,thresholds}.ts` and the seven `/api/owner/sop/**` route files plus the
-three services (`dashboard`, `snapshot`, `diagnosis`, `action`, `verification`) behind them.
+recommendations,risk-rules,thresholds}.ts` and the nine `/api/owner/sop/**` route files
+(`actions/[actionId]/route.ts`, `actions/[actionId]/verify/route.ts`,
+`businesses/[businessId]/diagnoses/route.ts`, `businesses/[businessId]/snapshots/route.ts`,
+`dashboard/route.ts`, `diagnoses/[cycleId]/actions/route.ts`, `diagnoses/[cycleId]/findings/route.ts`,
+`diagnoses/[cycleId]/route.ts`, `snapshots/[snapshotId]/route.ts`) plus the five backing services
+(`dashboard`, `snapshot`, `diagnosis`, `action`, `verification`) behind them. (Corrected in Revision
+1 — the first draft of this section inconsistently said "seven" route files and "three" services
+while naming five; the true, re-verified counts are nine route files and five services, used
+consistently throughout this document.)
 
 **Inputs** — the 11 `SOP_FIELDS` above, all optional numeric counts, plus `businessModel`,
 `industryTemplate`, `currency`, `periodStart/End`, `notes`. Missing fields are never invented: every
@@ -650,14 +713,33 @@ previous `activeBusinessId` from rendering after a switch** — CODE-PROVEN, no 
 This is a different (and correct) mechanism from `loadGenerationRef`, but achieves the same
 protection for this specific effect.
 
-**Delegated task load race** — `load(status, off)` (lines 174–187) has **no** cancellation flag,
-generation counter, or abort logic at all. A `load("A", 0)` (filter A) followed quickly by
-`load("B", 0)` (filter B) whose first response resolves *after* the second's would overwrite the
-correctly-displayed filter-B results with stale filter-A data — **CODE-PROVEN possible**, since both
-requests are ordinary unguarded `fetch` calls inside a `useCallback` with no de-duplication. This is
-a genuine race, though of a different flavor than the "business switch" races audited elsewhere
-(this page's delegated-task list has no business dimension to switch at all — Section J) — it can
-only be triggered by rapid filter/pagination changes, not by switching business.
+**Delegated task load race — present, unguarded, and re-evaluated for UX-05B in Revision 1.**
+`load(status, off)` (lines 174–187) has **no** cancellation flag, generation counter, or abort logic
+at all. A `load("A", 0)` (filter A) followed quickly by `load("B", 0)` (filter B) whose first
+response resolves *after* the second's would overwrite the correctly-displayed filter-B results with
+stale filter-A data — **CODE-PROVEN possible**, since both requests are ordinary unguarded `fetch`
+calls inside a `useCallback` with no de-duplication. This is a genuine race of a different *trigger*
+than the "business switch" races audited elsewhere (this page's delegated-task list has no business
+dimension to switch at all — Section J; here the request key is `status`/`offset`, not
+`businessId`) — but it is the **same underlying correctness defect**: an older async request's
+response committing over a newer one's. The first draft of this contract excluded it from UX-05B on
+the grounds that it was "a different flavor" with "no established template" — on re-evaluation that
+rationale does not hold: the `loadGenerationRef` pattern already proven on Home/Finance/Sales/
+Operations/(candidate) Execution is request-purpose-agnostic — it guards "does this response belong
+to the latest request I fired?" regardless of what varies between requests (business id, filter,
+offset). See Candidate 5, Section AC.
+
+**Dead "Review & Approve" completion link — corrected in Revision 1, added here per Section L.**
+Reachable only when `task.status === COMPLETED_PENDING_REVIEW`; the link target does not exist
+(Section L). `CORRECTNESS`, `SOURCE-PROVEN` (direct filesystem inspection, not inference),
+`USER-EVIDENCE NEEDED: NO` — a link to a nonexistent page is objectively broken regardless of any
+usability question. See Candidate 9, Section AC.
+
+**Raw assignee UUID and raw actor-role tokens on the detail page — corrected in Revision 1, added
+here per Section L.** Both `OWNER-LANGUAGE`/`OWNER-SAFETY`, `SOURCE-PROVEN`,
+`USER-EVIDENCE NEEDED: NO` — humanizing an already-known, small, closed enum (`TaskActorRole`) or
+falling back the same way the sibling list page already does (role, or "Assigned", or "—") requires
+no new evidence, no domain change, and no role/authorization change. See Candidates 7–8, Section AC.
 
 **Pagination/filter consistency** — `handleStatusChange` (lines 193–196) resets `offset` to `0`
 before setting the new filter — VERIFIED correct. `Next` is shown only when a full page was
@@ -684,10 +766,17 @@ NEEDS_DATA, APPROVED, DELEGATED, COMPLETED, REJECTED, OUTCOME_RECORDED, OUTCOME_
 OUTCOME_VERIFIED). Against Section H's confirmed status set (`PROPOSED, ACKNOWLEDGED, IN_PROGRESS,
 APPROVED, REJECTED, BLOCKED, NEEDS_DATA, COMPLETED, OUTCOME_RECORDED, OUTCOME_DISPUTED,
 OUTCOME_VERIFIED, CANCELLED`), the page's map is missing **`CANCELLED`** — a raw uppercase
-`"CANCELLED"` badge would render verbatim if a `ProcessExecutionTask` ever reached that status (no
-code path was found that sets it — Section H — so this is a latent gap, not an observed failure).
-The map also contains **`DELEGATED`**, a status the backend never actually produces (Section H) —
-a harmless dead entry, not a leak.
+`"CANCELLED"` badge would render verbatim if a `ProcessExecutionTask` ever reached that status. No
+code path was found that sets it today (Section H) — but, re-evaluated per Revision 1: the absence
+of a current writer is not sufficient grounds to declare a schema-legal, validated status
+permanently unreachable and therefore safe to leave unmapped; `CANCELLED` is one of
+`TERMINAL_STATUSES` in the bridge service's own status-check sets (Section H), so a future writer
+(or a status this audit's research pass did not find) reaching it would render the raw token with
+no fix required beyond adding one label entry. `CORRECTNESS`/`OWNER-LANGUAGE`, `SOURCE-PROVEN`,
+`USER-EVIDENCE NEEDED: NO` — see Candidate 6, Section AC. The map also contains **`DELEGATED`**, a
+status the backend never actually produces (Section H) — a harmless dead entry, not a leak; per the
+mission's own instruction this phase does not propose removing it, since removal has no correctness
+value.
 
 **Unsafe date rendering** — every date field (`item.workStartedAt`, `task.dueAt`) is guarded with a
 truthiness check before `new Date(...).toLocaleDateString()` (e.g. line 228, 299) — no unguarded
@@ -716,7 +805,7 @@ the Home/cockpit grep described in Section H.
 | Requests data | PARTIAL (`NEEDS_OWNER_CLARIFICATION` state exists, no explicit UI trigger found) | NO | YES (`REQUEST_MISSING_DATA`) |
 | Captures evidence | YES (Proof model, rich taxonomy) | YES (`window.prompt()`-collected notes/evidence array, no taxonomy) | YES (`evidenceRefs`, `SUBMIT_EVIDENCE`) |
 | Requires proof | YES (first-class, AI-prechecked) | NO (no proof-requirement concept on SOP actions) | NO (evidence-count threshold, not a "proof" object) |
-| Marks completion | YES (proof-gated, owner-reviewed) | YES (`window.prompt()` notes/evidence, no review step) | YES (evidence-count + fake-completion gate) |
+| Marks completion | **PARTIAL — corrected in Revision 1**: `completeTask` backend is proof-gated/owner-reviewed and works (BACKEND_CAPABLE); the task-detail page's own "Review & Approve" CTA exists but its link target (`/owner/tasks/[taskId]/complete`) does not (Section L) — the only working caller is an unrelated generic page (`/owner/page.tsx`) requiring a manually-typed task id | YES (`window.prompt()` notes/evidence, no review step) | YES (evidence-count + fake-completion gate) |
 | Records outcome | NO | NO (verification records before/after directly, no separate "outcome" step) | YES (`RECORD_OUTCOME`, distinct from completion) |
 | Verifies outcome | NO | YES (`OwnerSopVerification`, before/after/target-direction) | YES (`VERIFY_OUTCOME`, with `selfVerified` distinction) |
 | Requests reassessment | NO | PARTIAL (inline `runSopDiagnosis` re-trigger on completion/verification-success, no `OwnerReassessmentEvent`) | YES (`REQUEST_REASSESSMENT`, `OwnerReassessmentEvent`) |
@@ -768,10 +857,15 @@ not one system rendered twice.
 | `/owner/execution` finding/action panels | already humanized via `humanizeMetricKey`/`humanizeEvidenceLine` | page.tsx:9, 413/443/446/449/474 | YES | None found | Already applied | NO CHANGE |
 | `/owner/execution` verification prompts | `window.prompt()` native browser dialogs for notes/evidence/before/after/direction | page.tsx 213-214, 233-244 | YES | Presentation, not a language leak per se — bypasses the design system entirely | N/A | PRESENTATION (explicitly out of this audit's fix authority — Section 4/32) |
 | `/owner/tasks` assignee fallback | already safe: role, or "Assigned", or "Not yet assigned" — never a raw UUID (explicit in-source fix comment, line 285-288) | page.tsx:288 | YES | None found | Already applied | NO CHANGE |
+| `/owner/tasks/[taskId]` "Assigned to" | raw `assignedUserId` UUID when `assignedRole` is null | page.tsx:300, `task.assignedRole ?? task.assignedUserId ?? "—"` | YES | Medium — the sibling list page already fixed this exact leak; the detail page did not follow | Yes — the list page's own fallback pattern (role, or "Assigned", or "—") | OWNER-LANGUAGE / OWNER-SAFETY |
+| `/owner/tasks/[taskId]` status-history actor | raw `TaskActorRole` token (`EMPLOYEE`/`MANAGER`/`OWNER`/`SYSTEM`) | page.tsx:451, `{h.actorRole && <span>({h.actorRole})</span>}` | YES | Low-medium — a small, closed, already-known enum, just unhumanized | Yes — direct 1:1 humanization (Employee/Manager/Owner/System) | OWNER-LANGUAGE |
 
-No `BusinessConditionProfile`/`InterventionMode`/`InterventionPhase`/raw-capability-id/UUID-as-primary-
-text leaks were found on either page beyond the one recommendation-id reference above, which is
-explicitly labeled and monospaced, not presented as prose.
+**Corrected in Revision 1**: the first draft of this register claimed "no material UUID leak exists
+beyond the one recommendation-id reference" — that claim was wrong. Two further leaks (both above)
+were found on the task-detail page on re-audit: a raw assignee UUID and raw `TaskActorRole` tokens.
+No `BusinessConditionProfile`/`InterventionMode`/`InterventionPhase`/raw-capability-id leak was found
+on either page; the UUID/role leaks above are the exceptions to that narrower claim, not additional
+instances of it.
 
 ## S. Loading/empty/error/partial-state matrix
 
@@ -782,7 +876,7 @@ collapse `/owner/tasks`'s two models into one.
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `/owner/tasks` DelegatedTask list | `TableListSkeleton` | list rendered | `EmptyState` (filtered vs. unfiltered copy differs) | N/A (single source) | inline error text, governed via `classifyOperatorError` | no explicit retry button; changing filter/offset re-triggers `load` | N/A (model has no business dimension) | **RACE** — no generation guard (Section P) | N/A (no page-level mutation here; task actions live on the detail page) | N/A | N/A |
 | `/owner/tasks` "My work" (ProcessExecutionTask) | no dedicated skeleton — section simply doesn't render until the effect resolves | list rendered | section omitted entirely (`ownerWork.length > 0 &&`) — no explicit "nothing here" copy for this list | independent of the DelegatedTask list's own state (Section P, correctly) | separate inline error (`ownerWorkError`), governed via `classifyOperatorError` | none (re-fires only on `activeBusinessId` change) | **correctly cancelled** via effect cleanup (Section P) | N/A (no filter/pagination on this list) | N/A (read-only display) | N/A | N/A |
-| `/owner/tasks/[taskId]` detail | `DetailPageSkeleton` | full detail rendered | N/A (a task either exists or 404s) | N/A | `"Task not found."` (task null) vs. governed error text (fetch failure) — two distinct paths | none explicit | N/A | N/A | `actionLoading` disables buttons, shows "…" verb suffixes | `actionSuccess` green text + re-`load()` | `actionError` red text, governed via `classifyOperatorError` |
+| `/owner/tasks/[taskId]` detail | `DetailPageSkeleton` | full detail rendered | N/A (a task either exists or 404s) | **corrected in Revision 1**: for `COMPLETED_PENDING_REVIEW`, the rendered "Review & Approve" CTA is itself a partial-failure state — visible and clickable, but its destination 404s (Section L) | `"Task not found."` (task null) vs. governed error text (fetch failure) — two distinct paths | none explicit | N/A | N/A | `actionLoading` disables buttons, shows "…" verb suffixes (does not apply to the dead completion link, which is a plain navigation, not a tracked mutation) | `actionSuccess` green text + re-`load()` | `actionError` red text, governed via `classifyOperatorError` |
 | `/owner/execution` dashboard | `CardDashboardSkeleton` | `SopCycleView` rendered | "No businesses yet..." / "No execution snapshot yet..." (two distinct copy variants, correctly differentiated by whether a snapshot exists) | **not represented — see Section O.F, error and empty can render simultaneously** | raw `e.message` (Section O.D) | none explicit; only re-triggered by another action | **RACE** — no generation guard, no intent guard (Section O.A/B/C) | N/A (this page has no filter/pagination) | `busy` disables the relevant button, shows "Saving…"/etc. | implicit — a full `load()` re-render, no distinct success toast | same `error` banner as load failure — a failed mutation and a failed load are visually identical to the owner |
 
 ## T. Proof/evidence/outcome glossary
@@ -867,7 +961,16 @@ table, entirely unreferenced by any of the six `/owner/tasks` routes today; the 
 service's category taxonomy and high-impact flagging, unreferenced by the proof-review route's
 simpler DISPUTED path; `sop-document.service.ts` and `sop-process-intelligence.service.ts`, both
 fully built and unconnected to `/owner/execution`; automated task expiry's FSM definition, with no
-confirmed runtime trigger (Section G).
+confirmed runtime trigger (Section G); **added in Revision 1** — `POST /api/owner/tasks/complete`
+(`completeTask`) itself, including its `ownerOverride`/`maxProofAgeDays` parameters, which must
+survive exactly as-is when Candidate 9 (Section AC) repairs the task-detail page's dead link to it —
+no new backend endpoint, no second completion lifecycle, and no new override mechanism may be
+introduced in that repair.
+
+**CAN_REPRESENT_DIFFERENTLY, added in Revision 1**: the task-detail page's raw `assignedUserId`
+fallback and raw `TaskActorRole` history tokens (Section R) — the underlying data (who is assigned,
+who acted) must survive; only the *text* rendered for it may change, mirroring the sibling list
+page's already-shipped fallback rule.
 
 **UNKNOWN**: whether `OperatorItem` (the model `DelegatedTask.sourceOperatorItemId` optionally
 references) itself carries a businessId — not conclusively verified by this audit's research pass
@@ -952,6 +1055,14 @@ Source-audit only; no WCAG-conformance claim is made.
   hierarchy.
 - Touch-target sizing was not verified — the shared `Button`/`Badge`/`Select` primitive
   implementations were not read in this audit's scope — UNKNOWN.
+- **Added in Revision 1, binding on Section AC's Candidate 4**: the "status is communicated via
+  badge text, not color alone" finding two bullets above is not merely descriptive of the current
+  code — it is a constraint on any accepted future correction too. Any terminal-outcome correction
+  to `/owner/tasks`' list-page "Done" badge must communicate the underlying outcome in **text**, not
+  only via badge color; a color-only fix (green "Done" vs. red "Done") would satisfy no screen-reader
+  user and no color-blind user, since both would still receive the identical word "Done" for every
+  outcome. The first draft of Candidate 4 proposed exactly that color-only fix and is corrected in
+  Section AC.
 
 ## AA. Existing test/browser evidence
 
@@ -1009,26 +1120,57 @@ in that journey.
    a genuine, source-proven asymmetry in concurrency protection across the three models.
 10. No test asserts business-scoping (as opposed to workspace-scoping) for `DelegatedTask`/`Proof`
     — consistent with Section J's finding that no such scoping exists to test.
+11. **Added in Revision 1**: no test — component-level, route-level, or browser-level — asserts that
+    `/owner/tasks/[taskId]`'s "Review & Approve" link actually resolves to a working page. The
+    component test that exists for this page's sibling create-form
+    (`owner-new-task-page.test.tsx`) does not cover the detail page at all (gap #1 above already
+    noted this at the page level; this item notes specifically that the dead link itself — the exact
+    defect Section L/P now document — was consequently untested and unnoticed by CI on every prior
+    PR that touched this page).
 
 ## AB. Open-PR collision report
 
-Checked directly against GitHub (`arnab-netizen/OPsIq`) at mission time, 30 open PRs total.
+**Corrected in Revision 1.** The original audit checked GitHub before PR #514 existed and found
+`30` open PRs, with two internally inconsistent sub-counts (it labeled the Dependabot group "24" and
+the stage7-evidence group "7," which do not sum to 30 alongside `#496`; the actual sub-counts at
+that time, re-derived from the same raw listing, were **17** Dependabot PRs and **12**
+`stage7-evidence` PRs, `17 + 12 + 1 (#496) = 30`, correctly matching the total).
 
-| PR | Title | Files | Semantic overlap | Collision? | Action taken |
+The hostile post-PR audit instruction that triggered this revision asserted a different, larger
+figure — 48 open PRs total, 47 pre-existing, including a named group of 15 "legacy" PR numbers
+(`#368, #331, #311, #274, #181, #108, #40, #25, #24, #23, #22, #14, #13, #4, #1`). **A fresh,
+direct re-query of GitHub performed for this revision does not support that claim.** The complete,
+current list of open PR numbers is exactly:
+`413, 414, 415, 421, 422, 423, 424, 425, 426, 427, 428, 452, 455, 456, 457, 458, 459, 460, 461, 462,
+463, 464, 465, 466, 467, 468, 469, 479, 496, 514` — **30 total, including #514 itself.** None of the
+15 "legacy" PR numbers the audit instruction named are currently open (verified directly, not
+inferred). Per this document's own governing rule (Section 30 — current source wins over an
+unverified historical or asserted claim), this section reports the freshly-verified state below
+rather than the asserted 48/47/15-legacy figures, and flags the discrepancy rather than silently
+reconciling it.
+
+Excluding #514 itself (the PR under audit, not a collision candidate), there are **29** other open
+PRs at the time of this revision:
+
+| PR(s) | Title/category | Files | Semantic overlap | Collision? | Action taken |
 |---|---|---|---|---|---|
 | #496 | PR E — Re-verify recommendation-safety gate scoping (cash/margin/capacity) is not cross-business | `src/services/owner-finance/recommendation-{cash,margin}-safety.service.ts`, `src/services/owner-mode/recommendation-capacity-safety.service.ts`, 2 new `.db.test.ts` files | None — unrelated `owner-finance`/legacy-recommendation-gate scoping, doc-comment-only changes to the third file | NO | NONE |
-| #452–479 (24 Dependabot PRs) | dependency version bumps (npm/yarn packages, GitHub Actions) | `package.json`/`package-lock.json`/workflow YAML only | None | NO | NONE |
-| #412–428 (7 `stage7-evidence` PRs) | auto-generated evidence artifacts | evidence JSON only | None | NO | NONE |
+| #452, #455–469, #479 (17 Dependabot PRs) | dependency version bumps (npm/yarn packages, GitHub Actions) | `package.json`/`package-lock.json`/workflow YAML only | None | NO | NONE |
+| #413–415, #421–428 (11 `stage7-evidence` PRs) | auto-generated evidence artifacts | evidence JSON only | None | NO | NONE |
 
 No open PR touches any file under `src/app/(authenticated)/owner/{tasks,execution}/**`,
 `src/domain/execution/**`, `src/services/execution/**`, `src/services/owner-sop/**`,
 `src/domain/owner-sop/**`, `src/services/owner-mode/process-execution-bridge.service.ts`, or
-`src/app/api/owner/{tasks,process-execution,sop}/**`. **No collision found.**
+`src/app/api/owner/{tasks,process-execution,sop}/**`. **No collision found**, against the freshly
+verified 29-PR set above. No PR was merged, edited, closed, cherry-picked, or rebased by this audit
+in the course of this check.
 
 ## AC. Evidence-backed UX-05B candidates
 
 Per Section 32's rule, only candidates with `USER-EVIDENCE NEEDED: NO` may enter the concrete future
-manifest (Section AD). Each candidate below follows the required template.
+manifest (Section AD). Each candidate below follows the required template. **Rebuilt in Revision 1**
+from 4 candidates to 9, per the hostile post-PR audit's re-evaluation instruction — every candidate
+number below is stable across this revision; none of the original 1–4 were dropped, and 5–9 are new.
 
 **Candidate 1 — stale-response and stale-mutation-intent race guards on `/owner/execution`**
 - CURRENT: no `loadGenerationRef`, no `activeBusinessIdRef`, no create-business intent re-check (Section O.A/B/C).
@@ -1058,54 +1200,220 @@ manifest (Section AD). Each candidate below follows the required template.
 - FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (until/unless a cancelled action ever reaches this page — currently unreachable via this page's own UI). USER-EVIDENCE NEEDED: NO.
 - TESTS REQUIRED: a real-component regression test asserting the label, added to the same new race-test file as Candidate 1 (mirroring UX-04B's own pattern of bundling the label-parity test into the race-test file).
 
-**Candidate 4 — `/owner/tasks` list-page "Done" badge color falsely implies success for non-approved terminal states**
+**Candidate 4 — `/owner/tasks` list-page "Done" badge collapses four materially different terminal
+outcomes into identical rendered text — CORRECTED in Revision 1**
 - CURRENT: `REJECTED_INCOMPLETE`, `CANCELLED`, and `EXPIRED` all render the identical green
-  `success-accessible` "Done" badge as `APPROVED_COMPLETE` on the list page (Section K); the detail
-  page already renders each correctly.
+  `success-accessible` "Done" **badge with the identical text "Done"** as `APPROVED_COMPLETE` on the
+  list page (Section K); the detail page already renders each correctly, in both variant and text
+  (`STATUS_VARIANT`/`STATUS_LABELS`, page.tsx lines 67–97).
 - PROBLEM: a lay owner scanning the list cannot distinguish a genuinely successful task from a
-  rejected/cancelled/expired one by color, violating the design direction's "calm urgency"/
-  "nothing invented" color-semantics rule (no severity/success color should render without real
-  supporting evidence that the outcome was actually positive).
-- PROPOSED CHANGE: make the badge's **color** (not its label text, not the bucket grouping, not the
-  bucket's name "Done") depend on which underlying status produced it — e.g. keep rendering the text
-  "Done" but use the destructive/warning variant for `REJECTED_INCOMPLETE`/`CANCELLED`/`EXPIRED` and
-  reserve the success variant for `APPROVED_COMPLETE` alone. No renaming of the bucket, no
-  restructuring of `STATUS_GROUPS`, no change to which raw statuses belong to "Done."
-- SOURCE OF TRUTH: this contract's Section K; the detail page's own already-correct
-  `STATUS_VARIANT` map as the color precedent to reuse.
+  rejected/cancelled/expired one — not only by color (the first draft's framing), but by **text**,
+  since all four currently render the single word "Done." The first draft of this candidate proposed
+  fixing only the badge *color* while keeping "Done" as the text for all four outcomes — that is
+  rejected on hostile re-audit: Section Z's own accessibility finding ("status communicated via
+  badge text, not color alone") means a color-only fix would still hand every non-color-sighted
+  owner (and every screen-reader user) the identical, misleading word "Done" for a rejected,
+  cancelled, or expired task. A distinction that only a sighted, color-perceiving owner can read is
+  not a truthfulness fix; it is a truthfulness fix for one audience and a truthfulness bug left in
+  place for another.
+- PROPOSED CHANGE: **both** (1) a semantically appropriate badge variant, **and** (2) owner-visible
+  text identifying the actual terminal outcome — for the row-level badge specifically, not the filter
+  dropdown. The existing, already-shipped authoritative label map already has the exact text needed
+  (`STATUS_LABELS`, page.tsx lines 62–78: `APPROVED_COMPLETE → "Approved"`,
+  `REJECTED_INCOMPLETE → "Rejected"`, `CANCELLED → "Cancelled"`, `EXPIRED → "Expired"`) and the
+  detail page's `STATUS_VARIANT` map already has the exact color precedent to reuse — no new
+  terminology is invented. `STATUS_GROUPS`, the `"Done"` **filter optgroup label**, raw server
+  filter values, and pagination are all preserved unchanged; only the per-row badge for a task
+  currently in one of these four terminal states renders its specific outcome (variant + text)
+  instead of the shared bucket name "Done."
+- SOURCE OF TRUTH: this contract's Section K and Z; the detail page's own already-correct
+  `STATUS_VARIANT`/`STATUS_LABELS` maps as the exact variant-and-text precedent to reuse.
 - FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/page.tsx`.
-- FEATURES PRESERVED: all — grouping, labels, and filtering are untouched; only a color mapping changes.
-- DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (a color, not a layout/hierarchy/wording change). USER-EVIDENCE NEEDED: NO — this is a correctness fix against the design direction's own explicit, already-adopted color-semantics rule, not a new hierarchy/IA decision.
-- TESTS REQUIRED: extend the existing test coverage (or add a new small component test) asserting the "Done" badge is not rendered in the success variant for any of the three non-approved terminal statuses.
+- FEATURES PRESERVED: all — grouping, the filter optgroup, and pagination are untouched; only the
+  per-row terminal-state badge's variant and text change.
+- DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (badge variant and text for four specific
+  terminal states, not a layout/hierarchy change). USER-EVIDENCE NEEDED: NO — this is a correctness
+  fix against the design direction's own already-adopted color-and-text truthfulness rule (Section Z),
+  reusing terminology this same codebase already ships elsewhere, not a new hierarchy/IA/wording
+  decision.
+- TESTS REQUIRED: a component test asserting that rendered row text distinguishes, at minimum, all
+  four of `APPROVED_COMPLETE`/`REJECTED_INCOMPLETE`/`CANCELLED`/`EXPIRED` in **rendered text**, not
+  only in badge variant/color — added to the same new file as Candidate 6 (Section AD).
 
-**Explicitly NOT proposed** (would require user evidence per Section 32, or touch out-of-scope
-pages): fixing "Continue on Home"'s missing deep-link (touches `/owner/cockpit`, out of scope for
-this audit); replacing `window.prompt()` on `/owner/execution` (explicitly barred — Section 4/32);
-adding a concurrency guard to `updateSopAction` (a service-layer change, not a page-level fix
-matching this contract's own established page-only precedent — flagged as a residual instead,
-Section AF); fixing `/owner/tasks`'s filter/pagination race (Section P) — a genuine but
-lower-severity, differently-shaped race with no established fix template to point to yet; adding
-per-row business labels to the "Delegated work" list (would require a schema change — `DelegatedTask`
-has no businessId to label with at all, per Section J — out of scope for a page-only fix).
+**Candidate 5 — delegated-task list stale filter/pagination-request race on `/owner/tasks`**
+- CURRENT: `load(status, offset)` has no request-generation guard at all (Section P).
+- PROBLEM: an older filter/offset request resolving after a newer one can overwrite the
+  currently-correct list, error state, or loading state with stale data — the same underlying
+  "latest request wins" correctness defect the business-switch races elsewhere in this codebase
+  guard against, just triggered by a filter/offset change instead of a business switch.
+- PROPOSED CHANGE: a component-local request-generation ref around `load(status, offset)`, guarding
+  at minimum `setTasks(...)`, `setError(...)`, and `setLoading(false)` so a stale response cannot
+  commit — the same `loadGenerationRef` mechanism already proven four times over, applied to a
+  filter/offset key instead of a business-id key. No shared hook, no filter/pagination redesign.
+- SOURCE OF TRUTH: the `loadGenerationRef` pattern (Section AC Candidate 1's own source); this
+  contract's Section P as the defect proof.
+- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/page.tsx`.
+- FEATURES PRESERVED: all — filters, pagination, and their existing correct offset-reset/empty-state
+  behavior (Section P) are untouched; this is an additive guard only.
+- DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (except that a rare race no longer visibly
+  corrupts the list — a correctness improvement, not new behavior). USER-EVIDENCE NEEDED: NO.
+- TESTS REQUIRED: a new test file (or an extension of Candidate 4's) covering, at minimum: (1) filter
+  A request starts, filter B request starts, B resolves first, A resolves last — B must remain
+  displayed; (2) an older page/offset request resolving after a newer one must not un-advance the
+  displayed page; (3) a stale failed request must not replace a newer successful result with an
+  error banner.
+
+**Candidate 6 — `/owner/tasks` "My work" `OWNER_WORK_STATUS_LABELS` missing `CANCELLED`**
+- CURRENT: `OWNER_WORK_STATUS_LABELS` has 12 entries but omits `CANCELLED`, one of
+  `ProcessExecutionTask`'s own `TERMINAL_STATUSES` (Section H); `OWNER_WORK_STATUS_LABELS[item.
+  status] ?? item.status` would render the literal string `"CANCELLED"` verbatim if reached.
+- PROBLEM: same defect class as Candidate 3, on the sibling page/model — a schema-legal, validated
+  terminal status has no owner-facing label.
+- PROPOSED CHANGE: add `CANCELLED: "Cancelled"` to the map. No lifecycle change; the already-present,
+  harmless dead `DELEGATED` entry is explicitly left in place (removal has no correctness value —
+  mission instruction, not this audit's own judgment call).
+- SOURCE OF TRUTH: `src/services/owner-mode/process-execution-bridge.service.ts`'s
+  `TERMINAL_STATUSES` set (Section H).
+- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/page.tsx`.
+- FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: NO (until/unless a
+  `ProcessExecutionTask` ever reaches `CANCELLED`, which no current writer produces). USER-EVIDENCE
+  NEEDED: NO.
+- TESTS REQUIRED: a label-parity assertion added to the same test file as Candidate 4.
+
+**Candidate 7 — `/owner/tasks/[taskId]` raw assignee UUID leak**
+- CURRENT: `task.assignedRole ?? task.assignedUserId ?? "—"` (Section L/R).
+- PROBLEM: a raw user UUID can render as the "Assigned to" value, contradicting the sibling list
+  page's own already-shipped fix for the identical leak.
+- PROPOSED CHANGE: mirror the list page's existing rule exactly — `assignedRole`, or a fixed
+  "Assigned" string when only `assignedUserId` is set, or "—" when neither is set. Do not invent a
+  display name; no real display-name source was found or is assumed available.
+- SOURCE OF TRUTH: `src/app/(authenticated)/owner/tasks/page.tsx` line 288's own fallback (the
+  in-codebase precedent for this exact fix).
+- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx`.
+- FEATURES PRESERVED: all — the underlying assignment data is untouched; only its text rendering changes.
+- DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (text only, matching an existing in-app
+  pattern). USER-EVIDENCE NEEDED: NO.
+- TESTS REQUIRED: a component test asserting no raw UUID renders when `assignedRole` is null and
+  `assignedUserId` is set.
+
+**Candidate 8 — `/owner/tasks/[taskId]` raw `TaskActorRole` history tokens**
+- CURRENT: `{h.actorRole && <span>({h.actorRole})</span>}` renders `EMPLOYEE`/`MANAGER`/`OWNER`/
+  `SYSTEM` verbatim (Section L/R).
+- PROBLEM: raw, uppercase, internal enum tokens reach the owner in the status-history timeline.
+- PROPOSED CHANGE: a direct 1:1 humanizing map — `EMPLOYEE → "Employee"`, `MANAGER → "Manager"`,
+  `OWNER → "Owner"`, `SYSTEM → "System"`. No domain change, no authorization change — this is simple
+  presentation humanization of an already-small, already-closed, already-known enum.
+- SOURCE OF TRUTH: `TaskActorRole` (`src/domain/execution/delegated-task.ts` lines 73–78) — the
+  complete, authoritative set to map from.
+- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx`.
+- FEATURES PRESERVED: all. DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (text only).
+  USER-EVIDENCE NEEDED: NO.
+- TESTS REQUIRED: a component test asserting the humanized label renders for each of the 4 roles and
+  the raw token never does.
+
+**Candidate 9 — repair the dead "Review & Approve" completion link on `/owner/tasks/[taskId]`**
+- CURRENT: a `Link` to a nonexistent `/owner/tasks/[taskId]/complete` route (Section L/P) — a
+  confirmed, objectively broken navigation defect, not a usability question.
+- PROBLEM: an owner with a task in `COMPLETED_PENDING_REVIEW` cannot complete the review-and-approve
+  step from the one page built for it.
+- PROPOSED CHANGE (the *whether-it's-safe-to-freeze* question, per the mission's own instruction):
+  the existing backend (`POST /api/owner/tasks/complete`) and the task-detail page's own existing
+  state (`actionLoading`, `actionError`, `actionSuccess`, `apiPost`, `task.id`) are sufficient to
+  replace the dead navigation with an **in-place** action — calling `apiPost("/api/owner/tasks/
+  complete", { taskId: task.id })` and reusing the page's existing success/error rendering — without
+  inventing a new backend endpoint or a second completion lifecycle. **This much is safe to freeze.**
+  What is **not** safe to freeze from source alone: whether the task-detail page's in-place action
+  should expose the `ownerOverride` checkbox the generic `/owner/page.tsx` surface currently exposes.
+  Source proves the backend accepts and gates on it (Section G, L) and that bypassing the proof gate
+  is an audited, owner-only, emergency-only action (`OWNER_TASK_OVERRIDE_USED`) — but source alone
+  does not establish whether exposing that override *on this specific page, at this specific moment
+  in the review flow* is the intended product behavior, or whether it should instead stay confined
+  to the existing generic surface. Per the mission's explicit instruction, this audit does not invent
+  that product decision.
+- SOURCE OF TRUTH: `src/app/api/owner/tasks/complete/route.ts` (unchanged); `src/app/(authenticated)/
+  owner/page.tsx`'s `OwnerActions` component (the existing, working caller, as a reference for the
+  request shape — not to be duplicated as a second endpoint).
+- FILES LIKELY TO CHANGE: `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` (basic,
+  non-override completion action only — FROZEN); whether the same file also gains an
+  `ownerOverride` control is **NOT YET SAFE TO FREEZE**.
+- FEATURES PRESERVED: all — no new endpoint, no new lifecycle; the existing `completeTask` gating
+  (proof clearance, freshness window, SoD) is reused exactly as-is.
+- DOMAIN SEMANTICS CHANGE: NO. OWNER-VISIBLE CHANGE: YES (a dead link becomes a working action).
+  USER-EVIDENCE NEEDED: NO for the basic repair (a broken link being fixed needs no usability study);
+  the override-exposure question is a **product-scope** question, not a usability-evidence question,
+  and is left `NOT YET SAFE TO FREEZE` rather than mislabeled as user-evidence-gated.
+- TESTS REQUIRED: a component test driving the in-place completion action through the existing
+  `POST /api/owner/tasks/complete` mock, asserting success/blocked/error rendering via the page's
+  existing state, and — separately — a regression assertion that no dead-link `Link` to
+  `/complete` remains.
+
+**Explicitly disposed, not silently omitted, per the mission's instruction (item 14):**
+- **`/owner/execution` error-vs-empty simultaneous render (Section O.F)**: **PROVEN DEFECT —
+  IMPLEMENTATION NOT YET SAFE TO FREEZE.** The defect itself (a failed initial load rendering both
+  the error banner and the "No businesses yet" empty state at once) is real and source-proven, and is
+  the same known residual UX-04B's own PR body already flagged for Money/Operations without fixing.
+  What blocks freezing an implementation here is that the *correct* presentation choice (suppress the
+  empty state entirely on error? show only the error? something else?) has no established precedent
+  in this codebase to point to the way Candidates 1–3/5–8 each do — UX-04B never resolved this either.
+  Recorded as a residual (Section AF), not part of Section AD's manifest.
+- **`OwnerSopAction` concurrency asymmetry (Section AA gap #9)**: **PROVEN DEFECT — IMPLEMENTATION
+  NOT YET SAFE TO FREEZE.** `updateSopAction`'s plain `.update()` (no `updateMany`-with-
+  expected-status guard, unlike `applyTaskTransition` and the ProcessExecutionTask outcome-
+  verification path) is a real, source-proven asymmetry. It blocks freezing here because the fix is
+  a **service-layer** change (`src/services/owner-sop/action.service.ts`), not a page-level fix
+  matching every other accepted candidate's established shape, and no page-level precedent exists in
+  this codebase for the specific `updateMany`-retrofit pattern this would require at the service
+  layer. Recorded as a residual (Section AF), not part of Section AD's manifest.
+- **"Continue on Home" missing deep-link (Section H/P/Q)**: excluded because repairing it requires
+  touching `/owner/cockpit`, entirely out of this audit's modification scope (Section C) — not
+  because it lacks evidence. Recorded as a residual that would need its own scoped mission naming
+  Home as in-scope (Section AF).
+- **`window.prompt()` on `/owner/execution`**: excluded because the mission explicitly bars proposing
+  this without further authorization (Section 4/32), independent of evidence quality.
+- **Per-row business labels on the "Delegated work" list**: excluded because it would require a
+  schema change (`DelegatedTask` has no `businessId` to label with — Section J), out of scope for a
+  page-only fix.
 
 ## AD. Exact future file manifest, if safely knowable
 
-**UX-05B EXACT FILE MANIFEST: FROZEN** (Outcome 1) — for Candidates 1–4 only, all four sharing the
-same page-level, precedent-matching, zero-hierarchy-change shape already proven safe by UX-04B:
+**UX-05B EXACT FILE MANIFEST: FROZEN, for the basic (non-override) shape of every accepted
+candidate** (Outcome 1) — **rebuilt in Revision 1** from 4 candidates/4 files to 8 candidates/4
+production files + 2 test files, after the hostile post-PR audit added Candidates 5–9 and corrected
+Candidate 4. Candidate 9's `ownerOverride`-exposure question remains explicitly unfrozen (see below)
+— every other accepted candidate (1–8) has its full implementation shape frozen here; no candidate
+in Section AC lacks its needed file/test below.
 
 Production files:
 1. `src/app/(authenticated)/owner/execution/page.tsx` — Candidates 1, 2, 3 (race guards, error
    governance, cancelled label — bundled, exactly as UX-04B bundled its own equivalent fixes into
    one file per page).
-2. `src/app/(authenticated)/owner/tasks/page.tsx` — Candidate 4 (badge-color correctness only).
+2. `src/app/(authenticated)/owner/tasks/page.tsx` — Candidates 4, 5, 6 (terminal-state badge
+   text+variant correction, delegated-list filter/pagination race guard, My Work `CANCELLED` label
+   — all three bundled into this one file, the same way Candidates 1–3 bundle into execution's).
+3. `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` — Candidates 7, 8, and the **basic,
+   non-override** shape of Candidate 9 (UUID-leak fix, actor-role humanization, and the dead-link
+   repair using the existing `POST /api/owner/tasks/complete` endpoint with no `ownerOverride`
+   control exposed on this page).
 
 Test files (new, mirroring established templates exactly):
-3. `src/__tests__/components/owner-execution-business-switch-race.test.tsx` (new).
-4. `src/__tests__/owner-execution/execution-page-owner-safe-errors.test.tsx` (new).
+4. `src/__tests__/components/owner-execution-business-switch-race.test.tsx` (new) — Candidates 1, 3.
+5. `src/__tests__/owner-execution/execution-page-owner-safe-errors.test.tsx` (new) — Candidate 2.
+6. A new or extended test file for `src/app/(authenticated)/owner/tasks/page.tsx` covering
+   Candidates 4, 5, 6 together (terminal-state text/variant assertions, the three
+   stale-filter/pagination-request scenarios listed under Candidate 5, and the My Work label-parity
+   assertion) — exact filename not frozen (a small naming choice, not a product/implementation
+   question); a plausible name is `src/__tests__/components/owner-tasks-list-correctness.test.tsx`.
+7. A new or extended test file for `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` covering
+   Candidates 7, 8, and the basic Candidate 9 repair (UUID/role-label assertions, plus the in-place
+   completion action's success/blocked/error rendering and the dead-link regression check) — exact
+   filename not frozen; a plausible name is
+   `src/__tests__/components/owner-task-detail-correctness.test.tsx`.
 
-Everything else this contract discusses — the OwnerSopAction concurrency-guard gap, the "Continue on
-Home" deep-link gap, the `/owner/tasks` filter-race gap, `window.prompt()` replacement, any IA/
-hierarchy change — is explicitly **NOT** part of this frozen manifest, per Section AC's exclusions.
+**NOT part of this frozen manifest** — explicitly excluded, per Section AC's dispositions, not
+silently omitted: Candidate 9's `ownerOverride`-exposure question (product scope, not source-
+resolvable — Section AC, AF); the `/owner/execution` error-vs-empty simultaneous render; the
+`OwnerSopAction` concurrency asymmetry; the "Continue on Home" deep-link gap; `window.prompt()`
+replacement; any IA/hierarchy change.
 
 ## AE. Unsafe abstractions explicitly rejected
 
@@ -1174,6 +1482,24 @@ pages, not a new abstraction.
   gap (Section H/P/Q) is a confirmed, real defect, but fixing it requires touching `/owner/cockpit`,
   which is out of this audit's modification scope entirely — it is recorded here as a defect, not
   folded into Section AC's candidates, and would need its own scoped mission naming Home as in-scope.
+- **Added in Revision 1 — `PROVEN DEFECT, NOT YET SAFE TO FREEZE`**: `/owner/execution`'s
+  simultaneous error+empty-state render (Section O.F). WHY NOT SAFE TO FREEZE: the correct
+  presentation choice among several plausible ones (suppress the empty state on error? show only
+  the error? something else?) has no established precedent in this codebase — UX-04B left the
+  identical defect on Money/Operations unresolved too. WHAT WOULD RESOLVE IT: a design decision (not
+  necessarily user-evidence — this could plausibly be settled by source-level convention alone if a
+  precedent existed, but none does today) on which state should suppress the other. DOES IT BLOCK
+  UX-05B: NO (simply not included in this manifest; a future phase could adopt whichever convention
+  is decided).
+- **Added in Revision 1 — `PROVEN DEFECT, NOT YET SAFE TO FREEZE`**: the `OwnerSopAction` update-path
+  concurrency asymmetry (Section AA gap #9 — `updateSopAction` uses a plain `.update()`, not the
+  `updateMany`-with-expected-status guard `applyTaskTransition` and the ProcessExecutionTask
+  outcome-verification path both use). WHY NOT SAFE TO FREEZE: this is a service-layer change
+  (`src/services/owner-sop/action.service.ts`), not a page-level fix matching the shape of every
+  other accepted candidate in this document, and no established precedent exists in this codebase
+  for retrofitting this specific guard at the service layer. WHAT WOULD RESOLVE IT: a scoped mission
+  explicitly authorizing a service-layer (not page-only) fix, or a first precedent example elsewhere
+  in the codebase to model it on. DOES IT BLOCK UX-05B: NO.
 
 ## AG. Hostile self-audit
 
@@ -1218,9 +1544,14 @@ pages, not a new abstraction.
     `BACKEND_ONLY_MUST_PRESERVE` list explicitly protects named-user assignment, the escalation
     service, the proof-dispute category taxonomy, and both separate SOP-adjacent services, none of
     which any candidate in Section AC touches.
-17. **Did I preserve all existing task/action/proof/verification capabilities?** Yes — Section V is
-    exhaustive against Sections F–T, and none of the four frozen candidates removes any capability;
-    all are additive guards or a color fix.
+17. **Did I preserve all existing task/action/proof/verification capabilities?** Section V records
+    the capabilities established by the inspected source set and was rechecked after the hostile
+    amendment; **it is not claimed exhaustive beyond that verified scope** — this hostile audit
+    itself found three capabilities/defects the first draft missed entirely (the dead completion
+    route, the detail-page UUID leak, the detail-page actor-role leak), which is direct proof the
+    original "exhaustive" wording was an overclaim, now corrected. None of the 8 frozen candidates
+    (Section AD) removes any capability; all are additive guards, label/text corrections, or a
+    like-for-like navigation repair.
 18. **Did I treat historical audit docs as current truth without revalidation?** No — every claim
     sourced from UX-04A or the design direction doc was independently re-verified against current
     `main` by this audit's own reads (e.g. re-confirming UX-04A's Section D/E exclusion of Tasks/
@@ -1228,9 +1559,13 @@ pages, not a new abstraction.
 19. **Did I overclaim responsive/mobile safety from CSS alone?** No — Section Y uses only
     `SOURCE-RISK`/`SOURCE-SAFE-SIGNAL` classifications, and Section 38's strong-claim sweep (below)
     confirms no "mobile-safe"/"fully responsive" claim was made.
-20. **Did I check current open PR collisions?** Yes (Section AB) — 30 open PRs enumerated, one
-    (#496) checked file-by-file, confirmed no overlap; the remaining 29 confirmed non-overlapping by
-    category (Dependabot, stage7-evidence).
+20. **Did I check current open PR collisions?** Yes (Section AB) — and re-checked directly on
+    hostile audit, which surfaced that the first draft's sub-counts (24 Dependabot + 7 stage7-
+    evidence) did not sum to its own stated 30-PR total. Re-derived the correct sub-counts (17
+    Dependabot + 12 stage7-evidence + #496 = 30, at the pre-#514 mission time) and, separately,
+    froze a fresh 29-PR (excluding #514 itself) count as of this revision, verified directly rather
+    than accepted from the hostile-audit instruction's own (unverified, and on direct re-check,
+    incorrect) claim of 48 total / 15 named "legacy" PRs — none of which are currently open.
 21. **Did I modify any file other than the one authorized markdown contract?** No — Section 39
     documents the exact validation confirming this.
 22. **Did I weaken or update the feature-preservation baseline?** No — the verifier was run
@@ -1248,9 +1583,76 @@ pages, not a new abstraction.
     confusion is made — this is recorded as a `USER-EVIDENCE NEEDED` question, not answered from
     source.
 
-No self-audit failure requiring correction was found; all 24 questions above were answered directly
-against sourced sections of this same document, not asserted freshly.
+25. **Did I verify that `/owner/tasks/[taskId]/complete` actually exists before describing it as a
+    route?** In the first draft, no — that was exactly the failure a hostile post-PR audit caught,
+    and is the primary correction of this revision (Section L). On this revision, yes: verified
+    directly by listing the filesystem contents of `src/app/(authenticated)/owner/tasks/[taskId]/`,
+    which contains only `page.tsx`, no `complete/` subdirectory.
+26. **Does any task-detail field render a raw user UUID?** Yes, corrected in this revision — the
+    "Assigned to" field (Section L/R), missed in the first draft.
+27. **Does task status history render raw role enums?** Yes, corrected in this revision — the
+    status-history actor-role token (Section L/R), missed in the first draft.
+28. **Does any proposed fix distinguish semantic outcomes only by color?** The first draft's
+    Candidate 4 did exactly that; it is corrected in this revision to require both variant and text
+    (Section AC, Z).
+29. **Did I treat the delegated-list filter/pagination race using the same latest-request-wins
+    correctness standard as the business-switch races?** The first draft did not — it excluded the
+    race from UX-05B on a "different flavor, no template" rationale that does not survive scrutiny,
+    since `loadGenerationRef` guards the latest-request-wins property regardless of what the request
+    key is. Corrected in this revision as Candidate 5 (Section AC).
+30. **Is the open-PR count mathematically consistent with the grouped inventory?** The first draft's
+    was not (24 + 7 + 1 ≠ 30, though the stated total of 30 was itself correct). Corrected in this
+    revision (Section AB), and the hostile-audit instruction's own alternative claim (48/47/15-
+    legacy) was independently re-verified and found not to match current GitHub state either — the
+    figures in the corrected Section AB are freshly verified, not merely reconciled between the two
+    prior claims.
+31. **Are the SOP route/service counts consistent everywhere?** The first draft was not (Section N
+    said "seven" routes / "three" services while naming five; Section AG separately said "9"/"5").
+    Corrected in this revision to "nine" routes / "five" services everywhere, matching the
+    authoritative filesystem listing.
+32. **Does every accepted UX-05B candidate appear in the future file/test manifest?** Yes — Section
+    AD was rebuilt in this revision to cover all 8 frozen candidates (1–8) across 3 production files
+    and 4 test files (including Candidate 9's explicitly-frozen basic shape, distinct from its
+    explicitly-unfrozen override-exposure question), with nothing accepted in Section AC left
+    without a corresponding entry in Section AD.
 
-## Revision record
+No self-audit failure surfaced by this revision's own re-answering of questions 1–32 was left
+uncorrected before commit; every "no" or partial answer above points to the specific section where
+the correction was made.
 
-None — this is the initial version of UX-05A. No prior revision exists to record.
+## AH. Revision record
+
+**Revision 1 — hostile post-PR audit, applied to the same document, same PR #514.**
+
+Corrected:
+- the nonexistent `/owner/tasks/[taskId]/complete` route assumption (Section L, E) — the first draft
+  incorrectly described this as "a separate route ... not read, being outside this audit's scope";
+  it is in fact a dead link, verified directly by filesystem inspection.
+- the task-detail completion capability's classification in the overlap matrix (Section Q) from a
+  bare `YES` to a truthful `PARTIAL` (backend works; the page's own link to it does not).
+- the terminal-status Candidate 4, from a color-only proposal to one requiring both variant and text
+  (Section AC, Z), after the hostile audit correctly identified the color-only version as
+  contradicting this same document's own accessibility finding.
+- the delegated-list stale filter/pagination-request race's disposition (Section P, AC Candidate 5),
+  from excluded-with-a-weak-rationale to an accepted, frozen candidate.
+- a previously-missed raw assignee-UUID leak on the task-detail page (Section L, R, AC Candidate 7).
+- a previously-missed raw `TaskActorRole` leak in task-detail status history (Section L, R, AC
+  Candidate 8).
+- the "My work" `OWNER_WORK_STATUS_LABELS` `CANCELLED` gap's disposition (Section P, AC Candidate 6),
+  from dismissed-as-safe to an accepted, frozen candidate.
+- internally inconsistent SOP route-file/service counts (Section N: "seven"/"three naming five" →
+  "nine"/"five," consistent with Section AG's own count throughout).
+- the open-PR inventory and count (Section AB) — fixed an internal arithmetic inconsistency in the
+  original figures, and separately, independently re-verified the hostile-audit instruction's own
+  alternative claim (48 total / 15 named "legacy" PRs) against fresh GitHub state and found it does
+  not match; reported the freshly-verified state instead of either prior figure.
+- Section AC/AD, rebuilt from 4 candidates/1 disposition-free manifest to 9 evaluated candidates (8
+  frozen in whole or in the basic shape, 1 partially frozen) with two additional defects explicitly
+  dispositioned as `PROVEN DEFECT — IMPLEMENTATION NOT YET SAFE TO FREEZE` rather than silently
+  excluded (Section AF).
+- Section AG's item 17 "exhaustive" overclaim, downgraded to a scope-bounded claim, and items 4/20
+  updated for the count corrections above; added items 25–32.
+- this section's own heading, from `## Revision record` to `## AH. Revision record`, to match the
+  exact section list this document's own Section 34 (mission instruction) requires.
+
+New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
