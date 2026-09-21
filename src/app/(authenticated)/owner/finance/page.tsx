@@ -51,12 +51,18 @@ const SURVIVAL_LABEL: Record<string, string> = {
 
 // Same raw-token leak as SURVIVAL_LABEL above, on the finance action status badge
 // ("in_progress" rendered with its underscore intact).
+// UX-04B hostile-audit correction: this map omitted "cancelled", one of the six literals in the
+// shared RECOVERY_ACTION_STATUSES source of truth (src/domain/founder-recovery/action-status.ts)
+// -- a cancelled action would otherwise fall through to the raw status literal, the exact leak
+// class this map exists to close. The original UX-04A/UX-04B claim that Money already had
+// complete coverage was incorrect; corrected here alongside Operations (Sales already had it).
 const ACTION_STATUS_LABEL: Record<string, string> = {
   proposed: "Proposed",
   assigned: "Assigned",
   in_progress: "In progress",
   completed: "Completed",
   blocked: "Blocked",
+  cancelled: "Cancelled",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -193,6 +199,38 @@ export default function OwnerFinancePage() {
   // button instead of at the top of the page, far from where the owner is looking.
   const [snapshotError, setSnapshotError] = useState<{ message: string; retryable: boolean } | null>(null);
   const draftDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // UX-04B: stale business-switch response guard, mirroring the loadGenerationRef pattern already
+  // shipped for Home (owner/cockpit/page.tsx, UX-03). Without this, a slow response for a
+  // previously-active business arriving after a switch could silently overwrite the newer
+  // business's state and re-anchor the shared activeBusinessId back to the stale one -- see
+  // UX-04A Section J item 1.
+  const loadGenerationRef = useRef(0);
+  // UX-04B hostile-audit correction: the generation guard above closes the STALE-RESPONSE race
+  // (an old load() resolving late), but a SECOND, distinct race survived it -- a business-scoped
+  // MUTATION (addSnapshot/runDiagnosis/updateAction/verifyAction) started for business A can
+  // still be in flight when the owner switches to B; if A's mutation succeeds afterward, its own
+  // `await load(selected)` call starts AFTER B's load() and therefore receives a NEWER
+  // generation than B's own in-flight/just-finished load, so the generation guard alone would
+  // incorrectly let A's post-mutation reload win and re-anchor the shared business back to A.
+  // This ref tracks which business is CURRENTLY intended (kept in sync with the canonical
+  // ActiveBusinessContext, and updated synchronously the instant this page's own selector or
+  // create-business flow changes it) so every mutation handler can check, right after its await
+  // resolves, "is the business I ran this for still the one the owner is looking at?" before
+  // touching any page state. It never substitutes for ActiveBusinessContext -- it only stops an
+  // already-obsolete async continuation from acting on stale intent.
+  const activeBusinessIdRef = useRef<string | null>(activeBusinessId);
+
+  useEffect(() => {
+    activeBusinessIdRef.current = activeBusinessId;
+  }, [activeBusinessId]);
+
+  // Wraps the canonical setActiveBusinessId so the intent ref updates synchronously in the same
+  // tick as the owner's click, rather than waiting for the context's own state update to flow
+  // back down as a prop -- see activeBusinessIdRef's doc comment above.
+  const handleBusinessSelect = useCallback((businessId: string) => {
+    activeBusinessIdRef.current = businessId;
+    setActiveBusinessId(businessId);
+  }, [setActiveBusinessId]);
 
   useEffect(() => {
     return () => {
@@ -216,11 +254,16 @@ export default function OwnerFinancePage() {
   }
 
   const load = useCallback(async (businessId?: string | null) => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
     try {
       const qs = businessId ? `?businessId=${businessId}` : "";
       const data = await api(`/api/owner/finance/dashboard${qs}`);
+      // A newer load() has since started (the active business changed again while this request
+      // was in flight) -- this response is stale and must never commit. See the loadGenerationRef
+      // declaration above.
+      if (loadGenerationRef.current !== generation) return;
       setDashboard(data);
       setSelected(data.selectedBusinessId);
       // Keep the shared active-business context in sync with whichever business this page
@@ -229,13 +272,19 @@ export default function OwnerFinancePage() {
       // business rather than each independently re-deriving their own default.
       if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
+      // A stale failure (e.g. a slow request for a business the owner already switched away
+      // from) must never clobber an already-successful, current render with an error screen.
+      if (loadGenerationRef.current !== generation) return;
       // Governed classification, never the raw fetch/exception text -- see the P0-E pattern
       // already used by addSnapshot() below and by the cockpit page's load handler. A thrown
       // Error here can carry a server-side NotFoundError's raw `"<EntityType> not found: <uuid>"`
       // message (see infra/errors.ts), which must never reach the owner verbatim.
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
-      setLoading(false);
+      // A stale request's completion must never toggle the loading flag for a request that's no
+      // longer current -- it could otherwise dismiss the skeleton for a newer request still in
+      // flight.
+      if (loadGenerationRef.current === generation) setLoading(false);
     }
   }, [setActiveBusinessId]);
 
@@ -271,8 +320,15 @@ export default function OwnerFinancePage() {
         }),
       });
       setShowBusinessForm(false);
+      // Mark the newly created business as the intended active business synchronously (see
+      // activeBusinessIdRef's doc comment) -- a successful creation intentionally switches to it.
+      activeBusinessIdRef.current = created.id;
       setActiveBusinessId(created.id);
       await refreshBusinesses();
+      // If the owner switched to a different business while refreshBusinesses() was still
+      // pending, the newly-created business is no longer the intended one -- do not force it
+      // back into view.
+      if (activeBusinessIdRef.current !== created.id) return;
       await load(created.id);
     } catch (e) {
       // Governed classification -- see load()'s comment above.
@@ -285,6 +341,10 @@ export default function OwnerFinancePage() {
   async function addSnapshot(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selected) return;
+    // Capture which business this save is FOR before the await -- the owner may switch business
+    // while this request is in flight, and `selected` itself will have moved on by the time it
+    // resolves. See activeBusinessIdRef's doc comment.
+    const targetBusinessId = selected;
     setBusy(true);
     setSnapshotError(null);
     const fd = new FormData(e.currentTarget);
@@ -305,12 +365,23 @@ export default function OwnerFinancePage() {
         body: JSON.stringify(body),
       });
       // Draft is cleared only now, on confirmed success -- never at submission start, so a
-      // failed save leaves the draft (and the on-screen values) intact for retry.
+      // failed save leaves the draft (and the on-screen values) intact for retry. This cleanup is
+      // specific to targetBusinessId and reflects a confirmed successful server save for THAT
+      // business -- safe to do even if the owner has since switched away (see UX-04A/UX-04B: a
+      // confirmed-successful save's own draft-clear is not cross-business contamination).
       if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current);
-      clearFinanceDraft(selected);
+      clearFinanceDraft(targetBusinessId);
+      // Stale-mutation-intent guard: only close the form / reload if the owner is still looking
+      // at the business this save was for. If they've switched to a different business, closing
+      // THEIR form or reloading THIS one would be exactly the cross-business contamination this
+      // guard exists to prevent -- see activeBusinessIdRef's doc comment.
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setShowSnapshotForm(false);
-      await load(selected);
+      await load(targetBusinessId);
     } catch (e) {
+      // A stale failure for a business the owner has since switched away from must never render
+      // on the business they're now looking at.
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification, never the raw fetch/exception text -- see P0-E.
       const governed = classifyOperatorError(e, { context: "save" });
       setSnapshotError({
@@ -324,15 +395,20 @@ export default function OwnerFinancePage() {
 
   async function runDiagnosis() {
     if (!selected || !dashboard?.latestSnapshot) return;
+    // See addSnapshot's comment on why the target business is captured before the await.
+    const targetBusinessId = selected;
+    const snapshotId = dashboard.latestSnapshot.id;
     setBusy(true);
     setError(null);
     try {
       await api(`/api/owner/finance/businesses/${selected}/diagnoses`, {
         method: "POST",
-        body: JSON.stringify({ snapshotId: dashboard.latestSnapshot.id }),
+        body: JSON.stringify({ snapshotId }),
       });
-      await load(selected);
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification -- see load()'s comment above.
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
     } finally {
@@ -341,6 +417,8 @@ export default function OwnerFinancePage() {
   }
 
   async function updateAction(action: any, status: string) {
+    // See addSnapshot's comment on why the target business is captured before the await.
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     try {
@@ -354,8 +432,10 @@ export default function OwnerFinancePage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      await load(selected);
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification -- see load()'s comment above.
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
     } finally {
@@ -364,6 +444,8 @@ export default function OwnerFinancePage() {
   }
 
   async function verifyAction(action: any) {
+    // See addSnapshot's comment on why the target business is captured before the await.
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     try {
@@ -381,8 +463,10 @@ export default function OwnerFinancePage() {
           targetDirection: dir === "up" ? "up" : "down",
         }),
       });
-      await load(selected);
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification -- see load()'s comment above.
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
     } finally {
@@ -452,7 +536,7 @@ export default function OwnerFinancePage() {
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => setActiveBusinessId(businessId)}
+              onChange={handleBusinessSelect}
             />
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add financial snapshot
