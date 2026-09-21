@@ -104,7 +104,7 @@ where a domain's own service imports from a shared module (e.g.
 | INPUT/SNAPSHOT SOURCE | VERIFIED | `OwnerFinancialSnapshot` (prisma/schema.prisma:2901-2957); `createFinancialSnapshot()` snapshot.service.ts:97-180 |
 | DIAGNOSIS TRIGGER | VERIFIED — manual/button | page.tsx:325-341,460-462; no automatic first-run trigger |
 | DIAGNOSIS DATA SOURCE | VERIFIED | `runFinanceDiagnosis()` diagnosis.service.ts:22-247 → `diagnoseFinanceSnapshot()` domain/owner-finance/diagnosis.ts:93-127 |
-| CONDITION/STATE | VERIFIED | `SurvivalState = ["SAFE","WATCH","AT_RISK","CRITICAL","INSOLVENT_RISK"]`, types.ts:14-15; `survivalState()` metrics.ts:377-401 |
+| CONDITION/STATE | VERIFIED | `SurvivalState = ["SAFE","WATCH","AT_RISK","CRITICAL","INSOLVENT_RISK"]`, types.ts:14-15; `survivalState()` metrics.ts:377-401 — applies stronger risk-condition checks first, then an explicit inline comment (metrics.ts:396) backs a forced `WATCH`-or-worse floor when `dataConfidenceScore < 70` (check at metrics.ts:397); see Section I.0 |
 | HEALTH VALUE | VERIFIED | `overallHealthScore`, schema.prisma:2966; `financialHealthScore()` metrics.ts:352-359, capped by `healthScoreCeiling(dataConfidenceScore)` |
 | RISK VALUE | VERIFIED | `survivalRiskScore`, schema.prisma:2967; `financialRiskScore()` metrics.ts:301+ |
 | OPPORTUNITY VALUE | VERIFIED | `growthOpportunityScore`, schema.prisma:2968; `financialOpportunityScore()` metrics.ts:362+ |
@@ -116,7 +116,7 @@ where a domain's own service imports from a shared module (e.g.
 | ACTION LIFECYCLE | VERIFIED | Shared `RECOVERY_ACTION_STATUSES`/`canTransition()`, founder-recovery/action-status.ts:9-27; enforced action.service.ts:37-63; completion requires notes+evidence (action.service.ts:50-59); material transitions pass `enforceOwnerActionGates()` |
 | VERIFICATION | VERIFIED — with a UI gap | `recordFinanceVerification()` → shared `verifyOutcome()`; page's `verifyAction()` (page.tsx:366-391) never collects `targetValue`/`evidence`/`disputed` even though the schema supports them — target-reached auto-reassessment is unreachable from this page's own UI |
 | HISTORY | VERIFIED | `dashboard.cycleHistory`, dashboard.service.ts:30-38,104-109,136-144; rendered page.tsx:723-735 |
-| BUSINESS-SWITCH BEHAVIOUR | VERIFIED — real unguarded race | Uses `useActiveBusiness()` (page.tsx:9,183) AND `BusinessContextSelector` (presentational only). `load()` (page.tsx:218-240) has **no AbortController/generation-ref/request-id** (grep-confirmed zero matches). A slow stale response for business A arriving after a switch to B will silently overwrite B's already-rendered state — no error, no warning. |
+| BUSINESS-SWITCH BEHAVIOUR | VERIFIED — real unguarded race, IDENTICAL class to Sales/Operations | Uses `useActiveBusiness()` (page.tsx:9,183) AND `BusinessContextSelector` (presentational only). `load()` (page.tsx:218-240) has **no AbortController/generation-ref/request-id** (grep-confirmed zero matches) and unconditionally calls `setActiveBusinessId(data.selectedBusinessId)` on every resolved response. A slow stale response for business A arriving after a switch to B will silently overwrite B's already-rendered state AND re-anchor the shared `ActiveBusinessContext` back to A — no error, no warning. This `setActiveBusinessId` re-anchoring call is structurally identical across all three pages (re-verified directly for this amendment; see Section I.0 and the revision record after the hostile self-audit). |
 | LOADING | VERIFIED | Whole-page skeleton gate, page.tsx:393; separate `busy` flag for in-flight mutations |
 | ERROR | VERIFIED — collapses toward empty | All 5 handlers route through `classifyOperatorError()` (never raw); BUT a failed initial `load()` leaves `dashboard` null, and `businesses = dashboard?.businesses ?? []` then renders the SAME "No businesses yet" empty state a genuinely-zero-business account sees, simultaneously with the error banner — the two are not reconciled into one message |
 | EMPTY | VERIFIED | Zero-business text (page.tsx:445-448); `<DiagnosisEmptyState>` for no-cycle-yet (page.tsx:557-563) |
@@ -140,8 +140,8 @@ Additional Money-specific findings:
 | INPUT/SNAPSHOT SOURCE | VERIFIED | `OwnerSalesSnapshot`; `createSalesSnapshot`/`listSalesSnapshots`/`getSalesSnapshot`, snapshot.service.ts:76-158 |
 | DIAGNOSIS TRIGGER | VERIFIED — manual/button, period-snapshot model (NOT deal/pipeline CRM) | page.tsx:195-210,319-321. A separate, wholly unrelated CRM/deal-pipeline engine exists (`src/services/growth/sales-pipeline-engine.ts`) but is never referenced by this page (grep-confirmed) |
 | DIAGNOSIS DATA SOURCE | VERIFIED | `runSalesDiagnosis()` diagnosis.service.ts:25-139 → `diagnoseSalesSnapshot()` domain/owner-sales/diagnosis.ts:46-79 |
-| CONDITION/STATE | VERIFIED | `SalesState = ["STRONG","STEADY","SOFT","WEAK","CRITICAL"]`, types.ts:15-16; `salesState()` metrics.ts:256-282 |
-| HEALTH VALUE | VERIFIED | `healthScore`/`salesHealthScore`, types.ts:85; metrics.ts:226-233 |
+| CONDITION/STATE | VERIFIED | `SalesState = ["STRONG","STEADY","SOFT","WEAK","CRITICAL"]`, types.ts:15-16; `salesState()` metrics.ts:256-282 — applies stronger risk-condition checks first, then an explicit inline comment (metrics.ts:265) backs a forced `SOFT`-or-worse floor when `dataConfidenceScore < 50` (check at metrics.ts:266); see Section I.0 |
+| HEALTH VALUE | VERIFIED | `healthScore`/`salesHealthScore`, types.ts:85; metrics.ts:226-233 — takes no confidence parameter (unlike Money's `healthScoreCeiling`-capped score; see Section I.0) |
 | RISK VALUE | VERIFIED | `riskScore`/`salesRiskScore`, types.ts:86; metrics.ts:210-224 |
 | OPPORTUNITY VALUE | VERIFIED | `opportunityScore`/`salesOpportunityScore`, types.ts:87; metrics.ts:235-252 |
 | CONFIDENCE | VERIFIED | `dataConfidenceScore`, data-confidence.ts:70-89 |
@@ -152,9 +152,9 @@ Additional Money-specific findings:
 | ACTION LIFECYCLE | VERIFIED — same shared status machine | founder-recovery/action-status.ts, reused per action.service.ts:5-8,13-18. Page exposes only 4 of 6 legal transitions as buttons (no cancel, no un-block) |
 | VERIFICATION | VERIFIED — same UI gap as Money | Page's `verifyAction()` (page.tsx:234-258) never collects `targetValue`; `reachedTarget` is hard-coded false when null (verification.ts:66-71) — the auto-reassess-on-target-reached branch is unreachable from this page's own UI (though `verified_improved` still resolves correctly via the baseline-comparison branch) |
 | HISTORY | VERIFIED | `cycleHistory`, dashboard.service.ts:30-38,108-113,140-148; rendered page.tsx:504-516 |
-| BUSINESS-SWITCH BEHAVIOUR | VERIFIED — real unguarded race, IDENTICAL class to Money/Operations | Uses `useActiveBusiness()` (page.tsx:7,97) with a documented, passing regression test for the IN-ORDER case (`business-context-sync-sales-trust-execution.test.tsx:76-124`). **No generation-ref/AbortController exists** (page.tsx has no `useRef` at all, grep-confirmed) — an out-of-order slow response is NOT covered by the existing test and WILL overwrite current state |
+| BUSINESS-SWITCH BEHAVIOUR | VERIFIED — real unguarded race, IDENTICAL class to Money/Operations, including the shared-context re-anchoring | Uses `useActiveBusiness()` (page.tsx:7,97) with a documented, passing regression test for the IN-ORDER case (`business-context-sync-sales-trust-execution.test.tsx:76-124`); that test uses a synchronous-resolving fetch mock and cannot prove out-of-order behavior. **No generation-ref/AbortController exists** (page.tsx has no `useRef` at all, grep-confirmed) — an out-of-order slow response is NOT covered by the existing test, WILL overwrite current state, and — re-verified directly for this amendment — also re-calls `setActiveBusinessId(data.selectedBusinessId)`, identically to Money and Operations |
 | LOADING | VERIFIED | Two gates: `contextLoading` no-op, then page-local `loading` full-page skeleton (page.tsx:107,121-123,260) |
-| ERROR | VERIFIED — does NOT collapse into empty (better than Money/Operations) | Distinct red banner (page.tsx:278-282); catch blocks never clear `dashboard`, so stale-but-displayed data can coexist with the error banner rather than falling back to the zero-business empty state |
+| ERROR | VERIFIED — does NOT collapse into empty (better than Money/Operations) | Distinct red banner (page.tsx:278-282); catch blocks never clear `dashboard`, so stale-but-displayed data can coexist with the error banner rather than falling back to the zero-business empty state — but none of these catch blocks route through `classifyOperatorError()` (no governance import in this file, grep-confirmed); the banner can therefore render a raw exception message verbatim (see Section J item 7) |
 | EMPTY | VERIFIED — three distinct states | Zero businesses (page.tsx:304-307); snapshot-exists-no-diagnosis vs no-snapshot-at-all (page.tsx:357-359); zero-findings (page.tsx:435) |
 | MOBILE | VERIFIED classes / UNKNOWN rendered | Three fixed `grid-cols-N` grids with **no** responsive breakpoint modifier at all (page.tsx:287,329,343) — a real, verified regression relative to Money's `sm:grid-cols-2` pattern |
 | OWNER-LANGUAGE LEAKS | VERIFIED — one real gap | `ACTION_STATUS_LABEL` (page.tsx:43-49) has no `"cancelled"` entry; falls through to the raw literal string if ever reached (not reachable via this page's own buttons) |
@@ -175,8 +175,8 @@ Additional Sales-specific findings:
 | INPUT/SNAPSHOT SOURCE | VERIFIED | `OwnerOperationsSnapshot` (schema.prisma:3464-3499); snapshot.service.ts:70-133 |
 | DIAGNOSIS TRIGGER | VERIFIED — manual/button, plus 2 automatic RE-diagnosis paths | page.tsx:239-254,363-365; auto-reruns on action completion (action.service.ts:93-114) and on target-reaching verification (verification.service.ts:75-97), both best-effort/non-blocking |
 | DIAGNOSIS DATA SOURCE | VERIFIED | `runOperationsDiagnosis()` diagnosis.service.ts:25-138 → `diagnoseOperationsSnapshot()` domain/owner-operations/diagnosis.ts:46-81 |
-| CONDITION/STATE | VERIFIED | `OperationsState = ["SMOOTH","STEADY","STRAINED","BOTTLENECKED","OVERLOADED"]`, types.ts:16-17; `operationsState()` metrics.ts:215-243 — **explicit honesty guard**: `dataConfidenceScore < 50` forces STRAINED regardless of other signals, i.e. low confidence can never yield "SMOOTH" |
-| HEALTH VALUE | VERIFIED | `healthScore`, schema.prisma:3508; metrics.ts:181-191 |
+| CONDITION/STATE | VERIFIED | `OperationsState = ["SMOOTH","STEADY","STRAINED","BOTTLENECKED","OVERLOADED"]`, types.ts:16-17; `operationsState()` metrics.ts:215-243 — applies stronger risk-condition checks first, then an explicit inline comment (metrics.ts:226) backs a forced `STRAINED`-or-worse floor when `dataConfidenceScore < 50` (check at metrics.ts:227), i.e. low confidence can never yield "SMOOTH"; see Section I.0 |
+| HEALTH VALUE | VERIFIED | `healthScore`, schema.prisma:3508; metrics.ts:181-191 — takes no confidence parameter (same asymmetry as Sales; unlike Money's `healthScoreCeiling`-capped score; see Section I.0) |
 | RISK VALUE | VERIFIED | `riskScore`, schema.prisma:3509; metrics.ts:160-179 |
 | OPPORTUNITY VALUE | VERIFIED | `opportunityScore`, schema.prisma:3510; metrics.ts:193-211 |
 | CONFIDENCE | VERIFIED | `dataConfidenceScore`, data-confidence.ts:70-89; staleness penalty only applies at diagnosis-time, never at snapshot-create time (precise code-verified nuance, data-confidence.ts:85) |
@@ -187,9 +187,9 @@ Additional Sales-specific findings:
 | ACTION LIFECYCLE | VERIFIED — same shared status machine | founder-recovery/action-status.ts; page exposes 4 of 6 statuses as buttons (no cancel, no un-block) |
 | VERIFICATION | VERIFIED | Same shared `verifyOutcome()`; `VERIFY_LABEL` includes an `"unverified"` entry whose exact DB default was not located (UNKNOWN) |
 | HISTORY | VERIFIED | `cycleHistory`, dashboard.service.ts:104-108,136-144; page.tsx:591-603 |
-| BUSINESS-SWITCH BEHAVIOUR | VERIFIED — real unguarded race, IDENTICAL class to Money/Sales, with an extra hazard | Uses `useActiveBusiness()` (page.tsx:9,84). `load()` (page.tsx:97-113) has **zero** `useRef`/`AbortController`/generation guard (grep-confirmed). On a stale response, the page not only overwrites its own `dashboard`/`selected` state but also **re-calls `setActiveBusinessId(A)`**, re-anchoring the SHARED cross-page active-business context back to the stale business even though the owner has already navigated to B — a strictly worse variant of the same bug class (it can corrupt state seen by OTHER pages, not just this one). Server-side workspace-ownership re-validation (dashboard.service.ts:51-54,70) means this can never leak another workspace's data, only show/set the wrong one of the owner's OWN businesses. |
+| BUSINESS-SWITCH BEHAVIOUR | VERIFIED — real unguarded race, IDENTICAL across all three domains | Uses `useActiveBusiness()` (page.tsx:9,84). `load()` (page.tsx:97-113) has **zero** `useRef`/`AbortController`/generation guard (grep-confirmed). On a stale response, the page overwrites its own `dashboard`/`selected` state and **re-calls `setActiveBusinessId(A)`**, re-anchoring the SHARED cross-page active-business context back to the stale business even though the owner has already navigated to B. Re-reading Money's and Sales's `load()` implementations directly for this amendment confirms this exact `setActiveBusinessId` re-anchoring call is present and structurally identical in all three pages, not an Operations-specific "worse variant" — the original version of this document overstated this as unique to Operations; corrected here (see revision record after the hostile self-audit). Server-side workspace-ownership re-validation (dashboard.service.ts:51-54,70) means this can never leak another workspace's data, only show/set the wrong one of the owner's OWN businesses. |
 | LOADING | VERIFIED | Whole-page skeleton (page.tsx:304); shared `busy` flag across 6 forms/actions |
-| ERROR | VERIFIED — collapses toward empty, same pattern as Money | `load()`'s catch never clears `dashboard`; a failed initial fetch is visually indistinguishable from a genuine zero-business account in the main content area, differentiated only by whether the separate error banner also happens to be showing |
+| ERROR | VERIFIED — collapses toward empty, same pattern as Money | `load()`'s catch never clears `dashboard`; a failed initial fetch is visually indistinguishable from a genuine zero-business account in the main content area, differentiated only by whether the separate error banner also happens to be showing — and, like Sales, none of Operations' 7 catch blocks route through `classifyOperatorError()` (no governance import in this file, grep-confirmed); the banner can render a raw exception message verbatim (see Section J item 7) |
 | EMPTY | VERIFIED | Zero-business text (page.tsx:348-351); `<DiagnosisEmptyState>` (page.tsx:438-444) |
 | MOBILE | VERIFIED classes / UNKNOWN rendered | Five `grid-cols-N` grids with **no** responsive modifier at all (page.tsx:331,373,387,415,428) — same regression class as Sales |
 | OWNER-LANGUAGE LEAKS | VERIFIED — one confirmed real leak, two minor | **Confirmed leak:** `snap.band` (raw `OwnerLoadBand` enum, e.g. literal `"BOTTLENECK_RISK"`) rendered verbatim in a workload-save toast (page.tsx:230; enum at execution/owner-workload.ts:13-19) — the page's own code comment (page.tsx:45-47) documents that `operationsState` was fixed for exactly this leak class but the fix was never extended to this toast. Minor: raw `"up"/"down"` targetDirection (page.tsx:581); raw `ownerRole` (page.tsx:559, currently always the benign lowercase word "owner" per every template in recommendations.ts) |
@@ -201,12 +201,72 @@ Additional Operations-specific findings:
 - **No independent re-ranking in React:** VERIFIED absent (no `.sort()`/`.filter()` call anywhere in the 606-line file).
 - Explicitly confirmed **out of scope and unrelated despite name collision**: `src/domain/remote-operations/**` is a different product area (multi-location dispatch/compliance), not this page.
 
+## I.0 Home vs. domain-engine confidence semantics — explicit separation
+
+This section corrects a conflation in the original version of this document
+(see the revision record following the hostile self-audit) and states the
+rule UX-04A/UX-04B must follow going forward.
+
+**Two separate systems exist, and they are NOT governed by the same rule:**
+
+1. **Home's canonical assessment contract** (UX-02A `reconcileOwnerAssessment`,
+   UX-02B `composeOwnerAssessment`, rendered via UX-03's
+   `OwnerAssessmentSummary`): missing evidence there affects readiness,
+   confidence, and next-data-guidance — it does **not** independently
+   worsen the canonical overall health verdict. This invariant is
+   unchanged by UX-04A and out of scope for the three domain pages.
+
+2. **Each domain engine's own, pre-existing, separate scoring/state
+   semantics** (Money/Sales/Operations, entirely independent of Home's
+   pipeline — Section C already confirms none of the three reads or writes
+   `OwnerNowView`/`reconcileOwnerAssessment`/`composeOwnerAssessment`).
+   Directly re-verified against current source for this amendment:
+
+   - **Money**: `survivalState()` (`src/domain/owner-finance/metrics.ts:377-402`)
+     applies stronger risk-condition checks first, then — per an explicit
+     inline comment at `metrics.ts:396` — forces at least `WATCH` when
+     `dataConfidenceScore < 70` (check at `metrics.ts:397`), regardless of
+     what the risk checks alone would otherwise conclude. Money additionally
+     caps its numeric score: `financialHealthScore()` (`metrics.ts:352-360`)
+     is capped via `Math.min(...)` against `healthScoreCeiling(dataConfidenceScore)`
+     (`metrics.ts:348-350`).
+   - **Sales**: `salesState()` (`src/domain/owner-sales/metrics.ts:256-282`)
+     applies the same pattern — stronger risk checks first, then an explicit
+     inline comment at `metrics.ts:265` backs a forced-`SOFT`-or-worse floor
+     when `dataConfidenceScore < 50` (check at `metrics.ts:266`).
+     `salesHealthScore()` (`metrics.ts:226-233`) takes **no** confidence
+     parameter at all — Sales does not cap its numeric health score the way
+     Money does.
+   - **Operations**: `operationsState()` (`src/domain/owner-operations/metrics.ts:215-243`)
+     is the same pattern — stronger risk checks first, then an explicit
+     inline comment at `metrics.ts:226` backs a forced-`STRAINED`-or-worse
+     floor when `dataConfidenceScore < 50` (check at `metrics.ts:227`).
+     `operationsHealthScore()` (`metrics.ts:181-191`) also takes **no**
+     confidence parameter — same asymmetry as Sales, and unlike Money.
+
+   **This is intentional, documented honesty/caution behavior, not a
+   defect.** Each inline comment states the same rationale in substance:
+   there is not enough trustworthy data to assert a better state, so the
+   engine reports a more cautious one. None of the three is a bug; none is
+   proposed for change by this document.
+
+**The corrected UX-04 rule, stated explicitly:** Presentation must render
+each domain engine truthfully and must **not** add, remove, rerank, or
+reinterpret its scoring/state semantics. This is a UX-04-specific rule
+about presentation fidelity to an existing engine — it is not the same
+rule as Home's "missing evidence doesn't independently worsen the
+canonical verdict" invariant, and the two must not be conflated. Home's
+invariant describes Home's own composition logic; it says nothing about,
+and does not apply to, how Money/Sales/Operations' independent diagnosis
+engines are allowed to treat confidence internally — they already treat it
+as germane to state, by design, before UX-04A ever looked at them.
+
 ## I. Cross-domain comparison
 
 | Behavior | Money | Sales | Operations | Classification |
 |---|---|---|---|---|
 | Business context source | `useActiveBusiness()` + presentational `BusinessContextSelector` | Same | Same | **SHARED_SEMANTIC** — all three already use the canonical UX-01 context, contrary to this mission's stated premise that they were excluded from the original 13-page migration list. They were never IN that list, but current source shows all three are wired to it regardless. |
-| Stale-response race guard | **Absent** | **Absent** | **Absent** (plus the extra hazard of writing a stale id back into the shared context) | **SHARED_SEMANTIC DEFECT** — identical missing mitigation across all three; the exact `loadGenerationRef` pattern already shipped for Home in UX-03 was never applied here. This is the single most consistent, highest-confidence finding across all three audits. |
+| Stale-response race guard | **Absent** | **Absent** | **Absent** | **SHARED_SEMANTIC DEFECT** — identical missing mitigation across all three, including the identical `setActiveBusinessId` re-anchoring of the shared context on a stale response (re-verified directly for this amendment; the original version of this document overstated this as an Operations-only "extra hazard" — corrected, see revision record after the hostile self-audit). The exact `loadGenerationRef` pattern already shipped for Home in UX-03 was never applied here. This is the single most consistent, highest-confidence finding across all three audits. |
 | Findings data shape | `OwnerFinanceFinding`, matches `FindingCardData` exactly | `OwnerFinding` (owner-spine), matches `FindingCardData` exactly | `OwnerOperationsFinding`, matches `FindingCardData` exactly (independently verified column-by-column, not by trusting the code comment) | **SHARED_SEMANTIC** at the data-shape level |
 | Findings rendering component | Shared `<FindingCard>` | Bespoke inline JSX (equivalent content) | Shared `<FindingCard>` | **UNJUSTIFIED_INCONSISTENCY**, pending proof that Sales's bespoke rendering has no content difference from FindingCard's output — see Section S/T |
 | Empty-state component (no cycle yet) | Shared `<DiagnosisEmptyState>` | Bespoke 2-branch text (a 3rd state: "snapshot recorded, no diagnosis yet" that DiagnosisEmptyState's 2-branch contract doesn't model) | Shared `<DiagnosisEmptyState>` | **DOMAIN_SPECIFIC** as currently built — Sales genuinely has one more distinguishable state than the shared component currently supports; forcing it in without extending the component would be a semantic loss |
@@ -217,6 +277,7 @@ Additional Operations-specific findings:
 | Zero-findings copy | Hedged: "...this may indicate missing input data rather than a healthy business..." | **Not hedged**: "No sales issues detected." | Hedged: "...this may indicate missing input data rather than smooth operations..." | **UNJUSTIFIED_INCONSISTENCY** unless Money/Operations can independently prove the same "missing data always produces a finding first" guarantee Sales's rule engine proves — that proof was NOT done for Money/Operations in this pass (risk-rules.ts/opportunity-rules.ts not read line-by-line for either) |
 | Data-entry for completion/verification | `window.prompt()` ×5 | `window.prompt()` ×5 | `window.prompt()` ×5 | **SHARED_SEMANTIC DEFECT** — identical accessibility gap class across all three |
 | Confidence critically-low banner | `<30` banner present | **Not found** in the agent's read of the page | `<30` banner present | **UNKNOWN** — Sales agent's report does not mention an equivalent banner; may be intentionally absent because Sales's rule engine makes the scenario unreachable, or may be a real gap. Not resolved in this pass. |
+| Error-message governance | **Governed** — all 6 catch blocks route through `classifyOperatorError()` | **Ungoverned** — all 6 catch blocks use raw `setError(e.message)`, no governance import | **Ungoverned** — all 7 catch blocks use raw `setError(e.message)`, no governance import | **UNJUSTIFIED_INCONSISTENCY, high-confidence** — identical `api()` helper and an existing, already-shipped governance mechanism exist; Sales/Operations simply never adopted it. Not claimed as an observed leak on Sales/Operations, only structurally proven possible (see Section J item 7). |
 | Owner-language leak class | Raw-fallback trapdoor only (no live leak) | Missing `"cancelled"` label (narrow, not reachable via page buttons) | **One confirmed live leak** (`snap.band` raw enum in a toast) | **DOMAIN_SPECIFIC** instances of the same recurring risk pattern (a maintained label map that is not, or cannot be, kept in sync with every field it could ever render) |
 | Mobile-responsive form grids | `sm:grid-cols-2` present | **No responsive modifier at all** | **No responsive modifier at all** | **UNJUSTIFIED_INCONSISTENCY** — Money's forms have a responsive breakpoint Sales/Operations' equivalent forms lack |
 | Error-state collapse into empty | Collapses (failed load ≈ zero-business empty state) | **Does not collapse** (stale data + banner coexist) | Collapses (same pattern as Money) | **UNJUSTIFIED_INCONSISTENCY** — Sales's behavior here is arguably more correct than Money's/Operations' |
@@ -224,12 +285,13 @@ Additional Operations-specific findings:
 
 ## J. Truthfulness defects
 
-1. **Stale-response overwrite (all three, CRITICAL):** an out-of-order network response after a business switch silently overwrites the currently-displayed, correct business's data with a different business's stale data. On Operations this additionally corrupts the shared cross-page `activeBusinessId`. No error, no warning is shown when this happens.
+1. **Stale-response overwrite (all three, CRITICAL, identical mechanism):** an out-of-order network response after a business switch silently overwrites the currently-displayed, correct business's data with a different business's stale data, AND re-anchors the shared cross-page `activeBusinessId` back to the stale business — verified identical in all three pages' `load()` implementations, not Operations-specific (the original version of this document overstated this as an Operations-only hazard; corrected here). No error, no warning is shown when this happens.
 2. **Error-vs-empty collapse (Money, Operations):** a failed initial load and a genuinely-zero-business account render the identical "No businesses yet" text in the main content area; only the presence of a separate banner (easy to miss) distinguishes them.
 3. **Unsupported richer missing-data detail (Money):** `missingInputsRegistry` (per-field `impact` explanation strings) is computed by the diagnosis engine but never surfaced to the owner — the page only shows the flatter `missingCriticalData` list.
 4. **Verification-target dead path (Money, Sales; Operations UNKNOWN):** the page's own "Verify outcome" flow cannot supply a `targetValue`, so the domain's target-reached auto-reassessment branch can never fire from this UI — the underlying capability exists and works (verifiable via direct API use) but the page's own control surface cannot exercise it.
 5. **Zero-findings guarantee inconsistently worded (all three):** Money and Operations hedge ("this may indicate missing input data..."); Sales does not. Whether Money/Operations could also safely drop the hedge (because their own missing-data findings always intercept the low-confidence case, the way Sales's do) is UNKNOWN — this needs to be resolved with evidence before any copy unification.
 6. **Confidence-critically-low banner presence inconsistent (Money/Operations present, Sales UNKNOWN/absent):** not resolved in this pass.
+7. **Operator-safe error governance gap (Sales, Operations; Money already fixed) — structurally proven, not confirmed as an observed leak:** all three pages share an identical `api()` helper that throws `Error(data?.error?.message || data?.error || \`Request failed (${res.status})\`)`. Money routes all 6 of its catch blocks through `classifyOperatorError()` (`src/lib/operator-error-governance.ts`), which strips Prisma/DB/UUID/internal-jargon terminology before it reaches the owner. Sales (all 6 catch blocks) and Operations (all 7, including the capacity/workload forms) instead call the raw `setError(e instanceof Error ? e.message : "Failed to X")` pattern, with **no governance import anywhere in either file** (grep-confirmed). This is not a theoretical risk: `src/__tests__/owner-finance/finance-page-owner-safe-errors.test.tsx`'s own header comment documents that this exact defect previously existed on Money itself (5 of 6 handlers) and was fixed, with a concrete example of the resulting leak — a `NotFoundError` formatting as `` `${entityType} not found: ${entityId}` ``, e.g. "OwnerFinancialSnapshot not found: 123e4567-e89b-12d3-a456-426614174000", reaching the owner verbatim before the fix. Sales's and Operations' current code can produce the same class of message today under the same trigger conditions (any server-thrown `NotFoundError`/similar reaching an un-governed catch block); whether this has actually surfaced a raw UUID or internal name in production is UNKNOWN and not claimed here — only that it is structurally proven possible via identical code plus this direct historical precedent on the sibling page.
 
 ## K. Forms/accessibility defects
 
@@ -258,24 +320,53 @@ Additional Operations-specific findings:
 - Sales's three form grids (`grid-cols-2`×2, `grid-cols-4`×1) and Operations' five form grids (`grid-cols-2`×4, `grid-cols-4`×1) carry **no responsive breakpoint modifier at all** — verified as classes; actual rendered breakage at 390px was not visually tested by any agent (UNKNOWN, marked explicitly by all three reports) and would require a real/known-person or at minimum a live browser check before this is treated as settled, per Section 19's evidence boundary.
 - All three domains use `flex flex-wrap` on their action-button rows, which is inherently mobile-safe regardless of the grid finding above.
 
-## O. Progressive-disclosure contract (candidate, not adopted)
+## O. Progressive-disclosure contract — CURRENT order vs. FUTURE first-read hierarchy (not adopted)
 
-Evidence-based candidate hierarchy, common to all three domains' actual data availability (NOT automatically adopted — see Section Q for what would need to change and Section 19 for what still needs real-user evidence before any visual reordering is implemented):
+This section is split into two explicitly separate claims, corrected from
+the original version of this document, which stated a single "candidate
+hierarchy" without clearly separating what is observed today from what
+might be authorized later (see the revision record after the hostile
+self-audit). **`MUST_PRESERVE` (Section P) is not the same claim as
+`MUST_SHOW_FIRST` — preserving a capability says nothing about where in the
+render order it belongs.**
 
-**FIRST** (present in all three, verified): condition/state label (`survivalState`/`salesState`/`operationsState`), the three 0-100 scores (health/risk/opportunity), confidence score + missing-critical-data banner, `recommendedNextAction`.
+### CURRENT RENDER ORDER (verified, descriptive only)
 
-**THEN** (present in all three, verified): `findings` list with evidence-vs-threshold and confidence-per-finding.
+Each page's own JSX already renders, in this order, without intermixing:
+score row → confidence/missing-data banners → recommended action →
+findings → actions → history. Concretely, present in all three domains
+today:
 
-**THEN** (present in all three, verified): action list with status/lifecycle controls, verification UI, cycle history.
+1. condition/state label (`survivalState`/`salesState`/`operationsState`)
+   and the three 0-100 scores (health/risk/opportunity).
+2. confidence score + missing-critical-data banner.
+3. `recommendedNextAction`.
+4. `findings` list with evidence-vs-threshold and confidence-per-finding.
+5. action list with status/lifecycle controls, verification UI, cycle
+   history.
 
-No domain requires information to be shown out of this order to remain
-truthful — none of the three currently intermixes these tiers in its JSX
-(each page's own render order already roughly follows this sequence: score
-row → confidence/missing-data banners → recommended action → findings →
-actions → history). This candidate hierarchy is therefore **consistent
-with, not a change from,** current information order — it does not by
-itself justify any UX-04B file change; it is recorded so UX-04B does not
-have to re-derive it from scratch.
+This is a factual description of what each page shows first today. It is
+not a recommendation, and no domain requires information to be shown out
+of this order to remain truthful today.
+
+### FUTURE FIRST-READ HIERARCHY — USER-EVIDENCE NEEDED
+
+The original version of this document treated the CURRENT RENDER ORDER
+above as if it were also the correct, or pre-authorized, first-read
+hierarchy for a non-technical owner going forward. That is corrected here:
+**this document does not decide, and does not pre-authorize, what a
+non-technical owner should see first.** The score triad being rendered
+first today is not, by itself, evidence that a score triad is the right
+thing to show first — it may equally be evidence of an un-examined default
+carried over from an earlier, more technical iteration of these pages.
+Whether the current order is also the right order is real-user-evidence
+territory, and is explicitly left undecided here, alongside every other
+layout/hierarchy/copy-tone question in Section Q item 5 and Section V item
+8.
+
+`MUST_PRESERVE` (Section P) governs whether a capability may be removed or
+hidden; it does not authorize, and must not be read as authorizing, any
+particular render position for that capability.
 
 ## P. Existing-feature preservation table
 
@@ -328,7 +419,18 @@ SOURCE OF TRUTH: existing, tested pattern (Home/`page.tsx`, UX-03) — no new
 logic invented.
 FEATURES PRESERVED: all; this only discards a response that is no longer
 current, exactly as Home already does.
-SEMANTIC CHANGE: NO.
+DIAGNOSIS/SCORING SEMANTICS CHANGE: NO — no engine output (state, score,
+finding, recommended action) is touched.
+API CONTRACT CHANGE: NO — no request/response shape changes.
+CLIENT STATE BEHAVIOR CHANGE: YES — intentional correctness fix. Today a
+stale response can overwrite current state and the shared
+`activeBusinessId`; after the fix, a stale response is discarded instead
+of applied. This is a real behavior change relative to current code, even
+though it changes nothing about what a *correct*, in-order response would
+show.
+OWNER-VISIBLE EFFECT: the owner stops seeing a rare, silent wrong-business
+flash after a fast business switch; nothing else changes for the common
+in-order case.
 USER-EVIDENCE NEEDED: NO — this mirrors an already-shipped, already-tested
 mitigation; the correctness argument does not depend on visual design.
 
@@ -343,7 +445,11 @@ matching the existing `STATE_LABEL`/`SURVIVAL_LABEL` convention.
 SOURCE OF TRUTH: `src/domain/execution/owner-workload.ts`'s existing 5
 literal values — no new value invented.
 FEATURES PRESERVED: all.
-SEMANTIC CHANGE: NO.
+DOMAIN SEMANTICS CHANGE: NO — the underlying `OwnerLoadBand` value, its
+meaning, and when it is assigned are untouched.
+OWNER-FACING COPY/PRESENTATION CHANGE: YES — the raw enum token is
+replaced with a plain-language label in the toast; no new fact is stated
+that the enum value didn't already carry.
 USER-EVIDENCE NEEDED: NO.
 
 **3. Add the missing `"cancelled"` label entry to Sales' `ACTION_STATUS_LABEL`**
@@ -352,10 +458,48 @@ ever rendered.
 PROBLEM: same owner-language rule; narrow but real.
 PROPOSED PRESENTATION: add the missing map entry, matching Money's/Operations' complete coverage.
 SOURCE OF TRUTH: the existing, already-complete `RECOVERY_ACTION_STATUSES` list.
-SEMANTIC CHANGE: NO.
+DOMAIN SEMANTICS CHANGE: NO — the action-status machine and its values are
+untouched.
+OWNER-FACING COPY/PRESENTATION CHANGE: YES — closes a label-map gap with a
+plain-language label; no new fact is stated that the status value didn't
+already carry.
 USER-EVIDENCE NEEDED: NO.
 
-**4. Everything else — explicitly NOT decided here**
+**4. Operator-safe error governance parity (Sales, Operations)**
+CURRENT: Money routes all 6 of its catch blocks through the existing
+`classifyOperatorError()` helper (`src/lib/operator-error-governance.ts`).
+Sales (6 catch blocks) and Operations (7 catch blocks) use a raw
+`setError(e instanceof Error ? e.message : "Failed to X")` pattern instead,
+with no governance import in either file.
+PROBLEM: violates the design direction's Section 3 owner-language rule and
+Section 17's error-state contract; `finance-page-owner-safe-errors.test.tsx`'s
+own header comment proves this exact defect previously existed on Money and
+was fixed, with a concrete leak example (a `NotFoundError` formatting as
+`` `${entityType} not found: ${entityId}` ``, e.g. a raw UUID, reaching the
+owner verbatim). Whether this has actually surfaced on Sales/Operations in
+production is UNKNOWN; the risk is structural, proven by identical code
+plus this direct precedent, not by an observed incident.
+PROPOSED PRESENTATION: route Sales's and Operations' catch blocks through
+the existing `classifyOperatorError()` helper, exactly as Money already
+does — reusing the existing mechanism, no new abstraction, no error-system
+redesign.
+SOURCE OF TRUTH: `src/lib/operator-error-governance.ts` (already shipped,
+already used by Money) and Money's own catch-block call sites as the exact
+pattern to replicate.
+FEATURES PRESERVED: all; no error is suppressed, only reclassified for
+safe display, mirroring Money's already-shipped behavior.
+DOMAIN SEMANTICS CHANGE: NO — no diagnosis/scoring/state output changes.
+OWNER-FACING COPY/PRESENTATION CHANGE: YES — technical/internal error text
+is replaced with governed, plain-language error copy; retryable vs.
+non-retryable guidance becomes consistent with Money.
+USER-EVIDENCE NEEDED: NO — this reuses an existing, already-shipped
+mechanism; the correctness argument does not depend on visual design.
+TESTS NEEDED: a dedicated test per page (mirroring
+`finance-page-owner-safe-errors.test.tsx`) proving (a) raw exception/server
+messages are never rendered, (b) retryable vs. non-retryable copy is
+correct, and (c) an ERROR state is visually distinct from an EMPTY state.
+
+**5. Everything else — explicitly NOT decided here**
 
 Unifying the zero-findings copy hedge, unifying the confidence-critically-low
 banner's presence, moving Sales onto `FindingCard`/`DiagnosisEmptyState`,
@@ -374,20 +518,39 @@ proposing a manifest for these.
 
 ## R. Candidate UX-04B exact file manifest
 
-Only the three zero-semantic-risk fixes in Section Q have enough evidence
-to name files now:
+The four zero/low-semantic-risk fixes in Section Q have enough evidence to
+name files now. This corrects the original version of this document, which
+stated no test-file changes were proposed while Section V (acceptance
+criterion 3) already required a business-switch regression test per page —
+see the revision record after the hostile self-audit.
 
+Production files:
 - `src/app/(authenticated)/owner/finance/page.tsx` — add generation-ref guard to `load()`.
-- `src/app/(authenticated)/owner/sales/page.tsx` — add generation-ref guard to `load()`; add `"cancelled"` to `ACTION_STATUS_LABEL`.
-- `src/app/(authenticated)/owner/operations/page.tsx` — add generation-ref guard to `load()`; add an `OwnerLoadBand` label map for the workload-save toast.
+- `src/app/(authenticated)/owner/sales/page.tsx` — add generation-ref guard to `load()`; add `"cancelled"` to `ACTION_STATUS_LABEL`; route catch blocks through `classifyOperatorError()`.
+- `src/app/(authenticated)/owner/operations/page.tsx` — add generation-ref guard to `load()`; add an `OwnerLoadBand` label map for the workload-save toast; route catch blocks through `classifyOperatorError()`.
 
-No new component files, no shared-hook extraction, and no test-file
-changes are proposed in this manifest — introducing a shared hook (Section
-S) is a candidate for a future pass once the fix above has been applied
-identically three times and the duplication is visibly proven, not before.
+Test files (new, dedicated per-domain files, mirroring the existing
+templates identified by inspecting `owner-cockpit-business-switch-race.test.tsx`,
+`business-context-sync-sales-trust-execution.test.tsx`,
+`business-context-selector-migration.test.ts`, and
+`finance-page-owner-safe-errors.test.tsx` before choosing this strategy —
+extending the two existing test files was ruled out: the sync-execution
+test's fetch mock resolves synchronously and cannot prove an out-of-order
+race, and the selector-migration test is a static source-string check, not
+a runtime/behavioral test):
+- `src/__tests__/components/owner-finance-business-switch-race.test.tsx` — new, mirrors `owner-cockpit-business-switch-race.test.tsx`'s scenarios (stale-after-switch, inverse timing, rapid A→B→A, stale-failed-request, remount/generation-reset) for Money.
+- `src/__tests__/components/owner-sales-business-switch-race.test.tsx` — same, for Sales.
+- `src/__tests__/components/owner-operations-business-switch-race.test.tsx` — same, for Operations.
+- `src/__tests__/owner-sales/sales-page-owner-safe-errors.test.tsx` — new, mirrors `finance-page-owner-safe-errors.test.tsx` for Sales (Section Q item 4).
+- `src/__tests__/owner-operations/operations-page-owner-safe-errors.test.tsx` — new, mirrors `finance-page-owner-safe-errors.test.tsx` for Operations (Section Q item 4).
+
+No new component files and no shared-hook extraction are proposed in this
+manifest — introducing a shared hook (Section S) is a candidate for a
+future pass once the fix above has been applied identically three times
+and the duplication is visibly proven, not before.
 
 No other file is proposed. Everything else remains `USER-EVIDENCE NEEDED:
-YES` or blocked on further source reading, per Section Q item 4.
+YES` or blocked on further source reading, per Section Q item 5.
 
 ## S. Proposed shared components
 
@@ -463,8 +626,12 @@ must satisfy, at minimum:
    even if still not surfaced in the UI).
 3. The stale-response guard (Section Q item 1) is applied identically to
    all three pages using the exact pattern already proven on Home, with a
-   business-switch regression test per page mirroring
-   `owner-cockpit-business-switch-race.test.tsx`'s scenarios.
+   dedicated business-switch regression test per page mirroring
+   `owner-cockpit-business-switch-race.test.tsx`'s scenarios — see Section R
+   for the exact three new test-file names
+   (`owner-finance-business-switch-race.test.tsx`,
+   `owner-sales-business-switch-race.test.tsx`,
+   `owner-operations-business-switch-race.test.tsx`).
 4. No new "why it matters"/"what changed"/scoring text is invented for any
    finding, action, or state that does not already carry that data.
 5. Any change to zero-findings copy, confidence-banner presence, or
@@ -477,8 +644,14 @@ must satisfy, at minimum:
 7. No merge of Money/Sales/Operations' distinct input schemas.
 8. Real/known-person usage evidence is obtained before any change to
    information hierarchy, IA, or the decision to move any field behind/out
-   of progressive disclosure — Section O's candidate hierarchy is not
-   self-authorizing.
+   of progressive disclosure — Section O's CURRENT RENDER ORDER is not
+   self-authorizing as a FUTURE FIRST-READ HIERARCHY.
+9. If the error-governance fix (Section Q item 4) is included, Sales and
+   Operations each gain a dedicated safe-errors test mirroring
+   `finance-page-owner-safe-errors.test.tsx` (Section R), proving raw
+   exception/server messages are never rendered, retryable vs.
+   non-retryable copy is correct, and ERROR is visually distinct from
+   EMPTY.
 
 ## W. Residual unknowns
 
@@ -525,6 +698,13 @@ Explicitly NOT converted into implementation scope:
 10. Whether moving Sales onto `FindingCard` would visually or textually
     change anything a real owner would notice — data-shape equivalence is
     proven; rendered-output equivalence is not.
+11. Whether Sales's or Operations' ungoverned error handlers have ever
+    actually surfaced a raw UUID or internal name to a real owner in
+    production. This amendment establishes the risk is structurally real
+    (the same un-governed raw-message pattern Money's own test history
+    documents it once had, plus Money's own documented historical leak
+    example) but does not claim, and has no evidence of, an actual
+    observed leak on Sales or Operations specifically.
 
 ---
 
@@ -543,9 +723,21 @@ Explicitly NOT converted into implementation scope:
    explicitly flags the inconsistency rather than resolving it in either
    direction, and Sections F-H record each domain's actual zero-findings
    copy verbatim without endorsing a "healthy" reading.
-5. Did I treat missing data as bad health? **No** — every MISSING-DATA
-   BEHAVIOUR row documents that missing data reduces confidence/produces a
-   dedicated finding, never that it worsens `healthScore`/`state` directly.
+5. Did I treat missing data as bad health, or did I fail to distinguish
+   Home's invariant from the domain engines' own semantics? **Corrected in
+   this amendment** — the original answer to this question was false: it
+   claimed every MISSING-DATA BEHAVIOUR row documents that missing data
+   never worsens `healthScore`/`state` directly. Direct re-reading of
+   `metrics.ts` in all three domains for this amendment confirms the
+   opposite: `survivalState()`, `salesState()`, and `operationsState()` all
+   deliberately force a more cautious state when confidence is below a
+   threshold (Section I.0), and Money additionally caps its numeric health
+   score. The real question this hostile-audit item should test is
+   narrower, and is now answered correctly: did UX-04A add a NEW
+   presentation-side rule that makes missing data look worse than the
+   domain engine itself already says? **No** — this document proposes no
+   new confidence-to-severity mapping; Section I.0 states explicitly that
+   presentation must preserve each engine's existing semantics unchanged.
 6. Did I rerank findings or actions? **No** — Section I and each domain's
    ACTION ORDERING SOURCE row explicitly confirm zero React-side sorting in
    all three domains, and Section Q proposes no ordering change.
@@ -601,6 +793,51 @@ Explicitly NOT converted into implementation scope:
     low-digital-literacy owner — that is Section 19 evidence, not something
     code inspection can answer, and is not claimed as answered here.
 
-No defect surfaced by this self-audit required a correction to the
-contract above; all twenty answers point to gaps already recorded as
-`UNKNOWN`/`USER-EVIDENCE NEEDED` rather than silently resolved.
+## Revision record (PR #512 amendment)
+
+The original version of this document contained a real defect, surfaced by
+a hostile re-audit requested after publication, and corrected in this
+revision without any change to production code:
+
+1. **Home-vs-domain-engine confidence semantics were conflated.** The
+   original document implied a single confidence-affects-presentation rule
+   applied everywhere. Section I.0 (new) separates Home's canonical
+   composition invariant from each domain engine's own, separate,
+   pre-existing confidence-gates-state semantics, and states the correct,
+   narrower UX-04 rule: preserve each engine's semantics exactly, don't add
+   a new one.
+2. **Hostile self-audit item 5 (above) was factually wrong** and is
+   corrected in place, with the corrected, narrower question it should
+   have asked.
+3. **Section R stated "no test-file changes are proposed" while Section V
+   already required a per-page regression test** — an internal
+   contradiction. Corrected by naming five concrete new test files in
+   Section R after inspecting the repo's existing test-file conventions
+   (see Section R for why the two nearest existing test files were not
+   extended instead).
+4. **Section Q's "SEMANTIC CHANGE: NO" wording was imprecise** for the
+   stale-response fix (it is a real client-state behavior change, even
+   though it changes no diagnosis/scoring semantics) and for the two
+   label-map fixes (they are owner-facing copy/presentation changes, even
+   though they change no domain semantics). Both are now stated on
+   separate, explicit axes.
+5. **A new UX-04B candidate (Section Q item 4) was added**: Sales's and
+   Operations' error handling lacks the operator-safe error governance
+   Money already has, evidenced by Money's own historical fix
+   (`finance-page-owner-safe-errors.test.tsx`) — recorded as structurally
+   proven, not as an observed production leak.
+6. **Sections H and I overstated Operations as uniquely re-anchoring the
+   shared `activeBusinessId` on a stale response.** Direct re-reading of
+   Money's and Sales's `load()` implementations for this amendment
+   confirms the identical call is present in all three pages. Corrected in
+   Sections F, G, H, I, and J.
+7. **Section O did not separate what is rendered first today from what
+   should be shown first.** Rewritten to state CURRENT RENDER ORDER
+   (descriptive) and FUTURE FIRST-READ HIERARCHY (explicitly
+   USER-EVIDENCE-NEEDED, not decided here) as two distinct claims.
+8. **Section W (residual unknowns) is updated** to add the new,
+   error-governance-specific unknown this amendment's investigation
+   surfaced (item 11).
+
+No merge, and no start of UX-04B, occurred as part of making these
+corrections. This amendment changes only this document.
