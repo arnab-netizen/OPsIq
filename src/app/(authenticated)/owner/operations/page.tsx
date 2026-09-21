@@ -28,12 +28,18 @@ const VERIFY_LABEL: Record<string, string> = {
   disputed: "Disputed",
 };
 
+// UX-04B hostile-audit correction: this map omitted "cancelled", one of the six literals in the
+// shared RECOVERY_ACTION_STATUSES source of truth (src/domain/founder-recovery/action-status.ts)
+// -- a cancelled action would otherwise fall through to the raw status literal. The original
+// UX-04A/UX-04B claim that Operations already had complete coverage was incorrect; corrected here
+// alongside Money (Sales already had it).
 const ACTION_STATUS_LABEL: Record<string, string> = {
   proposed: "Proposed",
   assigned: "Assigned",
   in_progress: "In progress",
   completed: "Completed",
   blocked: "Blocked",
+  cancelled: "Cancelled",
 };
 
 const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -113,6 +119,23 @@ export default function OwnerOperationsPage() {
   // overwrite the newer business's state and re-anchor the shared activeBusinessId back to the
   // stale one -- see UX-04A Section J item 1.
   const loadGenerationRef = useRef(0);
+  // UX-04B hostile-audit correction: the generation guard above closes the STALE-RESPONSE race
+  // (an old load() resolving late), but a SECOND, distinct race survived it -- a business-scoped
+  // mutation started for business A can still be in flight when the owner switches to B; if A's
+  // mutation succeeds afterward, its own `await load(selected)` call starts AFTER B's load() and
+  // therefore receives a NEWER generation, so the generation guard alone would incorrectly let
+  // A's post-mutation reload win and re-anchor the shared business back to A. See
+  // owner/finance/page.tsx's identical activeBusinessIdRef for the full doc comment.
+  const activeBusinessIdRef = useRef<string | null>(activeBusinessId);
+
+  useEffect(() => {
+    activeBusinessIdRef.current = activeBusinessId;
+  }, [activeBusinessId]);
+
+  const handleBusinessSelect = useCallback((businessId: string) => {
+    activeBusinessIdRef.current = businessId;
+    setActiveBusinessId(businessId);
+  }, [setActiveBusinessId]);
 
   const load = useCallback(async (businessId?: string | null) => {
     const generation = ++loadGenerationRef.current;
@@ -169,8 +192,15 @@ export default function OwnerOperationsPage() {
         }),
       });
       setShowBusinessForm(false);
+      // Mark the newly created business as the intended active business synchronously -- a
+      // successful creation intentionally switches to it. See activeBusinessIdRef's comment.
+      activeBusinessIdRef.current = created.id;
       setActiveBusinessId(created.id);
       await refreshBusinesses();
+      // If the owner switched to a different business while refreshBusinesses() was still
+      // pending, the newly-created business is no longer the intended one -- do not force it
+      // back into view.
+      if (activeBusinessIdRef.current !== created.id) return;
       await load(created.id);
     } catch (e) {
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
@@ -182,6 +212,9 @@ export default function OwnerOperationsPage() {
   async function addSnapshot(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selected) return;
+    // Capture which business this save is FOR before the await -- the owner may switch business
+    // while this request is in flight. See activeBusinessIdRef's comment.
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
@@ -197,13 +230,15 @@ export default function OwnerOperationsPage() {
       if (v && typeof v === "string" && v.trim()) body[f.name] = parseFloat(v);
     }
     try {
-      await api(`/api/owner/operations/businesses/${selected}/snapshots`, {
+      await api(`/api/owner/operations/businesses/${targetBusinessId}/snapshots`, {
         method: "POST",
         body: JSON.stringify(body),
       });
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setShowSnapshotForm(false);
-      await load(selected);
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save snapshot"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
@@ -214,25 +249,32 @@ export default function OwnerOperationsPage() {
   async function addCapacity(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selected) return;
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     setCapacityResult(null);
     const fd = new FormData(e.currentTarget);
     try {
-      const snap = await api(`/api/owner/operations/businesses/${selected}/capacity-snapshots`, {
+      const snap = await api(`/api/owner/operations/businesses/${targetBusinessId}/capacity-snapshots`, {
         method: "POST",
         body: JSON.stringify({
           currentRevenue: parseFloat(String(fd.get("currentRevenue"))),
           resources: [{ type: "primary", utilization: parseFloat(String(fd.get("utilization"))) }],
         }),
       });
+      // Stale-mutation-intent guard: a capacity result banner and a form-close are specific to
+      // whichever business the owner is CURRENTLY viewing -- if they've switched away, showing
+      // this business's result on the new business (or reloading the old one) would be exactly
+      // the cross-business contamination this guard exists to prevent.
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setShowCapacityForm(false);
       setCapacityResult(
         `Capacity saved — bottleneck utilization ${Math.round((snap.bottleneckUtilization ?? 0) * 100)}%; ` +
           `${snap.growthSafe ? "growth headroom available" : "at/over safe capacity"}.`
       );
-      await load(selected);
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save capacity"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
@@ -243,24 +285,27 @@ export default function OwnerOperationsPage() {
   async function addWorkload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selected) return;
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     setWorkloadResult(null);
     const fd = new FormData(e.currentTarget);
     try {
-      const snap = await api(`/api/owner/operations/businesses/${selected}/workload-snapshots`, {
+      const snap = await api(`/api/owner/operations/businesses/${targetBusinessId}/workload-snapshots`, {
         method: "POST",
         body: JSON.stringify({
           ownerMinutesPerDay: parseFloat(String(fd.get("ownerMinutesPerDay"))),
           sustainableMinutesPerDay: parseFloat(String(fd.get("sustainableMinutesPerDay"))),
         }),
       });
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setShowWorkloadForm(false);
       // UX-04B: LOAD_BAND_LABEL translates the raw OwnerLoadBand enum instead of rendering it
       // verbatim (e.g. "BOTTLENECK_RISK") -- see UX-04A Section M / Section Q item 2.
       setWorkloadResult(`Owner workload saved — daily load ${Math.round(snap.dailyLoadPct ?? 0)}% (band ${LOAD_BAND_LABEL[snap.band] ?? "unknown"}).`);
-      await load(selected);
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save workload"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
@@ -269,15 +314,19 @@ export default function OwnerOperationsPage() {
 
   async function runDiagnosis() {
     if (!selected || !dashboard?.latestSnapshot) return;
+    const targetBusinessId = selected;
+    const snapshotId = dashboard.latestSnapshot.id;
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/owner/operations/businesses/${selected}/diagnoses`, {
+      await api(`/api/owner/operations/businesses/${targetBusinessId}/diagnoses`, {
         method: "POST",
-        body: JSON.stringify({ snapshotId: dashboard.latestSnapshot.id }),
+        body: JSON.stringify({ snapshotId }),
       });
-      await load(selected);
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
@@ -285,6 +334,7 @@ export default function OwnerOperationsPage() {
   }
 
   async function updateAction(action: any, status: string) {
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     try {
@@ -298,8 +348,10 @@ export default function OwnerOperationsPage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      await load(selected);
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
@@ -307,6 +359,7 @@ export default function OwnerOperationsPage() {
   }
 
   async function verifyAction(action: any) {
+    const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     try {
@@ -324,8 +377,10 @@ export default function OwnerOperationsPage() {
           targetDirection: dir === "down" ? "down" : "up",
         }),
       });
-      await load(selected);
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      await load(targetBusinessId);
     } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
@@ -386,7 +441,7 @@ export default function OwnerOperationsPage() {
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => setActiveBusinessId(businessId)}
+              onChange={handleBusinessSelect}
             />
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add operations snapshot

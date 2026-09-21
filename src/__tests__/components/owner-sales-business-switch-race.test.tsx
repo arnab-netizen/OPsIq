@@ -19,6 +19,15 @@
  * start of each call, and every state commit (success, error, and the loading flag itself) is
  * guarded by "is this still the latest generation?" before applying — mirroring
  * `owner-cockpit-business-switch-race.test.tsx`'s proven pattern and assertions exactly.
+ *
+ * HOSTILE-AUDIT ADDITION: the generation guard above closes the STALE-RESPONSE race, but a
+ * hostile re-audit found a SECOND, distinct race it does not close — a business-scoped MUTATION
+ * (addSnapshot/runDiagnosis/updateAction/verifyAction) started for business A can still be in
+ * flight when the owner switches to B; if A's mutation succeeds (or fails) afterward, its own
+ * stale closure would otherwise reload (or error-render) A regardless of the newer generation
+ * counter. The "stale mutation-intent race" tests below prove `activeBusinessIdRef`
+ * (owner/sales/page.tsx) closes this second race, using `runDiagnosis` as the representative
+ * business-scoped mutation.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, waitFor, screen, fireEvent, act } from "@testing-library/react";
@@ -32,7 +41,7 @@ function ok(data: unknown): Response {
   return { ok: true, status: 200, json: async () => data } as Response;
 }
 
-function dashboardFixture(label: string, businessId: string) {
+function dashboardFixture(label: string, businessId: string, actions: unknown[] = []) {
   return {
     businesses: [BIZ_A, BIZ_B],
     selectedBusinessId: businessId,
@@ -49,7 +58,7 @@ function dashboardFixture(label: string, businessId: string) {
       opportunityScore: 50,
       dataConfidenceScore: 90,
       findings: [],
-      actions: [],
+      actions,
     },
     recommendedNextAction: {
       title: `BUSINESS_${label}_SALES_ACTION`,
@@ -84,6 +93,8 @@ function renderPage() {
 
 interface PendingCall { businessId: string; resolve: (data: unknown) => void; reject: (err: unknown) => void }
 let dashboardCalls: PendingCall[];
+/** Pending POST .../diagnoses calls, for the stale-mutation-intent race tests below. */
+let diagnosisCalls: PendingCall[];
 
 function installFetchMock() {
   vi.stubGlobal(
@@ -98,6 +109,17 @@ function installFetchMock() {
         const businessId = params.get("businessId")!;
         return new Promise<Response>((resolve, reject) => {
           dashboardCalls.push({
+            businessId,
+            resolve: (data) => resolve(ok(data)),
+            reject,
+          });
+        });
+      }
+      const diagMatch = url.match(/\/api\/owner\/sales\/businesses\/([^/]+)\/diagnoses$/);
+      if (diagMatch) {
+        const businessId = diagMatch[1]!;
+        return new Promise<Response>((resolve, reject) => {
+          diagnosisCalls.push({
             businessId,
             resolve: (data) => resolve(ok(data)),
             reject,
@@ -126,8 +148,21 @@ async function waitForCall(businessId: string, occurrence = 0): Promise<PendingC
   return dashboardCalls.filter((c) => c.businessId === businessId)[occurrence]!;
 }
 
+/** Wait until the (0-indexed) Nth diagnosis POST for a given business has been issued. */
+async function waitForDiagnosisCall(businessId: string, occurrence = 0): Promise<PendingCall> {
+  await waitFor(
+    () => {
+      const matches = diagnosisCalls.filter((c) => c.businessId === businessId);
+      expect(matches.length).toBeGreaterThan(occurrence);
+    },
+    { timeout: 3000 }
+  );
+  return diagnosisCalls.filter((c) => c.businessId === businessId)[occurrence]!;
+}
+
 beforeEach(() => {
   dashboardCalls = [];
+  diagnosisCalls = [];
   installFetchMock();
   window.sessionStorage.clear();
   window.localStorage.clear();
@@ -227,5 +262,79 @@ describe("Owner Sales — stale business-switch response race (UX-04B)", () => {
     await act(async () => { staleCallB.resolve(dashboardFixture("B-stale-from-old-mount", BIZ_B.id)); });
     await flush();
     expect(screen.getByText("BUSINESS_B-fresh_SALES_ACTION")).toBeInTheDocument();
+  });
+
+  // UX-04B hostile-audit correction: Sales already had "cancelled" in its map, but Money's and
+  // Operations' equivalent maps did not despite the original claim otherwise -- this test proves
+  // Sales's own coverage against the real shared domain literal, for parity with the other two.
+  it("Sales's action-status label map covers the shared domain's \"cancelled\" status", async () => {
+    renderPage();
+    const callA = await waitForCall(BIZ_A.id);
+    await act(async () => {
+      callA.resolve(dashboardFixture("A", BIZ_A.id, [{
+        id: "action-cancelled",
+        title: "Pause the outbound campaign",
+        status: "cancelled",
+        ownerRole: "owner",
+        priorityScore: 1,
+        expectedTimeframeDays: 3,
+        description: "x",
+        verificationMetric: "revenue",
+        verificationMethod: "x",
+      }]));
+    });
+    await flush();
+    expect(await screen.findByText("Cancelled")).toBeInTheDocument();
+  });
+
+  // Stale MUTATION-INTENT race (distinct from the stale load()-RESPONSE races above): a
+  // business-scoped mutation started for A can still be in flight when the owner switches to B.
+  describe("stale mutation-intent race (runDiagnosis)", () => {
+    it("a diagnosis mutation started for A that succeeds AFTER a switch to B must not reload or re-anchor A", async () => {
+      renderPage();
+      const callA = await waitForCall(BIZ_A.id);
+      await act(async () => { callA.resolve(dashboardFixture("A", BIZ_A.id)); });
+      await flush();
+      await waitFor(() => expect(screen.getByText("BUSINESS_A_SALES_ACTION")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText("Run sales diagnosis"));
+      const diagA = await waitForDiagnosisCall(BIZ_A.id);
+
+      fireEvent.click(screen.getByTestId("switch-to-b"));
+      const callB = await waitForCall(BIZ_B.id);
+      await act(async () => { callB.resolve(dashboardFixture("B", BIZ_B.id)); });
+      await flush();
+      await waitFor(() => expect(screen.getByText("BUSINESS_B_SALES_ACTION")).toBeInTheDocument());
+
+      await act(async () => { diagA.resolve({ id: "diag-1" }); });
+      await flush();
+
+      expect(screen.getByText("BUSINESS_B_SALES_ACTION")).toBeInTheDocument();
+      expect(screen.queryByText("BUSINESS_A_SALES_ACTION")).not.toBeInTheDocument();
+      expect(dashboardCalls.filter((c) => c.businessId === BIZ_A.id)).toHaveLength(1);
+    });
+
+    it("a diagnosis mutation started for A that FAILS after a switch to B must not surface A's error on B", async () => {
+      const { container } = renderPage();
+      const callA = await waitForCall(BIZ_A.id);
+      await act(async () => { callA.resolve(dashboardFixture("A", BIZ_A.id)); });
+      await flush();
+      await waitFor(() => expect(screen.getByText("BUSINESS_A_SALES_ACTION")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText("Run sales diagnosis"));
+      const diagA = await waitForDiagnosisCall(BIZ_A.id);
+
+      fireEvent.click(screen.getByTestId("switch-to-b"));
+      const callB = await waitForCall(BIZ_B.id);
+      await act(async () => { callB.resolve(dashboardFixture("B", BIZ_B.id)); });
+      await flush();
+      await waitFor(() => expect(screen.getByText("BUSINESS_B_SALES_ACTION")).toBeInTheDocument());
+
+      await act(async () => { diagA.reject(new Error("Request failed (500)")); });
+      await flush();
+
+      expect(screen.getByText("BUSINESS_B_SALES_ACTION")).toBeInTheDocument();
+      expect(container.querySelector(".text-destructive")).toBeNull();
+    });
   });
 });
