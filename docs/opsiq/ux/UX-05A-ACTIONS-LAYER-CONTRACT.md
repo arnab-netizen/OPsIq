@@ -1151,13 +1151,19 @@ in that journey.
 the same root cause: every earlier check in this document's history called the PR-listing API without
 an explicit page-size parameter, which silently capped the result at a partial page and returned
 30 PRs (or fewer) while omitting a block of older, still-open PRs entirely. Requesting the listing
-with an explicit `perPage: 100` for this revision returns the complete set in a single page (48 < 100,
-so no further pagination is needed, and this was confirmed by checking that the returned count is
-below the requested page size).
+with an explicit `perPage: 100` for this revision returns the complete set in a single page.
+
+**Revision 4 — re-requeried, corrected again: 49, not 48.** A fresh `perPage: 100` query for Revision 4
+returns 49 open PRs, not the 48 Revision 3 stated. This is not a new PR opening since Revision 3 — it
+is Revision 3's own arithmetic error: PR #468 ("Chore(deps-dev): Bump playwright from 1.60.0 to 1.63.0")
+was present in Revision 3's own raw query result and was individually inspected at the time (confirmed
+`package.json`/`package-lock.json` only, the same dependency-only shape as its sibling Dependabot PRs),
+but was dropped from Revision 3's final group table and `GROUP_COUNT_SUM` by a transcription mistake,
+not a query truncation. #468 is restored to the DEPENDENCY ONLY group below.
 
 ```
-CURRENT OPEN PR TOTAL: 48
-EXCLUDING PR #514 ITSELF: 47
+CURRENT OPEN PR TOTAL: 49
+EXCLUDING PR #514 ITSELF: 48
 ```
 
 **DIRECT ACTIONS-LAYER COLLISIONS** (against the collision-sensitive paths listed below):
@@ -1180,12 +1186,12 @@ key-shape change); no open PR touches `src/domain/execution/**`, `src/services/e
 `src/services/owner-mode/process-execution-bridge.service.ts`, or any `src/app/api/owner/{tasks,
 process-execution,sop}/**` route.
 
-**OTHER OPEN PR GROUPS** (47 total, excluding #514):
+**OTHER OPEN PR GROUPS** (48 total, excluding #514):
 
 | Group | Count | PRs | Category |
 |---|---|---|---|
 | UX-05B implementation (this document's own downstream PR) | 1 | #515 | DIRECT_SOURCE_COLLISION (disposed above) |
-| Dependabot — npm/yarn version bumps (`package.json`/`package-lock.json` only) | 11 | #479, #469, #467, #466, #465, #464, #463, #462, #461, #460, #452 | DEPENDENCY ONLY |
+| Dependabot — npm/yarn version bumps (`package.json`/`package-lock.json` only) | 12 | #479, #469, #468, #467, #466, #465, #464, #463, #462, #461, #460, #452 | DEPENDENCY ONLY |
 | Dependabot — GitHub Actions version bumps (`.github/workflows/**` only) | 5 | #459, #458, #457, #456, #455 | TEST/CI COLLISION (config-only; no Actions-domain source touched) |
 | Stage-7 evidence-capture artifacts (each adds exactly one `docs/opsiq/evidence/stage-7/artifacts/evd_*.json` file, nothing else) | 14 | #428, #427, #426, #425, #424, #423, #422, #421, #415, #414, #413, #412, #411, #410 | EVIDENCE ARTIFACT ONLY |
 | Legacy CI/infrastructure PRs (workflow files, `vitest.config.ts`, `scripts/run-test-ci.ts`, runtime-proof/phase-* test files — no Actions-layer source) | 6 | #311, #274, #25, #23, #14, #13 | TEST/CI COLLISION (#13 additionally touches `prisma/schema.prisma` for an unrelated `AggregateLock` change — see SCHEMA COLLISION note above) |
@@ -1195,8 +1201,8 @@ process-execution,sop}/**` route.
 | Foundational schema PR, base branch not `main` (`claude/opsiq-domain-foundation-Y7Cqb`), dated 2026-04-25 — ~2 months before the Actions-layer models (`DelegatedTask`/`ProcessExecutionTask`) were introduced (2026-06-25, per the `owner_mode_execution_tables` migration timestamp seen elsewhere in this codebase); GitHub's diff API refused to return this PR's full diff (`406: diff exceeded the maximum number of lines`), so this is inferred from its file list + migration timeline, not from directly reading its `prisma/schema.prisma` hunk | 1 | #1 | SCHEMA COLLISION (unrelated model, inferred — not directly read; see caveat) |
 
 ```
-GROUP_COUNT_SUM = 1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47
-GROUP_COUNT_SUM_EXCLUDING_514 = TOTAL_CURRENT_OPEN_PRS(48) - 1 = 47
+GROUP_COUNT_SUM = 1 + 12 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 48
+GROUP_COUNT_SUM_EXCLUDING_514 = TOTAL_CURRENT_OPEN_PRS(49) - 1 = 48
 ```
 The two sides reconcile exactly.
 
@@ -1215,22 +1221,6 @@ be reviewed/merged on its own terms before or independently of this document, an
 future-manifest (Sections AC/AD) must not be read as though #515's changes already exist on `main`.
 **ACTION TAKEN: NONE** — #515 is not edited, merged, rebased, closed, or cherry-picked by this
 revision or by this document.
-
-Excluding #514 itself (the PR under audit, not a collision candidate), there are **29** other open
-PRs at the time of this revision:
-
-| PR(s) | Title/category | Files | Semantic overlap | Collision? | Action taken |
-|---|---|---|---|---|---|
-| #496 | PR E — Re-verify recommendation-safety gate scoping (cash/margin/capacity) is not cross-business | `src/services/owner-finance/recommendation-{cash,margin}-safety.service.ts`, `src/services/owner-mode/recommendation-capacity-safety.service.ts`, 2 new `.db.test.ts` files | None — unrelated `owner-finance`/legacy-recommendation-gate scoping, doc-comment-only changes to the third file | NO | NONE |
-| #452, #455–469, #479 (17 Dependabot PRs) | dependency version bumps (npm/yarn packages, GitHub Actions) | `package.json`/`package-lock.json`/workflow YAML only | None | NO | NONE |
-| #413–415, #421–428 (11 `stage7-evidence` PRs) | auto-generated evidence artifacts | evidence JSON only | None | NO | NONE |
-
-No open PR touches any file under `src/app/(authenticated)/owner/{tasks,execution}/**`,
-`src/domain/execution/**`, `src/services/execution/**`, `src/services/owner-sop/**`,
-`src/domain/owner-sop/**`, `src/services/owner-mode/process-execution-bridge.service.ts`, or
-`src/app/api/owner/{tasks,process-execution,sop}/**`. **No collision found**, against the freshly
-verified 29-PR set above. No PR was merged, edited, closed, cherry-picked, or rebased by this audit
-in the course of this check.
 
 ## AC. Evidence-backed UX-05B candidates
 
@@ -1750,9 +1740,11 @@ pages, not a new abstraction.
     found not to match — that re-verification was itself wrong, for the same root cause described in
     Section AB: every prior check in this document's history queried the PR list without an explicit
     page-size parameter and silently received a truncated page. A `perPage: 100` query for Revision 3
-    returns the complete 48-PR set in one page, confirms all 15 named "legacy" PR numbers are in fact
-    still open, and Section AB now reflects that corrected figure rather than the two prior wrong
-    ones.
+    returns the complete set in one page, confirms all 15 named "legacy" PR numbers are in fact
+    still open, and Section AB was updated to reflect that corrected figure rather than the two prior
+    wrong ones. **Corrected again in Revision 4**: Revision 3's own figure (48 total) was itself off
+    by one — a group-table transcription error, not a further pagination defect (PR #468 was already
+    in Revision 3's own query result). The live total is `49`; Section AB now reflects that.
 21. **Did I modify any file other than the one authorized markdown contract?** No — Section 39
     documents the exact validation confirming this.
 22. **Did I weaken or update the feature-preservation baseline?** No — the verifier was run
@@ -1797,9 +1789,12 @@ pages, not a new abstraction.
     was not (24 + 7 + 1 ≠ 30, though the stated total of 30 was itself correct). Corrected in Revision
     1 (Section AB) against a since-discovered-truncated 30-PR query. **Corrected again in Revision
     3**: the 48-total/15-legacy figure this item previously said "did not match" is, on a genuinely
-    complete `perPage: 100` query, exactly correct — see item 20's correction above and Section AB's
-    new group table, whose counts (`1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47`, excluding #514) do sum
-    to the live total.
+    complete `perPage: 100` query, exactly correct in kind (the hostile-audit instruction's 48/15
+    figures were real, not fabricated) — see item 20's correction above. **Corrected a third time in
+    Revision 4**: Revision 3's own group table undercounted by one (it omitted PR #468, already
+    present in its own raw query result, from both the table and `GROUP_COUNT_SUM`). The live total
+    is `49`, not `48`; Section AB's current group table (`1 + 12 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 48`,
+    excluding #514) now sums to that corrected live total.
 31. **Are the SOP route/service counts consistent everywhere?** The first draft was not (Section N
     said "seven" routes / "three" services while naming five; Section AG separately said "9"/"5").
     Corrected in this revision to "nine" routes / "five" services everywhere, matching the
@@ -1835,14 +1830,20 @@ pages, not a new abstraction.
     in prior revisions; no production, test, schema, or config file was touched (Section 39's
     validation, re-run below, confirms this).
 36. **[Added in Revision 3] Did I query all pages/results necessary to enumerate every currently
-    open PR?** Yes — the query was issued with `perPage: 100`, and the result set (48 items) came
-    back below that page size, which is itself the evidence that nothing further remains on a next
-    page. Prior revisions' checks (including this document's own Revision 1/2 checks and this
-    section's own items 20/30 before this correction) never set an explicit page size and were
-    silently truncated as a result — the root cause corrected in Section AB.
-37. **[Added in Revision 3] Does the open-PR group arithmetic exactly equal the live GitHub total?**
-    Yes — Section AB's `GROUP_COUNT_SUM = 1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47` equals
-    `TOTAL_CURRENT_OPEN_PRS(48) - 1`, checked explicitly rather than asserted.
+    open PR?** Yes — the query was issued with `perPage: 100`, and the result set (48 items, later
+    corrected to 49 in Revision 4 — see item 45) came back below that page size, which is itself the
+    evidence that nothing further remains on a next page. Prior revisions' checks (including this
+    document's own Revision 1/2 checks and this section's own items 20/30 before this correction)
+    never set an explicit page size and were silently truncated as a result — the root cause
+    corrected in Section AB. **[Revision 4 note]**: paginating correctly does not, by itself,
+    guarantee the resulting count is then transcribed correctly into the group table — see item 45.
+37. **[Added in Revision 3, corrected in Revision 4] Does the open-PR group arithmetic exactly equal
+    the live GitHub total?** At the time Revision 3 was written, no — its own
+    `GROUP_COUNT_SUM = 1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47` reconciled against the `48` Revision
+    3 itself asserted, but that 47/48 pair was arrived at by omitting PR #468 (already present in
+    Revision 3's own raw query result) from the group table. Revision 4 corrects this: Section AB's
+    live total is `49`, its `GROUP_COUNT_SUM = 1 + 12 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 48` now includes
+    #468 in the DEPENDENCY ONLY group, and `48 = TOTAL_CURRENT_OPEN_PRS(49) - 1` reconciles exactly.
 38. **[Added in Revision 3] Did I explicitly inspect PR #515 rather than pretending it is outside the
     collision set?** Yes — its live state, title, head SHA, and full changed-file list were fetched
     directly (not assumed from its title), confirmed to touch exactly the three principal UX-05A
@@ -1856,18 +1857,46 @@ pages, not a new abstraction.
     else in this document.
 40. **[Added in Revision 3] Did I verify the open/closed state of any legacy PR I mentioned rather
     than relying on the previous revision?** Yes — all 15 named legacy PR numbers, plus every other
-    PR in the live 48-total set, were checked against this revision's own fresh query and, for every
-    PR touching a plausibly-sensitive path, had their actual changed-file lists inspected directly
-    (Section AB) rather than trusting either this document's own prior "not open" claim or the
-    hostile-audit instruction's assertion at face value.
+    PR in the live open-PR set (48 per Revision 3's count, 49 per Revision 4's corrected count — see
+    item 45), were checked against this revision's own fresh query and, for every PR touching a
+    plausibly-sensitive path, had their actual changed-file lists inspected directly (Section AB)
+    rather than trusting either this document's own prior "not open" claim or the hostile-audit
+    instruction's assertion at face value.
 41. **[Added in Revision 3] Did I record the raw MANAGER/STAFF owner-language residual without
     scope-creeping its implementation?** Yes — Sections R and AF record the residual with its full
     classification (PRIMARY: OWNER-LANGUAGE, EVIDENCE: SOURCE-PROVEN, USER-EVIDENCE NEEDED: NO,
     IMPLEMENTATION STATUS: NOT PART OF THE CURRENT COSMETIC FREEZE) and explicitly state it is not
     added to Candidate 7 retroactively and not implemented by this revision; no production file was
     touched anywhere in this revision (Section 39's validation, re-run below, confirms this).
+42. **[Added in Revision 4] Does Section AB contain exactly one current open-PR inventory?** In
+    Revision 3, no — a second, superseded pre-Revision-3 block ("Excluding #514 itself... there are
+    29 other open PRs...", with its own now-false "No collision found, against the freshly verified
+    29-PR set above" conclusion) had been left sitting directly underneath the corrected Revision-3
+    inventory, contradicting it outright. Removed entirely in Revision 4; Section AB now contains
+    exactly one current-state collision inventory.
+43. **[Added in Revision 4] Is the superseded 29-PR table completely absent from the current-state
+    section?** Yes — the entire block, its table, and its concluding "No collision found... 29-PR
+    set" sentence were deleted from Section AB (not relocated, not kept as a second "current" table).
+44. **[Added in Revision 4] Are prior Revision-1 count mistakes explicitly historical/superseded
+    rather than phrased as current truth?** Yes — Section AB's own intro, and items 20/30/36/37/40
+    above, each state plainly that Revision 1's "30 total, does not support 48" conclusion was wrong,
+    and that Revision 3's own "48 total" was itself subsequently found off by one in Revision 4 (item
+    45) — neither superseded figure is left reading as though it were still the document's current
+    claim.
+45. **[Added in Revision 4] Does the current PR group arithmetic reconcile to the fresh live GitHub
+    total?** In Revision 3, no — `1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47` reconciled only against
+    Revision 3's own (undercounted) `48`, not against the true live total. A fresh `perPage: 100`
+    query for Revision 4 returns `49` open PRs; PR #468 (a playwright Dependabot bump, already
+    present in Revision 3's own raw query result but dropped from its group table) is restored to the
+    DEPENDENCY ONLY group, and the corrected `GROUP_COUNT_SUM = 1 + 12 + 5 + 14 + 6 + 4 + 1 + 4 + 1 =
+    48` now reconciles exactly against `TOTAL_CURRENT_OPEN_PRS(49) - 1`.
+46. **[Added in Revision 4] Is PR #515 still represented according to its actual live state?** Yes —
+    re-queried directly for this revision: still `OPEN`, `merged: false`, head
+    `f01d6ebd0d7a395f03999e06ce99b302646f99dd`, base `13f323b6bc67815a1c00bc3f1df96efd736356d9`,
+    unchanged since Revision 3. Section AB's `DIRECT_SOURCE_COLLISION`/`ACTION TAKEN: NONE`
+    disposition for #515 remains accurate and is left untouched by this revision.
 
-No self-audit failure surfaced by this revision's own re-answering of questions 1–41 was left
+No self-audit failure surfaced by this revision's own re-answering of questions 1–46 was left
 uncorrected before commit; every "no" or partial answer above points to the specific section where
 the correction was made.
 
@@ -1961,7 +1990,10 @@ Corrected:
   audit in Sections A–AG, and #515 is explicitly left unmodified, unmerged, and untouched by this
   revision (Section AB's disposition: `ACTION TAKEN: NONE`).
 - mathematically reconciled the open-PR group counts: `1 + 11 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 47`,
-  matching `TOTAL_CURRENT_OPEN_PRS(48) - 1`.
+  matching `TOTAL_CURRENT_OPEN_PRS(48) - 1`. **(Superseded by Revision 4 below: this specific
+  47/48 pair was itself off by one — PR #468 was omitted from the group table — and is no longer
+  the figure in Section AB. Revision 3's methodology, the legacy-PR reverification, and the #515
+  disposition below all remain correct; only this exact count needed a further fix.)**
 - recorded the remaining raw `assignedRole` `MANAGER`/`STAFF` owner-language residual (Sections R,
   AF) found during PR #515's own review — verified directly against current `main`
   (`owner/tasks/new/page.tsx:26-28`) — without adding it to Candidate 7 retroactively or authorizing
@@ -1972,5 +2004,43 @@ Corrected:
   — this remains a documentation-only correction; UX-05B (already implemented in PR #515, separately
   from this document) was not started, expanded, or altered by this revision, and PR #515 was not
   modified in any way.
+
+New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
+
+**Revision 4 — remove superseded collision inventory, applied to the same document, same PR #514.**
+
+Corrected:
+- removed the stale 29-open-PR table left behind in Section AB after Revision 3 — Revision 3 had
+  added its corrected 48-PR live inventory directly above the original document's pre-Revision-3
+  29-PR block without deleting that block, leaving two directly contradictory current-state
+  collision reports in the same section (the old one concluding "No collision found" against a
+  since-superseded 29-PR count, sitting directly under the new one's 48-PR count and #515
+  `DIRECT_SOURCE_COLLISION` disposition).
+- ensured Section AB contains exactly one current live collision inventory — the stale block, its
+  table, and its concluding "No collision found... 29-PR set" sentence were deleted outright, not
+  relocated or preserved as a second "current" table.
+- re-queried GitHub live rather than assuming Revision 3's `48`/`47` remained correct, and found it
+  did not: the true live total is `49` open PRs (`48` excluding #514). This was not a new PR opening
+  since Revision 3 — PR #468 ("Chore(deps-dev): Bump playwright from 1.60.0 to 1.63.0") was already
+  present in Revision 3's own raw query result and had already been individually inspected
+  (confirmed `package.json`/`package-lock.json` only) — it was simply omitted from Revision 3's final
+  group table and `GROUP_COUNT_SUM` by a transcription error. #468 is restored to the DEPENDENCY ONLY
+  group; the corrected arithmetic (`1 + 12 + 5 + 14 + 6 + 4 + 1 + 4 + 1 = 48`) reconciles exactly
+  against the live total.
+- clarified every current-state reference to Revision 3's own now-superseded `48`/`47` figures
+  (Section AB's intro, and Section AG items 20, 30, 36, 37, 40) so none of them reads as a still-true
+  current claim — each now states plainly that Revision 3's total was itself corrected in Revision 4,
+  while leaving Revision 3's own historical record (Section AH above) intact and unmodified, since it
+  accurately describes what Revision 3 asserted at the time.
+- re-verified PR #515's live state unchanged (`OPEN`, `merged: false`, head
+  `f01d6ebd0d7a395f03999e06ce99b302646f99dd`) and left its `DIRECT_SOURCE_COLLISION`/
+  `ACTION TAKEN: NONE` disposition untouched.
+- did not change Candidates 1–9, their scope classes, Sections AC/AD's implementation boundaries,
+  Candidate 9's unresolved workflow specification, the MANAGER/STAFF residual, the feature-
+  preservation inventory, or the route/service counts — this revision is a collision-inventory
+  consistency fix only.
+- added Section AG items 42–46 auditing this revision's own consistency.
+- no production, test, schema, or config file was touched by this revision (re-run validation below)
+  — this remains a documentation-only correction; PR #515 was not modified in any way.
 
 New head SHA: recorded in the commit that carries this revision, and in PR #514's updated body.
