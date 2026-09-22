@@ -9,7 +9,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge, Button, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
@@ -17,6 +17,7 @@ import { DelegatedTaskStatus, TaskActorRole } from "@/domain/execution/delegated
 import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
 import { PROOF_TYPE_LABEL } from "@/lib/owner-proof-type-labels";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 
 interface ProofDetail {
   id: string;
@@ -139,6 +140,17 @@ const ASSIGNED_ROLE_LABEL: Record<string, string> = {
   OWNER: "Owner",
 };
 
+// UX-06 Wave A2 (Section T.2): frozen mapping from completeTask()'s known 409
+// blocked reasons to plain owner language. Raw reason codes must never render;
+// any reason not in this map falls through to the existing governed error path.
+const BLOCKED_REASON_LABEL: Record<string, string> = {
+  proof_not_accepted: "The proof still needs to be accepted before this task can be approved.",
+  duplicate_proof: "This proof was flagged as a duplicate. Review it or ask for new proof before approving the task.",
+  proof_stale: "The accepted proof is too old to use for approval. Ask for updated proof.",
+  separation_of_duty: "The person who completed this work cannot approve it. Another authorised reviewer needs to approve the task.",
+  transition_denied: "This task cannot be approved from its current state. Refresh the task and review its latest status.",
+};
+
 async function apiFetch(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
   const data = await res.json().catch(() => ({}));
@@ -176,6 +188,12 @@ export default function TaskDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // UX-06 Wave A2: React state alone does not synchronously protect two rapid
+  // click-handler invocations within the same tick, so this ref -- local to the
+  // approval action only, not a general concurrency framework -- guards against
+  // a duplicate POST /api/owner/tasks/complete from a double click.
+  const approveInFlightRef = useRef(false);
 
   // Proof submit form state
   const [submitProofType, setSubmitProofType] = useState<string>("");
@@ -234,6 +252,45 @@ export default function TaskDetailPage() {
       setActionError(classifyOperatorError(err, { context: "action" }).operatorMessage);
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  // UX-06 Wave A2 (Section T.2, Candidate 9): same-page final approval. Calls
+  // the existing, unchanged POST /api/owner/tasks/complete with only { taskId }
+  // -- never ownerOverride/maxProofAgeDays -- and never optimistically marks
+  // the task approved; the final status always comes from the reload below.
+  async function handleApproveTask() {
+    if (approveInFlightRef.current) return;
+    approveInFlightRef.current = true;
+    setActionLoading(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const res = await fetch("/api/owner/tasks/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && data && (data as { blocked?: unknown }).blocked === true) {
+        const reason = (data as { reason?: unknown }).reason;
+        const mapped = typeof reason === "string" ? BLOCKED_REASON_LABEL[reason] : undefined;
+        setActionError(
+          mapped ??
+            classifyOperatorError(httpResponseErrorFromBody(res.status, data), { context: "action" }).operatorMessage
+        );
+        return;
+      }
+      if (!res.ok) {
+        throw httpResponseErrorFromBody(res.status, data);
+      }
+      setActionSuccess("Task approved.");
+      await load();
+    } catch (err) {
+      setActionError(classifyOperatorError(err, { context: "action" }).operatorMessage);
+    } finally {
+      setActionLoading(false);
+      approveInFlightRef.current = false;
     }
   }
 
@@ -411,6 +468,25 @@ export default function TaskDetailPage() {
       {!isTerminal && (
         <div className="rounded-lg border border-border p-4 space-y-3 text-sm">
           <h2 className="font-medium">Owner actions</h2>
+
+          {/* UX-06 Wave A2 (Section T.2, Candidate 9): same-page final approval,
+              replacing the previous dead Review & Approve link to a nonexistent
+              /complete route. The Proof panel above already shows everything
+              needed to decide -- no second proof-review step is added here. */}
+          {task.status === DelegatedTaskStatus.COMPLETED_PENDING_REVIEW && (
+            <div className="space-y-2 pb-3 border-b border-border">
+              <h3 className="font-medium">Ready for approval</h3>
+              <p className="text-muted-foreground">
+                {task.proofRequirementId
+                  ? "The work has been completed. Review the details and any proof above, then approve it to mark this task as complete."
+                  : "The work has been completed. Review the details above, then approve it to mark this task as complete."}
+              </p>
+              <Button size="sm" disabled={actionLoading} onClick={handleApproveTask}>
+                {actionLoading ? "Approving…" : "Approve task"}
+              </Button>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             {task.status !== DelegatedTaskStatus.IN_PROGRESS && [
               DelegatedTaskStatus.ASSIGNED,
@@ -428,11 +504,6 @@ export default function TaskDetailPage() {
                 onClick={() => handleTransition(DelegatedTaskStatus.PROOF_REQUIRED)}>
                 Require Proof
               </Button>
-            )}
-            {task.status === DelegatedTaskStatus.COMPLETED_PENDING_REVIEW && (
-              <Link href={`/owner/tasks/${task.id}/complete`}>
-                <Button size="sm" disabled={actionLoading}>Review &amp; Approve</Button>
-              </Link>
             )}
             {![DelegatedTaskStatus.CANCELLED].includes(task.status as DelegatedTaskStatus) && (
               <Button size="sm" variant="outline" disabled={actionLoading}
