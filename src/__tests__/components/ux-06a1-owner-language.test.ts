@@ -117,4 +117,22 @@ describe("UX-06 Wave A1 owner-language contract", () => {
     expect(src).not.toContain("Hide password");
     expect(src).not.toContain("PasswordInput");
   });
+
+  it("PasswordInput carries no generic error-rendering prop (governance compliance)", () => {
+    const src = read("src/ui/primitives/password-input.tsx");
+    expect(src).not.toMatch(/error\s*&&\s*<p/);
+    expect(src).not.toContain("error?: string");
+  });
+
+  it("the Tasks list uses the local assigned-role label map, never a raw assignedRole render", () => {
+    const src = read("src/app/(authenticated)/owner/tasks/page.tsx");
+    expect(src).toContain("ASSIGNED_ROLE_LABEL");
+    expect(src).not.toMatch(/Who: \{task\.assignedRole\}/);
+  });
+
+  it("the task-detail page uses a role label map, never a raw assignedRole render", () => {
+    const src = read("src/app/(authenticated)/owner/tasks/[taskId]/page.tsx");
+    expect(src).toContain("ASSIGNED_ROLE_LABEL");
+    expect(src).not.toMatch(/\{task\.assignedRole \?\? \(task\.assignedUserId/);
+  });
 });

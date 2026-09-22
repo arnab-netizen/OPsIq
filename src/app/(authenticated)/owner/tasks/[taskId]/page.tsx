@@ -127,6 +127,18 @@ const ACTOR_ROLE_LABEL: Record<string, string> = {
   [TaskActorRole.SYSTEM]: "System",
 };
 
+// UX-06A1 hostile-audit remediation: "Assigned to:" previously rendered raw
+// assignedRole ("MANAGER", "STAFF") verbatim. Kept as its own narrowly-scoped map
+// (not merged with ACTOR_ROLE_LABEL above) -- assignedRole and TaskActorRole are
+// distinct concepts (who a task is delegated to vs. who acted in its status
+// history) and are not collapsed into one lookup table.
+const ASSIGNED_ROLE_LABEL: Record<string, string> = {
+  MANAGER: "Manager",
+  STAFF: "Staff",
+  EMPLOYEE: "Employee",
+  OWNER: "Owner",
+};
+
 async function apiFetch(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
   const data = await res.json().catch(() => ({}));
@@ -292,7 +304,7 @@ export default function TaskDetailPage() {
               (owner/tasks/page.tsx) for the identical leak: role, or a fixed "Assigned" string,
               or "—" when neither is set (matching this page's own convention for other missing
               fields, e.g. Priority/Due/Work started below). */}
-          <div><span className="text-muted-foreground">Assigned to:</span> <span>{task.assignedRole ?? (task.assignedUserId ? "Assigned" : "—")}</span></div>
+          <div><span className="text-muted-foreground">Assigned to:</span> <span>{task.assignedRole ? (ASSIGNED_ROLE_LABEL[task.assignedRole] ?? "Assigned") : (task.assignedUserId ? "Assigned" : "—")}</span></div>
           <div><span className="text-muted-foreground">Priority:</span> <span>{task.priority ?? "—"}</span></div>
           <div><span className="text-muted-foreground">Due:</span> <span>{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "—"}</span></div>
           <div><span className="text-muted-foreground">Work started:</span> <span>{task.workStartedAt ? new Date(task.workStartedAt).toLocaleString() : "—"}</span></div>

@@ -68,10 +68,24 @@ describe("PasswordInput", () => {
     expect(input.autocomplete).toBe("new-password");
   });
 
-  it("forwards the disabled prop to the underlying input", () => {
+  // UX-06A1 hostile-audit remediation: disabled must apply to the whole control, not
+  // just the <input> — otherwise the Show/Hide button stays clickable while the field
+  // itself cannot be edited, an incoherent disabled state.
+  it("disabling the field also disables the Show/Hide toggle", () => {
     render(<PasswordInput label="Password" disabled />);
     const input = screen.getByLabelText("Password") as HTMLInputElement;
+    const toggle = screen.getByRole("button", { name: "Show password" }) as HTMLButtonElement;
     expect(input.disabled).toBe(true);
+    expect(toggle.disabled).toBe(true);
+  });
+
+  it("clicking a disabled toggle does not change the input's type", () => {
+    render(<PasswordInput label="Password" disabled />);
+    const input = screen.getByLabelText("Password") as HTMLInputElement;
+    const toggle = screen.getByRole("button", { name: "Show password" });
+    fireEvent.click(toggle);
+    expect(input.type).toBe("password");
+    expect(screen.getByRole("button", { name: "Show password" })).toBeInTheDocument();
   });
 
   it("maintains independent visibility state across two separate instances", () => {

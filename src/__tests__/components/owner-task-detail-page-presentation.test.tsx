@@ -76,8 +76,29 @@ describe("Candidate 7 — /owner/tasks/[taskId] 'Assigned to' never leaks a raw 
     installFetchMock(baseTask({ assignedRole: "MANAGER", assignedUserId: RAW_UUID }));
     render(<TaskDetailPage />);
 
-    expect(await screen.findByText("MANAGER")).toBeInTheDocument();
+    expect(await screen.findByText("Manager")).toBeInTheDocument();
     expect(screen.queryByText(RAW_UUID)).not.toBeInTheDocument();
+  });
+});
+
+// UX-06A1 hostile-audit remediation: assignedRole must render humanized, never the
+// raw "MANAGER"/"STAFF" token — the test above previously asserted the wrong
+// (raw-leaking) behavior as correct.
+describe("UX-06A1 — /owner/tasks/[taskId] 'Assigned to' humanizes assignedRole", () => {
+  it("assignedRole 'MANAGER' renders 'Manager', never the raw token", async () => {
+    installFetchMock(baseTask({ assignedRole: "MANAGER" }));
+    render(<TaskDetailPage />);
+
+    expect(await screen.findByText("Manager")).toBeInTheDocument();
+    expect(screen.queryByText("MANAGER")).not.toBeInTheDocument();
+  });
+
+  it("assignedRole 'STAFF' renders 'Staff', never the raw token", async () => {
+    installFetchMock(baseTask({ assignedRole: "STAFF" }));
+    render(<TaskDetailPage />);
+
+    expect(await screen.findByText("Staff")).toBeInTheDocument();
+    expect(screen.queryByText("STAFF")).not.toBeInTheDocument();
   });
 });
 

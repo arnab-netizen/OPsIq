@@ -80,6 +80,16 @@ const STATUS_LABELS: Record<string, string> = {
   [DelegatedTaskStatus.DISPUTED]: "Disputed",
 };
 
+// UX-06A1 hostile-audit remediation: assignedRole previously rendered raw ("MANAGER",
+// "STAFF") in the "Who:" line. Local, narrowly-scoped map — an unrecognized future
+// role falls back to "Assigned" rather than exposing the raw token.
+const ASSIGNED_ROLE_LABEL: Record<string, string> = {
+  MANAGER: "Manager",
+  STAFF: "Staff",
+  EMPLOYEE: "Employee",
+  OWNER: "Owner",
+};
+
 /**
  * Plain-language grouping of the 15-state DelegatedTaskStatus model, for the filter dropdown only
  * — the underlying status value, API contract, and per-row Badge/STATUS_LABELS above are untouched.
@@ -324,8 +334,13 @@ export default function OwnerTasksPage() {
             const badgeText = isDoneTerminal ? (STATUS_LABELS[task.status] ?? task.status) : group;
             // Never show a raw user id -- the list API returns assignedUserId but no resolved
             // display name, so "who owns it" falls back to the role (if set) or a plain "Assigned"
-            // rather than leaking the UUID, which is the previous fallback here.
-            const who = task.assignedRole ?? (task.assignedUserId ? "Assigned" : "Not yet assigned");
+            // rather than leaking the UUID, which is the previous fallback here. The role itself is
+            // humanized via ASSIGNED_ROLE_LABEL (UX-06A1) -- never the raw "MANAGER"/"STAFF" token.
+            const who = task.assignedRole
+              ? (ASSIGNED_ROLE_LABEL[task.assignedRole] ?? "Assigned")
+              : task.assignedUserId
+                ? "Assigned"
+                : "Not yet assigned";
             return (
               <li key={task.id} className="border-t border-border py-4 first:border-t-0 first:pt-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
