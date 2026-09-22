@@ -404,7 +404,13 @@ export default function TaskDetailPage() {
           {canSubmitProof && (
             <form onSubmit={handleSubmitProof} className="space-y-2 pt-2 border-t border-border">
               <h3 className="font-medium text-sm">Submit proof</h3>
+              {/* UX-06 Wave B1 (Section K, N): these fields were previously placeholder-only with
+                  no persistent <label>, an accessibility/labeling gap. Payload/handler unchanged. */}
+              <label htmlFor="submit-proof-type" className="text-sm font-medium text-foreground block">
+                Proof type
+              </label>
               <select
+                id="submit-proof-type"
                 value={submitProofType}
                 onChange={(e) => setSubmitProofType(e.target.value)}
                 className="rounded border border-border bg-background px-3 py-1.5 text-sm w-full"
@@ -415,7 +421,11 @@ export default function TaskDetailPage() {
                   <option key={t} value={t}>{PROOF_TYPE_LABEL[t] ?? t}</option>
                 ))}
               </select>
+              <label htmlFor="submit-proof-note" className="text-sm font-medium text-foreground block">
+                Note
+              </label>
               <input
+                id="submit-proof-note"
                 type="text"
                 placeholder="Note (required)"
                 value={submitNote}
@@ -433,7 +443,13 @@ export default function TaskDetailPage() {
           {canReviewProof && (
             <form onSubmit={handleReviewProof} className="space-y-2 pt-2 border-t border-border">
               <h3 className="font-medium text-sm">Review proof</h3>
+              {/* UX-06 Wave B1 (Section K, N): persistent labels replacing placeholder-only
+                  fields. Payload/handler unchanged. */}
+              <label htmlFor="review-proof-outcome" className="text-sm font-medium text-foreground block">
+                Outcome
+              </label>
               <select
+                id="review-proof-outcome"
                 value={reviewTo}
                 onChange={(e) => setReviewTo(e.target.value)}
                 className="rounded border border-border bg-background px-3 py-1.5 text-sm w-full"
@@ -447,14 +463,20 @@ export default function TaskDetailPage() {
                 <option value={ProofStatus.DISPUTED}>Dispute</option>
               </select>
               {reviewTo === ProofStatus.REJECTED && (
-                <input
-                  type="text"
-                  placeholder="Rejection reason (required)"
-                  value={reviewReason}
-                  onChange={(e) => setReviewReason(e.target.value)}
-                  className="rounded border border-border bg-background px-3 py-1.5 text-sm w-full"
-                  required
-                />
+                <>
+                  <label htmlFor="review-proof-reason" className="text-sm font-medium text-foreground block">
+                    Rejection reason
+                  </label>
+                  <input
+                    id="review-proof-reason"
+                    type="text"
+                    placeholder="Rejection reason (required)"
+                    value={reviewReason}
+                    onChange={(e) => setReviewReason(e.target.value)}
+                    className="rounded border border-border bg-background px-3 py-1.5 text-sm w-full"
+                    required
+                  />
+                </>
               )}
               <Button type="submit" size="sm" disabled={actionLoading}>
                 {actionLoading ? "Reviewing…" : "Submit Review"}

@@ -469,14 +469,14 @@ describe("(i) run #6 — 01-07 verifies action completion by id, not by re-readi
 
   it("polls the action's own id via a direct GET (not the card) to confirm 'completed', using expect(...).toPass for auto-retry instead of a fixed timing window", () => {
     const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
-    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3000);
+    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3400);
     expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
     expect(block).toMatch(/\/api\/owner\/finance\/actions\/\$\{actionId\}/);
   });
 
   it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress', which are pre-reassessment states, use the card)", () => {
     const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
-    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3000);
+    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3400);
     expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
     expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
     expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);

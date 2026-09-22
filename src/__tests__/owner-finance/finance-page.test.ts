@@ -89,7 +89,13 @@ describe("Owner Finance page wiring", () => {
   it("drives action status via the finance API (no version field; uses status machine)", () => {
     expect(src).toContain('onUpdateAction(a, "assigned")');
     expect(src).toContain('onUpdateAction(a, "in_progress")');
-    expect(src).toContain('onUpdateAction(a, "completed")');
+    // Completion moved from a direct status-transition call to a same-page inline form (UX-06
+    // Wave B1) -- the action is still driven through the same status machine via completeAction,
+    // which PATCHes { status: "completed", ... } to the same endpoint; assert that instead of the
+    // now-removed onUpdateAction(a, "completed") call site.
+    expect(src).toContain("async function completeAction(");
+    expect(src).toContain('status: "completed"');
+    expect(src).toContain("onCompleteAction={completeAction}");
     expect(src).not.toMatch(/version:\s*action\.version/); // finance actions have no version column
   });
 

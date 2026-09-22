@@ -49,14 +49,14 @@ describe("(a) 21-06 verifies Sales action completion by id, not by re-reading a 
 
   it("polls the action's own id via a direct GET to confirm 'completed', using expect(...).toPass for auto-retry", () => {
     const idx = SALES_SPEC_SRC.indexOf('test("21-06');
-    const block = SALES_SPEC_SRC.slice(idx, idx + 3000);
+    const block = SALES_SPEC_SRC.slice(idx, idx + 3700);
     expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
     expect(block).toMatch(/\/api\/owner\/sales\/actions\/\$\{actionId\}/);
   });
 
   it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress' use the card)", () => {
     const idx = SALES_SPEC_SRC.indexOf('test("21-06');
-    const block = SALES_SPEC_SRC.slice(idx, idx + 3000);
+    const block = SALES_SPEC_SRC.slice(idx, idx + 3700);
     expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
     expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
     expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);

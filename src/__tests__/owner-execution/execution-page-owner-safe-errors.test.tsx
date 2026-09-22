@@ -398,6 +398,10 @@ describe("Owner Execution page — governed, owner-safe error rendering (remaini
   });
 
   it("verifyAction: a failed verification submission never renders its raw exception message", async () => {
+    // UX-06 Wave B1: "Verify outcome" now opens a same-page inline form (Before value/After
+    // value/Target direction + "Save verification") instead of a chain of window.prompt() calls
+    // that submitted immediately on click -- fill it and click Save to drive the same POST the
+    // old prompt-answered flow did.
     dashboardFixture = dashboardWithFullCycle("in_progress");
     verifyFailure = {
       kind: "http",
@@ -405,14 +409,14 @@ describe("Owner Execution page — governed, owner-safe error rendering (remaini
       body: { error: { message: `${LEAKY_ACTION_ENTITY} not found: ${LEAKY_UUID}` } },
     };
     installFetchMock();
-    vi.spyOn(window, "prompt")
-      .mockReturnValueOnce("10")
-      .mockReturnValueOnce("20")
-      .mockReturnValueOnce("up");
     const { container } = renderPage();
 
     const verifyButton = await screen.findByRole("button", { name: "Verify outcome" });
     fireEvent.click(verifyButton);
+    await screen.findByRole("heading", { name: "Verify outcome" });
+    fireEvent.change(screen.getByLabelText("Before value"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("After value"), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
 
     await waitFor(() => getErrorBanner(container));
     const banner = getErrorBanner(container);
