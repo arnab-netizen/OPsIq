@@ -1193,8 +1193,8 @@ Kept structurally separate from every other wave. Its product decisions are now 
 linking policy, button placement, no One Tap in v1, the new-user setup flow) — what remains is
 implementation, security, and schema design, not further product choice. Requires its own full
 signup-gate-parity test suite (beta admission, capacity, policy acceptance, the "Finish setting up
-OpsIQ" screen) before merge, plus the `UserAuthIdentity`-equivalent persistence concept (Q.4/Q.10) and a
-transactional/idempotent account-graph creation design (Q.5/Q.12) that this document specifies the
+OpsIQ" screen) before merge, plus the `UserAuthIdentity`-equivalent persistence concept (Q.4) and a
+transactional/idempotent account-graph creation design (Q.5) that this document specifies the
 requirements for but does not design in implementation detail.
 
 **This remains 4 broad waves, not one phase per problem** — Candidate 9 and Google identity each retain
@@ -1236,9 +1236,9 @@ this audit's original modification scope per UX-05A and would need its own scopi
 **Wave D:** a new GIS-appropriate credential-verification endpoint (Section Q.2 — an ID-token POST
 target, not necessarily a classic redirect callback), a new `src/services/auth/google-sign-in.
 service.ts` (deliberately distinct from `google-sheets-oauth.service.ts`), `login/page.tsx` **and**
-`signup/page.tsx` (a "Continue with Google" entry point on both, per Q.11 — frozen, not pending), a new
-`UserAuthIdentity`-equivalent Prisma model + migration (Q.4/Q.10, not authorized by this document), and a
-new "Finish setting up OpsIQ" screen (Q.5/Q.12) collecting business name + the three policy acceptances,
+`signup/page.tsx` (a "Continue with Google" entry point on both, per Q.7 — frozen, not pending), a new
+`UserAuthIdentity`-equivalent Prisma model + migration (Q.4, not authorized by this document), and a
+new "Finish setting up OpsIQ" screen (Q.5) collecting business name + the three policy acceptances,
 with the verified Google email shown read-only.
 
 ---
