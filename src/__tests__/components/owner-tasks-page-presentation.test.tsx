@@ -23,14 +23,14 @@ function renderWithProvider(ui: React.ReactElement) {
 
 const BIZ_A = { id: "biz-a", name: "Trinity Services", currency: "USD" };
 
-function makeTask(id: string, status: string) {
+function makeTask(id: string, status: string, assignedRole: string | null = "MANAGER") {
   return {
     id,
     title: `Task ${id}`,
     status,
     priority: null,
     assignedUserId: null,
-    assignedRole: "MANAGER",
+    assignedRole,
     dueAt: null,
     createdAt: new Date().toISOString(),
     proofRequirementId: null,
@@ -145,5 +145,27 @@ describe("Candidate 6 — /owner/tasks 'My work' CANCELLED label", () => {
     const myWorkSection = myWorkHeading.closest("div") as HTMLElement;
     expect(within(myWorkSection).getByText("Cancelled")).toBeInTheDocument();
     expect(within(myWorkSection).queryByText("CANCELLED")).not.toBeInTheDocument();
+  });
+});
+
+// UX-06A1 hostile-audit remediation: the "Who:" line previously rendered
+// assignedRole raw ("MANAGER", "STAFF"). It must render the humanized label.
+describe("UX-06A1 — /owner/tasks 'Who:' line humanizes assignedRole", () => {
+  it("assignedRole 'MANAGER' renders 'Who: Manager', never the raw token", async () => {
+    installTasksFetchMock([makeTask("t1", "ASSIGNED", "MANAGER")]);
+    renderWithProvider(<OwnerTasksPage />);
+    const row = await screen.findByRole("link", { name: "Task t1" }).then((link) => link.closest("li") as HTMLElement);
+
+    expect(within(row).getByText("Who: Manager")).toBeInTheDocument();
+    expect(within(row).queryByText("Who: MANAGER")).not.toBeInTheDocument();
+  });
+
+  it("assignedRole 'STAFF' renders 'Who: Staff', never the raw token", async () => {
+    installTasksFetchMock([makeTask("t1", "ASSIGNED", "STAFF")]);
+    renderWithProvider(<OwnerTasksPage />);
+    const row = await screen.findByRole("link", { name: "Task t1" }).then((link) => link.closest("li") as HTMLElement);
+
+    expect(within(row).getByText("Who: Staff")).toBeInTheDocument();
+    expect(within(row).queryByText("Who: STAFF")).not.toBeInTheDocument();
   });
 });

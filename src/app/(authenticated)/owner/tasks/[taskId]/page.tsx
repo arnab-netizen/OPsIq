@@ -15,6 +15,7 @@ import { useParams } from "next/navigation";
 import { Badge, Button, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { DelegatedTaskStatus, TaskActorRole } from "@/domain/execution/delegated-task";
 import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
+import { PROOF_TYPE_LABEL } from "@/lib/owner-proof-type-labels";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ProofDetail {
@@ -101,33 +102,14 @@ const PROOF_STATUS_LABELS: Record<string, string> = {
   [ProofStatus.REQUIRED]: "Required",
   [ProofStatus.PENDING_SUBMISSION]: "Pending Submission",
   [ProofStatus.SUBMITTED]: "Submitted",
-  [ProofStatus.AI_PRECHECK_PASSED]: "AI Precheck Passed",
-  [ProofStatus.AI_PRECHECK_FAILED]: "AI Precheck Failed",
+  [ProofStatus.AI_PRECHECK_PASSED]: "Automatically checked — passed",
+  [ProofStatus.AI_PRECHECK_FAILED]: "Automatically checked — needs review",
   [ProofStatus.NEEDS_HUMAN_REVIEW]: "Needs Human Review",
   [ProofStatus.ACCEPTED]: "Accepted",
   [ProofStatus.REJECTED]: "Rejected",
   [ProofStatus.RESUBMISSION_REQUIRED]: "Resubmission Required",
   [ProofStatus.DISPUTED]: "Disputed",
   [ProofStatus.OVERRIDDEN_NOT_VERIFIED]: "Override (Not Verified)",
-};
-
-const PROOF_TYPE_LABEL: Record<string, string> = {
-  [ProofType.PHOTO]: "Photo",
-  [ProofType.SCREENSHOT]: "Screenshot",
-  [ProofType.BEFORE_AFTER_IMAGE]: "Before/after image",
-  [ProofType.CALL_LOG]: "Call log",
-  [ProofType.MESSAGE_SCREENSHOT]: "Message screenshot",
-  [ProofType.CUSTOMER_RESPONSE_TAG]: "Customer response tag",
-  [ProofType.CSV_UPLOAD]: "CSV upload",
-  [ProofType.INVOICE]: "Invoice",
-  [ProofType.PAYMENT_CONFIRMATION]: "Payment confirmation",
-  [ProofType.DELIVERY_PROOF]: "Delivery proof",
-  [ProofType.PICKUP_PROOF]: "Pickup proof",
-  [ProofType.MANAGER_CONFIRMATION]: "Manager confirmation",
-  [ProofType.CUSTOMER_CONFIRMATION]: "Customer confirmation",
-  [ProofType.SHORT_NOTE]: "Short note",
-  [ProofType.CHECKLIST_COMPLETION]: "Checklist completion",
-  [ProofType.DOCUMENT]: "Document",
 };
 
 const RISK_LEVEL_LABEL: Record<string, string> = {
@@ -143,6 +125,18 @@ const ACTOR_ROLE_LABEL: Record<string, string> = {
   [TaskActorRole.MANAGER]: "Manager",
   [TaskActorRole.OWNER]: "Owner",
   [TaskActorRole.SYSTEM]: "System",
+};
+
+// UX-06A1 hostile-audit remediation: "Assigned to:" previously rendered raw
+// assignedRole ("MANAGER", "STAFF") verbatim. Kept as its own narrowly-scoped map
+// (not merged with ACTOR_ROLE_LABEL above) -- assignedRole and TaskActorRole are
+// distinct concepts (who a task is delegated to vs. who acted in its status
+// history) and are not collapsed into one lookup table.
+const ASSIGNED_ROLE_LABEL: Record<string, string> = {
+  MANAGER: "Manager",
+  STAFF: "Staff",
+  EMPLOYEE: "Employee",
+  OWNER: "Owner",
 };
 
 async function apiFetch(path: string) {
@@ -310,7 +304,7 @@ export default function TaskDetailPage() {
               (owner/tasks/page.tsx) for the identical leak: role, or a fixed "Assigned" string,
               or "—" when neither is set (matching this page's own convention for other missing
               fields, e.g. Priority/Due/Work started below). */}
-          <div><span className="text-muted-foreground">Assigned to:</span> <span>{task.assignedRole ?? (task.assignedUserId ? "Assigned" : "—")}</span></div>
+          <div><span className="text-muted-foreground">Assigned to:</span> <span>{task.assignedRole ? (ASSIGNED_ROLE_LABEL[task.assignedRole] ?? "Assigned") : (task.assignedUserId ? "Assigned" : "—")}</span></div>
           <div><span className="text-muted-foreground">Priority:</span> <span>{task.priority ?? "—"}</span></div>
           <div><span className="text-muted-foreground">Due:</span> <span>{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "—"}</span></div>
           <div><span className="text-muted-foreground">Work started:</span> <span>{task.workStartedAt ? new Date(task.workStartedAt).toLocaleString() : "—"}</span></div>

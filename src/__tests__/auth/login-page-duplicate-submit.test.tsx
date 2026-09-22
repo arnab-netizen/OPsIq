@@ -145,3 +145,21 @@ describe("LoginPage — one logical login action sends at most one request", () 
     expect(secondFetch).toHaveBeenCalledTimes(1);
   });
 });
+
+// UX-06 Wave A1 (Section P): the password field renders the Show/Hide toggle, and
+// toggling it never itself submits the form (no fetch call as a side effect).
+describe("Login page — password visibility control (UX-06 Wave A1)", () => {
+  it("renders a Show password control and never submits when it is clicked", () => {
+    const spy = vi.fn(async () => okResponse());
+    vi.stubGlobal("fetch", spy);
+    render(<LoginPage />);
+    fillCredentials();
+
+    const toggle = screen.getByRole("button", { name: "Show password" });
+    fireEvent.click(toggle);
+
+    expect(screen.getByLabelText("Password")).toHaveProperty("type", "text");
+    expect(screen.getByRole("button", { name: "Hide password" })).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

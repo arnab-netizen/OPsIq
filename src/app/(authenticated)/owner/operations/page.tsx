@@ -387,7 +387,7 @@ export default function OwnerOperationsPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading operations workspace" />;
+  if (loading) return <CardDashboardSkeleton label="Loading your operations information" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -502,7 +502,7 @@ export default function OwnerOperationsPage() {
                 <Input name="currentRevenue" label="Current revenue at this capacity" type="number" required data-testid="capacity-currentRevenue" />
                 <Input name="utilization" label="Bottleneck utilization (0–1)" type="number" step="0.01" required data-testid="capacity-utilization" />
               </div>
-              <p className="text-xs text-muted-foreground">Equipment/capacity feeds the scaling gate. Leave blank if unknown — missing data is reported, never invented.</p>
+              <p className="text-xs text-muted-foreground">This helps OpsIQ judge whether the business has enough capacity to grow safely. Leave blank if unknown — missing data is reported, never invented.</p>
               <Button type="submit" disabled={busy} data-testid="capacity-submit">{busy ? "Saving…" : "Save capacity"}</Button>
             </form>
           )}
@@ -515,7 +515,7 @@ export default function OwnerOperationsPage() {
                 <Input name="ownerMinutesPerDay" label="Owner minutes/day on ops" type="number" required data-testid="workload-ownerMinutes" />
                 <Input name="sustainableMinutesPerDay" label="Sustainable minutes/day" type="number" required data-testid="workload-sustainableMinutes" />
               </div>
-              <p className="text-xs text-muted-foreground">Owner workload is the human-execution-reality dimension. Leave blank if unknown — missing data is reported, never invented.</p>
+              <p className="text-xs text-muted-foreground">This helps OpsIQ understand how much of the day-to-day work depends on you. Leave blank if unknown — missing data is reported, never invented.</p>
               <Button type="submit" disabled={busy} data-testid="workload-submit">{busy ? "Saving…" : "Save workload"}</Button>
             </form>
           )}

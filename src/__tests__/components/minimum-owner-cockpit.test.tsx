@@ -262,3 +262,62 @@ describe("MinimumOwnerCockpit", () => {
     expect(getByTestId("cockpit-proof-drawer").hasAttribute("open")).toBe(false);
   });
 });
+
+// UX-06 Wave A1 (Section G7): GoalAttentionSignal.state must never reach the owner as
+// a raw enum token (the previous render was `state.replace(/_/g, " ")`, e.g. "NO
+// GROWTH" -- spaced but not humanized). Each of the 6 real states gets a plain-
+// language label, and an unknown future value falls back to a safe, non-raw string.
+const goalSignal = (over: Partial<import("@/services/owner-guidance/owner-now-view.service").GoalAttentionSignal> = {}) => ({
+  state: "ON_TRACK" as const,
+  goalTitle: "Grow monthly revenue",
+  targetAmount: null,
+  targetCurrency: null,
+  targetDateIso: null,
+  gapToClose: null,
+  projectedMonthsToGoal: null,
+  currentTrajectoryDateIso: null,
+  requiredMonthlyImprovement: null,
+  confidence: null,
+  trajectoryMiss: null,
+  assumptions: [],
+  beginnerExplanation: "Revenue is tracking toward the goal.",
+  ...over,
+});
+
+describe("MinimumOwnerCockpit — goal-state humanization (UX-06 Section G7)", () => {
+  it("NO_GROWTH renders 'Not progressing', never the raw or spaced-raw token", () => {
+    const { getByTestId } = render(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state: "NO_GROWTH" })} />
+    );
+    expect(getByTestId("cockpit-goal-state").textContent).toBe("Not progressing");
+    expect(getByTestId("cockpit-goal-state").textContent).not.toMatch(/NO_GROWTH|NO GROWTH/);
+  });
+
+  it("INSUFFICIENT_DATA renders 'Not enough information'", () => {
+    const { getByTestId } = render(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state: "INSUFFICIENT_DATA" })} />
+    );
+    expect(getByTestId("cockpit-goal-state").textContent).toBe("Not enough information");
+  });
+
+  it.each([
+    ["NO_GOAL", "No goal set"],
+    ["STALE", "Needs updating"],
+    ["ON_TRACK", "On track"],
+    ["AT_RISK", "At risk"],
+  ] as const)("%s renders %s", (state, label) => {
+    const { getByTestId } = render(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state })} />
+    );
+    expect(getByTestId("cockpit-goal-state").textContent).toBe(label);
+  });
+
+  it("an unrecognized future state falls back to a safe label, never the raw value", () => {
+    const unknownSignal = goalSignal({ state: "SOME_FUTURE_STATE" as never });
+    const { getByTestId } = render(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={unknownSignal} />
+    );
+    expect(getByTestId("cockpit-goal-state").textContent).toBe("Goal status unavailable");
+    expect(getByTestId("cockpit-goal-state").textContent).not.toMatch(/SOME_FUTURE_STATE/);
+  });
+});

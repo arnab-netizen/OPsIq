@@ -216,7 +216,7 @@ export default function OwnerLearningGovernancePage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading learning governance workspace" />;
+  if (loading) return <CardDashboardSkeleton label="Loading learning information" />;
 
   return (
     <PageContainer>

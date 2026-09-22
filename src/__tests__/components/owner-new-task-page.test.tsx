@@ -95,4 +95,33 @@ describe("NewOwnerTaskPage", () => {
     expect(mockPush).toHaveBeenCalledWith("/owner/tasks");
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  // UX-06 Wave A1 (Section G9): the proof-type select must use the same hand-curated
+  // labels as /owner/tasks/[taskId], not the page's previous generic enum humanizer
+  // (which produced "Csv Upload" / "Before After Image").
+  it("shows the shared, hand-curated proof-type labels once proof is required", () => {
+    render(<NewOwnerTaskPage />);
+    fireEvent.click(screen.getByLabelText("Require proof of completion"));
+
+    const select = screen.getByLabelText("Proof type") as HTMLSelectElement;
+    const optionLabels = Array.from(select.options).map((o) => o.textContent);
+
+    expect(optionLabels).toContain("CSV upload");
+    expect(optionLabels).toContain("Before/after image");
+    expect(optionLabels).not.toContain("Csv Upload");
+    expect(optionLabels).not.toContain("Before After Image");
+  });
+
+  it("submits the raw ProofType enum value, not the humanized label, when proof is required", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ taskId: "t1" }) });
+    render(<NewOwnerTaskPage />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Follow up" } });
+    fireEvent.click(screen.getByLabelText("Require proof of completion"));
+    fireEvent.change(screen.getByLabelText("Proof type"), { target: { value: "csv_upload" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create task" }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.requireProof.proofType).toBe("csv_upload");
+  });
 });

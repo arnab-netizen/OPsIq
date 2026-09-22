@@ -259,7 +259,7 @@ export default function OwnerCashflowPage() {
     }
   }
 
-  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading cashflow workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading your cash flow information" />;
   if (needsBusinessRecovery) return (
     <PageContainer>
       <p>Your previously selected business is no longer available. Choose a business to continue.</p>

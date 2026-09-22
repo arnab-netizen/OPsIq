@@ -2,6 +2,7 @@
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
+import { PasswordInput } from "@/ui/primitives/password-input";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
@@ -173,9 +174,8 @@ export default function SignupPage() {
                 autoComplete="email"
                 disabled={betaEnabled === null}
               />
-              <Input
+              <PasswordInput
                 label="Password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
@@ -185,7 +185,7 @@ export default function SignupPage() {
                 disabled={betaEnabled === null}
               />
               <Input
-                label="Workspace Name"
+                label="Business name"
                 type="text"
                 value={workspaceName}
                 onChange={(e) => setWorkspaceName(e.target.value)}

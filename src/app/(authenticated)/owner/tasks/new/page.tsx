@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { Button, Input, Textarea, Select, PageHeader, PageContainer } from "@/ui/primitives";
 import { ProofType } from "@/domain/execution/proof";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { PROOF_TYPE_LABEL } from "@/lib/owner-proof-type-labels";
 
 const ROLE_OPTIONS = [
   { value: "", label: "No specific role" },
@@ -30,7 +31,7 @@ const ROLE_OPTIONS = [
 
 const PROOF_TYPE_OPTIONS = Object.values(ProofType).map((v) => ({
   value: v,
-  label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+  label: PROOF_TYPE_LABEL[v] ?? v,
 }));
 
 export default function NewOwnerTaskPage() {

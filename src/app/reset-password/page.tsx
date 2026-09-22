@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/ui/primitives/button";
-import { Input } from "@/ui/primitives/input";
+import { PasswordInput } from "@/ui/primitives/password-input";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -103,9 +103,8 @@ function ResetPasswordForm() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
+            <PasswordInput
               label="New password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
@@ -113,9 +112,8 @@ function ResetPasswordForm() {
               minLength={8}
               autoComplete="new-password"
             />
-            <Input
+            <PasswordInput
               label="Confirm new password"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Re-enter your new password"
