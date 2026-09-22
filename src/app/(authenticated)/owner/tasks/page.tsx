@@ -9,7 +9,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, EmptyState, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
@@ -158,6 +158,13 @@ export default function OwnerTasksPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
+  // UX-05C Candidate 5: stale filter/pagination-request guard for the delegated-task list, so a
+  // slower older request (a previous filter or offset) resolving after a newer one can never
+  // overwrite the newer, correct result -- latest-request-wins. Mirrors the loadGenerationRef
+  // pattern already shipped on Home/Money/Sales/Operations/Execution, scoped to this page's own
+  // delegated-task load only (the separate "My Work" loader below already has its own
+  // effect-local `cancelled` guard and is untouched here).
+  const loadGenerationRef = useRef(0);
 
   const LIMIT = 25;
 
@@ -190,17 +197,26 @@ export default function OwnerTasksPage() {
   }, [activeBusinessId]);
 
   const load = useCallback(async (status: string, off: number) => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
     try {
       const qs = new URLSearchParams({ limit: String(LIMIT), offset: String(off) });
       if (status) qs.set("status", status);
       const data = await apiFetch(`/api/owner/tasks?${qs}`);
+      // A newer filter/offset request has since started -- this response is stale and must
+      // never commit (latest-request-wins). See the loadGenerationRef declaration above.
+      if (loadGenerationRef.current !== generation) return;
       setTasks(data.tasks ?? []);
     } catch (err) {
+      // A stale failure (an older filter/offset request rejecting after a newer one already
+      // succeeded) must never clobber the newer, correct render with an error banner.
+      if (loadGenerationRef.current !== generation) return;
       setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
     } finally {
-      setLoading(false);
+      // A stale request's completion must never toggle the loading flag for a request that's no
+      // longer current -- the newer request remains authoritative until it finishes.
+      if (loadGenerationRef.current === generation) setLoading(false);
     }
   }, []);
 
