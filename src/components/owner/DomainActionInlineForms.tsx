@@ -30,11 +30,13 @@ export function CompletionActionForm({ busy = false, onCancel, onSave }: Complet
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const trimmedNotes = notes.trim();
-    const trimmedEvidence = evidence.trim();
+    // No trimming: the old window.prompt()-based flow this replaces preserved whatever the owner
+    // typed verbatim (`window.prompt("Completion notes:") || ""`; evidence was `ev ? [ev] : []` on
+    // the raw string) -- the frozen contract (UX-06 Section Z) requires the same payload semantics
+    // for a valid submission, so introducing trimming here would be an unauthorized behavior change.
     onSave({
-      completionNotes: trimmedNotes,
-      completionEvidence: trimmedEvidence ? [trimmedEvidence] : [],
+      completionNotes: notes,
+      completionEvidence: evidence ? [evidence] : [],
     });
   }
 
@@ -88,11 +90,24 @@ export interface VerificationActionFormProps {
  * number or the field fails local validation -- ordinary field validation,
  * never routed through server-error governance (Section K's frozen contract).
  *
- * Exported for direct unit testing: a native `type="number"` input's own DOM
- * sanitization already clears anything that doesn't parse to a finite number
- * (including magnitude overflow) back to "" before this ever runs, so the
- * non-blank+non-finite branch below is unreachable through normal browser
- * interaction -- this export lets that branch be proven correct directly.
+ * Exported for direct unit testing: this function's non-blank+non-finite
+ * branch is unreachable through normal browser interaction, by two
+ * independent, empirically confirmed mechanisms (real Chromium, real
+ * keyboard input -- jsdom does not compute either):
+ *   1. A native `type="number"` input clears anything that doesn't parse to
+ *      a finite number (including magnitude overflow, e.g. "1e400") back to
+ *      "" the instant it's typed, so this function is never actually called
+ *      with a non-blank, non-finite string from a rendered field's own value.
+ *   2. Independently of (1), for a genuinely malformed/overflowing entry the
+ *      input's `validity.badInput` becomes true, and the browser's own
+ *      constraint validation then blocks the "submit" event itself from ever
+ *      firing -- confirmed via both a real Save-button click and a real
+ *      Enter keypress, either way with zero network requests and this
+ *      form's own onSubmit handler never invoked at all. A no-op click is
+ *      the actual observed behavior for this case, not a silent null
+ *      submission.
+ * This export lets the branch itself be proven correct directly, since
+ * nothing in a rendered browser can reach it.
  */
 export function parseOptionalNumericField(raw: string): { valid: true; value: number | null } | { valid: false } {
   const trimmed = raw.trim();

@@ -49,13 +49,17 @@ describe("CompletionActionForm", () => {
     expect(onSave).toHaveBeenCalledWith({ completionNotes: "", completionEvidence: [] });
   });
 
-  it("non-empty evidence becomes exactly one trimmed array entry, and notes are trimmed", () => {
+  it("non-empty evidence becomes exactly one array entry, and whitespace is preserved verbatim (never trimmed)", () => {
+    // The old window.prompt()-based flow this replaces preserved whatever the owner typed exactly
+    // (`window.prompt("Completion notes:") || ""`; evidence was `ev ? [ev] : []` on the raw,
+    // untrimmed string) -- the frozen contract (UX-06 Section Z) requires the same payload
+    // semantics for a valid submission, so this form must not introduce trimming.
     const onSave = vi.fn();
     render(<CompletionActionForm onCancel={() => {}} onSave={onSave} />);
     fireEvent.change(screen.getByLabelText("Completion notes"), { target: { value: "  done  " } });
     fireEvent.change(screen.getByLabelText("Completion evidence"), { target: { value: "  photo.png  " } });
     fireEvent.click(screen.getByRole("button", { name: "Save completion" }));
-    expect(onSave).toHaveBeenCalledWith({ completionNotes: "done", completionEvidence: ["photo.png"] });
+    expect(onSave).toHaveBeenCalledWith({ completionNotes: "  done  ", completionEvidence: ["  photo.png  "] });
   });
 
   it("busy disables both fields and the Save/Cancel controls", () => {
@@ -66,17 +70,20 @@ describe("CompletionActionForm", () => {
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   });
 
-  it("rapid repeated Save cannot produce a duplicate callback beyond what the parent's own submit handler allows through the disabled state", () => {
-    // The form itself only calls onSave once per submit event; the busy-disable contract (proven
-    // above) is what a rendering parent uses to prevent a second submit while one is in flight.
+  it("in isolation (not busy), two rapid clicks call onSave twice -- this component does NOT itself prevent duplicate submission", () => {
+    // This test does not prove duplicate-submit prevention; it proves the opposite baseline: an
+    // uncontrolled-busy form calls onSave once per click, so two rapid clicks call it twice. Real
+    // duplicate-submit prevention has two layers, neither of which this isolated render exercises:
+    // (1) the `busy` prop disables the Save button once a submit is in flight (proven above), and
+    // (2) each domain page's own synchronous actionMutationInFlightRef collapses this to exactly
+    // one real network request even if a second click somehow lands before disabling paints --
+    // proven as an actual integration assertion of `toHaveLength(1)` on the mocked network layer
+    // in every owner-<domain>-inline-actions.test.tsx (Test M).
     const onSave = vi.fn();
     render(<CompletionActionForm onCancel={() => {}} onSave={onSave} />);
     const button = screen.getByRole("button", { name: "Save completion" });
     fireEvent.click(button);
     fireEvent.click(button);
-    // Two submits of an uncontrolled-busy form call onSave twice -- it is the PAGE's own
-    // actionMutationInFlightRef (proven in each owner-<domain>-inline-actions.test.tsx) that
-    // collapses this to one real network request, not this presentation-only component.
     expect(onSave).toHaveBeenCalledTimes(2);
   });
 });
@@ -120,16 +127,19 @@ describe("VerificationActionForm", () => {
     expect(onSave).toHaveBeenCalledWith({ beforeValue: 50, afterValue: 75.5, targetDirection: "down" });
   });
 
-  it("an invalid (non-blank, non-finite) value never calls onSave and shows plain validation copy, never NaN/parseFloat/schema text", () => {
+  it("parseOptionalNumericField's own invalid branch is correct by direct call; a blank rendered submit succeeds with no crash", () => {
+    // This test does NOT exercise the rendered form's invalid-submit path -- a real browser makes
+    // that path unreachable via normal typing, by two independent, empirically confirmed
+    // mechanisms documented on parseOptionalNumericField's own doc comment (DOM value sanitization
+    // clears an unparseable entry back to "" the instant it's typed, AND -- confirmed separately --
+    // the browser's own native constraint validation blocks the "submit" event itself for a
+    // badInput field, via either a real click or a real Enter keypress, before this component's
+    // onSubmit ever runs). jsdom computes neither mechanism, so this proves the pure function
+    // directly instead of fabricating a fireEvent.change scenario no real browser can produce.
     const onSave = vi.fn();
     render(
       <VerificationActionForm defaultDirection="up" metricLabel="Revenue" onCancel={() => {}} onSave={onSave} />
     );
-    // parseOptionalNumericField is exercised directly here (a native number input's own DOM
-    // sanitization makes a non-blank+non-finite value unreachable via fireEvent.change -- see
-    // owner-finance-inline-actions.test.tsx item I for that empirical proof); this asserts the
-    // component's actual submit handler, not just the standalone function, refuses to call onSave
-    // when it is fed such a value directly.
     expect(parseOptionalNumericField("1e400")).toEqual({ valid: false });
     expect(parseOptionalNumericField("not-a-number")).toEqual({ valid: false });
     expect(parseOptionalNumericField("")).toEqual({ valid: true, value: null });
