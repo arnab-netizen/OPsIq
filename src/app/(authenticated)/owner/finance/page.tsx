@@ -6,6 +6,12 @@ import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
 import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
+import {
+  CompletionActionForm,
+  VerificationActionForm,
+  type CompletionValues,
+  type VerificationValues,
+} from "@/components/owner/DomainActionInlineForms";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
@@ -198,7 +204,14 @@ export default function OwnerFinancePage() {
   // above (used by the other four mutations on this page) so it can render next to the Save
   // button instead of at the top of the page, far from where the owner is looking.
   const [snapshotError, setSnapshotError] = useState<{ message: string; retryable: boolean } | null>(null);
+  // UX-06 Wave B1: at most one action-editing inline form open at a time on this page (Section
+  // Z/AA's frozen state shape). Page-local -- no global store, no context.
+  const [editingAction, setEditingAction] = useState<{ actionId: string; mode: "complete" | "verify" } | null>(null);
   const draftDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // UX-06 Wave B1: React state alone does not synchronously protect two rapid Save clicks within
+  // the same tick (mirrors approveInFlightRef from UX-06A2) -- local to the completion/verification
+  // mutation only, not a general concurrency framework.
+  const actionMutationInFlightRef = useRef(false);
   // UX-04B: stale business-switch response guard, mirroring the loadGenerationRef pattern already
   // shipped for Home (owner/cockpit/page.tsx, UX-03). Without this, a slow response for a
   // previously-active business arriving after a switch could silently overwrite the newer
@@ -422,15 +435,9 @@ export default function OwnerFinancePage() {
     setBusy(true);
     setError(null);
     try {
-      const body: Record<string, unknown> = { status };
-      if (status === "completed") {
-        body.completionNotes = window.prompt("Completion notes:") || "";
-        const ev = window.prompt("Completion evidence:") || "";
-        body.completionEvidence = ev ? [ev] : [];
-      }
       await api(`/api/owner/finance/actions/${action.id}`, {
         method: "PATCH",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ status }),
       });
       if (activeBusinessIdRef.current !== targetBusinessId) return;
       await load(targetBusinessId);
@@ -443,34 +450,67 @@ export default function OwnerFinancePage() {
     }
   }
 
-  async function verifyAction(action: any) {
-    // See addSnapshot's comment on why the target business is captured before the await.
+  // UX-06 Wave B1 (Section X.2, K): replaces the two native-dialog calls previously inlined in
+  // updateAction()'s "completed" branch. Same PATCH endpoint, method, and body shape -- only the
+  // completionNotes/completionEvidence source changed from a native dialog to the inline form.
+  async function completeAction(action: any, values: CompletionValues) {
+    if (actionMutationInFlightRef.current) return;
+    actionMutationInFlightRef.current = true;
     const targetBusinessId = selected;
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
-      if (beforeRaw === null) { setBusy(false); return; }
-      const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
-      if (afterRaw === null) { setBusy(false); return; }
-      const dir = window.prompt("Target direction (up / down):", "down");
-      if (dir === null) { setBusy(false); return; }
-      await api(`/api/owner/finance/actions/${action.id}/verify`, {
-        method: "POST",
+      await api(`/api/owner/finance/actions/${action.id}`, {
+        method: "PATCH",
         body: JSON.stringify({
-          beforeValue: beforeRaw.trim() === "" ? null : parseFloat(beforeRaw),
-          afterValue: afterRaw.trim() === "" ? null : parseFloat(afterRaw),
-          targetDirection: dir === "up" ? "up" : "down",
+          status: "completed",
+          completionNotes: values.completionNotes,
+          completionEvidence: values.completionEvidence,
         }),
       });
-      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return; }
+      setEditingAction(null);
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      // Governed classification -- see load()'s comment above.
+      // Governed classification -- see load()'s comment above. Failure must never clear the open
+      // inline form (Section Z's frozen contract), so editingAction is left untouched here.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+    } finally {
+      setBusy(false);
+      actionMutationInFlightRef.current = false;
+    }
+  }
+
+  // UX-06 Wave B1: replaces the three native-dialog calls previously inlined in verifyAction().
+  // Same POST endpoint and body shape -- the inline form has already validated/typed the values
+  // before this is called (Section K's frozen semantics: blank -> null, never 0/NaN/"").
+  async function verifyActionSubmit(action: any, values: VerificationValues) {
+    if (actionMutationInFlightRef.current) return;
+    actionMutationInFlightRef.current = true;
+    const targetBusinessId = selected;
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/owner/finance/actions/${action.id}/verify`, {
+        method: "POST",
+        body: JSON.stringify({
+          beforeValue: values.beforeValue,
+          afterValue: values.afterValue,
+          targetDirection: values.targetDirection,
+        }),
+      });
+      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return; }
+      setEditingAction(null);
+      await load(targetBusinessId);
+    } catch (e) {
+      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      // Governed classification -- see load()'s comment above. Failure must never clear the open
+      // inline form.
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
+      actionMutationInFlightRef.current = false;
     }
   }
 
@@ -653,8 +693,11 @@ export default function OwnerFinancePage() {
               recommended={dashboard.recommendedNextAction}
               history={dashboard.cycleHistory}
               busy={busy}
+              editingAction={editingAction}
+              onEditingActionChange={setEditingAction}
               onUpdateAction={updateAction}
-              onVerifyAction={verifyAction}
+              onCompleteAction={completeAction}
+              onVerifyAction={verifyActionSubmit}
             />
           )}
         </>
@@ -670,7 +713,10 @@ function FinanceCycleView({
   recommended,
   history,
   busy,
+  editingAction,
+  onEditingActionChange,
   onUpdateAction,
+  onCompleteAction,
   onVerifyAction,
 }: {
   cycle: any;
@@ -679,8 +725,11 @@ function FinanceCycleView({
   recommended: any;
   history: any[];
   busy: boolean;
+  editingAction: { actionId: string; mode: "complete" | "verify" } | null;
+  onEditingActionChange: (v: { actionId: string; mode: "complete" | "verify" } | null) => void;
   onUpdateAction: (a: any, s: string) => void;
-  onVerifyAction: (a: any) => void;
+  onCompleteAction: (a: any, values: CompletionValues) => void;
+  onVerifyAction: (a: any, values: VerificationValues) => void;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -784,9 +833,15 @@ function FinanceCycleView({
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
-                  {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
+                  {a.status === "in_progress" && (
+                    <Button onClick={() => onEditingActionChange({ actionId: a.id, mode: "complete" })} disabled={busy}>
+                      Complete
+                    </Button>
+                  )}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>
+                  <Button onClick={() => onEditingActionChange({ actionId: a.id, mode: "verify" })} disabled={busy}>
+                    Verify outcome
+                  </Button>
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
@@ -797,6 +852,22 @@ function FinanceCycleView({
                       before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
                     </span>
                   </div>
+                )}
+                {editingAction && editingAction.actionId === a.id && editingAction.mode === "complete" && (
+                  <CompletionActionForm
+                    busy={busy}
+                    onCancel={() => onEditingActionChange(null)}
+                    onSave={(values) => onCompleteAction(a, values)}
+                  />
+                )}
+                {editingAction && editingAction.actionId === a.id && editingAction.mode === "verify" && (
+                  <VerificationActionForm
+                    busy={busy}
+                    defaultDirection="down"
+                    metricLabel={humanizeMetricKey(a.verificationMetric)}
+                    onCancel={() => onEditingActionChange(null)}
+                    onSave={(values) => onVerifyAction(a, values)}
+                  />
                 )}
               </div>
             );

@@ -12,7 +12,7 @@
  * covering that separately-authorized workflow repair.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent } from "@testing-library/react";
 import TaskDetailPage from "@/app/(authenticated)/owner/tasks/[taskId]/page";
 
 vi.mock("next/navigation", () => ({
@@ -246,5 +246,55 @@ describe("Candidate 9 — dead 'Review & Approve' link no longer exists anywhere
     for (const link of links) {
       expect(link.getAttribute("href")).not.toMatch(/\/complete$/);
     }
+  });
+});
+
+// UX-06 Wave B1 (Section K, N): Submit proof / Review proof previously used placeholder-only
+// fields with no persistent <label>, an accessibility/labeling gap. Payload/handler unchanged.
+describe("UX-06 Wave B1 — Submit proof / Review proof persistent label associations", () => {
+  it("Submit proof: Proof type and Note have persistent, correctly-associated labels", async () => {
+    installFetchMock(
+      baseTask({
+        status: "PROOF_REQUIRED",
+        proofRequirementId: "pr1",
+        proofRequirement: { id: "pr1", proofType: "PHOTO", riskLevel: "LOW", reviewerRole: null, ownerOverrideAllowed: false },
+      })
+    );
+    render(<TaskDetailPage />);
+
+    const proofTypeSelect = await screen.findByLabelText("Proof type");
+    expect(proofTypeSelect.tagName).toBe("SELECT");
+    const noteInput = screen.getByLabelText("Note");
+    expect(noteInput.tagName).toBe("INPUT");
+  });
+
+  it("Review proof: Outcome has a persistent label, and Rejection reason gains one only once Reject is selected", async () => {
+    installFetchMock(
+      baseTask({
+        status: "IN_PROGRESS",
+        proofRequirementId: "pr1",
+        proofRequirement: { id: "pr1", proofType: "PHOTO", riskLevel: "LOW", reviewerRole: null, ownerOverrideAllowed: false },
+        proof: {
+          id: "proof1",
+          status: "SUBMITTED",
+          proofType: "PHOTO",
+          submittedByUserId: "u1",
+          submittedAt: new Date().toISOString(),
+          reviewedByUserId: null,
+          reviewedAt: null,
+          reviewReason: null,
+          duplicateFlagged: false,
+        },
+      })
+    );
+    render(<TaskDetailPage />);
+
+    const outcomeSelect = await screen.findByLabelText("Outcome");
+    expect(outcomeSelect.tagName).toBe("SELECT");
+    expect(screen.queryByLabelText("Rejection reason")).not.toBeInTheDocument();
+
+    fireEvent.change(outcomeSelect, { target: { value: "REJECTED" } });
+    const rejectionInput = screen.getByLabelText("Rejection reason");
+    expect(rejectionInput.tagName).toBe("INPUT");
   });
 });

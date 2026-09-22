@@ -218,7 +218,14 @@ test.describe("PROD-22 — Operations Owner journey live production acceptance",
       await page.waitForLoadState("networkidle");
       await expect(card).toContainText("in_progress");
 
+      // UX-06 Wave B1: "Complete" now opens a same-page inline form (Section X.2, Z) instead of
+      // immediately mutating via window.prompt() -- fill it and click "Save completion" to drive
+      // the same PATCH the old dialog-answered flow did. registerActionDialogHandler is still
+      // registered above defensively (see its own doc comment) but has nothing to intercept here.
       await card.getByRole("button", { name: "Complete" }).click();
+      await card.getByLabel("Completion notes").fill("Live production acceptance: completion notes");
+      await card.getByLabel("Completion evidence").fill("acceptance-test-evidence-reference");
+      await card.getByRole("button", { name: "Save completion" }).click();
       await page.waitForLoadState("networkidle");
       await expect(async () => {
         const res = await timedApiCall(context, "GET", "/api/owner/operations/actions/:actionId", () =>

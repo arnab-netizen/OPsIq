@@ -51,14 +51,14 @@ describe.each(SPECS)("$name — action lifecycle verifies by exact id, not a .fi
 
   it("polls the action's own id via a direct GET to confirm 'completed', using expect(...).toPass for auto-retry", () => {
     const idx = src.indexOf(testMarker);
-    const block = src.slice(idx, idx + 3500);
+    const block = src.slice(idx, idx + 3900);
     expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
     expect(block).toContain(`${spec.apiPrefix}/actions/\${actionId}`);
   });
 
   it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress' use the card)", () => {
     const idx = src.indexOf(testMarker);
-    const block = src.slice(idx, idx + 3500);
+    const block = src.slice(idx, idx + 3900);
     expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
     expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
     expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);
