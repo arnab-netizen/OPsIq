@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge, Button, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
-import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
+import { DelegatedTaskStatus, TaskActorRole } from "@/domain/execution/delegated-task";
 import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -134,6 +134,15 @@ const RISK_LEVEL_LABEL: Record<string, string> = {
   [ProofRiskLevel.LOW]: "Low",
   [ProofRiskLevel.MEDIUM]: "Medium",
   [ProofRiskLevel.HIGH]: "High",
+};
+
+// UX-05B Candidate 8: humanize the authoritative TaskActorRole enum instead of rendering it
+// verbatim in status history (was e.g. raw "EMPLOYEE"/"MANAGER"/"OWNER"/"SYSTEM").
+const ACTOR_ROLE_LABEL: Record<string, string> = {
+  [TaskActorRole.EMPLOYEE]: "Employee",
+  [TaskActorRole.MANAGER]: "Manager",
+  [TaskActorRole.OWNER]: "Owner",
+  [TaskActorRole.SYSTEM]: "System",
 };
 
 async function apiFetch(path: string) {
@@ -297,7 +306,11 @@ export default function TaskDetailPage() {
       <div className="rounded-lg border border-border p-4 space-y-3 text-sm">
         {task.description && <p className="text-muted-foreground">{task.description}</p>}
         <div className="grid grid-cols-2 gap-2">
-          <div><span className="text-muted-foreground">Assigned to:</span> <span>{task.assignedRole ?? task.assignedUserId ?? "—"}</span></div>
+          {/* UX-05B Candidate 7: never show a raw user id -- mirrors the list page's own fix
+              (owner/tasks/page.tsx) for the identical leak: role, or a fixed "Assigned" string,
+              or "—" when neither is set (matching this page's own convention for other missing
+              fields, e.g. Priority/Due/Work started below). */}
+          <div><span className="text-muted-foreground">Assigned to:</span> <span>{task.assignedRole ?? (task.assignedUserId ? "Assigned" : "—")}</span></div>
           <div><span className="text-muted-foreground">Priority:</span> <span>{task.priority ?? "—"}</span></div>
           <div><span className="text-muted-foreground">Due:</span> <span>{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "—"}</span></div>
           <div><span className="text-muted-foreground">Work started:</span> <span>{task.workStartedAt ? new Date(task.workStartedAt).toLocaleString() : "—"}</span></div>
@@ -448,7 +461,7 @@ export default function TaskDetailPage() {
                 {h.fromStatus && <span>← {STATUS_LABELS[h.fromStatus] ?? h.fromStatus}</span>}
                 <span>·</span>
                 <span>{new Date(h.occurredAt).toLocaleString()}</span>
-                {h.actorRole && <span>({h.actorRole})</span>}
+                {h.actorRole && <span>({ACTOR_ROLE_LABEL[h.actorRole] ?? h.actorRole})</span>}
               </li>
             ))}
           </ol>

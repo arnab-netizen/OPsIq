@@ -56,6 +56,9 @@ const OWNER_WORK_STATUS_LABELS: Record<string, string> = {
   OUTCOME_RECORDED: "Outcome recorded",
   OUTCOME_DISPUTED: "Outcome disputed",
   OUTCOME_VERIFIED: "Outcome verified",
+  // UX-05B Candidate 6: CANCELLED is one of ProcessExecutionTask's own TERMINAL_STATUSES
+  // (process-execution-bridge.service.ts) -- this map was missing it.
+  CANCELLED: "Cancelled",
 };
 const OWNER_WORK_TERMINAL = new Set(["REJECTED"]);
 
@@ -122,6 +125,21 @@ const GROUP_VARIANT: Record<string, "success-accessible" | "default-accessible" 
   "In progress": "default-accessible",
   Waiting: "warning-accessible",
   Done: "success-accessible",
+};
+
+/**
+ * UX-05B Candidate 4: the "Done" group name/color is truthful for APPROVED_COMPLETE but not for
+ * REJECTED_INCOMPLETE/CANCELLED/EXPIRED -- all four previously rendered an identical green "Done"
+ * badge. For rows in the "Done" group only, the badge now shows the row's own specific outcome
+ * (variant + text), mirroring the detail page's already-correct STATUS_VARIANT/STATUS_LABELS
+ * (owner/tasks/[taskId]/page.tsx). STATUS_GROUPS, the filter optgroup, and raw server filter
+ * values are untouched -- this only changes what the per-row badge renders for these 4 statuses.
+ */
+const DONE_STATUS_VARIANT: Record<string, "success-accessible" | "destructive-accessible"> = {
+  [DelegatedTaskStatus.APPROVED_COMPLETE]: "success-accessible",
+  [DelegatedTaskStatus.REJECTED_INCOMPLETE]: "destructive-accessible",
+  [DelegatedTaskStatus.CANCELLED]: "destructive-accessible",
+  [DelegatedTaskStatus.EXPIRED]: "destructive-accessible",
 };
 
 async function apiFetch(path: string) {
@@ -282,6 +300,12 @@ export default function OwnerTasksPage() {
         <ul className="flex flex-col">
           {tasks.map((task) => {
             const group = GROUP_FOR_STATUS[task.status] ?? "To do";
+            // UX-05B Candidate 4: within "Done," show the row's own specific terminal outcome
+            // (variant + text) instead of the shared bucket name/color -- see DONE_STATUS_VARIANT's
+            // own doc comment above. Every other group still shows its bucket name/color as before.
+            const isDoneTerminal = group === "Done";
+            const badgeVariant = isDoneTerminal ? (DONE_STATUS_VARIANT[task.status] ?? GROUP_VARIANT[group]) : GROUP_VARIANT[group];
+            const badgeText = isDoneTerminal ? (STATUS_LABELS[task.status] ?? task.status) : group;
             // Never show a raw user id -- the list API returns assignedUserId but no resolved
             // display name, so "who owns it" falls back to the role (if set) or a plain "Assigned"
             // rather than leaking the UUID, which is the previous fallback here.
@@ -292,7 +316,7 @@ export default function OwnerTasksPage() {
                   <Link href={`/owner/tasks/${task.id}`} className="font-display text-[1.05rem] font-semibold text-foreground hover:underline">
                     {task.title}
                   </Link>
-                  <Badge variant={GROUP_VARIANT[group]}>{group}</Badge>
+                  <Badge variant={badgeVariant}>{badgeText}</Badge>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span>Who: {who}</span>
