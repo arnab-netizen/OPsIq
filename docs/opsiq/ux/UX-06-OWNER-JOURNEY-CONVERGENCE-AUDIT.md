@@ -5,20 +5,31 @@ changed to produce this document. This document is the sole deliverable of this 
 
 **Revision history:**
 - v1.0 — initial audit, produced against `main` @ `2c674c1a38a3b232de1a45e381da6851d1f31059`.
-- v2.0 (this revision) — hostile-audit remediation. Restores the exact required A–AD section structure
-  (no reconstructed/approximate mapping remains). Withdraws v1.0's Candidate 9 implementation assumption
-  and replaces it with a formal product-decision gate. Re-runs the owner-language hard gate and finds 2
-  additional violation classes (Workspace Name; ~10 "Loading … workspace" skeleton labels) plus a full
-  term-by-term sweep of 14 named vocabulary items. Expands the canonical language dictionary to cover 14
-  additional required concepts. Re-adjudicates two naming recommendations (Trust page title; Tasks/Actions
-  nav) with reversed conclusions where the evidence supported reversal. Freezes one canonical first-time
-  journey with direct evidence rather than leaving "A or B." Distinguishes local-sandbox browser evidence
-  from live-deployment evidence throughout, with a new live-acceptance gate. Explicitly gates the
+- v2.0 — hostile-audit remediation. Restores the exact required A–AD section structure (no reconstructed/
+  approximate mapping remains). Withdraws v1.0's Candidate 9 implementation assumption and replaces it
+  with a formal product-decision gate. Re-runs the owner-language hard gate and finds 2 additional
+  violation classes (Workspace Name; ~10 "Loading … workspace" skeleton labels) plus a full term-by-term
+  sweep of 14 named vocabulary items. Expands the canonical language dictionary to cover 14 additional
+  required concepts. Re-adjudicates two naming recommendations (Trust page title; Tasks/Actions nav) with
+  reversed conclusions where the evidence supported reversal. Freezes one canonical first-time journey
+  with direct evidence rather than leaving "A or B." Distinguishes local-sandbox browser evidence from
+  live-deployment evidence throughout, with a new live-acceptance gate. Explicitly gates the
   populated-diagnosis and mobile-snapshot-form evidence holes this document already disclosed in v1.0.
   Corrects the Google-authentication section against Google's own documented Sign In With Google / GIS
   guidance (ID token, `sub` identifier, account-linking caution, scope separation). Splits Wave A into two
-  risk classes and corrects Wave B's testing assumption. No production/test/schema/config file was touched
-  to produce this revision — see the validation block at the end of this document.
+  risk classes and corrects Wave B's testing assumption.
+- v3.0 (this revision) — final product-decision freeze, the last document-only amendment before
+  implementation. Resolves the Candidate 9 product/workflow decision left open by v2.0's gate: freezes a
+  same-page final-approval experience on `/owner/tasks/[taskId]` (no new `/complete` page, no new proof-
+  review step, no client-side re-implementation of server gates), including the exact plain-language
+  copy for the ready-for-approval state, the five known-block-reason mappings, and the success/refresh
+  behavior. Resolves the Google-identity product decisions left open by v2.0's Section Q.7: forbids
+  automatic account linking on email match alone (even for a Google-authoritative address), freezes
+  "Continue with Google" on both Login and Signup with no One Tap/auto-select in the first version, and
+  freezes the new-Google-user "Finish setting up OpsIQ" flow. Neither Candidate 9 nor Google sign-in is
+  implemented by this revision — both remain `IMPLEMENTATION: NOT STARTED`, with the *product* decision
+  now closed and only implementation/security/schema design work remaining. No production/test/schema/
+  config file was touched to produce any revision of this document — see the validation block at the end.
 
 **Base commit audited:** `main` @ `2c674c1a38a3b232de1a45e381da6851d1f31059`. Re-verified unmoved at the
 start of this remediation pass (Section B).
@@ -41,19 +52,36 @@ sites with the labelled-input pattern already proven on `/owner/cockpit`, and wr
 carefully-scoped Google-identity specification that reuses neither the existing Sheets-import OAuth
 plumbing nor the assumption that email is a durable identity key.
 
-**Correction from v1.0:** this document's first draft named a specific page
-(`owner/tasks/[taskId]/complete/page.tsx`) as "the actual fix" for Candidate 9 and classified it inside
-the lowest-risk wave. That was a scope violation against the merged UX-05A Candidate 9 contract, which
-explicitly proved the defect while leaving its *implementation shape* open pending four product/workflow
-questions. This revision withdraws that assumption. Candidate 9 remains the sole **HARD WORKFLOW
-BLOCKER** (Section W) and Wave A's first priority (Section Z), but its implementation is
-`BLOCKED_PENDING_WORKFLOW_DECISION` until the gate in Section T is resolved by a product decision — not
-by this document.
+**History of the Candidate 9 correction:** v1.0 named a specific page
+(`owner/tasks/[taskId]/complete/page.tsx`) as "the actual fix" for Candidate 9, a scope violation against
+the merged UX-05A Candidate 9 contract, which proved the defect while leaving its implementation shape
+open pending four product/workflow questions. v2.0 withdrew that assumption and restored the four-
+question decision gate. **This revision (v3.0) closes that gate with an explicit product decision**
+(Section T): the repair is a same-page final-approval action on the existing `/owner/tasks/[taskId]`
+page, reusing the existing `POST /api/owner/tasks/complete` endpoint and `completeTask()` service
+unchanged, with no new route, no new proof-review step, and no client-side re-implementation of the
+server's proof/freshness/separation-of-duty gates. Candidate 9 remains the sole **HARD WORKFLOW
+BLOCKER** (Section W) and Wave A2 (Section Z); its status is now `PRODUCT/WORKFLOW DECISION: RESOLVED` /
+`IMPLEMENTATION: NOT STARTED` — the decision that blocked implementation is closed, but no code exists
+yet and none is written by this document.
 
-**Recommended verdict:** this document is safe to become the authoritative implementation plan **once**
-the Candidate 9 decision gate (Section T) and the Google-identity design decisions (Section Q.4) are
-each resolved by a product owner — neither is resolvable from source or browser evidence alone, and this
-revision does not pretend otherwise.
+**History of the Google-identity correction:** v2.0 specified the architecture (GIS ID-token credential,
+`sub` as the durable identifier, a `UserAuthIdentity`-equivalent persistence concept, scope separation
+from the Sheets connector) but left several product decisions open (Section Q.7 in v2.0): whether
+automatic linking is ever enabled, where "Continue with Google" appears, whether One Tap ships in v1, and
+the exact shape of the new-user setup screen. **This revision closes all four** (Section Q): automatic
+linking is forbidden unconditionally, even for a Google-authoritative address — email is never a silent
+linking key; "Continue with Google" appears on both Login and Signup; One Tap/auto-select is explicitly
+excluded from the first version; and the new-Google-user flow is frozen as a "Finish setting up OpsIQ"
+screen that collects only what Google didn't supply while preserving every existing beta/legal/account-
+graph gate. Google sign-in's status is now `PRODUCT DECISIONS: RESOLVED` / `IMPLEMENTATION: NOT STARTED`
+— remaining work is security/schema/endpoint design, not further product choice.
+
+**Recommended verdict:** this document is now safe to become the authoritative implementation plan for
+Waves A1, B, and C without further product-decision dependencies, and for Waves A2 and D as well, since
+their previously-blocking product decisions are resolved as of this revision — what remains for A2 and D
+is implementation, security, and schema design work, tracked in Sections AA/AB, not further product
+adjudication.
 
 ---
 
@@ -701,31 +729,38 @@ implying the same authorization-code-and-redirect shape the Sheets connector alr
   Sheets scope, and therefore no reason to route through the redirect-based flow the Sheets connector was
   built for. Do not freeze a redirect-based flow merely because that connector uses one.
 
-### Q.3 Safe existing-account linking (corrected — email is not a silent linking key)
+### Q.3 Safe existing-account linking — FROZEN in this revision, stricter than Google's own minimum
 
-Per Google's own documented guidance, `email_verified=true` inside an ID token does **not** by itself mean
-Google remains the authoritative party for that email address — for a non-`@gmail.com` address with no
-`hd` (hosted domain) claim, Google's own guidance is explicit that password or another challenge method
-should still be used, because ownership of a third-party email account can change after the Google
-Account was first created with it. This directly forbids the naive "if Google's email matches our
-`User.email`, link automatically" design.
+v2.0 left open whether automatic linking should ever be enabled for the case where Google *is*
+authoritative for the address (`@gmail.com`, or a Google Workspace domain signaled by the `hd` claim).
+**This revision closes that question with a deliberately stricter product/security policy than Google's
+own guidance requires:** OpsIQ never links automatically on email match alone, **even when Google is
+authoritative for that email.** Google's `email`, `email_verified`, and `hd` claims establish what
+*Google* knows about the address — they do not by themselves establish that the *OpsIQ account* holder
+and the *Google account* holder are the same authorization to merge, and this document does not treat
+Google's authority over an email as sufficient authority over an OpsIQ account.
 
 **Frozen linking policy:**
 
-1. A Google credential arrives with a `sub`.
-2. If that `sub` already has a stored link to an OpsIQ `User` (Q.4's identity table), sign in as that
-   user directly. No further decision needed.
+1. A Google credential arrives with a verified `sub`.
+2. If that `sub` already has a stored link to an OpsIQ `User` (Q.4's identity concept), sign in as that
+   user directly via the normal session flow (Q.6). No further decision needed.
 3. If the `sub` has no existing link, and the ID token's `email` matches an existing `User.email`:
-   - If Google is authoritative for that address (`email` ends in a domain Google itself hosts/verifies as
-     a Google Workspace domain — signaled by the `hd` claim — or is a `@gmail.com` consumer address),
-     **automatic linking may be considered**, but only as an explicit, audited action, never a silent
-     merge, and only with a product decision to actually enable it (not decided by this document).
-   - If Google is **not** authoritative for that address (no `hd`, non-Gmail domain), **automatic linking
-     must not occur.** The safe default in every case, and the only path this document freezes without
-     further product sign-off, is: require the person to authenticate to the existing OpsIQ account
-     first (their existing password, or a re-verification email), and only then offer an explicit "link
-     your Google account" action, which itself is audited (`AuditEvent`).
+   **automatic linking never occurs, unconditionally** — this applies identically whether or not Google
+   is authoritative for that address; `email_verified`, `@gmail.com`, and `hd` are never, by themselves,
+   sufficient to attach a Google identity to an existing account. The required flow instead is:
+   1. Tell the person plainly that an OpsIQ account already exists for this email.
+   2. Require them to authenticate to *that existing OpsIQ account* first — using its existing password,
+      or a one-time email re-verification/re-authentication flow; the eventual implementation may choose
+      whichever safe, already-existing mechanism reuses the most (Q.9).
+   3. Only after that succeeds, explicitly offer a "Link Google account" action.
+   4. Write the `UserAuthIdentity` link (Q.4) only on that explicit action.
+   5. Emit an `AuditEvent` for the link itself.
+   6. Proceed into the normal session flow (Q.6).
 4. If no existing `User.email` matches at all, this is a new-user flow (Q.5) — never a link.
+
+**Email is never the provider identity key, under any circumstance this document specifies** — not for
+sign-in (Q.2's `sub`), and not for linking (this section).
 
 ### Q.4 Provider-identity persistence is currently missing (corrected — schema is not already sufficient)
 
@@ -756,8 +791,10 @@ bind to exactly one OpsIQ `User`, and one OpsIQ `User` may (in principle, for a 
 world) hold more than one `UserAuthIdentity` row. This table's *existence and shape concept* is frozen;
 its exact field names, migration, and whether it replaces or supplements `primaryAuthMethod` are not —
 that is implementation detail for the eventual Wave D PR, not this document.
+`WorkspaceMembership.primaryAuthMethod` must not be used as the identity-binding key; it may later hold
+purely descriptive/account metadata if genuinely useful, but never the durable link itself.
 
-### Q.5 New-Google-user flow must preserve the full account graph
+### Q.5 New-Google-user flow — frozen in this revision, must preserve the full account graph
 
 A genuinely new Google user (no existing `sub` link, no matching `User.email`) must still pass every gate
 a password signup passes today — none of these may be silently skipped just because Google already
@@ -766,20 +803,44 @@ verified an email address:
 - Beta admission (`admissionMode`, `BetaRequest` invite check).
 - Capacity (the advisory-lock-guarded `reservePublicBetaCapacity()` check).
 - Business/workspace naming — a Google-authenticated new user still needs to name their business, exactly
-  as the password-signup flow's required `workspaceName` field does today (and see G10 for that field's
-  own current label defect, which a Google-flow equivalent screen must not repeat).
+  as the password-signup flow's required `workspaceName` field does today (labelled correctly this time —
+  see G10 for the current field's label/placeholder defect, which a Google-flow equivalent screen must
+  not repeat).
 - Explicit Terms acceptance, Privacy acceptance, and Beta-notice acceptance — each its own
   `PolicyAcceptance` row, exactly as today.
 - Workspace creation, `WorkspaceMembership(role="owner")`, and `UserRoleAssignment` provisioning.
 - The same `AuditEvent`s (`USER_CREATED`, `POLICY_ACCEPTED`, etc.) the password path emits today.
 
-**Required plain-language screen (specified, not designed in detail):** after a first-time Google
-credential is verified and no existing account is found, the flow must show a short **"Finish setting up
-OpsIQ"** step collecting only what Google could not supply (the business/workspace name and the three
-policy acceptances) before any `Session`/`Workspace`/`WorkspaceMembership` row is created — mirroring
-today's signup form's own required fields minus email and password, which Google's credential already
-supplies. The Google-identity step is meant to remove **password-entry and email-verification friction**,
-never to remove **product or legal gates.**
+**Frozen "Finish setting up OpsIQ" screen — exact fields (copy may be polished, field set is frozen):**
+
+```
+Finish setting up OpsIQ
+
+Business name          [ ______________________ ]   (required)
+Signed in as: {verified Google email}                (read-only, from the Google credential)
+
+[ ] I accept the Terms
+[ ] I accept the Privacy notice
+[ ] I accept the Beta notice
+```
+
+- **No password field.** Google's credential already establishes the identity; asking for a password here
+  would reintroduce exactly the friction a Google sign-in is meant to remove.
+- **No OpsIQ email-verification step.** The email inside the verified Google ID token is not re-verified
+  by OpsIQ's own emailed-link mechanism — Google already verified it as part of issuing the credential.
+  This is a deliberate, narrow exception to the password flow's own email-verification requirement, not a
+  general relaxation of it; the password flow's own verification step is unchanged for password users.
+- **Every other gate above still applies in full** — this screen removes identity friction, not legal or
+  capacity gates. If beta admission or capacity fails, the person is refused *before* this screen is
+  reached, exactly as a password signup is refused before its own form is shown.
+
+**Transactionality, named as a requirement, not designed here:** the eventual implementation must ensure
+that a failure partway through (workspace creation succeeds but `UserAuthIdentity` linking fails, or vice
+versa) never leaves a half-created, unusable-but-present account graph — the same atomic-transaction
+pattern the existing password-signup route already uses (`SIGNUP_TRANSACTION_TIMEOUT_MS`-bounded, all-or-
+nothing) is the pattern to extend, not reinvent. The exact transaction boundary and idempotency behavior
+(e.g., what happens if the same Google credential is submitted twice in quick succession) is Wave D
+implementation design, not decided by this document.
 
 ### Q.6 Session architecture preserved (unchanged from v1.0, re-confirmed correct)
 
@@ -790,13 +851,50 @@ the ongoing OpsIQ session credential — the ID token is checked once, at sign-i
 subsequent request is authenticated by the existing `opsiq_session` cookie exactly as it is today.
 Logout/session revocation remains entirely OpsIQ-controlled and requires no change.
 
-### Q.7 Required design decisions still open (product-owner decisions, not resolvable from source)
+### Q.7 Sign-in UX shape — frozen in this revision
 
-1. Whether automatic linking is ever enabled for the Google-authoritative case (Q.3 step 3) — this
-   document specifies the *rule* for when it would be safe, not whether to turn it on.
-2. Exact schema naming for the `UserAuthIdentity` concept (Q.4).
-3. Exact copy and field order for the "Finish setting up OpsIQ" screen (Q.5).
-4. Whether "Continue with Google" appears on both Login and Signup, or only Signup.
+**"Continue with Google" appears on both `/login` and `/signup`.** Returning users naturally start from
+Login; new users naturally start from Signup. The backend identity resolver — not the page the button
+was clicked from — is what determines whether a given credential represents a linked existing user
+(Q.3 step 2), an unlinked existing account (Q.3 step 3), or a genuinely new user (Q.5). Both entry points
+call the same resolver; neither page needs to know in advance which case it will turn out to be.
+
+**Google One Tap is explicitly excluded from the first version.** No `auto_select`, no automatic/silent
+One Tap sign-in. The first release requires a deliberate user action — clicking the explicit "Continue
+with Google" button — for every sign-in, whether the person is new or returning. This is a deliberate
+scope reduction, not an oversight: it keeps the account-linking behavior in Q.3 predictable (no
+credential is ever presented to the resolver without the person having just chosen to sign in with
+Google), and avoids the additional consent/FedCM-eligibility considerations One Tap's silent flows would
+otherwise raise. One Tap may be reconsidered in a later wave, but is not part of this specification.
+
+### Q.8 Google sign-in is not Google API authorization — frozen, re-emphasized
+
+Restated as its own explicit freeze, not only as a side note inside Q.2: **"Sign in with Google" and the
+Google Sheets connector are, and remain, two unrelated features.** The sign-in flow this document
+specifies never requests `spreadsheets.readonly` or `drive.readonly`, never stores a Google access or
+refresh token merely for login, and never routes through `google-sheets-oauth.service.ts`. Google's own
+current web GIS documentation confirms the "Sign in with Google" button returns an ID-token credential
+for identity, and separately confirms `sub` as the recommended durable account identifier — the
+authorization-code-and-scopes machinery the Sheets connector needs is a different Google product surface
+entirely, and this document does not conflate them anywhere.
+
+### Q.9 Status after this revision
+
+```
+Google identity architecture:                 SPECIFIED
+Product decisions:                            RESOLVED
+Implementation:                                NOT STARTED
+Schema migration:                              REQUIRED IN WAVE D (not authorized by this document)
+Existing-account silent email linking:         FORBIDDEN (unconditionally — Q.3)
+Google One Tap in the first release:           NO (Q.7)
+"Continue with Google" placement:              LOGIN + SIGNUP (Q.7)
+OpsIQ session architecture:                    PRESERVED, unchanged (Q.6)
+Google Sheets/API OAuth scopes requested for login: NONE (Q.8)
+```
+
+Remaining Wave D work is now implementation, security, schema, and Google Cloud configuration design —
+not further product choice. Session creation/logout, beta admission, capacity, and policy acceptance are
+all unchanged mechanisms this flow must call into, not new mechanisms this document invents.
 
 **Risk classification: HIGH implementation risk, isolate into its own PR/wave (Wave D, Section Z) — never
 bundled with the low-risk password-visibility work in Section P.**
@@ -850,47 +948,112 @@ LOCAL-BROWSER-VERIFIED: the Tasks list correctly separates "My work" from "Deleg
 status-group filtering and governed, non-raw status labels throughout. Creating a task and viewing it in
 the list both worked end-to-end in the browser pass with no console errors observed.
 
-### T.1 CANDIDATE 9 PRODUCT DECISION GATE
+### T.1 CANDIDATE 9 — PRODUCT DECISION (RESOLVED in this revision)
 
-**Status: `BLOCKED_PENDING_WORKFLOW_DECISION`.** This document does **not** name an implementation shape
-for Candidate 9, and withdraws v1.0's assumption that it does. What follows is the exact, unresolved
-contract from the merged UX-05A Candidate 9 specification, reproduced rather than paraphrased away:
+**Status:**
 
-> The defect is proven and unchanged: a `Link` to a nonexistent `/owner/tasks/[taskId]/complete` route —
-> an owner with a task in `COMPLETED_PENDING_REVIEW` cannot complete the review-and-approve step from the
-> one page built for it.
->
-> The implementation shape is **not** frozen. Before any implementation can be authorized, four questions
-> must be answered by a product/workflow decision — none of which source code alone resolves:
->
-> 1. **The review experience** — does approving require the owner to have the proof panel's content in
->    view first, or is a separate confirmation step needed?
-> 2. **The explicit approval action** — is a single button click sufficient given the proof panel is
->    already visible on the same page, or does "Review & Approve" imply a distinct confirm step beyond
->    what "Accept" already does in the proof-review form immediately above it?
-> 3. **Proof visibility at the moment of approval** — must the specific accepted proof be re-displayed or
->    re-confirmed as part of the approval action itself?
-> 4. **Existing server gates** — confirming, not changing, that `completeTask`'s proof-clearance,
->    freshness-window, and separation-of-duty gates remain the sole enforcement point, with any UI change
->    additive around them, never a bypass.
+```
+Defect:                       PROVEN
+Product/workflow decision:    RESOLVED
+Implementation:               NOT STARTED
+Beta blocker:                 YES
+Wave:                         A2
+```
 
-**What this document does freeze, independent of which page/dialog/action eventually implements the
-repair:**
-- Candidate 9 is a **beta-blocking broken workflow** (Section W).
-- Whatever the eventual fix is, it must reuse — never duplicate or bypass — the existing `completeTask`
-  gating.
-- Owner-override exposure remains excluded from consideration under this candidate, unconditionally,
-  regardless of which implementation is eventually chosen.
-- No specific page, dialog, single-click action, or existing proof form is picked here. `owner/
-  tasks/[taskId]/complete/page.tsx` — the file v1.0 named — is **not** frozen as the answer; it is one
-  *possible* shape among several the four questions above could produce (a same-page confirm step, a
-  modal, a dedicated route, or something else entirely), and this document takes no position on which.
+The four questions v2.0 left open (reproduced there verbatim from the merged UX-05A contract) are now
+answered by an explicit product decision, recorded here rather than left to an implementer to guess:
 
-**Disposition:** Wave A2 (Section Z) — first priority, but implementation work does not start until a
-product owner resolves the four questions above. This gate is the single most important correction this
-remediation makes.
+1. **The review experience** — resolved: no separate review step. Proof review has already happened
+   before a task ever reaches `COMPLETED_PENDING_REVIEW`; the existing Proof panel already renders above
+   the owner-action area on the same page, and the owner is expected to have read it there, not in a
+   second place.
+2. **The explicit approval action** — resolved: a single, explicit primary button ("Approve task") on the
+   same page. No modal, no second confirmation step — the task's own status change (to
+   `COMPLETED_PENDING_REVIEW`) already signals a meaningful state, and requiring a second gate on top of
+   a page the owner deliberately navigated to would add friction without adding information.
+3. **Proof visibility at the moment of approval** — resolved: the existing Proof panel, positioned above
+   the approval action as it already is, is sufficient. No re-display or re-selection of the accepted
+   proof is required as part of the approval click itself.
+4. **Existing server gates** — resolved: unchanged. `completeTask()` remains the sole authority for proof
+   acceptance, duplicate-proof protection, proof freshness, allowed-transition checking, and separation of
+   duty. No client-side logic replaces, duplicates, or bypasses any of these.
 
-### T.2 Other Actions/Execution findings (unchanged in substance from v1.0)
+### T.2 CANDIDATE 9 — frozen same-page experience
+
+**Location:** the repair belongs on the existing `/owner/tasks/[taskId]` page. **No new `/complete`
+page, route, or API is created.**
+
+**Trigger:** `task.status === COMPLETED_PENDING_REVIEW`. The existing dead `Review & Approve` →
+`/owner/tasks/[taskId]/complete` link is replaced by a same-page final-approval block in the eventual
+Wave A2 implementation.
+
+**Required presentation (copy may be polished at implementation time, meaning frozen):**
+
+```
+Ready for approval
+
+The work has been completed. Review the details and any proof above, then approve it
+to mark this task as complete.
+```
+
+If the task has no proof requirement, the copy may drop the "any proof above" reference but must still
+state the consequence plainly before the action is taken. Primary action label: **"Approve task."** The
+consequence — *approving marks the task as complete* — must be legible before the click, not only in the
+button label.
+
+**Server call (unchanged endpoint, unchanged service, unchanged gates):** the button calls the existing
+
+```
+POST /api/owner/tasks/complete
+{ "taskId": "<current task id>" }
+```
+
+**Never** sent from this owner-facing UI: `ownerOverride`, `maxProofAgeDays`. `completeTask()` remains
+the sole authority for proof-clearance, duplicate-proof protection, freshness, allowed-transition
+checking, separation of duty, and the final `APPROVED_COMPLETE` transition and its audit events. No
+client-side logic, alternate completion service, or duplicate FSM may substitute for any of this.
+
+**Plain-language blocked states (frozen mapping; raw codes below must never render to an owner):**
+
+| Raw server reason (never shown) | Owner-facing text (exact wording may be polished, meaning frozen) |
+|---|---|
+| `proof_not_accepted` | "The proof still needs to be accepted before this task can be approved." |
+| `duplicate_proof` | "This proof was flagged as a duplicate. Review it or ask for new proof before approving the task." |
+| `proof_stale` | "The accepted proof is too old to use for approval. Ask for updated proof." |
+| `separation_of_duty` | "The person who completed this work cannot approve it. Another authorised reviewer needs to approve the task." |
+| `transition_denied` | "This task cannot be approved from its current state. Refresh the task and review its latest status." |
+
+Any other/unexpected failure continues to use the existing governed, operator-safe error mechanism
+(`classifyOperatorError`) already proven elsewhere on this page — it is not given a new error path.
+
+**Success behavior:** on a successful call, show a plain confirmation ("Task approved."), then reload the
+authoritative task state from the server rather than optimistically inventing the final status client-
+side. The resulting owner-visible status badge must read "Approved."
+
+**Likely file/scope (not a schema, service, or API change):**
+
+```
+src/app/(authenticated)/owner/tasks/[taskId]/page.tsx
+```
+
+No new page. No API change. No service/domain/schema change. Tests are required (Section AB).
+
+**Frozen future test contract** — at minimum, the eventual implementation's tests must prove:
+
+- `COMPLETED_PENDING_REVIEW` renders the "Ready for approval" block.
+- The dead `/complete` `Link` no longer exists anywhere in the file.
+- The Proof panel/details remain visible above the approval action, unchanged.
+- "Approve task" calls the existing `POST /api/owner/tasks/complete`.
+- The request body contains `taskId` and does **not** contain `ownerOverride` or `maxProofAgeDays`.
+- The button disables while the request is in flight.
+- Each of the five known 409 reasons above renders its mapped plain-language message, never the raw code.
+- An unexpected failure remains operator-safe (governed message, no raw exception).
+- A successful approval reloads the task and the rendered status becomes "Approved."
+- No second proof-review step is invented anywhere in this flow.
+- Every other pre-existing task-detail behavior (status history, other status transitions, the non-
+  proof-required path) continues to function unchanged.
+
+### T.3 Other Actions/Execution findings (unchanged in substance from v1.0/v2.0)
 
 **Confirmed defect, page-title vs. nav-label mismatch:** now resolved in this revision (Section E.3) by
 renaming the page's own H1 from "Actions" to "Tasks," not the nav.
@@ -927,7 +1090,7 @@ specifically. **Classification: MEDIUM.**
 
 | Residual | Disposition |
 |---|---|
-| Candidate 9 — dead `/owner/tasks/[taskId]/complete` link | **HARD WORKFLOW BLOCKER** (Section W). `BLOCKED_PENDING_WORKFLOW_DECISION` (Section T.1). Wave A2 once unblocked. |
+| Candidate 9 — dead `/owner/tasks/[taskId]/complete` link | **HARD WORKFLOW BLOCKER** (Section W). Product decision `RESOLVED` (Section T.1) — same-page approval on `/owner/tasks/[taskId]` (Section T.2). `IMPLEMENTATION: NOT STARTED`. Wave A2. |
 | MANAGER/STAFF raw-value leak | **HIGH.** Wave A1 (mechanical humanization, same class as G9). |
 | Execution's simultaneous error+empty-state render defect | **MEDIUM**, NOT-YET-VERIFIED. Wave B. |
 | `OwnerSopAction` concurrency asymmetry | **LOW/deferred** — backend-workflow review, out of this audit's scope. |
@@ -941,7 +1104,7 @@ specifically. **Classification: MEDIUM.**
 | Password-visibility toggle | **MEDIUM, low-risk.** Wave A1 — never bundled with Wave D. |
 | **[New]** "Workspace Name" label/placeholder disagreement (G10) | **MEDIUM.** Wave A1 (copy-only). |
 | **[New]** "Loading … workspace" skeleton labels (G11) | **MEDIUM.** Wave A1 (copy-only, one shared string pattern). |
-| Google sign-in | **Spec only (Section Q).** Its own isolated Wave D, gated on Q.7's product sign-off. |
+| Google sign-in | **Spec resolved (Section Q).** Product decisions closed (Q.9). `IMPLEMENTATION: NOT STARTED`. Its own isolated Wave D. |
 
 ---
 
@@ -953,8 +1116,9 @@ polish requirement — see Section AC for the full set of BETA UX EXIT GATES):
 **HARD WORKFLOW BLOCKER (1):**
 1. **Candidate 9 — dead Review & Approve link.** Owners with a task in `COMPLETED_PENDING_REVIEW` cannot
    approve or reject it through the UI at all. This is the only item in this entire audit classified as
-   an unconditional broken-workflow blocker — and its *implementation* remains gated (Section T.1) even
-   though its *status as a blocker* is not in question.
+   an unconditional broken-workflow blocker. Its product/workflow decision is now **resolved** (Section
+   T.1: a same-page "Approve task" action, Section T.2), but it remains a beta blocker until that
+   decision is actually implemented — `IMPLEMENTATION: NOT STARTED` is not the same as "not a blocker."
 
 No other single finding in this audit rises to HARD WORKFLOW BLOCKER on its own. Every hard owner-
 language, mobile, and accessibility requirement this document names is not therefore optional — each is
@@ -996,12 +1160,14 @@ sense.
 Pure copy/label changes plus the isolated password-visibility addition. No workflow logic changes.
 
 **Wave A2 — Candidate 9 workflow repair (gated, not low-risk — corrected classification).**
-v1.0 incorrectly folded this into "lowest risk, ship first" alongside pure copy fixes. It is corrected
-here: Candidate 9 is a **workflow/navigation repair whose shape is unresolved** (Section T.1), not a
-mechanical copy fix, and must not be classified or scheduled as if it were one. It may still be worked as
-soon as A1 ships, or in parallel once the T.1 decision gate clears — but it does not start as code until
-that gate clears, and it is tracked as its own risk class within the same broad "Wave A" grouping so this
-plan stays at 4 headline waves rather than 5.
+v1.0 incorrectly folded this into "lowest risk, ship first" alongside pure copy fixes. Candidate 9 is a
+**workflow repair**, not a mechanical copy fix, and is not scheduled as if it were one, even though its
+product decision is now resolved (Section T.1: a same-page "Approve task" action on `/owner/tasks/
+[taskId]`, Section T.2). It may be worked as soon as A1 ships, or in parallel — the decision gate that
+previously blocked it from starting is now clear — but it still requires its own implementation,
+security-relevant review of the server-gate integration, and the full test contract in Section T.2/AB
+before merge; it is tracked as its own risk class within the same broad "Wave A" grouping so this plan
+stays at 4 headline waves rather than 5.
 
 **Wave B — Core owner interaction & presentation convergence (moderate risk).**
 The 20 `window.prompt()` replacements, Trust's label-map/error-governance fixes, and the Sales/Operations
@@ -1023,14 +1189,18 @@ interaction semantics, only default visibility.
 discovered while implementing Waves A/B.
 
 **Wave D — Google identity (isolated, security-reviewed, its own PR regardless of timing).**
-Kept structurally separate from every other wave. Gated on Q.7's product decisions before any code is
-written. Requires its own full signup-gate-parity test suite (beta admission, capacity, policy
-acceptance, the "Finish setting up OpsIQ" screen) before merge, plus the `UserAuthIdentity`-equivalent
-persistence concept (Q.4).
+Kept structurally separate from every other wave. Its product decisions are now resolved (Section Q:
+linking policy, button placement, no One Tap in v1, the new-user setup flow) — what remains is
+implementation, security, and schema design, not further product choice. Requires its own full
+signup-gate-parity test suite (beta admission, capacity, policy acceptance, the "Finish setting up
+OpsIQ" screen) before merge, plus the `UserAuthIdentity`-equivalent persistence concept (Q.4/Q.10) and a
+transactional/idempotent account-graph creation design (Q.5/Q.12) that this document specifies the
+requirements for but does not design in implementation detail.
 
 **This remains 4 broad waves, not one phase per problem** — Candidate 9 and Google identity each retain
-their own explicit decision gate (T.1, Q.7) even while sitting inside Wave A and Wave D respectively,
-exactly as the mission requires.
+their own explicit decision record (T.1, Q) even while sitting inside Wave A and Wave D respectively,
+exactly as the mission requires. Both are now `PRODUCT DECISION: RESOLVED` / `IMPLEMENTATION: NOT
+STARTED` — this document freezes the product shape, not the code.
 
 ---
 
@@ -1046,9 +1216,12 @@ E.3); `owner/finance/page.tsx` (drop "BLOCKED tier" wording, G4); `owner/operati
 G6 helper text); `owner/cockpit`'s `MinimumOwnerCockpit.tsx` (Goal-chip label map, G7); `owner/tasks/new/
 page.tsx` (PROOF_TYPE_LABEL import, G9; MANAGER/STAFF humanization).
 
-**Wave A2:** Not namable yet — depends entirely on Section T.1's product decision. Likely candidates
-include (not frozen) `owner/tasks/[taskId]/page.tsx` itself, a new confirm-dialog component, or a new
-route — this list is explicitly provisional and none of it is authorized.
+**Wave A2:** `src/app/(authenticated)/owner/tasks/[taskId]/page.tsx` — the same-page "Ready for
+approval" block and "Approve task" action (Section T.2), replacing the dead `Review & Approve` link.
+Likely a new test file (e.g. `src/__tests__/components/owner-task-detail-approval.test.tsx`) covering
+the frozen test contract in Section T.2 — filename not frozen. **No API route, service, domain, or
+schema file is expected to change** — the fix is presentation/interaction-only against the existing
+`POST /api/owner/tasks/complete` endpoint and `completeTask()` service.
 
 **Wave B:** `owner/finance/page.tsx`, `owner/sales/page.tsx`, `owner/operations/page.tsx`, `owner/
 execution/page.tsx` (the 20 `window.prompt()` call sites); `owner/trust/page.tsx` (label maps +
@@ -1060,12 +1233,13 @@ tasks/[taskId]/page.tsx` (persistent labels on proof forms).
 this audit's original modification scope per UX-05A and would need its own scoping); `owner/data/page.tsx`
 (`MissingCritical` positive-state copy).
 
-**Wave D:** a new `src/app/api/auth/google/callback/route.ts` or equivalent GIS-appropriate endpoint
-(Section Q.2 — not necessarily a classic redirect callback), a new `src/services/auth/google-sign-in.
-service.ts` (deliberately distinct from `google-sheets-oauth.service.ts`), `login/page.tsx` and/or
-`signup/page.tsx` (a "Continue with Google" entry point, pending Q.7 item 4), a new `UserAuthIdentity`-
-equivalent Prisma model + migration (Q.4, not authorized by this document), and a new "Finish setting up
-OpsIQ" screen (Q.5).
+**Wave D:** a new GIS-appropriate credential-verification endpoint (Section Q.2 — an ID-token POST
+target, not necessarily a classic redirect callback), a new `src/services/auth/google-sign-in.
+service.ts` (deliberately distinct from `google-sheets-oauth.service.ts`), `login/page.tsx` **and**
+`signup/page.tsx` (a "Continue with Google" entry point on both, per Q.11 — frozen, not pending), a new
+`UserAuthIdentity`-equivalent Prisma model + migration (Q.4/Q.10, not authorized by this document), and a
+new "Finish setting up OpsIQ" screen (Q.5/Q.12) collecting business name + the three policy acceptances,
+with the verified Google email shown read-only.
 
 ---
 
@@ -1074,7 +1248,7 @@ OpsIQ" screen (Q.5).
 | Wave | Required before merge |
 |---|---|
 | A1 | Unit/snapshot tests confirming each renamed label; a LOCAL-BROWSER-VERIFIED re-check of all 3 renamed page titles + the password toggle's behavior (Section P's frozen behavior list) at both viewports; **before this wave is considered done**, a LIVE-DEPLOYMENT-VERIFIED pass of the same items on the actual deployed exact SHA (Section AC). |
-| A2 | Entirely dependent on Section T.1's eventual decision — a regression test asserting no dead `Link` to `/complete` remains, whatever form the working replacement takes; scope of further tests not namable until the shape is frozen. |
+| A2 | The full frozen test contract in Section T.2 (11 assertions: ready-for-approval render, dead-link removal, proof/details visibility, correct endpoint+payload shape, no `ownerOverride`/`maxProofAgeDays`, in-flight disable, each of the 5 mapped 409 reasons, operator-safe unexpected-failure handling, post-success reload to "Approved," no invented second review step, and full preservation of every other existing task-detail behavior); a LOCAL-BROWSER-VERIFIED re-check of the new copy at both viewports; a LIVE-DEPLOYMENT-VERIFIED pass before this wave is considered done (Section AC.1). |
 | B | The full behavioral test list in Section Z's Wave B entry, per affected completion/verification flow (4 pages × the fields-render/cancel/invalid/valid/failure/success/race-protection checklist); `MUST_BROWSER_VERIFY_BEFORE_MERGE` for the Sales/Operations 390px snapshot-form layout (Section M) — this is a hard gate on this wave, not optional; `MUST_BROWSER_VERIFY_BEFORE_IMPLEMENTATION` for the populated Money/Sales/Operations/Execution diagnosis-cycle views generally (Section B.4) — i.e., obtain real populated-state evidence before finalizing the Trust label-map fix and the harmonization redesign, not merely before merging them; a LIVE-DEPLOYMENT-VERIFIED pass on the deployed SHA covering the same items before closure. |
 | C | Standard regression coverage for whatever specific fix each item receives; no wave-wide gate beyond that. |
 | D | The full signup-gate-parity suite named in Section Q.5 (beta admission, capacity, policy acceptance, audit events) plus new-user and existing-user-linking test paths per Section Q.3's frozen linking policy; a LIVE-DEPLOYMENT-VERIFIED pass against Google's real identity endpoints (not mockable in the same way local Postgres was) before this wave is considered done. |
@@ -1109,9 +1283,10 @@ term:
 7. See at least one recommended action, understand who is meant to do it, and start it.
 8. Delegate a task to a named role, with or without required proof, and understand what happens next.
 9. Complete an owner-started action using labelled fields, never a native browser prompt (post Wave B).
-10. See a task through to actual approval or rejection with no dead link in the way — **gated on Section
-    T.1's product decision being resolved and implemented (Wave A2)**, not merely "post Wave A" as v1.0
-    stated; this gate cannot close on a schedule, only on a decision.
+10. See a task through to actual approval using the same-page "Approve task" action (Section T.2) with
+    no dead link in the way — the product decision that previously blocked this gate is now resolved
+    (Section T.1); the gate itself still closes only on Wave A2's implementation landing, not on a
+    schedule.
 11. Understand every status badge they see without needing to know the underlying system's vocabulary.
 12. Understand every entry on the Evidence & Trust page, including the audit trail, without seeing a raw
     code or ID as the primary text of any line (post Wave B).
@@ -1124,9 +1299,9 @@ term:
     so.
 17. Never see a raw internal enum, UUID, or system-only term anywhere in the core owner journey — after
     Waves A1/B, every currently-known violation in Sections G/U is closed.
-18. If they choose to sign in with Google in the future, go through the exact same beta-admission,
-    workspace-naming, and Terms/Privacy/Beta-notice acceptance gates a password signup requires today —
-    never a shortcut (Wave D, gated on Section Q.7).
+18. If they choose to sign in with Google, go through the exact same beta-admission, workspace-naming,
+    and Terms/Privacy/Beta-notice acceptance gates a password signup requires today, via the frozen
+    "Finish setting up OpsIQ" screen — never a shortcut (Wave D, Section Q.5/Q.9).
 
 ### AC.1 Live-acceptance gate (new in this revision — mission item 22)
 
@@ -1152,62 +1327,71 @@ gate applies to it — each wave's own AB entry names exactly where this applies
 
 ## AD. Hostile self-audit
 
-1. **Did we invent Candidate 9's implementation shape?** NO — Section T.1 reproduces the four open
-   questions verbatim from the merged UX-05A contract and freezes only what that contract already froze
-   (the defect, and the two hard constraints); no page, dialog, or action is named as the answer.
-2. **Did we miss "Workspace Name"?** NO — it is now G10, cross-referenced in Sections O, K, V, X, AC, and
-   AA, with the exact source lines quoted.
-3. **Does the dictionary cover all required owner concepts?** YES — Section H.2 adds diagnosis,
-   assessment, review, finding, risk, opportunity, confidence, missing information, action, task,
-   verification, proof, outcome, and snapshot, each with internal meaning, current wording, recommended
-   wording, explanation-required flag, screens, and a domain-semantics-differs flag.
-4. **Did we prefer technical "Explainability" merely because the page already said it?** NO — Section E.2
-   reverses v1.0's recommendation and freezes "Evidence & Trust" (the plain-language pair) as the page's
-   own title, explicitly rejecting "Explainability" as product/AI vocabulary.
-5. **Would nav become Actions > Actions?** NO — Section E.3 rejects renaming the nav item and instead
-   renames the page's own H1 from "Actions" to "Tasks," leaving the "Actions" section header and its
-   children's names non-colliding.
-6. **Is the first-time primary journey singular?** YES — Section C freezes one canonical path using direct
-   local-browser evidence (Home's own CTA target, confirmed rendered), while explicitly keeping
-   `/owner/onboarding` available as a secondary, non-deleted route, and naming the one sub-detail left
-   genuinely unverified (Start Here's own step-1 destination) rather than silently assuming it.
-7. **Are local-browser and live-deployment evidence clearly distinguished?** YES — Section B.1 defines 4
-   distinct labels and this revision re-labels every prior `BROWSER-VERIFIED` claim to
-   `LOCAL-BROWSER-VERIFIED` throughout; zero claims in this document carry `LIVE-DEPLOYMENT-VERIFIED`, and
-   Section AC.1 adds an explicit gate requiring that evidence before final closure.
-8. **Are populated-domain and mobile-form gaps honestly gated?** YES — Section AB classifies each
-   specific gap as `MUST_BROWSER_VERIFY_BEFORE_IMPLEMENTATION`, `MUST_BROWSER_VERIFY_BEFORE_MERGE`, or
-   `SOURCE-SUFFICIENT_FOR_SPEC` individually, rather than one blanket disclaimer; the Sales/Operations
-   390px form gap is named as a hard merge gate on Wave B specifically (Section M, AB).
-9. **Does Google identity persist provider `sub`?** REQUIRED — Section Q.4 freezes this as an architecture
-   decision (the `UserAuthIdentity` concept, keyed on `provider` + `providerSubject`), while explicitly
-   not freezing exact schema naming or authorizing any migration.
-10. **Can email alone silently link existing accounts?** NO — Section Q.3 forbids automatic linking on
-    email match alone, requires re-authentication to the existing account before any explicit link for
-    the non-Google-authoritative case, and only lets automatic linking be *considered* (not decided here)
-    for the Google-Workspace/Gmail-authoritative case, per Google's own documented `hd`/`email_verified`
-    guidance.
-11. **Is Google login separated from Sheets/API OAuth scopes?** YES — Section Q.2 explicitly separates the
-    GIS ID-token identity credential (no API scopes, no access/refresh tokens) from the Sheets connector's
-    authorization-code flow, and forbids routing sign-in through `google-sheets-oauth.service.ts`.
-12. **Does Google auth reuse OpsIQ sessions?** YES — Section Q.6 freezes that the flow terminates in the
-    exact same `Session` row / `opsiq_session` cookie mechanism used today, with no parallel session
-    system and no NextAuth/Auth.js migration.
-13. **Does Wave B require behavioral tests for prompt replacements?** YES — Section Z's Wave B entry
-    withdraws v1.0's "presentation-layer only" classification and lists the seven-point behavioral-test
-    checklist (render, cancel, invalid, valid-payload-parity, owner-safe failure, successful refresh,
-    race-protection survival) required per affected flow.
-14. **Are hard workflow blockers separated from beta UX exit gates?** YES — Section W now names exactly
-    one HARD WORKFLOW BLOCKER (Candidate 9) and explicitly states every other requirement lives in Section
-    AC as its own numbered gate, not as an optional nice-to-have.
-15. **Are there no more than 4 broad waves?** YES — Section Z names exactly four (A, B, C, D), with
-    Candidate 9 and Google identity each carrying their own decision gate (T.1, Q.7) *inside* Wave A and
-    Wave D respectively rather than spawning additional headline waves.
+**Carried forward from v2.0 (still true, unaffected by this revision's product-decision freeze):**
+
+1. **Did we miss "Workspace Name"?** NO — G10, cross-referenced in Sections O, K, V, X, AC, AA.
+2. **Does the dictionary cover all required owner concepts?** YES — Section H.2.
+3. **Did we prefer technical "Explainability" merely because the page already said it?** NO — Section
+   E.2 freezes "Evidence & Trust" on the page itself.
+4. **Would nav become Actions > Actions?** NO — Section E.3 renames the page's own H1 to "Tasks" instead.
+5. **Is the first-time primary journey singular?** YES — Section C, unchanged and not reopened in this
+   revision (per this mission's own instruction not to reopen settled first-run/nav/language decisions).
+6. **Are local-browser and live-deployment evidence clearly distinguished?** YES — Section B.1's 4 labels,
+   unchanged and not reopened.
+7. **Are populated-domain and mobile-form gaps honestly gated?** YES — Section AB, unchanged.
+8. **Does Wave B require behavioral tests for prompt replacements?** YES — Section Z's Wave B entry,
+   unchanged.
+9. **Are there no more than 4 broad waves?** YES — Section Z names exactly four (A, B, C, D) both before
+   and after this revision.
+
+**New for this revision — the mission's own required final checklist:**
+
+10. **Does Candidate 9 still say `BLOCKED_PENDING_WORKFLOW_DECISION`?** NO — Section T.1 now reads
+    `PRODUCT/WORKFLOW DECISION: RESOLVED`, `IMPLEMENTATION: NOT STARTED`.
+11. **Is a new `/complete` page proposed?** NO — Section T.2 explicitly states no new page, route, or API
+    is created; the repair is same-page on the existing `/owner/tasks/[taskId]`.
+12. **Does Candidate 9 reuse the existing completion endpoint/service?** YES — Section T.2 freezes the
+    call as the existing `POST /api/owner/tasks/complete` with an unchanged `completeTask()` service as
+    sole authority; no alternate service, no duplicate FSM.
+13. **Is proof re-reviewed unnecessarily?** NO — Section T.1 item 1/Section T.2 both state the existing
+    Proof panel, already positioned above the approval action, is sufficient; no second review step is
+    invented.
+14. **Is the approval consequence explained before clicking?** YES — Section T.2's frozen copy states
+    "approve it to mark this task as complete" as part of the ready-for-approval text itself, not only in
+    the button label.
+15. **Is `ownerOverride` exposed?** NO — Section T.2 explicitly lists `ownerOverride` and
+    `maxProofAgeDays` as never sent from this owner-facing UI.
+16. **Are raw 409 reason codes allowed to render?** NO — Section T.2's mapping table converts all five
+    known reasons to plain language; unexpected failures use the existing governed error mechanism.
+17. **Can matching email silently link Google?** NO — Section Q.3 forbids automatic linking on email
+    match alone, unconditionally, including for the Google-authoritative case v2.0 had left open.
+18. **Is Google `sub` the durable provider identity?** YES — Section Q.4/Q.9, unchanged from v2.0 and now
+    explicitly confirmed as the frozen architecture decision, not merely a proposal.
+19. **Is Google One Tap part of v1?** NO — Section Q.7 explicitly excludes One Tap/auto-select from the
+    first version.
+20. **Does "Continue with Google" appear on Login and Signup?** YES — Section Q.7, both entry points,
+    frozen (v2.0 had left this open as Q.7 item 4).
+21. **Does a new Google user still pass beta/legal/account-graph gates?** YES — Section Q.5's frozen
+    "Finish setting up OpsIQ" screen explicitly preserves beta admission, capacity, business naming, and
+    all three policy acceptances; only the password field and OpsIQ's own email-re-verification step are
+    removed, both because Google's credential already supersedes what each of those two specifically
+    exists to establish.
+22. **Does Google login use the normal OpsIQ Session?** YES — Section Q.6, unchanged from v2.0, re-
+    confirmed: normal `Session` row, normal `opsiq_session` cookie, no parallel mechanism.
+23. **Does Google login request Sheets/Drive scopes?** NO — Section Q.8 freezes this separation
+    explicitly, as its own dedicated subsection rather than only a side note inside Q.2.
+24. **Did we reopen already settled first-run/nav/language decisions?** NO — Sections C, E, G, H, O, P
+    are unchanged in substance from v2.0; only Sections A, Q, T, V, W, Z, AA, AB, AC, AD were amended, per
+    the mission's own instruction to amend only where necessary.
+25. **Are there still no more than 4 broad UX waves?** YES — Section Z, unchanged: A (with A1/A2 as risk
+    sub-classes, not extra headline waves), B, C, D.
 
 No hostile-audit answer in this pass surfaced a defect requiring a further correction before delivery.
 
 ---
 
-**End of document. No implementation follows from this document without separate, explicit authorization
-for each wave, and Waves A2/D specifically require a resolved product decision (Sections T.1, Q.7) before
-any code is written.**
+**End of document. No implementation follows from this document without separate, explicit
+authorization for each wave. Waves A2 and D no longer require a further product decision before code is
+written — their product decisions are resolved as of this revision (Sections T.1, Q.9) — but neither is
+implemented by this document, and both still require their own implementation-time authorization, design
+review, and the test contracts named in Sections T.2/AB before any code merges.**
