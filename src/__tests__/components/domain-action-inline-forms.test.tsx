@@ -128,14 +128,16 @@ describe("VerificationActionForm", () => {
   });
 
   it("parseOptionalNumericField's own invalid branch is correct by direct call; a blank rendered submit succeeds with no crash", () => {
-    // This test does NOT exercise the rendered form's invalid-submit path -- a real browser makes
-    // that path unreachable via normal typing, by two independent, empirically confirmed
-    // mechanisms documented on parseOptionalNumericField's own doc comment (DOM value sanitization
-    // clears an unparseable entry back to "" the instant it's typed, AND -- confirmed separately --
-    // the browser's own native constraint validation blocks the "submit" event itself for a
-    // badInput field, via either a real click or a real Enter keypress, before this component's
-    // onSubmit ever runs). jsdom computes neither mechanism, so this proves the pure function
-    // directly instead of fabricating a fireEvent.change scenario no real browser can produce.
+    // This test does NOT exercise the rendered form's invalid-submit path -- real Chromium makes
+    // that path unreachable via normal typing, by two distinct mechanisms documented on
+    // parseOptionalNumericField's own doc comment: (1) DOM value sanitization clears an
+    // unparseable entry back to "" the instant it's typed -- jsdom reproduces this one via
+    // fireEvent.change -- and (2), confirmed separately via real Chromium keyboard input (not
+    // reproducible in jsdom), Chromium's own native constraint validation blocks the "submit"
+    // event itself for a badInput field, via either a real click or a real Enter keypress, before
+    // this component's onSubmit ever runs. Because jsdom does not compute `validity.badInput` from
+    // a value assigned via fireEvent.change, mechanism (2) cannot be driven through the rendered
+    // form here -- this proves the pure function directly instead.
     const onSave = vi.fn();
     render(
       <VerificationActionForm defaultDirection="up" metricLabel="Revenue" onCancel={() => {}} onSave={onSave} />

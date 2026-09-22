@@ -243,19 +243,21 @@ describe("Owner Sales — inline Complete/Verify action forms (UX-06 Wave B1)", 
   });
 
   it("I. invalid numeric input never submits a broken value, and the shared validator rejects it directly", async () => {
-    // A native type="number" input's own DOM sanitization (confirmed empirically: this holds in
-    // both jsdom and real browsers) clears anything that doesn't parse to a finite number --
-    // including magnitude overflow like "1e400" -- back to "" the instant it's set, so this page's
-    // rendered field can never carry a non-blank, non-finite value into Save in the first place.
-    // This test exercises that DOM-sanitization path via fireEvent.change (jsdom), which is why
-    // the request below still goes out with safe null semantics. A real browser adds a SECOND,
-    // stronger, independent guarantee that jsdom cannot reproduce: typing an unparseable entry
-    // (e.g. "1e400" or the incomplete exponent "1e") sets the field's own validity.badInput to
-    // true, and the browser's native constraint validation then blocks the "submit" event itself
+    // A native type="number" input's own DOM sanitization (confirmed empirically in both jsdom,
+    // via fireEvent.change, and real Chromium, via Playwright's real keyboard input) clears
+    // anything that doesn't parse to a finite number -- including magnitude overflow like
+    // "1e400" -- back to "" the instant it's set, so this page's rendered field can never carry a
+    // non-blank, non-finite value into Save in the first place. This test exercises that
+    // DOM-sanitization path via fireEvent.change (jsdom), which is why the request below still
+    // goes out with safe null semantics. Real Chromium adds a SECOND, stronger, independent
+    // guarantee that jsdom does not reproduce: typing an unparseable entry via real keyboard
+    // input (e.g. "1e400" or the incomplete exponent "1e") sets the field's own validity.badInput
+    // to true, and Chromium's native constraint validation then blocks the "submit" event itself
     // from ever firing -- confirmed via both a real Save-button click and a real Enter keypress,
     // either way with zero network requests and this form's onSubmit never invoked at all. So in
-    // a real browser this exact scenario is actually a no-op click, not a null submission -- see
+    // Chromium this exact scenario is actually a no-op click, not a null submission -- see
     // DomainActionInlineForms.tsx's parseOptionalNumericField doc comment for the full evidence.
+    // (Only Chromium was tested here; other browser engines were not verified.)
     renderPage();
     await resolveDashboard(BIZ_A.id, dashboardFixture("A", BIZ_A.id));
     fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));

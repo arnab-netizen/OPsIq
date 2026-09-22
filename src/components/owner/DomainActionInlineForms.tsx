@@ -91,23 +91,31 @@ export interface VerificationActionFormProps {
  * never routed through server-error governance (Section K's frozen contract).
  *
  * Exported for direct unit testing: this function's non-blank+non-finite
- * branch is unreachable through normal browser interaction, by two
- * independent, empirically confirmed mechanisms (real Chromium, real
- * keyboard input -- jsdom does not compute either):
- *   1. A native `type="number"` input clears anything that doesn't parse to
- *      a finite number (including magnitude overflow, e.g. "1e400") back to
- *      "" the instant it's typed, so this function is never actually called
- *      with a non-blank, non-finite string from a rendered field's own value.
- *   2. Independently of (1), for a genuinely malformed/overflowing entry the
- *      input's `validity.badInput` becomes true, and the browser's own
- *      constraint validation then blocks the "submit" event itself from ever
- *      firing -- confirmed via both a real Save-button click and a real
- *      Enter keypress, either way with zero network requests and this
- *      form's own onSubmit handler never invoked at all. A no-op click is
- *      the actual observed behavior for this case, not a silent null
- *      submission.
- * This export lets the branch itself be proven correct directly, since
- * nothing in a rendered browser can reach it.
+ * branch is unreachable through normal typing, by two distinct mechanisms:
+ *   1. Value sanitization: a native `type="number"` input clears anything
+ *      that doesn't parse to a finite number (including magnitude overflow,
+ *      e.g. "1e400") back to "" the instant it's typed, so this function is
+ *      never actually called with a non-blank, non-finite string from a
+ *      rendered field's own value. This holds in both jsdom (via
+ *      fireEvent.change) and real Chromium (via Playwright's real keyboard
+ *      input) -- jsdom does reproduce this mechanism.
+ *   2. Submission blocking: independently of (1), typing an unparseable
+ *      entry via real keyboard input in Chromium (confirmed with Playwright,
+ *      not fireEvent) sets the field's own `validity.badInput` to true, and
+ *      Chromium's native constraint validation then blocks the "submit"
+ *      event itself from ever firing -- confirmed via both a real
+ *      Save-button click and a real Enter keypress, either way with zero
+ *      network requests and this form's own onSubmit handler never invoked
+ *      at all (confirmed with a temporary console.log instrumentation
+ *      probe). A no-op click is the actual observed behavior for this case
+ *      in Chromium, not a silent null submission. jsdom does NOT reproduce
+ *      this mechanism -- it never computes `validity.badInput` from a value
+ *      assigned via fireEvent.change, so the corresponding unit test
+ *      simulates it directly instead (see domain-action-inline-forms.
+ *      test.tsx). This was verified in Chromium only; other browser engines
+ *      were not tested here.
+ * This export lets the branch itself be proven correct directly, since a
+ * rendered Chromium browser cannot reach it through normal typing.
  */
 export function parseOptionalNumericField(raw: string): { valid: true; value: number | null } | { valid: false } {
   const trimmed = raw.trim();
