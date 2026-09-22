@@ -168,12 +168,83 @@ describe("UX-06 Wave A1 (Section G8) — AI Precheck owner wording", () => {
   });
 });
 
-describe("Candidate 9 (NOT authorized this phase) — dead 'Review & Approve' link is untouched", () => {
-  it("COMPLETED_PENDING_REVIEW still links to the nonexistent /complete route, unchanged", async () => {
+// UX-06 Wave A2 (Section T.2, Candidate 9): the dead "Review & Approve" link to a
+// nonexistent /complete route is repaired into a same-page final-approval block.
+// The behavioral approval flow itself (POST call, blocked-reason mapping, success
+// reload, double-submit guard) is covered in owner-task-approval.test.tsx; this file
+// stays scoped to presentation.
+describe("UX-06 Wave A2 — /owner/tasks/[taskId] same-page 'Ready for approval' presentation", () => {
+  it("COMPLETED_PENDING_REVIEW with no proof requirement renders 'Ready for approval' and 'Approve task', never the old dead link", async () => {
+    installFetchMock(baseTask({ status: "COMPLETED_PENDING_REVIEW", proofRequirementId: null }));
+    render(<TaskDetailPage />);
+
+    expect(await screen.findByText("Ready for approval")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve task" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The work has been completed. Review the details above, then approve it to mark this task as complete."
+      )
+    ).toBeInTheDocument();
+
+    expect(screen.queryByText("Review & Approve")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review & Approve" })).not.toBeInTheDocument();
+    const complete = screen.queryAllByRole("link").filter((el) => el.getAttribute("href")?.endsWith("/complete"));
+    expect(complete).toHaveLength(0);
+  });
+});
+
+describe("UX-06 Wave A2 — Proof panel remains above the approval action", () => {
+  it("a proof-required pending-review task still renders Proof, the proof-aware copy, and no second proof-review step, with Proof before Ready for approval in document order", async () => {
+    installFetchMock(
+      baseTask({
+        status: "COMPLETED_PENDING_REVIEW",
+        proofRequirementId: "pr1",
+        proofRequirement: { id: "pr1", proofType: "PHOTO", riskLevel: "LOW", reviewerRole: null, ownerOverrideAllowed: false },
+        proof: {
+          id: "proof1",
+          status: "ACCEPTED",
+          proofType: "PHOTO",
+          submittedByUserId: "u1",
+          submittedAt: new Date().toISOString(),
+          reviewedByUserId: "u2",
+          reviewedAt: new Date().toISOString(),
+          reviewReason: null,
+          duplicateFlagged: false,
+        },
+      })
+    );
+    render(<TaskDetailPage />);
+
+    await screen.findByText("Ready for approval");
+
+    expect(screen.getByText("Proof")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The work has been completed. Review the details and any proof above, then approve it to mark this task as complete."
+      )
+    ).toBeInTheDocument();
+
+    // Document order: Proof heading must precede the approval heading.
+    const proofHeading = screen.getByText("Proof");
+    const approvalHeading = screen.getByText("Ready for approval");
+    expect(proofHeading.compareDocumentPosition(approvalHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // No re-selection of already-accepted proof, no extra confirmation control.
+    expect(screen.queryByText("Submit proof")).not.toBeInTheDocument();
+    expect(screen.queryByText("Review proof")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /submit review/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Candidate 9 — dead 'Review & Approve' link no longer exists anywhere in the file", () => {
+  it("no link anywhere in a rendered COMPLETED_PENDING_REVIEW page points at /complete", async () => {
     installFetchMock(baseTask({ status: "COMPLETED_PENDING_REVIEW" }));
     render(<TaskDetailPage />);
 
-    const link = await screen.findByRole("link", { name: "Review & Approve" });
-    expect(link).toHaveAttribute("href", `/owner/tasks/11111111-1111-4111-8111-111111111111/complete`);
+    await screen.findByText("Ready for approval");
+    const links = screen.queryAllByRole("link");
+    for (const link of links) {
+      expect(link.getAttribute("href")).not.toMatch(/\/complete$/);
+    }
   });
 });
