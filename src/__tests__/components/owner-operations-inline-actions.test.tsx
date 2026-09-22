@@ -356,4 +356,96 @@ describe("Owner Operations — inline Complete/Verify action forms (UX-06 Wave B
 
     expect(promptSpy).not.toHaveBeenCalled();
   });
+
+  it("O. with two action rows, keyboard Cancel on the SECOND row's Verify form returns focus to that row's own trigger (never the first row's, never the page body), and sends no mutation request", async () => {
+    // Confirmed production accessibility finding: closing the Verify form left focus on the page
+    // body instead of the button that opened it. The fix's own logic lives in the trigger's onClick
+    // handler, which runs identically however the click was produced (mouse, or a real browser's
+    // native Space/Enter-activates-a-focused-button default action) -- fireEvent.click here proves
+    // that handler restores focus correctly; the real keyboard path (Tab to Cancel, press Space) is
+    // separately verified against a live rendered app, since jsdom/Testing Library's fireEvent does
+    // not reproduce a browser's native keyboard-activation-triggers-click behavior without
+    // @testing-library/user-event, which is not a dependency of this repo.
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [
+        action({ id: "action-1", title: "First action" }),
+        action({ id: "action-2", title: "Second action" }),
+      ])
+    );
+
+    const verifyTriggers = await screen.findAllByRole("button", { name: "Verify outcome" });
+    expect(verifyTriggers).toHaveLength(2);
+    const [firstTrigger, secondTrigger] = verifyTriggers;
+
+    // Closed state: no expanded/controls state on either trigger yet.
+    expect(firstTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(secondTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(secondTrigger.getAttribute("aria-controls")).toBeNull();
+
+    fireEvent.click(secondTrigger);
+    const heading = await screen.findByRole("heading", { name: "Verify outcome" });
+
+    // Only the SECOND row's trigger claims the open state -- the first row's is untouched.
+    expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(firstTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(firstTrigger.getAttribute("aria-controls")).toBeNull();
+
+    const controlsId = secondTrigger.getAttribute("aria-controls");
+    expect(controlsId).toBeTruthy();
+    const formEl = document.getElementById(controlsId!);
+    expect(formEl).not.toBeNull();
+    expect(formEl).toContainElement(heading);
+    // Accessible name: the form's own aria-labelledby resolves to the visible heading text.
+    expect(formEl).toHaveAttribute("aria-labelledby", heading.id);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await flush();
+
+    expect(document.activeElement).toBe(secondTrigger);
+    expect(document.activeElement).not.toBe(firstTrigger);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(secondTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(secondTrigger.getAttribute("aria-controls")).toBeNull();
+    expect(verifyCalls).toHaveLength(0);
+    expect(patchCalls).toHaveLength(0);
+  });
+
+  it("P. with two action rows, keyboard Cancel on the SECOND row's Complete form returns focus to that row's own trigger (never the first row's), and sends no mutation request", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [
+        action({ id: "action-1", title: "First action" }),
+        action({ id: "action-2", title: "Second action" }),
+      ])
+    );
+
+    const completeTriggers = await screen.findAllByRole("button", { name: "Complete" });
+    expect(completeTriggers).toHaveLength(2);
+    const [firstTrigger, secondTrigger] = completeTriggers;
+
+    fireEvent.click(secondTrigger);
+    const heading = await screen.findByText("Complete action");
+
+    expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(firstTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(firstTrigger.getAttribute("aria-controls")).toBeNull();
+
+    const controlsId = secondTrigger.getAttribute("aria-controls");
+    expect(controlsId).toBeTruthy();
+    const formEl = document.getElementById(controlsId!);
+    expect(formEl).not.toBeNull();
+    expect(formEl).toContainElement(heading);
+    expect(formEl).toHaveAttribute("aria-labelledby", heading.id);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await flush();
+
+    expect(document.activeElement).toBe(secondTrigger);
+    expect(document.activeElement).not.toBe(firstTrigger);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(patchCalls).toHaveLength(0);
+  });
 });

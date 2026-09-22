@@ -86,6 +86,32 @@ describe("CompletionActionForm", () => {
     fireEvent.click(button);
     expect(onSave).toHaveBeenCalledTimes(2);
   });
+
+  it("accepts an optional formId that becomes the <form> element's own id, and gives the form an accessible name tied to its visible heading", () => {
+    const { container } = render(
+      <CompletionActionForm formId="my-complete-form" onCancel={() => {}} onSave={() => {}} />
+    );
+    const form = container.querySelector("form");
+    expect(form).toHaveAttribute("id", "my-complete-form");
+    const heading = screen.getByText("Complete action");
+    expect(form).toHaveAttribute("aria-labelledby", heading.id);
+    expect(heading.id).not.toBe("");
+  });
+
+  it("two simultaneously mounted instances never share the same heading id -- no duplicate IDs even without a caller-supplied formId", () => {
+    const { container } = render(
+      <>
+        <CompletionActionForm onCancel={() => {}} onSave={() => {}} />
+        <CompletionActionForm onCancel={() => {}} onSave={() => {}} />
+      </>
+    );
+    const headings = container.querySelectorAll("h4");
+    expect(headings).toHaveLength(2);
+    const [firstId, secondId] = [headings[0]!.id, headings[1]!.id];
+    expect(firstId).not.toBe("");
+    expect(secondId).not.toBe("");
+    expect(firstId).not.toBe(secondId);
+  });
 });
 
 describe("VerificationActionForm", () => {
@@ -176,5 +202,37 @@ describe("VerificationActionForm", () => {
     expect(screen.getByLabelText("Target direction")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
+
+  it("accepts an optional formId that becomes the <form> element's own id, and gives the form an accessible name tied to its visible heading", () => {
+    const { container } = render(
+      <VerificationActionForm
+        formId="my-verify-form"
+        defaultDirection="up"
+        metricLabel="Revenue"
+        onCancel={() => {}}
+        onSave={() => {}}
+      />
+    );
+    const form = container.querySelector("form");
+    expect(form).toHaveAttribute("id", "my-verify-form");
+    const heading = screen.getByText("Verify outcome");
+    expect(form).toHaveAttribute("aria-labelledby", heading.id);
+    expect(heading.id).not.toBe("");
+  });
+
+  it("two simultaneously mounted instances never share the same heading id -- no duplicate IDs even without a caller-supplied formId", () => {
+    const { container } = render(
+      <>
+        <VerificationActionForm defaultDirection="up" metricLabel="Revenue" onCancel={() => {}} onSave={() => {}} />
+        <VerificationActionForm defaultDirection="down" metricLabel="Orders" onCancel={() => {}} onSave={() => {}} />
+      </>
+    );
+    const headings = container.querySelectorAll("h4");
+    expect(headings).toHaveLength(2);
+    const [firstId, secondId] = [headings[0]!.id, headings[1]!.id];
+    expect(firstId).not.toBe("");
+    expect(secondId).not.toBe("");
+    expect(firstId).not.toBe(secondId);
   });
 });
