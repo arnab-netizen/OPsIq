@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button, Input, Select } from "@/ui/primitives";
 
 /**
@@ -20,13 +20,20 @@ export interface CompletionValues {
 
 export interface CompletionActionFormProps {
   busy?: boolean;
+  /** DOM id for the <form> element itself, so a caller's trigger button can point its
+   *  aria-controls at this exact instance. Optional -- omitting it only omits the id attribute,
+   *  it does not affect the form's own accessible name (see headingId below). */
+  formId?: string;
   onCancel: () => void;
   onSave: (values: CompletionValues) => void;
 }
 
-export function CompletionActionForm({ busy = false, onCancel, onSave }: CompletionActionFormProps) {
+export function CompletionActionForm({ busy = false, formId, onCancel, onSave }: CompletionActionFormProps) {
   const [notes, setNotes] = useState("");
   const [evidence, setEvidence] = useState("");
+  // useId() guarantees a unique id per mounted instance (unlike a static string), so the form's
+  // accessible name never collides even if more than one of these were ever mounted at once.
+  const headingId = useId();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,8 +48,13 @@ export function CompletionActionForm({ busy = false, onCancel, onSave }: Complet
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 rounded-md border border-border bg-card p-3 space-y-3">
-      <h4 className="text-sm font-semibold text-foreground">Complete action</h4>
+    <form
+      id={formId}
+      aria-labelledby={headingId}
+      onSubmit={handleSubmit}
+      className="mt-3 rounded-md border border-border bg-card p-3 space-y-3"
+    >
+      <h4 id={headingId} className="text-sm font-semibold text-foreground">Complete action</h4>
       <Input
         name="completionNotes"
         label="Completion notes"
@@ -81,6 +93,10 @@ export interface VerificationActionFormProps {
   defaultDirection: "up" | "down";
   /** Humanized metric text shown as "Metric: <this>". */
   metricLabel: string;
+  /** DOM id for the <form> element itself, so a caller's trigger button can point its
+   *  aria-controls at this exact instance. Optional -- omitting it only omits the id attribute,
+   *  it does not affect the form's own accessible name (see headingId below). */
+  formId?: string;
   onCancel: () => void;
   onSave: (values: VerificationValues) => void;
 }
@@ -129,6 +145,7 @@ export function VerificationActionForm({
   busy = false,
   defaultDirection,
   metricLabel,
+  formId,
   onCancel,
   onSave,
 }: VerificationActionFormProps) {
@@ -136,6 +153,9 @@ export function VerificationActionForm({
   const [afterRaw, setAfterRaw] = useState("");
   const [targetDirection, setTargetDirection] = useState<"up" | "down">(defaultDirection);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // useId() guarantees a unique id per mounted instance (unlike a static string), so the form's
+  // accessible name never collides even if more than one of these were ever mounted at once.
+  const headingId = useId();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -150,8 +170,13 @@ export function VerificationActionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 rounded-md border border-border bg-card p-3 space-y-3">
-      <h4 className="text-sm font-semibold text-foreground">Verify outcome</h4>
+    <form
+      id={formId}
+      aria-labelledby={headingId}
+      onSubmit={handleSubmit}
+      className="mt-3 rounded-md border border-border bg-card p-3 space-y-3"
+    >
+      <h4 id={headingId} className="text-sm font-semibold text-foreground">Verify outcome</h4>
       <p className="text-xs text-muted-foreground">Metric: {metricLabel}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input

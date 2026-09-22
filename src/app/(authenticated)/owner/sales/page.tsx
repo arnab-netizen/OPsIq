@@ -503,6 +503,11 @@ function SalesCycleView({
   onVerifyAction: (a: any, values: VerificationValues) => void;
 }) {
   const state = score?.salesState ?? cycle.salesState;
+  // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
+  // opened its form (confirmed production accessibility finding) -- never a different row's
+  // trigger, even with multiple actions open/closed in sequence.
+  const completeTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const verifyTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   return (
     <div className="space-y-6">
       <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
@@ -570,6 +575,10 @@ function SalesCycleView({
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
             const latestVerification = a.verifications?.[0];
+            const isCompleteOpen = Boolean(editingAction && editingAction.actionId === a.id && editingAction.mode === "complete");
+            const isVerifyOpen = Boolean(editingAction && editingAction.actionId === a.id && editingAction.mode === "verify");
+            const completeFormId = `sales-complete-form-${a.id}`;
+            const verifyFormId = `sales-verify-form-${a.id}`;
             return (
               <div key={a.id} className="border rounded p-3">
                 <div className="flex justify-between items-start">
@@ -589,12 +598,24 @@ function SalesCycleView({
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && (
-                    <Button onClick={() => onEditingActionChange({ actionId: a.id, mode: "complete" })} disabled={busy}>
+                    <Button
+                      ref={(el) => { completeTriggerRefs.current[a.id] = el; }}
+                      aria-expanded={isCompleteOpen}
+                      aria-controls={isCompleteOpen ? completeFormId : undefined}
+                      onClick={() => onEditingActionChange({ actionId: a.id, mode: "complete" })}
+                      disabled={busy}
+                    >
                       Complete
                     </Button>
                   )}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onEditingActionChange({ actionId: a.id, mode: "verify" })} disabled={busy}>
+                  <Button
+                    ref={(el) => { verifyTriggerRefs.current[a.id] = el; }}
+                    aria-expanded={isVerifyOpen}
+                    aria-controls={isVerifyOpen ? verifyFormId : undefined}
+                    onClick={() => onEditingActionChange({ actionId: a.id, mode: "verify" })}
+                    disabled={busy}
+                  >
                     Verify outcome
                   </Button>
                 </div>
@@ -608,19 +629,27 @@ function SalesCycleView({
                     </span>
                   </div>
                 )}
-                {editingAction && editingAction.actionId === a.id && editingAction.mode === "complete" && (
+                {isCompleteOpen && (
                   <CompletionActionForm
+                    formId={completeFormId}
                     busy={busy}
-                    onCancel={() => onEditingActionChange(null)}
+                    onCancel={() => {
+                      onEditingActionChange(null);
+                      completeTriggerRefs.current[a.id]?.focus();
+                    }}
                     onSave={(values) => onCompleteAction(a, values)}
                   />
                 )}
-                {editingAction && editingAction.actionId === a.id && editingAction.mode === "verify" && (
+                {isVerifyOpen && (
                   <VerificationActionForm
+                    formId={verifyFormId}
                     busy={busy}
                     defaultDirection="up"
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
-                    onCancel={() => onEditingActionChange(null)}
+                    onCancel={() => {
+                      onEditingActionChange(null);
+                      verifyTriggerRefs.current[a.id]?.focus();
+                    }}
                     onSave={(values) => onVerifyAction(a, values)}
                   />
                 )}
