@@ -25,8 +25,11 @@ const FIXED_FALLBACK = "We couldn't create your account right now. Please try ag
 async function fillAndSubmit() {
   await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@example.com" } });
-  fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "password123" } });
-  fireEvent.change(screen.getByLabelText(/workspace name/i), { target: { value: "Acme" } });
+  // Exact match, not /password/i: PasswordInput's Show/Hide toggle carries an
+  // aria-label of "Show password" / "Hide password", which would also match a
+  // loose /password/i regex against getByLabelText.
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+  fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: "Acme" } });
   fireEvent.click(screen.getByLabelText(/Terms/i));
   fireEvent.click(screen.getByLabelText(/Privacy notice/i));
   fireEvent.click(screen.getByLabelText(/Beta notice/i));
@@ -151,5 +154,75 @@ describe("SignupPage — admission-mode wording", () => {
       expect(screen.getByText(/beta registration isn.t open right now/i)).toBeTruthy();
     });
     expect(screen.queryByText(/open beta/i)).toBeNull();
+  });
+});
+
+/**
+ * UX-06 Wave A1 (Section G10): the owner-visible field label changed from
+ * "Workspace Name" to "Business name", but the internal workspaceName field and the
+ * API payload it produces must not change — this proves the rename is UI-only.
+ */
+describe("SignupPage — Business name label (UX-06 Wave A1)", () => {
+  it("shows a 'Business name' field and no 'Workspace Name' label anywhere", async () => {
+    mockBetaStatus({ enabled: true, admissionMode: "OPEN_BETA" });
+    render(<SignupPage />);
+    await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
+
+    expect(screen.getByLabelText("Business name")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Workspace Name")).not.toBeInTheDocument();
+    expect(screen.queryByText("Workspace Name")).not.toBeInTheDocument();
+  });
+
+  it("still submits the API payload's workspaceName field under the 'Business name' UI label", async () => {
+    let capturedBody: Record<string, unknown> | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/api/auth/beta-status")) {
+          return { ok: true, json: async () => ({ enabled: true, admissionMode: "OPEN_BETA" }) } as Response;
+        }
+        if (url.includes("/api/auth/signup") && init?.body) {
+          capturedBody = JSON.parse(init.body as string);
+          return {
+            ok: true,
+            status: 201,
+            json: async () => ({ success: true, pendingVerification: true, user: {}, workspace: {} }),
+          } as Response;
+        }
+        return Promise.reject(new Error("unexpected fetch in this test"));
+      })
+    );
+
+    render(<SignupPage />);
+    await fillAndSubmit();
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    expect(capturedBody).toMatchObject({ workspaceName: "Acme" });
+  });
+});
+
+/**
+ * UX-06 Wave A1 (Section P): the password field must render the Show/Hide toggle,
+ * and toggling it must never submit the form.
+ */
+describe("SignupPage — password visibility control (UX-06 Wave A1)", () => {
+  it("renders a Show password control for the Password field", async () => {
+    mockBetaStatus({ enabled: true, admissionMode: "OPEN_BETA" });
+    render(<SignupPage />);
+    await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
+
+    expect(screen.getByRole("button", { name: "Show password" })).toBeInTheDocument();
+  });
+
+  it("clicking the password toggle never submits the form", async () => {
+    mockBetaStatus({ enabled: true, admissionMode: "OPEN_BETA" });
+    render(<SignupPage />);
+    await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+    expect(screen.getByLabelText("Password")).toHaveProperty("type", "text");
+    // No fetch to the signup endpoint occurred as a side effect of the toggle.
+    expect(screen.queryByText(/we couldn.t create your account/i)).not.toBeInTheDocument();
   });
 });

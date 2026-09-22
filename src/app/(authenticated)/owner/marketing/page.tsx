@@ -255,7 +255,7 @@ export default function OwnerMarketingPage() {
     }
   }
 
-  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading marketing workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading your marketing information" />;
   if (needsBusinessRecovery) return (
     <PageContainer>
       <p>Your previously selected business is no longer available. Choose a business to continue.</p>

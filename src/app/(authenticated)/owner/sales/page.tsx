@@ -318,7 +318,7 @@ export default function OwnerSalesPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading sales workspace" />;
+  if (loading) return <CardDashboardSkeleton label="Loading your sales information" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -330,7 +330,7 @@ export default function OwnerSalesPage() {
     <PageContainer>
       <div className="mb-6">
         <PageHeader
-          title="Owner Sales"
+          title="Sales"
           description="Where sales leak, who is churning, what to push next — with the single highest-impact sales move and verification."
           actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
         />

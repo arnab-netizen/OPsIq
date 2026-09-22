@@ -169,7 +169,7 @@ export default function OwnerGrowthPricingPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading growth pricing workspace" />;
+  if (loading) return <CardDashboardSkeleton label="Loading growth and pricing information" />;
 
   return (
     <PageContainer>

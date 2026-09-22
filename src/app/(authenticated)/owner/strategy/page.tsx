@@ -253,7 +253,7 @@ export default function OwnerStrategyPage() {
     }
   }
 
-  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading strategy workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading your strategy information" />;
   if (needsBusinessRecovery) return (
     <PageContainer>
       <p>Your previously selected business is no longer available. Choose a business to continue.</p>

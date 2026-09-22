@@ -176,7 +176,7 @@ export default function OwnerApprovalsPage() {
     }
   }
 
-  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading approvals workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading approvals" />;
   if (needsBusinessRecovery) return (
     <PageContainer>
       <p>Your previously selected business is no longer available. Choose a business to continue.</p>

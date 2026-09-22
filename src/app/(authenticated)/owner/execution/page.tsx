@@ -331,7 +331,7 @@ export default function OwnerExecutionPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading execution workspace" />;
+  if (loading) return <CardDashboardSkeleton label="Loading your execution information" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -344,7 +344,7 @@ export default function OwnerExecutionPage() {
       <div className="mb-6">
         <PageHeader
           title="Owner Execution & SOP"
-          description="Who must do what, by when, and whether it was actually done and verified — with the single highest-impact accountability move and what to turn into an SOP."
+          description="Who must do what, by when, and whether it was actually done and verified — with the single highest-impact accountability move. SOP means Standard Operating Procedure: a written, repeatable way of doing a task."
           actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
         />
       </div>

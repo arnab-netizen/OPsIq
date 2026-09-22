@@ -233,7 +233,7 @@ export default function OwnerTasksPage() {
     <PageContainer>
       <div className="mb-6">
         <PageHeader
-          title="Actions"
+          title="Tasks"
           actions={<Link href="/owner/tasks/new"><Button size="sm">+ New Task</Button></Link>}
         />
       </div>

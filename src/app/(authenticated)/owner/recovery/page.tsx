@@ -248,7 +248,7 @@ export default function OwnerRecoveryPage() {
     }
   }
 
-  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading recovery workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading recovery information" />;
   if (needsBusinessRecovery) return (
     <PageContainer>
       <p>Your previously selected business is no longer available. Choose a business to continue.</p>

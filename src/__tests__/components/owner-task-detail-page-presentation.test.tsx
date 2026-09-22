@@ -119,6 +119,34 @@ describe("Candidate 8 — /owner/tasks/[taskId] status history humanizes TaskAct
   });
 });
 
+describe("UX-06 Wave A1 (Section G8) — AI Precheck owner wording", () => {
+  it("renders 'Automatically checked — passed' for AI_PRECHECK_PASSED, never the raw label", async () => {
+    installFetchMock(
+      baseTask({
+        proofRequirementId: "pr1",
+        proof: { status: "AI_PRECHECK_PASSED", duplicateFlagged: false },
+      })
+    );
+    render(<TaskDetailPage />);
+
+    expect(await screen.findByText("Automatically checked — passed")).toBeInTheDocument();
+    expect(screen.queryByText("AI Precheck Passed")).not.toBeInTheDocument();
+  });
+
+  it("renders 'Automatically checked — needs review' for AI_PRECHECK_FAILED, never the raw label", async () => {
+    installFetchMock(
+      baseTask({
+        proofRequirementId: "pr1",
+        proof: { status: "AI_PRECHECK_FAILED", duplicateFlagged: false },
+      })
+    );
+    render(<TaskDetailPage />);
+
+    expect(await screen.findByText("Automatically checked — needs review")).toBeInTheDocument();
+    expect(screen.queryByText("AI Precheck Failed")).not.toBeInTheDocument();
+  });
+});
+
 describe("Candidate 9 (NOT authorized this phase) — dead 'Review & Approve' link is untouched", () => {
   it("COMPLETED_PENDING_REVIEW still links to the nonexistent /complete route, unchanged", async () => {
     installFetchMock(baseTask({ status: "COMPLETED_PENDING_REVIEW" }));

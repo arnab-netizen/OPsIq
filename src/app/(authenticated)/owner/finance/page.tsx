@@ -474,7 +474,7 @@ export default function OwnerFinancePage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading finance workspace" />;
+  if (loading) return <CardDashboardSkeleton label="Loading your money information" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -714,7 +714,7 @@ function FinanceCycleView({
 
       {(score?.dataConfidenceScore ?? cycle.dataConfidenceScore) < 30 && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
-          ⚠ Data confidence is critically low ({Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100 — BLOCKED tier). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.
+          ⚠ Data confidence is critically low ({Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.
         </div>
       )}
 

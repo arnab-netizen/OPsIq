@@ -2,6 +2,7 @@
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
+import { PasswordInput } from "@/ui/primitives/password-input";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useOperatorMutation } from "@/hooks/useOperatorMutation";
@@ -94,9 +95,8 @@ export default function LoginPage() {
             required
             autoComplete="email"
           />
-          <Input
+          <PasswordInput
             label="Password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"

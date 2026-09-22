@@ -380,6 +380,19 @@ const RISK_LEVEL_LABEL: Record<string, string> = {
   BLOCKED: "Blocked", HIGH_GROWTH: "Growth-ready", unknown: "—",
 };
 
+// UX-06 Wave A1 (Section G7): humanizes GoalAttentionSignal.state so the owner never
+// sees a raw enum token (e.g. "NO_GROWTH"). Unknown/future values fall back to a
+// neutral, safe label rather than rendering the raw value.
+const GOAL_STATE_LABEL: Record<string, string> = {
+  NO_GOAL: "No goal set",
+  INSUFFICIENT_DATA: "Not enough information",
+  STALE: "Needs updating",
+  ON_TRACK: "On track",
+  AT_RISK: "At risk",
+  NO_GROWTH: "Not progressing",
+};
+const GOAL_STATE_FALLBACK = "Goal status unavailable";
+
 const CONDITION_FIELD_LABEL: Record<keyof DerivedBusinessConditionSignals, string> = {
   cashPressureLevel: "Cash pressure",
   marginPressureLevel: "Margin pressure",
@@ -1503,7 +1516,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span className="text-sm font-medium text-foreground">Goal</span>
                 <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
-                  {goalAttentionSignal.state.replace(/_/g, " ")}
+                  {GOAL_STATE_LABEL[goalAttentionSignal.state] ?? GOAL_STATE_FALLBACK}
                 </span>
                 {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
               </div>

@@ -102,3 +102,24 @@ describe("reset-password page", () => {
     await waitFor(() => expect(screen.getByText(/invalid or has expired/i)).toBeTruthy());
   });
 });
+
+// UX-06 Wave A1 (Section P): both password fields render independent Show/Hide
+// toggles, and revealing one never affects the other's visibility.
+describe("reset-password page — password visibility control (UX-06 Wave A1)", () => {
+  it("New password and Confirm new password toggle independently", () => {
+    searchParamsValue = "token=abc123";
+    render(<ResetPasswordPage />);
+
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "a-fresh-new-password-9" } });
+    fireEvent.change(screen.getByLabelText("Confirm new password"), { target: { value: "a-fresh-new-password-9" } });
+
+    const toggles = screen.getAllByRole("button", { name: "Show password" });
+    expect(toggles).toHaveLength(2);
+    fireEvent.click(toggles[0]!);
+
+    expect(screen.getByLabelText("New password")).toHaveProperty("type", "text");
+    expect(screen.getByLabelText("Confirm new password")).toHaveProperty("type", "password");
+    // The value survived the toggle.
+    expect(screen.getByLabelText("New password")).toHaveProperty("value", "a-fresh-new-password-9");
+  });
+});
