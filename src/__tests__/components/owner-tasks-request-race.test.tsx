@@ -233,15 +233,22 @@ describe("Owner Tasks — delegated-list stale filter/pagination-request race (U
     const callB = await waitForTaskCall({ status: "BLOCKED", offset: 0 });
 
     // The older (A) request finishes first -- its own finally() must not surface as "done" for
-    // the still-pending, newer (B) generation. Neither A's nor B's data may render yet.
+    // the still-pending, newer (B) generation. Neither A's nor B's data may render yet, AND the
+    // real loading skeleton must still be showing -- a stale setLoading(false) here would let a
+    // false "No tasks match this filter" empty state render while B is still authoritative and
+    // pending, which the earlier "A-ONLY-TASK absent" assertion alone could not catch (that
+    // assertion only proves setTasks() is guarded, not that setLoading(false) is).
     await act(async () => { callA.resolve({ tasks: [makeTask("t-a", "A-ONLY-TASK", "IN_PROGRESS")] }); });
     await flush();
     expect(screen.queryByText("A-ONLY-TASK")).not.toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(screen.queryByText("No tasks match this filter")).not.toBeInTheDocument();
 
     // B (the newer, authoritative generation) now resolves.
     await act(async () => { callB.resolve({ tasks: [makeTask("t-b", "B-ONLY-TASK", "BLOCKED")] }); });
     await flush();
     await waitFor(() => expect(screen.getByText("B-ONLY-TASK")).toBeInTheDocument());
+    expect(screen.queryByRole("status", { name: "Loading" })).not.toBeInTheDocument();
     expect(screen.queryByText("A-ONLY-TASK")).not.toBeInTheDocument();
   });
 });
