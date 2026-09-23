@@ -6,8 +6,7 @@ import { Badge, Button, Select, Disclosure, CardDashboardSkeleton, PageHeader, P
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
-import { humanizeIdentifier } from "@/lib/audit-label";
-import { FINDING_TYPE_LABEL } from "@/components/owner/FindingCard";
+import { findingTypeLabel, eventNameLabel, entityTypeLabel } from "@/lib/audit-label";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
@@ -57,17 +56,6 @@ const DOMAIN_LABEL: Record<string, string> = {
   strategy: "Strategy",
   portfolio: "Portfolio",
 };
-
-// UX-06 Wave B (Section G.1/U): findingType has exactly two known business values
-// (opportunity/risk, per FindingCard.tsx's own map); anything else -- including a value this
-// page has never seen -- falls back to the same generic, honest reformat audit-label.ts uses,
-// never a raw un-cased string and never a guessed business meaning.
-function findingTypeLabel(raw: unknown): string {
-  if (typeof raw === "string" && FINDING_TYPE_LABEL[raw.toLowerCase()]) {
-    return FINDING_TYPE_LABEL[raw.toLowerCase()];
-  }
-  return humanizeIdentifier(raw);
-}
 
 async function api(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
@@ -332,14 +320,15 @@ export default function OwnerTrustPage() {
                         <div key={e.id} className="border-b py-1 text-sm">
                           <div className="flex justify-between items-center">
                             <span>
-                              {/* UX-06 Wave B (Section G.3): eventName/entityType used to render
-                                  raw. AUDIT_EVENTS (domain/constants/audit-events.ts) and the
-                                  entityType values written across the codebase's audit-log call
-                                  sites are a large, open-ended set -- humanizeIdentifier's
-                                  mechanical reformat covers every current and future value
-                                  without a per-value map that could miss or misdescribe one. */}
-                              <strong>{humanizeIdentifier(e.eventName)}</strong>
-                              <span className="text-muted-foreground"> · {humanizeIdentifier(e.entityType)}</span>
+                              {/* UX-06 Wave B (Section G.3): eventName/entityType used to render raw.
+                                  eventNameLabel/entityTypeLabel (src/lib/audit-label.ts) label only the
+                                  curated, repository-confirmed values this audit trail can actually show
+                                  (every AUDIT_EVENTS emission tied to a diagnosis cycle's own id, across
+                                  all 7 owner domains) -- anything else present is an honest "Other
+                                  event"/"Other entity type", never a guessed reformat of an unverified
+                                  value. */}
+                              <strong>{eventNameLabel(e.eventName)}</strong>
+                              <span className="text-muted-foreground"> · {entityTypeLabel(e.entityType)}</span>
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(e.occurredAt).toLocaleString()}
