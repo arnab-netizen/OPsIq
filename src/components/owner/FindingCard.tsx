@@ -59,6 +59,26 @@ export const FINDING_TYPE_LABEL: Record<string, string> = {
   risk: "Risk",
 };
 
+/**
+ * Own-property-only lookup for a plain object literal used as a label/variant table. A bare
+ * `map[key]` lookup is unsafe when `key` comes from server-controlled data: every plain JS
+ * object inherits `Object.prototype` members (`constructor`, `toString`, `hasOwnProperty`,
+ * `valueOf`, and, via the `__proto__` accessor, the prototype object itself), so a
+ * findingType/severity value equal to one of those names would resolve to that inherited
+ * function/object instead of `undefined` -- silently producing a value React cannot render
+ * (a thrown "Objects are not valid as a React child" for `__proto__`, or a logged "Functions
+ * are not valid as a React child" plus a blank badge for the others) instead of falling
+ * through to this component's existing raw-value fallback like any other unrecognized string.
+ * `Object.prototype.hasOwnProperty.call` (not `map.hasOwnProperty`, which could itself be
+ * shadowed by a same-named own property) confirms `key` was actually defined on `map` itself
+ * before it is ever indexed. Same pattern as `src/lib/audit-label.ts`'s own `ownLookup` --
+ * duplicated locally rather than imported, since `audit-label.ts` already imports
+ * `FINDING_TYPE_LABEL` from this module and importing back would be circular.
+ */
+function ownLookup<T>(map: Record<string, T>, key: string | undefined): T | undefined {
+  return key !== undefined && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+}
+
 function sureLabel(confidencePct: number): string {
   return confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
 }
@@ -74,8 +94,8 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What OpsIQ found</span>
         <span className="flex shrink-0 gap-1">
-          <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[finding.findingType?.toLowerCase()] ?? finding.findingType}</Badge>
-          <Badge variant={SEVERITY_VARIANT[finding.severity?.toLowerCase()] ?? "default"}>{SEVERITY_LABEL[finding.severity?.toLowerCase()] ?? finding.severity}</Badge>
+          <Badge variant="muted-accessible">{ownLookup(FINDING_TYPE_LABEL, finding.findingType?.toLowerCase()) ?? finding.findingType}</Badge>
+          <Badge variant={ownLookup(SEVERITY_VARIANT, finding.severity?.toLowerCase()) ?? "default"}>{ownLookup(SEVERITY_LABEL, finding.severity?.toLowerCase()) ?? finding.severity}</Badge>
         </span>
       </div>
       <strong className="mt-1 block font-display text-[1.05rem] font-semibold leading-snug text-foreground">{finding.title}</strong>
