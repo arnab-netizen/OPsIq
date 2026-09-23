@@ -52,7 +52,9 @@ const SEVERITY_LABEL: Record<string, string> = {
   critical: "Critical",
 };
 
-const FINDING_TYPE_LABEL: Record<string, string> = {
+// Exported so other owner surfaces (e.g. /owner/trust, UX-06 Wave B) can label the same
+// findingType values consistently instead of inventing a second map. Reused, never redefined.
+export const FINDING_TYPE_LABEL: Record<string, string> = {
   opportunity: "Opportunity",
   risk: "Risk",
 };
