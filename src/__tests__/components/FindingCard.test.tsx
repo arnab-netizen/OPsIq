@@ -1,19 +1,27 @@
 /**
- * FindingCard — own-property-only label/variant lookups (shared-component prototype-pollution
- * hardening).
+ * FindingCard — own-property-only label/variant lookups (inherited-property lookup hardening).
  *
  * Root cause fixed here: `FINDING_TYPE_LABEL`/`SEVERITY_LABEL`/`SEVERITY_VARIANT` were plain
- * object-literal lookups (`map[key]`) with no `hasOwnProperty` guard. Every plain JS object
- * inherits `Object.prototype` members, so a `findingType`/`severity` value equal to
- * `"constructor"`, `"toString"`, `"hasOwnProperty"`, or `"valueOf"` resolved to that inherited
- * *function* instead of `undefined` (React logs "Functions are not valid as a React child" and
- * renders nothing for that badge), and `"__proto__"` resolved to the prototype *object* itself
- * (React throws synchronously: "Objects are not valid as a React child"). This file proves the
- * `ownLookup()` fix added directly in FindingCard.tsx makes all five poison values fall through
- * to the exact same raw-value fallback an ordinary unrecognized string already used — no crash,
- * no console error, no blank badge — while leaving every canonical label, every case
- * normalization, every color/variant mapping, and the unknown/missing-value fallback text
- * completely unchanged from before the fix.
+ * object-literal lookups (`map[key]`) with no `hasOwnProperty` guard -- a read-side lookup
+ * defect, not prototype pollution (no `Object.prototype` mutation is involved or demonstrated
+ * anywhere here). Every plain JS object inherits `Object.prototype` members, so a
+ * `findingType`/`severity` value equal to one of those member names *can* resolve to the
+ * inherited member instead of `undefined`. In this component specifically, only `"constructor"`
+ * and `"__proto__"` actually did: both are already all-lowercase, so the existing
+ * `.toLowerCase()` normalization ahead of the lookup does nothing for them, and each hit its
+ * real inherited counterpart -- `"constructor"` resolved to the inherited *function* (React logs
+ * "Functions are not valid as a React child" and renders nothing for that badge), `"__proto__"`
+ * resolved to the prototype *object* itself (React throws synchronously: "Objects are not valid
+ * as a React child"). `"toString"`, `"hasOwnProperty"`, and `"valueOf"` are real *camelCase*
+ * Object.prototype member names, so the same pre-existing `.toLowerCase()` step already turned
+ * them into `"tostring"`/`"hasownproperty"`/`"valueof"` before this fix ever ran -- strings that
+ * match no inherited member -- so those three already fell through to the ordinary raw-value
+ * fallback here, incidentally, before this commit. All five are still exercised below as
+ * defensive regression coverage: the `ownLookup()` guard added in FindingCard.tsx makes the
+ * fallback explicit and correct for all five uniformly, independent of `.toLowerCase()`
+ * continuing to run first, rather than leaving three of them safe only by that coincidence.
+ * Every canonical label, case normalization, color/variant mapping, and the unknown/missing-value
+ * fallback text is unchanged from before the fix.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";

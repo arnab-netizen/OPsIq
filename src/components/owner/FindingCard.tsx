@@ -64,11 +64,25 @@ export const FINDING_TYPE_LABEL: Record<string, string> = {
  * `map[key]` lookup is unsafe when `key` comes from server-controlled data: every plain JS
  * object inherits `Object.prototype` members (`constructor`, `toString`, `hasOwnProperty`,
  * `valueOf`, and, via the `__proto__` accessor, the prototype object itself), so a
- * findingType/severity value equal to one of those names would resolve to that inherited
- * function/object instead of `undefined` -- silently producing a value React cannot render
- * (a thrown "Objects are not valid as a React child" for `__proto__`, or a logged "Functions
- * are not valid as a React child" plus a blank badge for the others) instead of falling
- * through to this component's existing raw-value fallback like any other unrecognized string.
+ * findingType/severity value equal to one of those names can resolve to that inherited
+ * function/object instead of `undefined` -- silently producing a value React cannot render,
+ * instead of falling through to this component's existing raw-value fallback like any other
+ * unrecognized string.
+ *
+ * Concretely, in this component: `finding.findingType`/`finding.severity` are lowercased
+ * (`.toLowerCase()`) before being used as the lookup key. `"constructor"` and `"__proto__"` are
+ * already all-lowercase, so that normalization does nothing for them, and they DO resolve to
+ * the real inherited member -- `"__proto__"` resolves to the prototype *object* itself (React
+ * throws synchronously: "Objects are not valid as a React child"), and `"constructor"`
+ * resolves to the inherited *function* (React logs "Functions are not valid as a React child"
+ * and renders nothing for that badge). `"toString"`, `"hasOwnProperty"`, and `"valueOf"` are
+ * real camelCase Object.prototype member names, so lowercasing them first (to `"tostring"`,
+ * `"hasownproperty"`, `"valueof"`) already produced a string that does NOT match any inherited
+ * member here -- this existing normalization already fell through to the raw-value fallback
+ * for those three specifically, in this file, before this fix. The guard below still covers
+ * all five uniformly (and defensively, independent of `.toLowerCase()` continuing to run
+ * first) rather than relying on that normalization as the only safeguard.
+ *
  * `Object.prototype.hasOwnProperty.call` (not `map.hasOwnProperty`, which could itself be
  * shadowed by a same-named own property) confirms `key` was actually defined on `map` itself
  * before it is ever indexed. Same pattern as `src/lib/audit-label.ts`'s own `ownLookup` --
