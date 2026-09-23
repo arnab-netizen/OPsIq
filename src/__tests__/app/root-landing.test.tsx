@@ -96,8 +96,10 @@ describe("root route (/) structured data", () => {
 
     expect(org.logo).toBe("https://opsiq.solutions/opsiq-logo.png");
     expect(org.url).toBe("https://opsiq.solutions/");
-    // sameAs carries only the two confirmed official org profiles -- no unverified personal
-    // accounts, e.g. a founder's Medium page, ever get attributed to the organization here.
+    // This is a string-equality check only -- it proves this PR left the two pre-existing
+    // sameAs URLs unchanged and added no new one (e.g. a founder's personal account). It does
+    // NOT verify these two URLs are OpsIQ's official profiles or that they are reachable; this
+    // test suite has no network access and makes no claim either way about that.
     expect(org.sameAs).toEqual([
       "https://www.linkedin.com/company/opsiq-hq/",
       "https://x.com/opsiqsolutions",
