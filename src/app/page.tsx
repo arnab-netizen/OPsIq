@@ -10,6 +10,11 @@ const SITE_URL = "https://opsiq.solutions";
 const OG_TITLE = "OpsIQ - Diagnose your business. Know your next move.";
 const OG_DESCRIPTION =
   "OpsIQ reads your business numbers, tells you what needs attention and why, and gives you an ordered plan for what to do next. Free beta, no card required.";
+// Describes what /public/og-image.png actually shows (verified against the real file): the
+// OpsIQ wordmark, the "Free beta · no credit card required" badge, the headline, and the
+// opsiq.solutions footer text -- not marketing copy invented for this purpose.
+const OG_IMAGE_ALT =
+  "OpsIQ wordmark with the headline \"Diagnose your business. Know your next move,\" a free beta badge, and the opsiq.solutions URL.";
 
 export const metadata: Metadata = {
   title: OG_TITLE,
@@ -22,13 +27,13 @@ export const metadata: Metadata = {
     description: OG_DESCRIPTION,
     url: `${SITE_URL}/`,
     type: "website",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: OG_TITLE,
     description: OG_DESCRIPTION,
-    images: ["/og-image.png"],
+    images: [{ url: "/og-image.png", alt: OG_IMAGE_ALT }],
   },
 };
 

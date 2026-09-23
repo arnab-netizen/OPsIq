@@ -6,7 +6,7 @@ import { render, cleanup } from "@testing-library/react";
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/services/auth", () => ({ getSession: vi.fn() }));
 
-import HomePage from "@/app/page";
+import HomePage, { metadata } from "@/app/page";
 import LandingPage from "@/components/landing/LandingPage";
 import { getSession } from "@/services/auth";
 import { redirect } from "next/navigation";
@@ -115,6 +115,22 @@ describe("root route (/) structured data", () => {
       expect(entity).not.toHaveProperty("aggregateRating");
       expect(entity).not.toHaveProperty("review");
     }
+  });
+
+  it("gives the shared og:image/twitter:image the same accurate, non-empty alt text", () => {
+    const ogImages = metadata.openGraph?.images;
+    const ogImage = Array.isArray(ogImages) ? ogImages[0] : ogImages;
+    const twitterImages = metadata.twitter?.images;
+    const twitterImage = Array.isArray(twitterImages) ? twitterImages[0] : twitterImages;
+
+    expect(ogImage).toMatchObject({ url: "/og-image.png" });
+    expect(twitterImage).toMatchObject({ url: "/og-image.png" });
+
+    const ogAlt = typeof ogImage === "object" ? ogImage?.alt : undefined;
+    const twitterAlt = typeof twitterImage === "object" ? twitterImage?.alt : undefined;
+    expect(typeof ogAlt).toBe("string");
+    expect((ogAlt as string).length).toBeGreaterThan(0);
+    expect(twitterAlt).toBe(ogAlt);
   });
 });
 
