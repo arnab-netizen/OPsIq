@@ -333,9 +333,18 @@ export default function OwnerRecoveryPage() {
             </form>
           )}
 
-          {!dashboard?.hasData ? (
+          {/* dashboard is set only on a successful load() and is never reset to null on failure
+              (see load()'s catch block above), so `dashboard === null` here means only "no
+              successful response yet" -- distinct from a successful response confirming no
+              snapshot data. Unlike Group A (Finance/Operations/Sales), `businesses` above comes
+              from the independently loaded ActiveBusinessContext, not from `dashboard` -- the
+              outer `businesses.length === 0` branch is unaffected by this gate. A failed initial
+              load must never render "No metric snapshot yet." next to the error banner above:
+              that would present unverified emptiness as a fact. A failure AFTER a prior success
+              leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard?.latestSnapshot
+              {dashboard.latestSnapshot
                 ? "Snapshot recorded. Click “Run diagnosis cycle” to generate findings and a recovery plan."
                 : "No metric snapshot yet. Add a snapshot, then run a diagnosis cycle."}
             </div>
