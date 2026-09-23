@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
+import { Badge, Button, Select, Disclosure, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { humanizeIdentifier } from "@/lib/audit-label";
+import { FINDING_TYPE_LABEL } from "@/components/owner/FindingCard";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -55,6 +58,17 @@ const DOMAIN_LABEL: Record<string, string> = {
   portfolio: "Portfolio",
 };
 
+// UX-06 Wave B (Section G.1/U): findingType has exactly two known business values
+// (opportunity/risk, per FindingCard.tsx's own map); anything else -- including a value this
+// page has never seen -- falls back to the same generic, honest reformat audit-label.ts uses,
+// never a raw un-cased string and never a guessed business meaning.
+function findingTypeLabel(raw: unknown): string {
+  if (typeof raw === "string" && FINDING_TYPE_LABEL[raw.toLowerCase()]) {
+    return FINDING_TYPE_LABEL[raw.toLowerCase()];
+  }
+  return humanizeIdentifier(raw);
+}
+
 async function api(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
   const data = await res.json().catch(() => ({}));
@@ -94,7 +108,9 @@ export default function OwnerTrustPage() {
       // of the business selected elsewhere in the app).
       if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      // UX-06 Wave B (Section U): route through the same governed classifier every other
+      // audited owner page already uses, instead of showing e.message (a raw exception) verbatim.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -120,7 +136,7 @@ export default function OwnerTrustPage() {
       const data = await api(`/api/owner/trust/explanations?domain=${domain}&cycleId=${cycleId}`);
       setCards(data.explanations ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load explanations");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load explanations"), { context: "load" }).operatorMessage);
     } finally {
       setCardsLoading(false);
     }
@@ -138,7 +154,7 @@ export default function OwnerTrustPage() {
       const data = await api(`/api/owner/trust/audit-trail?entityId=${entityId}`);
       setAudit(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load audit trail");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load audit trail"), { context: "load" }).operatorMessage);
     }
   }, []);
 
@@ -159,7 +175,7 @@ export default function OwnerTrustPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+        <div role="alert" className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -222,8 +238,22 @@ export default function OwnerTrustPage() {
                       <div className="min-w-0">
                         <div className="font-bold">{c.whatWasDetected}</div>
                         <div className="text-xs text-muted-foreground">
-                          {DOMAIN_LABEL[c.domain] ?? c.domain} · {c.findingType} · {c.findingCode}
+                          {DOMAIN_LABEL[c.domain] ?? c.domain} · {findingTypeLabel(c.findingType)}
                         </div>
+                        {/* UX-06 Wave B (Section G.1): findingType/findingCode used to render raw
+                            in the line above. The plain-language label now covers the primary
+                            read; the original technical values stay reachable (never removed,
+                            only relocated) via this keyboard-accessible disclosure. */}
+                        <Disclosure summary="Technical reference" className="mt-1 max-w-xs text-xs">
+                          <p>
+                            <span className="font-medium text-foreground">Finding type: </span>
+                            <code className="select-all">{typeof c.findingType === "string" && c.findingType ? c.findingType : "—"}</code>
+                          </p>
+                          <p>
+                            <span className="font-medium text-foreground">Finding code: </span>
+                            <code className="select-all">{typeof c.findingCode === "string" && c.findingCode ? c.findingCode : "—"}</code>
+                          </p>
+                        </Disclosure>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge variant={SEVERITY_VARIANT[c.severity] || "default-accessible"}>{SEVERITY_LABEL[c.severity] ?? c.severity}</Badge>
@@ -284,20 +314,46 @@ export default function OwnerTrustPage() {
 
               {audit && (
                 <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
-                  <h2 className="font-bold mb-3">Audit trail — {audit.entityId}</h2>
+                  {/* UX-06 Wave B (Section G.2): the heading previously interpolated the raw
+                      entityId as its own primary text. The id is still fully available -- moved
+                      into the disclosure below, never dropped. */}
+                  <h2 className="font-bold mb-2">Audit trail</h2>
+                  <Disclosure summary="Technical reference" className="mb-3 max-w-sm text-xs">
+                    <p>
+                      <span className="font-medium text-foreground">Entity ID: </span>
+                      <code className="select-all">{audit.entityId || "—"}</code>
+                    </p>
+                  </Disclosure>
                   {audit.events.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No audit events for this entity.</p>
                   ) : (
                     <div className="space-y-1">
                       {audit.events.map((e: any) => (
-                        <div key={e.id} className="flex justify-between items-center border-b py-1 text-sm">
-                          <span>
-                            <strong>{e.eventName}</strong>
-                            <span className="text-muted-foreground"> · {e.entityType}</span>
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(e.occurredAt).toLocaleString()}
-                          </span>
+                        <div key={e.id} className="border-b py-1 text-sm">
+                          <div className="flex justify-between items-center">
+                            <span>
+                              {/* UX-06 Wave B (Section G.3): eventName/entityType used to render
+                                  raw. AUDIT_EVENTS (domain/constants/audit-events.ts) and the
+                                  entityType values written across the codebase's audit-log call
+                                  sites are a large, open-ended set -- humanizeIdentifier's
+                                  mechanical reformat covers every current and future value
+                                  without a per-value map that could miss or misdescribe one. */}
+                              <strong>{humanizeIdentifier(e.eventName)}</strong>
+                              <span className="text-muted-foreground"> · {humanizeIdentifier(e.entityType)}</span>
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(e.occurredAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <Disclosure summary="Technical reference" className="mt-1 max-w-sm text-xs">
+                            <p>
+                              <span className="font-medium text-foreground">Event: </span>
+                              <code className="select-all">{typeof e.eventName === "string" && e.eventName ? e.eventName : "—"}</code>
+                              {"; "}
+                              <span className="font-medium text-foreground">Entity type: </span>
+                              <code className="select-all">{typeof e.entityType === "string" && e.entityType ? e.entityType : "—"}</code>
+                            </p>
+                          </Disclosure>
                         </div>
                       ))}
                     </div>
