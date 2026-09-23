@@ -384,7 +384,13 @@ export default function OwnerSalesPage() {
         </form>
       )}
 
-      {businesses.length === 0 ? (
+      {/* dashboard is set only on a successful load() and is never reset to null on failure (see
+          load()'s catch block above), so `dashboard === null` here means only "no successful
+          response yet" -- distinct from a successful response confirming zero businesses. A
+          failed initial load must never render "No businesses yet" next to the error banner
+          above: that would present unverified emptiness as a fact. A failure AFTER a prior
+          success leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+      {dashboard === null ? null : businesses.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
           No businesses yet. Create your first business to begin a sales diagnosis.
         </div>
