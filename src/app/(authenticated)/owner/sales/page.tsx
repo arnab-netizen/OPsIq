@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { FindingCard } from "@/components/owner/FindingCard";
+import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import {
   CompletionActionForm,
   VerificationActionForm,
@@ -15,23 +17,6 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
-
-const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
-  low: "muted-accessible",
-  medium: "default-accessible",
-  high: "warning-accessible",
-  critical: "destructive-accessible",
-};
-const SEVERITY_LABEL: Record<string, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  critical: "Critical",
-};
-const FINDING_TYPE_LABEL: Record<string, string> = {
-  opportunity: "Opportunity",
-  risk: "Risk",
-};
 
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   unverified: "muted-accessible",
@@ -451,11 +436,12 @@ export default function OwnerSalesPage() {
           )}
 
           {!dashboard?.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard?.latestSnapshot
-                ? "Snapshot recorded. Click “Run sales diagnosis” to generate findings and an action plan."
-                : "No sales snapshot yet. Add a snapshot, then run a sales diagnosis."}
-            </div>
+            <DiagnosisEmptyState
+              domainLabel="sales"
+              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              snapshotLabel="sales snapshot"
+              diagnosisLabel="Run sales diagnosis"
+            />
           ) : (
             <SalesCycleView
               cycle={cycle}
@@ -542,30 +528,16 @@ function SalesCycleView({
         </div>
       )}
 
+      {/* Findings — the shared FindingCard component (src/components/owner/FindingCard.tsx),
+          the exact same card Money and Operations render: OwnerSalesFinding has the identical
+          shape to OwnerFinanceFinding/OwnerOperationsFinding, so this is the same real
+          component, not a look-alike copy (UX-06 Section S). */}
       <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No sales issues detected.</p>}
-        <div className="space-y-3">
+        <div className="flex flex-col gap-6">
           {cycle.findings.map((f: any) => (
-            <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>
-              <div className="flex justify-between">
-                <span className="font-semibold">{f.title}</span>
-                <span className="flex gap-1">
-                  <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[f.findingType] ?? f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">{f.summary}</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
-              </p>
-              {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
-              )}
-              {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
-              )}
-            </div>
+            <FindingCard key={f.id} finding={f} />
           ))}
         </div>
       </section>
