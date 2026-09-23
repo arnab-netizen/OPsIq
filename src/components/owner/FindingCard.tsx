@@ -59,6 +59,40 @@ export const FINDING_TYPE_LABEL: Record<string, string> = {
   risk: "Risk",
 };
 
+/**
+ * Own-property-only lookup for a plain object literal used as a label/variant table. A bare
+ * `map[key]` lookup is unsafe when `key` comes from server-controlled data: every plain JS
+ * object inherits `Object.prototype` members (`constructor`, `toString`, `hasOwnProperty`,
+ * `valueOf`, and, via the `__proto__` accessor, the prototype object itself), so a
+ * findingType/severity value equal to one of those names can resolve to that inherited
+ * function/object instead of `undefined` -- silently producing a value React cannot render,
+ * instead of falling through to this component's existing raw-value fallback like any other
+ * unrecognized string.
+ *
+ * Concretely, in this component: `finding.findingType`/`finding.severity` are lowercased
+ * (`.toLowerCase()`) before being used as the lookup key. `"constructor"` and `"__proto__"` are
+ * already all-lowercase, so that normalization does nothing for them, and they DO resolve to
+ * the real inherited member -- `"__proto__"` resolves to the prototype *object* itself (React
+ * throws synchronously: "Objects are not valid as a React child"), and `"constructor"`
+ * resolves to the inherited *function* (React logs "Functions are not valid as a React child"
+ * and renders nothing for that badge). `"toString"`, `"hasOwnProperty"`, and `"valueOf"` are
+ * real camelCase Object.prototype member names, so lowercasing them first (to `"tostring"`,
+ * `"hasownproperty"`, `"valueof"`) already produced a string that does NOT match any inherited
+ * member here -- this existing normalization already fell through to the raw-value fallback
+ * for those three specifically, in this file, before this fix. The guard below still covers
+ * all five uniformly (and defensively, independent of `.toLowerCase()` continuing to run
+ * first) rather than relying on that normalization as the only safeguard.
+ *
+ * `Object.prototype.hasOwnProperty.call` (not `map.hasOwnProperty`, which could itself be
+ * shadowed by a same-named own property) confirms `key` was actually defined on `map` itself
+ * before it is ever indexed. Same pattern as `src/lib/audit-label.ts`'s own `ownLookup` --
+ * duplicated locally rather than imported, since `audit-label.ts` already imports
+ * `FINDING_TYPE_LABEL` from this module and importing back would be circular.
+ */
+function ownLookup<T>(map: Record<string, T>, key: string | undefined): T | undefined {
+  return key !== undefined && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+}
+
 function sureLabel(confidencePct: number): string {
   return confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
 }
@@ -74,8 +108,8 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What OpsIQ found</span>
         <span className="flex shrink-0 gap-1">
-          <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[finding.findingType?.toLowerCase()] ?? finding.findingType}</Badge>
-          <Badge variant={SEVERITY_VARIANT[finding.severity?.toLowerCase()] ?? "default"}>{SEVERITY_LABEL[finding.severity?.toLowerCase()] ?? finding.severity}</Badge>
+          <Badge variant="muted-accessible">{ownLookup(FINDING_TYPE_LABEL, finding.findingType?.toLowerCase()) ?? finding.findingType}</Badge>
+          <Badge variant={ownLookup(SEVERITY_VARIANT, finding.severity?.toLowerCase()) ?? "default"}>{ownLookup(SEVERITY_LABEL, finding.severity?.toLowerCase()) ?? finding.severity}</Badge>
         </span>
       </div>
       <strong className="mt-1 block font-display text-[1.05rem] font-semibold leading-snug text-foreground">{finding.title}</strong>
