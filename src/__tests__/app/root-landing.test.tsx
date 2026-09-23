@@ -51,6 +51,73 @@ describe("root route (/) landing behavior", () => {
   });
 });
 
+describe("root route (/) structured data", () => {
+  function getJsonLdScripts(element: Awaited<ReturnType<typeof HomePage>>) {
+    const children = (element as { props: { children: unknown } }).props.children;
+    const childArray = Array.isArray(children) ? children : [children];
+    return childArray.filter((child) => (child as { type?: unknown } | null)?.type === "script") as Array<{
+      props: { dangerouslySetInnerHTML: { __html: string } };
+    }>;
+  }
+
+  it("renders exactly two JSON-LD script tags, each parsing as valid, distinct JSON", async () => {
+    getSessionMock.mockResolvedValue(null);
+
+    const element = await HomePage();
+    const scripts = getJsonLdScripts(element);
+    expect(scripts.length).toBe(2);
+
+    const parsed = scripts.map((s) => JSON.parse(s.props.dangerouslySetInnerHTML.__html));
+    const types = parsed.map((p) => p["@type"]).sort();
+    expect(types).toEqual(["Organization", "WebApplication"]);
+  });
+
+  it("gives both entities a stable @id and links the application to the organization as publisher", async () => {
+    getSessionMock.mockResolvedValue(null);
+
+    const element = await HomePage();
+    const scripts = getJsonLdScripts(element);
+    const parsed = scripts.map((s) => JSON.parse(s.props.dangerouslySetInnerHTML.__html));
+
+    const app = parsed.find((p) => p["@type"] === "WebApplication");
+    const org = parsed.find((p) => p["@type"] === "Organization");
+    expect(app["@id"]).toBe("https://opsiq.solutions/#software");
+    expect(org["@id"]).toBe("https://opsiq.solutions/#organization");
+    expect(app.publisher).toEqual({ "@id": org["@id"] });
+  });
+
+  it("references the real, existing logo asset and canonical domain -- no invented URLs", async () => {
+    getSessionMock.mockResolvedValue(null);
+
+    const element = await HomePage();
+    const scripts = getJsonLdScripts(element);
+    const parsed = scripts.map((s) => JSON.parse(s.props.dangerouslySetInnerHTML.__html));
+    const org = parsed.find((p) => p["@type"] === "Organization");
+
+    expect(org.logo).toBe("https://opsiq.solutions/opsiq-logo.png");
+    expect(org.url).toBe("https://opsiq.solutions/");
+    // sameAs carries only the two confirmed official org profiles -- no unverified personal
+    // accounts, e.g. a founder's Medium page, ever get attributed to the organization here.
+    expect(org.sameAs).toEqual([
+      "https://www.linkedin.com/company/opsiq-hq/",
+      "https://x.com/opsiqsolutions",
+    ]);
+  });
+
+  it("never invents a rating or review to satisfy rich-result eligibility", async () => {
+    getSessionMock.mockResolvedValue(null);
+
+    const element = await HomePage();
+    const scripts = getJsonLdScripts(element);
+    const parsed = scripts.map((s) => JSON.parse(s.props.dangerouslySetInnerHTML.__html));
+
+    for (const entity of parsed) {
+      expect(entity).not.toHaveProperty("aggregateRating");
+      expect(entity).not.toHaveProperty("review");
+    }
+  });
+});
+
 describe("LandingPage content", () => {
   it("shows public landing content explaining the product", () => {
     const { container } = render(<LandingPage />);
@@ -101,7 +168,9 @@ describe("LandingPage content", () => {
     // Product-Hunt-specific badge/screenshot asset, and no script tags.
     const imgs = container.querySelectorAll("img");
     expect(imgs.length).toBe(1);
-    expect(imgs[0].getAttribute("alt")).toBe("OpsIQ");
+    // The logo is an image-only link to "/" -- its alt text is the link's sole accessible
+    // name, so it must describe the destination ("home"), not just restate the brand.
+    expect(imgs[0].getAttribute("alt")).toBe("OpsIQ home");
     expect(container.querySelectorAll("script").length).toBe(0);
   });
 });

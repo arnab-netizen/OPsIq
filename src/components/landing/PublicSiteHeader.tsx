@@ -11,7 +11,7 @@ export function PublicSiteHeader() {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
       <Link href="/" className="shrink-0">
-        <Image src="/opsiq-logo.png" alt="OpsIQ" width={1864} height={541} priority className="h-9 w-auto" />
+        <Image src="/opsiq-logo.png" alt="OpsIQ home" width={1864} height={541} priority className="h-9 w-auto" />
       </Link>
       <nav aria-label="Primary" className="flex items-center gap-3">
         <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">

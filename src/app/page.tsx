@@ -34,7 +34,8 @@ export const metadata: Metadata = {
 
 const softwareApplicationJsonLd = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "WebApplication",
+  "@id": `${SITE_URL}/#software`,
   name: "OpsIQ",
   url: `${SITE_URL}/`,
   applicationCategory: "BusinessApplication",
@@ -47,11 +48,13 @@ const softwareApplicationJsonLd = {
     priceCurrency: "USD",
     description: "Free invite-only beta, no credit card required",
   },
+  publisher: { "@id": `${SITE_URL}/#organization` },
 };
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${SITE_URL}/#organization`,
   name: "OpsIQ",
   url: `${SITE_URL}/`,
   logo: `${SITE_URL}/opsiq-logo.png`,
