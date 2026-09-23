@@ -18,11 +18,24 @@
  * (happy path, not-found/raw-identifier, validation, authorization, network, unexpected-internal);
  * one dedicated test per remaining catch path then proves the same governance holds for every
  * other mutation on this page, not just `load()`.
+ *
+ * ROOT_CAUSE (initial-load empty-state defect): `businesses` was derived as `dashboard?.businesses
+ * ?? []` and the "No businesses yet" empty state was gated on `businesses.length === 0` alone.
+ * `dashboard` starts `null` and is set only inside `load()`'s success branch -- never reset to
+ * `null` on failure -- so a FAILED *initial* load (no successful response has ever landed) left
+ * `dashboard === null`, and the `?? []` fallback made `businesses.length === 0` true purely from
+ * the absence of data, not because a real payload confirmed zero businesses. The page then
+ * rendered "No businesses yet." next to the governed error banner, presenting unverified emptiness
+ * as fact. Fix: gate the empty-state ternary on `dashboard === null` first (page.tsx), so a failed
+ * initial load renders only the error banner, while every other case (successful zero-business
+ * load, a later failed reload/switch that leaves a prior successful `dashboard` untouched, and
+ * recovery) is unaffected, since none of those change whether `dashboard` is `null`. The
+ * "empty-state gating" describe block below is this fix's dedicated regression coverage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
 import OwnerExecutionPage from "@/app/(authenticated)/owner/execution/page";
-import { ActiveBusinessProvider } from "@/context/active-business-context";
+import { ActiveBusinessProvider, useActiveBusiness } from "@/context/active-business-context";
 import { hasOperatorUnsafeContent } from "@/lib/operator-error-governance";
 
 const BIZ_A = { id: "biz-a", name: "Acme Bakery", currency: "USD" };
@@ -49,6 +62,13 @@ let actionUpdateFailure: FailureMode | null = null;
 let verifyFailure: FailureMode | null = null;
 /** Overrides the default no-business dashboard payload for a given test. */
 let dashboardFixture: Record<string, unknown> | null = null;
+/** 1-indexed count of dashboard GETs issued so far this test, and an optional call number on
+ *  which `dashboardFailure` alone should apply (every other call succeeds) -- used by the
+ *  "successful load, then a failed reload" regression below to fail only the SECOND dashboard
+ *  request, leaving the first (successful, populated) one alone. `null` (the default) applies
+ *  `dashboardFailure`, when set, to every call -- unchanged behavior for every existing test. */
+let dashboardCallCount = 0;
+let dashboardFailOnCall: number | null = null;
 
 function dashboardEmpty() {
   return { businesses: [], selectedBusinessId: null, hasData: false, latestSnapshot: null, missingCriticalData: [] };
@@ -134,9 +154,11 @@ function installFetchMock() {
       }
 
       if (url.includes("/api/owner/sop/dashboard")) {
-        if (dashboardFailure) {
-          if (dashboardFailure.kind === "reject") throw dashboardFailure.error;
-          return httpFailureResponse(dashboardFailure);
+        dashboardCallCount += 1;
+        const failThisCall = dashboardFailure && (dashboardFailOnCall === null || dashboardCallCount === dashboardFailOnCall);
+        if (failThisCall) {
+          if (dashboardFailure!.kind === "reject") throw dashboardFailure!.error;
+          return httpFailureResponse(dashboardFailure as FailureMode & { kind: "http" });
         }
         return { ok: true, status: 200, json: async () => (dashboardFixture ?? dashboardNoSnapshot()) } as Response;
       }
@@ -226,6 +248,8 @@ beforeEach(() => {
   actionUpdateFailure = null;
   verifyFailure = null;
   dashboardFixture = null;
+  dashboardCallCount = 0;
+  dashboardFailOnCall = null;
 });
 
 afterEach(() => {
@@ -421,5 +445,145 @@ describe("Owner Execution page — governed, owner-safe error rendering (remaini
     await waitFor(() => getErrorBanner(container));
     const banner = getErrorBanner(container);
     assertNoLeak(banner.textContent ?? "");
+  });
+});
+
+/**
+ * Owner Execution page — initial-load empty-state gating (dashboard === null vs. a successful
+ * zero-business payload). See the file-header ROOT_CAUSE comment above for the full defect and
+ * fix. Six scenarios, matching the authorized fix's required coverage exactly.
+ */
+describe("Owner Execution page — initial-load empty-state gating", () => {
+  const BIZ_B = { id: "biz-b", name: "Trinity Services", currency: "USD" };
+
+  function dashboardForBusinesses(businessId: string) {
+    return {
+      businesses: [BIZ_A, BIZ_B],
+      selectedBusinessId: businessId,
+      hasData: false,
+      latestSnapshot: null,
+      missingCriticalData: [],
+    };
+  }
+
+  function SwitchHarness() {
+    const { setActiveBusinessId } = useActiveBusiness();
+    return (
+      <button data-testid="switch-to-b" onClick={() => setActiveBusinessId(BIZ_B.id)}>
+        switch to B
+      </button>
+    );
+  }
+
+  function renderPageWithSwitch() {
+    return render(
+      <ActiveBusinessProvider>
+        <SwitchHarness />
+        <OwnerExecutionPage />
+      </ActiveBusinessProvider>
+    );
+  }
+
+  it("1. pending initial request: loading UI only, no premature empty-business claim", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/owner/businesses")) {
+          return { ok: true, status: 200, json: async () => ({ businesses: [BIZ_A] }) } as Response;
+        }
+        if (url.includes("/api/owner/sop/dashboard")) {
+          // Never resolves within this test -- the initial request stays pending throughout.
+          return new Promise<Response>(() => {});
+        }
+        return { ok: true, status: 200, json: async () => ({}) } as Response;
+      })
+    );
+
+    const { container } = renderPage();
+
+    expect(await screen.findByRole("status", { name: "Loading your execution information" })).toBeInTheDocument();
+    expect(screen.queryByText(/No businesses yet/)).not.toBeInTheDocument();
+    expect(container.querySelector(".text-destructive")).toBeNull();
+  });
+
+  it("2. failed initial request with no dashboard payload: governed error only, no false no-business/no-snapshot guidance or data-dependent controls", async () => {
+    dashboardFailure = { kind: "http", status: 500, body: { error: "boom" } };
+    installFetchMock();
+    const { container } = renderPage();
+
+    await waitFor(() => getErrorBanner(container));
+    const banner = getErrorBanner(container);
+    assertNoLeak(banner.textContent ?? "");
+
+    // The business list is UNKNOWN (no successful payload ever landed) -- never rendered as a
+    // confirmed-empty or confirmed-no-snapshot state, and no control that depends on a loaded
+    // business/dashboard is shown.
+    expect(screen.queryByText(/No businesses yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No execution snapshot yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Snapshot recorded/)).not.toBeInTheDocument();
+    expect(screen.queryByText("+ Add execution snapshot")).not.toBeInTheDocument();
+    expect(screen.queryByText("Run execution diagnosis")).not.toBeInTheDocument();
+    // The always-available "+ New business" action (independent of dashboard) is unaffected.
+    expect(screen.getByRole("button", { name: "+ New business" })).toBeInTheDocument();
+  });
+
+  it("3. successful response with zero businesses: original no-business guidance, no error", async () => {
+    dashboardFixture = dashboardEmpty();
+    installFetchMock();
+    const { container } = renderPage();
+
+    await screen.findByText(/No businesses yet/);
+    expect(container.querySelector(".text-destructive")).toBeNull();
+  });
+
+  it("4. successful response with an existing business but no snapshot: original no-snapshot guidance, no error", async () => {
+    dashboardFixture = dashboardNoSnapshot();
+    installFetchMock();
+    const { container } = renderPage();
+
+    await screen.findByText(/No execution snapshot yet/);
+    expect(container.querySelector(".text-destructive")).toBeNull();
+    // A confirmed business is loaded, so business-scoped controls are correctly present here
+    // (in contrast to scenario 2, where they must be absent).
+    expect(screen.getByText("+ Add execution snapshot")).toBeInTheDocument();
+  });
+
+  it("5. a successful populated load followed by a failed reload preserves the prior content and shows the governed error", async () => {
+    dashboardFixture = dashboardWithFullCycle("in_progress");
+    dashboardFailure = { kind: "http", status: 500, body: { error: "boom" } };
+    dashboardFailOnCall = 2; // the initial load (call 1) succeeds; the reload (call 2) fails
+    installFetchMock();
+    const { container } = renderPage();
+
+    await screen.findByText("Follow up with overdue accounts");
+    expect(container.querySelector(".text-destructive")).toBeNull();
+
+    // A successful mutation (diagnosisFailure is unset, so this POST succeeds) triggers this
+    // page's own authoritative reload -- that reload's dashboard GET is the one that fails.
+    fireEvent.click(screen.getByText("Run execution diagnosis"));
+
+    await waitFor(() => getErrorBanner(container));
+    // The prior successful dashboard is never reset on a failed load (see load()'s catch block) --
+    // the whole previously-rendered section must remain exactly as it was, not the empty state.
+    expect(screen.getByText("Follow up with overdue accounts")).toBeInTheDocument();
+    expect(screen.queryByText(/No businesses yet/)).not.toBeInTheDocument();
+  });
+
+  it("6. a subsequent successful load clears the error and renders fresh data", async () => {
+    dashboardFixture = dashboardForBusinesses(BIZ_B.id);
+    dashboardFailure = { kind: "http", status: 500, body: { error: "boom" } };
+    dashboardFailOnCall = 1; // only the initial load (for the auto-selected BIZ_A) fails
+    installFetchMock();
+    const { container } = renderPageWithSwitch();
+
+    await waitFor(() => getErrorBanner(container));
+    expect(screen.queryByText(/No businesses yet/)).not.toBeInTheDocument();
+
+    // Switching business triggers a fresh load() for BIZ_B, which succeeds.
+    fireEvent.click(screen.getByTestId("switch-to-b"));
+
+    await screen.findByText(/No execution snapshot yet/);
+    expect(container.querySelector(".text-destructive")).toBeNull();
   });
 });
