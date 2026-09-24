@@ -106,6 +106,24 @@ const OPERATIONS_FIELDS: Array<{ name: string; label: string }> = [
   { name: "sopMisses", label: "SOP misses" },
 ];
 
+function operationsField(name: string) {
+  const f = OPERATIONS_FIELDS.find((x) => x.name === name);
+  if (!f) throw new Error(`Unknown operations field: ${name}`);
+  return f;
+}
+
+// Presentation-only grouping for the snapshot form below -- each group is a contiguous run of
+// OPERATIONS_FIELDS in its existing order, so field order (and therefore tab order) is unchanged
+// from the previous flat layout. Every OPERATIONS_FIELDS name appears in exactly one group, and
+// addSnapshot() still reads the payload from OPERATIONS_FIELDS directly, so the save payload is
+// unaffected.
+const OPERATIONS_FIELD_GROUPS: Array<{ title: string; fieldNames: string[] }> = [
+  { title: "Orders & quality", fieldNames: ["ordersReceived", "ordersCompleted", "ordersDelayed", "reworkCount", "complaints"] },
+  { title: "Capacity & staffing", fieldNames: ["staffHours", "machineCapacityUnits", "idleHours"] },
+  { title: "Delivery", fieldNames: ["deliveryAttempts", "deliveryFailures", "inventoryShortages"] },
+  { title: "SOP compliance", fieldNames: ["sopChecks", "sopMisses"] },
+];
+
 export default function OwnerOperationsPage() {
   const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
@@ -443,7 +461,11 @@ export default function OwnerOperationsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+        <div
+          role="alert"
+          data-testid="operations-page-error"
+          className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+        >
           {error}
         </div>
       )}
@@ -495,11 +517,11 @@ export default function OwnerOperationsPage() {
           </div>
 
           {showSnapshotForm && (
-            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
-              <h2 className="font-semibold">
+            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">
                 Operations snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input name="periodStart" label="Period start" type="date" required />
                 <Input name="periodEnd" label="Period end" type="date" required />
                 <Select
@@ -513,9 +535,17 @@ export default function OwnerOperationsPage() {
                   ]}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {OPERATIONS_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
+              <div className="flex flex-col gap-4">
+                {OPERATIONS_FIELD_GROUPS.map((group) => (
+                  <div key={group.title}>
+                    <h3 className="text-sm font-semibold text-foreground">{group.title}</h3>
+                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {group.fieldNames.map((name) => {
+                        const f = operationsField(name);
+                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />;
+                      })}
+                    </div>
+                  </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
