@@ -69,18 +69,22 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-// Field names match salesSnapshotCreateSchema (Slice 5).
-const SALES_FIELDS: Array<{ name: string; label: string }> = [
-  { name: "leads", label: "Leads" },
-  { name: "qualifiedLeads", label: "Qualified leads" },
+// Field names match salesSnapshotCreateSchema (Slice 5). `hint` is added only where the field
+// name alone is genuinely ambiguous and metrics.ts/types.ts supports a specific clarification --
+// see sales-snapshot-form-hints.test.tsx for the source each hint is checked against. Fields with
+// no listed ambiguity (orders, revenue, b2b/b2c revenue split, complaints, discounts, refunds,
+// staff count) are left without a hint rather than restating the label.
+const SALES_FIELDS: Array<{ name: string; label: string; hint?: string }> = [
+  { name: "leads", label: "Leads", hint: "All inquiries or contacts this period, before qualifying them." },
+  { name: "qualifiedLeads", label: "Qualified leads", hint: "Leads you've screened as good prospects — a subset of the leads above, not a separate count." },
   { name: "orders", label: "Orders" },
   { name: "revenue", label: "Revenue" },
-  { name: "averageOrderValue", label: "Average order value" },
-  { name: "newCustomers", label: "New customers" },
-  { name: "repeatCustomers", label: "Repeat customers" },
-  { name: "lostCustomers", label: "Lost customers" },
+  { name: "averageOrderValue", label: "Average order value", hint: "Leave blank to calculate this automatically from revenue and orders. Enter a value only if you track it separately." },
+  { name: "newCustomers", label: "New customers", hint: "Customers who ordered from you for the first time this period." },
+  { name: "repeatCustomers", label: "Repeat customers", hint: "Existing customers who ordered again this period." },
+  { name: "lostCustomers", label: "Lost customers", hint: "Customers who had ordered before but placed no order this period." },
   { name: "b2bProspects", label: "B2B prospects" },
-  { name: "b2bPipelineValue", label: "B2B pipeline value" },
+  { name: "b2bPipelineValue", label: "B2B pipeline value", hint: "Value of B2B deals still in progress, not yet closed — separate from the B2B revenue you've already earned below." },
   { name: "b2bRevenue", label: "B2B revenue" },
   { name: "b2cRevenue", label: "B2C revenue" },
   { name: "complaints", label: "Complaints" },
@@ -457,7 +461,7 @@ export default function OwnerSalesPage() {
                     <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {group.fieldNames.map((name) => {
                         const f = salesField(name);
-                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />;
+                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
                       })}
                     </div>
                   </div>
