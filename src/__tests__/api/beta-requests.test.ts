@@ -309,3 +309,84 @@ describe("POST /api/beta-requests — owner notification on new request", () => 
     expect(body.success).toBe(true);
   });
 });
+
+describe("POST /api/beta-requests — acquisition attribution (owned resource surface)", () => {
+  it("persists utm_term, landing path, conversion path, and referrer host when supplied", async () => {
+    const res = await POST(
+      makeReq({
+        email: "a@example.com",
+        utmSource: "linkedin",
+        utmTerm: "cash flow",
+        landingPath: "/resources/profitable-but-short-on-cash",
+        conversionPath: "/resources/profitable-but-short-on-cash",
+        referrerHost: "www.linkedin.com",
+      }) as never
+    );
+    expect(res.status).toBe(200);
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({
+      utmSource: "linkedin",
+      utmTerm: "cash flow",
+      landingPath: "/resources/profitable-but-short-on-cash",
+      conversionPath: "/resources/profitable-but-short-on-cash",
+      referrerHost: "www.linkedin.com",
+    });
+  });
+
+  it("stays backward compatible: a pre-attribution payload succeeds and stores null for the new fields", async () => {
+    const res = await POST(makeReq({ email: "a@example.com", utmSource: "google" }) as never);
+    expect(res.status).toBe(200);
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({
+      utmSource: "google",
+      utmTerm: null,
+      landingPath: null,
+      conversionPath: null,
+      referrerHost: null,
+    });
+  });
+
+  it("returns only the id from the insert (no full-row RETURNING)", async () => {
+    await POST(makeReq({ email: "a@example.com" }) as never);
+    expect(mocks.create.mock.calls[0][0].select).toEqual({ id: true });
+  });
+
+  it.each([
+    ["a full URL as landing path", { landingPath: "https://evil.example/x" }],
+    ["a landing path with a query string", { landingPath: "/resources/x?utm_source=a" }],
+    ["an over-long landing path", { landingPath: `/${"a".repeat(300)}` }],
+    ["a conversion path with whitespace", { conversionPath: "/resources/a b" }],
+    ["a full referrer URL instead of a host", { referrerHost: "https://www.linkedin.com/feed" }],
+    ["an over-long utm_term", { utmTerm: "x".repeat(201) }],
+  ])("rejects %s with a 400 and creates no row", async (_label, extra) => {
+    const res = await POST(makeReq({ email: "a@example.com", ...extra }) as never);
+    expect(res.status).toBe(400);
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("records attribution presence (never values) on the creation audit event", async () => {
+    await POST(
+      makeReq({ email: "a@example.com", utmTerm: "t", referrerHost: "news.ycombinator.com", landingPath: "/resources" }) as never
+    );
+    const created = mocks.emitAuditEvent.mock.calls.find((c) => c[0].eventName === "beta_request.created");
+    expect(created?.[0].payload).toEqual({ hasUtm: true, hasReferrer: true, hasLandingPath: true });
+  });
+
+  it("includes the referrer and landing/request pages in the owner notification", async () => {
+    process.env.BETA_REQUEST_NOTIFICATION_EMAIL = "owner@opsiq.example";
+    try {
+      await POST(
+        makeReq({
+          email: "a@example.com",
+          referrerHost: "www.linkedin.com",
+          landingPath: "/resources",
+          conversionPath: "/resources/profitable-but-short-on-cash",
+        }) as never
+      );
+    } finally {
+      delete process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    }
+    const ownerCall = mocks.send.mock.calls.find((c) => c[0].to === "owner@opsiq.example");
+    expect(ownerCall![0].text).toContain("Referrer: www.linkedin.com");
+    expect(ownerCall![0].text).toContain("Landing page: /resources");
+    expect(ownerCall![0].text).toContain("Requested from: /resources/profitable-but-short-on-cash");
+  });
+});

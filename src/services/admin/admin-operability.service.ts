@@ -477,6 +477,10 @@ export interface AdminBetaRequestSummary {
   utmMedium: string | null;
   utmCampaign: string | null;
   utmContent: string | null;
+  utmTerm: string | null;
+  landingPath: string | null;
+  conversionPath: string | null;
+  referrerHost: string | null;
   invitedAt: string | null;
   invitedBy: string | null;
   createdAt: string;
@@ -518,6 +522,10 @@ export async function listBetaRequestsForAdmin(opts: {
       utmMedium: true,
       utmCampaign: true,
       utmContent: true,
+      utmTerm: true,
+      landingPath: true,
+      conversionPath: true,
+      referrerHost: true,
       invitedAt: true,
       invitedBy: true,
       createdAt: true,
@@ -537,6 +545,10 @@ export async function listBetaRequestsForAdmin(opts: {
       utmMedium: string | null;
       utmCampaign: string | null;
       utmContent: string | null;
+      utmTerm: string | null;
+      landingPath: string | null;
+      conversionPath: string | null;
+      referrerHost: string | null;
       invitedAt: Date | null;
       invitedBy: string | null;
       createdAt: Date;
@@ -549,6 +561,10 @@ export async function listBetaRequestsForAdmin(opts: {
       utmMedium: r.utmMedium,
       utmCampaign: r.utmCampaign,
       utmContent: r.utmContent,
+      utmTerm: r.utmTerm,
+      landingPath: r.landingPath,
+      conversionPath: r.conversionPath,
+      referrerHost: r.referrerHost,
       invitedAt: r.invitedAt ? r.invitedAt.toISOString() : null,
       invitedBy: r.invitedBy,
       createdAt: r.createdAt.toISOString(),

@@ -93,7 +93,7 @@ describe("LandingPage — structure and CTAs", () => {
     expect(container.querySelector("main")).not.toBeNull();
     expect(container.querySelector("footer")).not.toBeNull();
     expect(container.querySelector('nav[aria-label="Primary"]')).not.toBeNull();
-    expect(container.querySelector('nav[aria-label="Legal and support"]')).not.toBeNull();
+    expect(container.querySelector('nav[aria-label="Resources, legal, and support"]')).not.toBeNull();
   });
 
   it("every anchor CTA points at /login, never a dead link, and cold traffic is never sent straight to /signup", () => {

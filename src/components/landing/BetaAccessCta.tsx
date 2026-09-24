@@ -18,6 +18,11 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Modal, Input, Button } from "@/ui/primitives";
+import {
+  captureFirstTouchAttribution,
+  cleanPath,
+  type AcquisitionAttribution,
+} from "@/lib/attribution/acquisition-attribution";
 
 interface BetaAccessCtaProps {
   triggerClassName: string;
@@ -39,19 +44,15 @@ export function BetaAccessCta({ triggerClassName, triggerLabel = DEFAULT_LABEL }
   const [firstName, setFirstName] = useState("");
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const utmRef = useRef<{ source?: string; medium?: string; campaign?: string; content?: string }>({});
+  const attributionRef = useRef<AcquisitionAttribution>({});
 
-  // Read UTM params once, client-side only — never via next/navigation's
-  // useSearchParams, so this component carries no Suspense-boundary
-  // requirement and does no server-side work of its own.
+  // First-touch acquisition attribution for this tab (UTM tags, landing
+  // path, external referrer host) — read client-side only, never via
+  // next/navigation's useSearchParams, so this component carries no
+  // Suspense-boundary requirement and does no server-side work of its own.
+  // See src/lib/attribution/acquisition-attribution.ts.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    utmRef.current = {
-      source: params.get("utm_source") ?? undefined,
-      medium: params.get("utm_medium") ?? undefined,
-      campaign: params.get("utm_campaign") ?? undefined,
-      content: params.get("utm_content") ?? undefined,
-    };
+    attributionRef.current = captureFirstTouchAttribution(window);
   }, []);
 
   function resetAndClose() {
@@ -76,10 +77,8 @@ export function BetaAccessCta({ triggerClassName, triggerLabel = DEFAULT_LABEL }
         body: JSON.stringify({
           email,
           ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
-          ...(utmRef.current.source ? { utmSource: utmRef.current.source } : {}),
-          ...(utmRef.current.medium ? { utmMedium: utmRef.current.medium } : {}),
-          ...(utmRef.current.campaign ? { utmCampaign: utmRef.current.campaign } : {}),
-          ...(utmRef.current.content ? { utmContent: utmRef.current.content } : {}),
+          ...attributionRef.current,
+          ...(cleanPath(window.location.pathname) ? { conversionPath: window.location.pathname } : {}),
         }),
       });
       const body = await res.json().catch(() => null);
