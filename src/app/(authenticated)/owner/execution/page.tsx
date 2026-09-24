@@ -401,7 +401,11 @@ export default function OwnerExecutionPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+        <div
+          role="alert"
+          data-testid="execution-page-error"
+          className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+        >
           {error}
         </div>
       )}
