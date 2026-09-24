@@ -28,6 +28,21 @@ const FINDING_TYPE_LABEL: Record<string, string> = {
   risk: "Risk",
 };
 
+/**
+ * Own-property-only lookup for a plain object literal used as a label/variant table. A bare
+ * `map[key]` lookup is unsafe when `key` comes from server-controlled data: every plain JS
+ * object inherits `Object.prototype` members (`constructor`, `toString`, `hasOwnProperty`,
+ * `valueOf`, and, via the `__proto__` accessor, the prototype object itself), so a
+ * findingType/severity value equal to one of those names can resolve to that inherited
+ * function/object instead of `undefined` -- producing a value React cannot render, instead of
+ * falling through to the existing raw-value fallback like any other unrecognized string. Same
+ * pattern as src/components/owner/FindingCard.tsx's own `ownLookup` (PR #525) -- duplicated
+ * locally here since this page defines its own local label maps rather than importing them.
+ */
+function ownLookup<T>(map: Record<string, T>, key: string | undefined): T | undefined {
+  return key !== undefined && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+}
+
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   unverified: "muted-accessible",
   verified_improved: "success-accessible",
@@ -457,8 +472,8 @@ function CashflowCycleView({
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[f.findingType] ?? f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
+                  <Badge variant="muted-accessible">{ownLookup(FINDING_TYPE_LABEL, f.findingType) ?? f.findingType}</Badge>
+                  <Badge variant={ownLookup(SEVERITY_VARIANT, f.severity)}>{ownLookup(SEVERITY_LABEL, f.severity) ?? f.severity}</Badge>
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
