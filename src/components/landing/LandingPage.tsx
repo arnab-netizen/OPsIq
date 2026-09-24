@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/ui/primitives";
 import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
 import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
+import { PublicSiteFooter } from "@/components/landing/PublicSiteFooter";
 
 /**
  * Public, logged-out landing page for first-time visitors.
@@ -27,8 +28,6 @@ const primaryCta =
 
 const secondaryCta =
   "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-border bg-background text-foreground hover:bg-muted h-12 px-6 text-base rounded-lg";
-
-const SUPPORT_EMAIL = "support@opsiq.solutions";
 
 /** "How OpsIQ works" — the real loop: every domain diagnosis follows this order today. */
 const HOW_IT_WORKS = [
@@ -245,20 +244,7 @@ export default function LandingPage() {
         </p>
       </section>
 
-      <footer className="mx-auto w-full max-w-6xl px-6 py-8 text-center text-sm text-muted-foreground">
-        <p>Free beta &mdash; no credit card required.</p>
-        <nav aria-label="Legal and support" className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-          <Link href="/privacy" className="text-[var(--primary-text)] hover:underline">
-            Privacy
-          </Link>
-          <Link href="/terms" className="text-[var(--primary-text)] hover:underline">
-            Terms
-          </Link>
-          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[var(--primary-text)] hover:underline">
-            Support
-          </a>
-        </nav>
-      </footer>
+      <PublicSiteFooter />
     </main>
   );
 }

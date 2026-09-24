@@ -35,6 +35,11 @@ import { z } from "zod/v4";
 import { canSubmitBetaRequest } from "@/domain/beta/admission";
 import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
 import { publicAdmissionRefusal } from "@/lib/public-admission-response";
+import {
+  ATTRIBUTION_HOST_PATTERN,
+  ATTRIBUTION_LIMITS,
+  ATTRIBUTION_PATH_PATTERN,
+} from "@/lib/attribution/acquisition-attribution";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -42,7 +47,13 @@ export const runtime = "nodejs";
 // Bounds request-body/stored-row size for this anonymous, unauthenticated
 // write surface — each field's max() below is the payload-size control for
 // this route (see Phase 13 abuse review in the controlled-beta PR).
-const UTM_MAX_LEN = 200;
+const UTM_MAX_LEN = ATTRIBUTION_LIMITS.utm;
+
+// Acquisition attribution captured client-side by
+// src/lib/attribution/acquisition-attribution.ts, which shapes values to
+// exactly these bounds. Paths are root-relative with no query string or
+// fragment; the referrer is a bare hostname only (never a full URL).
+const attributionPathSchema = z.string().max(ATTRIBUTION_LIMITS.path).regex(ATTRIBUTION_PATH_PATTERN);
 
 const betaRequestSchema = z.object({
   email: identityEmailSchema,
@@ -51,6 +62,10 @@ const betaRequestSchema = z.object({
   utmMedium: z.string().trim().max(UTM_MAX_LEN).optional(),
   utmCampaign: z.string().trim().max(UTM_MAX_LEN).optional(),
   utmContent: z.string().trim().max(UTM_MAX_LEN).optional(),
+  utmTerm: z.string().trim().max(UTM_MAX_LEN).optional(),
+  landingPath: attributionPathSchema.optional(),
+  conversionPath: attributionPathSchema.optional(),
+  referrerHost: z.string().max(ATTRIBUTION_LIMITS.host).regex(ATTRIBUTION_HOST_PATTERN).optional(),
 });
 
 /**
@@ -97,7 +112,7 @@ function isEmailUniqueViolation(error: unknown): boolean {
  * a notification failure must never affect the already-persisted request or
  * the response already returned to the visitor.
  *
- * Every field here (firstName, email, utmSource, utmCampaign) is
+ * Every field here (firstName, email, utm/referrer/path attribution) is
  * visitor-supplied and untrusted: each is escapeHtml()'d before it reaches
  * the HTML body, so a submitter cannot inject markup into the email an
  * operator opens. The plain-text body keeps the raw, human-readable values.
@@ -108,6 +123,9 @@ async function notifyOwnerOfNewBetaRequest(row: {
   firstName: string | null;
   utmSource: string | null;
   utmCampaign: string | null;
+  landingPath: string | null;
+  conversionPath: string | null;
+  referrerHost: string | null;
 }): Promise<void> {
   try {
     const recipient = process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
@@ -122,6 +140,9 @@ async function notifyOwnerOfNewBetaRequest(row: {
       ["Created", new Date().toISOString()],
       ...(row.utmSource ? ([["Source", row.utmSource]] as Array<[string, string]>) : []),
       ...(row.utmCampaign ? ([["Campaign", row.utmCampaign]] as Array<[string, string]>) : []),
+      ...(row.referrerHost ? ([["Referrer", row.referrerHost]] as Array<[string, string]>) : []),
+      ...(row.landingPath ? ([["Landing page", row.landingPath]] as Array<[string, string]>) : []),
+      ...(row.conversionPath ? ([["Requested from", row.conversionPath]] as Array<[string, string]>) : []),
     ];
 
     await provider.send({
@@ -166,10 +187,18 @@ export const POST = async (request: NextRequest) => {
       return publicAdmissionRefusal("/api/beta-requests", CLOSED_RESPONSE, 403);
     }
 
-    const { email, firstName, utmSource, utmMedium, utmCampaign, utmContent } = await parseRequestBody(
-      request,
-      betaRequestSchema
-    );
+    const {
+      email,
+      firstName,
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      utmContent,
+      utmTerm,
+      landingPath,
+      conversionPath,
+      referrerHost,
+    } = await parseRequestBody(request, betaRequestSchema);
 
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
     await requirePgRateLimit(`beta-request:${ip}`, BETA_REQUEST_RATE_LIMIT);
@@ -187,7 +216,12 @@ export const POST = async (request: NextRequest) => {
           utmMedium: utmMedium || null,
           utmCampaign: utmCampaign || null,
           utmContent: utmContent || null,
+          utmTerm: utmTerm || null,
+          landingPath: landingPath || null,
+          conversionPath: conversionPath || null,
+          referrerHost: referrerHost || null,
         },
+        select: { id: true },
       });
       created = true;
     } catch (error) {
@@ -211,7 +245,11 @@ export const POST = async (request: NextRequest) => {
         eventName: AUDIT_EVENTS.BETA_REQUEST_CREATED,
         entityType: "beta_request",
         entityId: id,
-        payload: { hasUtm: !!(utmSource || utmMedium || utmCampaign || utmContent) },
+        payload: {
+          hasUtm: !!(utmSource || utmMedium || utmCampaign || utmContent || utmTerm),
+          hasReferrer: !!referrerHost,
+          hasLandingPath: !!landingPath,
+        },
         visibility: "internal",
       });
 
@@ -225,6 +263,9 @@ export const POST = async (request: NextRequest) => {
         firstName: firstName || null,
         utmSource: utmSource || null,
         utmCampaign: utmCampaign || null,
+        landingPath: landingPath || null,
+        conversionPath: conversionPath || null,
+        referrerHost: referrerHost || null,
       });
 
       // Best-effort, non-blocking confirmation — never gates the response
