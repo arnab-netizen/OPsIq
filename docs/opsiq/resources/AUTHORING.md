@@ -84,3 +84,13 @@ hostname for the visitor's tab, plus the path the request was submitted from
 `https://opsiq.solutions/resources/<slug>?utm_source=linkedin&utm_medium=social&utm_campaign=<campaign>`.
 Canonical URLs never include query strings. Results are visible to beta-request
 operators at `/admin/beta-requests`.
+
+## Page-view analytics
+
+Vercel Web Analytics counts page views on the public pages only (`/`, `/about`,
+`/beta`, `/privacy`, `/terms`, `/resources`, `/resources/*`); every other path is
+dropped in the browser and only `utm_*` query parameters are kept
+(`src/lib/analytics/public-page-analytics.ts`). It is mounted only on the Vercel
+production deployment (`VERCEL_ENV=production`) and requires Web Analytics to be
+enabled on the Vercel project. No custom events are sent: CTA clicks and modal
+opens are not measured, and lead-level attribution stays on the beta request.

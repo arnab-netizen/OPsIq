@@ -306,7 +306,9 @@
     "base_origin_main": "634d49a78a44737035bbeee8586154fe99777f57",
     "scope": "Defect I-1 from the owned-resource production gate: /resources + /resources/[slug] file-based resource surface, sitemap lastmod fix, footer discovery link, 404 links, beta-request acquisition attribution",
     "merge_precondition": "Migration 20260924100000_add_beta_request_acquisition_attribution must be applied to production (migrate-production.yml PINNED_PREDEPLOY) BEFORE merge; BetaRequest reads/writes select the new columns",
-    "open_owner_decisions": ["Analytics provider for page-view/CTA-click/modal-open events (none exists; Vercel Web Analytics not enabled)"],
+    "analytics": "Vercel Web Analytics page views (public paths only, production only) added; team is on Hobby; custom events NOT implemented (plan eligibility unverified from primary docs in-session); Web Analytics must be enabled in the Vercel dashboard BEFORE merge",
+    "migration_sha": "f39c2d397e2ea6e004bba84b7382bc53540739ab",
+    "migration_sha256": "ef597d7248cb1584b91937107042802ceff7d5edffc90408d097a1089be866c2",
     "resource_1": "NOT PUBLISHED — structural dry run only (src/__tests__/resources/fixtures/resource-1-structure.md)",
     "next_target": "PR -> CI green -> owner-run pre-deploy migration -> owner merge -> rerun production verification gate"
   }

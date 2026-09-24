@@ -47,7 +47,12 @@ export default function PrivacyPage() {
             page you opened in that browser tab and the page you requested access from (page
             paths only), and the domain of the external website that referred you (never its full
             address). Until you submit, these details stay in your browser tab&rsquo;s session
-            storage; they set no cookies and are not used for advertising.
+            storage; they set no cookies and are not used for advertising. On our public pages
+            only (the homepage, About, Beta notice, Privacy, Terms, and Resources pages), we also
+            count page visits with Vercel Web Analytics: the page address (with any campaign tags,
+            but no other link parameters), the referring website, and general browser, device,
+            and country information. OpsIQ sets no cookies for this, sends it no name, email, or
+            account information, and does not record visits to signed-in pages.
           </p>
         </section>
 
@@ -65,7 +70,8 @@ export default function PrivacyPage() {
         <section>
           <h2 className="font-semibold text-foreground">Third-party infrastructure and providers</h2>
           <p className="mt-1">
-            OpsIQ runs on third-party infrastructure to operate: Vercel (application hosting),
+            OpsIQ runs on third-party infrastructure to operate: Vercel (application hosting, and
+            page-visit analytics for our public pages),
             Neon (Postgres database hosting), Resend (transactional email, e.g. verification and
             password-reset emails), and Sentry (error monitoring — configured to scrub cookies,
             authorization headers, request bodies, and never to include your email or IP address
