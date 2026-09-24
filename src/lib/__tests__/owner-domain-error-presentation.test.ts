@@ -3,11 +3,16 @@
  *
  * ROOT_CAUSE this closes (see the module's own header comment for the full account): the
  * Strategy/Recovery/Marketing/Cashflow pages' local `api()` helper discarded the real HTTP status
- * code and derived owner-facing text by guessing keywords in the raw server message. That let a
- * 5xx response whose body happened to contain "invalid"/"validation" render as a user-input
- * problem, and separately let a genuine `NotFoundError("<ModelName>", <uuid>)` -- a real, reachable
- * shape thrown by every one of these domains' action/verification services -- reach the owner as
- * raw internal-model-name-plus-UUID text.
+ * code, and each page's catch handler rendered the resulting exception's `.message` verbatim -- a
+ * direct, unfiltered passthrough with no keyword inspection or classification of any kind. That is
+ * what let a 5xx response whose body happened to contain "invalid"/"validation" render as a
+ * user-input problem (the substring was simply present in the raw text shown), and separately let a
+ * genuine `NotFoundError("<ModelName>", <uuid>)` -- a real, reachable shape thrown by every one of
+ * these domains' action/verification services -- reach the owner as raw internal-model-name-plus-
+ * UUID text. A distinct, separate risk -- keyword/pattern screening of 5xx body text to decide
+ * whether it looked safe to show -- was considered and rejected during this fix's design phase,
+ * before any implementation; it is not what the original defect did, and this module's allowlist-
+ * only design supersedes that rejected approach rather than refining it.
  *
  * Fixtures below are labeled REALISTIC (traced to an actual call site reachable through
  * `withCanonicalEnforcement`, see src/lib/canonical-route-enforcement.ts) or SYNTHETIC/DEFENSIVE
@@ -142,6 +147,63 @@ describe("presentDomainError — known 4xx message allowlist (Rule 2 & 3)", () =
   });
 });
 
+describe("presentDomainError — known-message matching is bound to domain, suffix, and status (negative cases)", () => {
+  it("SYNTHETIC/DEFENSIVE: an unknown domain word (not one of strategy/recovery/marketing/cashflow) never matches the action-status template", () => {
+    const err = httpResponseErrorFromBody(400, { error: "Invalid finance action status: bogus" });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/status isn.t recognized/i);
+  });
+
+  it("SYNTHETIC/DEFENSIVE: an unknown domain word never matches the action-transition template", () => {
+    const err = httpResponseErrorFromBody(400, { error: "Invalid sales action transition: open → closed" });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+  });
+
+  it("SYNTHETIC/DEFENSIVE: an altered completion-requirement suffix (not completionEvidence/actualOutcome) never matches", () => {
+    const err = httpResponseErrorFromBody(400, {
+      error: "Completing a strategy action requires completionNotes and someOtherField.",
+    });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/required completion details/i);
+  });
+
+  it("SYNTHETIC/DEFENSIVE: Recovery's completion-requirement wording does not cross-match a different domain's template, and vice versa", () => {
+    // Recovery's real wording ("actualOutcome") stated for a different domain word never matches
+    // either the 3-domain completionEvidence template or the recovery-only actualOutcome template.
+    const err = httpResponseErrorFromBody(400, {
+      error: "Completing a marketing action requires completionNotes and actualOutcome.",
+    });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+  });
+
+  it("SYNTHETIC/DEFENSIVE: text that merely mentions a 'baseline value' in an unrelated sentence does not partial-match the verification template", () => {
+    const err = httpResponseErrorFromBody(400, {
+      error: "We could not proceed: no before (baseline) value was available for an unrelated reason.",
+    });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/doesn.t have a baseline value/i);
+  });
+
+  it("SYNTHETIC/DEFENSIVE: a known message template's exact text arriving at an incompatible status (not its source-verified status) falls to the generic fallback for that status", () => {
+    // "Validation failed" is only ever a 400 (ValidationError's fixed status) in this codebase;
+    // this proves the match is bound to status, not text alone.
+    const validationAt409 = httpResponseErrorFromBody(409, { error: "Validation failed" });
+    expect(presentDomainError(validationAt409, "save")).toBe("Couldn't save your changes. Please try again.");
+
+    // The NotFoundError shape is only ever a 404 in this codebase; the same text at 400 must not
+    // be treated as the curated "couldn't be found" message.
+    const notFoundAt400 = httpResponseErrorFromBody(400, { error: `OwnerStrategyAction not found: ${LEAKY_UUID}` });
+    const message = presentDomainError(notFoundAt400, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/couldn.t be found/i);
+  });
+});
+
 describe("presentDomainError — entity/identifier leaks (Rule 3, NotFoundError)", () => {
   it.each([
     ["OwnerStrategyAction", "strategy"],
@@ -239,25 +301,41 @@ describe("presentDomainError — malformed / empty bodies", () => {
   });
 });
 
-describe("presentDomainError — no HTTP response at all (Rule 5)", () => {
-  it("a genuine fetch() rejection (TypeError, no Response object) gets connectivity guidance without claiming an active check/retry", () => {
+describe("presentDomainError — no HTTP response at all: genuine fetch failures get connectivity guidance (Rule 5)", () => {
+  it("REALISTIC: a genuine fetch() rejection (TypeError('Failed to fetch'), Chromium's real fetch-rejection shape, no Response object) gets connectivity guidance without claiming an active check/retry", () => {
     const message = presentDomainError(new TypeError("Failed to fetch"), "load");
     expect(message).toBe("Couldn't connect to the server. Check your internet connection and try again.");
     expect(message).not.toMatch(/checking|automatically retry|we are retrying/i);
   });
 
-  it("a non-Error thrown value (string) is treated the same as a connectivity failure, not classified as a status", () => {
-    const message = presentDomainError("some raw thrown string", "action");
+  it("REALISTIC: Firefox's differently-worded fetch-rejection TypeError is also recognized as a network failure", () => {
+    const message = presentDomainError(new TypeError("NetworkError when attempting to fetch resource."), "action");
     expect(message).toBe("Couldn't connect to the server. Check your internet connection and try again.");
   });
+});
 
-  it("undefined/null thrown values do not crash and fall to the same connectivity fallback", () => {
-    expect(presentDomainError(undefined, "save")).toBe(
-      "Couldn't connect to the server. Check your internet connection and try again."
-    );
-    expect(presentDomainError(null, "save")).toBe(
-      "Couldn't connect to the server. Check your internet connection and try again."
-    );
+describe("presentDomainError — unrelated/unclassified exceptions never get an invented network diagnosis (Rule 5 correction)", () => {
+  it("SYNTHETIC/DEFENSIVE: an unrelated TypeError from client code (not a fetch rejection) gets the plain per-context fallback, not connectivity guidance", () => {
+    const message = presentDomainError(new TypeError("Cannot read properties of undefined (reading 'id')"), "load");
+    expect(message).toBe("Couldn't load that information. Please refresh and try again.");
+    expect(message).not.toMatch(/connect|internet connection/i);
+  });
+
+  it("SYNTHETIC/DEFENSIVE: a plain Error unrelated to fetch gets the plain per-context fallback, not connectivity guidance", () => {
+    const message = presentDomainError(new Error("Something else went wrong client-side"), "save");
+    expect(message).toBe("Couldn't save your changes. Please try again.");
+    expect(message).not.toMatch(/connect|internet connection/i);
+  });
+
+  it("a non-Error thrown value (string) gets the plain per-context fallback, not an invented connectivity diagnosis", () => {
+    const message = presentDomainError("some raw thrown string", "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/connect|internet connection/i);
+  });
+
+  it("undefined/null thrown values do not crash and fall to the same plain per-context fallback, not connectivity guidance", () => {
+    expect(presentDomainError(undefined, "save")).toBe("Couldn't save your changes. Please try again.");
+    expect(presentDomainError(null, "save")).toBe("Couldn't save your changes. Please try again.");
   });
 });
 
