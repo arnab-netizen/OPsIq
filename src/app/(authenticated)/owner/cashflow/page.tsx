@@ -7,6 +7,8 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { useActiveBusiness } from "@/context/active-business-context";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { presentDomainError } from "@/lib/owner-domain-error-presentation";
+import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -74,7 +76,7 @@ async function api(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+  if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
   return data;
 }
 
@@ -115,7 +117,7 @@ export default function OwnerCashflowPage() {
       setDashboard(data);
     } catch (e) {
       if (requestSeq.current !== seq) return;
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(presentDomainError(e, "load"));
     } finally {
       if (requestSeq.current === seq) setLoading(false);
     }
@@ -155,7 +157,7 @@ export default function OwnerCashflowPage() {
       setActiveBusinessId(created.id);
       await refreshBusinesses();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create business");
+      setError(presentDomainError(e, "save"));
     } finally {
       setBusy(false);
     }
@@ -186,7 +188,7 @@ export default function OwnerCashflowPage() {
       setShowSnapshotForm(false);
       await load(activeBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save snapshot");
+      setError(presentDomainError(e, "save"));
     } finally {
       setBusy(false);
     }
@@ -203,7 +205,7 @@ export default function OwnerCashflowPage() {
       });
       await load(activeBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to run diagnosis");
+      setError(presentDomainError(e, "action"));
     } finally {
       setBusy(false);
     }
@@ -226,7 +228,7 @@ export default function OwnerCashflowPage() {
       });
       await load(activeBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update action");
+      setError(presentDomainError(e, "action"));
     } finally {
       setBusy(false);
     }
@@ -253,7 +255,7 @@ export default function OwnerCashflowPage() {
       });
       await load(activeBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to verify");
+      setError(presentDomainError(e, "action"));
     } finally {
       setBusy(false);
     }
