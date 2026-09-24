@@ -180,6 +180,40 @@ describe("presentDomainError — known-message matching is bound to domain, suff
     expect(message).toBe("Couldn't complete this action. Please try again.");
   });
 
+  it("SYNTHETIC/DEFENSIVE: Recovery's domain word paired with the OTHER 3 domains' completionEvidence template never matches (Recovery never produces this exact text)", () => {
+    // This is the exact shape a 4-domain KNOWN_DOMAIN_WORD alternation would have wrongly accepted:
+    // Recovery's real source always says "...and actualOutcome.", never "...and completionEvidence.".
+    const err = httpResponseErrorFromBody(400, {
+      error: "Completing a recovery action requires completionNotes and completionEvidence.",
+    });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/required completion details/i);
+  });
+
+  it("SYNTHETIC/DEFENSIVE: Recovery's domain word paired with the OTHER 3 domains' baseline-verification wording never matches (Recovery's real wording is entirely different)", () => {
+    const err = httpResponseErrorFromBody(400, {
+      error: "Cannot verify a recovery action without a before (baseline) value for the metric.",
+    });
+    const message = presentDomainError(err, "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
+    expect(message).not.toMatch(/doesn.t have a baseline value/i);
+  });
+
+  it("REALISTIC: Recovery's OWN completion-requirement and baseline-verification templates still match correctly after the domain-word restriction", () => {
+    const completion = httpResponseErrorFromBody(400, {
+      error: "Completing a recovery action requires completionNotes and actualOutcome.",
+    });
+    expect(presentDomainError(completion, "action")).toBe("Add the required completion details before marking this complete.");
+
+    const baseline = httpResponseErrorFromBody(400, {
+      error: "Cannot verify an action without a baseline metric value. Re-run diagnosis to capture a baseline.",
+    });
+    expect(presentDomainError(baseline, "action")).toBe(
+      "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one."
+    );
+  });
+
   it("SYNTHETIC/DEFENSIVE: text that merely mentions a 'baseline value' in an unrelated sentence does not partial-match the verification template", () => {
     const err = httpResponseErrorFromBody(400, {
       error: "We could not proceed: no before (baseline) value was available for an unrelated reason.",
@@ -318,6 +352,14 @@ describe("presentDomainError — unrelated/unclassified exceptions never get an 
   it("SYNTHETIC/DEFENSIVE: an unrelated TypeError from client code (not a fetch rejection) gets the plain per-context fallback, not connectivity guidance", () => {
     const message = presentDomainError(new TypeError("Cannot read properties of undefined (reading 'id')"), "load");
     expect(message).toBe("Couldn't load that information. Please refresh and try again.");
+    expect(message).not.toMatch(/connect|internet connection/i);
+  });
+
+  it("SYNTHETIC/DEFENSIVE: TypeError('fetch is not a function') is NOT recognized as a fetch rejection merely because its message contains the word 'fetch'", () => {
+    // This is exactly the false-positive a naive /fetch/i substring test would have produced --
+    // this message names a client-side bug (fetch undefined/shadowed), not a network failure.
+    const message = presentDomainError(new TypeError("fetch is not a function"), "action");
+    expect(message).toBe("Couldn't complete this action. Please try again.");
     expect(message).not.toMatch(/connect|internet connection/i);
   });
 

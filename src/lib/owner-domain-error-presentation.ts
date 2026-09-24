@@ -60,14 +60,16 @@
  *  4. 403 is split only on the two real, source-confirmed auth-decision
  *     strings ("Insufficient permissions" / "Workspace required"); any other
  *     403 body falls to the generic permission message.
- *  5. No HTTP response at all splits further: a genuinely identified
- *     `fetch()` network failure (a `TypeError` naming the fetch itself, e.g.
- *     "Failed to fetch") gets connectivity guidance that does not claim the
- *     app is actively "checking" the connection or retrying automatically --
- *     neither of which these 4 pages' manual `api()` calls actually do. Any
- *     OTHER exception (an unrelated `TypeError`, a thrown string, `null`,
+ *  5. No HTTP response at all splits further: a `TypeError` whose message
+ *     exactly matches one of a short, explicit list of known fetch-rejection
+ *     strings (e.g. "Failed to fetch") gets connectivity guidance that does
+ *     not claim the app is actively "checking" the connection or retrying
+ *     automatically -- neither of which these 4 pages' manual `api()` calls
+ *     actually do. This is conservative message recognition, not proof of
+ *     the underlying cause. Any OTHER exception (an unrelated `TypeError`
+ *     such as `fetch is not a function`, a thrown string, `null`,
  *     `undefined`, or anything else that isn't a recognized `HttpResponseError`
- *     or a recognized fetch failure) never establishes that the network
+ *     or one of those exact messages) never establishes that the network
  *     failed and is never relabeled as one -- it gets the same plain,
  *     operation-appropriate generic fallback as an unmatched HTTP response.
  *  6. No message ever asserts "nothing was saved" -- that guarantee is not
@@ -98,9 +100,23 @@ const GENERIC_FALLBACK: Record<PresentationContext, string> = {
  * The exact 4 domain words these routes' action/verification services use in
  * their own message templates -- never a bare `\S+` wildcard, so a message
  * from an unrelated domain (or with an altered/misspelled domain word) can
- * never accidentally match one of these entries.
+ * never accidentally match one of these entries. Used only where all 4
+ * domains genuinely share the identical template (see each entry below).
  */
 const KNOWN_DOMAIN_WORD = "strategy|recovery|marketing|cashflow";
+
+/**
+ * Strategy/Marketing/Cashflow share IDENTICAL wording for the completion-
+ * requirement and baseline-verification templates below -- Recovery does
+ * NOT: its action.service.ts/verification.service.ts use "actualOutcome"
+ * (not "completionEvidence") and an entirely different baseline-verification
+ * sentence (see the two Recovery-only entries below). Using the 4-domain
+ * `KNOWN_DOMAIN_WORD` for these two templates would let a "Completing a
+ * recovery action requires completionNotes and completionEvidence." message
+ * -- a string Recovery's real source never produces -- match anyway, which
+ * is exactly the unverified-template risk this allowlist exists to avoid.
+ */
+const THREE_DOMAIN_WORD = "strategy|marketing|cashflow";
 
 /**
  * Narrow, explicit allowlist of KNOWN 4xx message templates, each bound to
@@ -125,17 +141,17 @@ const KNOWN_MESSAGE_TEMPLATES: ReadonlyArray<{ status: number; pattern: RegExp; 
   // "Invalid <domain> action transition: <from> → <to>" -- action.service.ts, all 4 domains, always 400.
   { status: 400, pattern: new RegExp(`^Invalid (?:${KNOWN_DOMAIN_WORD}) action transition: `), message: "That action can't move to the requested status from its current one. Refresh to see its latest status." },
   // "Completing a <domain> action requires completionNotes and completionEvidence."
-  // (Strategy/Marketing/Cashflow) -- action.service.ts, always 400. Never repeats the raw
-  // field names in the owner-facing text.
-  { status: 400, pattern: new RegExp(`^Completing a (?:${KNOWN_DOMAIN_WORD}) action requires completionNotes and completionEvidence\\.$`), message: "Add the required completion details before marking this complete." },
+  // (Strategy/Marketing/Cashflow ONLY -- Recovery uses "actualOutcome", see below) --
+  // action.service.ts, always 400. Never repeats the raw field names in the owner-facing text.
+  { status: 400, pattern: new RegExp(`^Completing a (?:${THREE_DOMAIN_WORD}) action requires completionNotes and completionEvidence\\.$`), message: "Add the required completion details before marking this complete." },
   // Recovery's own wording for the same rule -- "...completionNotes and actualOutcome."
   // (action.service.ts, founder-recovery), always 400.
   { status: 400, pattern: /^Completing a recovery action requires completionNotes and actualOutcome\.$/, message: "Add the required completion details before marking this complete." },
   // "Cannot verify a <domain> action without a before (baseline) value for the metric."
-  // (Strategy/Marketing/Cashflow) -- verification.service.ts, always 400. Exact, anchored
-  // string -- not a `.*` partial match, so unrelated text merely mentioning a "baseline
-  // value" can never match this template.
-  { status: 400, pattern: new RegExp(`^Cannot verify a (?:${KNOWN_DOMAIN_WORD}) action without a before \\(baseline\\) value for the metric\\.$`), message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
+  // (Strategy/Marketing/Cashflow ONLY -- Recovery's wording is entirely different, see below) --
+  // verification.service.ts, always 400. Exact, anchored string -- not a `.*` partial match, so
+  // unrelated text merely mentioning a "baseline value" can never match this template.
+  { status: 400, pattern: new RegExp(`^Cannot verify a (?:${THREE_DOMAIN_WORD}) action without a before \\(baseline\\) value for the metric\\.$`), message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
   // Recovery's own, differently-worded baseline-verification message
   // (verification.service.ts, founder-recovery), always 400. Exact, anchored string.
   { status: 400, pattern: /^Cannot verify an action without a baseline metric value\. Re-run diagnosis to capture a baseline\.$/, message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
@@ -154,23 +170,41 @@ function safe(message: string, context: PresentationContext): string {
 }
 
 /**
- * A genuine `fetch()` network failure is always a `TypeError` whose message
- * names the fetch itself (e.g. "Failed to fetch" in Chromium-based browsers,
- * "NetworkError when attempting to fetch resource." in Firefox) -- these 4
- * pages' `api()` helper makes no other `TypeError`-throwing call. This is a
- * narrow, source-grounded identification, not a blanket "any TypeError is a
- * network failure" assumption: an unrelated `TypeError` from other client
- * code (e.g. a bug reading an undefined property) does not match, and must
- * not be relabeled as a connectivity problem. Known limitation: a browser
- * whose fetch-rejection message never mentions "fetch" (e.g. Safari's "Load
- * failed") is not recognized by this narrow check and falls to the generic
- * fallback instead of connectivity guidance -- a plain, safe outcome, just
- * not the most specific one available for that browser.
+ * The exact, known TypeError messages browsers use for a `fetch()` rejection
+ * -- not a substring/keyword test. Matching "fetch" anywhere in a TypeError's
+ * message is too broad: it would also match an unrelated bug like
+ * `TypeError("fetch is not a function")`, which says nothing about
+ * connectivity. Matching one of these exact strings is conservative MESSAGE
+ * recognition, not proof of the underlying cause: this module has no way to
+ * confirm the network actually failed, only that the exception's text is the
+ * one real `fetch()` in `api()` is known to throw on a connection failure. A
+ * message that doesn't match is never assumed to be a network failure merely
+ * because it wasn't recognized as one -- it gets the same plain fallback an
+ * unmatched HTTP response would.
+ */
+const FETCH_REJECTION_MESSAGES: ReadonlyArray<RegExp> = [
+  /^Failed to fetch$/, // Chromium-based browsers
+  /^NetworkError when attempting to fetch resource\.$/, // Firefox
+];
+
+/**
+ * `error` is a genuine `fetch()` rejection only when it is a `TypeError`
+ * whose message exactly matches one of `FETCH_REJECTION_MESSAGES` above --
+ * these 4 pages' `api()` helper makes no other `TypeError`-throwing call, so
+ * this is a narrow, source-grounded check, not a blanket "any TypeError is a
+ * network failure" assumption. An unrelated `TypeError` from other client
+ * code (e.g. a bug reading an undefined property, or `fetch is not a
+ * function`) does not match, and must not be relabeled as a connectivity
+ * problem. Known limitation: a browser whose fetch-rejection message isn't
+ * one of the two covered here (e.g. Safari's "Load failed") is not
+ * recognized by this narrow check and falls to the generic fallback instead
+ * of connectivity guidance -- a plain, safe outcome, just not the most
+ * specific one available for that browser.
  */
 function isFetchNetworkFailure(error: unknown): boolean {
   if (!(error instanceof TypeError)) return false;
   const text = error.message;
-  return /fetch/i.test(text);
+  return FETCH_REJECTION_MESSAGES.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -182,7 +216,7 @@ function isFetchNetworkFailure(error: unknown): boolean {
 export function presentDomainError(error: unknown, context: PresentationContext): string {
   if (!(error instanceof HttpResponseError)) {
     if (isFetchNetworkFailure(error)) {
-      // A real, identified connectivity failure -- no HTTP response was ever received.
+      // A recognized fetch-rejection message -- no HTTP response was ever received.
       return safe(NETWORK_MESSAGE, context);
     }
     // No real HTTP response, and not a recognized fetch failure either: an
