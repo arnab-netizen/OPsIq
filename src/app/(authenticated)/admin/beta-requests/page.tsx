@@ -26,6 +26,9 @@ interface BetaRequestRow {
   status: string;
   utmSource: string | null;
   utmCampaign: string | null;
+  referrerHost: string | null;
+  landingPath: string | null;
+  conversionPath: string | null;
   invitedAt: string | null;
   invitedBy: string | null;
   createdAt: string;
@@ -159,8 +162,15 @@ export default function AdminBetaRequestsPage() {
           },
           {
             key: "source",
-            header: "Source / campaign",
-            render: (row: BetaRequestRow) => [row.utmSource, row.utmCampaign].filter(Boolean).join(" / ") || "—",
+            header: "Source / campaign / referrer",
+            render: (row: BetaRequestRow) =>
+              [row.utmSource, row.utmCampaign, row.referrerHost].filter(Boolean).join(" / ") || "—",
+          },
+          {
+            key: "pages",
+            header: "Landed on / requested from",
+            render: (row: BetaRequestRow) =>
+              [row.landingPath, row.conversionPath].filter(Boolean).join(" → ") || "—",
           },
           {
             key: "status",

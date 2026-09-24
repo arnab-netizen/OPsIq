@@ -1096,28 +1096,37 @@ model PrivacyRequest {
 /// (see the controlled-beta homepage PR) can be added without a further
 /// schema migration.
 model BetaRequest {
-  id            String    @id @db.Uuid
-  email         String    @unique
-  firstName     String?   @map("first_name")
+  id             String    @id @db.Uuid
+  email          String    @unique
+  firstName      String?   @map("first_name")
   // Persisted admission/request-lifecycle facts ONLY. REQUESTED | INVITED | REVOKED | REJECTED.
   // EXPIRED is deliberately NOT a persisted value — it is derived at read time from
   // (status == INVITED && invitedAt + INVITE_TTL_DAYS <= now), see src/lib/beta.ts.
   // Any customer-journey state beyond admission (registered/verified/active) must be
   // derived live from User/Session/WorkspaceMembership — never denormalized onto this row.
-  status        String    @default("REQUESTED")
-  utmSource     String?   @map("utm_source")
-  utmMedium     String?   @map("utm_medium")
-  utmCampaign   String?   @map("utm_campaign")
-  utmContent    String?   @map("utm_content")
-  qualification Json?
-  invitedAt     DateTime? @map("invited_at")
-  invitedBy     String?   @map("invited_by")
-  revokedAt     DateTime? @map("revoked_at")
-  revokedBy     String?   @map("revoked_by")
-  rejectedAt    DateTime? @map("rejected_at")
-  rejectedBy    String?   @map("rejected_by")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  status         String    @default("REQUESTED")
+  utmSource      String?   @map("utm_source")
+  utmMedium      String?   @map("utm_medium")
+  utmCampaign    String?   @map("utm_campaign")
+  utmContent     String?   @map("utm_content")
+  utmTerm        String?   @map("utm_term")
+  // Acquisition attribution captured by the public site (see
+  // src/lib/attribution/acquisition-attribution.ts): first-touch landing path
+  // and external referrer hostname for this browser tab, plus the path the
+  // request was submitted from. Paths carry no query string; the referrer is a
+  // bare hostname, never a full URL.
+  landingPath    String?   @map("landing_path")
+  conversionPath String?   @map("conversion_path")
+  referrerHost   String?   @map("referrer_host")
+  qualification  Json?
+  invitedAt      DateTime? @map("invited_at")
+  invitedBy      String?   @map("invited_by")
+  revokedAt      DateTime? @map("revoked_at")
+  revokedBy      String?   @map("revoked_by")
+  rejectedAt     DateTime? @map("rejected_at")
+  rejectedBy     String?   @map("rejected_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@index([status, createdAt])
   @@map("beta_requests")

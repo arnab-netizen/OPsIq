@@ -299,5 +299,15 @@
     "scope": "GOVERNANCE_ARTIFACTS_ONLY — no runtime, production, Prisma, CI-workflow, or validator change",
     "warning": "Do NOT mark factory-stage-7-closure CLOSED before PR-1B lands. Until then the fifth closure condition is binding but not machine-enforced."
   },
-  "prs_merged_to_main_completeness": "NOT EXHAUSTIVE — PRs #263 through #271 are merged on main but were never recorded here. Treat git history, not this list, as the authoritative record of what is on main."
+  "prs_merged_to_main_completeness": "NOT EXHAUSTIVE — PRs #263 through #271 are merged on main but were never recorded here. Treat git history, not this list, as the authoritative record of what is on main.",
+  "owned_resource_surface": {
+    "status": "IMPLEMENTED_ON_BRANCH_PENDING_PR_CI_MERGE",
+    "branch": "claude/eloquent-mayer-uil01a",
+    "base_origin_main": "634d49a78a44737035bbeee8586154fe99777f57",
+    "scope": "Defect I-1 from the owned-resource production gate: /resources + /resources/[slug] file-based resource surface, sitemap lastmod fix, footer discovery link, 404 links, beta-request acquisition attribution",
+    "merge_precondition": "Migration 20260924100000_add_beta_request_acquisition_attribution must be applied to production (migrate-production.yml PINNED_PREDEPLOY) BEFORE merge; BetaRequest reads/writes select the new columns",
+    "open_owner_decisions": ["Analytics provider for page-view/CTA-click/modal-open events (none exists; Vercel Web Analytics not enabled)"],
+    "resource_1": "NOT PUBLISHED — structural dry run only (src/__tests__/resources/fixtures/resource-1-structure.md)",
+    "next_target": "PR -> CI green -> owner-run pre-deploy migration -> owner merge -> rerun production verification gate"
+  }
 }

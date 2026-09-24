@@ -5,7 +5,7 @@ export const metadata = {
   description: "How OpsIQ handles your information during beta.",
 };
 
-const POLICY_VERSION = "2026-09-17";
+const POLICY_VERSION = "2026-09-24";
 
 export default function PrivacyPage() {
   return (
@@ -41,7 +41,13 @@ export default function PrivacyPage() {
             recommendations, and actions OpsIQ generates from that information; basic technical
             data needed to operate the service (IP address for rate-limiting and abuse
             prevention, session cookies, and error/crash reports); and, if you submit one, the
-            content of any support or beta-feedback request you send us.
+            content of any support or beta-feedback request you send us. If you request beta
+            access, we record the email and optional first name you enter plus how you found
+            OpsIQ: the campaign tags in the link you followed (utm_ parameters), the first OpsIQ
+            page you opened in that browser tab and the page you requested access from (page
+            paths only), and the domain of the external website that referred you (never its full
+            address). Until you submit, these details stay in your browser tab&rsquo;s session
+            storage; they set no cookies and are not used for advertising.
           </p>
         </section>
 
@@ -51,7 +57,8 @@ export default function PrivacyPage() {
             To create and secure your account (including verifying your email address before
             granting access), to generate your business diagnosis and recommendations and show
             them back to you in your workspace, to protect the service against abuse (rate
-            limiting, fraud, and security monitoring), and to fix bugs and improve the product.
+            limiting, fraud, and security monitoring), to understand which of our pages and
+            channels lead people to request beta access, and to fix bugs and improve the product.
           </p>
         </section>
 

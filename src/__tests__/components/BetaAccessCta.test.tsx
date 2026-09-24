@@ -8,7 +8,7 @@
  * own accessible open/submit/success/error/double-submit behavior.
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
 
@@ -219,5 +219,56 @@ describe("BetaAccessCta", () => {
 
     const emailInput = screen.getByLabelText("Email") as HTMLInputElement;
     expect(emailInput.value).toBe("");
+  });
+});
+
+describe("BetaAccessCta — acquisition attribution", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("sends first-touch utm/landing attribution plus the page the request was made from", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, message: "Received." }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // First touch: a resource page reached from a tagged link.
+    window.history.replaceState({}, "", "/resources/cash-gap?utm_source=linkedin&utm_medium=social&utm_term=cash%20flow");
+    const first = renderCta();
+    first.unmount();
+
+    // Later page in the same tab, with no tags of its own: first touch is kept.
+    window.history.replaceState({}, "", "/resources");
+    renderCta();
+    fireEvent.click(screen.getByRole("button", { name: "Request beta access" }));
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Request beta access" }).slice(-1)[0]);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body).toMatchObject({
+      email: "a@example.com",
+      utmSource: "linkedin",
+      utmMedium: "social",
+      utmTerm: "cash flow",
+      landingPath: "/resources/cash-gap",
+      conversionPath: "/resources",
+    });
+    expect(body).not.toHaveProperty("referrerHost");
+  });
+
+  it("still posts to the existing /api/beta-requests endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, message: "Received." }) });
+    vi.stubGlobal("fetch", fetchMock);
+    renderCta();
+    fireEvent.click(screen.getByRole("button", { name: "Request beta access" }));
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Request beta access" }).slice(-1)[0]);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/beta-requests");
   });
 });
