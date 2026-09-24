@@ -42,6 +42,16 @@ Measurement model (owner-approved):
 Interpretation: all traffic so far is direct and consistent with owner/verification
 visits. **No external distribution has produced measurable traffic or leads yet.**
 
+| Check (UTC) | Article views | Referrers seen | Beta requests since 14:28Z | LinkedIn/Medium-attributed requests |
+|---|---|---|---|---|
+| 2026-09-24 ~16:10 | 9 (3 visitors) | none (direct only) | 0 | — |
+| 2026-09-24 ~16:40 | 9 (3 visitors) | none — no `linkedin.com` / `medium.com` referrer recorded | 0 | 0 (`referrer_host`/`utm_source`) |
+
+Note: a link click from LinkedIn/Medium can arrive without a referrer (app
+browsers, `noreferrer`), so "no referrer" is not proof the posts produced no
+visits — it is proof no *attributed* visit or lead exists yet. Tagged links
+make future clicks attributable at the lead level.
+
 ## 3. Distribution — channel status
 
 | Channel | Status | Cost | Notes / blocker |
@@ -49,7 +59,9 @@ visits. **No external distribution has produced measurable traffic or leads yet.
 | Owned site (index, footer link, sitemap) | DONE | $0 | Evidence in §1 |
 | Google Search Console (URL inspection, sitemap submit) | BLOCKED | $0 | No Search Console access from the agent session; owner action |
 | Bing Webmaster Tools / IndexNow | NOT STARTED | $0 | Needs owner account (Bing) or a key file + outbound ping; agent session egress is blocked |
-| LinkedIn (OpsIQ page `opsiq-hq`) | READY TO POST | $0 | Copy + tagged link in `RESOURCE_1_DISTRIBUTION_KIT.md`; no posting connector in agent session |
+| LinkedIn post (prior run) | OWNER-REPORTED, UNVERIFIED | $0 | `https://www.linkedin.com/feed/update/urn:li:share:7508916807861383168/` — agent session cannot load linkedin.com (egress blocked) to confirm content/link/UTM; do not repost the same copy |
+| LinkedIn (OpsIQ page `opsiq-hq`) | READY TO POST | $0 | Copy + tagged link in `RESOURCE_1_DISTRIBUTION_KIT.md`; no posting connector in agent session. Check the prior post above first to avoid duplication |
+| Medium article (prior run) | OWNER-REPORTED, UNVERIFIED | $0 | `https://medium.com/@arnab.poddar_72328/profitable-on-paper-short-on-cash-a-worked-example-d0d2f635809e` — medium.com blocked from agent session; confirm it links to the canonical article (ideally with `utm_source=medium&utm_medium=syndication&utm_campaign=resource_1_launch`) |
 | X (`@opsiqsolutions`) | READY TO POST | $0 | same |
 | Founder personal LinkedIn | READY TO POST | $0 | same |
 | Communities (e.g. small-business subreddits, forums) | READY — CHECK RULES FIRST | $0 | Many prohibit self-promotion; post only where rules allow, value-first |
@@ -78,3 +90,4 @@ visits. **No external distribution has produced measurable traffic or leads yet.
 | Date (UTC) | Change | Evidence |
 |---|---|---|
 | 2026-09-24 | Ledger created; Resource #1 live verification recorded | this file, sources in §1–§2 |
+| 2026-09-24 | Prior-run LinkedIn + Medium posts recorded as owner-reported/unverified; second measurement row | PR #537 merged (`96271ce8`); Vercel referrer breakdown; `beta_requests` read-only counts |
