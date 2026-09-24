@@ -89,6 +89,23 @@ const SALES_FIELDS: Array<{ name: string; label: string }> = [
   { name: "staffCount", label: "Sales staff count" },
 ];
 
+function salesField(name: string) {
+  const f = SALES_FIELDS.find((x) => x.name === name);
+  if (!f) throw new Error(`Unknown sales field: ${name}`);
+  return f;
+}
+
+// Presentation-only grouping for the snapshot form below -- each group is a contiguous run of
+// SALES_FIELDS in its existing order, so field order (and therefore tab order) is unchanged from
+// the previous flat layout. Every SALES_FIELDS name appears in exactly one group, and addSnapshot()
+// still reads the payload from SALES_FIELDS directly, so the save payload is unaffected.
+const SALES_FIELD_GROUPS: Array<{ title: string; fieldNames: string[] }> = [
+  { title: "Leads, orders & revenue", fieldNames: ["leads", "qualifiedLeads", "orders", "revenue", "averageOrderValue"] },
+  { title: "Customers", fieldNames: ["newCustomers", "repeatCustomers", "lostCustomers"] },
+  { title: "B2B & B2C revenue", fieldNames: ["b2bProspects", "b2bPipelineValue", "b2bRevenue", "b2cRevenue"] },
+  { title: "Complaints, discounts & team", fieldNames: ["complaints", "discountAmount", "refundAmount", "staffCount"] },
+];
+
 export default function OwnerSalesPage() {
   const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
@@ -415,11 +432,11 @@ export default function OwnerSalesPage() {
           </div>
 
           {showSnapshotForm && (
-            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
-              <h2 className="font-semibold">
+            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">
                 Sales snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input name="periodStart" label="Period start" type="date" required />
                 <Input name="periodEnd" label="Period end" type="date" required />
                 <Select
@@ -433,9 +450,17 @@ export default function OwnerSalesPage() {
                   ]}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {SALES_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
+              <div className="flex flex-col gap-4">
+                {SALES_FIELD_GROUPS.map((group) => (
+                  <div key={group.title}>
+                    <h3 className="text-sm font-semibold text-foreground">{group.title}</h3>
+                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {group.fieldNames.map((name) => {
+                        const f = salesField(name);
+                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />;
+                      })}
+                    </div>
+                  </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
