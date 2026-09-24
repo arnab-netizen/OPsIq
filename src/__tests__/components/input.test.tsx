@@ -2,10 +2,10 @@
  * Input primitive — accessible hint/error association.
  *
  * `hint` and `error` were previously rendered as plain, visually-adjacent paragraphs with no
- * programmatic link to the input, so a screen-reader user landing on the field never heard them
- * (a sighted-only affordance). This locks in the `aria-describedby` wiring added alongside the
- * Sales/Operations hint-text pass, since that pass depends on it to make the new hints
- * accessible, and the fix applies to every Input call site, not just Sales/Operations.
+ * programmatic description association with the input. This locks in the `aria-describedby`
+ * wiring added alongside the Sales/Operations hint-text pass, since that pass depends on it to
+ * make the new hints accessible, and the fix applies to every Input call site, not just
+ * Sales/Operations.
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";

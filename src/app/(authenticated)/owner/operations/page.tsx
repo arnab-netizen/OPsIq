@@ -105,7 +105,10 @@ const OPERATIONS_FIELDS: Array<{ name: string; label: string; hint?: string }> =
   { name: "complaints", label: "Complaints" },
   { name: "staffHours", label: "Staff hours", hint: "Total hours worked by all staff combined this period." },
   { name: "machineCapacityUnits", label: "Machine capacity (units)", hint: "Maximum units your equipment could process this period." },
-  { name: "idleHours", label: "Idle hours", hint: "Hours from the staff hours above where there was no work to do." },
+  // idleHours: idleRatePct (metrics.ts) only computes idle / staffHours as a ratio -- it does not
+  // establish what counts as "idle" or that idle hours are drawn from the staffHours total, and no
+  // type comment defines it either. Left unresolved rather than invented; no hint.
+  { name: "idleHours", label: "Idle hours" },
   { name: "deliveryAttempts", label: "Delivery attempts", hint: "Leave blank to measure delivery success against completed orders instead." },
   { name: "deliveryFailures", label: "Delivery failures" },
   { name: "inventoryShortages", label: "Inventory shortages", hint: "Number of stockout events (times you ran out of stock) this period." },

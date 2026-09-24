@@ -90,7 +90,11 @@ const SALES_FIELDS: Array<{ name: string; label: string; hint?: string }> = [
   { name: "repeatCustomers", label: "Repeat customers", hint: "Added with new customers above to total your active customers this period." },
   { name: "lostCustomers", label: "Lost customers", hint: "Added with active customers above when calculating this period's customer-loss rate." },
   { name: "b2bProspects", label: "B2B prospects" },
-  { name: "b2bPipelineValue", label: "B2B pipeline value", hint: "Compared against your revenue below to show how many multiples of revenue are currently in your B2B pipeline." },
+  // b2bPipelineValue: b2bPipelineCoveragePct (metrics.ts) divides this by the general `revenue`
+  // field above (not b2bRevenue, which renders directly below it in this group) -- a hint saying
+  // "compared against your revenue below" would point at the wrong field. Left unresolved rather
+  // than invent a corrected phrasing; no hint.
+  { name: "b2bPipelineValue", label: "B2B pipeline value" },
   { name: "b2bRevenue", label: "B2B revenue" },
   { name: "b2cRevenue", label: "B2C revenue" },
   { name: "complaints", label: "Complaints" },

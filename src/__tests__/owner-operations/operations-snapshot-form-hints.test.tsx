@@ -10,8 +10,12 @@
  * string is non-empty.
  *
  * Source cross-references:
- * - staffHours / idleHours: idleRatePct = idleHours / staffHours (metrics.ts), confirming idle
- *   hours are a subset of the total staff hours, not a separate headcount.
+ * - staffHours: required reading for idleRatePct/ordersPerStaffHour (metrics.ts) to be coherent
+ *   rates.
+ * - idleHours: intentionally has no hint. idleRatePct = idleHours / staffHours (metrics.ts) is
+ *   only a ratio -- it does not establish what counts as "idle" or that idle hours are drawn from
+ *   the staffHours total, and no type comment defines it either. Left unresolved rather than
+ *   invented.
  * - machineCapacityUnits: types.ts's own comment ("equipment capacity (units processable this
  *   period)").
  * - deliveryAttempts: deliverySuccessRatePct's base falls back to ordersCompleted when
@@ -31,14 +35,13 @@ const BIZ_A = { id: "biz-a", name: "Acme Bakery", currency: "USD" };
 const EXPECTED_HINTS: Record<string, string> = {
   staffHours: "Total hours worked by all staff combined this period.",
   machineCapacityUnits: "Maximum units your equipment could process this period.",
-  idleHours: "Hours from the staff hours above where there was no work to do.",
   deliveryAttempts: "Leave blank to measure delivery success against completed orders instead.",
   inventoryShortages: "Number of stockout events (times you ran out of stock) this period.",
   sopChecks: "Total number of SOP (Standard Operating Procedure) checks expected this period.",
   sopMisses: "How many of the expected checks above were missed or not completed.",
 };
 
-const FIELDS_WITHOUT_A_HINT = ["ordersReceived", "ordersCompleted", "ordersDelayed", "reworkCount", "complaints", "deliveryFailures"];
+const FIELDS_WITHOUT_A_HINT = ["ordersReceived", "ordersCompleted", "ordersDelayed", "reworkCount", "complaints", "idleHours", "deliveryFailures"];
 
 function installFetchMock() {
   vi.stubGlobal(

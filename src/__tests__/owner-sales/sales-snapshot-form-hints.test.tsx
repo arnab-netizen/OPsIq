@@ -26,8 +26,10 @@
  * - newCustomers/repeatCustomers/lostCustomers: activeCustomers() = newCustomers + repeatCustomers,
  *   and lostCustomerRatePct = lost / (active + lost) -- purely the summation/ratio relationship,
  *   without asserting each field's own lifetime-history definition.
- * - b2bPipelineValue: b2bPipelineCoveragePct = b2bPipelineValue / revenue -- purely the ratio
- *   relationship, without asserting deal-stage semantics ("not yet closed").
+ * - b2bPipelineValue: intentionally has no hint. b2bPipelineCoveragePct divides this by the
+ *   general `revenue` field (not `b2bRevenue`, which renders directly below it in this group) --
+ *   a hint saying "compared against your revenue below" would point at the wrong field. Left
+ *   unresolved rather than invent a corrected phrasing.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, screen, fireEvent } from "@testing-library/react";
@@ -42,10 +44,9 @@ const EXPECTED_HINTS: Record<string, string> = {
   newCustomers: "New customers plus repeat customers below should add up to your active customers this period.",
   repeatCustomers: "Added with new customers above to total your active customers this period.",
   lostCustomers: "Added with active customers above when calculating this period's customer-loss rate.",
-  b2bPipelineValue: "Compared against your revenue below to show how many multiples of revenue are currently in your B2B pipeline.",
 };
 
-const FIELDS_WITHOUT_A_HINT = ["leads", "orders", "revenue", "b2bProspects", "b2bRevenue", "b2cRevenue", "complaints", "discountAmount", "refundAmount", "staffCount"];
+const FIELDS_WITHOUT_A_HINT = ["leads", "orders", "revenue", "b2bProspects", "b2bPipelineValue", "b2bRevenue", "b2cRevenue", "complaints", "discountAmount", "refundAmount", "staffCount"];
 
 function installFetchMock() {
   vi.stubGlobal(

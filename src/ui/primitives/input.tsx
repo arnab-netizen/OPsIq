@@ -12,9 +12,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   function Input({ label, error, hint, className = "", id, "aria-describedby": ariaDescribedBy, ...props }, ref) {
     const generatedId = useId();
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-") ?? generatedId;
-    // The visible hint/error text below was previously rendered with no programmatic link to the
-    // input, so a screen-reader user never heard it (visual-only affordance). One description id
-    // covers both, since only one of the two is ever rendered at a time.
+    // The hint/error text previously had no programmatic description association with the input.
+    // One description id covers both, since only one of the two is ever rendered at a time.
     //
     // The id is derived from `generatedId` (useId(), guaranteed unique per rendered instance),
     // never from `inputId` -- `inputId` falls back to a label-derived slug when no explicit `id`
