@@ -29,7 +29,7 @@ If you've only ever checked one of the two, you've only ever seen half the pictu
 
 ## Why "profitable" doesn't mean "already in the bank"
 
-The most common mix-up comes down to accounting method. If your business uses **accrual accounting**, a sale can count toward your profit when it's earned, even if the customer hasn't paid yet — before the customer actually pays. Under **cash-basis accounting**, that same sale generally isn't counted until the cash actually arrives. Which method your books use changes *when* a sale shows up as profit — but either way, being counted as profit isn't the same as being sitting in your bank account.
+The most common mix-up comes down to accounting method. If your business uses **accrual accounting**, a sale can count toward your profit when it's earned, even if the customer hasn't paid yet. Under **cash-basis accounting**, that same sale generally isn't counted until the cash actually arrives. Which method your books use changes *when* a sale shows up as profit — but either way, being counted as profit isn't the same as being sitting in your bank account.
 
 If a customer takes 60 days to pay an invoice that already counted toward this month's profit, that revenue can be perfectly real on paper today and still be two months away from your bank account. Multiply that across a few slow-paying customers and you can be genuinely, honestly profitable while genuinely, uncomfortably short on cash.
 
@@ -80,7 +80,7 @@ Table: Worked example — cash position (illustrative)
 
 On cash currently available, this business is **$5,000 short** of the $7,000 coming due. Whether that turns into an actual shortfall depends heavily on when the $6,500 in outstanding receivables gets collected — if both customers paid on time, closing cash would have been $8,500, comfortably covering what's owed. As it stands: **profitable for the month, but carrying real liquidity risk because collection is lagging.** The problem here isn't that the business is unprofitable. It's that $6,500 is stuck outside the bank account, and the next 30 days depend on whether that gets resolved.
 
-*This example is deliberately simplified to isolate the receivables-timing effect. It assumes: the $28,000 of revenue is assumed to have been earned and recognized under accrual accounting during the month, even though $6,500 remained uncollected at month-end; no receivables from a prior period were collected during the month; every listed cost was paid in cash during the same month; and there's no depreciation, capital spending, loan principal repayment, owner draw, other working-capital movement, other income/expense, or separate tax adjustment folded in. A real month usually has more moving parts — this isolates one, on purpose.*
+*This example is deliberately simplified to isolate the receivables-timing effect. It assumes: the $28,000 of revenue was earned and recognized under accrual accounting during the month, even though $6,500 remained uncollected at month-end; no receivables from a prior period were collected during the month; every listed cost was paid in cash during the same month; and there's no depreciation, capital spending, loan principal repayment, owner draw, other working-capital movement, other income/expense, or separate tax adjustment folded in. A real month usually has more moving parts — this isolates one, on purpose.*
 
 ## Your self-check
 
