@@ -8,16 +8,26 @@
  * render no hint, and confirms each rendered hint is programmatically associated with its input
  * (not just visually adjacent) -- it does not merely assert every hint string is non-empty.
  *
+ * Hints are deliberately narrow: each states only the computed relationship a formula/fallback
+ * actually establishes between two fields, never a business-process claim (what makes a lead
+ * "qualified", whether a customer is new "for the first time ever", whether a pipeline deal is
+ * "closed") that the schema does not enforce and no source comment states. `leads` itself has no
+ * hint -- the only genuine ambiguity was what separates it from `qualifiedLeads`, which
+ * `qualifiedLeads`'s own hint now covers without asserting a subset relationship the schema
+ * doesn't enforce (they are independent, unvalidated optional fields).
+ *
  * Source cross-references:
- * - qualifiedLeads / leads: qualifiedConversionPct and leadToSaleConversionPct
- *   (src/domain/owner-sales/metrics.ts) are two distinct funnel ratios, confirming qualifiedLeads
- *   is a subset of leads, not a separate count.
+ * - qualifiedLeads: unlike averageOrderValue, there is no fallback/derivation from `leads` in
+ *   metrics.ts -- qualifiedConversionPct and leadToSaleConversionPct are two independently
+ *   computed funnel ratios, establishing only that the two fields are tracked and used
+ *   separately, not that one is a subset of the other.
  * - averageOrderValue: types.ts's own comment ("optional direct (else derived from
  *   revenue/orders)") and averageOrderValue()'s fallback in metrics.ts.
  * - newCustomers/repeatCustomers/lostCustomers: activeCustomers() = newCustomers + repeatCustomers,
- *   and lostCustomerRatePct = lost / (active + lost) -- lost customers placed no order this period.
- * - b2bPipelineValue: b2bPipelineCoveragePct = b2bPipelineValue / revenue, confirming pipeline
- *   value is distinct from (not counted within) realized b2bRevenue.
+ *   and lostCustomerRatePct = lost / (active + lost) -- purely the summation/ratio relationship,
+ *   without asserting each field's own lifetime-history definition.
+ * - b2bPipelineValue: b2bPipelineCoveragePct = b2bPipelineValue / revenue -- purely the ratio
+ *   relationship, without asserting deal-stage semantics ("not yet closed").
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, screen, fireEvent } from "@testing-library/react";
@@ -27,16 +37,15 @@ import OwnerSalesPage from "@/app/(authenticated)/owner/sales/page";
 const BIZ_A = { id: "biz-a", name: "Acme Bakery", currency: "USD" };
 
 const EXPECTED_HINTS: Record<string, string> = {
-  leads: "All inquiries or contacts this period, before qualifying them.",
-  qualifiedLeads: "Leads you've screened as good prospects — a subset of the leads above, not a separate count.",
+  qualifiedLeads: "Tracked as its own number, not calculated from Leads above -- used for a separate conversion-rate measurement.",
   averageOrderValue: "Leave blank to calculate this automatically from revenue and orders. Enter a value only if you track it separately.",
-  newCustomers: "Customers who ordered from you for the first time this period.",
-  repeatCustomers: "Existing customers who ordered again this period.",
-  lostCustomers: "Customers who had ordered before but placed no order this period.",
-  b2bPipelineValue: "Value of B2B deals still in progress, not yet closed — separate from the B2B revenue you've already earned below.",
+  newCustomers: "New customers plus repeat customers below should add up to your active customers this period.",
+  repeatCustomers: "Added with new customers above to total your active customers this period.",
+  lostCustomers: "Added with active customers above when calculating this period's customer-loss rate.",
+  b2bPipelineValue: "Compared against your revenue below to show how many multiples of revenue are currently in your B2B pipeline.",
 };
 
-const FIELDS_WITHOUT_A_HINT = ["orders", "revenue", "b2bProspects", "b2bRevenue", "b2cRevenue", "complaints", "discountAmount", "refundAmount", "staffCount"];
+const FIELDS_WITHOUT_A_HINT = ["leads", "orders", "revenue", "b2bProspects", "b2bRevenue", "b2cRevenue", "complaints", "discountAmount", "refundAmount", "staffCount"];
 
 function installFetchMock() {
   vi.stubGlobal(

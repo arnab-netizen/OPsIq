@@ -15,7 +15,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     // The visible hint/error text below was previously rendered with no programmatic link to the
     // input, so a screen-reader user never heard it (visual-only affordance). One description id
     // covers both, since only one of the two is ever rendered at a time.
-    const descriptionId = error || hint ? `${inputId}-description` : undefined;
+    //
+    // The id is derived from `generatedId` (useId(), guaranteed unique per rendered instance),
+    // never from `inputId` -- `inputId` falls back to a label-derived slug when no explicit `id`
+    // prop is given, so two Inputs sharing a label with neither passing `id` (e.g. two "Complaints"
+    // fields on different pages rendered in the same tree, or a future repeated-row form) would
+    // otherwise collide on the same `${inputId}-description` id and each could end up describing
+    // the wrong field, or two elements sharing one id (invalid HTML, ambiguous for assistive tech).
+    const descriptionId = error || hint ? `${generatedId}-description` : undefined;
 
     return (
       <div className="flex flex-col gap-1.5">

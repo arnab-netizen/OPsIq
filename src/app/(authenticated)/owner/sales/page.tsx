@@ -71,20 +71,26 @@ async function api(path: string, init?: RequestInit) {
 
 // Field names match salesSnapshotCreateSchema (Slice 5). `hint` is added only where the field
 // name alone is genuinely ambiguous and metrics.ts/types.ts supports a specific clarification --
-// see sales-snapshot-form-hints.test.tsx for the source each hint is checked against. Fields with
-// no listed ambiguity (orders, revenue, b2b/b2c revenue split, complaints, discounts, refunds,
-// staff count) are left without a hint rather than restating the label.
+// see sales-snapshot-form-hints.test.tsx for the source each hint is checked against. Hints are
+// deliberately narrow: each states only what a formula, fallback, or type comment in
+// domain/owner-sales/{types,metrics}.ts actually establishes (a computed relationship between two
+// fields), never a business-process claim (what counts as a "qualified" lead, whether a customer
+// is new "for the first time ever", whether a pipeline deal is "closed") that the schema doesn't
+// enforce and no source comment states. Where the only available clarification would require
+// inventing such a claim, the field is left without a hint. Fields with no listed ambiguity
+// (orders, revenue, b2b/b2c revenue split, complaints, discounts, refunds, staff count) are left
+// without a hint rather than restating the label.
 const SALES_FIELDS: Array<{ name: string; label: string; hint?: string }> = [
-  { name: "leads", label: "Leads", hint: "All inquiries or contacts this period, before qualifying them." },
-  { name: "qualifiedLeads", label: "Qualified leads", hint: "Leads you've screened as good prospects — a subset of the leads above, not a separate count." },
+  { name: "leads", label: "Leads" },
+  { name: "qualifiedLeads", label: "Qualified leads", hint: "Tracked as its own number, not calculated from Leads above -- used for a separate conversion-rate measurement." },
   { name: "orders", label: "Orders" },
   { name: "revenue", label: "Revenue" },
   { name: "averageOrderValue", label: "Average order value", hint: "Leave blank to calculate this automatically from revenue and orders. Enter a value only if you track it separately." },
-  { name: "newCustomers", label: "New customers", hint: "Customers who ordered from you for the first time this period." },
-  { name: "repeatCustomers", label: "Repeat customers", hint: "Existing customers who ordered again this period." },
-  { name: "lostCustomers", label: "Lost customers", hint: "Customers who had ordered before but placed no order this period." },
+  { name: "newCustomers", label: "New customers", hint: "New customers plus repeat customers below should add up to your active customers this period." },
+  { name: "repeatCustomers", label: "Repeat customers", hint: "Added with new customers above to total your active customers this period." },
+  { name: "lostCustomers", label: "Lost customers", hint: "Added with active customers above when calculating this period's customer-loss rate." },
   { name: "b2bProspects", label: "B2B prospects" },
-  { name: "b2bPipelineValue", label: "B2B pipeline value", hint: "Value of B2B deals still in progress, not yet closed — separate from the B2B revenue you've already earned below." },
+  { name: "b2bPipelineValue", label: "B2B pipeline value", hint: "Compared against your revenue below to show how many multiples of revenue are currently in your B2B pipeline." },
   { name: "b2bRevenue", label: "B2B revenue" },
   { name: "b2cRevenue", label: "B2C revenue" },
   { name: "complaints", label: "Complaints" },

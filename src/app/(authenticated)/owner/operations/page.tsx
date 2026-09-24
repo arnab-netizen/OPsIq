@@ -92,8 +92,11 @@ async function api(path: string, init?: RequestInit) {
 // Field names match operationsSnapshotCreateSchema (Slice 5). `hint` is added only where the
 // field name alone is genuinely ambiguous and metrics.ts/types.ts supports a specific
 // clarification -- see operations-snapshot-form-hints.test.tsx for the source each hint is
-// checked against. Fields with no listed ambiguity (orders received/completed/delayed, rework,
-// complaints, delivery failures) are left without a hint rather than restating the label.
+// checked against. Hints are deliberately narrow: each states only what a formula, fallback, or
+// type comment in domain/owner-operations/{types,metrics}.ts actually establishes (a computed
+// relationship between two fields), never an invented process claim the schema doesn't enforce.
+// Fields with no listed ambiguity (orders received/completed/delayed, rework, complaints,
+// delivery failures) are left without a hint rather than restating the label.
 const OPERATIONS_FIELDS: Array<{ name: string; label: string; hint?: string }> = [
   { name: "ordersReceived", label: "Orders received" },
   { name: "ordersCompleted", label: "Orders completed" },
