@@ -210,8 +210,9 @@ function connectorRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("[unit] runQuickBooksSync — lease CAS", () => {
-  it("returns NO_WORK immediately when the lease is already held (no other DB work attempted)", async () => {
+  it("returns NO_WORK immediately when the connector is not ACTIVE (no follow-up scheduled)", async () => {
     ownerConnectorUpdateMany.mockResolvedValueOnce({ count: 0 });
+    ownerConnectorFindFirst.mockResolvedValueOnce({ status: "DISCONNECTED", syncLeaseExpiresAt: null });
     const client = fakeClient();
     const result = await runQuickBooksSync({
       workspaceId: WORKSPACE,
@@ -222,7 +223,31 @@ describe("[unit] runQuickBooksSync — lease CAS", () => {
       deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
     });
     expect(result.status).toBe("NO_WORK");
-    expect(ownerConnectorFindFirst).not.toHaveBeenCalled();
+    expect(scheduledTaskCreate).not.toHaveBeenCalled();
+  });
+
+  it("when the lease is HELD (connector ACTIVE, lease not yet expired), schedules ONE deferred follow-up sync keyed on the observed lease expiry and returns NO_WORK", async () => {
+    ownerConnectorUpdateMany.mockResolvedValueOnce({ count: 0 });
+    const leaseExpiresAt = new Date("2026-09-25T10:04:00.000Z"); // in the future relative to "now" below
+    ownerConnectorFindFirst.mockResolvedValueOnce({ status: "ACTIVE", syncLeaseExpiresAt: leaseExpiresAt });
+    const client = fakeClient();
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "WEBHOOK",
+      requestedBy: ACTOR,
+      runId: "run-deferred-1",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+    expect(result.status).toBe("NO_WORK");
+    expect(result.summary).toMatch(/deferred/i);
+    const deferredCall = scheduledTaskCreate.mock.calls.find(
+      (c) => (c[0] as { data: { idempotencyKey: string } }).data.idempotencyKey === `quickbooks-sync:${CONNECTOR}:deferred:${leaseExpiresAt.toISOString()}`
+    );
+    expect(deferredCall).toBeDefined();
+    const payload = (deferredCall![0] as { data: { payload: unknown; scheduledFor: Date } }).data;
+    expect(payload.payload).toMatchObject({ connectorId: CONNECTOR, trigger: "WEBHOOK", requestedBy: ACTOR });
+    expect(payload.scheduledFor.getTime()).toBe(leaseExpiresAt.getTime() + 30_000);
   });
 
   it("releases the lease it set, in finally, on a clean SUCCESS run", async () => {

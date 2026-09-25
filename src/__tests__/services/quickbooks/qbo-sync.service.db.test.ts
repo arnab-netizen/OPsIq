@@ -13,9 +13,9 @@
  *   TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55432/opsiq_qbo_test \
  *   npx vitest run src/__tests__/services/quickbooks/qbo-sync.service.db.test.ts
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
+import { db, getDbInstance } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { teardownOwnerBusiness } from "../../test-helpers/owner-business-teardown";
 import { createBusiness } from "@/services/founder-recovery/business.service";
@@ -603,15 +603,36 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] F27/F28 — quickBooksSyncTaskHandle
       },
     });
     const handlers = new Map<string, TaskHandler>([
-      [TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client, forceFailureStatePersistError: true })],
+      [TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })],
     ]);
     const scheduler = new DatabaseSchedulerProvider();
 
     // ── Attempt 1: FORBIDDEN classification, but the FAILED-state persistence
-    // transaction is forced to reject (test seam) — a local durability
-    // failure, so this must be treated as retryable, never as a recorded
-    // terminal failure, and must never touch the connector row at all.
-    await scheduler.processTaskById(taskId, handlers);
+    // transaction is made to reject from the TEST side (a real db.$transaction
+    // spy, no production test seam) — a local durability failure, so this
+    // must be treated as retryable, never as a recorded terminal failure,
+    // and must never touch the connector row at all.
+    //
+    // client.companyInfo() throws immediately (before preferences(), before
+    // the CompanyInfo/Preferences upsert transaction, before any initial/CDC
+    // page transaction) — handleSyncFailure's own failure-state persist is
+    // therefore the ONLY db.$transaction call this attempt makes, so failing
+    // exactly its first (and only) invocation unambiguously targets it.
+    // `db` (src/lib/db.ts) is a lazy-init Proxy whose `get` trap always reads
+    // straight through to the real, shared Prisma client instance once
+    // initialized — spying on `db` itself lands the mock on the Proxy's own
+    // (ignored) target object, never observed by later `db.$transaction(...)`
+    // calls. getDbInstance() returns that SAME real client instance, so
+    // spying on IT is what the Proxy's get trap actually reads.
+    const realDb = await getDbInstance();
+    const txSpy = vi.spyOn(realDb, "$transaction").mockImplementationOnce(async () => {
+      throw new Error("test-injected: simulated failure-state persistence rejection");
+    });
+    try {
+      await scheduler.processTaskById(taskId, handlers);
+    } finally {
+      txSpy.mockRestore(); // restore BEFORE attempt 2 — its persistence must work for real
+    }
 
     const afterAttempt1Task = await db.scheduledTask.findUnique({ where: { id: taskId } });
     expect(afterAttempt1Task?.status).toBe("pending"); // retried, not terminally failed
@@ -625,8 +646,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] F27/F28 — quickBooksSyncTaskHandle
     const terminalAfter1 = auditAfter1.find((a) => (a.payload as { terminal?: boolean } | null)?.terminal === true);
     expect(terminalAfter1).toBeUndefined(); // no terminal "failed" audit row from this attempt
 
-    // ── Attempt 2: same FORBIDDEN classification, persistence now works
-    // (the seam is off) — must terminally fail for real this time.
+    // ── Attempt 2: same FORBIDDEN classification, persistence now works for
+    // real (the spy was restored above) — must terminally fail for real.
     await db.scheduledTask.update({ where: { id: taskId }, data: { scheduledFor: new Date(Date.now() - 1000) } }); // make it due now
     const handlersAttempt2 = new Map<string, TaskHandler>([
       [TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })],
