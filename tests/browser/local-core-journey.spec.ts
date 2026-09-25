@@ -15,11 +15,20 @@
  * src/__tests__/**\/*.test.ts and is not what this test is proving.
  */
 import { test, expect } from "@playwright/test";
+import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
 import { randomUUID } from "crypto";
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
-const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(DATABASE_URL) && !/neon\.tech|amazonaws|\.aws\./.test(DATABASE_URL);
+// Same guard as the vitest harness (a substring regex could be satisfied by "?x=@localhost:" or a
+// "?host=" override while the driver connects elsewhere).
+const isLocal = (() => {
+  try {
+    return resolveTestDatabase({ ...process.env, TEST_WITH_DB: "true", DATABASE_URL }).target === "loopback";
+  } catch {
+    return false;
+  }
+})();
 
 test.describe("Local core journey: signup through Home, Priorities, Actions", () => {
   test.skip(!isLocal, "Refuses to run except against an explicit local Postgres DATABASE_URL.");

@@ -15,6 +15,8 @@
  * AFTER scripts/seed-trust-journey-repro.ts on any workspace reset -- that script deletes and
  * recreates both businesses fresh, which cascades away everything seeded here.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import { randomUUID } from "crypto";
 
 const WORKSPACE_ID = "61000000-0000-0000-0000-0000000000a1";
