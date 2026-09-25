@@ -65,7 +65,10 @@ vi.mock("@/services/integration-fabric/integration-event.service", () => ({
 // but the module still statically imports them — stub minimally so the import resolves
 // even if either module is mid-flight elsewhere in this workspace.
 vi.mock("@/services/quickbooks/qbo-client", () => ({ createQboClient: vi.fn() }));
-vi.mock("@/services/quickbooks/qbo-token.service", () => ({ createQboTokenProvider: vi.fn() }));
+vi.mock("@/services/quickbooks/qbo-token.service", () => ({
+  createQboTokenProvider: vi.fn(),
+  REFRESH_FAILED_MESSAGE: "QuickBooks authorization expired or was revoked. Reconnect QuickBooks.",
+}));
 
 import {
   requestQuickBooksSync,
@@ -698,7 +701,7 @@ describe("[unit] runQuickBooksSync — failure classification", () => {
     expect(result.status).toBe("FAILED");
     // F25: persisted inside a transaction (atomically with syncState), not a bare db.ownerConnector.update.
     expect(txOwnerConnectorUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ syncFailureMessage: "Reconnect QuickBooks" }) })
+      expect.objectContaining({ data: expect.objectContaining({ syncFailureMessage: "QuickBooks authorization expired or was revoked. Reconnect QuickBooks." }) })
     );
     const releaseCall = ownerConnectorUpdateMany.mock.calls.find(
       (c) => (c[0] as { data?: { syncLeaseExpiresAt?: unknown } }).data?.syncLeaseExpiresAt === null

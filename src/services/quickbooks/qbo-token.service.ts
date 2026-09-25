@@ -143,7 +143,12 @@ const REFRESH_LEASE_MS = 30_000;
 const REFRESH_POLL_TIMEOUT_MS = 10_000;
 const REFRESH_POLL_INTERVAL_MS = 250;
 
-const REFRESH_FAILED_MESSAGE = "QuickBooks authorization expired or was revoked. Reconnect QuickBooks.";
+// Exported (export-only change) so qbo-sync.service.ts's own AUTH-failure
+// summary text can reuse this exact wording instead of maintaining a second,
+// shorter copy that could drift from what the token layer itself persists
+// as OwnerConnector.syncFailureMessage when it transitions the connector to
+// REFRESH_FAILED — see performRefresh()/transitionToRefreshFailed() below.
+export const REFRESH_FAILED_MESSAGE = "QuickBooks authorization expired or was revoked. Reconnect QuickBooks.";
 
 function defaultSleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

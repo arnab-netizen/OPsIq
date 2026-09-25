@@ -57,7 +57,7 @@ import {
   type QboCdcResult,
 } from "@/domain/quickbooks/qbo-contracts";
 import { createQboClient } from "@/services/quickbooks/qbo-client";
-import { createQboTokenProvider } from "@/services/quickbooks/qbo-token.service";
+import { createQboTokenProvider, REFRESH_FAILED_MESSAGE } from "@/services/quickbooks/qbo-token.service";
 import { materializeQuickBooksSnapshots } from "@/services/quickbooks/qbo-materialize.service";
 import { ingestIntegrationEvent } from "@/services/integration-fabric/integration-event.service";
 
@@ -129,11 +129,13 @@ export async function requestQuickBooksSync(input: RequestQuickBooksSyncInput): 
   const idempotencyKey = buildSyncIdempotencyKey(connector.id, input.trigger, input.dedupKey, now);
   const requestedBy = input.trigger === "MANUAL" || input.trigger === "INITIAL" ? input.actorId : connector.registeredBy;
 
-  const existing = await db.scheduledTask.findUnique({ where: { idempotencyKey }, select: { id: true } });
-
   const payload: QboSyncTaskPayload = { connectorId: connector.id, trigger: input.trigger, requestedBy };
   const scheduler = new DatabaseSchedulerProvider();
-  const taskId = await scheduler.schedule({
+  // scheduleIdempotent is P2002 race-safe: no separate pre-findUnique (which
+  // was TOCTOU — a concurrent caller could win the create between our read
+  // and our create) — the unique idempotencyKey constraint itself is the
+  // single arbiter of "created vs. already existed".
+  const { id: taskId, created } = await scheduler.scheduleIdempotent({
     taskName: TASK_NAME_QUICKBOOKS_SYNC,
     payload: payload as unknown as Record<string, unknown>,
     scheduledFor: now,
@@ -142,8 +144,8 @@ export async function requestQuickBooksSync(input: RequestQuickBooksSyncInput): 
     idempotencyKey,
   });
 
-  const deduplicated = existing !== null;
-  if (!deduplicated) {
+  const deduplicated = !created;
+  if (created) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.QUICKBOOKS_SYNC_REQUESTED,
       workspaceId: input.workspaceId,
@@ -609,8 +611,6 @@ async function runReportsAndMaterialize(params: {
 
   return { periodKey, issues: result.issues };
 }
-
-const REFRESH_FAILED_MESSAGE = "Reconnect QuickBooks";
 
 /**
  * Shared continuation-scheduling used by BOTH the initial-pull budget-exceeded

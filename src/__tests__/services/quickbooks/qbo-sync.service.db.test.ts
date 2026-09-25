@@ -590,4 +590,144 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] F27/F28 — quickBooksSyncTaskHandle
     await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
     await db.ownerConnector.delete({ where: { id: connector.id } });
   }, 30_000);
+
+  it("F28 two-phase — attempt 1 (persistence rejects) retries without corrupting connector state; attempt 2 (persistence works) terminally fails with the real classification", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const { taskId } = await seedPendingTask(workspaceId, connector.id);
+
+    const client = emptyClient({
+      companyInfo: async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      },
+    });
+    const handlers = new Map<string, TaskHandler>([
+      [TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client, forceFailureStatePersistError: true })],
+    ]);
+    const scheduler = new DatabaseSchedulerProvider();
+
+    // ── Attempt 1: FORBIDDEN classification, but the FAILED-state persistence
+    // transaction is forced to reject (test seam) — a local durability
+    // failure, so this must be treated as retryable, never as a recorded
+    // terminal failure, and must never touch the connector row at all.
+    await scheduler.processTaskById(taskId, handlers);
+
+    const afterAttempt1Task = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(afterAttempt1Task?.status).toBe("pending"); // retried, not terminally failed
+    expect(afterAttempt1Task?.attempts).toBe(1);
+
+    const afterAttempt1Connector = await db.ownerConnector.findUnique({ where: { id: connector.id } });
+    expect(afterAttempt1Connector?.syncFailureMessage).toBeNull(); // untouched — never overwritten with the simulated persistence-failure text
+
+    const auditAfter1 = await db.auditEvent.findMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    expect(auditAfter1.some((a) => a.eventName === "scheduled_task.retry_scheduled")).toBe(true);
+    const terminalAfter1 = auditAfter1.find((a) => (a.payload as { terminal?: boolean } | null)?.terminal === true);
+    expect(terminalAfter1).toBeUndefined(); // no terminal "failed" audit row from this attempt
+
+    // ── Attempt 2: same FORBIDDEN classification, persistence now works
+    // (the seam is off) — must terminally fail for real this time.
+    await db.scheduledTask.update({ where: { id: taskId }, data: { scheduledFor: new Date(Date.now() - 1000) } }); // make it due now
+    const handlersAttempt2 = new Map<string, TaskHandler>([
+      [TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })],
+    ]);
+    await scheduler.processTaskById(taskId, handlersAttempt2);
+
+    const afterAttempt2Task = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(afterAttempt2Task?.status).toBe("failed");
+    expect(afterAttempt2Task?.attempts).toBe(2);
+
+    const afterAttempt2Connector = await db.ownerConnector.findUnique({ where: { id: connector.id } });
+    expect(afterAttempt2Connector?.syncFailureMessage).toContain("403");
+    const syncState = afterAttempt2Connector?.syncState as { lastRunStatus?: string } | null;
+    expect(syncState?.lastRunStatus).toBe("FAILED");
+
+    const auditAfter2 = await db.auditEvent.findMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    const terminalAfter2 = auditAfter2.find((a) => a.eventName === "scheduled_task.failed" && (a.payload as { terminal?: boolean } | null)?.terminal === true);
+    expect(terminalAfter2).toBeDefined();
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+
+  it("F27 — AUTH ends 'failed' (no retry); connector.status stays REFRESH_FAILED (the token layer's own transition — this sync code never touches `status`)", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const { taskId, scheduledFor } = await seedPendingTask(workspaceId, connector.id);
+
+    // Simulates the REAL createQboTokenProvider's own documented behavior on
+    // a dead refresh token: it transitions the connector to REFRESH_FAILED
+    // (its own separate, already-committed write) and THEN the AUTH error
+    // reaches the client call this sync code awaits. A fake client is used
+    // here (no real Intuit network call), but reproduces that exact
+    // documented two-part side effect so this test proves what
+    // handleSyncFailure does with it: it must return FAILED (no retry) and
+    // must NEVER touch/revert the `status` column itself.
+    const client = emptyClient({
+      companyInfo: async () => {
+        await db.ownerConnector.update({
+          where: { id: connector.id },
+          data: { status: "REFRESH_FAILED", syncFailureMessage: "QuickBooks authorization expired or was revoked. Reconnect QuickBooks." },
+        });
+        throw new QboApiError({ kind: "AUTH", message: "QuickBooks authorization expired or was revoked. Reconnect QuickBooks." });
+      },
+    });
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })]]);
+
+    const scheduler = new DatabaseSchedulerProvider();
+    await scheduler.processTaskById(taskId, handlers);
+
+    const row = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(row?.status).toBe("failed");
+    expect(row?.attempts).toBe(1);
+    expect(row?.scheduledFor.getTime()).toBe(scheduledFor.getTime()); // never rescheduled
+
+    const connectorAfter = await db.ownerConnector.findUnique({ where: { id: connector.id } });
+    expect(connectorAfter?.status).toBe("REFRESH_FAILED");
+
+    const auditRows = await db.auditEvent.findMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    const terminalAudit = auditRows.find((a) => a.eventName === "scheduled_task.failed" && (a.payload as { terminal?: boolean } | null)?.terminal === true);
+    expect(terminalAudit).toBeDefined();
+    expect(auditRows.some((a) => a.eventName === "scheduled_task.retry_scheduled")).toBe(false);
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+
+  it("F27 — RATE_LIMITED ends 'pending' with backoff and a scheduled_task.retry_scheduled audit row", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const { taskId, scheduledFor } = await seedPendingTask(workspaceId, connector.id);
+
+    const client = emptyClient({
+      companyInfo: async () => {
+        throw new QboApiError({ kind: "RATE_LIMITED", message: "QuickBooks rate limit exceeded", retryAfterMs: 5000 });
+      },
+    });
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })]]);
+
+    const scheduler = new DatabaseSchedulerProvider();
+    await scheduler.processTaskById(taskId, handlers);
+
+    const row = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(row?.status).toBe("pending");
+    expect(row?.attempts).toBe(1);
+    expect(row?.scheduledFor.getTime()).toBeGreaterThan(scheduledFor.getTime()); // backoff pushed it into the future
+
+    const auditRows = await db.auditEvent.findMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    expect(auditRows.some((a) => a.eventName === "scheduled_task.retry_scheduled")).toBe(true);
+    const terminalAudit = auditRows.find((a) => (a.payload as { terminal?: boolean } | null)?.terminal === true);
+    expect(terminalAudit).toBeUndefined();
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
 });
