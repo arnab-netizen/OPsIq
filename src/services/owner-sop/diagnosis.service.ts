@@ -132,21 +132,30 @@ export async function runSopDiagnosis(
         select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true },
       });
       const continuity = planWithContinuity(actionRows, engagedPrior);
-      carriedForwardIds = continuity.carried.map((c) => c.prior.id);
-      // Re-attach each carried action to this cycle (finding + ranking re-evaluated) so every reader
-      // of the latest cycle sees the owner's in-flight work; audited in the same transaction.
+      carriedForwardIds = [];
+      // Re-attach each carried action to this cycle (ranking and wording re-evaluated) so every reader
+      // of the latest cycle sees the owner's in-flight work; audited in the same transaction. The
+      // original findingId is kept: it holds the baseline measured before the work started.
+      // Guarded by status: an action finished/cancelled meanwhile is not moved; a fresh proposal
+      // is created for it instead.
+      const recreate: typeof continuity.toCreate = [];
+      const movedPlanned = new Set<(typeof continuity.toCreate)[number]>();
       for (const c of continuity.carried) {
-        await tx.ownerSopAction.update({
-          where: { id: c.prior.id },
+        const moved = await tx.ownerSopAction.updateMany({
+          where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
           data: {
             cycleId,
-            findingId: c.planned.findingId,
+            description: c.planned.description,
+            verificationMethod: c.planned.verificationMethod,
+            expectedTimeframeDays: c.planned.expectedTimeframeDays,
             priorityScore: c.planned.priorityScore,
             expectedImpactScore: c.planned.expectedImpactScore,
             effortScore: c.planned.effortScore,
             confidence: c.planned.confidence,
           },
         });
+        if (moved.count === 0) continue;
+        movedPlanned.add(c.planned);
         await emitAuditEvent(
           {
             eventName: AUDIT_EVENTS.OWNER_SOP_ACTION_UPDATED,
@@ -163,8 +172,13 @@ export async function runSopDiagnosis(
           },
           tx
         );
+        carriedForwardIds.push(c.prior.id);
       }
-      if (continuity.toCreate.length > 0) await tx.ownerSopAction.createMany({ data: continuity.toCreate });
+      for (const c of continuity.carried) {
+        if (!movedPlanned.has(c.planned) && !recreate.includes(c.planned)) recreate.push(c.planned);
+      }
+      const toCreate = [...continuity.toCreate, ...recreate];
+      if (toCreate.length > 0) await tx.ownerSopAction.createMany({ data: toCreate });
     },
     { maxWait: 10000, timeout: 20000 }
   );

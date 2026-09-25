@@ -128,17 +128,16 @@ export async function runCycle(
         findingCode: r.finding.code,
       }));
     const continuity = planWithContinuity(actionSpecs, engagedPrior);
-    carriedForwardIds = continuity.carried.map((c) => c.prior.id);
+    carriedForwardIds = [];
+    // Re-attach (guarded by status; original findingId kept — its baseline predates the work).
+    const movedPlanned = new Set<(typeof actionSpecs)[number]>();
     for (const c of continuity.carried) {
-      await tx.recoveryAction.update({
-        where: { id: c.prior.id },
-        data: {
-          cycleId,
-          findingId: findingIdByCode[c.planned.findingCode] ?? null,
-          priority: c.planned.priority,
-          version: { increment: 1 },
-        },
+      const moved = await tx.recoveryAction.updateMany({
+        where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        data: { cycleId, priority: c.planned.priority, version: { increment: 1 } },
       });
+      if (moved.count === 0) continue;
+      movedPlanned.add(c.planned);
       await emitAuditEvent(
         {
           eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
@@ -155,10 +154,12 @@ export async function runCycle(
         },
         tx
       );
+      carriedForwardIds.push(c.prior.id);
     }
+    const recreate = continuity.carried.map((c) => c.planned).filter((p, i, all) => !movedPlanned.has(p) && all.indexOf(p) === i);
 
     const now = Date.now();
-    for (const a of continuity.toCreate) {
+    for (const a of [...continuity.toCreate, ...recreate]) {
       await tx.recoveryAction.create({
         data: {
           id: randomUUID(),

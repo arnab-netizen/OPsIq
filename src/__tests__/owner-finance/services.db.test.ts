@@ -250,4 +250,37 @@ describe("[db] Owner Finance services", () => {
 
     await teardownOwnerBusiness(businessId);
   });
+
+  it("[db] finishing an action left on an older cycle re-diagnoses the LATEST cycle's snapshot, never a stale one (round-3 audit P1-A)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const july = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle1 = await runFinanceDiagnosis(businessId, july.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    // Pretend a later diagnosis no longer raised this action's finding: it stays on cycle 1
+    // while a newer cycle (from a newer snapshot) becomes the latest.
+    const august = await createFinancialSnapshot(
+      businessId,
+      { ...leakySnapshot(), periodStart: "2026-05-01", periodEnd: "2026-05-31" },
+      actor,
+      workspaceId
+    );
+    const cycle2 = await runFinanceDiagnosis(businessId, august.id, actor, workspaceId);
+    await db.ownerFinanceAction.update({ where: { id: action.id }, data: { cycleId: cycle1.id } });
+
+    await updateFinanceAction(
+      action.id,
+      { status: "completed", completionNotes: "done", completionEvidence: ["ref"] },
+      actor,
+      workspaceId
+    );
+    const latest = await db.ownerFinanceCycle.findFirst({ where: { businessId, workspaceId }, orderBy: { sequenceNumber: "desc" } });
+    expect(latest!.sequenceNumber).toBe(cycle2.sequenceNumber + 1);
+    expect(latest!.snapshotId).toBe(august.id);
+
+    await teardownOwnerBusiness(businessId);
+  });
 });
+

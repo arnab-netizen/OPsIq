@@ -326,6 +326,9 @@ describe("[db] Owner Sales services", () => {
     const reevaluated = await db.ownerSalesAction.findFirst({ where: { id: inFlight.id } });
     expect(reevaluated!.priorityScore).toBe(inFlight.priorityScore);
     expect(reevaluated!.status).toBe("in_progress");
+    // The original finding (baseline measured before the work started) is kept, so the
+    // measured baseline does not drift with later diagnoses.
+    expect(reevaluated!.findingId).toBe(inFlight.findingId);
 
     const dash = await getSalesDashboard(workspaceId, businessId);
     const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === inFlight.id) as
