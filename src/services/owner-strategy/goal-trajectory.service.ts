@@ -95,6 +95,8 @@ export interface GoalAccelerationScore {
 
 const MS_PER_MONTH = 30.44 * 24 * 60 * 60 * 1000;
 const STALE_DAYS = 60;
+/** Projections beyond this horizon are reported as "not reachable at the current rate" (no date). */
+const MAX_PROJECTION_MONTHS = 1200;
 
 function extractMetric(period: TrailingPeriod, targetType: GoalTrajectoryInput["targetType"]): number | null {
   if (targetType === "REVENUE" || targetType === "MULTIPLE") return period.revenue;
@@ -205,6 +207,7 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
 
   let projectedMonthsToGoal: number | null = null;
   let currentTrajectoryDate: Date | null = null;
+  let beyondHorizon = false;
 
   if (lastValue >= input.targetAmount) {
     projectedMonthsToGoal = 0;
@@ -223,23 +226,28 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
   } else {
     // Solve: lastValue * (1 + rate)^n = target → n = ln(target/lastValue) / ln(1+rate)
     const n = Math.log(input.targetAmount / lastValue) / Math.log(1 + monthlyGrowthRate);
-    if (Number.isFinite(n)) {
+    if (Number.isFinite(n) && n <= MAX_PROJECTION_MONTHS) {
       projectedMonthsToGoal = Math.ceil(n);
       currentTrajectoryDate = new Date(now.getTime() + projectedMonthsToGoal * MS_PER_MONTH);
+    } else {
+      beyondHorizon = true;
+      rationale.push(`at the current growth rate the target is more than ${MAX_PROJECTION_MONTHS / 12} years away — no projected date`);
     }
   }
 
   const gapToClose = Math.max(0, input.targetAmount - lastValue);
   const requiredMonthlyImprovement = targetDatePassed ? null : gapToClose / ownerTimelineMonths;
 
-  const trajectoryMiss =
-    projectedMonthsToGoal !== null && projectedMonthsToGoal > ownerTimelineMonths * 1.2;
   const reached = lastValue >= input.targetAmount;
+  // A goal already reached is never a miss.
+  const trajectoryMiss =
+    !reached &&
+    (beyondHorizon || (projectedMonthsToGoal !== null && projectedMonthsToGoal > ownerTimelineMonths * 1.2));
   // No projection: a shrinking series is not on track; otherwise unknown. Never "true" without a projection.
   const onTrack: boolean | null = reached
     ? true
     : projectedMonthsToGoal === null
-      ? lastValue < firstValue
+      ? beyondHorizon || lastValue < firstValue
         ? false
         : monthlyGrowthRate !== null && monthlyGrowthRate <= 0
           ? false

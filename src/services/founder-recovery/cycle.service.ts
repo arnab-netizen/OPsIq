@@ -113,20 +113,48 @@ export async function runCycle(
     }
 
     // Continuity: an action the owner has taken on for the same finding is carried forward
-    // (re-prioritised), not duplicated (see action-continuity.ts).
-    const engagedPrior = (
+    // (re-attached to this cycle and re-prioritised, audited), not duplicated (see action-continuity.ts).
+    const engagedPrior: Array<{ id: string; cycleId: string; priority: string; findingCode: string }> = (
       await tx.recoveryAction.findMany({
         where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
-        select: { id: true, finding: { select: { code: true } } },
+        select: { id: true, cycleId: true, priority: true, finding: { select: { code: true } } },
       })
     )
       .filter((r: { finding: { code: string } | null }) => r.finding !== null)
-      .map((r: { id: string; finding: { code: string } }) => ({ id: r.id, findingCode: r.finding.code }));
+      .map((r: { id: string; cycleId: string; priority: string; finding: { code: string } }) => ({
+        id: r.id,
+        cycleId: r.cycleId,
+        priority: r.priority,
+        findingCode: r.finding.code,
+      }));
     const continuity = planWithContinuity(actionSpecs, engagedPrior);
-    carriedForwardIds = continuity.carried.map((c) => c.priorActionId);
-    // Re-evaluate each carried action's priority against this diagnosis.
+    carriedForwardIds = continuity.carried.map((c) => c.prior.id);
     for (const c of continuity.carried) {
-      await tx.recoveryAction.update({ where: { id: c.priorActionId }, data: { priority: c.planned.priority } });
+      await tx.recoveryAction.update({
+        where: { id: c.prior.id },
+        data: {
+          cycleId,
+          findingId: findingIdByCode[c.planned.findingCode] ?? null,
+          priority: c.planned.priority,
+          version: { increment: 1 },
+        },
+      });
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
+          actorId,
+          workspaceId,
+          entityType: "RecoveryAction",
+          entityId: c.prior.id,
+          payload: {
+            reason: "carried_forward_by_diagnosis",
+            fromCycleId: c.prior.cycleId,
+            toCycleId: cycleId,
+            priority: { from: c.prior.priority, to: c.planned.priority },
+          },
+        },
+        tx
+      );
     }
 
     const now = Date.now();

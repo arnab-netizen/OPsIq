@@ -116,8 +116,9 @@ export async function getCashflowDashboard(
 
   // Each action carries the value the diagnosis measured for its verification
   // metric (null when not measured) — the baseline an outcome is compared to.
-  // Actions the owner has taken on in earlier cycles stay visible (carried forward, listed
-  // first) until completed or cancelled — a re-diagnosis never hides in-flight owner work.
+  // Engaged actions are re-attached to the new cycle when their finding is still raised
+  // (action-continuity.ts). Any engaged action left on an earlier cycle is one the latest
+  // diagnosis no longer raises: still shown (after current actions) until finished or cancelled.
   const carriedActions = latestCycle
     ? await db.ownerCashflowAction.findMany({
         where: {
@@ -138,13 +139,13 @@ export async function getCashflowDashboard(
     ? {
         ...latestCycle,
         actions: [
+          ...latestCycle.actions.map(withMeasuredBaseline),
           ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
             ...withMeasuredBaseline(a),
             carriedFromCycleSequence: a.cycle.sequenceNumber,
             // false when the latest diagnosis no longer raises this finding (finish or cancel it).
             stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
           })),
-          ...latestCycle.actions.map(withMeasuredBaseline),
         ],
       }
     : null;

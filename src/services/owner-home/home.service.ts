@@ -9,7 +9,6 @@
  * guard and every read is workspace-scoped. Reuses the proven Business Condition
  * domain-score/action mappers — no scoring logic is duplicated here.
  */
-import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
@@ -112,30 +111,6 @@ export interface OwnerHomeResult {
 }
 
 /**
- * Actions the owner has taken on (assigned/in progress/blocked) in cycles older than the latest
- * one, kept only while the latest diagnosis still raises their finding. Diagnosis runs carry such
- * actions forward instead of duplicating them (action-continuity.ts), so the latest cycle alone no
- * longer lists them; an action whose finding is no longer raised is not current priority.
- */
-async function engagedActionsFromEarlierCycles(
-  delegate: { findMany: (args: unknown) => Promise<any[]> },
-  where: { businessId: string; workspaceId: string },
-  latestCycle: { id: string; findings: Array<{ code: string }> },
-  findingCodeOf: (row: any) => string | null,
-  include?: Record<string, unknown>
-): Promise<any[]> {
-  const flagged = new Set(latestCycle.findings.map((f) => f.code));
-  const rows = await delegate.findMany({
-    where: { ...where, cycleId: { not: latestCycle.id }, status: { in: [...ENGAGED_ACTION_STATUSES] } },
-    ...(include ? { include } : {}),
-  });
-  return rows.filter((r) => {
-    const code = findingCodeOf(r);
-    return code !== null && flagged.has(code);
-  });
-}
-
-/**
  * Build the §19 owner-home summary for a business (or the owner's most-recent one).
  * Deterministic and honest: no domain data ⇒ no summary (not invented).
  */
@@ -225,9 +200,7 @@ export async function getOwnerHome(
 
   if (finance) {
     domainScores.push(financeCycleToDomainScore(finance));
-    for (const a of [...finance.actions, ...(await engagedActionsFromEarlierCycles(db.ownerFinanceAction, where, finance, (r) => r.findingCode))]) {
-      actions.push(financeActionRowToOwnerAction(a));
-    }
+    for (const a of finance.actions) actions.push(financeActionRowToOwnerAction(a));
     for (const f of finance.findings) findings.push(rowToFinding(f, "finance"));
     for (const v of allFinanceVers) {
       verifications.push({
@@ -243,30 +216,19 @@ export async function getOwnerHome(
   }
   if (recovery) {
     domainScores.push(recoveryCycleToDomainScore(recovery, recovery.snapshot));
-    const carriedRecovery = await engagedActionsFromEarlierCycles(
-      db.recoveryAction,
-      where,
-      recovery,
-      (r) => r.finding?.code ?? null,
-      { finding: { select: { code: true } } }
-    );
-    for (const a of [...recovery.actions, ...carriedRecovery]) actions.push(recoveryActionRowToOwnerAction(a));
+    for (const a of recovery.actions) actions.push(recoveryActionRowToOwnerAction(a));
     // Recovery findings do not carry the spine findingType/impact shape → excluded from
     // the risk/opportunity lists (honest: nothing inferred). Recovery scores still count.
   }
   if (cashflow) {
     domainScores.push(cashflowCycleToDomainScore(cashflow));
-    for (const a of [...cashflow.actions, ...(await engagedActionsFromEarlierCycles(db.ownerCashflowAction, where, cashflow, (r) => r.findingCode))]) {
-      actions.push(cashflowActionRowToOwnerAction(a));
-    }
+    for (const a of cashflow.actions) actions.push(cashflowActionRowToOwnerAction(a));
     for (const f of cashflow.findings) findings.push(rowToFinding(f, "cashflow"));
     verifications.push(...flattenVerifications(cashflow, "cashflow"));
   }
   if (sales) {
     domainScores.push(salesCycleToDomainScore(sales));
-    for (const a of [...sales.actions, ...(await engagedActionsFromEarlierCycles(db.ownerSalesAction, where, sales, (r) => r.findingCode))]) {
-      actions.push(salesActionRowToOwnerAction(a));
-    }
+    for (const a of sales.actions) actions.push(salesActionRowToOwnerAction(a));
     for (const f of sales.findings) findings.push(rowToFinding(f, "sales"));
     for (const v of allSalesVers) {
       verifications.push({
@@ -282,9 +244,7 @@ export async function getOwnerHome(
   }
   if (operations) {
     domainScores.push(operationsCycleToDomainScore(operations));
-    for (const a of [...operations.actions, ...(await engagedActionsFromEarlierCycles(db.ownerOperationsAction, where, operations, (r) => r.findingCode))]) {
-      actions.push(operationsActionRowToOwnerAction(a));
-    }
+    for (const a of operations.actions) actions.push(operationsActionRowToOwnerAction(a));
     for (const f of operations.findings) findings.push(rowToFinding(f, "operations"));
     for (const v of allOperationsVers) {
       verifications.push({
@@ -300,9 +260,7 @@ export async function getOwnerHome(
   }
   if (sop) {
     domainScores.push(sopCycleToDomainScore(sop));
-    for (const a of [...sop.actions, ...(await engagedActionsFromEarlierCycles(db.ownerSopAction, where, sop, (r) => r.findingCode))]) {
-      actions.push(sopActionRowToOwnerAction(a));
-    }
+    for (const a of sop.actions) actions.push(sopActionRowToOwnerAction(a));
     for (const f of sop.findings) findings.push(rowToFinding(f, "sop"));
     for (const v of allSopVers) {
       verifications.push({
@@ -318,17 +276,13 @@ export async function getOwnerHome(
   }
   if (marketing) {
     domainScores.push(marketingCycleToDomainScore(marketing));
-    for (const a of [...marketing.actions, ...(await engagedActionsFromEarlierCycles(db.ownerMarketingAction, where, marketing, (r) => r.findingCode))]) {
-      actions.push(marketingActionRowToOwnerAction(a));
-    }
+    for (const a of marketing.actions) actions.push(marketingActionRowToOwnerAction(a));
     for (const f of marketing.findings) findings.push(rowToFinding(f, "marketing"));
     verifications.push(...flattenVerifications(marketing, "marketing"));
   }
   if (strategy) {
     domainScores.push(strategyCycleToDomainScore(strategy));
-    for (const a of [...strategy.actions, ...(await engagedActionsFromEarlierCycles(db.ownerStrategyAction, where, strategy, (r) => r.findingCode))]) {
-      actions.push(strategyActionRowToOwnerAction(a));
-    }
+    for (const a of strategy.actions) actions.push(strategyActionRowToOwnerAction(a));
     for (const f of strategy.findings) findings.push(rowToFinding(f, "strategy"));
     for (const v of allStrategyVers) {
       verifications.push({

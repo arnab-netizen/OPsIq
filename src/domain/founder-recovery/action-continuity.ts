@@ -9,8 +9,9 @@
  *
  * Rule:
  * - An ENGAGED prior action whose finding/recommendation is planned again is
- *   carried forward instead of duplicated, and its priority is re-evaluated to
- *   the new plan's values (the caller applies `reprioritise`).
+ *   carried forward instead of duplicated: the caller re-attaches it to the new
+ *   cycle (cycle, finding and ranking re-evaluated, audited), so every reader of
+ *   "the latest cycle's actions" sees it without special-casing.
  * - Never-touched "proposed" actions are NOT carried: the new cycle's fresh
  *   proposals supersede them (they carry the re-evaluated ranking).
  * - Terminal actions (completed/cancelled) never block a fresh proposal.
@@ -33,20 +34,24 @@ export function continuityKey(a: ContinuityKeyed): string {
 }
 
 /**
- * Split planned actions into those to create and those already covered by an
- * engaged prior action (returned with the prior action id for re-prioritisation).
+ * Split planned actions into those to create and those already covered by
+ * engaged prior actions. Every engaged prior action with a matching key is
+ * returned (with the planned action it continues) so all of them are re-attached.
  */
 export function planWithContinuity<T extends ContinuityKeyed, P extends ContinuityKeyed & { id: string }>(
   planned: readonly T[],
   engagedPrior: readonly P[]
-): { toCreate: T[]; carried: Array<{ priorActionId: string; planned: T }> } {
-  const byKey = new Map<string, P>();
-  for (const p of engagedPrior) if (!byKey.has(continuityKey(p))) byKey.set(continuityKey(p), p);
+): { toCreate: T[]; carried: Array<{ prior: P; planned: T }> } {
+  const byKey = new Map<string, P[]>();
+  for (const p of engagedPrior) {
+    const key = continuityKey(p);
+    byKey.set(key, [...(byKey.get(key) ?? []), p]);
+  }
   const toCreate: T[] = [];
-  const carried: Array<{ priorActionId: string; planned: T }> = [];
+  const carried: Array<{ prior: P; planned: T }> = [];
   for (const a of planned) {
-    const prior = byKey.get(continuityKey(a));
-    if (prior) carried.push({ priorActionId: prior.id, planned: a });
+    const priors = byKey.get(continuityKey(a));
+    if (priors) for (const prior of priors) carried.push({ prior, planned: a });
     else toCreate.push(a);
   }
   return { toCreate, carried };

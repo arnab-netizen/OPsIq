@@ -15,6 +15,15 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
+
+/** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
+interface EngagedPriorAction {
+  id: string;
+  cycleId: string;
+  findingCode: string;
+  recommendationCode: string;
+  priorityScore: number;
+}
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -118,23 +127,42 @@ export async function runMarketingDiagnosis(
       if (findingRows.length > 0) await tx.ownerMarketingFinding.createMany({ data: findingRows });
       // Continuity: an action the owner has taken on for the same finding/recommendation is
       // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
-      const engagedPrior = await tx.ownerMarketingAction.findMany({
+      const engagedPrior: EngagedPriorAction[] = await tx.ownerMarketingAction.findMany({
         where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
-        select: { id: true, findingCode: true, recommendationCode: true },
+        select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true },
       });
       const continuity = planWithContinuity(actionRows, engagedPrior);
-      carriedForwardIds = continuity.carried.map((c) => c.priorActionId);
-      // Re-evaluate each carried action's ranking against this diagnosis.
+      carriedForwardIds = continuity.carried.map((c) => c.prior.id);
+      // Re-attach each carried action to this cycle (finding + ranking re-evaluated) so every reader
+      // of the latest cycle sees the owner's in-flight work; audited in the same transaction.
       for (const c of continuity.carried) {
         await tx.ownerMarketingAction.update({
-          where: { id: c.priorActionId },
+          where: { id: c.prior.id },
           data: {
+            cycleId,
+            findingId: c.planned.findingId,
             priorityScore: c.planned.priorityScore,
             expectedImpactScore: c.planned.expectedImpactScore,
             effortScore: c.planned.effortScore,
             confidence: c.planned.confidence,
           },
         });
+        await emitAuditEvent(
+          {
+            eventName: AUDIT_EVENTS.OWNER_MARKETING_ACTION_UPDATED,
+            actorId,
+            workspaceId,
+            entityType: "OwnerMarketingAction",
+            entityId: c.prior.id,
+            payload: {
+              reason: "carried_forward_by_diagnosis",
+              fromCycleId: c.prior.cycleId,
+              toCycleId: cycleId,
+              priorityScore: { from: c.prior.priorityScore, to: c.planned.priorityScore },
+            },
+          },
+          tx
+        );
       }
       if (continuity.toCreate.length > 0) await tx.ownerMarketingAction.createMany({ data: continuity.toCreate });
     },

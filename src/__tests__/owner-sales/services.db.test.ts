@@ -317,9 +317,11 @@ describe("[db] Owner Sales services", () => {
     const cycle2 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
     const sameIntent = (a: { findingCode: string; recommendationCode: string }) =>
       a.findingCode === inFlight.findingCode && a.recommendationCode === inFlight.recommendationCode;
-    // No duplicate for the engaged action; every untouched proposal is regenerated fresh.
-    expect(cycle2.actions.filter(sameIntent)).toHaveLength(0);
-    expect(cycle2.actions).toHaveLength(cycle1.actions.length - 1);
+    // The engaged action is re-attached to cycle 2 (no duplicate); untouched proposals are regenerated.
+    const cycle2Rows = await db.ownerSalesAction.findMany({ where: { cycleId: cycle2.id } });
+    expect(cycle2Rows.filter(sameIntent)).toHaveLength(1);
+    expect(cycle2Rows.find(sameIntent)!.id).toBe(inFlight.id);
+    expect(cycle2Rows).toHaveLength(cycle1.actions.length);
     // The carried action's priority was re-evaluated against the new diagnosis.
     const reevaluated = await db.ownerSalesAction.findFirst({ where: { id: inFlight.id } });
     expect(reevaluated!.priorityScore).toBe(inFlight.priorityScore);
@@ -327,14 +329,21 @@ describe("[db] Owner Sales services", () => {
 
     const dash = await getSalesDashboard(workspaceId, businessId);
     const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === inFlight.id) as
-      | { status: string; carriedFromCycleSequence?: number; stillFlaggedByLatestDiagnosis?: boolean }
+      | { status: string; cycleId: string; carriedFromCycleSequence?: number }
       | undefined;
     expect(listed?.status).toBe("in_progress");
-    expect(listed?.carriedFromCycleSequence).toBe(cycle1.sequenceNumber);
-    expect(listed?.stillFlaggedByLatestDiagnosis).toBe(true);
+    expect(listed?.cycleId).toBe(cycle2.id);
+    expect(listed?.carriedFromCycleSequence).toBeUndefined();
     // Untouched cycle-1 proposals are superseded by cycle 2's, not listed twice.
     expect(dash.latestCycle!.actions).toHaveLength(cycle1.actions.length);
     expect(dash.recommendedNextAction).not.toBeNull();
+    // Every surface reading the latest cycle agrees: Home sees the in-flight action too.
+    const { getOwnerHome } = await import("@/services/owner-home/home.service");
+    const home = await getOwnerHome(workspaceId, businessId);
+    expect(home.summary!.requiredActions.some((a) => a.status === "in_progress" && a.findingCode === inFlight.findingCode)).toBe(true);
+    // The re-attachment is audited.
+    const audit = await db.auditEvent.findFirst({ where: { entityId: inFlight.id, eventName: "owner.sales_action_updated", workspaceId }, orderBy: { occurredAt: "desc" } });
+    expect((audit!.payload as { reason?: string }).reason).toBe("carried_forward_by_diagnosis");
 
     await teardownOwnerBusiness(businessId);
   });

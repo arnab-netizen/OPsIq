@@ -250,6 +250,45 @@ describe("Signal A — GoalAttentionSignal state derivation", () => {
 
 // ─── Signal C: Policy Attention Signal ───────────────────────────────────────
 
+describe("Signal A — goal trajectory edge cases (beta integrity round-2 audit)", () => {
+  const goal = { targetType: "PROFIT", targetAmount: 10_000_000, targetCurrency: "INR", targetDate: new Date("2027-09-01") };
+  const base = { confidence: "HIGH", confidenceRationale: "ok", gapToClose: 1, requiredMonthlyImprovement: 1, assumptions: [] };
+
+  it("an Invalid Date projection never crashes now-view and serialises as null", async () => {
+    const deps = baseDeps({
+      goalTrajectoryFn: async () => ({
+        goal,
+        trajectory: { ...base, trajectoryMiss: false, projectedMonthsToGoal: 12, currentTrajectoryDate: new Date(Number.NaN) },
+      }),
+    });
+    const payload = await getOwnerNowView("ws1", "biz1", deps);
+    expect(payload.goalAttentionSignal?.currentTrajectoryDateIso).toBeNull();
+  });
+
+  it("no projection because the target is beyond the horizon → AT_RISK, not NO_GROWTH", async () => {
+    const deps = baseDeps({
+      goalTrajectoryFn: async () => ({
+        goal,
+        trajectory: { ...base, trajectoryMiss: true, onTrack: false, projectedMonthsToGoal: null, currentTrajectoryDate: null },
+      }),
+    });
+    const payload = await getOwnerNowView("ws1", "biz1", deps);
+    expect(payload.goalAttentionSignal?.state).toBe("AT_RISK");
+  });
+
+  it("no projection because results cross zero (onTrack unknown) → INSUFFICIENT_DATA, not 'growth needs to turn positive'", async () => {
+    const deps = baseDeps({
+      goalTrajectoryFn: async () => ({
+        goal,
+        trajectory: { ...base, confidence: "MEDIUM", trajectoryMiss: false, onTrack: null, projectedMonthsToGoal: null, currentTrajectoryDate: null },
+      }),
+    });
+    const payload = await getOwnerNowView("ws1", "biz1", deps);
+    expect(payload.goalAttentionSignal?.state).toBe("INSUFFICIENT_DATA");
+    expect(payload.goalAttentionSignal?.beginnerExplanation).not.toMatch(/turn positive/);
+  });
+});
+
 describe("Signal C — PolicyAttentionSignal (triggered vs configured)", () => {
   it("returns null when policyListFn is absent", async () => {
     const deps = baseDeps();

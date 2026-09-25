@@ -282,6 +282,8 @@ export interface GuidanceDeps {
       gapToClose: number | null;
       requiredMonthlyImprovement: number | null;
       assumptions: string[];
+      /** Absent on older/fake trajectories; null = cannot be determined. */
+      onTrack?: boolean | null;
     };
   } | null>;
   /** Optional — active operating policies for this workspace (Phase 7). Absent on a fake-DI test → null. */
@@ -2278,9 +2280,16 @@ export async function getOwnerNowView(
     } else if (trajectory.confidence === "MEDIUM" && trajectory.confidenceRationale.includes("days old")) {
       goalState = "STALE";
       beginnerExplanation = "Your last result was recorded more than 60 days ago. Update your numbers to get a fresh projection.";
-    } else if (trajectory.projectedMonthsToGoal === null) {
+    } else if (trajectory.projectedMonthsToGoal === null && trajectory.trajectoryMiss) {
+      goalState = "AT_RISK";
+      beginnerExplanation = "At the current rate your goal is decades away. Growth needs to speed up substantially.";
+    } else if (trajectory.projectedMonthsToGoal === null && trajectory.onTrack !== null) {
       goalState = "NO_GROWTH";
       beginnerExplanation = "At the current rate, your goal cannot be reached. Growth needs to turn positive.";
+    } else if (trajectory.projectedMonthsToGoal === null) {
+      // e.g. results crossing from a loss into profit: no compound rate exists, so no projection.
+      goalState = "INSUFFICIENT_DATA";
+      beginnerExplanation = "Your results cross zero, so OpsIQ can't project a date yet. Keep recording results.";
     } else if (trajectory.trajectoryMiss) {
       goalState = "AT_RISK";
       const behindMonths = trajectory.projectedMonthsToGoal - Math.max(0, ownerMonths);
@@ -2298,7 +2307,10 @@ export async function getOwnerNowView(
       targetDateIso: goal.targetDate.toISOString(),
       gapToClose: trajectory.gapToClose,
       projectedMonthsToGoal: trajectory.projectedMonthsToGoal,
-      currentTrajectoryDateIso: trajectory.currentTrajectoryDate?.toISOString() ?? null,
+      currentTrajectoryDateIso:
+        trajectory.currentTrajectoryDate && Number.isFinite(trajectory.currentTrajectoryDate.getTime())
+          ? trajectory.currentTrajectoryDate.toISOString()
+          : null,
       requiredMonthlyImprovement: trajectory.requiredMonthlyImprovement,
       confidence: trajectory.confidence as "LOW" | "MEDIUM" | "HIGH",
       trajectoryMiss: trajectory.trajectoryMiss,

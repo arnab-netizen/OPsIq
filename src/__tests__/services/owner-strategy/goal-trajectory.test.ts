@@ -315,3 +315,24 @@ describe("goal-trajectory — values crossing zero (final hostile audit P1-2)", 
     expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
   });
 });
+
+describe("goal-trajectory — horizon and reached-goal edges (round-2 audit)", () => {
+  const series = (vals: number[]) =>
+    vals.map((v, i) => ({ periodStart: monthsAgo(vals.length - i), periodEnd: monthsAgo(vals.length - i - 1), revenue: null, netProfit: v }));
+
+  it("growth too slow to reach the target within 100 years: no Invalid Date, not on track, a miss", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 10_000_000, targetDate: monthsAhead(12), periods: series([1_000_000, 1_000_000, 1_000_001]), now });
+    expect(r.projectedMonthsToGoal).toBeNull();
+    expect(r.currentTrajectoryDate).toBeNull();
+    expect(r.onTrack).toBe(false);
+    expect(r.trajectoryMiss).toBe(true);
+    expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("a goal already reached is never a miss, even after its target date", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 1000, targetDate: new Date("2020-01-01T00:00:00Z"), periods: series([1500, 1800, 2000]), now });
+    expect(r.onTrack).toBe(true);
+    expect(r.trajectoryMiss).toBe(false);
+    expect(r.percentComplete).toBe(200);
+  });
+});

@@ -116,8 +116,9 @@ export async function getRecoveryDashboard(
     orderBy: { dueAt: "asc" },
   });
 
-  // Actions the owner has taken on in earlier cycles stay visible (carried forward, listed
-  // first) until completed or cancelled — a re-diagnosis never hides in-flight owner work.
+  // Engaged actions are re-attached to the new cycle when their finding is still raised
+  // (action-continuity.ts). Any engaged action left on an earlier cycle is one the latest
+  // diagnosis no longer raises: still shown (after current actions) until finished or cancelled.
   const carriedActions = latestCycleRow
     ? await db.recoveryAction.findMany({
         where: {
@@ -138,13 +139,13 @@ export async function getRecoveryDashboard(
     ? {
         ...latestCycleRow,
         actions: [
+          ...latestCycleRow.actions,
           ...carriedActions.map((a: { cycle: { cycleNumber: number }; finding: { code: string } | null }) => ({
             ...a,
             carriedFromCycleSequence: a.cycle.cycleNumber,
             stillFlaggedByLatestDiagnosis:
               a.finding !== null && latestCycleRow.findings.some((f: { code: string }) => f.code === a.finding!.code),
           })),
-          ...latestCycleRow.actions,
         ],
       }
     : null;

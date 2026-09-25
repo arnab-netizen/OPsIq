@@ -20,9 +20,19 @@ describe("action continuity", () => {
       { findingCode: "F1", recommendationCode: "R1", priorityScore: 80 },
       { findingCode: "F2", recommendationCode: "R2", priorityScore: 40 },
     ];
-    const r = planWithContinuity(planned, [{ id: "a1", findingCode: "F1", recommendationCode: "R1" }]);
+    const prior = { id: "a1", findingCode: "F1", recommendationCode: "R1" };
+    const r = planWithContinuity(planned, [prior]);
     expect(r.toCreate.map((a) => a.findingCode)).toEqual(["F2"]);
-    expect(r.carried).toEqual([{ priorActionId: "a1", planned: planned[0] }]);
+    expect(r.carried).toEqual([{ prior, planned: planned[0] }]);
+  });
+
+  it("every engaged prior action with the same key is carried (legacy duplicates all re-attached)", () => {
+    const r = planWithContinuity([{ findingCode: "F1", recommendationCode: "R1" }], [
+      { id: "a1", findingCode: "F1", recommendationCode: "R1" },
+      { id: "a2", findingCode: "F1", recommendationCode: "R1" },
+    ]);
+    expect(r.carried.map((c) => c.prior.id)).toEqual(["a1", "a2"]);
+    expect(r.toCreate).toHaveLength(0);
   });
 
   it("a different recommendation for the same finding is not a duplicate", () => {
