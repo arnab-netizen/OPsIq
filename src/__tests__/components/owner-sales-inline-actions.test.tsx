@@ -30,7 +30,10 @@ function action(overrides: Record<string, unknown> = {}) {
     priorityScore: 1,
     expectedTimeframeDays: 3,
     description: "x",
-    verificationMetric: "revenue",
+    // leadToSaleConversionPct is a known, higher-is-better metric (VERIFICATION_METRIC_DIRECTION,
+    // domain/owner-mode/verification-direction.ts) -- unlike the old page-wide "up" constant this
+    // replaced, this fixture now actually needs a real up-metric to legitimately pre-fill "up".
+    verificationMetric: "leadToSaleConversionPct",
     verificationMethod: "x",
     ...overrides,
   };
@@ -206,7 +209,7 @@ describe("Owner Sales — inline Complete/Verify action forms (UX-06 Wave B1)", 
     });
   });
 
-  it("F. Verify outcome renders Before/After/Target direction fields with the sales default direction", async () => {
+  it("F. Verify outcome renders Before/After/Target direction fields, pre-filled from the metric's own canonical direction (not a page-wide constant)", async () => {
     renderPage();
     await resolveDashboard(BIZ_A.id, dashboardFixture("A", BIZ_A.id));
     fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
@@ -275,6 +278,43 @@ describe("Owner Sales — inline Complete/Verify action forms (UX-06 Wave B1)", 
     expect(parseOptionalNumericField("1e400")).toEqual({ valid: false });
     expect(parseOptionalNumericField("")).toEqual({ valid: true, value: null });
     expect(parseOptionalNumericField("12.5")).toEqual({ valid: true, value: 12.5 });
+  });
+
+  it("Q. a lower-is-better metric (refundRatePct) pre-fills \"down\", not a page-wide constant", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "refundRatePct" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    expect(screen.getByLabelText("Target direction")).toHaveValue("down");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
+  });
+
+  it("R. a metric with no canonical direction pre-selects nothing and blocks Save until the owner explicitly chooses", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "revenue" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    expect(screen.getByLabelText("Target direction")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(
+      screen.getByText("Select whether higher or lower is the improvement for this metric before saving.")
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Target direction"), { target: { value: "down" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(1);
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
   });
 
   it("J. server failure shows a governed owner-safe error, never a raw exception, and leaves the form open", async () => {
