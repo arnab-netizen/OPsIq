@@ -20,7 +20,8 @@ import {
   getQuickBooksStatus,
 } from "@/services/quickbooks/qbo-connection.service";
 import { QBO_PROVIDER } from "@/domain/quickbooks/qbo-config";
-import { ValidationError, UnauthorizedError } from "@/infra/errors";
+import { ValidationError, UnauthorizedError, ConflictError } from "@/infra/errors";
+import { decryptOAuthToken } from "@/services/external-systems/oauth-token.service";
 
 const actorId = randomUUID();
 const otherActorId = randomUUID();
@@ -276,6 +277,110 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] qbo-connection.service", () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it("F14a: a realm change with existing provenance revokes the newly issued token and rejects (disconnect first)", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await seedBusiness(workspaceId);
+
+    const started = await startQuickBooksConnect({ workspaceId, actorId, businessId, env: testEnv });
+    const state1 = new URL(started.authorizeUrl).searchParams.get("state")!;
+    await completeQuickBooksConnect({
+      workspaceId,
+      actorId,
+      code: "auth-code-a",
+      state: state1,
+      realmId: "1010101010",
+      env: testEnv,
+      fetchImpl: tokenFetch("1010101010") as unknown as typeof fetch,
+    });
+
+    // Simulate provenance: at least one mirrored record already ingested for this connector.
+    await db.ownerConnectorRecord.create({
+      data: {
+        workspaceId,
+        connectorId: started.connectorId,
+        provider: QBO_PROVIDER,
+        externalAccount: "1010101010",
+        entityType: "CompanyInfo",
+        remoteId: "1",
+        remoteStatus: "ACTIVE",
+        data: { Id: "1" },
+      },
+    });
+
+    const reconnect = await startQuickBooksConnect({ workspaceId, actorId, businessId, env: testEnv });
+    const state2 = new URL(reconnect.authorizeUrl).searchParams.get("state")!;
+
+    const revokeCalls: Array<{ url: string; body: unknown }> = [];
+    const fetchImpl = vi.fn(async (url: string, init: RequestInit) => {
+      if (String(url).includes("/tokens/bearer")) {
+        return new Response(
+          JSON.stringify({
+            access_token: "access-2020202020",
+            refresh_token: "refresh-2020202020",
+            token_type: "bearer",
+            expires_in: 3600,
+            x_refresh_token_expires_in: 8726400,
+          }),
+          { status: 200 },
+        );
+      }
+      // revoke endpoint
+      revokeCalls.push({ url: String(url), body: JSON.parse(init.body as string) });
+      return new Response(null, { status: 200 });
+    });
+
+    await expect(
+      completeQuickBooksConnect({
+        workspaceId,
+        actorId,
+        code: "auth-code-b",
+        state: state2,
+        realmId: "2020202020",
+        env: testEnv,
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    expect(revokeCalls).toHaveLength(1);
+    expect(revokeCalls[0].body).toEqual({ token: "refresh-2020202020" });
+
+    // Original connection (realm 1010101010) is untouched.
+    const connectorAfter = await db.ownerConnector.findUnique({ where: { id: started.connectorId } });
+    expect(connectorAfter?.externalAccountId).toBe("1010101010");
+    expect(connectorAfter?.status).toBe("ACTIVE");
+
+    await teardown(workspaceId, businessId);
+  });
+
+  it("F14b: an ACTIVE connector cannot be started for a different business in the same workspace", async () => {
+    const workspaceId = randomUUID();
+    const businessA = await seedBusiness(workspaceId);
+    const businessB = await seedBusiness(workspaceId);
+
+    const started = await startQuickBooksConnect({ workspaceId, actorId, businessId: businessA, env: testEnv });
+    const state = new URL(started.authorizeUrl).searchParams.get("state")!;
+    await completeQuickBooksConnect({
+      workspaceId,
+      actorId,
+      code: "auth-code",
+      state,
+      realmId: "3030303030",
+      env: testEnv,
+      fetchImpl: tokenFetch("3030303030") as unknown as typeof fetch,
+    });
+
+    await expect(
+      startQuickBooksConnect({ workspaceId, actorId, businessId: businessB, env: testEnv }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    const connector = await db.ownerConnector.findUnique({ where: { id: started.connectorId } });
+    expect(connector?.businessId).toBe(businessA);
+    expect(connector?.status).toBe("ACTIVE");
+
+    await teardown(workspaceId, businessA);
+    await db.ownerBusiness.delete({ where: { id: businessB } });
+  });
+
   it("getQuickBooksStatus.allowedActions: ACTIVE allows sync+disconnect, forbids reconnect", async () => {
     const workspaceId = randomUUID();
     const businessId = await seedBusiness(workspaceId);
@@ -355,6 +460,147 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] qbo-connection.service", () => {
     expect(status.connector?.status).toBe("ACTIVE");
     expect(status.connector?.allowedActions).toEqual({ sync: false, disconnect: true, reconnect: true });
     expect(status.connector?.needsReconnect).toBe(true);
+
+    await teardown(workspaceId, businessId);
+  });
+
+  it("F12: a same-realm reconnect revokes the OLD stored refresh token (not the new one) before overwriting it", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await seedBusiness(workspaceId);
+
+    const started = await startQuickBooksConnect({ workspaceId, actorId, businessId, env: testEnv });
+    const state1 = new URL(started.authorizeUrl).searchParams.get("state")!;
+    await completeQuickBooksConnect({
+      workspaceId,
+      actorId,
+      code: "auth-code-gen1",
+      state: state1,
+      realmId: "4141414141",
+      env: testEnv,
+      fetchImpl: tokenFetch("gen1") as unknown as typeof fetch,
+    });
+
+    const revokeCalls: Array<{ token: string }> = [];
+    const fetchImpl = vi.fn(async (url: string, init: RequestInit) => {
+      if (String(url).includes("/tokens/bearer")) {
+        return new Response(
+          JSON.stringify({
+            access_token: "access-gen2",
+            refresh_token: "refresh-gen2",
+            token_type: "bearer",
+            expires_in: 3600,
+            x_refresh_token_expires_in: 8726400,
+          }),
+          { status: 200 },
+        );
+      }
+      revokeCalls.push(JSON.parse(init.body as string));
+      return new Response(null, { status: 200 });
+    });
+
+    const reconnect = await startQuickBooksConnect({ workspaceId, actorId, businessId, env: testEnv });
+    const state2 = new URL(reconnect.authorizeUrl).searchParams.get("state")!;
+    const result = await completeQuickBooksConnect({
+      workspaceId,
+      actorId,
+      code: "auth-code-gen2",
+      state: state2,
+      realmId: "4141414141", // SAME realm — a re-consent, not a company switch
+      env: testEnv,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(result.reconnected).toBe(true);
+    // Exactly one revoke call, and it carries the OLD (gen-1) refresh token — never the new one.
+    expect(revokeCalls).toHaveLength(1);
+    expect(revokeCalls[0]).toEqual({ token: "refresh-gen1" });
+
+    const connectorAfter = await db.ownerConnector.findUnique({ where: { id: started.connectorId } });
+    expect(connectorAfter?.status).toBe("ACTIVE");
+    expect(connectorAfter?.externalAccountId).toBe("4141414141");
+
+    const tokenAfter = await db.ownerConnectorToken.findUnique({ where: { connectorId: started.connectorId } });
+    const decrypted = decryptOAuthToken(
+      {
+        accessToken: tokenAfter!.encryptedAccessToken,
+        refreshToken: tokenAfter!.encryptedRefreshToken ?? undefined,
+        tokenType: tokenAfter!.tokenType,
+      },
+      workspaceId,
+    );
+    expect(decrypted.accessToken).toBe("access-gen2");
+    expect(decrypted.refreshToken).toBe("refresh-gen2");
+
+    await teardown(workspaceId, businessId);
+  });
+
+  it("F12: a failed revoke of the old token (provider 500) never blocks the reconnect and logs/audits nothing secret", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await seedBusiness(workspaceId);
+
+    const started = await startQuickBooksConnect({ workspaceId, actorId, businessId, env: testEnv });
+    const state1 = new URL(started.authorizeUrl).searchParams.get("state")!;
+    await completeQuickBooksConnect({
+      workspaceId,
+      actorId,
+      code: "auth-code-gen1",
+      state: state1,
+      realmId: "5151515151",
+      env: testEnv,
+      fetchImpl: tokenFetch("gen1b") as unknown as typeof fetch,
+    });
+
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url).includes("/tokens/bearer")) {
+        return new Response(
+          JSON.stringify({
+            access_token: "access-gen2b",
+            refresh_token: "refresh-gen2b",
+            token_type: "bearer",
+            expires_in: 3600,
+            x_refresh_token_expires_in: 8726400,
+          }),
+          { status: 200 },
+        );
+      }
+      // Provider outage on revoke — must be swallowed (best-effort) and never surface to the caller.
+      return new Response(JSON.stringify({ error: "internal_error" }), { status: 500 });
+    });
+
+    const reconnect = await startQuickBooksConnect({ workspaceId, actorId, businessId, env: testEnv });
+    const state2 = new URL(reconnect.authorizeUrl).searchParams.get("state")!;
+    const result = await completeQuickBooksConnect({
+      workspaceId,
+      actorId,
+      code: "auth-code-gen2",
+      state: state2,
+      realmId: "5151515151",
+      env: testEnv,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    // The reconnect itself still succeeds despite the revoke failure.
+    expect(result.reconnected).toBe(true);
+    const connectorAfter = await db.ownerConnector.findUnique({ where: { id: started.connectorId } });
+    expect(connectorAfter?.status).toBe("ACTIVE");
+
+    const tokenAfter = await db.ownerConnectorToken.findUnique({ where: { connectorId: started.connectorId } });
+    const decrypted = decryptOAuthToken(
+      {
+        accessToken: tokenAfter!.encryptedAccessToken,
+        refreshToken: tokenAfter!.encryptedRefreshToken ?? undefined,
+        tokenType: tokenAfter!.tokenType,
+      },
+      workspaceId,
+    );
+    expect(decrypted.accessToken).toBe("access-gen2b");
+
+    // No audit row (QUICKBOOKS_CONNECTED or otherwise) contains the old or new refresh/access token,
+    // and the connect-succeeded audit row is present despite the revoke failure.
+    const auditRows = await db.auditEvent.findMany({ where: { entityId: started.connectorId } });
+    expect(auditRows.some((r) => r.eventName === "quickbooks.connected")).toBe(true);
+    const serialized = JSON.stringify(auditRows.map((r) => r.payload));
+    expect(serialized).not.toMatch(/gen1b|gen2b|refresh-|access-/);
 
     await teardown(workspaceId, businessId);
   });

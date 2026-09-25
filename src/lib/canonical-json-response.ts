@@ -35,6 +35,7 @@
  */
 export interface CanonicalJsonResponse {
   readonly __canonicalJsonResponse: true;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- opaque JSON-serializable route payload; every route handler reads it with its own shape
   readonly body: any;
   readonly status: number;
   readonly headers?: Readonly<Record<string, string>>;
@@ -50,7 +51,7 @@ export function isCanonicalJsonResponse(value: unknown): value is CanonicalJsonR
     return false;
   }
 
-  const obj = value as any;
+  const obj = value as Record<string, unknown> & { headers?: unknown; status?: unknown };
 
   // Check for the brand marker
   if (obj.__canonicalJsonResponse !== true) {
@@ -73,7 +74,7 @@ export function isCanonicalJsonResponse(value: unknown): value is CanonicalJsonR
       return false;
     }
     // All header values must be strings
-    for (const [_key, value] of Object.entries(obj.headers)) {
+    for (const value of Object.values(obj.headers as Record<string, unknown>)) {
       if (typeof value !== "string") {
         return false;
       }
@@ -162,6 +163,7 @@ export function canonicalRedirect(
  * ```
  */
 export function canonicalJson(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- opaque JSON-serializable route payload (see CanonicalJsonResponse.body)
   body: any,
   options: {
     status: number;

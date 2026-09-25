@@ -33,7 +33,7 @@ describe("[module-20] connector provider registry — readiness declarations", (
   });
 
   it("no provider claims PRODUCTION_READY without a real implementation", () => {
-    // All current connectors are PLACEHOLDER_ONLY or NOT_IMPLEMENTED.
+    // QuickBooks is WRITE_CAPABLE_GATED (sandbox/Intuit approval pending); all others PLACEHOLDER_ONLY.
     const productionReady = allProviders().filter(
       (p) => p.readiness === "PRODUCTION_READY"
     );

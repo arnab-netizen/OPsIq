@@ -201,10 +201,11 @@ export interface QboNetworkFailureInput {
  */
 export function classifyQboNetworkFailure(input: QboNetworkFailureInput): QboApiError {
   const kind: QboErrorKind = input.timedOut ? "TIMEOUT" : "TRANSIENT";
-  const reason = input.error instanceof Error ? input.error.message : String(input.error);
-  const message = input.timedOut
-    ? "QuickBooks did not respond in time"
-    : `Could not reach QuickBooks (${truncate(reason, 120)})`;
+  // Fixed, owner-safe text only — the raw network error (hostnames, errno,
+  // stack fragments) must never reach an owner-facing message. The error's
+  // `name` (e.g. "ECONNRESET", "AbortError") is safe to log separately by
+  // the caller for diagnostics, but is not included here.
+  const message = input.timedOut ? "QuickBooks did not respond in time" : "Could not reach QuickBooks";
 
   return new QboApiError({
     kind,

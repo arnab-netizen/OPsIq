@@ -18,15 +18,13 @@ import {
   isConnectorProductionReady,
   PROVIDERS,
   TEMPLATES,
-  type Provider,
-  type ImportTemplate,
 } from "../../../domain/external-systems/provider-registry";
 
 describe("B12-S1: External Systems Provider Registry", () => {
   describe("Connector readiness honesty (Phase 0 truth/safety)", () => {
-    it("no provider is labelled PRODUCTION_READY (they are import templates only)", () => {
-      for (const provider of Object.values(PROVIDERS)) {
-        expect(provider.readiness).toBe("PLACEHOLDER_ONLY");
+    it("no provider is labelled PRODUCTION_READY; only QuickBooks has a live (gated) connector", () => {
+      for (const [key, provider] of Object.entries(PROVIDERS)) {
+        expect(provider.readiness).toBe(key === "QUICKBOOKS" ? "WRITE_CAPABLE_GATED" : "PLACEHOLDER_ONLY");
         expect(isConnectorProductionReady(provider)).toBe(false);
       }
     });

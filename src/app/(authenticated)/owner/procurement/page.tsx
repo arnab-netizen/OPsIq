@@ -10,6 +10,7 @@ import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { QuickBooksRecordActionsProvider, QuickBooksRecordActionCell } from "@/ui/owner/integrations/quickbooks-record-actions";
 
 async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -203,6 +204,7 @@ export default function ProcurementPage() {
           primaryAction={{ label: "+ New PO", onClick: openCreate }}
         />
       ) : (
+        <QuickBooksRecordActionsProvider type="PurchaseOrder" ids={orders.map((o) => o.id)}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm" data-testid="procurement-table">
             <thead>
@@ -212,6 +214,7 @@ export default function ProcurementPage() {
                 <th className="text-left px-4 py-2">Status</th>
                 <th className="text-right px-4 py-2">Total</th>
                 <th className="text-left px-4 py-2"></th>
+                <th className="text-left px-4 py-2">QuickBooks</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -247,12 +250,16 @@ export default function ProcurementPage() {
                         </button>
                       )}
                     </td>
+                    <td className="px-4 py-2">
+                      <QuickBooksRecordActionCell recordId={order.id} />
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+        </QuickBooksRecordActionsProvider>
       )}
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Purchase Order">

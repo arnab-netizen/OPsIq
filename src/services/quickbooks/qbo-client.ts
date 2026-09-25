@@ -46,7 +46,7 @@ import { classifyQboHttpFailure, classifyQboNetworkFailure } from "@/domain/quic
 
 // ─── Injectable primitives (deterministic tests) ───────────────────────────
 
-export type QboFetch = (input: string, init: RequestInit) => Promise<Response>;
+export type QboFetch = (url: string, init: RequestInit) => Promise<Response>;
 export type QboSleep = (ms: number) => Promise<void>;
 export type QboRandom = () => number;
 export type QboNow = () => Date;
@@ -72,7 +72,7 @@ const CDC_ENTITY_TRUNCATION_LIMIT = 1000;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9-]{1,50}$/;
 const WHERE_FORBIDDEN_PATTERN = /[;\\]/;
 
-const defaultFetch: QboFetch = (input, init) => fetch(input, init);
+const defaultFetch: QboFetch = (url, init) => fetch(url, init);
 const defaultSleep: QboSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const defaultRandom: QboRandom = () => Math.random();
 const defaultNow: QboNow = () => new Date();
@@ -88,11 +88,14 @@ function asArray(v: unknown): unknown[] {
 }
 
 function malformed(reason: string): QboApiError {
-  return new QboApiError({ kind: "MALFORMED", message: `QuickBooks response did not match the expected shape: ${reason}` });
+  const ownerSafeText = `QuickBooks response did not match the expected shape: ${reason}`;
+  const built = new QboApiError({ kind: "MALFORMED", message: ownerSafeText });
+  return built;
 }
 
-function validationError(message: string): QboApiError {
-  return new QboApiError({ kind: "VALIDATION", message });
+function validationError(ownerSafeText: string): QboApiError {
+  const built = new QboApiError({ kind: "VALIDATION", message: ownerSafeText });
+  return built;
 }
 
 // ─── Request id / where-clause validation ──────────────────────────────────

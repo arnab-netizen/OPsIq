@@ -22,7 +22,8 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { requestQuickBooksSync, runQuickBooksSync } from "@/services/quickbooks/qbo-sync.service";
 import { handleQuickBooksWebhook } from "@/services/quickbooks/qbo-webhook.service";
 import { materializeQuickBooksSnapshots } from "@/services/quickbooks/qbo-materialize.service";
-import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import { createFinancialSnapshot, amendFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import profitAndLossFixture from "@/__tests__/fixtures/quickbooks/profit-and-loss.json";
 import { QBO_SYNC_ENTITY_ORDER, type QboEntityName } from "@/domain/quickbooks/qbo-entities";
 import type { QboClient, QboQueryPage, QboCdcResult } from "@/domain/quickbooks/qbo-contracts";
 import { createHmac } from "crypto";
@@ -319,6 +320,58 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] materializeQuickBooksSnapshots", () 
     const stillThere = await db.ownerFinancialSnapshot.findUnique({ where: { id: ownerSnapshot.id } });
     expect(stillThere?.revenue?.toString()).toBe("55555");
     expect(stillThere?.supersededById).toBeNull();
+
+    await teardownOwnerBusiness(business.id);
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+
+  // F15: an owner correction layered on top of a QuickBooks-created snapshot
+  // must never be silently overwritten by the next sync.
+  it("never re-applies over a snapshot the owner amended after we created it (F15)", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const business = await createBusiness({ name: "QBO Owner-Amend-After-Us Test", businessType: "generic_local_service", currency: "USD", b2cSupported: true, b2bSupported: false }, actor, workspaceId);
+    const connector = await createConnector(workspaceId, realmId, business.id);
+
+    // 1. QuickBooks creates the snapshot (revenue 12000 from the fixture).
+    const created = await materializeQuickBooksSnapshots({
+      workspaceId, connectorId: connector.id, businessId: business.id, actorId: actor,
+      periodStart: "2026-01-01", periodEnd: "2026-01-31",
+      reports: { profitAndLoss: profitAndLossFixture, balanceSheet: {}, agedReceivables: {}, agedPayables: {} },
+      homeCurrency: "USD",
+    });
+    expect(created.financial).toBe("CREATED");
+    const link = await db.ownerConnectorRecord.findFirst({ where: { connectorId: connector.id, entityType: "Link:OwnerFinancialSnapshot", remoteId: "2026-01-01..2026-01-31" } });
+    const qboCreatedId = link!.opsiqEntityId!;
+
+    // 2. Owner corrects it by hand (amendFinancialSnapshot — a real governed amendment).
+    const ownerAmended = await amendFinancialSnapshot(
+      qboCreatedId,
+      { amendmentReason: "Owner correction: QuickBooks miscategorized a refund", revenue: 999999 },
+      actor,
+      workspaceId
+    );
+    expect(ownerAmended.snapshot!.id).not.toBe(qboCreatedId);
+
+    // 3. A later sync brings different QuickBooks-derived values — must SKIP, not overwrite the owner's correction.
+    const bumpedFixture = JSON.parse(JSON.stringify(profitAndLossFixture)) as typeof profitAndLossFixture;
+    bumpedFixture.Rows.Row[0].Summary.ColData[1].value = "22000.00"; // Total Income
+
+    const secondSync = await materializeQuickBooksSnapshots({
+      workspaceId, connectorId: connector.id, businessId: business.id, actorId: actor,
+      periodStart: "2026-01-01", periodEnd: "2026-01-31",
+      reports: { profitAndLoss: bumpedFixture, balanceSheet: {}, agedReceivables: {}, agedPayables: {} },
+      homeCurrency: "USD",
+    });
+    expect(secondSync.financial).toBe("SKIPPED");
+    expect(secondSync.issues.some((i) => /amended in OpsIQ/i.test(i))).toBe(true);
+
+    const finalCurrent = await db.ownerFinancialSnapshot.findFirst({
+      where: { businessId: business.id, periodStart: new Date("2026-01-01"), periodEnd: new Date("2026-01-31"), supersededById: null },
+    });
+    expect(finalCurrent?.id).toBe(ownerAmended.snapshot!.id);
+    expect(finalCurrent?.revenue?.toString()).toBe("999999");
 
     await teardownOwnerBusiness(business.id);
     await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });

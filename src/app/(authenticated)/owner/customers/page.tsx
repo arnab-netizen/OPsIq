@@ -15,6 +15,7 @@ import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSke
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { QuickBooksRecordActionsProvider, QuickBooksRecordActionCell } from "@/ui/owner/integrations/quickbooks-record-actions";
 
 interface CustomerRecord {
   id: string;
@@ -401,6 +402,7 @@ export default function CustomersPage() {
           )}
 
       {visibleCustomers.length > 0 && (
+        <QuickBooksRecordActionsProvider type="CustomerRecord" ids={visibleCustomers.map((c) => c.id)}>
         <>
         {/* Below sm: a stacked card per customer instead of a horizontally-scrolling table --
             a table's fixed columns force either truncation or sideways scrolling on a narrow
@@ -422,6 +424,9 @@ export default function CustomersPage() {
                 {customer.ltv != null && <span>{formatCurrency(customer.ltv, currentBusiness?.currency)}</span>}
                 {customer.lastPurchaseDate && <span>Last purchase {formatDate(customer.lastPurchaseDate)}</span>}
               </div>
+              <div className="mt-1.5">
+                <QuickBooksRecordActionCell recordId={customer.id} />
+              </div>
             </div>
           ))}
         </div>
@@ -438,6 +443,7 @@ export default function CustomersPage() {
                 <th className="px-4 py-2 text-left font-medium">LTV</th>
                 <th className="px-4 py-2 text-left font-medium">Last Purchase</th>
                 <th className="px-4 py-2 text-left font-medium"></th>
+                <th className="px-4 py-2 text-left font-medium">QuickBooks</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -466,12 +472,16 @@ export default function CustomersPage() {
                       Edit
                     </button>
                   </td>
+                  <td className="px-4 py-3">
+                    <QuickBooksRecordActionCell recordId={customer.id} />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         </>
+        </QuickBooksRecordActionsProvider>
       )}
         </section>
       )}

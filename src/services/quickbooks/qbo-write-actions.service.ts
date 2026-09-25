@@ -163,6 +163,11 @@ async function pushParty(args: {
     return { ...r, action: "UPDATED" };
   }
 
+  // QBO enforces DisplayName uniqueness across name-list entities. An exact,
+  // unlinked match is linked (no duplicate). If two OpsIQ records share a name,
+  // only one can link; the other's create is rejected by QBO as a DUPLICATE and
+  // recorded FAILED — the owner resolves it by renaming in OpsIQ (a corrected
+  // retry reopens the ledger row under a new requestid).
   const sameName = await findUnlinkedByDisplayName(connector.id, entity, fields.DisplayName);
   if (sameName.length === 1) {
     if (await linkExisting(sameName[0].id, opsiqEntityType, opsiqEntityId)) {

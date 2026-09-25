@@ -231,4 +231,18 @@ describe("classifyQboNetworkFailure", () => {
     const err = classifyQboNetworkFailure({ error: new Error("ECONNRESET"), isWrite: false, timedOut: false });
     expect(err.ambiguous).toBe(false);
   });
+
+  it("never includes the raw network error text (hostnames, errno, internals) in the owner-facing message", () => {
+    const sensitive = new Error("connect ECONNREFUSED 10.0.4.17:443 at TCPConnectWrap.afterConnect [as oncomplete]");
+    const err = classifyQboNetworkFailure({ error: sensitive, isWrite: false, timedOut: false });
+    expect(err.message).toBe("Could not reach QuickBooks");
+    expect(err.message).not.toContain("10.0.4.17");
+    expect(err.message).not.toContain("ECONNREFUSED");
+  });
+
+  it("uses a fixed owner-safe message for a timeout regardless of the underlying error", () => {
+    const err = classifyQboNetworkFailure({ error: new Error("internal timeout detail"), isWrite: true, timedOut: true });
+    expect(err.message).toBe("QuickBooks did not respond in time");
+    expect(err.message).not.toContain("internal timeout detail");
+  });
 });

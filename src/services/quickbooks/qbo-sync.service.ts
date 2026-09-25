@@ -52,6 +52,7 @@ import {
   type QboSyncState,
   type QboClient,
   type QboEntityBody,
+  type QboCdcResult,
 } from "@/domain/quickbooks/qbo-contracts";
 import { createQboClient } from "@/services/quickbooks/qbo-client";
 import { createQboTokenProvider } from "@/services/quickbooks/qbo-token.service";
@@ -276,11 +277,30 @@ function toDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Paginated fallback for a CDC-truncated entity: `WHERE MetaData.LastUpdatedTime >= '<cursor>'`. Bounded to MAX_FALLBACK_PAGES. */
-async function queryChangedSince(client: QboClient, entity: QboEntityName, since: Date): Promise<QboEntityBody[]> {
+/**
+ * Paginated fallback for a CDC-truncated entity: `WHERE MetaData.LastUpdatedTime
+ * >= '<cursor>'`. Bounded by BOTH MAX_FALLBACK_PAGES (100 * 1000 = 100k rows,
+ * a safety cap against a runaway loop) and the run's own wall-clock deadline
+ * (so this fallback can never itself blow the sync run's overall budget).
+ * `complete: false` means there is MORE data pending than this call fetched
+ * (page cap or deadline) — the caller MUST NOT advance the CDC cursor past
+ * this window in that case (see runCdcPass), or the un-fetched remainder
+ * would be silently and permanently lost on the next run.
+ */
+async function queryChangedSince(
+  client: QboClient,
+  entity: QboEntityName,
+  since: Date,
+  opts: { deadlineMs: number; now: () => Date }
+): Promise<{ items: QboEntityBody[]; complete: boolean }> {
   const items: QboEntityBody[] = [];
   let startPosition = 1;
+  let complete = true;
   for (let page = 0; page < MAX_FALLBACK_PAGES; page++) {
+    if (opts.now().getTime() > opts.deadlineMs) {
+      complete = false;
+      break;
+    }
     const result = await client.query(entity, {
       where: `MetaData.LastUpdatedTime >= '${since.toISOString()}'`,
       startPosition,
@@ -290,8 +310,9 @@ async function queryChangedSince(client: QboClient, entity: QboEntityName, since
     items.push(...result.items);
     if (result.items.length < QBO_QUERY_MAX_RESULTS) break;
     startPosition += result.items.length;
+    if (page === MAX_FALLBACK_PAGES - 1) complete = false;
   }
-  return items;
+  return { items, complete };
 }
 
 interface ConnectorSnapshot {
@@ -365,22 +386,61 @@ async function runCdcPass(params: {
   runId: string;
   syncState: QboSyncState;
   now: Date;
-}): Promise<{ nextState: QboSyncState; counts: Record<string, number> }> {
-  const { client, connector, runId, syncState, now } = params;
+  nowFn: () => Date;
+  deadlineMs: number;
+}): Promise<{ nextState: QboSyncState; counts: Record<string, number>; incomplete: boolean }> {
+  const { client, connector, runId, syncState, now, nowFn, deadlineMs } = params;
   const cursorDate = new Date(syncState.cdcCursor as string);
   // 5-minute overlap skew so a change committed right at the previous run's
   // boundary is never missed by an off-by-one server-clock discrepancy.
   const changedSince = new Date(cursorDate.getTime() - 5 * 60 * 1000);
 
   const cdcResult = await client.cdc(QBO_CDC_ENTITIES, changedSince);
+
+  // Every remote call — including the truncated-entity paginated fallback —
+  // happens HERE, before any transaction opens. No network call is ever made
+  // inside a DB transaction (CLAUDE.md hard rule): an HTTP round-trip held
+  // open under a DB transaction would hold that transaction's connection for
+  // the network call's full latency, and a slow/hung provider response would
+  // hold the underlying DB lock/connection along with it.
+  let anyIncomplete = false;
+  const perEntity: Array<{ entity: QboEntityName; changed: QboEntityBody[]; deleted: QboCdcResult["entities"][number]["deleted"] }> = [];
+  for (const entityChanges of cdcResult.entities) {
+    if (entityChanges.truncated) {
+      if (nowFn().getTime() > deadlineMs) {
+        // Run budget already spent — do not even start another entity's
+        // fallback fetch; leave it (and everything after it) for the
+        // continuation run, same as a mid-page deadline hit below.
+        anyIncomplete = true;
+        perEntity.push({ entity: entityChanges.entity, changed: [], deleted: [] });
+        continue;
+      }
+      const fallback = await queryChangedSince(client, entityChanges.entity, changedSince, { deadlineMs, now: nowFn });
+      if (!fallback.complete) {
+        anyIncomplete = true;
+        logger.error("QuickBooks CDC fallback query did not finish (page cap or run deadline) — more changes are pending", {
+          connectorId: connector.id,
+          entity: entityChanges.entity,
+          runId,
+          maxPages: MAX_FALLBACK_PAGES,
+        });
+      }
+      perEntity.push({ entity: entityChanges.entity, changed: fallback.items, deleted: entityChanges.deleted });
+    } else {
+      perEntity.push({ entity: entityChanges.entity, changed: entityChanges.changed, deleted: entityChanges.deleted });
+    }
+  }
+
   const counts: Record<string, number> = {};
+  // Incomplete: do NOT advance the cursor — the un-fetched remainder must
+  // stay in scope for the next run (whatever WAS fetched above is still
+  // persisted below; upserts are idempotent/no-regress, so a safe, bounded
+  // re-fetch of the same window next run is the correct fail-safe, never
+  // silent data loss).
+  const nextCursor = anyIncomplete ? syncState.cdcCursor : (cdcResult.serverTime ?? now.toISOString());
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    for (const entityChanges of cdcResult.entities) {
-      const changed = entityChanges.truncated
-        ? await queryChangedSince(client, entityChanges.entity, changedSince)
-        : entityChanges.changed;
-
+    for (const { entity, changed, deleted } of perEntity) {
       for (const item of changed) {
         const id = typeof item.Id === "string" ? item.Id : String(item.Id ?? "");
         if (!id) continue;
@@ -391,7 +451,7 @@ async function runCdcPass(params: {
           connectorId: connector.id,
           provider: QBO_PROVIDER,
           externalAccount: connector.externalAccountId,
-          entityType: entityChanges.entity,
+          entityType: entity,
           remoteId: id,
           remoteSyncToken: typeof item.SyncToken === "string" ? item.SyncToken : null,
           remoteUpdatedAt: parseMetaUpdatedAt(item),
@@ -402,7 +462,7 @@ async function runCdcPass(params: {
         });
       }
 
-      for (const del of entityChanges.deleted) {
+      for (const del of deleted) {
         await upsertConnectorRecord(tx, {
           id: randomUUID(),
           workspaceId: connector.workspaceId,
@@ -410,7 +470,7 @@ async function runCdcPass(params: {
           connectorId: connector.id,
           provider: QBO_PROVIDER,
           externalAccount: connector.externalAccountId,
-          entityType: entityChanges.entity,
+          entityType: entity,
           remoteId: del.Id,
           remoteSyncToken: null,
           remoteUpdatedAt: del.lastUpdated ? new Date(del.lastUpdated) : null,
@@ -421,10 +481,9 @@ async function runCdcPass(params: {
         });
       }
 
-      counts[entityChanges.entity] = changed.length + entityChanges.deleted.length;
+      counts[entity] = changed.length + deleted.length;
     }
 
-    const nextCursor = cdcResult.serverTime ?? now.toISOString();
     const nextState: QboSyncState = {
       ...syncState,
       cdcCursor: nextCursor,
@@ -433,10 +492,10 @@ async function runCdcPass(params: {
     await persistSyncState(connector.id, nextState, tx);
   });
 
-  const nextCursor = cdcResult.serverTime ?? now.toISOString();
   return {
     nextState: { ...syncState, cdcCursor: nextCursor, recordCounts: mergeCounts(syncState.recordCounts, counts) },
     counts,
+    incomplete: anyIncomplete,
   };
 }
 
@@ -525,6 +584,31 @@ async function runReportsAndMaterialize(params: {
 }
 
 const REFRESH_FAILED_MESSAGE = "Reconnect QuickBooks";
+
+/**
+ * Shared continuation-scheduling used by BOTH the initial-pull budget-exceeded
+ * path and the CDC-incomplete (page-cap or deadline) path: enqueue a follow-up
+ * ScheduledTask for the SAME connector under the run's own continuation key,
+ * so a crash-retry of this exact run never double-enqueues a second one.
+ */
+async function scheduleContinuationTask(params: {
+  connectorId: string;
+  workspaceId: string;
+  requestedBy: string;
+  runId: string;
+  trigger: QboSyncTrigger;
+  scheduledFor: Date;
+}): Promise<void> {
+  const scheduler = new DatabaseSchedulerProvider();
+  await scheduler.schedule({
+    taskName: TASK_NAME_QUICKBOOKS_SYNC,
+    payload: { connectorId: params.connectorId, trigger: params.trigger, requestedBy: params.requestedBy } satisfies QboSyncTaskPayload,
+    scheduledFor: params.scheduledFor,
+    maxAttempts: 3,
+    workspaceId: params.workspaceId,
+    idempotencyKey: buildSyncContinuationIdempotencyKey(params.connectorId, params.runId),
+  });
+}
 
 /**
  * Runs one QuickBooks sync attempt for a single connector. At most one run
@@ -626,6 +710,7 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
       let syncState: QboSyncState = parseQboSyncState(connectorRow.syncState) ?? initialQboSyncState(startedAt);
       let totalUpserted = 0;
       let incrementalCounts: Record<string, number> = {};
+      let cdcIncomplete = false;
       let incrementalDone = false;
 
       while (!incrementalDone) {
@@ -634,19 +719,13 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
           // for the SAME connector and stop cleanly. Progress already made
           // this run is durably persisted (each page committed its own
           // transaction above), so nothing is lost or double-counted.
-          const scheduler = new DatabaseSchedulerProvider();
-          const continuationKey = buildSyncContinuationIdempotencyKey(connector.id, input.runId);
-          await scheduler.schedule({
-            taskName: TASK_NAME_QUICKBOOKS_SYNC,
-            payload: {
-              connectorId: connector.id,
-              trigger: syncState.phase === "INITIAL" ? "INITIAL" : input.trigger,
-              requestedBy: input.requestedBy,
-            } satisfies QboSyncTaskPayload,
-            scheduledFor: now(),
-            maxAttempts: 3,
+          await scheduleContinuationTask({
+            connectorId: connector.id,
             workspaceId: input.workspaceId,
-            idempotencyKey: continuationKey,
+            requestedBy: input.requestedBy,
+            runId: input.runId,
+            trigger: syncState.phase === "INITIAL" ? "INITIAL" : input.trigger,
+            scheduledFor: now(),
           });
 
           const finalState: QboSyncState = {
@@ -704,10 +783,21 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
           continue;
         }
 
-        const cdc = await runCdcPass({ client, connector, runId: input.runId, syncState, now: now() });
+        const cdc = await runCdcPass({ client, connector, runId: input.runId, syncState, now: now(), nowFn: now, deadlineMs: deadline });
         syncState = cdc.nextState;
         incrementalCounts = cdc.counts;
         totalUpserted += Object.values(cdc.counts).reduce((s, v) => s + v, 0);
+        cdcIncomplete = cdc.incomplete;
+        if (cdcIncomplete) {
+          await scheduleContinuationTask({
+            connectorId: connector.id,
+            workspaceId: input.workspaceId,
+            requestedBy: input.requestedBy,
+            runId: input.runId,
+            trigger: input.trigger,
+            scheduledFor: now(),
+          });
+        }
         incrementalDone = true;
       }
 
@@ -731,7 +821,8 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
         };
       } catch (err) {
         materializeFailed = true;
-        materializeIssues = [err instanceof Error ? err.message : "Report pull or snapshot materialization failed."];
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+        materializeIssues = [governed.operatorMessage];
         logger.error("QuickBooks report pull / snapshot materialization failed (sync data itself is durable)", err, {
           connectorId: connector.id,
           runId: input.runId,
@@ -739,16 +830,18 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
       }
 
       // ── (g) Finish ────────────────────────────────────────────────────
-      const status: QuickBooksSyncStatus = materializeFailed ? "PARTIAL_FAILURE" : "SUCCESS";
+      const status: QuickBooksSyncStatus = materializeFailed || cdcIncomplete ? "PARTIAL_FAILURE" : "SUCCESS";
       const summary = materializeFailed
         ? `QuickBooks data synced (${totalUpserted} record(s)); report/snapshot materialization failed: ${materializeIssues[0] ?? "unknown error"}`
-        : `QuickBooks sync complete: ${totalUpserted} record(s) synced.`;
+        : cdcIncomplete
+          ? `QuickBooks sync partially complete: ${totalUpserted} record(s) synced; more changes are pending for at least one entity and will be picked up on the next sync (CDC cursor was not advanced).`
+          : `QuickBooks sync complete: ${totalUpserted} record(s) synced.`;
 
       const finalState: QboSyncState = {
         ...syncState,
         lastRunId: input.runId,
         lastRunAt: now().toISOString(),
-        lastRunStatus: materializeFailed ? "PARTIAL" : "SUCCESS",
+        lastRunStatus: materializeFailed || cdcIncomplete ? "PARTIAL" : "SUCCESS",
         lastRunSummary: summary,
       };
 
@@ -811,8 +904,12 @@ async function handleSyncFailure(params: {
         syncFailureMessage: qboErr?.kind === "AUTH" ? REFRESH_FAILED_MESSAGE : ownerSafeMessage,
       },
     })
-    .catch(() => {
-      /* best-effort — the audit event below is the durable record of this failure */
+    .catch((persistErr: unknown) => {
+      // best-effort — the audit event below is the durable record of this failure
+      logger.error("QuickBooks sync: failed to persist syncFailureMessage on connector (non-fatal)", persistErr, {
+        connectorId: connector.id,
+        runId,
+      });
     });
 
   await emitAuditEvent({
@@ -822,8 +919,12 @@ async function handleSyncFailure(params: {
     entityId: connector.id,
     payload: { trigger, runId, errorKind },
     ...toAuditActor(requestedBy),
-  }).catch(() => {
-    /* audit failure must never mask the sync outcome being returned/thrown below */
+  }).catch((auditErr: unknown) => {
+    // audit failure must never mask the sync outcome being returned/thrown below
+    logger.error("QuickBooks sync: failed to emit QUICKBOOKS_SYNC_FAILED audit event (non-fatal)", auditErr, {
+      connectorId: connector.id,
+      runId,
+    });
   });
 
   if (connector.businessId) {
@@ -839,8 +940,14 @@ async function handleSyncFailure(params: {
         occurredAt: new Date().toISOString(),
       },
       requestedBy
-    ).catch(() => {
-      /* governed re-evaluation is best-effort here; the sync failure itself is already recorded above */
+    ).catch((ingestErr: unknown) => {
+      // governed re-evaluation is best-effort here; the sync failure itself is already recorded above.
+      // It will be retried on the next sync attempt (which re-derives BLOCKER_EVENT re-evaluation
+      // from the connector's current state), so this is never a permanently lost re-evaluation.
+      logger.error("QuickBooks sync: CONNECTOR_SYNC_FAILED re-evaluation trigger failed (non-fatal; will re-run on next sync)", ingestErr, {
+        connectorId: connector.id,
+        runId,
+      });
     });
   }
 

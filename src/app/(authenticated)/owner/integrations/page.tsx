@@ -17,6 +17,8 @@ import { CardDashboardSkeleton, ErrorState, PageContainer, PageHeader } from "@/
 import { QuickBooksConnectionCard } from "@/ui/owner/integrations/quickbooks-connection-card";
 import type { QuickBooksStatusDTO } from "@/domain/quickbooks/qbo-contracts";
 import { QBO_CONNECT_ERROR_CODES, type QboConnectErrorCode } from "@/domain/quickbooks/qbo-connect-outcome";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 
 const FETCH_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 5_000;
@@ -72,7 +74,7 @@ async function api(path: string, init?: RequestInit) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+      throw httpResponseErrorFromBody(res.status, data);
     }
     return data;
   } catch (e) {
@@ -87,10 +89,6 @@ async function api(path: string, init?: RequestInit) {
     clearTimeout(timer);
     if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
   }
-}
-
-function errorMessage(e: unknown): string {
-  return e instanceof Error && e.message ? e.message : "Something went wrong. Try again.";
 }
 
 export default function OwnerIntegrationsPage() {
@@ -140,7 +138,8 @@ function OwnerIntegrationsView() {
     }
     if (errorCode) {
       const known = isKnownQuickBooksErrorCode(errorCode) ? errorCode : "unknown";
-      return { tone: "error", message: QUICKBOOKS_ERROR_MESSAGE[known] };
+      const banner: { tone: "success" | "error"; message: string } = { tone: "error", message: QUICKBOOKS_ERROR_MESSAGE[known] };
+      return banner;
     }
     return null;
     // Intentionally read once from the callback URL's own query params on mount — a later
@@ -200,7 +199,7 @@ function OwnerIntegrationsView() {
       await loadStatus();
     } catch (e) {
       if (e instanceof CancelledRequestError) return;
-      if (mountedRef.current) setLoadError(errorMessage(e));
+      if (mountedRef.current) setLoadError(classifyOperatorError(e, { context: "load" }).operatorMessage);
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -249,7 +248,7 @@ function OwnerIntegrationsView() {
           if (mountedRef.current) setRefreshError(null);
         })
         .catch((e) => {
-          if (mountedRef.current) setRefreshError(errorMessage(e));
+          if (mountedRef.current) setRefreshError(classifyOperatorError(e, { context: "load" }).operatorMessage);
         });
     }, POLL_INTERVAL_MS);
     return () => stopPolling();
@@ -283,7 +282,7 @@ function OwnerIntegrationsView() {
         throw new Error("QuickBooks didn't return a place to continue. Try again.");
       }
     } catch (e) {
-      setActionError(errorMessage(e));
+      if (mountedRef.current) setActionError(classifyOperatorError(e, { context: "action" }).operatorMessage);
       releaseConnecting();
     }
   }, [releaseConnecting]);
@@ -310,7 +309,7 @@ function OwnerIntegrationsView() {
       });
       await loadStatus();
     } catch (e) {
-      if (mountedRef.current) setActionError(errorMessage(e));
+      if (mountedRef.current) setActionError(classifyOperatorError(e, { context: "action" }).operatorMessage);
     } finally {
       syncInFlightRef.current = false;
       if (mountedRef.current) setSyncRequestInFlight(false);
@@ -329,7 +328,7 @@ function OwnerIntegrationsView() {
       });
       if (mountedRef.current) setDto((data?.quickbooks as QuickBooksStatusDTO) ?? null);
     } catch (e) {
-      if (mountedRef.current) setActionError(errorMessage(e));
+      if (mountedRef.current) setActionError(classifyOperatorError(e, { context: "action" }).operatorMessage);
     } finally {
       disconnectInFlightRef.current = false;
       if (mountedRef.current) setDisconnecting(false);

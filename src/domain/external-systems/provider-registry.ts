@@ -38,8 +38,9 @@ export interface Provider {
   // `isActive` = this CSV import TEMPLATE is available for selection. It does NOT
   // mean a live connection exists. Real connection status is `readiness`.
   isActive: boolean;
-  // Truthful connector readiness. Currently every provider is PLACEHOLDER_ONLY:
-  // the service layer has no live token exchange / data fetch.
+  // Truthful connector readiness. Every provider except QuickBooks is
+  // PLACEHOLDER_ONLY (no live token exchange / data fetch); QuickBooks Online is
+  // WRITE_CAPABLE_GATED (see its entry). None is PRODUCTION_READY.
   readiness: ConnectorReadiness;
 }
 
@@ -123,12 +124,18 @@ export const PROVIDERS: Record<string, Provider> = {
     isActive: true,
     readiness: "PLACEHOLDER_ONLY",
   },
+  // QuickBooks Online has a live connector (src/services/quickbooks/*): OAuth,
+  // encrypted rotating tokens, sync, and governed writes that require explicit
+  // owner confirmation. It is WRITE_CAPABLE_GATED — gated by deployment
+  // configuration (fails closed without Intuit credentials) and by per-write
+  // governance. It is NOT production-ready: not yet verified against a
+  // QuickBooks sandbox company and not yet approved by Intuit for production.
   QUICKBOOKS: {
     id: "quickbooks",
     name: "QuickBooks",
     category: "accounting",
     isActive: true,
-    readiness: "PLACEHOLDER_ONLY",
+    readiness: "WRITE_CAPABLE_GATED",
   },
   XERO: {
     id: "xero",

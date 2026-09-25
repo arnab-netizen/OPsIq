@@ -53,15 +53,14 @@ class FakeQbo {
   }
 
   client(): QboClient {
-    const self = this;
     const bump = (e: string, ref: { Id: string; SyncToken: string }, patch: Record<string, unknown>) => {
-      const cur = self.store.get(self.key(e, ref.Id));
+      const cur = this.store.get(this.key(e, ref.Id));
       if (!cur) throw new QboApiError({ kind: "NOT_FOUND", message: "Object Not Found", httpStatus: 400 });
       if (cur.SyncToken !== ref.SyncToken) {
         throw new QboApiError({ kind: "STALE_OBJECT", message: "Stale Object Error", httpStatus: 400 });
       }
       const next = { ...cur, ...patch, SyncToken: String(Number(cur.SyncToken) + 1), MetaData: { LastUpdatedTime: new Date().toISOString() } };
-      self.store.set(self.key(e, ref.Id), next);
+      this.store.set(this.key(e, ref.Id), next);
       return next;
     };
     return {
@@ -73,34 +72,34 @@ class FakeQbo {
       cdc: async () => { throw new Error("unused"); },
       report: async () => { throw new Error("unused"); },
       read: async (entity, id) => {
-        self.calls.push({ op: "read", entity });
-        const cur = self.store.get(self.key(entity, id));
+        this.calls.push({ op: "read", entity });
+        const cur = this.store.get(this.key(entity, id));
         if (!cur) throw new QboApiError({ kind: "NOT_FOUND", message: "Object Not Found", httpStatus: 400 });
         return cur;
       },
       create: async (entity, body, { requestId }) => {
-        self.calls.push({ op: "create", entity, requestId });
-        return self.commit(requestId, () => {
-          const created = { ...body, Id: String(self.nextId++), SyncToken: "0", MetaData: { LastUpdatedTime: new Date().toISOString() } };
-          self.store.set(self.key(entity, created.Id!), created);
+        this.calls.push({ op: "create", entity, requestId });
+        return this.commit(requestId, () => {
+          const created = { ...body, Id: String(this.nextId++), SyncToken: "0", MetaData: { LastUpdatedTime: new Date().toISOString() } };
+          this.store.set(this.key(entity, created.Id!), created);
           return created;
         });
       },
       update: async (entity, body, { requestId }) => {
-        self.calls.push({ op: "update", entity, requestId });
-        return self.commit(requestId, () => { const { Id, SyncToken, ...rest } = body; return bump(entity, { Id, SyncToken }, rest); });
+        this.calls.push({ op: "update", entity, requestId });
+        return this.commit(requestId, () => { const { Id, SyncToken, ...rest } = body; return bump(entity, { Id, SyncToken }, rest); });
       },
       delete: async (entity, ref, { requestId }) => {
-        self.calls.push({ op: "delete", entity, requestId });
-        return self.commit(requestId, () => bump(entity, ref, { status: "Deleted" }));
+        this.calls.push({ op: "delete", entity, requestId });
+        return this.commit(requestId, () => bump(entity, ref, { status: "Deleted" }));
       },
       void: async (entity, ref, { requestId }) => {
-        self.calls.push({ op: "void", entity, requestId });
-        return self.commit(requestId, () => bump(entity, ref, {}));
+        this.calls.push({ op: "void", entity, requestId });
+        return this.commit(requestId, () => bump(entity, ref, {}));
       },
       inactivate: async (entity, ref, { requestId }) => {
-        self.calls.push({ op: "inactivate", entity, requestId });
-        return self.commit(requestId, () => bump(entity, ref, { Active: false }));
+        this.calls.push({ op: "inactivate", entity, requestId });
+        return this.commit(requestId, () => bump(entity, ref, { Active: false }));
       },
     };
   }
@@ -416,6 +415,26 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks writes", () => {
     const rec = await db.ownerConnectorRecord.findFirst({ where: { connectorId, entityType: "Vendor", remoteId: v.remoteId } });
     expect(rec?.remoteStatus).toBe("INACTIVE");
     expect(fake.calls.some((c) => c.op === "delete")).toBe(false);
+  });
+
+  it("business isolation: records of another business in the SAME workspace are refused (connector is bound to one business)", async () => {
+    const otherBusinessId = randomUUID();
+    await db.ownerBusiness.create({
+      data: { id: otherBusinessId, workspaceId, name: "Other Co", businessType: "generic_local_service", currency: "USD", createdBy: actorId },
+    });
+    const vendorId = randomUUID();
+    await db.vendorRecord.create({ data: { id: vendorId, workspaceId, businessId: otherBusinessId, name: "Other Vendor", approvalStatus: "APPROVED" } });
+    await expect(pushVendorToQuickBooks({ workspaceId, actorId, vendorId, deps: deps() })).rejects.toThrow(/different business/);
+    const po = await db.purchaseOrder.create({
+      data: { workspaceId, businessId: otherBusinessId, poNumber: "PO-OTHER-1", vendorId, status: "DELIVERED", lineItems: [{ description: "x", qty: 1, unitPrice: 5 }], totalAmount: 5, currency: "USD", createdBy: actorId },
+    });
+    await expect(
+      recordBillForPurchaseOrder({ workspaceId, actorId, purchaseOrderId: po.id, expenseAccountId: "60", confirm: true, deps: deps() }),
+    ).rejects.toThrow(/different business/);
+    await expect(
+      inactivatePartyInQuickBooks({ workspaceId, actorId, kind: "vendor", recordId: vendorId, confirm: true, deps: deps() }),
+    ).rejects.toThrow(/different business/);
+    expect(fake.calls).toHaveLength(0);
   });
 
   it("workspace isolation: another workspace cannot write through this connector or reach its records", async () => {

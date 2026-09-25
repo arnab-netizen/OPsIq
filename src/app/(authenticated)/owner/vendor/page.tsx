@@ -15,6 +15,7 @@ import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSke
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { QuickBooksRecordActionsProvider, QuickBooksRecordActionCell } from "@/ui/owner/integrations/quickbooks-record-actions";
 
 type ApprovalStatus = "PENDING_REVIEW" | "APPROVED" | "SUSPENDED";
 
@@ -258,6 +259,7 @@ export default function VendorPage() {
       )}
 
       {!loading && !error && visibleVendors.length > 0 && (
+        <QuickBooksRecordActionsProvider type="VendorRecord" ids={visibleVendors.map((v) => v.id)}>
         <div className="rounded-lg border border-border overflow-hidden overflow-x-auto" data-testid="vendor-table">
           <table className="w-full text-sm">
             <thead className="bg-muted text-muted-foreground">
@@ -268,6 +270,7 @@ export default function VendorPage() {
                 <th className="px-4 py-2 text-left font-medium">Payment Terms</th>
                 <th className="px-4 py-2 text-left font-medium">Related Party</th>
                 <th className="px-4 py-2 text-left font-medium"></th>
+                <th className="px-4 py-2 text-left font-medium">QuickBooks</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -314,11 +317,15 @@ export default function VendorPage() {
                       )}
                     </div>
                   </td>
+                  <td className="px-4 py-3">
+                    <QuickBooksRecordActionCell recordId={vendor.id} />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        </QuickBooksRecordActionsProvider>
       )}
 
       {/* Create Vendor Modal */}

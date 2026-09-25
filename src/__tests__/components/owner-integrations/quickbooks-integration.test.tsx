@@ -108,7 +108,14 @@ function stubFetch() {
             return { ok: true, json: async () => ({ taskId: "task-1", deduplicated: false }) } as Response;
           }
           if (body.action === "disconnect") {
-            currentDto = notConnectedDto();
+            // Realistic server behavior: disconnect keeps the connector row (status DISCONNECTED,
+            // allowedActions: reconnect only) rather than clearing it to null — the owner can
+            // still see which QuickBooks company they were connected to and reconnect it.
+            currentDto = connectedDto({
+              status: "DISCONNECTED",
+              needsReconnect: true,
+              allowedActions: { sync: false, disconnect: false, reconnect: true },
+            });
             return { ok: true, json: async () => ({ quickbooks: currentDto }) } as Response;
           }
         }
@@ -194,6 +201,41 @@ describe("OwnerIntegrationsPage — QuickBooks", () => {
     expect(posted.length).toBe(1);
   });
 
+  it("F8: Connecting… releases after 15s when navigation never actually happens", async () => {
+    vi.useFakeTimers();
+    currentDto = notConnectedDto();
+    render(<OwnerIntegrationsPage />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const connectBtn = screen.getByRole("button", { name: /connect quickbooks/i });
+    fireEvent.click(connectBtn);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: /connecting…/i })).toBeTruthy();
+    expect(assignMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(screen.getByRole("button", { name: /^connect quickbooks$/i })).not.toBeDisabled();
+  });
+
+  it("F8: a pageshow event (bfcache return) releases a stuck Connecting…", async () => {
+    currentDto = notConnectedDto();
+    await renderReady();
+    const connectBtn = await screen.findByRole("button", { name: /connect quickbooks/i });
+    fireEvent.click(connectBtn);
+    await waitFor(() => expect(screen.getByRole("button", { name: /connecting…/i })).toBeTruthy());
+    expect(assignMock).toHaveBeenCalledTimes(1);
+
+    fireEvent(window, new Event("pageshow"));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^connect quickbooks$/i })).not.toBeDisabled());
+  });
+
   it("connected: renders company, business, status, freshness, last sync, records", async () => {
     await renderReady();
     const card = screen.getByTestId("quickbooks-connected");
@@ -234,6 +276,12 @@ describe("OwnerIntegrationsPage — QuickBooks", () => {
 
     await waitFor(() => expect(posted.length).toBe(1));
     expect(posted[0].body).toEqual({ action: "disconnect", confirm: true });
+
+    // Immediate post-disconnect render: the POST response's DTO is applied directly (no extra
+    // GET needed) — the card now shows DISCONNECTED with Reconnect only, not Sync/Disconnect.
+    await waitFor(() => expect(screen.getByRole("button", { name: /reconnect quickbooks/i })).toBeTruthy());
+    expect(screen.queryByRole("button", { name: /sync now/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^disconnect$/i })).toBeNull();
   });
 
   it("Disconnect: double-clicking the confirm button posts exactly once", async () => {
@@ -408,5 +456,45 @@ describe("OwnerIntegrationsPage — QuickBooks", () => {
     // Still 999 — the older/stale response must have been dropped, not applied.
     expect(within(screen.getByTestId("quickbooks-connected")).getByText("999")).toBeTruthy();
     expect(screen.queryByText("1")).toBeNull();
+  });
+
+  it("F6: a background poll tick that fails shows a subtle refresh note, keeping the last good DTO on screen", async () => {
+    vi.useFakeTimers();
+    currentDto = connectedDto({
+      companyName: "Acme Bakery LLC",
+      sync: {
+        phase: "INCREMENTAL",
+        running: true,
+        lastRunStatus: null,
+        lastRunAt: null,
+        lastRunSummary: null,
+        initialProgress: null,
+        freshness: "STALE",
+      },
+    });
+
+    render(<OwnerIntegrationsPage />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(within(screen.getByTestId("quickbooks-connected")).getByText("Acme Bakery LLC")).toBeTruthy();
+    expect(screen.queryByTestId("quickbooks-refresh-note")).toBeNull();
+
+    statusResponseQueue.push(() =>
+      Promise.resolve({ ok: false, json: async () => ({ error: { message: "Couldn't reach QuickBooks." } }) } as Response),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const note = screen.getByTestId("quickbooks-refresh-note");
+    expect(note.textContent).toMatch(/couldn't refresh status/i);
+    // The last good DTO is still shown underneath — never replaced by an error screen.
+    expect(within(screen.getByTestId("quickbooks-connected")).getByText("Acme Bakery LLC")).toBeTruthy();
   });
 });

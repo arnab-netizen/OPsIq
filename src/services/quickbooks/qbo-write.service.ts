@@ -41,8 +41,10 @@ import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
+  AppError,
   ConflictError,
   DuplicateSubmissionError,
   ForbiddenError,
@@ -613,7 +615,14 @@ async function recordWriteFailure(args: {
     eventName = AUDIT_EVENTS.QUICKBOOKS_WRITE_AMBIGUOUS;
   }
 
-  const message = ownerSafe(err instanceof Error ? err.message : "QuickBooks write failed.");
+  // Provider errors (classified, owner-safe fault text) and OpsIQ's own AppErrors
+  // (validation/conflict messages written for owners) are kept verbatim; anything
+  // else (e.g. a database error) is governed so internals never reach the owner.
+  const message = ownerSafe(
+    err instanceof QboApiError || err instanceof AppError
+      ? String((err as Error).message)
+      : classifyOperatorError(err, { context: "save" }).operatorMessage,
+  );
   try {
     await finishLedger(rowId, { status, errorCode, errorMessage: message });
     await emitAuditEvent({

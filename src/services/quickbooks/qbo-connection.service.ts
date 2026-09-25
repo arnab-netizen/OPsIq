@@ -232,7 +232,10 @@ export async function completeQuickBooksConnect(input: CompleteQuickBooksConnect
       payload: { reason: "STATE_INVALID_OR_EXPIRED" },
       ...toAuditActor(parsed.actorId),
     });
-    throw new UnauthorizedError("AUTH_INVALID", "This QuickBooks connection link has expired or was already used. Start over.");
+    throw new UnauthorizedError(
+      "AUTH_INVALID",
+      "This QuickBooks connection link has expired, was already used, or was replaced by a newer connection attempt. Start again.",
+    );
   }
 
   const connector = await (db as any).ownerConnector.findFirst({
@@ -288,6 +291,38 @@ export async function completeQuickBooksConnect(input: CompleteQuickBooksConnect
   const reconnected = connector.status === "ACTIVE" || connector.status === "REFRESH_FAILED";
   const sameRealm = connector.externalAccountId === parsed.realmId;
   const keepSyncState = reconnected && sameRealm && connector.syncState != null;
+
+  // A reconnect (same-realm re-consent, or a realm change with no provenance to protect —
+  // the "different company, disconnect first" rejection above already handled the
+  // has-provenance case) is about to OVERWRITE the stored credential. If a token row
+  // already exists, its refresh token is about to become orphaned but still valid at
+  // Intuit unless revoked here first — same pattern as disconnectQuickBooks. Best-effort:
+  // a revoke failure must never block the (already-successful) new connection.
+  const existingToken = await (db as any).ownerConnectorToken.findUnique({
+    where: { connectorId: connector.id },
+    select: { encryptedAccessToken: true, encryptedRefreshToken: true, tokenType: true },
+  });
+  if (existingToken?.encryptedRefreshToken) {
+    try {
+      const plain = decryptOAuthToken(
+        {
+          accessToken: existingToken.encryptedAccessToken,
+          refreshToken: existingToken.encryptedRefreshToken,
+          tokenType: existingToken.tokenType,
+        },
+        parsed.workspaceId,
+      );
+      if (plain.refreshToken) {
+        await revokeQboToken(configResult.config, plain.refreshToken, { fetchImpl: input.fetchImpl });
+      }
+    } catch {
+      logger.warn(
+        "Failed to revoke the previous QuickBooks refresh token before a reconnect; proceeding to store the new credential regardless.",
+        undefined,
+        { connectorId: connector.id },
+      );
+    }
+  }
 
   await (db as any).$transaction(async (tx: any) => {
     const stored = await storeQboTokens({

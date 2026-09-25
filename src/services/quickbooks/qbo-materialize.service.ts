@@ -12,10 +12,26 @@
  * Currency is never converted: a business whose OpsIQ currency does not
  * match QuickBooks' home currency for the period is skipped with an issue,
  * not silently coerced.
+ *
+ * KNOWN FAIL-SAFE LIMITATION (documented, not fixed here — createFinancialSnapshot/
+ * createCashflowSnapshot and the OwnerConnectorRecord link upsert are deliberately
+ * separate operations/transactions, and this module may not edit the owner-finance/
+ * owner-cashflow snapshot services to merge them). If the process crashes between a
+ * successful createFinancialSnapshot/createCashflowSnapshot call and the link upsert
+ * that follows it, the new snapshot is left durably persisted but UNLINKED. The next
+ * materialization run for that same period then finds a current snapshot with no
+ * matching link and treats it as owner-entered (SKIPPED, "Owner-entered financial
+ * snapshot exists..."), never touching or overwriting it again. This is the correct
+ * fail-safe direction — a merged single transaction is not available across these two
+ * independently-owned services — but it does mean a rare crash at exactly this window
+ * silently converts one QuickBooks-derived snapshot into a permanently owner-entered-
+ * looking one; an owner (or a future reconciliation pass) can re-link it manually if
+ * that ever needs correcting.
  */
 
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { getBusiness } from "@/services/founder-recovery/business.service";
@@ -26,7 +42,6 @@ import { cashflowSnapshotCreateSchema } from "@/domain/owner-cashflow/validation
 import {
   createFinancialSnapshot,
   amendFinancialSnapshot,
-  resolveCurrentSnapshotId,
   rowToFinanceInput,
 } from "@/services/owner-finance/snapshot.service";
 import { createCashflowSnapshot } from "@/services/owner-cashflow/snapshot.service";
@@ -196,8 +211,21 @@ export async function materializeQuickBooksSnapshots(
       opsiqEntityId: created.id,
       now,
     });
-  } else if (!financialLink?.opsiqEntityId || (await resolveCurrentSnapshotId(financialLink.opsiqEntityId)) !== currentFinancial.id) {
+  } else if (!financialLink?.opsiqEntityId) {
     issues.push(`Owner-entered financial snapshot exists for ${periodKey}; QuickBooks values not applied.`);
+    financialOutcome = "SKIPPED";
+  } else if (financialLink.opsiqEntityId !== currentFinancial.id) {
+    // F15: the link points at OUR last write, but the current (non-superseded)
+    // version for this period is a DIFFERENT id — someone amended past our
+    // last write (an owner correction, most likely) since our last sync.
+    // resolveCurrentSnapshotId(financialLink.opsiqEntityId) would still equal
+    // currentFinancial.id in that case (it walks forward through every
+    // amendment, ours AND the owner's), which would wrongly treat the
+    // owner's correction as "still ours to overwrite". Only an EXACT match —
+    // our last write IS the current head — is treated as safe to amend
+    // again; anything else (including an owner amendment layered on top of
+    // ours) is left alone.
+    issues.push(`The QuickBooks-derived snapshot for ${periodKey} was amended in OpsIQ; QuickBooks values not re-applied.`);
     financialOutcome = "SKIPPED";
   } else {
     const existingInput = rowToFinanceInput(currentFinancial);
@@ -300,8 +328,18 @@ export async function materializeQuickBooksSnapshots(
         occurredAt: now.toISOString(),
       },
       input.actorId
-    ).catch(() => {
-      /* governed re-evaluation is best-effort; the snapshot write itself is already durable and audited */
+    ).catch((err) => {
+      // Governed re-evaluation is best-effort; the snapshot write itself is
+      // already durable and audited above. Logged (no payload data — kind/
+      // period only) and surfaced as an issue rather than silently dropped;
+      // it is not permanently lost, since the next materialization for this
+      // period re-emits ACCOUNTING_PL_SYNCED on its own next CREATED/AMENDED.
+      logger.error("QuickBooks materialize: ACCOUNTING_PL_SYNCED re-evaluation trigger failed (non-fatal)", err, {
+        connectorId: input.connectorId,
+        businessId: input.businessId,
+        period: periodKey,
+      });
+      issues.push("Re-evaluation trigger failed; it will re-run on the next sync.");
     });
   }
 

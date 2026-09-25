@@ -305,30 +305,51 @@ export function createQboTokenProvider(opts: CreateQboTokenProviderOptions): Qbo
     }
 
     const nowDate = now();
-    await (db as any).$transaction(async (tx: any) => {
-      const stored = await storeQboTokens({
-        workspaceId: opts.workspaceId,
-        connectorId: connector.id,
-        tokens,
-        now: nowDate,
-        client: tx,
-      });
-      await tx.ownerConnector.update({
-        where: { id: connector.id },
-        data: { tokenExpiresAt: stored.accessTokenExpiresAt, status: "ACTIVE", syncFailureMessage: null },
-      });
-      await emitAuditEvent(
-        {
-          eventName: AUDIT_EVENTS.QUICKBOOKS_TOKEN_REFRESHED,
+    try {
+      await (db as any).$transaction(async (tx: any) => {
+        const stored = await storeQboTokens({
           workspaceId: opts.workspaceId,
-          entityType: "OwnerConnector",
-          entityId: connector.id,
-          payload: { provider: QBO_PROVIDER },
-          ...actorFor(opts.actorId),
-        },
-        tx,
+          connectorId: connector.id,
+          tokens,
+          now: nowDate,
+          client: tx,
+        });
+        await tx.ownerConnector.update({
+          where: { id: connector.id },
+          data: { tokenExpiresAt: stored.accessTokenExpiresAt, status: "ACTIVE", syncFailureMessage: null },
+        });
+        await emitAuditEvent(
+          {
+            eventName: AUDIT_EVENTS.QUICKBOOKS_TOKEN_REFRESHED,
+            workspaceId: opts.workspaceId,
+            entityType: "OwnerConnector",
+            entityId: connector.id,
+            payload: { provider: QBO_PROVIDER },
+            ...actorFor(opts.actorId),
+          },
+          tx,
+        );
+      });
+    } catch (persistErr) {
+      // Intuit already rotated the refresh token server-side when refreshQboTokens
+      // succeeded above: the OLD refresh token (still in the DB) is now dead at
+      // Intuit, and the NEW one was never persisted. Leaving the connector ACTIVE
+      // would let it silently limp along until its short-lived access token also
+      // expires, only THEN discovering (via a second failed refresh) that it is
+      // unrecoverable. Fail closed and visible now instead: release the lease
+      // (never leave it to self-expire after 30s — a same-generation retry must
+      // be able to try again immediately) and transition straight to
+      // REFRESH_FAILED, exactly like an invalid_grant, since the practical
+      // outcome (this connector cannot get a new access token) is identical.
+      await releaseLease(connector.id);
+      await transitionToRefreshFailed(connector.id, opts.workspaceId);
+      logger.error(
+        "QuickBooks token refresh succeeded at the provider but failed to persist; connector marked REFRESH_FAILED (the previous refresh token is no longer valid at Intuit).",
+        persistErr instanceof Error ? persistErr : new Error(String(persistErr)),
+        { connectorId: connector.id },
       );
-    });
+      throw persistErr;
+    }
 
     return {
       accessToken: tokens.accessToken,
