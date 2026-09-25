@@ -456,6 +456,28 @@ jobs:
           MIGRATION_NAME: ${{ inputs.migration_name }}
         run: node scripts/verify-pinned-migration.mjs
 
+      # Release gate hand-off (incident 58f1d87e). The production build of a commit
+      # whose migrations are unapplied is refused by
+      # scripts/release/production-migration-gate.mjs, so production stays on the
+      # previous deployment. Once THIS workflow has applied and post-verified the
+      # migration, redeploy main so the gate re-checks and the release is promoted.
+      # The hook only asks Vercel to build main; the gate still decides. Optional:
+      # without the VERCEL_PRODUCTION_DEPLOY_HOOK_URL secret the operator redeploys
+      # main in Vercel (docs/deployment/PRODUCTION_RELEASE_PROCEDURE.md). The hook
+      # URL is a secret and is never echoed.
+      - name: Trigger production redeploy of main (release gate re-check)
+        if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true'
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "REDEPLOY=manual" >> "$GITHUB_ENV"
+            echo "::notice::VERCEL_PRODUCTION_DEPLOY_HOOK_URL is not configured - redeploy main in Vercel so the release gate re-checks and promotes it."
+            exit 0
+          fi
+          curl -fsS -X POST --max-time 30 -o /dev/null "$DEPLOY_HOOK_URL"
+          echo "REDEPLOY=triggered" >> "$GITHUB_ENV"
+
       - name: Migration summary
         if: always()
         run: |
@@ -517,6 +539,8 @@ jobs:
             echo "Do NOT run \`prisma migrate resolve\` or hand-edit \`_prisma_migrations\` in response to this." >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
+          echo "Production redeploy of main (release gate re-check): ${REDEPLOY:-not attempted}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Important:** Verify the production app is healthy after migrations (e.g. \`/api/health\`, \`/api/readiness\`)." >> "$GITHUB_STEP_SUMMARY"
           echo "If \`prisma migrate deploy\` reported a failed migration, do not re-run this workflow blindly:" >> "$GITHUB_STEP_SUMMARY"
           echo "inspect the failure in migration-status-after.txt, fix the underlying issue, then apply" >> "$GITHUB_STEP_SUMMARY"
