@@ -19,13 +19,14 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { teardownOwnerBusiness } from "../../test-helpers/owner-business-teardown";
 import { createBusiness } from "@/services/founder-recovery/business.service";
-import { requestQuickBooksSync, runQuickBooksSync } from "@/services/quickbooks/qbo-sync.service";
+import { requestQuickBooksSync, runQuickBooksSync, buildQuickBooksSyncTaskHandler } from "@/services/quickbooks/qbo-sync.service";
 import { handleQuickBooksWebhook } from "@/services/quickbooks/qbo-webhook.service";
 import { materializeQuickBooksSnapshots } from "@/services/quickbooks/qbo-materialize.service";
 import { createFinancialSnapshot, amendFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import profitAndLossFixture from "@/__tests__/fixtures/quickbooks/profit-and-loss.json";
 import { QBO_SYNC_ENTITY_ORDER, type QboEntityName } from "@/domain/quickbooks/qbo-entities";
-import type { QboClient, QboQueryPage, QboCdcResult } from "@/domain/quickbooks/qbo-contracts";
+import { TASK_NAME_QUICKBOOKS_SYNC, QboApiError, type QboClient, type QboQueryPage, type QboCdcResult } from "@/domain/quickbooks/qbo-contracts";
+import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
 import { createHmac } from "crypto";
 
 const actor = randomUUID();
@@ -491,6 +492,101 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] materializeQuickBooksSnapshots", () 
     expect(finalCurrent?.revenue?.toString()).toBe("999999");
 
     await teardownOwnerBusiness(business.id);
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+});
+
+// F27/F28 — driven through the REAL DatabaseSchedulerProvider.processTaskById
+// with the REAL quickBooksSyncTaskHandler (built with an injected fake client
+// via buildQuickBooksSyncTaskHandler), proving the full terminal-failure vs
+// retry contract end to end against real ScheduledTask/AuditEvent rows.
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] F27/F28 — quickBooksSyncTaskHandler via DatabaseSchedulerProvider.processTaskById", () => {
+  async function seedPendingTask(workspaceId: string, connectorId: string) {
+    const taskId = randomUUID();
+    const scheduledFor = new Date(Date.now() - 1000);
+    await db.scheduledTask.create({
+      data: {
+        id: taskId,
+        taskName: TASK_NAME_QUICKBOOKS_SYNC,
+        payload: { connectorId, trigger: "SCHEDULED", requestedBy: actor },
+        status: "pending",
+        scheduledFor,
+        maxAttempts: 3,
+        workspaceId,
+      },
+    });
+    return { taskId, scheduledFor };
+  }
+
+  it("a FORBIDDEN (403) failure ends status 'failed', attempts=1, scheduledFor unmoved, a terminal scheduled_task.failed audit row, and NO retry_scheduled audit row", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const { taskId, scheduledFor } = await seedPendingTask(workspaceId, connector.id);
+
+    const client = emptyClient({
+      companyInfo: async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      },
+    });
+    const handler: TaskHandler = buildQuickBooksSyncTaskHandler({ createClient: async () => client });
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, handler]]);
+
+    const scheduler = new DatabaseSchedulerProvider();
+    await scheduler.processTaskById(taskId, handlers);
+
+    const row = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(row?.status).toBe("failed");
+    expect(row?.attempts).toBe(1);
+    expect(row?.scheduledFor.getTime()).toBe(scheduledFor.getTime()); // never rescheduled — no retry
+
+    const auditRows = await db.auditEvent.findMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    expect(auditRows.some((a) => a.eventName === "scheduled_task.retry_scheduled")).toBe(false);
+    const failedAudit = auditRows.find((a) => a.eventName === "scheduled_task.failed");
+    expect(failedAudit).toBeDefined();
+    expect((failedAudit!.payload as { terminal?: boolean } | null)?.terminal).toBe(true);
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+
+  it("a TRANSIENT failure ends status 'pending' (retried), with a scheduled_task.retry_scheduled audit row present", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const { taskId } = await seedPendingTask(workspaceId, connector.id);
+
+    const client = emptyClient({
+      companyInfo: async () => {
+        throw new QboApiError({ kind: "TRANSIENT", message: "QuickBooks temporarily unavailable" });
+      },
+    });
+    const handler: TaskHandler = buildQuickBooksSyncTaskHandler({ createClient: async () => client });
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, handler]]);
+
+    const scheduler = new DatabaseSchedulerProvider();
+    await scheduler.processTaskById(taskId, handlers);
+
+    const row = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(row?.status).toBe("pending");
+    expect(row?.attempts).toBe(1);
+
+    const auditRows = await db.auditEvent.findMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    expect(auditRows.some((a) => a.eventName === "scheduled_task.retry_scheduled")).toBe(true);
+    // The scheduler's generic recordFailure() path also emits a
+    // scheduled_task.failed audit row on every attempt (retried or not) as
+    // an attempt-level record — but it must never carry terminal:true here,
+    // since this attempt WAS retried, not terminally failed.
+    const nonTerminalFailedAudit = auditRows.find((a) => a.eventName === "scheduled_task.failed");
+    if (nonTerminalFailedAudit) {
+      expect((nonTerminalFailedAudit.payload as { terminal?: boolean } | null)?.terminal).not.toBe(true);
+    }
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
     await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
     await db.ownerConnector.delete({ where: { id: connector.id } });
   }, 30_000);

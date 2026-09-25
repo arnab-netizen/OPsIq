@@ -71,6 +71,7 @@ import {
   requestQuickBooksSync,
   runQuickBooksSync,
   quickBooksSyncTaskHandler,
+  buildQuickBooksSyncTaskHandler,
   buildSyncContinuationIdempotencyKey,
 } from "@/services/quickbooks/qbo-sync.service";
 import { NotFoundError, ConflictError, ValidationError } from "@/infra/errors";
@@ -836,6 +837,147 @@ describe("[unit] runQuickBooksSync — failure classification", () => {
     expect(data.syncState.lastRunId).toBe("run-f25");
     expect(data.syncState.lastRunAt).toBeTruthy();
   });
+
+  // F27/F28 — non-retryable classifications return FAILED (never throw).
+  it.each([
+    ["FORBIDDEN", 403],
+    ["VALIDATION", 400],
+    ["NOT_FOUND", 404],
+    ["DUPLICATE", 400],
+    ["STALE_OBJECT", 400],
+    ["MALFORMED", 200],
+    ["CONFIG", null],
+  ] as const)("a %s failure returns FAILED without throwing", async (kind, httpStatus) => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind, message: `classified as ${kind}`, httpStatus });
+      }),
+    });
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: `run-${kind}`,
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+    expect(result.status).toBe("FAILED");
+  });
+
+  it("AUTH failure returns FAILED and never touches the connector's `status` column (the token layer alone governs REFRESH_FAILED)", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "AUTH", message: "invalid_grant" });
+      }),
+    });
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-auth-status",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+    expect(result.status).toBe("FAILED");
+    for (const call of txOwnerConnectorUpdate.mock.calls) {
+      expect((call[0] as { data?: Record<string, unknown> }).data).not.toHaveProperty("status");
+    }
+  });
+
+  // F27/F28 — retryable classifications still throw (unchanged).
+  it.each(["TRANSIENT", "RATE_LIMITED", "TIMEOUT"] as const)("a %s failure still throws so the scheduler retries", async (kind) => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind, message: `classified as ${kind}` });
+      }),
+    });
+    await expect(
+      runQuickBooksSync({
+        workspaceId: WORKSPACE,
+        connectorId: CONNECTOR,
+        trigger: "SCHEDULED",
+        requestedBy: ACTOR,
+        runId: `run-${kind}`,
+        deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+      })
+    ).rejects.toThrow();
+  });
+
+  // F28 — a local durability failure (the FAILED-state persistence tx itself
+  // rejects) must THROW an owner-safe error, never return FAILED — a
+  // classified-terminal outcome we could not even record must default to
+  // "the scheduler retries", not "definitely, permanently failed".
+  it("F28 — when persisting the FAILED outcome itself fails (transaction rejects), THROWS an owner-safe durability error instead of returning FAILED", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      }),
+    });
+    dbTransaction.mockImplementationOnce(async () => {
+      throw new Error("connection terminated unexpectedly"); // simulated Prisma failure — must never leak into the thrown message
+    });
+
+    await expect(
+      runQuickBooksSync({
+        workspaceId: WORKSPACE,
+        connectorId: CONNECTOR,
+        trigger: "SCHEDULED",
+        requestedBy: ACTOR,
+        runId: "run-f28",
+        deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+      })
+    ).rejects.toThrow(/could not be recorded/i);
+
+    // The lease must still be released even on this path.
+    const releaseCall = ownerConnectorUpdateMany.mock.calls.find(
+      (c) => (c[0] as { data?: { syncLeaseExpiresAt?: unknown } }).data?.syncLeaseExpiresAt === null
+    );
+    expect(releaseCall).toBeDefined();
+  });
+
+  // F16 — a governed re-evaluation trigger failure must never be silently
+  // swallowed into just a log line: it must be durable (audit payload flag)
+  // and owner-visible (a note in the persisted lastRunSummary).
+  it("F16 — when the CONNECTOR_SYNC_FAILED re-evaluation trigger fails, it is folded into lastRunSummary and the audit payload (never silently dropped)", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow({ businessId: "biz-1" }));
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      }),
+    });
+    ingestIntegrationEvent.mockRejectedValueOnce(new Error("integration event ingestion unavailable"));
+
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f16",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+
+    expect(result.status).toBe("FAILED");
+    expect(ingestIntegrationEvent).toHaveBeenCalledTimes(1); // attempted exactly once, never retried inline
+
+    // Durable + visible: the audit payload carries the flag.
+    const failedAudit = emitAuditEvent.mock.calls.find(
+      (c) => (c[0] as { eventName?: string }).eventName === "quickbooks.sync_failed"
+    );
+    expect(failedAudit).toBeDefined();
+    expect((failedAudit![0] as { payload?: { reevaluationTriggerFailed?: boolean } }).payload?.reevaluationTriggerFailed).toBe(true);
+
+    // Owner-visible: the persisted lastRunSummary carries an explicit note.
+    const syncStateCall = txOwnerConnectorUpdate.mock.calls.find(
+      (c) => (c[0] as { data?: { syncState?: { lastRunSummary?: string } } }).data?.syncState?.lastRunSummary
+    );
+    expect(syncStateCall).toBeDefined();
+    const summary = (syncStateCall![0] as { data: { syncState: { lastRunSummary: string } } }).data.syncState.lastRunSummary;
+    expect(summary).toMatch(/re-evaluation could not be queued/i);
+  });
 });
 
 // ─── Task handler ─────────────────────────────────────────────────────────
@@ -855,20 +997,74 @@ describe("[unit] quickBooksSyncTaskHandler", () => {
 
   it("uses context.workspaceId — never a workspaceId embedded in payload — to scope the sync (payload carries no workspaceId field at all)", async () => {
     ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow({ workspaceId: WORKSPACE }));
-    vi.doMock("@/services/quickbooks/qbo-client", () => ({ createQboClient: vi.fn() }));
-    const client = fakeClient();
-    // deps injection isn't reachable through the handler by design (production
-    // task payload has no deps channel); route via ownerConnector mocks instead
-    // and assert the workspace used to acquire the sync lease.
+    // The PRODUCTION handler (no injected deps) exercises the real createQboClient
+    // path, which fails fast in this unit environment — that's fine, we only
+    // assert the workspace used to acquire the sync lease before that point.
     await quickBooksSyncTaskHandler(
       { connectorId: CONNECTOR, trigger: "MANUAL", requestedBy: ACTOR },
       { taskId: "t1", taskName: "quickbooks-sync", workspaceId: WORKSPACE, attempt: 1 }
     ).catch(() => {
       /* creating the real client will fail without full env/token wiring in this unit test — we only assert the lease-acquire call below */
     });
-    void client;
     expect(ownerConnectorUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ workspaceId: WORKSPACE, id: CONNECTOR }) })
     );
+  });
+
+  // F27 — deterministic, via the buildQuickBooksSyncTaskHandler(deps) test seam
+  // (a fake QboClient, no real QBO/token-service dependency).
+  it("F27 — maps a FAILED runQuickBooksSync outcome to HandlerResult {status:'FAILED'} — does NOT throw", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow({ workspaceId: WORKSPACE }));
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      }),
+    });
+    const handler = buildQuickBooksSyncTaskHandler({ createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") });
+
+    const result = await handler(
+      { connectorId: CONNECTOR, trigger: "SCHEDULED", requestedBy: ACTOR },
+      { taskId: "t-f27", taskName: "quickbooks-sync", workspaceId: WORKSPACE, attempt: 1 }
+    );
+
+    expect(result).toMatchObject({ status: "FAILED" });
+    expect((result as { summary?: string }).summary).toBeTruthy();
+  });
+
+  it("F27 — a retryable (TRANSIENT) runQuickBooksSync failure still propagates as a thrown error (scheduler retries)", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow({ workspaceId: WORKSPACE }));
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "TRANSIENT", message: "server error" });
+      }),
+    });
+    const handler = buildQuickBooksSyncTaskHandler({ createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") });
+
+    await expect(
+      handler(
+        { connectorId: CONNECTOR, trigger: "SCHEDULED", requestedBy: ACTOR },
+        { taskId: "t-f27-retry", taskName: "quickbooks-sync", workspaceId: WORKSPACE, attempt: 1 }
+      )
+    ).rejects.toThrow();
+  });
+
+  it("F28 — a durability failure while persisting FAILED state propagates as a thrown error through the handler too (scheduler retries)", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow({ workspaceId: WORKSPACE }));
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      }),
+    });
+    dbTransaction.mockImplementationOnce(async () => {
+      throw new Error("connection terminated unexpectedly");
+    });
+    const handler = buildQuickBooksSyncTaskHandler({ createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") });
+
+    await expect(
+      handler(
+        { connectorId: CONNECTOR, trigger: "SCHEDULED", requestedBy: ACTOR },
+        { taskId: "t-f28", taskName: "quickbooks-sync", workspaceId: WORKSPACE, attempt: 1 }
+      )
+    ).rejects.toThrow(/could not be recorded/i);
   });
 });
