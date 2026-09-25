@@ -142,10 +142,6 @@ export const QBO_ENTITIES: Readonly<Record<QboEntityName, QboEntitySpec>> = Obje
   ) as Record<QboEntityName, QboEntitySpec>,
 );
 
-export function getQboEntitySpec(name: string): QboEntitySpec | null {
-  return (QBO_ENTITY_NAMES as readonly string[]).includes(name) ? QBO_ENTITIES[name as QboEntityName] : null;
-}
-
 /**
  * Initial-sync order: reference/master data first so transactional rows can be
  * resolved against already-mirrored references.
@@ -190,10 +186,6 @@ export const QBO_REPORT_NAMES = [
 ] as const;
 
 export type QboReportName = (typeof QBO_REPORT_NAMES)[number];
-
-export function isQboReportName(v: unknown): v is QboReportName {
-  return typeof v === "string" && (QBO_REPORT_NAMES as readonly string[]).includes(v);
-}
 
 /** Mirror entityType for a stored report, e.g. "Report:ProfitAndLoss". */
 export function reportRecordEntityType(name: QboReportName): string {

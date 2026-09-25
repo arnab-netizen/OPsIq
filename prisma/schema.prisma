@@ -6946,7 +6946,7 @@ model OwnerConnectorWrite {
   errorMessage      String?   @map("error_message") @db.VarChar(500)
   opsiqEntityType   String?   @map("opsiq_entity_type") @db.VarChar(64)
   opsiqEntityId     String?   @map("opsiq_entity_id") @db.VarChar(255)
-  requestedBy       String    @map("requested_by") @db.Uuid
+  requestedBy       String    @map("requested_by") @db.Uuid // compliance capture: who requested this governed QBO write
   lockedUntil       DateTime? @map("locked_until")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")

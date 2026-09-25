@@ -52,9 +52,6 @@ export const QBO_OAUTH_STATE_TTL_SECONDS = 600;
 /** Refresh an access token this long before its stated expiry. */
 export const QBO_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 300;
 
-/** Intuit `requestid` maximum length. OpsIQ derives a 36-char UUID-shaped value, well within it. */
-export const QBO_REQUEST_ID_MAX_LENGTH = 50;
-
 /** QBO query endpoint maximum page size. */
 export const QBO_QUERY_MAX_RESULTS = 1000;
 
