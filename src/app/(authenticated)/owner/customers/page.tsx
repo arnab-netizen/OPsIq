@@ -336,7 +336,7 @@ export default function CustomersPage() {
     <PageContainer data-testid="customers-page">
       <div className="mb-6">
         <PageHeader
-          title="Customers"
+          title="Customer records"
           description="Who your customers are, which ones matter most, and where the relationship needs attention."
           actions={<Button size="sm" onClick={openCreate} disabled={!selectedBizId}>+ New Customer</Button>}
         />
