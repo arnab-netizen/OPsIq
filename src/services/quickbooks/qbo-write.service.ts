@@ -353,6 +353,17 @@ export async function executeGovernedQboWrite(input: GovernedQboWriteInput): Pro
       return { writeId: row.id, remoteId: row.remoteId, remoteSyncToken: row.remoteSyncToken, replayed: true };
     }
     if (row.status === "FAILED" || row.status === "CONFLICT") {
+      if (row.lastAmbiguousAt && row.payloadHash !== payloadHash) {
+        // F29: the pinned requestid belongs to the ORIGINAL payload, which
+        // QuickBooks may already have committed. Sending a different payload
+        // under it could return the original result and look like the new
+        // intent was applied; a new requestid could duplicate the original.
+        // Neither is safe, so the changed intent is refused and the ledger
+        // row (requestid, payload hash, ambiguity marker) is left untouched.
+        throw new ConflictError(
+          "An earlier attempt of this QuickBooks change may already have been recorded in QuickBooks. Sync QuickBooks and check that record before submitting a different version of this change.",
+        );
+      }
       // Definitively NOT committed in QuickBooks (rejected by QBO or by OpsIQ
       // before sending). Intent-derived keys (e.g. one bill per PO) must stay
       // retryable after the owner corrects the record, so the row is reopened
@@ -365,9 +376,17 @@ export async function executeGovernedQboWrite(input: GovernedQboWriteInput): Pro
       // committed record instead of creating a second one.
       // Compare-and-set so two concurrent retries cannot both reopen it.
       const reopened = await db.ownerConnectorWrite.updateMany({
-        where: { id: row.id, status: row.status, providerRequestId: row.providerRequestId },
+        where: {
+          id: row.id,
+          status: row.status,
+          providerRequestId: row.providerRequestId,
+          payloadHash: row.payloadHash,
+          // A row that turned AMBIGUOUS concurrently must not be reopened on this stale read.
+          lastAmbiguousAt: row.lastAmbiguousAt,
+        },
         data: {
           status: "PENDING",
+          // Pinned rows only reach here with an unchanged payload (checked above).
           payloadHash,
           providerRequestId: row.lastAmbiguousAt
             ? row.providerRequestId

@@ -398,6 +398,50 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks writes", () => {
     expect((requested.at(-1)?.payload as { requestIdPinned?: boolean }).requestIdPinned).toBe(true);
   });
 
+  it("F29: AMBIGUOUS → FAILED → CHANGED payload is refused; the pinned requestid, payload hash and marker are untouched", async () => {
+    const line = (amt: number, type: "Debit" | "Credit", acct: string) => ({
+      DetailType: "JournalEntryLineDetail", Amount: amt, JournalEntryLineDetail: { PostingType: type, AccountRef: { value: acct } },
+    });
+    const key = "je-ambiguous-then-changed-1";
+    const write = (amt: number) =>
+      executeGovernedQboWrite({ workspaceId, actorId, idempotencyKey: key, entity: "JournalEntry", operation: "create", body: { Line: [line(amt, "Debit", "60"), line(amt, "Credit", "61")] }, confirm: true, deps: deps() });
+
+    // Payload A: QBO commits, response lost → AMBIGUOUS.
+    fake.failNextWriteAmbiguousAfterCommit = true;
+    await expect(write(40)).rejects.toMatchObject({ name: "ServiceUnavailableError" });
+    const ambiguous = await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } });
+    expect(ambiguous?.status).toBe("AMBIGUOUS");
+    // Same payload A retried, rejected before QBO processes it → FAILED.
+    fake.failNextWriteWith = new QboApiError({ kind: "AUTH", message: "token expired", httpStatus: 401 });
+    await expect(write(40)).rejects.toBeTruthy();
+    const failed = await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } });
+    expect(failed?.status).toBe("FAILED");
+
+    // Payload B (owner changed the data) under the same logical key.
+    const callsBefore = fake.calls.length;
+    await expect(write(55)).rejects.toMatchObject({ name: "ConflictError" });
+
+    // Rejected before any QBO call — no read, no create, nothing sent with payload B.
+    expect(fake.calls.length).toBe(callsBefore);
+    const after = await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } });
+    expect(after?.status).toBe("FAILED");
+    expect(after?.providerRequestId).toBe(ambiguous!.providerRequestId);
+    expect(after?.payloadHash).toBe(ambiguous!.payloadHash);
+    expect(after?.lastAmbiguousAt).not.toBeNull();
+    expect(after?.attempts).toBe(failed!.attempts);
+    // Only payload A's single commit exists remotely; no second logical transaction.
+    const jes = Array.from(fake.store.entries()).filter(([k]) => k.startsWith("JournalEntry:"));
+    expect(jes).toHaveLength(1);
+    expect((jes[0][1].Line as Array<{ Amount: number }>).map((l) => l.Amount)).toEqual([40, 40]);
+    expect(await db.ownerConnectorWrite.count({ where: { workspaceId, idempotencyKey: key } })).toBe(1);
+
+    // The original intent still resolves through the pinned requestid.
+    const ok = await write(40);
+    expect((await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } }))?.status).toBe("COMMITTED");
+    expect(ok.remoteId).toBe(jes[0][1].Id);
+    expect(Array.from(fake.store.keys()).filter((k) => k.startsWith("JournalEntry:"))).toHaveLength(1);
+  });
+
   it("reusing an idempotency key with a different payload is rejected", async () => {
     const vendorId = await seedVendor();
     await pushVendorToQuickBooks({ workspaceId, actorId, vendorId, deps: deps() });
