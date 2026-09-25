@@ -4,8 +4,8 @@
  *
  * Authorization is Intuit's `intuit-signature` header only:
  * base64(HMAC-SHA256(QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN, raw body)), compared in
- * constant time over the EXACT raw bytes (the body is read with request.text()
- * before any parsing). Fail-closed: when the verifier token is not configured
+ * constant time over the EXACT raw bytes (the body is read with
+ * request.arrayBuffer() before any parsing). Fail-closed: when the verifier token is not configured
  * every delivery is rejected with 503.
  *
  * Notifications are treated as triggers only — no entity data from the payload
@@ -33,7 +33,9 @@ const RESPONSE_TEXT: Record<number, string> = {
 };
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const rawBody = await request.text();
+  // Exact received bytes: the HMAC is computed over these, never over a
+  // decoded-and-re-encoded string.
+  const rawBody = Buffer.from(await request.arrayBuffer());
   const signatureHeader = request.headers.get("intuit-signature");
 
   let result: Awaited<ReturnType<typeof handleQuickBooksWebhook>>;

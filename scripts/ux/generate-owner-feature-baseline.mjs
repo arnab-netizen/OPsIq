@@ -739,6 +739,10 @@ const NON_WORKFLOW_MUTATION_FAMILIES = [
   // Budget mutations proven NOT part of the shared FSM (see budget_actions above) -- override and
   // working-capital submission have no status/transition evidence of their own in source.
   { family: "budget_non_workflow", apiPrefixes: ["/api/owner/budget/override", "/api/owner/budget/working-capital"], uiPages: ["/owner/budget"] },
+  // QuickBooks Online connection lifecycle (connect / sync / disconnect) and governed record
+  // pushes (vendor / customer / purchase order / bill / inactivate). Not a recovery-action FSM:
+  // connector state and the write ledger are governed server-side in src/services/quickbooks.
+  { family: "quickbooks_integration", apiPrefixes: ["/api/owner/integrations/quickbooks"], uiPages: ["/owner/integrations", "/owner/procurement", "/owner/vendor", "/owner/customers"] },
 ];
 
 function findFilesByKeywords(keywords, excludeKeywords = []) {

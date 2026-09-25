@@ -208,6 +208,123 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] QuickBooks sync — lease CAS under 
   }, 30_000);
 });
 
+// F19 — full real-Postgres round-trip for the CDC fallback "incomplete" path.
+// Uses the run-deadline termination mechanism (not the literal 100-page cap,
+// which would mean tens of thousands of real inserts here) — both mechanisms
+// drive the IDENTICAL downstream code (queryChangedSince returns
+// `complete: false`, and runCdcPass/runQuickBooksSync branch on that single
+// boolean regardless of which check produced it), so this is a faithful
+// real-DB proof of the shared mechanism: persist-what-was-fetched, DO NOT
+// advance the cursor, schedule a continuation, and — the part a call-count-only
+// unit test cannot prove — a SECOND run against the real row picks the exact
+// same window back up and, once it can finish, advances the cursor with
+// every record (from BOTH runs) durably persisted. The page-cap's own
+// distinct 100-page termination arithmetic is proven at the unit level
+// (qbo-sync.service.test.ts, "F19 CDC fallback termination mechanisms").
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] QuickBooks sync — F19 CDC fallback incomplete → continuation → completes, no data lost", () => {
+  it("run 1 persists what it fetched and leaves the cursor unchanged; run 2 re-requests the SAME window, finishes, advances the cursor, and every record from both runs is present", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const originalCursor = new Date(Date.now() - 60_000).toISOString();
+
+    await db.ownerConnector.update({
+      where: { id: connector.id },
+      data: {
+        syncState: {
+          version: 1,
+          phase: "INCREMENTAL",
+          initial: { entityIndex: QBO_SYNC_ENTITY_ORDER.length, startPosition: 1, startedAt: new Date(Date.now() - 120_000).toISOString(), completedAt: new Date(Date.now() - 120_000).toISOString() },
+          cdcCursor: originalCursor,
+          lastRunId: null, lastRunAt: null, lastRunStatus: null, lastRunSummary: null,
+          lastReportsAt: null, lastMaterializedPeriod: null, recordCounts: {},
+        },
+      },
+    });
+
+    const whereClausesSeen: string[] = [];
+
+    // ── Run 1: always a FULL (1000-item) page, and the virtual clock jumps
+    // far past the run's own budget right after that first page is fetched —
+    // guarantees exactly one page is fetched before the deadline check stops it.
+    const virtualNow = { current: Date.now() };
+    const run1Query = async (entity: string, opts: { startPosition: number; maxResults: number; where?: string }) => {
+      if (opts.where) whereClausesSeen.push(opts.where);
+      const items = Array.from({ length: 1000 }, (_, i) => ({ Id: `f19-run1-${i}`, SyncToken: "1", DisplayName: `Run1 #${i}`, MetaData: { LastUpdatedTime: new Date().toISOString() } }));
+      virtualNow.current += 60 * 60_000; // jump 60 minutes ahead — well past any reasonable budget
+      return { entity, items, startPosition: opts.startPosition, maxResults: opts.maxResults };
+    };
+    const client1 = emptyClient({
+      query: run1Query as unknown as QboClient["query"],
+      cdc: async (): Promise<QboCdcResult> => ({
+        entities: [{ entity: "Customer", changed: [], deleted: [], truncated: true }],
+        serverTime: new Date(virtualNow.current).toISOString(),
+      }),
+    });
+
+    const run1 = await runQuickBooksSync({
+      workspaceId, connectorId: connector.id, trigger: "SCHEDULED", requestedBy: actor, runId: randomUUID(),
+      budgetMs: 5 * 60_000,
+      deps: { createClient: async () => client1, now: () => new Date(virtualNow.current) },
+    });
+    expect(run1.status).toBe("PARTIAL_FAILURE");
+
+    const afterRun1 = await db.ownerConnector.findUnique({ where: { id: connector.id }, select: { syncState: true } });
+    const stateAfterRun1 = afterRun1!.syncState as { cdcCursor: string };
+    expect(stateAfterRun1.cdcCursor).toBe(originalCursor); // NOT advanced
+
+    const countAfterRun1 = await db.ownerConnectorRecord.count({ where: { connectorId: connector.id, entityType: "Customer" } });
+    expect(countAfterRun1).toBe(1000); // the one fetched page WAS persisted despite being "incomplete"
+
+    // A continuation task must exist for the same connector.
+    const continuationCount = await db.scheduledTask.count({
+      where: { workspaceId, taskName: "quickbooks-sync", payload: { path: ["connectorId"], equals: connector.id } },
+    });
+    expect(continuationCount).toBeGreaterThan(0);
+
+    // ── Run 2: short (10-item) final page — completes naturally this time.
+    const run2Query = async (entity: string, opts: { startPosition: number; maxResults: number; where?: string }) => {
+      if (opts.where) whereClausesSeen.push(opts.where);
+      const items = Array.from({ length: 10 }, (_, i) => ({ Id: `f19-run2-${i}`, SyncToken: "1", DisplayName: `Run2 #${i}`, MetaData: { LastUpdatedTime: new Date().toISOString() } }));
+      return { entity, items, startPosition: opts.startPosition, maxResults: opts.maxResults };
+    };
+    const client2 = emptyClient({
+      query: run2Query as unknown as QboClient["query"],
+      cdc: async (): Promise<QboCdcResult> => ({
+        entities: [{ entity: "Customer", changed: [], deleted: [], truncated: true }],
+        serverTime: new Date().toISOString(),
+      }),
+    });
+
+    const run2 = await runQuickBooksSync({
+      workspaceId, connectorId: connector.id, trigger: "SCHEDULED", requestedBy: actor, runId: randomUUID(),
+      deps: { createClient: async () => client2 },
+    });
+    expect(run2.status).toBe("SUCCESS");
+
+    // Both runs' fallback queries used the SAME changedSince window (run 2
+    // re-requested exactly where run 1 left off, since the cursor never moved).
+    expect(whereClausesSeen).toHaveLength(2);
+    expect(whereClausesSeen[0]).toBe(whereClausesSeen[1]);
+
+    const afterRun2 = await db.ownerConnector.findUnique({ where: { id: connector.id }, select: { syncState: true } });
+    const stateAfterRun2 = afterRun2!.syncState as { cdcCursor: string };
+    expect(stateAfterRun2.cdcCursor).not.toBe(originalCursor); // NOW advanced
+
+    // Nothing from run 1 was lost, and run 2's records are also present.
+    const finalCount = await db.ownerConnectorRecord.count({ where: { connectorId: connector.id, entityType: "Customer" } });
+    expect(finalCount).toBe(1010);
+    const run1Sample = await db.ownerConnectorRecord.findFirst({ where: { connectorId: connector.id, entityType: "Customer", remoteId: "f19-run1-999" } });
+    const run2Sample = await db.ownerConnectorRecord.findFirst({ where: { connectorId: connector.id, entityType: "Customer", remoteId: "f19-run2-9" } });
+    expect(run1Sample).not.toBeNull();
+    expect(run2Sample).not.toBeNull();
+
+    await db.scheduledTask.deleteMany({ where: { workspaceId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 60_000);
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] requestQuickBooksSync — workspace scoping", () => {
   it("rejects a request scoped to a workspace that does not own the connector", async () => {
     const workspaceId = randomUUID();

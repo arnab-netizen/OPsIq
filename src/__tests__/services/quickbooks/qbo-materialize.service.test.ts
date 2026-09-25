@@ -48,7 +48,12 @@ const ownerConnectorRecordFindFirst = vi.fn();
 const ownerConnectorRecordUpsert = vi.fn(async () => ({}));
 const ownerConnectorFindFirst = vi.fn(async () => ({ externalAccountId: "789012345" }));
 
-const dbMock = {
+// vi.mock is hoisted above every top-level statement in this file, so the
+// object it returns must itself be built inside vi.hoisted() — a plain
+// `const dbMock = {...}` here would still be in the temporal dead zone when
+// the hoisted factory below runs (unlike the `const x = vi.fn()` calls
+// above, which Vitest's hoisting transform recognizes and hoists too).
+const dbMock = vi.hoisted(() => ({
   ownerFinancialSnapshot: { findFirst: (...a: unknown[]) => ownerFinancialSnapshotFindFirst(...a) },
   ownerCashflowSnapshot: { findFirst: (...a: unknown[]) => ownerCashflowSnapshotFindFirst(...a) },
   ownerConnectorRecord: {
@@ -56,7 +61,7 @@ const dbMock = {
     upsert: (...a: unknown[]) => ownerConnectorRecordUpsert(...a),
   },
   ownerConnector: { findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a) },
-};
+}));
 
 // DC-20 (vitest.setup.ts contract): every "@/lib/db" mock factory must also export getDbInstance.
 vi.mock("@/lib/db", () => ({ db: dbMock, getDbInstance: vi.fn().mockResolvedValue(dbMock) }));

@@ -67,6 +67,7 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
 
   const consoleErrors: string[] = [];
   const apiBodies: string[] = [];
+  const failedResponses: string[] = [];
 
   test.beforeAll(async () => {
     const hash = bcrypt.hashSync(PASSWORD, 10);
@@ -93,6 +94,7 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
   test.beforeEach(async ({ page }) => {
     page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
     page.on("response", async (r) => {
+      if (r.status() >= 400) failedResponses.push(`${r.request().method()} ${new URL(r.url()).pathname} ${r.status()}`);
       if (new URL(r.url()).pathname.startsWith("/api/owner/integrations/quickbooks")) {
         apiBodies.push(await r.text().catch(() => ""));
       }
@@ -105,7 +107,8 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
 
   test("not connected → Connect sends the owner to Intuit with a hashed one-time state", async ({ page }) => {
     await login(page);
-    await page.goto("/owner/integrations", { waitUntil: "networkidle" });
+    await page.goto("/owner/integrations", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
     await expect(page.getByRole("heading", { name: /integrations/i }).first()).toBeVisible();
     await expect(page.getByText("QuickBooks Online").first()).toBeVisible();
 
@@ -179,7 +182,8 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
     );
 
     await login(page);
-    await page.goto("/owner/integrations", { waitUntil: "networkidle" });
+    await page.goto("/owner/integrations", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
     await expect(page.getByText("Sandbox Company US")).toBeVisible();
     await expect(page.getByText(/sandbox/i).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /sync now/i })).toBeVisible();
@@ -195,7 +199,8 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
 
   test("Sync Now is accepted and the page stays healthy", async ({ page }) => {
     await login(page);
-    await page.goto("/owner/integrations", { waitUntil: "networkidle" });
+    await page.goto("/owner/integrations", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
     const [res] = await Promise.all([
       page.waitForResponse((r) => r.url().includes("/api/owner/integrations/quickbooks") && r.request().method() === "POST"),
       page.getByRole("button", { name: /sync now/i }).click(),
@@ -207,9 +212,69 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
     expect(await page.content()).not.toContain(ACCESS);
   });
 
+  test("record write buttons follow server-decided allowedActions; confirmation and error UX", async ({ page }) => {
+    const [conn] = await sql<{ id: string }>(`SELECT id FROM owner_connectors WHERE workspace_id=$1 AND provider='QUICKBOOKS'`, [WORKSPACE_ID]);
+    const mirror = (entityType: string, remoteId: string, data: object, link: [string, string] | null = null) =>
+      sql(
+        `INSERT INTO owner_connector_records (workspace_id, business_id, connector_id, provider, external_account, entity_type, remote_id, remote_sync_token, remote_status, data, opsiq_entity_type, opsiq_entity_id, updated_at)
+         VALUES ($1,$2,$3,'QUICKBOOKS',$4,$5,$6,'0','ACTIVE',$7::jsonb,$8,$9,now())`,
+        [WORKSPACE_ID, BUSINESS_ID, conn.id, REALM, entityType, remoteId, JSON.stringify(data), link?.[0] ?? null, link?.[1] ?? null],
+      );
+    const approvedVendor = randomUUID();
+    const pendingVendor = randomUUID();
+    await sql(`INSERT INTO vendor_records (id, workspace_id, business_id, name, approval_status, updated_at) VALUES ($1,$2,$3,'Linked Flour Co','APPROVED',now()), ($4,$2,$3,'Pending Sugar Co','PENDING_REVIEW',now())`,
+      [approvedVendor, WORKSPACE_ID, BUSINESS_ID, pendingVendor]);
+    await mirror("Preferences", "preferences", { CurrencyPrefs: { HomeCurrency: { value: "USD" }, MultiCurrencyEnabled: false } });
+    await mirror("Account", "60", { Id: "60", Name: "Supplies", AccountType: "Expense", Active: true });
+    await mirror("Vendor", "77", { Id: "77", DisplayName: "Linked Flour Co", Active: true }, ["VendorRecord", approvedVendor]);
+    await sql(
+      `INSERT INTO purchase_orders (workspace_id, business_id, po_number, vendor_id, status, line_items, total_amount, currency, created_by, delivered_at, updated_at)
+       VALUES ($1,$2,'PO-E2E-1',$3,'DELIVERED',$4::jsonb,30,'USD',$5,now(),now())`,
+      [WORKSPACE_ID, BUSINESS_ID, approvedVendor, JSON.stringify([{ description: "Flour", qty: 3, unitPrice: 10 }]), USER_ID],
+    );
+
+    await login(page);
+    await page.goto("/owner/vendor", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
+    const pendingRow = page.locator("tr", { hasText: "Pending Sugar Co" });
+    await expect(pendingRow).toContainText(/approve the vendor/i);
+    await expect(pendingRow.getByRole("button", { name: /send to quickbooks/i })).toHaveCount(0);
+    await expect(page.locator("tr", { hasText: "Linked Flour Co" })).toContainText(/in quickbooks/i);
+
+    const actionPosts: string[] = [];
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().includes("/api/owner/integrations/quickbooks/actions")) actionPosts.push(r.postData() ?? "");
+    });
+    await page.goto("/owner/procurement", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
+    const poRow = page.locator("tr", { hasText: "PO-E2E-1" });
+    await poRow.getByRole("button", { name: /record bill/i }).click();
+    let dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText(/create a bill \(a payable\) in QuickBooks/i);
+    await dialog.getByRole("button", { name: /cancel/i }).click();
+    await expect(dialog).toBeHidden();
+    expect(actionPosts).toHaveLength(0);
+
+    await poRow.getByRole("button", { name: /record bill/i }).click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/expense account/i).selectOption("60");
+    await dialog.getByRole("button", { name: /record bill/i }).click();
+    // Intuit is not reachable with fake credentials: the owner must see an owner-safe error, never secrets.
+    const alert = page.getByRole("alert").first();
+    await expect(alert).toBeVisible({ timeout: 45000 });
+    const alertText = await alert.innerText();
+    for (const secret of [ACCESS, REFRESH]) expect(alertText).not.toContain(secret);
+    expect(alertText).not.toMatch(/stack|prisma|ECONN|at \w+ \(/i);
+    expect(actionPosts).toHaveLength(1);
+    expect(JSON.parse(actionPosts[0])).toMatchObject({ action: "record_bill", expenseAccountId: "60", confirm: true });
+    const bills = await sql<{ n: string }>(`SELECT count(*)::text AS n FROM owner_connector_records WHERE workspace_id=$1 AND entity_type='Bill'`, [WORKSPACE_ID]);
+    expect(bills[0].n).toBe("0"); // nothing recorded without a confirmed QuickBooks commit
+  });
+
   test("Disconnect requires confirmation, deletes the token, leaves Reconnect", async ({ page }) => {
     await login(page);
-    await page.goto("/owner/integrations", { waitUntil: "networkidle" });
+    await page.goto("/owner/integrations", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
     await page.getByRole("button", { name: /disconnect/i }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -230,8 +295,10 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
   test("mobile width renders the card without horizontal overflow", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
     await login(page);
-    await page.goto("/owner/integrations", { waitUntil: "networkidle" });
-    await expect(page.getByText("QuickBooks Online").first()).toBeVisible();
+    await page.goto("/owner/integrations", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading").first().waitFor();
+    await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /reconnect quickbooks/i })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
   });
@@ -239,9 +306,17 @@ test.describe("QuickBooks Online integration (owner, real backend)", () => {
   test("no token material in any QuickBooks API response; no console errors", async () => {
     for (const body of apiBodies) {
       for (const secret of [ACCESS, REFRESH]) expect(body).not.toContain(secret);
-      expect(body).not.toMatch(/encrypted_?(access|refresh)|refreshToken|accessToken/i);
+      // No token-VALUE keys (refreshTokenExpiresAt is a date and is allowed).
+      expect(body).not.toMatch(/"(access_?token|refresh_?token|encrypted_?access_?token|encrypted_?refresh_?token|id_token)"\s*:/i);
+      expect(body).not.toMatch(/v1gcm\./); // no ciphertext either
     }
-    const relevant = consoleErrors.filter((e) => !/favicon|Download the React DevTools/i.test(e));
-    expect(relevant).toEqual([]);
+    // The ONLY failed request allowed is the deliberately induced Record-bill attempt
+    // (Intuit is unreachable with fake credentials); the browser logs one generic
+    // "Failed to load resource" line per failed request, and nothing else may appear.
+    expect(failedResponses.every((f) => f.startsWith("POST /api/owner/integrations/quickbooks/actions "))).toBe(true);
+    expect(failedResponses.length).toBe(1);
+    const unexpected = consoleErrors.filter((e) => !/favicon|Download the React DevTools/i.test(e) && !/^Failed to load resource: the server responded with a status of 4\d\d/.test(e));
+    expect(unexpected).toEqual([]);
+    expect(consoleErrors.filter((e) => /^Failed to load resource/.test(e)).length).toBe(failedResponses.length);
   });
 });

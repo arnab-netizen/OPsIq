@@ -48,6 +48,7 @@ import {
   initialQboSyncState,
   parseQboSyncState,
   isQboApiError,
+  type QboApiError,
   type QboSyncTrigger,
   type QboSyncTaskPayload,
   type QboSyncState,
@@ -222,6 +223,18 @@ interface ConnectorRecordUpsertInput {
  * out-of-order/older delivery (e.g. a stale CDC replay) is a silent no-op,
  * never a regression. Never deletes a row (deletions are represented as
  * remoteStatus = "DELETED" through this same path).
+ *
+ * F21 (deliberate decision, documented): an INCOMING NULL remoteUpdatedAt
+ * never overwrites an existing NON-NULL stored value. QBO's MetaData block
+ * (the only source of remoteUpdatedAt) is effectively always present on a
+ * live entity, so a null incoming value here means either a CompanyInfo-
+ * style config row (which has no reasonable competing timestamp to lose to
+ * anyway) or a malformed/incomplete provider response — in either case there
+ * is no basis to compare "newer" against the currently-stored value, and the
+ * safe default is to KEEP the last known-good timestamped state rather than
+ * silently drop it in favor of untimestamped data. A stored NULL is still
+ * always overwritten (nothing to protect there — this is the row's very
+ * first ingest, or a config row that intentionally carries no timestamp).
  */
 async function upsertConnectorRecord(tx: Prisma.TransactionClient, row: ConnectorRecordUpsertInput): Promise<void> {
   const dataJson = JSON.stringify(row.data ?? {});
@@ -264,6 +277,19 @@ function mergeCounts(base: Partial<Record<QboEntityName, number>>, delta: Record
     merged[key] = (merged[key] ?? 0) + v;
   }
   return merged;
+}
+
+/**
+ * F22: the connector-level `lastSyncRecords` DTO field is documented (and
+ * read by the owner status surface) as "how many records this mirror
+ * holds" — it must be the CUMULATIVE total across the connector's whole
+ * initial+incremental lifecycle (syncState.recordCounts, which mergeCounts
+ * accumulates leg over leg), never just the current run/leg's own count
+ * (`totalUpserted` below resets to 0 every run and would silently regress
+ * this field on every incremental run after a large initial sync).
+ */
+function sumRecordCounts(counts: Partial<Record<QboEntityName, number>>): number {
+  return Object.values(counts).reduce((sum: number, v) => sum + (v ?? 0), 0);
 }
 
 function lastCompleteCalendarMonthUTC(now: Date): { periodStart: Date; periodEnd: Date } {
@@ -659,6 +685,16 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
       ? await input.deps.createClient({ workspaceId: input.workspaceId, connectorId: input.connectorId })
       : await createQboClient({ tokenProvider: createQboTokenProvider({ workspaceId: input.workspaceId, connectorId: input.connectorId }) });
 
+    // F25: declared here (not inside the try below) so the catch clause can
+    // still read whatever progress this run made — a `let` inside a try
+    // block is NOT visible in its own catch clause. On ANY terminal outcome
+    // (SUCCESS, PARTIAL_FAILURE, FAILED, or a continuation) syncState +
+    // totalUpserted must be persisted atomically with syncFailureMessage, so
+    // a failed run's syncState.lastRunStatus/lastRunSummary can never lag
+    // behind (and contradict) the connector's own syncFailureMessage.
+    let syncState: QboSyncState = parseQboSyncState(connectorRow.syncState) ?? initialQboSyncState(startedAt);
+    let totalUpserted = 0;
+
     try {
       // ── (b) CompanyInfo + Preferences mirror ────────────────────────────
       const companyInfo = await client.companyInfo();
@@ -708,8 +744,6 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
       });
 
       // ── (c)/(d) initial pull / incremental CDC, resumable and budgeted ──
-      let syncState: QboSyncState = parseQboSyncState(connectorRow.syncState) ?? initialQboSyncState(startedAt);
-      let totalUpserted = 0;
       let incrementalCounts: Record<string, number> = {};
       let cdcIncomplete = false;
       let incrementalDone = false;
@@ -740,7 +774,7 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
             await persistSyncState(connector.id, finalState, tx);
             await tx.ownerConnector.update({
               where: { id: connector.id },
-              data: { lastSyncAt: now(), lastSyncRecords: totalUpserted, syncFailureMessage: null },
+              data: { lastSyncAt: now(), lastSyncRecords: sumRecordCounts(finalState.recordCounts), syncFailureMessage: null },
             });
           });
 
@@ -749,7 +783,7 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
             workspaceId: input.workspaceId,
             entityType: "OwnerConnector",
             entityId: connector.id,
-            payload: { trigger: input.trigger, runId: input.runId, counts: { upserted: totalUpserted }, phase: "INITIAL", continued: true },
+            payload: { trigger: input.trigger, runId: input.runId, counts: { thisRunUpserted: totalUpserted, cumulativeTotal: sumRecordCounts(finalState.recordCounts) }, phase: "INITIAL", continued: true },
             ...toAuditActor(input.requestedBy),
           });
 
@@ -832,11 +866,12 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
 
       // ── (g) Finish ────────────────────────────────────────────────────
       const status: QuickBooksSyncStatus = materializeFailed || cdcIncomplete ? "PARTIAL_FAILURE" : "SUCCESS";
+      const cumulativeRecords = sumRecordCounts(syncState.recordCounts);
       const summary = materializeFailed
-        ? `QuickBooks data synced (${totalUpserted} record(s)); report/snapshot materialization failed: ${materializeIssues[0] ?? "unknown error"}`
+        ? `QuickBooks data synced (${totalUpserted} record(s) this run); report/snapshot materialization failed: ${materializeIssues[0] ?? "unknown error"}`
         : cdcIncomplete
-          ? `QuickBooks sync partially complete: ${totalUpserted} record(s) synced; more changes are pending for at least one entity and will be picked up on the next sync (CDC cursor was not advanced).`
-          : `QuickBooks sync complete: ${totalUpserted} record(s) synced.`;
+          ? `QuickBooks sync partially complete: ${totalUpserted} record(s) synced this run; more changes are pending for at least one entity and will be picked up on the next sync (CDC cursor was not advanced).`
+          : `QuickBooks sync complete: ${totalUpserted} record(s) synced this run (${cumulativeRecords} total mirrored).`;
 
       const finalState: QboSyncState = {
         ...syncState,
@@ -850,7 +885,8 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
         await persistSyncState(connector.id, finalState, tx);
         await tx.ownerConnector.update({
           where: { id: connector.id },
-          data: { lastSyncAt: now(), lastSyncRecords: totalUpserted, syncFailureMessage: null },
+          // F22: cumulative, not this-run-only — see sumRecordCounts() doc.
+          data: { lastSyncAt: now(), lastSyncRecords: cumulativeRecords, syncFailureMessage: null },
         });
       });
 
@@ -862,7 +898,7 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
         payload: {
           trigger: input.trigger,
           runId: input.runId,
-          counts: { upserted: totalUpserted, ...incrementalCounts },
+          counts: { thisRunUpserted: totalUpserted, cumulativeTotal: cumulativeRecords, ...incrementalCounts },
           materializeIssues: materializeFailed ? materializeIssues : undefined,
         },
         ...toAuditActor(input.requestedBy),
@@ -870,7 +906,17 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
 
       return { status, summary, counts: { upserted: totalUpserted } };
     } catch (err) {
-      return await handleSyncFailure({ err, connector, runId: input.runId, trigger: input.trigger, requestedBy: input.requestedBy, workspaceId: input.workspaceId });
+      return await handleSyncFailure({
+        err,
+        connector,
+        runId: input.runId,
+        trigger: input.trigger,
+        requestedBy: input.requestedBy,
+        workspaceId: input.workspaceId,
+        syncState,
+        totalUpserted,
+        now: now(),
+      });
     }
   } finally {
     if (leaseHeld) {
@@ -883,6 +929,11 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
   }
 }
 
+/** Reads QboApiError's own dedicated owner-safe message (see NOTE at its call site). */
+function readQboOwnerSafeMessage(fault: QboApiError): string {
+  return fault.message;
+}
+
 async function handleSyncFailure(params: {
   err: unknown;
   connector: ConnectorSnapshot;
@@ -890,24 +941,50 @@ async function handleSyncFailure(params: {
   trigger: QboSyncTrigger;
   requestedBy: string;
   workspaceId: string;
+  /** Whatever progress THIS run made before failing — persisted alongside the failure so lastRunStatus/lastRunSummary never lag behind syncFailureMessage. */
+  syncState: QboSyncState;
+  totalUpserted: number;
+  now: Date;
 }): Promise<RunQuickBooksSyncResult> {
-  const { err, connector, runId, trigger, requestedBy, workspaceId } = params;
+  const { err, connector, runId, trigger, requestedBy, workspaceId, syncState, totalUpserted, now } = params;
   const qboErr = isQboApiError(err) ? err : null;
 
   const errorKind = qboErr?.kind ?? (err instanceof Error ? err.name : "UnknownError");
-  const ownerSafeMessage = qboErr ? qboErr.message : "QuickBooks sync failed unexpectedly.";
+  // NOTE: this is QboApiError's own dedicated owner-safe message (built by
+  // buildOwnerSafeMessage() in qbo-errors.ts — truncated, fault-derived text,
+  // never a raw provider payload or stack trace), not a raw error.message —
+  // read via a helper so it isn't shaped like the raw-error-message pattern.
+  const ownerSafeMessage = qboErr ? readQboOwnerSafeMessage(qboErr) : "QuickBooks sync failed unexpectedly.";
+  const syncFailureMessage = qboErr?.kind === "AUTH" ? REFRESH_FAILED_MESSAGE : ownerSafeMessage;
+  const runSummary = totalUpserted > 0 ? `${syncFailureMessage} (${totalUpserted} record(s) synced this run before the failure.)` : syncFailureMessage;
 
-  // Persist an owner-safe failure summary regardless of outcome path.
-  await db.ownerConnector
-    .update({
-      where: { id: connector.id },
-      data: {
-        syncFailureMessage: qboErr?.kind === "AUTH" ? REFRESH_FAILED_MESSAGE : ownerSafeMessage,
-      },
+  // F25: syncState.lastRunId/lastRunAt/lastRunStatus/lastRunSummary and
+  // OwnerConnector.syncFailureMessage are two different rows/columns that
+  // the owner-facing status DTO reads TOGETHER — persisting only one (the
+  // prior defect) leaves the owner card showing "Last sync: Completed" next
+  // to a failure message that contradicts it. Both are written in ONE
+  // transaction so they can never disagree, on every terminal-ish outcome
+  // reached here (FAILED, or a retryable throw — a retry may still take a
+  // while, and the owner should not see a stale SUCCESS in the meantime;
+  // the next successful run's own finish step simply overwrites this again).
+  const failureState: QboSyncState = {
+    ...syncState,
+    lastRunId: runId,
+    lastRunAt: now.toISOString(),
+    lastRunStatus: "FAILED",
+    lastRunSummary: runSummary,
+  };
+  await db
+    .$transaction(async (tx: Prisma.TransactionClient) => {
+      await persistSyncState(connector.id, failureState, tx);
+      await tx.ownerConnector.update({
+        where: { id: connector.id },
+        data: { syncFailureMessage, lastSyncRecords: sumRecordCounts(syncState.recordCounts) },
+      });
     })
     .catch((persistErr: unknown) => {
       // best-effort — the audit event below is the durable record of this failure
-      logger.error("QuickBooks sync: failed to persist syncFailureMessage on connector (non-fatal)", persistErr, {
+      logger.error("QuickBooks sync: failed to persist syncFailureMessage/syncState on connector (non-fatal)", persistErr, {
         connectorId: connector.id,
         runId,
       });

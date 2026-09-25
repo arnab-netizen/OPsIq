@@ -161,7 +161,10 @@ describe("webhook route", () => {
     m.webhook.mockResolvedValue({ status: 200, dispatched: [] });
     const raw = '[{"specversion":"1.0","id":"e1"}]  ';
     await webhookPOST(new Request(W, { method: "POST", body: raw, headers: { "intuit-signature": "sig==" } }));
-    expect(m.webhook).toHaveBeenCalledWith({ rawBody: raw, signatureHeader: "sig==" });
+    const arg = m.webhook.mock.calls[0][0] as { rawBody: Buffer; signatureHeader: string };
+    expect(Buffer.isBuffer(arg.rawBody)).toBe(true);
+    expect(arg.rawBody.equals(Buffer.from(raw, "utf8"))).toBe(true);
+    expect(arg.signatureHeader).toBe("sig==");
   });
 
   it.each([[401], [400], [503]])("propagates status %s without dispatching", async (status) => {

@@ -16,33 +16,34 @@ import { QboApiError } from "@/domain/quickbooks/qbo-contracts";
 import { QBO_SYNC_ENTITY_ORDER } from "@/domain/quickbooks/qbo-entities";
 
 // ─── db mock ──────────────────────────────────────────────────────────────
+// vi.mock is hoisted above every top-level statement in this file, so
+// everything the factory (and getDbInstance) reference must be created
+// inside vi.hoisted() — a plain top-level `const dbMock = {...}` declared
+// after the vi.mock call would still be in the temporal dead zone when the
+// hoisted factory runs.
 
-const scheduledTaskFindUnique = vi.fn(async () => null as { id: string } | null);
-const scheduledTaskCreate = vi.fn(async (args: { data: { id: string } }) => ({ id: args.data.id }));
-const ownerConnectorFindFirst = vi.fn();
-const ownerConnectorUpdateMany = vi.fn(async () => ({ count: 1 }));
-const ownerConnectorUpdate = vi.fn(async () => ({}));
-const txExecuteRaw = vi.fn(async () => 1);
-const txOwnerConnectorUpdate = vi.fn(async () => ({}));
-
-function makeTx() {
-  return {
-    $executeRaw: txExecuteRaw,
-    ownerConnector: { update: txOwnerConnectorUpdate },
-  };
-}
-
-const dbTransaction = vi.fn(async (fn: (tx: ReturnType<typeof makeTx>) => unknown) => fn(makeTx()));
-
-const dbMock = {
-  scheduledTask: { findUnique: (...a: unknown[]) => scheduledTaskFindUnique(...(a as [])), create: (...a: unknown[]) => scheduledTaskCreate(...(a as [{ data: { id: string } }])) },
-  ownerConnector: {
-    findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a),
-    updateMany: (...a: unknown[]) => ownerConnectorUpdateMany(...a),
-    update: (...a: unknown[]) => ownerConnectorUpdate(...a),
-  },
-  $transaction: (...a: unknown[]) => dbTransaction(...(a as [(tx: ReturnType<typeof makeTx>) => unknown])),
-};
+const { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, ownerConnectorUpdateMany, ownerConnectorUpdate, txExecuteRaw, txOwnerConnectorUpdate, dbTransaction, dbMock } =
+  vi.hoisted(() => {
+    const scheduledTaskFindUnique = vi.fn(async () => null as { id: string } | null);
+    const scheduledTaskCreate = vi.fn(async (args: { data: { id: string } }) => ({ id: args.data.id }));
+    const ownerConnectorFindFirst = vi.fn();
+    const ownerConnectorUpdateMany = vi.fn(async () => ({ count: 1 }));
+    const ownerConnectorUpdate = vi.fn(async () => ({}));
+    const txExecuteRaw = vi.fn(async () => 1);
+    const txOwnerConnectorUpdate = vi.fn(async () => ({}));
+    const makeTx = () => ({ $executeRaw: txExecuteRaw, ownerConnector: { update: txOwnerConnectorUpdate } });
+    const dbTransaction = vi.fn(async (fn: (tx: ReturnType<typeof makeTx>) => unknown) => fn(makeTx()));
+    const dbMock = {
+      scheduledTask: { findUnique: (...a: unknown[]) => scheduledTaskFindUnique(...(a as [])), create: (...a: unknown[]) => scheduledTaskCreate(...(a as [{ data: { id: string } }])) },
+      ownerConnector: {
+        findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a),
+        updateMany: (...a: unknown[]) => ownerConnectorUpdateMany(...a),
+        update: (...a: unknown[]) => ownerConnectorUpdate(...a),
+      },
+      $transaction: (...a: unknown[]) => dbTransaction(...(a as [(tx: ReturnType<typeof makeTx>) => unknown])),
+    };
+    return { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, ownerConnectorUpdateMany, ownerConnectorUpdate, txExecuteRaw, txOwnerConnectorUpdate, dbTransaction, dbMock };
+  });
 
 // DC-20 (vitest.setup.ts contract): every "@/lib/db" mock factory must also export getDbInstance.
 vi.mock("@/lib/db", () => ({ db: dbMock, getDbInstance: vi.fn().mockResolvedValue(dbMock) }));
@@ -85,7 +86,9 @@ beforeEach(() => {
   scheduledTaskFindUnique.mockResolvedValue(null);
   scheduledTaskCreate.mockImplementation(async (args: { data: { id: string } }) => ({ id: args.data.id }));
   ownerConnectorUpdateMany.mockResolvedValue({ count: 1 });
-  dbTransaction.mockImplementation(async (fn: (tx: ReturnType<typeof makeTx>) => unknown) => fn(makeTx()));
+  dbTransaction.mockImplementation(async (fn: (tx: { $executeRaw: typeof txExecuteRaw; ownerConnector: { update: typeof txOwnerConnectorUpdate } }) => unknown) =>
+    fn({ $executeRaw: txExecuteRaw, ownerConnector: { update: txOwnerConnectorUpdate } })
+  );
 });
 
 // ─── requestQuickBooksSync ────────────────────────────────────────────────
@@ -413,6 +416,265 @@ describe("[unit] runQuickBooksSync — CDC", () => {
     // Stale cursor resets to phase INITIAL, so every synced entity is queried again.
     expect((client.query as ReturnType<typeof vi.fn>).mock.calls.length).toBe(QBO_SYNC_ENTITY_ORDER.length);
     expect(client.cdc).toHaveBeenCalledTimes(1); // the fresh initial pass then transitions back into one incremental pass
+  });
+
+  // F19
+  it("a truncated entity that never finishes paging (still full pages at the cap) leaves the cursor unchanged and schedules a continuation", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(incrementalConnectorRow("2026-09-25T09:00:00.000Z"));
+    const fullPage = () => Array.from({ length: 1000 }, (_, i) => emptyEntityBody(String(i)));
+    const queryMock = vi.fn(async (entity: string, opts: { startPosition: number; maxResults: number }) => ({
+      entity,
+      items: fullPage(),
+      startPosition: opts.startPosition,
+      maxResults: opts.maxResults,
+    }));
+    const client = fakeClient({
+      query: queryMock as unknown as QboClient["query"],
+      cdc: vi.fn(async () => ({
+        entities: [{ entity: "Invoice", changed: [], deleted: [], truncated: true }],
+        serverTime: "2026-09-25T10:00:00.000Z",
+      })) as unknown as QboClient["cdc"],
+    });
+
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-cap-1",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+
+    expect(result.status).toBe("PARTIAL_FAILURE");
+    expect(queryMock.mock.calls.length).toBe(100); // MAX_FALLBACK_PAGES
+
+    // Cursor must NOT have advanced past the un-fetched remainder: the persisted
+    // syncState.cdcCursor is still the OLD cursor, not client.cdc's serverTime.
+    const syncStateUpdate = txOwnerConnectorUpdate.mock.calls.find(
+      (c) => (c[0] as { data?: { syncState?: { cdcCursor?: string } } }).data?.syncState?.cdcCursor
+    );
+    expect(syncStateUpdate).toBeDefined();
+    expect((syncStateUpdate![0] as { data: { syncState: { cdcCursor: string } } }).data.syncState.cdcCursor).toBe("2026-09-25T09:00:00.000Z");
+
+    // A continuation task must have been scheduled for the same connector/run.
+    const continuationCall = scheduledTaskCreate.mock.calls.find(
+      (c) => (c[0] as { data: { idempotencyKey: string } }).data.idempotencyKey === buildSyncContinuationIdempotencyKey(CONNECTOR, "run-cap-1")
+    );
+    expect(continuationCall).toBeDefined();
+  });
+
+  it("never calls the QBO client while a db transaction is open (no network call inside a DB transaction)", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(incrementalConnectorRow("2026-09-25T09:00:00.000Z"));
+    let txOpen = false;
+    dbTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      txOpen = true;
+      try {
+        return await fn({ $executeRaw: txExecuteRaw, ownerConnector: { update: txOwnerConnectorUpdate } });
+      } finally {
+        txOpen = false;
+      }
+    });
+    let violation = false;
+    const client = fakeClient({
+      query: vi.fn(async (entity: string, opts: { startPosition: number; maxResults: number }) => {
+        if (txOpen) violation = true;
+        return { entity, items: [], startPosition: opts.startPosition, maxResults: opts.maxResults };
+      }) as unknown as QboClient["query"],
+      cdc: vi.fn(async () => {
+        if (txOpen) violation = true;
+        return {
+          entities: [{ entity: "Invoice", changed: [emptyEntityBody("1")], deleted: [], truncated: true }],
+          serverTime: "2026-09-25T10:00:00.000Z",
+        };
+      }) as unknown as QboClient["cdc"],
+    });
+
+    await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-no-net-in-tx",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+
+    expect(violation).toBe(false);
+  });
+});
+
+function freshIncrementalConnectorRow(cdcCursorIso: string) {
+  return connectorRow({
+    syncState: {
+      version: 1,
+      phase: "INCREMENTAL",
+      initial: { entityIndex: QBO_SYNC_ENTITY_ORDER.length, startPosition: 1, startedAt: "2026-08-01T00:00:00.000Z", completedAt: "2026-08-01T00:05:00.000Z" },
+      cdcCursor: cdcCursorIso,
+      lastRunId: null,
+      lastRunAt: null,
+      lastRunStatus: null,
+      lastRunSummary: null,
+      lastReportsAt: null,
+      lastMaterializedPeriod: null,
+      recordCounts: {},
+    },
+  });
+}
+
+/** Wraps every function-valued property of a fake QboClient so a call while `txActive.value` is true increments `counter`. */
+function instrumentClientAgainstTx(client: QboClient, txActive: { value: boolean }, counter: { value: number }): QboClient {
+  const wrapped: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(client as unknown as Record<string, unknown>)) {
+    if (typeof val === "function") {
+      wrapped[key] = async (...args: unknown[]) => {
+        if (txActive.value) counter.value++;
+        return (val as (...a: unknown[]) => unknown)(...args);
+      };
+    } else {
+      wrapped[key] = val;
+    }
+  }
+  return wrapped as unknown as QboClient;
+}
+
+// F18 — strict, instrumented proof: zero QBO client calls while a db transaction
+// is active, and the fetched rows ARE persisted inside a transaction.
+describe("[unit] runQuickBooksSync — F18 no network call during a db transaction (instrumented)", () => {
+  it("wraps every QboClient method; the truncated-CDC fallback fetch happens with zero calls during an active tx, and the fetched rows are upserted inside that tx", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(freshIncrementalConnectorRow("2026-09-25T09:00:00.000Z"));
+
+    const txActive = { value: false };
+    const networkCallsDuringTx = { value: 0 };
+    let upsertCallsObservedDuringTx = 0;
+
+    dbTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      txActive.value = true;
+      try {
+        return await fn({
+          $executeRaw: (...args: unknown[]) => {
+            if (txActive.value) upsertCallsObservedDuringTx++;
+            return (txExecuteRaw as unknown as (...a: unknown[]) => unknown)(...args);
+          },
+          ownerConnector: { update: txOwnerConnectorUpdate },
+        });
+      } finally {
+        txActive.value = false;
+      }
+    });
+
+    const fallbackItems = Array.from({ length: 5 }, (_, i) => emptyEntityBody(`fallback-${i}`));
+    const rawClient = fakeClient({
+      query: vi.fn(async (entity: string, opts: { startPosition: number; maxResults: number }) => ({
+        entity,
+        items: opts.startPosition === 1 ? fallbackItems : [],
+        startPosition: opts.startPosition,
+        maxResults: opts.maxResults,
+      })) as unknown as QboClient["query"],
+      cdc: vi.fn(async () => ({
+        entities: [{ entity: "Invoice", changed: [], deleted: [], truncated: true }],
+        serverTime: "2026-09-25T10:00:00.000Z",
+      })) as unknown as QboClient["cdc"],
+    });
+    const client = instrumentClientAgainstTx(rawClient, txActive, networkCallsDuringTx);
+
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f18",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+
+    expect(result.status).toBe("SUCCESS");
+    expect(networkCallsDuringTx.value).toBe(0);
+    expect(upsertCallsObservedDuringTx).toBeGreaterThan(0);
+
+    // The fetched fallback rows were actually persisted (not silently dropped).
+    const persistedIds = new Set(
+      txExecuteRaw.mock.calls.filter((c) => c.includes("Invoice")).map((c) => c.find((v) => typeof v === "string" && v.startsWith("fallback-")))
+    );
+    for (const item of fallbackItems) {
+      expect(persistedIds.has(item.Id)).toBe(true);
+    }
+  });
+});
+
+// F19 — deterministic proof for both termination mechanisms, unit-level (call-count
+// and cursor-not-advanced assertions; see qbo-sync.service.db.test.ts for the full
+// real-Postgres round-trip: second run resumes, eventually completes, no data lost).
+describe("[unit] runQuickBooksSync — F19 CDC fallback termination mechanisms", () => {
+  it("mechanism 1 — page-cap exhaustion: fallback stops at MAX_FALLBACK_PAGES, cursor unchanged, continuation scheduled", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(freshIncrementalConnectorRow("2026-09-25T09:00:00.000Z"));
+    const fullPage = () => Array.from({ length: 1000 }, (_, i) => emptyEntityBody(`page-${i}`));
+    const queryMock = vi.fn(async (entity: string, opts: { startPosition: number; maxResults: number }) => ({
+      entity,
+      items: fullPage(), // ALWAYS a full page — never terminates on its own
+      startPosition: opts.startPosition,
+      maxResults: opts.maxResults,
+    }));
+    const client = fakeClient({
+      query: queryMock as unknown as QboClient["query"],
+      cdc: vi.fn(async () => ({
+        entities: [{ entity: "Invoice", changed: [], deleted: [], truncated: true }],
+        serverTime: "2026-09-25T10:00:00.000Z",
+      })) as unknown as QboClient["cdc"],
+    });
+
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f19-cap",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+
+    expect(result.status).toBe("PARTIAL_FAILURE");
+    expect(queryMock).toHaveBeenCalledTimes(100); // MAX_FALLBACK_PAGES — proves the CAP terminated it, not a short page
+    const cursorUpdate = txOwnerConnectorUpdate.mock.calls.find((c) => (c[0] as { data?: { syncState?: { cdcCursor?: string } } }).data?.syncState?.cdcCursor);
+    expect((cursorUpdate![0] as { data: { syncState: { cdcCursor: string } } }).data.syncState.cdcCursor).toBe("2026-09-25T09:00:00.000Z");
+    expect(scheduledTaskCreate.mock.calls.some((c) => (c[0] as { data: { idempotencyKey: string } }).data.idempotencyKey === buildSyncContinuationIdempotencyKey(CONNECTOR, "run-f19-cap"))).toBe(true);
+  });
+
+  it("mechanism 2 — run-deadline exhaustion mid-fallback: stops before the page cap, cursor unchanged, continuation scheduled", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(freshIncrementalConnectorRow("2026-09-25T09:00:00.000Z"));
+    // A VIRTUAL clock that only advances when a page is actually fetched (2
+    // minutes "cost" per page) — deliberately decoupled from how many
+    // *other*, incidental now() calls the production code happens to make
+    // elsewhere in the run (lease timestamps, ingestedAt, etc.), so this
+    // test does not silently miscalibrate if unrelated code changes. The
+    // deadline is blown a few pages in, well short of the 100-page cap.
+    const virtualNow = { current: new Date("2026-09-25T10:00:00.000Z").getTime() };
+    const clock = () => new Date(virtualNow.current);
+    const fullPage = () => Array.from({ length: 1000 }, (_, i) => emptyEntityBody(`deadline-${i}`));
+    const queryMock = vi.fn(async (entity: string, opts: { startPosition: number; maxResults: number }) => {
+      virtualNow.current += 2 * 60_000; // each fetched page "costs" 2 minutes of wall-clock
+      return { entity, items: fullPage(), startPosition: opts.startPosition, maxResults: opts.maxResults };
+    });
+    const client = fakeClient({
+      query: queryMock as unknown as QboClient["query"],
+      cdc: vi.fn(async () => ({
+        entities: [{ entity: "Invoice", changed: [], deleted: [], truncated: true }],
+        serverTime: "2026-09-25T10:00:00.000Z",
+      })) as unknown as QboClient["cdc"],
+    });
+
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f19-deadline",
+      budgetMs: 5 * 60_000, // 5 minutes — blown after ~3 pages (6 minutes of virtual cost), nowhere near the 100-page cap
+      deps: { createClient: async () => client, now: clock },
+    });
+
+    expect(result.status).toBe("PARTIAL_FAILURE");
+    expect(queryMock.mock.calls.length).toBeGreaterThan(0); // real progress was made before stopping
+    expect(queryMock.mock.calls.length).toBeLessThan(100); // proves it did NOT run out via the page cap
+    const cursorUpdate = txOwnerConnectorUpdate.mock.calls.find((c) => (c[0] as { data?: { syncState?: { cdcCursor?: string } } }).data?.syncState?.cdcCursor);
+    expect((cursorUpdate![0] as { data: { syncState: { cdcCursor: string } } }).data.syncState.cdcCursor).toBe("2026-09-25T09:00:00.000Z");
+    expect(scheduledTaskCreate.mock.calls.some((c) => (c[0] as { data: { idempotencyKey: string } }).data.idempotencyKey === buildSyncContinuationIdempotencyKey(CONNECTOR, "run-f19-deadline"))).toBe(true);
   });
 });
 
