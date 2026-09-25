@@ -124,6 +124,34 @@ describe("migration release signal", () => {
     rmSync(r.dir, { recursive: true, force: true });
   });
 
+  it("a migration that landed on main after the PR branched is not misread as deleted by the PR (merge-base diff)", () => {
+    const r = repo();
+    r.git("checkout", "-qb", "feature");
+    r.write("src/app.ts", "export const feature = 1;\n");
+    const head = r.commit();
+    r.git("checkout", "-q", "-");
+    r.write(`prisma/migrations/${NEW}/migration.sql`, 'ALTER TABLE "a" ADD COLUMN "m" TEXT;\n');
+    const mainTip = r.commit();
+    const res = signal(r.dir, mainTip, head);
+    expect(res.ok).toBe(true);
+    expect(res.verdict).toBe("NO_MIGRATION_CHANGE");
+    rmSync(r.dir, { recursive: true, force: true });
+  });
+
+  it("a PR migration that sorts before a migration already merged to main → BLOCKED (ordering uses the base tip)", () => {
+    const r = repo();
+    r.git("checkout", "-qb", "feature");
+    r.write("prisma/migrations/20260925000000_pr_migration/migration.sql", 'ALTER TABLE "a" ADD COLUMN "p" TEXT;\n');
+    const head = r.commit();
+    r.git("checkout", "-q", "-");
+    r.write(`prisma/migrations/${NEW}/migration.sql`, 'ALTER TABLE "a" ADD COLUMN "m" TEXT;\n');
+    const mainTip = r.commit();
+    const res = signal(r.dir, mainTip, head);
+    expect(res.ok).toBe(false);
+    expect(res.blockers.join("\n")).toMatch(/sorts before the latest existing migration/);
+    rmSync(r.dir, { recursive: true, force: true });
+  });
+
   it("invalid or out-of-order migration names → BLOCKED", () => {
     const r = repo();
     r.write("prisma/migrations/20200101000000_older_than_base/migration.sql", 'ALTER TABLE "a" ADD COLUMN "z" TEXT;\n');

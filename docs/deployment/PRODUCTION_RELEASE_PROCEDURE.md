@@ -70,7 +70,7 @@ If the workflow reports a failed or uncertain migration, or the build gate says 
 - **Do not** re-run the workflow blindly, redeploy, or hand-edit `_prisma_migrations`.
 - **Do not** run `prisma migrate deploy` or `db push` from a laptop against production.
 - Production keeps serving the last good deployment: the gate refuses new builds while a failed row exists.
-- Inspect the workflow log (`migration-status-after.txt`), fix the cause, then resolve with `prisma migrate resolve --applied|--rolled-back <name>` under owner authorization, as the workflow summary describes. Then re-run the workflow and redeploy.
+- Inspect the workflow log (`migration-status-after.txt`) and fix the cause. Resolving the row (`prisma migrate resolve --applied|--rolled-back <name>`) needs owner authorization. Note that **any** row left with `rolled_back_at` set, or with no `finished_at`, keeps both the runtime startup check and this build gate failing, even after the migration is later re-applied under the same name. So a rolled-back resolution also needs an owner decision on that history row before production can be promoted again. Then re-run the workflow and redeploy.
 
 ## Rollback
 
@@ -96,4 +96,5 @@ If the workflow reports a failed or uncertain migration, or the build gate says 
 - Instant Rollback and re-promotion of an existing production deployment don't rebuild, so they aren't gated. This is by design, and safe under expand/contract.
 - The approved workflow applies exactly one migration per run. With two migrations pending it refuses (fail closed). Avoid this by merging one migration PR at a time. Clearing it requires an owner decision (for example a workflow change to name several migrations).
 - The destructive-SQL classification is a conservative pattern scan, not a SQL parser. The acknowledgement line is an explicit human assertion, not a proof.
+- A skipped Vercel build (`vercel.json` `ignoreCommand` skips governance-only commits) doesn't promote anything. If the deploy hook's build of `main` is skipped this way, redeploy the last runtime commit in Vercel manually.
 - The gate trusts the production `DATABASE_URL` configured in Vercel, which is the same database the deployment will use. Host pinning for **mutations** remains the job of the migration workflow's `expected_database_host`.

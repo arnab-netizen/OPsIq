@@ -146,16 +146,23 @@ function git(args) {
 }
 
 export function collectFromGit(baseSha, headSha) {
-  const changes = git(["diff", "--name-status", "--no-renames", baseSha, headSha, "--", MIGRATIONS_PREFIX])
+  // Compare against the merge base: migrations that landed on the base branch after
+  // this PR branched must not read as "deleted" by the PR.
+  const mergeBase = git(["merge-base", baseSha, headSha]).trim();
+  const changes = git(["diff", "--name-status", "--no-renames", mergeBase, headSha, "--", MIGRATIONS_PREFIX])
     .split("\n")
     .filter(Boolean)
     .map((line) => {
       const [status, path] = line.split("\t");
       return { status, path };
     });
-  const baseMigrationNames = git(["ls-tree", "--name-only", `${baseSha}:${MIGRATIONS_PREFIX.slice(0, -1)}`])
-    .split("\n")
-    .filter((n) => n && !n.includes("."));
+  const listNames = (rev) =>
+    git(["ls-tree", "--name-only", `${rev}:${MIGRATIONS_PREFIX.slice(0, -1)}`])
+      .split("\n")
+      .filter((n) => n && !n.includes("."));
+  // Existing = on the merge base (modify/delete detection) or on the base tip (ordering:
+  // a new migration must sort after everything already on main).
+  const baseMigrationNames = [...new Set([...listNames(mergeBase), ...listNames(baseSha)])];
   const readHeadSql = (name) => {
     try {
       return git(["show", `${headSha}:${MIGRATIONS_PREFIX}${name}/migration.sql`]);

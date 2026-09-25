@@ -78,6 +78,13 @@ describe("production migration release gate (runs in `npm run build` on Vercel p
     }
   });
 
+  it("on Vercel without VERCEL_ENV (system env vars not exposed) → fail closed, never a silent skip", async () => {
+    const cwd = fixtureRepo([PRIOR]);
+    const out = await runGate({ env: { VERCEL: "1", DATABASE_URL: PROD_ENV.DATABASE_URL }, cwd, readRows: async () => [] });
+    expect(out.exitCode).toBe(1);
+    expect(out.output).toContain("fail closed");
+  });
+
   it("Case E — several migrations pending unexpectedly → fail closed (gate) and the approved workflow refuses (exactly-one-pending)", () => {
     const r = evaluateMigrationGate({
       committed: [PRIOR, INCIDENT].map((name) => ({ name, checksum: sha(SQL[name]) })),

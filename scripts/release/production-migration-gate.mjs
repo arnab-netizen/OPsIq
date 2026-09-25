@@ -163,6 +163,14 @@ async function readMigrationRows(databaseUrl) {
 
 export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows } = {}) {
   const enforced = env.VERCEL_ENV === "production" || env.OPSIQ_RELEASE_GATE_FORCE === "1";
+  if (!enforced && env.VERCEL === "1" && !env.VERCEL_ENV) {
+    // On Vercel but the target environment is not exposed (system env vars disabled):
+    // this could be a production build — fail closed rather than skip.
+    return {
+      exitCode: 1,
+      output: `[release-gate] BLOCKED: running on Vercel without VERCEL_ENV, so production cannot be ruled out (fail closed). Enable "Automatically expose System Environment Variables". Procedure: ${RELEASE_PROCEDURE_DOC}`,
+    };
+  }
   if (!enforced) {
     return { exitCode: 0, output: `[release-gate] SKIPPED: not a production build (VERCEL_ENV=${env.VERCEL_ENV ?? "unset"})` };
   }
