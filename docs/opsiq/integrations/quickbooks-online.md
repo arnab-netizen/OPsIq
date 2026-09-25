@@ -137,6 +137,11 @@ retried after correction under a new `requestid`.
 - Cashflow snapshots have no amendment path in OpsIQ, so a period already materialized is not
   updated by later syncs (reported as a sync issue).
 - The platform cron is daily; Sync Now, post-connect and webhook-triggered syncs run immediately.
+- A sync requested while another sync for the same connector holds its 5-minute lease is not
+  run concurrently. One follow-up sync is scheduled for 30 seconds after that lease's expiry, and
+  every request during the same lease collapses onto it. Leases are not renewed, so the
+  follow-up can run up to about 5.5 minutes after the request even when the other sync finished
+  early.
 - A governed write whose outcome was ever ambiguous (timeout or lost response) keeps its
   provider requestid for every later retry, so QuickBooks' requestid de-duplication returns a
   record it already committed instead of creating a second one. There is no content-based
