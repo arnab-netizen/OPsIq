@@ -16,11 +16,18 @@ import {
   getActiveGoal,
   markGoalAchieved,
 } from "@/services/owner-strategy/goal.service";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 
 const actor = randomUUID();
 const wsA = randomUUID();
 const wsB = randomUUID();
+const wsC = randomUUID();
+const wsD = randomUUID();
+
+/** Relative future date so the suite never expires (goals must target a future date). */
+function future(days: number): Date {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
 
 beforeAll(async () => {
   await db.user.upsert({
@@ -41,6 +48,8 @@ afterAll(async () => {
   await db.ownerGoalMilestone.deleteMany({ where: { workspaceId: wsB } });
   await db.ownerGoal.deleteMany({ where: { workspaceId: wsA } });
   await db.ownerGoal.deleteMany({ where: { workspaceId: wsB } });
+  await db.ownerGoal.deleteMany({ where: { workspaceId: { in: [wsC, wsD] } } });
+  await db.ownerBusiness.deleteMany({ where: { workspaceId: { in: [wsC, wsD] } } });
   await db.auditEvent.deleteMany({ where: { actorId: actor } });
   await db.user.delete({ where: { id: actor } });
 });
@@ -53,9 +62,9 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       targetType: "PROFIT",
       targetAmount: 10000,
       targetCurrency: "GBP",
-      targetDate: new Date("2027-01-01"),
+      targetDate: future(270),
       baselineAmount: 3000,
-      baselineDate: new Date("2026-07-01"),
+      baselineDate: future(90),
     });
 
     expect(goalId).toBeTruthy();
@@ -76,7 +85,7 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       targetType: "REVENUE",
       targetAmount: 50000,
       targetCurrency: "USD",
-      targetDate: new Date("2027-06-01"),
+      targetDate: future(450),
     });
 
     const secondId = await createGoal({
@@ -85,7 +94,7 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       targetType: "PROFIT",
       targetAmount: 12000,
       targetCurrency: "USD",
-      targetDate: new Date("2027-12-01"),
+      targetDate: future(540),
     });
 
     const first = await db.ownerGoal.findFirst({ where: { id: firstId } });
@@ -118,7 +127,8 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       actorId: actor,
       targetType: "PROFIT",
       targetAmount: 5000,
-      targetDate: new Date("2026-12-01"),
+      targetCurrency: "INR",
+      targetDate: future(180),
     });
 
     await markGoalAchieved(goalId, wsB, actor);
@@ -133,7 +143,8 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       actorId: actor,
       targetType: "REVENUE",
       targetAmount: 20000,
-      targetDate: new Date("2027-03-01"),
+      targetCurrency: "INR",
+      targetDate: future(360),
     });
 
     await expect(markGoalAchieved(goalId, wsB, actor)).rejects.toBeInstanceOf(NotFoundError);
@@ -145,7 +156,8 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       actorId: actor,
       targetType: "REVENUE",
       targetAmount: 80000,
-      targetDate: new Date("2028-01-01"),
+      targetCurrency: "INR",
+      targetDate: future(630),
     });
 
     const wsAGoal = await getActiveGoal(wsA);
@@ -154,5 +166,31 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
     expect(wsAGoal?.workspaceId).toBe(wsA);
     expect(wsBGoal?.workspaceId).toBe(wsB);
     expect(wsAGoal?.id).not.toBe(wsBGoal?.id);
+  });
+
+  it("[db] rejects a goal whose target date is in the past (BIV-04)", async () => {
+    await expect(
+      createGoal({ workspaceId: wsA, actorId: actor, targetType: "PROFIT", targetAmount: 1, targetCurrency: "INR", targetDate: new Date("2020-01-01") })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("[db] omitted currency resolves to the workspace's single business currency — never USD (BIV-06)", async () => {
+    await db.ownerBusiness.create({
+      data: { id: randomUUID(), workspaceId: wsC, name: "INR biz", businessType: "laundry_local_service", currency: "INR", updatedAt: new Date() },
+    });
+    const goalId = await createGoal({ workspaceId: wsC, actorId: actor, targetType: "REVENUE", targetAmount: 100, targetDate: future(30) });
+    const row = await db.ownerGoal.findUnique({ where: { id: goalId } });
+    expect(row!.targetCurrency).toBe("INR");
+  });
+
+  it("[db] omitted currency with businesses in several currencies requires an explicit choice (BIV-06)", async () => {
+    for (const currency of ["INR", "GBP"]) {
+      await db.ownerBusiness.create({
+        data: { id: randomUUID(), workspaceId: wsD, name: `${currency} biz`, businessType: "laundry_local_service", currency, updatedAt: new Date() },
+      });
+    }
+    await expect(
+      createGoal({ workspaceId: wsD, actorId: actor, targetType: "REVENUE", targetAmount: 100, targetDate: future(30) })
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 });

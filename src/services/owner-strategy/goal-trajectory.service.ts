@@ -35,15 +35,47 @@ export interface GoalTrajectoryInput {
   now?: Date;
 }
 
+/**
+ * Every numeric field is either a finite number or null. null means "not
+ * computable from the recorded data" and must be rendered as unavailable —
+ * never as 0, NaN or Infinity.
+ */
 export interface GoalTrajectoryResult {
   projectedMonthsToGoal: number | null;
   currentTrajectoryDate: Date | null;
   confidence: TrajectoryConfidence;
   confidenceRationale: string;
-  requiredMonthlyImprovement: number;
-  gapToClose: number;
+  /** null when the target date has passed or the current value is unknown. */
+  requiredMonthlyImprovement: number | null;
+  /** null when no period has a recorded value for the goal metric. */
+  gapToClose: number | null;
   trajectoryMiss: boolean;
   assumptions: string[];
+  /** Latest recorded value of the goal metric; null when none recorded. */
+  currentValue: number | null;
+  /**
+   * Progress toward target in percent: (current − baseline) / (target − baseline) × 100,
+   * with baseline 0 when none was declared. null when the current value is unknown
+   * or the target does not exceed the baseline.
+   */
+  percentComplete: number | null;
+  /** true/false only when a projection exists; null when it cannot be determined. */
+  onTrack: boolean | null;
+  /** true when the declared target date is already in the past. */
+  targetDatePassed: boolean;
+}
+
+function computeProgress(
+  currentValue: number | null,
+  targetAmount: number,
+  baselineAmount: number | null | undefined
+): number | null {
+  if (currentValue === null) return null;
+  const base = baselineAmount ?? 0;
+  const span = targetAmount - base;
+  if (!Number.isFinite(span) || span <= 0) return null;
+  const pct = ((currentValue - base) / span) * 100;
+  return Number.isFinite(pct) ? Math.round(pct * 10) / 10 : null;
 }
 
 export interface GoalAccelerationScore {
@@ -122,11 +154,18 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
 
   // ─── Return early if LOW confidence ───────────────────────────────────────
 
+  const ownerTimelineMonths = (input.targetDate.getTime() - now.getTime()) / MS_PER_MONTH;
+  const targetDatePassed = ownerTimelineMonths <= 0;
+  if (targetDatePassed) {
+    rationale.push("target date has already passed");
+  }
+
   if (confidence === "LOW") {
-    const ownerTimelineMonths = (input.targetDate.getTime() - now.getTime()) / MS_PER_MONTH;
-    const currentValue = validValues[validValues.length - 1] ?? 0;
-    const gapToClose = Math.max(0, input.targetAmount - currentValue);
-    const requiredMonthlyImprovement = ownerTimelineMonths > 0 ? gapToClose / ownerTimelineMonths : Infinity;
+    // Missing data is reported as unknown — never substituted with 0.
+    const currentValue = validValues.length > 0 ? validValues[validValues.length - 1] : null;
+    const gapToClose = currentValue === null ? null : Math.max(0, input.targetAmount - currentValue);
+    const requiredMonthlyImprovement =
+      gapToClose === null || targetDatePassed ? null : gapToClose / ownerTimelineMonths;
 
     return {
       projectedMonthsToGoal: null,
@@ -137,6 +176,10 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
       gapToClose,
       trajectoryMiss: false,
       assumptions: ["Insufficient data for projection"],
+      currentValue,
+      percentComplete: computeProgress(currentValue, input.targetAmount, input.baselineAmount),
+      onTrack: currentValue !== null && currentValue >= input.targetAmount ? true : null,
+      targetDatePassed,
     };
   }
 
@@ -171,12 +214,19 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
     currentTrajectoryDate = new Date(trajectoryMs);
   }
 
-  const ownerTimelineMonths = (input.targetDate.getTime() - now.getTime()) / MS_PER_MONTH;
   const gapToClose = Math.max(0, input.targetAmount - lastValue);
-  const requiredMonthlyImprovement = ownerTimelineMonths > 0 ? gapToClose / ownerTimelineMonths : Infinity;
+  const requiredMonthlyImprovement = targetDatePassed ? null : gapToClose / ownerTimelineMonths;
 
   const trajectoryMiss =
     projectedMonthsToGoal !== null && projectedMonthsToGoal > ownerTimelineMonths * 1.2;
+  const reached = lastValue >= input.targetAmount;
+  const onTrack: boolean | null = reached
+    ? true
+    : projectedMonthsToGoal === null
+      ? monthlyGrowthRate <= 0
+        ? false
+        : null
+      : !trajectoryMiss && !targetDatePassed;
 
   if (trajectoryMiss) {
     rationale.push("TRAJECTORY_MISS: current growth rate will not reach target within 120% of the declared timeline");
@@ -191,6 +241,10 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
     gapToClose,
     trajectoryMiss,
     assumptions,
+    currentValue: lastValue,
+    percentComplete: computeProgress(lastValue, input.targetAmount, input.baselineAmount),
+    onTrack,
+    targetDatePassed,
   };
 }
 

@@ -279,8 +279,8 @@ export interface GuidanceDeps {
       trajectoryMiss: boolean;
       projectedMonthsToGoal: number | null;
       currentTrajectoryDate: Date | null;
-      gapToClose: number;
-      requiredMonthlyImprovement: number;
+      gapToClose: number | null;
+      requiredMonthlyImprovement: number | null;
       assumptions: string[];
     };
   } | null>;
