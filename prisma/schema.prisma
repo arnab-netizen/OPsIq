@@ -6951,6 +6951,7 @@ model OwnerConnectorWrite {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
   completedAt       DateTime? @map("completed_at")
+  lastAmbiguousAt   DateTime? @map("last_ambiguous_at") // set when QBO may hold providerRequestId; pins it for every later retry
 
   connector OwnerConnector @relation(fields: [connectorId], references: [id], onDelete: Restrict)
 

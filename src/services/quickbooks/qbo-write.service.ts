@@ -132,6 +132,7 @@ type LedgerRow = {
   remoteSyncToken: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  lastAmbiguousAt: Date | null;
 };
 
 // ─── Pure helpers (exported for tests) ──────────────────────────────────────
@@ -215,6 +216,7 @@ const ledgerSelect = {
   remoteSyncToken: true,
   errorCode: true,
   errorMessage: true,
+  lastAmbiguousAt: true,
 } as const;
 
 async function openLedger(args: {
@@ -284,6 +286,8 @@ async function finishLedger(
     data: {
       ...data,
       lockedUntil: null,
+      // Durable: once QuickBooks may hold this requestid, it stays pinned (see reopen below).
+      ...(data.status === "AMBIGUOUS" ? { lastAmbiguousAt: new Date() } : {}),
       completedAt: data.status === "COMMITTED" || data.status === "FAILED" || data.status === "CONFLICT" ? new Date() : null,
     },
   });
@@ -355,13 +359,19 @@ export async function executeGovernedQboWrite(input: GovernedQboWriteInput): Pro
       // under a NEW generation-derived requestid: the old requestid's rejected
       // response can never be replayed onto the corrected request, and no
       // committed record exists that a new requestid could duplicate.
+      // EXCEPT when an earlier attempt was AMBIGUOUS: QuickBooks may already
+      // hold a committed record under that requestid, so it stays pinned and
+      // the retry re-sends it — QBO's requestid de-duplication then returns the
+      // committed record instead of creating a second one.
       // Compare-and-set so two concurrent retries cannot both reopen it.
       const reopened = await db.ownerConnectorWrite.updateMany({
         where: { id: row.id, status: row.status, providerRequestId: row.providerRequestId },
         data: {
           status: "PENDING",
           payloadHash,
-          providerRequestId: deriveProviderRequestId(workspaceId, `${input.idempotencyKey}#${row.attempts}`),
+          providerRequestId: row.lastAmbiguousAt
+            ? row.providerRequestId
+            : deriveProviderRequestId(workspaceId, `${input.idempotencyKey}#${row.attempts}`),
           errorCode: null,
           errorMessage: null,
           completedAt: null,
@@ -387,7 +397,14 @@ export async function executeGovernedQboWrite(input: GovernedQboWriteInput): Pro
     eventName: AUDIT_EVENTS.QUICKBOOKS_WRITE_REQUESTED,
     entityType: "OwnerConnectorWrite",
     entityId: ledger.id,
-    payload: { entity, operation, remoteId: input.remoteId ?? null, resumed: !created, opsiqLink: input.opsiqLink ?? null },
+    payload: {
+      entity,
+      operation,
+      remoteId: input.remoteId ?? null,
+      resumed: !created,
+      requestIdPinned: ledger.lastAmbiguousAt !== null,
+      opsiqLink: input.opsiqLink ?? null,
+    },
   });
 
   const requestId = ledger.providerRequestId;

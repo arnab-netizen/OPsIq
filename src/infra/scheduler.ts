@@ -139,6 +139,16 @@ async function auditTaskEvent(
 
 export class DatabaseSchedulerProvider implements SchedulerProvider {
   async schedule(input: ScheduleTaskInput): Promise<string> {
+    return (await this.scheduleIdempotent(input)).id;
+  }
+
+  /**
+   * Same as schedule(), but also reports whether THIS call created the task.
+   * Concurrency-safe: the idempotencyKey unique constraint is the arbiter —
+   * a concurrent creator that loses the race (P2002) resolves to the winner's
+   * row instead of surfacing a raw constraint error.
+   */
+  async scheduleIdempotent(input: ScheduleTaskInput): Promise<{ id: string; created: boolean }> {
     // Idempotent upsert when idempotencyKey provided.
     if (input.idempotencyKey) {
       const existing = await db.scheduledTask.findUnique({
@@ -151,24 +161,41 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
           idempotencyKey: input.idempotencyKey,
           existingId: existing.id,
         });
-        return existing.id;
+        return { id: existing.id, created: false };
       }
     }
 
-    const task = await db.scheduledTask.create({
-      data: {
-        id: uuidv4(),
+    let task: { id: string };
+    try {
+      task = await db.scheduledTask.create({
+        data: {
+          id: uuidv4(),
+          taskName: input.taskName,
+          payload: input.payload
+            ? (input.payload as Prisma.InputJsonValue)
+            : Prisma.DbNull,
+          scheduledFor: input.scheduledFor,
+          maxAttempts: input.maxAttempts ?? 3,
+          status: "pending",
+          workspaceId: input.workspaceId ?? null,
+          idempotencyKey: input.idempotencyKey ?? null,
+        },
+        select: { id: true },
+      });
+    } catch (err) {
+      if (!input.idempotencyKey || !(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2002") throw err;
+      const winner = await db.scheduledTask.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        select: { id: true },
+      });
+      if (!winner) throw err;
+      logger.info("Task already scheduled (concurrent idempotent skip)", {
         taskName: input.taskName,
-        payload: input.payload
-          ? (input.payload as Prisma.InputJsonValue)
-          : Prisma.DbNull,
-        scheduledFor: input.scheduledFor,
-        maxAttempts: input.maxAttempts ?? 3,
-        status: "pending",
-        workspaceId: input.workspaceId ?? null,
-        idempotencyKey: input.idempotencyKey ?? null,
-      },
-    });
+        idempotencyKey: input.idempotencyKey,
+        existingId: winner.id,
+      });
+      return { id: winner.id, created: false };
+    }
 
     logger.info("Task scheduled", {
       taskId: task.id,
@@ -183,7 +210,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       { scheduledFor: input.scheduledFor.toISOString(), idempotencyKey: input.idempotencyKey ?? null }
     );
 
-    return task.id;
+    return { id: task.id, created: true };
   }
 
   async cancel(taskId: string): Promise<void> {

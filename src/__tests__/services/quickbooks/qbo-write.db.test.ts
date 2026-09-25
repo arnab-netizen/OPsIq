@@ -32,11 +32,18 @@ class FakeQbo {
   nextId = 100;
   failNextWriteAmbiguous = false;
   failNextWriteAmbiguousAfterCommit = false;
+  /** Thrown before QBO processes the request (e.g. an expired token) — nothing is committed. */
+  failNextWriteWith: QboApiError | null = null;
 
   key(entity: string, id: string) { return `${entity}:${id}`; }
   seed(entity: QboEntityName, body: QboEntityBody) { this.store.set(this.key(entity, body.Id!), body); }
 
   private commit(requestId: string, fn: () => QboEntityBody): QboEntityBody {
+    if (this.failNextWriteWith) {
+      const e = this.failNextWriteWith;
+      this.failNextWriteWith = null;
+      throw e;
+    }
     const prior = this.byRequestId.get(requestId);
     if (prior) return prior; // QBO requestid de-duplication
     if (this.failNextWriteAmbiguous) {
@@ -354,6 +361,41 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks writes", () => {
     // Same request resolves normally.
     const r = await pushVendorToQuickBooks({ workspaceId, actorId, vendorId, deps: deps() });
     expect(r.action).toBe("CREATED");
+  });
+
+  it("AMBIGUOUS → FAILED → retry: the requestid stays pinned, so a commit QBO already holds is never duplicated", async () => {
+    const line = (type: "Debit" | "Credit", acct: string) => ({
+      DetailType: "JournalEntryLineDetail", Amount: 40, JournalEntryLineDetail: { PostingType: type, AccountRef: { value: acct } },
+    });
+    const key = "je-ambiguous-then-failed-1";
+    const write = () =>
+      executeGovernedQboWrite({ workspaceId, actorId, idempotencyKey: key, entity: "JournalEntry", operation: "create", body: { Line: [line("Debit", "60"), line("Credit", "61")] }, confirm: true, deps: deps() });
+
+    // 1) QBO commits, but the response is lost.
+    fake.failNextWriteAmbiguousAfterCommit = true;
+    await expect(write()).rejects.toMatchObject({ name: "ServiceUnavailableError" });
+    const ambiguous = await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } });
+    expect(ambiguous?.status).toBe("AMBIGUOUS");
+    expect(ambiguous?.lastAmbiguousAt).not.toBeNull();
+
+    // 2) The retry is rejected before QBO processes it (definitive, non-retryable) → FAILED.
+    fake.failNextWriteWith = new QboApiError({ kind: "AUTH", message: "token expired", httpStatus: 401 });
+    await expect(write()).rejects.toBeTruthy();
+    const failed = await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } });
+    expect(failed?.status).toBe("FAILED");
+    expect(failed?.lastAmbiguousAt).not.toBeNull();
+
+    // 3) Retry after reconnect: reopened under the SAME requestid → QBO dedup returns the first commit.
+    const ok = await write();
+    const creates = fake.calls.filter((c) => c.op === "create" && c.entity === "JournalEntry");
+    expect(new Set(creates.map((c) => c.requestId))).toEqual(new Set([ambiguous!.providerRequestId]));
+    expect(Array.from(fake.store.keys()).filter((k) => k.startsWith("JournalEntry:"))).toHaveLength(1);
+    const done = await db.ownerConnectorWrite.findFirst({ where: { workspaceId, idempotencyKey: key } });
+    expect(done?.status).toBe("COMMITTED");
+    expect(done?.providerRequestId).toBe(ambiguous!.providerRequestId);
+    expect(done?.remoteId).toBe(ok.remoteId);
+    const requested = await db.auditEvent.findMany({ where: { workspaceId, eventName: "quickbooks.write_requested", entityId: done!.id }, orderBy: { occurredAt: "asc" } });
+    expect((requested.at(-1)?.payload as { requestIdPinned?: boolean }).requestIdPinned).toBe(true);
   });
 
   it("reusing an idempotency key with a different payload is rejected", async () => {
