@@ -85,6 +85,9 @@ describe("resolveTestDatabase", () => {
       "postgresql://u:p@localhost:5432/db?host=prod.remote-db.invalid",
       "postgresql://u:p@localhost/db?host=/cloudsql/proj:region:instance",
       "postgresql://u:p@localhost/db?hostaddr=203.0.113.9",
+      "socket://u:p@localhost/tmp/remote-proxy.invalid?db=opsiq",
+      "socket://u:p@localhost?db=opsiq",
+      "foo://u:p@localhost/db",
     ]) {
       expect(() => resolveTestDatabase({ TEST_WITH_DB: "true", DATABASE_URL: url }), url).toThrow(TestDatabaseGuardError);
     }

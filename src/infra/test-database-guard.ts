@@ -28,8 +28,9 @@
  * 4. "Loopback" must be where the pg driver actually connects: its connection
  *    string parser lets a `host`/`hostaddr` query parameter override the URL
  *    hostname (incl. a unix socket such as a cloud SQL proxy), so any such
- *    parameter disqualifies the URL; an encoded socket-path hostname is not a
- *    loopback name either.
+ *    parameter disqualifies the URL; only the postgres:/postgresql: schemes are
+ *    accepted (pg's `socket:` scheme ignores the hostname), and an encoded
+ *    socket-path hostname is not a loopback name either.
  * 5. Messages are sanitized: no URL, host, user, password or database name.
  *
  * Loopback is the only location trusted without opt-in because a remote
@@ -67,6 +68,9 @@ function isLoopback(url: string): boolean {
   } catch {
     return false;
   }
+  // Only a TCP postgres URL: pg's `socket:` scheme (and other schemes) ignore the hostname and
+  // connect to a socket path or PGHOST instead.
+  if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") return false;
   for (const key of parsed.searchParams.keys()) {
     const k = key.toLowerCase();
     if (k === "host" || k === "hostaddr") return false;
