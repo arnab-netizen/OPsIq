@@ -324,6 +324,33 @@ describe("Owner Money — inline Complete/Verify action forms (UX-06 Wave B1)", 
     expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "up" });
   });
 
+  it("S. an inherited Object.prototype-name metric (\"constructor\") is never resolved to an inherited value -- it pre-selects nothing and blocks Save exactly like an ordinary unmapped metric", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "constructor" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+
+    // A buggy `map[key] ?? null` lookup would resolve "constructor" to Object's constructor
+    // function (truthy, not nullish) rather than falling through to null. The fixed lookup
+    // returns exactly null, so no option is pre-selected here.
+    expect(screen.getByLabelText("Target direction")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(
+      screen.getByText("Select whether higher or lower is the improvement for this metric before saving.")
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Target direction"), { target: { value: "down" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(1);
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
+  });
+
   it("J. server failure shows a governed owner-safe error, never a raw exception, and leaves the form open", async () => {
     patchBehavior = "fail500";
     renderPage();

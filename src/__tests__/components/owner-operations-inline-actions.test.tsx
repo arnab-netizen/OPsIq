@@ -317,6 +317,93 @@ describe("Owner Operations — inline Complete/Verify action forms (UX-06 Wave B
     expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
   });
 
+  it("S. an inherited Object.prototype-name metric (\"constructor\") is never resolved to an inherited value -- it pre-selects nothing and blocks Save exactly like an ordinary unmapped metric", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "constructor" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+
+    // A buggy `map[key] ?? null` lookup would resolve "constructor" to Object's constructor
+    // function (truthy, not nullish) rather than falling through to null -- which would render
+    // here as neither "up" nor "down" being selected, an unrenderable <option>, or (worse) let a
+    // non-"up"/"down" value slip through Save. The fixed lookup returns exactly null.
+    expect(screen.getByLabelText("Target direction")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(
+      screen.getByText("Select whether higher or lower is the improvement for this metric before saving.")
+    ).toBeInTheDocument();
+
+    // Once the owner explicitly picks a direction, submission proceeds normally and carries only
+    // the literal "up"/"down" the owner chose -- never anything inherited.
+    fireEvent.change(screen.getByLabelText("Target direction"), { target: { value: "up" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(1);
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "up" });
+  });
+
+  it("T. capacityUtilizationPct resolves per the action's own findingCode, not a single global default: OPS_CAPACITY_BOTTLENECK (too high, reduce it) pre-fills \"down\"", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture(
+        "A",
+        BIZ_A.id,
+        [action({ verificationMetric: "capacityUtilizationPct", findingCode: "OPS_CAPACITY_BOTTLENECK" })]
+      )
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    expect(screen.getByLabelText("Target direction")).toHaveValue("down");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
+  });
+
+  it("U. capacityUtilizationPct resolves per the action's own findingCode: OPS_OPP_USE_CAPACITY_HEADROOM (spare capacity, raise it) pre-fills \"up\" -- the opposite of test T's finding, same metric key", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture(
+        "A",
+        BIZ_A.id,
+        [action({ verificationMetric: "capacityUtilizationPct", findingCode: "OPS_OPP_USE_CAPACITY_HEADROOM" })]
+      )
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    expect(screen.getByLabelText("Target direction")).toHaveValue("up");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "up" });
+  });
+
+  it("V. capacityUtilizationPct with no recognized findingCode preserves the ambiguity -- blocks Save rather than forcing either direction", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture(
+        "A",
+        BIZ_A.id,
+        [action({ verificationMetric: "capacityUtilizationPct", findingCode: "OPS_SOME_UNRELATED_FINDING" })]
+      )
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    expect(screen.getByLabelText("Target direction")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(
+      screen.getByText("Select whether higher or lower is the improvement for this metric before saving.")
+    ).toBeInTheDocument();
+  });
+
   it("J. server failure shows a governed owner-safe error, never a raw exception, and leaves the form open", async () => {
     patchBehavior = "fail500";
     renderPage();

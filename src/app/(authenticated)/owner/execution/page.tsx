@@ -682,7 +682,7 @@ function SopCycleView({
                   <VerificationActionForm
                     formId={verifyFormId}
                     busy={busy}
-                    defaultDirection={getVerificationDirection(a.verificationMetric)}
+                    defaultDirection={getVerificationDirection(a.verificationMetric, a.findingCode)}
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
                     onCancel={() => {
                       onEditingActionChange(null);
