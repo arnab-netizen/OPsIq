@@ -10,6 +10,8 @@
  *     archetype business created by seed-e2e-owner.ts is the workspace's primary business).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import {
   E2E_WORKSPACE_ID,
   E2E_PHASE3_TASK_ID,

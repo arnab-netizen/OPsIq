@@ -14,6 +14,8 @@
  *
  * Used by tests/browser/trust-journey.spec.ts. Nothing here tunes or improves OpsIQ's output.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import {

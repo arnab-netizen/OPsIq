@@ -9,6 +9,8 @@
  * real candidate and PASS 12's execution layer derives a COLLECT_COST_DATA + PREPARE_PROOF_PACK task. No
  * fabricated money; the signal is deterministic (fixed dedupe key) so re-seeding is idempotent.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import { randomUUID } from "crypto";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "../tests/browser/e2e-fixtures";
 import { PrismaPg } from "@prisma/adapter-pg";

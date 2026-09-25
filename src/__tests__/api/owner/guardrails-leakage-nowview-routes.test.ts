@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   // null, matching "no finance diagnosis" as the deterministic default) for the same DB-free
   // route-contract isolation this file already gives every other now-view dependency.
   getCockpitFinancePriority: vi.fn().mockResolvedValue(null),
+  getCockpitDomainPriority: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/canonical-route-enforcement", () => ({
@@ -59,6 +60,10 @@ vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
 
 vi.mock("@/services/owner-guidance/cockpit-finance-priority.service", () => ({
   getCockpitFinancePriority: mocks.getCockpitFinancePriority,
+}));
+
+vi.mock("@/services/owner-guidance/cockpit-domain-priority.service", () => ({
+  getCockpitDomainPriority: mocks.getCockpitDomainPriority,
 }));
 
 // ─── Route imports (after mocks) ─────────────────────────────────────────────
@@ -473,10 +478,10 @@ describe("[now-view] GET /api/owner/now-view — handler", () => {
     expect(opts?.requireWorkspace).toBe(true);
   });
 
-  it("returns service result directly (no canonicalJson wrapper), plus the additive F3 finance-priority field", async () => {
+  it("returns service result directly (no canonicalJson wrapper), plus the additive F3 finance-priority and BIV-03 domain-priority fields", async () => {
     mocks.getOwnerNowView.mockResolvedValue(SAMPLE_NOW_VIEW);
     const res = await nowViewGet(makeGetCtx(`https://x/api/owner/now-view`));
-    expect(res).toEqual({ ...SAMPLE_NOW_VIEW, financeTopPriority: null });
+    expect(res).toEqual({ ...SAMPLE_NOW_VIEW, financeTopPriority: null, domainTopPriority: null });
   });
 
   it("calls getOwnerNowView with verified workspaceId", async () => {

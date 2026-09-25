@@ -12,6 +12,8 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
+
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -19,6 +21,15 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { diagnoseStrategySnapshot } from "@/domain/owner-strategy/diagnosis";
 import { planStrategyActionsFromDiagnosis } from "@/domain/owner-strategy/actions";
 import { getStrategySnapshot, rowToStrategyInput } from "./snapshot.service";
+
+/** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
+interface EngagedPriorAction {
+  id: string;
+  cycleId: string;
+  findingCode: string;
+  recommendationCode: string;
+  priorityScore: number;
+}
 
 export async function runStrategyDiagnosis(
   businessId: string,
@@ -93,6 +104,8 @@ export async function runStrategyDiagnosis(
     expectedTimeframeDays: a.expectedTimeframeDays,
   }));
 
+  let carriedForwardIds: string[] = [];
+  let createdActionCount = 0;
   await db.$transaction(
     async (tx: any) => {
       await tx.ownerStrategyCycle.create({
@@ -112,7 +125,61 @@ export async function runStrategyDiagnosis(
         },
       });
       if (findingRows.length > 0) await tx.ownerStrategyFinding.createMany({ data: findingRows });
-      if (actionRows.length > 0) await tx.ownerStrategyAction.createMany({ data: actionRows });
+      // Continuity: an action the owner has taken on for the same finding/recommendation is
+      // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
+      const engagedPrior: EngagedPriorAction[] = await tx.ownerStrategyAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true },
+      });
+      const continuity = planWithContinuity(actionRows, engagedPrior);
+      carriedForwardIds = [];
+      // Re-attach each carried action to this cycle (ranking and wording re-evaluated) so every reader
+      // of the latest cycle sees the owner's in-flight work; audited in the same transaction. The
+      // original findingId is kept: it holds the baseline measured before the work started.
+      // Guarded by status: an action finished/cancelled meanwhile is not moved; a fresh proposal
+      // is created for it instead.
+      const recreate: typeof continuity.toCreate = [];
+      const movedPlanned = new Set<(typeof continuity.toCreate)[number]>();
+      for (const c of continuity.carried) {
+        const moved = await tx.ownerStrategyAction.updateMany({
+          where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+          data: {
+            cycleId,
+            description: c.planned.description,
+            verificationMethod: c.planned.verificationMethod,
+            expectedTimeframeDays: c.planned.expectedTimeframeDays,
+            priorityScore: c.planned.priorityScore,
+            expectedImpactScore: c.planned.expectedImpactScore,
+            effortScore: c.planned.effortScore,
+            confidence: c.planned.confidence,
+          },
+        });
+        if (moved.count === 0) continue;
+        movedPlanned.add(c.planned);
+        await emitAuditEvent(
+          {
+            eventName: AUDIT_EVENTS.OWNER_STRATEGY_ACTION_UPDATED,
+            actorId,
+            workspaceId,
+            entityType: "OwnerStrategyAction",
+            entityId: c.prior.id,
+            payload: {
+              reason: "carried_forward_by_diagnosis",
+              fromCycleId: c.prior.cycleId,
+              toCycleId: cycleId,
+              priorityScore: { from: c.prior.priorityScore, to: c.planned.priorityScore },
+            },
+          },
+          tx
+        );
+        carriedForwardIds.push(c.prior.id);
+      }
+      for (const c of continuity.carried) {
+        if (!movedPlanned.has(c.planned) && !recreate.includes(c.planned)) recreate.push(c.planned);
+      }
+      const toCreate = [...continuity.toCreate, ...recreate];
+      createdActionCount = toCreate.length;
+      if (toCreate.length > 0) await tx.ownerStrategyAction.createMany({ data: toCreate });
     },
     { maxWait: 10000, timeout: 20000 }
   );
@@ -127,7 +194,8 @@ export async function runStrategyDiagnosis(
       businessId,
       sequenceNumber,
       findingCount: diagnosis.findings.length,
-      actionCount: plan.actions.length,
+      actionCount: createdActionCount,
+      carriedForwardActionIds: carriedForwardIds,
       strategyState: diagnosis.metrics.strategyState,
     },
   });

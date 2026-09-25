@@ -7,6 +7,7 @@
  * verification), overdue actions, and cycle history. Returns an explicit empty
  * state when the owner has no businesses or no cycles yet.
  */
+import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "./business.service";
 
@@ -115,12 +116,47 @@ export async function getRecoveryDashboard(
     orderBy: { dueAt: "asc" },
   });
 
+  // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
+  // (action-continuity.ts). Engaged actions left on an earlier cycle are still shown (after
+  // current actions, flagged when the latest diagnosis no longer raises their finding) until
+  // finished or cancelled.
+  const carriedActions = latestCycleRow
+    ? await db.recoveryAction.findMany({
+        where: {
+          businessId: selectedBusinessId,
+          workspaceId,
+          cycleId: { not: latestCycleRow.id },
+          status: { in: [...ENGAGED_ACTION_STATUSES] },
+        },
+        include: {
+          verifications: { orderBy: { createdAt: "desc" } },
+          cycle: { select: { cycleNumber: true } },
+          finding: { select: { code: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const latestCycle = latestCycleRow
+    ? {
+        ...latestCycleRow,
+        actions: [
+          ...latestCycleRow.actions,
+          ...carriedActions.map((a: { cycle: { cycleNumber: number }; finding: { code: string } | null }) => ({
+            ...a,
+            carriedFromCycleSequence: a.cycle.cycleNumber,
+            stillFlaggedByLatestDiagnosis:
+              a.finding !== null && latestCycleRow.findings.some((f: { code: string }) => f.code === a.finding!.code),
+          })),
+        ],
+      }
+    : null;
+
   return {
     businesses: businessList,
     selectedBusinessId,
     hasData: latestCycleRow !== null,
     latestSnapshot: latestSnapshot ?? null,
-    latestCycle: latestCycleRow ?? null,
+    latestCycle,
     overdueActions,
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

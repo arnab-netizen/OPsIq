@@ -10,6 +10,8 @@
  */
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
+import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
+import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -81,7 +83,11 @@ export async function getFinanceDashboard(
         snapshot: true,
         findings: { orderBy: { severity: "asc" } },
         actions: {
-          include: { verifications: { orderBy: { createdAt: "desc" } } },
+          include: {
+            verifications: { orderBy: { createdAt: "desc" } },
+            // Measured baseline for outcome verification (prefill + provenance display).
+            ...baselineFindingInclude,
+          },
           // Deterministic total order -- see owner-sales/dashboard.service.ts
           // for the full incident writeup. priorityScore ties at the [0,100]
           // clamp ceiling are real and expected; a single-key orderBy has no
@@ -108,6 +114,50 @@ export async function getFinanceDashboard(
     }),
   ]);
 
+  // Each action carries the value the diagnosis measured for its verification
+  // metric (null when not measured) — the baseline an outcome is compared to.
+  // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
+  // (action-continuity.ts). Engaged actions left on an earlier cycle are still shown (after
+  // current actions, flagged when the latest diagnosis no longer raises their finding) until
+  // finished or cancelled.
+  const carriedActions = latestCycle
+    ? await db.ownerFinanceAction.findMany({
+        where: {
+          businessId: selectedBusinessId,
+          workspaceId,
+          cycleId: { not: latestCycle.id },
+          status: { in: [...ENGAGED_ACTION_STATUSES] },
+        },
+        include: {
+          verifications: { orderBy: { createdAt: "desc" } },
+          ...baselineFindingInclude,
+          cycle: { select: { sequenceNumber: true } },
+        },
+        orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
+      })
+    : [];
+  // measuredBaseline follows the snapshot amendment chain (baseline.service.ts).
+  const withBaseline = async <T extends { verificationMetric: string; finding?: BaselineFindingRow | null }>(a: T) => ({
+    ...a,
+    measuredBaseline: await financeMeasuredBaseline(a, workspaceId),
+  });
+  const latestCycleView = latestCycle
+    ? {
+        ...latestCycle,
+        actions: [
+          ...(await Promise.all(latestCycle.actions.map(withBaseline))),
+          ...(await Promise.all(
+            carriedActions.map(async (a: { verificationMetric: string; findingCode: string; finding: BaselineFindingRow | null; cycle: { sequenceNumber: number } }) => ({
+              ...(await withBaseline(a)),
+              carriedFromCycleSequence: a.cycle.sequenceNumber,
+              // false when the latest diagnosis no longer raises this finding (finish or cancel it).
+              stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
+            }))
+          )),
+        ],
+      }
+    : null;
+
   const domainScore = latestCycle
     ? {
         domain: "finance" as const,
@@ -127,7 +177,7 @@ export async function getFinanceDashboard(
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
-    latestCycle: latestCycle ?? null,
+    latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
     missingCriticalData: latestSnapshot

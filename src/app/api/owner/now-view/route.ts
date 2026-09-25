@@ -8,6 +8,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
 import { getCockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
+import { getCockpitDomainPriority } from "@/services/owner-guidance/cockpit-domain-priority.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,7 +28,10 @@ export const GET = withCanonicalEnforcement(
     });
     // F3: additive, best-effort — a failure here must never break the rest of the cockpit payload.
     const financeTopPriority = await getCockpitFinancePriority(ctx.verifiedWorkspaceId, businessId).catch(() => null);
-    return { ...payload, financeTopPriority };
+    // BIV-03: the top open action from the other domain diagnoses (Sales, Strategy, ...), same
+    // best-effort contract as the finance priority.
+    const domainTopPriority = await getCockpitDomainPriority(ctx.verifiedWorkspaceId, businessId).catch(() => null);
+    return { ...payload, financeTopPriority, domainTopPriority };
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }
 );

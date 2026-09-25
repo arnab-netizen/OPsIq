@@ -548,7 +548,9 @@ export default function CustomersPage() {
               />
             </div>
             <div>
-              <label htmlFor="customer-ltv" className="block text-sm font-medium mb-1">Lifetime value ($)</label>
+              <label htmlFor="customer-ltv" className="block text-sm font-medium mb-1">
+                Lifetime value{currentBusiness?.currency ? ` (${currentBusiness.currency})` : ""}
+              </label>
               <Input
                 id="customer-ltv"
                 type="number"

@@ -67,7 +67,7 @@ export interface CanonicalAuthContext {
   // PHASE D: ROOT CONTAINER - Single execution lineage authority
   // Optional: not required for service layer, only for logging/tracing
   traceId?: string;
-  executionTrace?: Readonly<any>;  // Read-only reference to unified trace
+  executionTrace?: Readonly<unknown>;  // Read-only reference to unified trace
 
   // PHASE E: IMMUTABLE SESSION SNAPSHOT - Single request reality
   verifiedSessionSnapshot: {
@@ -171,7 +171,7 @@ export interface ServiceAuthEnvelope {
  * Handler receives verified context, never auth data.
  * Handler is impossible to execute if auth failed.
  */
-export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<any>;
+export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
 
 /**
  * CANONICAL ROUTE WRAPPER
@@ -522,7 +522,7 @@ export function withCanonicalEnforcement(
           const policyRoles = decision.context?.policy?.roles?.map((r) => r.role) || [];
           const policyCapabilities: string[] = [];
           if (decision.context?.policy?.roles) {
-            const { getCapabilitiesForRole } = require("@/policies/capability-check");
+            const { getCapabilitiesForRole } = require("@/policies/capability-check"); // eslint-disable-line @typescript-eslint/no-require-imports -- pre-existing synchronous load
             for (const role of decision.context.policy.roles) {
               const caps = getCapabilitiesForRole(role.role);
               policyCapabilities.push(...caps);
@@ -536,7 +536,7 @@ export function withCanonicalEnforcement(
               : `${workspaceId.substring(0, 4)}...${workspaceId.substring(workspaceId.length - 4)}`
             : undefined;
 
-          (errorResponse.body as any) = {
+          (errorResponse.body as Record<string, unknown>) = {
             ...errorResponse.body,
             classification: "canonical_permission_denied",
             stage: "authorization",
@@ -735,7 +735,7 @@ export function withCanonicalEnforcement(
       } else if (error && typeof error === "object" && "statusCode" in error && "code" in error) {
         // AppError subclass (NotFoundError, ForbiddenError, etc.)
         // Has statusCode and code properties - convert to ClassifiedApiError
-        const appError = error as any;
+        const appError = error as { statusCode?: unknown; code?: unknown };
         const statusCode = typeof appError.statusCode === "number" ? appError.statusCode : 500;
         const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -826,7 +826,7 @@ export function withCanonicalEnforcement(
         operation: operationName,
       });
 
-      const responseBody: any = {
+      const responseBody: Record<string, unknown> = {
         // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes
         // its real message so the client can act on it; any 5xx or
         // unclassified/raw exception keeps a generic message -- never
@@ -853,6 +853,16 @@ export function withCanonicalEnforcement(
         stage: classifiedError.stage,
       };
 
+      // Field-level validation issues (owner-safe 4xx only): lets a form mark
+      // the exact field instead of showing a generic banner. Only the
+      // {path, message} pairs produced by the validation layer are exposed.
+      if (isKnownSafeClientError) {
+        const fieldErrors = extractSafeFieldErrors(error);
+        if (fieldErrors.length > 0) {
+          responseBody.fieldErrors = fieldErrors;
+        }
+      }
+
       // Include safe error name for diagnostics
       if (safErrorName && safErrorName !== "unknown") {
         responseBody.errorName = safErrorName;
@@ -864,7 +874,7 @@ export function withCanonicalEnforcement(
       }
 
       // Include safe Prisma details if available (allowlisted keys only)
-      const safeDetails = (classifiedError as any).safeDetails;
+      const safeDetails = (classifiedError as { safeDetails?: Record<string, unknown> }).safeDetails;
       if (safeDetails && typeof safeDetails === "object") {
         const allowlistedKeys = [
           "prismaCode",
@@ -975,3 +985,21 @@ export function withCanonicalPolicyEnforcement(
   };
 }
 
+/**
+ * Extract `{path, message}` field issues from a 4xx AppError's details.
+ * Anything that is not a short string pair is dropped, so no internal detail
+ * can leak through this channel.
+ */
+export function extractSafeFieldErrors(error: unknown): Array<{ path: string; message: string }> {
+  const details = (error as { details?: { fieldErrors?: unknown } } | null)?.details;
+  const raw = details?.fieldErrors;
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ path: string; message: string }> = [];
+  for (const item of raw.slice(0, 50)) {
+    if (!item || typeof item !== "object") continue;
+    const { path, message } = item as { path?: unknown; message?: unknown };
+    if (typeof path !== "string" || typeof message !== "string") continue;
+    out.push({ path: path.slice(0, 200), message: message.slice(0, 300) });
+  }
+  return out;
+}

@@ -3066,24 +3066,28 @@ model OwnerFinanceAction {
 }
 
 model OwnerFinanceVerification {
-  id                 String                     @id @db.Uuid
-  workspaceId        String                     @map("workspace_id") @db.Uuid
-  businessId         String                     @map("business_id") @db.Uuid
-  actionId           String                     @map("action_id") @db.Uuid
-  verificationMetric String                     @map("verification_metric")
-  beforeValue        Float?                     @map("before_value")
-  afterValue         Float?                     @map("after_value")
-  targetDirection    String                     @map("target_direction")
-  targetValue        Float?                     @map("target_value")
-  status             String                     @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?                  @map("verified_at")
-  createdAt          DateTime                   @default(now()) @map("created_at")
-  updatedAt          DateTime                   @updatedAt @map("updated_at")
-  business           OwnerBusiness              @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerFinanceAction         @relation(fields: [actionId], references: [id], onDelete: Restrict)
-  outcomeSignal      OwnerFinanceOutcomeSignal?
+  id                  String                     @id @db.Uuid
+  workspaceId         String                     @map("workspace_id") @db.Uuid
+  businessId          String                     @map("business_id") @db.Uuid
+  actionId            String                     @map("action_id") @db.Uuid
+  verificationMetric  String                     @map("verification_metric")
+  beforeValue         Float?                     @map("before_value")
+  afterValue          Float?                     @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?                    @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?                     @map("measured_before_value")
+  targetDirection     String                     @map("target_direction")
+  targetValue         Float?                     @map("target_value")
+  status              String                     @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?                  @map("verified_at")
+  createdAt           DateTime                   @default(now()) @map("created_at")
+  updatedAt           DateTime                   @updatedAt @map("updated_at")
+  business            OwnerBusiness              @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerFinanceAction         @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  outcomeSignal       OwnerFinanceOutcomeSignal?
 
   @@index([workspaceId])
   @@index([businessId])
@@ -3267,23 +3271,27 @@ model OwnerCashflowAction {
 }
 
 model OwnerCashflowVerification {
-  id                 String              @id @db.Uuid
-  workspaceId        String              @map("workspace_id") @db.Uuid
-  businessId         String              @map("business_id") @db.Uuid
-  actionId           String              @map("action_id") @db.Uuid
-  verificationMetric String              @map("verification_metric")
-  beforeValue        Float?              @map("before_value")
-  afterValue         Float?              @map("after_value")
-  targetDirection    String              @map("target_direction")
-  targetValue        Float?              @map("target_value")
-  status             String              @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?           @map("verified_at")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  business           OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerCashflowAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  id                  String              @id @db.Uuid
+  workspaceId         String              @map("workspace_id") @db.Uuid
+  businessId          String              @map("business_id") @db.Uuid
+  actionId            String              @map("action_id") @db.Uuid
+  verificationMetric  String              @map("verification_metric")
+  beforeValue         Float?              @map("before_value")
+  afterValue          Float?              @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?             @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?              @map("measured_before_value")
+  targetDirection     String              @map("target_direction")
+  targetValue         Float?              @map("target_value")
+  status              String              @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?           @map("verified_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  business            OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerCashflowAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -3438,23 +3446,27 @@ model OwnerSalesAction {
 }
 
 model OwnerSalesVerification {
-  id                 String           @id @db.Uuid
-  workspaceId        String           @map("workspace_id") @db.Uuid
-  businessId         String           @map("business_id") @db.Uuid
-  actionId           String           @map("action_id") @db.Uuid
-  verificationMetric String           @map("verification_metric")
-  beforeValue        Float?           @map("before_value")
-  afterValue         Float?           @map("after_value")
-  targetDirection    String           @map("target_direction")
-  targetValue        Float?           @map("target_value")
-  status             String           @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?        @map("verified_at")
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
-  business           OwnerBusiness    @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerSalesAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  id                  String           @id @db.Uuid
+  workspaceId         String           @map("workspace_id") @db.Uuid
+  businessId          String           @map("business_id") @db.Uuid
+  actionId            String           @map("action_id") @db.Uuid
+  verificationMetric  String           @map("verification_metric")
+  beforeValue         Float?           @map("before_value")
+  afterValue          Float?           @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?          @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?           @map("measured_before_value")
+  targetDirection     String           @map("target_direction")
+  targetValue         Float?           @map("target_value")
+  status              String           @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?        @map("verified_at")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  business            OwnerBusiness    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerSalesAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -3607,23 +3619,27 @@ model OwnerOperationsAction {
 }
 
 model OwnerOperationsVerification {
-  id                 String                @id @db.Uuid
-  workspaceId        String                @map("workspace_id") @db.Uuid
-  businessId         String                @map("business_id") @db.Uuid
-  actionId           String                @map("action_id") @db.Uuid
-  verificationMetric String                @map("verification_metric")
-  beforeValue        Float?                @map("before_value")
-  afterValue         Float?                @map("after_value")
-  targetDirection    String                @map("target_direction")
-  targetValue        Float?                @map("target_value")
-  status             String                @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?             @map("verified_at")
-  createdAt          DateTime              @default(now()) @map("created_at")
-  updatedAt          DateTime              @updatedAt @map("updated_at")
-  business           OwnerBusiness         @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerOperationsAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  id                  String                @id @db.Uuid
+  workspaceId         String                @map("workspace_id") @db.Uuid
+  businessId          String                @map("business_id") @db.Uuid
+  actionId            String                @map("action_id") @db.Uuid
+  verificationMetric  String                @map("verification_metric")
+  beforeValue         Float?                @map("before_value")
+  afterValue          Float?                @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?               @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?                @map("measured_before_value")
+  targetDirection     String                @map("target_direction")
+  targetValue         Float?                @map("target_value")
+  status              String                @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?             @map("verified_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  business            OwnerBusiness         @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerOperationsAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -3771,23 +3787,27 @@ model OwnerSopAction {
 }
 
 model OwnerSopVerification {
-  id                 String         @id @db.Uuid
-  workspaceId        String         @map("workspace_id") @db.Uuid
-  businessId         String         @map("business_id") @db.Uuid
-  actionId           String         @map("action_id") @db.Uuid
-  verificationMetric String         @map("verification_metric")
-  beforeValue        Float?         @map("before_value")
-  afterValue         Float?         @map("after_value")
-  targetDirection    String         @map("target_direction")
-  targetValue        Float?         @map("target_value")
-  status             String         @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?      @map("verified_at")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
-  business           OwnerBusiness  @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerSopAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  id                  String         @id @db.Uuid
+  workspaceId         String         @map("workspace_id") @db.Uuid
+  businessId          String         @map("business_id") @db.Uuid
+  actionId            String         @map("action_id") @db.Uuid
+  verificationMetric  String         @map("verification_metric")
+  beforeValue         Float?         @map("before_value")
+  afterValue          Float?         @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?        @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?         @map("measured_before_value")
+  targetDirection     String         @map("target_direction")
+  targetValue         Float?         @map("target_value")
+  status              String         @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?      @map("verified_at")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+  business            OwnerBusiness  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerSopAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -3938,23 +3958,27 @@ model OwnerMarketingAction {
 }
 
 model OwnerMarketingVerification {
-  id                 String               @id @db.Uuid
-  workspaceId        String               @map("workspace_id") @db.Uuid
-  businessId         String               @map("business_id") @db.Uuid
-  actionId           String               @map("action_id") @db.Uuid
-  verificationMetric String               @map("verification_metric")
-  beforeValue        Float?               @map("before_value")
-  afterValue         Float?               @map("after_value")
-  targetDirection    String               @map("target_direction")
-  targetValue        Float?               @map("target_value")
-  status             String               @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?            @map("verified_at")
-  createdAt          DateTime             @default(now()) @map("created_at")
-  updatedAt          DateTime             @updatedAt @map("updated_at")
-  business           OwnerBusiness        @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerMarketingAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  id                  String               @id @db.Uuid
+  workspaceId         String               @map("workspace_id") @db.Uuid
+  businessId          String               @map("business_id") @db.Uuid
+  actionId            String               @map("action_id") @db.Uuid
+  verificationMetric  String               @map("verification_metric")
+  beforeValue         Float?               @map("before_value")
+  afterValue          Float?               @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?              @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?               @map("measured_before_value")
+  targetDirection     String               @map("target_direction")
+  targetValue         Float?               @map("target_value")
+  status              String               @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?            @map("verified_at")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  business            OwnerBusiness        @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerMarketingAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -4102,23 +4126,27 @@ model OwnerStrategyAction {
 }
 
 model OwnerStrategyVerification {
-  id                 String              @id @db.Uuid
-  workspaceId        String              @map("workspace_id") @db.Uuid
-  businessId         String              @map("business_id") @db.Uuid
-  actionId           String              @map("action_id") @db.Uuid
-  verificationMetric String              @map("verification_metric")
-  beforeValue        Float?              @map("before_value")
-  afterValue         Float?              @map("after_value")
-  targetDirection    String              @map("target_direction")
-  targetValue        Float?              @map("target_value")
-  status             String              @default("unverified")
-  confidence         Float
-  evidence           Json
-  verifiedAt         DateTime?           @map("verified_at")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  business           OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerStrategyAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  id                  String              @id @db.Uuid
+  workspaceId         String              @map("workspace_id") @db.Uuid
+  businessId          String              @map("business_id") @db.Uuid
+  actionId            String              @map("action_id") @db.Uuid
+  verificationMetric  String              @map("verification_metric")
+  beforeValue         Float?              @map("before_value")
+  afterValue          Float?              @map("after_value")
+  /// MEASURED | OWNER_REPORTED — where beforeValue came from (null on rows created before provenance was recorded).
+  baselineSource      String?             @map("baseline_source")
+  /// Value the diagnosis measured for verificationMetric at the time, when available.
+  measuredBeforeValue Float?              @map("measured_before_value")
+  targetDirection     String              @map("target_direction")
+  targetValue         Float?              @map("target_value")
+  status              String              @default("unverified")
+  confidence          Float
+  evidence            Json
+  verifiedAt          DateTime?           @map("verified_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  business            OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action              OwnerStrategyAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])

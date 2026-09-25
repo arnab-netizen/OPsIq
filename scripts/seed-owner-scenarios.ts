@@ -4,6 +4,7 @@
  * per scenario, a full critical-domain row set tuned by the scenario knobs so the production runtime
  * resolves the scenario's dominant constraint (proven at the service level by the scenario unit tests).
  */
+import { resolveTestDatabase } from "../src/infra/test-database-guard";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "../tests/browser/e2e-fixtures";
@@ -131,5 +132,8 @@ async function main() {
 // Only run the seeder when executed directly (e.g. `npx tsx scripts/seed-owner-scenarios.ts`). Importing
 // this module for `seedScenarioBusiness` must NOT trigger a full E2E seed as a side effect.
 if (process.argv[1] && process.argv[1].includes("seed-owner-scenarios")) {
+  // CLI entry only (this module is also imported for its pure helpers): fail closed unless
+  // DATABASE_URL is a guarded test database (src/infra/test-database-guard.ts).
+  resolveTestDatabase({ ...process.env, TEST_WITH_DB: "true" });
   main().catch((e) => { console.error(e); process.exit(1); });
 }

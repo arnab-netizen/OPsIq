@@ -42,8 +42,14 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
+/** Campaign money in the active business's currency (campaigns carry no currency of their own). */
+function formatCampaignMoney(amount: number, currency: string | undefined): string {
+  return `${currency ? currency + " " : ""}${amount.toLocaleString()}`;
+}
+
 export default function CampaignsPage() {
   const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
+  const campaignCurrency = businesses.find((b) => b.id === activeBusinessId)?.currency;
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Presentation-only: prevents rendering EmptyState before the business
@@ -215,9 +221,9 @@ export default function CampaignsPage() {
                       {STATUS_LABEL[c.status] ?? c.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right">{c.spend != null ? `$${Number(c.spend).toLocaleString()}` : "—"}</td>
+                  <td className="px-4 py-2 text-right">{c.spend != null ? formatCampaignMoney(Number(c.spend), campaignCurrency) : "—"}</td>
                   <td className="px-4 py-2 text-right">{c.leads ?? "—"}</td>
-                  <td className="px-4 py-2 text-right">{c.revenue != null ? `$${Number(c.revenue).toLocaleString()}` : "—"}</td>
+                  <td className="px-4 py-2 text-right">{c.revenue != null ? formatCampaignMoney(Number(c.revenue), campaignCurrency) : "—"}</td>
                   <td className="px-4 py-2 text-right">{roi(c)}</td>
                   <td className="px-4 py-2">
                     <button

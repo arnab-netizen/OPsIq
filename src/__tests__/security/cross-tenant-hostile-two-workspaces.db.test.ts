@@ -168,6 +168,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const goalA = await postGoal({
       targetType: "PROFIT",
       targetAmount: 111111,
+      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
     expect(goalA.status).toBe(201);
@@ -178,6 +180,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const goalB = await postGoal({
       targetType: "REVENUE",
       targetAmount: 222222,
+      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
     expect(goalB.status).toBe(201);
@@ -259,6 +263,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const rejected = await postGoal({
       targetType: "REVENUE",
       targetAmount: 999999,
+      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       workspaceId: wsB,
     });
@@ -278,6 +284,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const created = await postGoal({
       targetType: "REVENUE",
       targetAmount: 999999,
+      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
     expect(created.status).toBe(201);

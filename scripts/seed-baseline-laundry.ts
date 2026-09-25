@@ -18,6 +18,8 @@
  *  - EMERGENCY budget     → a committed statutory-payroll obligation due in days (mode flips, growth BLOCKed)
  *  - reassessment         → diagnosis cadence recorded by the real services
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import {

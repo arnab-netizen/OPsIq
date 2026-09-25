@@ -172,7 +172,8 @@ describe("CustomersPage", () => {
     expect(getByLabelText("Email")).toBeTruthy();
     expect(getByLabelText("Phone")).toBeTruthy();
     expect(getByLabelText("Segment")).toBeTruthy();
-    expect(getByLabelText("Lifetime value ($)")).toBeTruthy();
+    // Label carries the active business currency (fixture business is USD) -- never a hard-coded "$".
+    expect(getByLabelText("Lifetime value (USD)")).toBeTruthy();
     expect(getByLabelText("Notes")).toBeTruthy();
   });
 

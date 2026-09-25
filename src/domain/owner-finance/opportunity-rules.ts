@@ -120,7 +120,9 @@ export function buildFinanceOpportunityFindings(
         code: "FIN_OPP_BREAK_EVEN_RECOVERY",
         title: "Closing the gap to break-even",
         summary: "A defined revenue increase or cost reduction reaches break-even and stops the loss.",
-        sourceMetric: "breakEvenRevenue",
+        // sourceValue is revenue (break-even is the threshold) — labelling it
+        // breakEvenRevenue presented revenue as a measured break-even value.
+        sourceMetric: "revenue",
         sourceValue: revenue,
         threshold: m.breakEvenRevenue,
         severity: "high",

@@ -9,6 +9,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -65,6 +66,8 @@ export async function runCycle(
       : `Cycle ${cycleNumber}: ${findings.length} finding(s); top issue ${findings[0].title} (${findings[0].severity}).`;
 
   // Persist atomically.
+  let carriedForwardIds: string[] = [];
+  let createdActionCount = 0;
   await db.$transaction(async (tx: any) => {
     await tx.recoveryCycle.create({
       data: {
@@ -110,8 +113,55 @@ export async function runCycle(
       });
     }
 
+    // Continuity: an action the owner has taken on for the same finding is carried forward
+    // (re-attached to this cycle and re-prioritised, audited), not duplicated (see action-continuity.ts).
+    const engagedPrior: Array<{ id: string; cycleId: string; priority: string; findingCode: string }> = (
+      await tx.recoveryAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        select: { id: true, cycleId: true, priority: true, finding: { select: { code: true } } },
+      })
+    )
+      .filter((r: { finding: { code: string } | null }) => r.finding !== null)
+      .map((r: { id: string; cycleId: string; priority: string; finding: { code: string } }) => ({
+        id: r.id,
+        cycleId: r.cycleId,
+        priority: r.priority,
+        findingCode: r.finding.code,
+      }));
+    const continuity = planWithContinuity(actionSpecs, engagedPrior);
+    carriedForwardIds = [];
+    // Re-attach (guarded by status; original findingId kept — its baseline predates the work).
+    const movedPlanned = new Set<(typeof actionSpecs)[number]>();
+    for (const c of continuity.carried) {
+      const moved = await tx.recoveryAction.updateMany({
+        where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        data: { cycleId, priority: c.planned.priority, version: { increment: 1 } },
+      });
+      if (moved.count === 0) continue;
+      movedPlanned.add(c.planned);
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
+          actorId,
+          workspaceId,
+          entityType: "RecoveryAction",
+          entityId: c.prior.id,
+          payload: {
+            reason: "carried_forward_by_diagnosis",
+            fromCycleId: c.prior.cycleId,
+            toCycleId: cycleId,
+            priority: { from: c.prior.priority, to: c.planned.priority },
+          },
+        },
+        tx
+      );
+      carriedForwardIds.push(c.prior.id);
+    }
+    const recreate = continuity.carried.map((c) => c.planned).filter((p, i, all) => !movedPlanned.has(p) && all.indexOf(p) === i);
+
     const now = Date.now();
-    for (const a of actionSpecs) {
+    createdActionCount = continuity.toCreate.length + recreate.length;
+    for (const a of [...continuity.toCreate, ...recreate]) {
       await tx.recoveryAction.create({
         data: {
           id: randomUUID(),
@@ -150,7 +200,8 @@ export async function runCycle(
           businessId,
           cycleNumber,
           findingCount: findings.length,
-          actionCount: actionSpecs.length,
+          actionCount: createdActionCount,
+          carriedForwardActionIds: carriedForwardIds,
           healthStatus: health.status,
         },
       },

@@ -16,8 +16,12 @@ export const runtime = "nodejs";
 const createGoalSchema = z.object({
   targetType: z.enum(["PROFIT", "REVENUE", "NET_WORTH", "MULTIPLE"]),
   targetAmount: z.number().positive(),
-  targetCurrency: z.string().length(3).optional(),
-  targetDate: z.string().datetime(),
+  // Omitted → resolved server-side from the workspace's business currency.
+  targetCurrency: z.string().regex(/^[A-Za-z]{3}$/, "Currency must be a 3-letter code").optional(),
+  targetDate: z
+    .string()
+    .datetime()
+    .refine((v) => new Date(v).getTime() > Date.now(), "Target date must be in the future"),
   baselineAmount: z.number().nullable().optional(),
   baselineDate: z.string().datetime().nullable().optional(),
 });
