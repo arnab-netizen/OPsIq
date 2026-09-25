@@ -10,7 +10,7 @@
  */
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
-import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
+import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 
 export interface FinanceDashboardPayload {
@@ -86,7 +86,7 @@ export async function getFinanceDashboard(
           include: {
             verifications: { orderBy: { createdAt: "desc" } },
             // Measured baseline for outcome verification (prefill + provenance display).
-            finding: { select: { sourceMetric: true, sourceValue: true } },
+            ...baselineFindingInclude,
           },
           // Deterministic total order -- see owner-sales/dashboard.service.ts
           // for the full incident writeup. priorityScore ties at the [0,100]
@@ -129,23 +129,30 @@ export async function getFinanceDashboard(
         },
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
-          finding: { select: { sourceMetric: true, sourceValue: true } },
+          ...baselineFindingInclude,
           cycle: { select: { sequenceNumber: true } },
         },
         orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
       })
     : [];
+  // measuredBaseline follows the snapshot amendment chain (baseline.service.ts).
+  const withBaseline = async <T extends { verificationMetric: string; finding?: BaselineFindingRow | null }>(a: T) => ({
+    ...a,
+    measuredBaseline: await financeMeasuredBaseline(a, workspaceId),
+  });
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
         actions: [
-          ...latestCycle.actions.map(withMeasuredBaseline),
-          ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
-            ...withMeasuredBaseline(a),
-            carriedFromCycleSequence: a.cycle.sequenceNumber,
-            // false when the latest diagnosis no longer raises this finding (finish or cancel it).
-            stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
-          })),
+          ...(await Promise.all(latestCycle.actions.map(withBaseline))),
+          ...(await Promise.all(
+            carriedActions.map(async (a: { verificationMetric: string; findingCode: string; finding: BaselineFindingRow | null; cycle: { sequenceNumber: number } }) => ({
+              ...(await withBaseline(a)),
+              carriedFromCycleSequence: a.cycle.sequenceNumber,
+              // false when the latest diagnosis no longer raises this finding (finish or cancel it).
+              stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
+            }))
+          )),
         ],
       }
     : null;

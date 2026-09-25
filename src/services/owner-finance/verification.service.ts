@@ -13,9 +13,9 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { verifyOutcome } from "@/domain/founder-recovery/verification";
 import {
   canRecordOutcome,
-  measuredBaselineFor,
   resolveVerificationBaseline,
 } from "@/domain/founder-recovery/verification-evidence";
+import { baselineFindingInclude, financeMeasuredBaseline } from "./baseline.service";
 import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceVerifyInput } from "@/domain/owner-finance/validation";
 
@@ -27,7 +27,7 @@ export async function recordFinanceVerification(
 ) {
   const action = await db.ownerFinanceAction.findFirst({
     where: { id: actionId, workspaceId },
-    include: { finding: { select: { sourceMetric: true, sourceValue: true } } },
+    include: baselineFindingInclude,
   });
   if (!action) throw new NotFoundError("OwnerFinanceAction", actionId);
 
@@ -41,7 +41,8 @@ export async function recordFinanceVerification(
   // Baseline provenance: measured by the diagnosis unless the owner reports a different value.
   const baseline = resolveVerificationBaseline(
     input.beforeValue,
-    measuredBaselineFor(action.verificationMetric, action.finding)
+    // Follows the snapshot amendment chain: a retracted value is never used as "measured".
+    await financeMeasuredBaseline(action, workspaceId)
   );
   if (!baseline.ok) {
     throw new ValidationError(baseline.reason, {
