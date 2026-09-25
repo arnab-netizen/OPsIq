@@ -33,7 +33,7 @@ Status column records remediation state on this branch (see section "Remediation
 - Confidence: high. Tests: `beta-requests-rbac.test.ts` [db] cases (incl. "ordinary self-serve business owner is denied (403)") run locally against sandbox DB: pass.
 
 ### BIV-03 — Home contradicts application state (4.3)
-- Status: FIXED (dd221d6f): new `cockpit-domain-priority.service` reuses `getOwnerHome` (hostile review: reuse the existing aggregator) — top open non-Finance action shown on Home (primary when there is no Finance priority); `getOwnerHome` includes open actions from earlier cycles; the add-business prompt renders only when the owner has no business.
+- Status: FIXED (dd221d6f; refined 4a0cc8f3): new `cockpit-domain-priority.service` reuses the existing `getOwnerHome` aggregator (unchanged from main) — the top open non-Finance action is shown on Home (primary when there is no Finance priority, secondary otherwise; never overrides a governed topRoute); engaged actions are re-attached to the latest cycle by the diagnosis (BIV-12), so every latest-cycle reader agrees; the add-business prompt renders only when the owner has no business. Runtime: Home shows "Open action from your Strategy/Sales diagnosis" instead of "No urgent action".
 - Allegation: after Sales snapshots, 2 diagnoses, action lifecycle and a Strategy evaluation, Home said "No urgent action needs your attention" and "Haven't added your business yet?".
 - Observed: Home = `/owner/cockpit` → `/api/owner/now-view` (`force-dynamic`, fetched on every mount/business change; no client cache). Urgent action is sourced only from the process-execution bridge (proof-scan/cash families, narrowed to CASH_PROFIT/STARTUP_MODE in multi-business workspaces, `owner-now-view.service.ts:2097-2108`) and the Finance cycle (`cockpit-finance-priority.service.ts:72-93`). No `ownerSalesCycle/Action` or `ownerStrategyCycle/Action` read exists in the now-view path. "Haven't added your business yet?" (`src/components/owner/MinimumOwnerCockpit.tsx:1160-1165`) is rendered unconditionally inside the `!bridge.topRoute && !financeTopPriority` branch — also for owners with businesses.
 - Not the cause: stale cache, wrong active business (same `ActiveBusinessProvider` id used by Home, Sales and Strategy), SSR hydration.
@@ -100,7 +100,7 @@ Status column records remediation state on this branch (see section "Remediation
 ### BIV-12 — Diagnosis cycle history (4.12)
 - Runtime: cycle 2 created three new `proposed` actions; cycle-1 `in_progress` action retained (status intact, queryable by id), cycle 1 listed in `cycleHistory`; dashboard/UI renders only the latest cycle's actions; history list is counts only. No deletion; no carry-forward; duplicate action for the same recommendation. Known in `owner-sales/services.db.test.ts:191-256`.
 - Classification (revised by hostile review): **DESIGN/SEMANTIC DEFECT**, P1 — the regenerate-per-cycle mechanism is deliberate and asserted (`owner-sales/services.db.test.ts:191-256`), but open owner work becoming unreachable is not.
-- Status: FIXED (572b03ba) in all 7 domain diagnosis services + recovery: an open action for the same finding/recommendation is carried forward, not duplicated; terminal actions still allow a fresh proposal (existing test preserved); dashboards list carried open actions first ("Still open from cycle #N"); nothing deleted.
+- Status: FIXED (final design 4a0cc8f3 + 238091d6, after audit rounds 1–3 rejected two earlier designs) in all 7 domain diagnosis services + recovery: an ENGAGED action (assigned / in progress / blocked) whose finding/recommendation is planned again is re-attached to the new cycle (ranking and wording re-evaluated, original finding kept as the pre-work baseline, status-guarded, audited with from/to cycle); untouched proposals are regenerated (original per-cycle contract and test preserved); engaged actions not planned again stay on their cycle and are still listed on the domain page ("Still open from cycle #N", flagged when no longer raised). Nothing is deleted. Runtime: after cycle 2 the in-progress action appears exactly once, in progress, with its measured baseline intact.
 
 ### BIV-13 — Health / Risk / Data confidence (4.13)
 - Runtime: Sales cycle → health 80, risk 0, data confidence 25, with a "Critical sales inputs are missing" finding. Formula: risk sums only signals whose metric is non-null (missing ⇒ 0); health = 0.6·(100−risk) + 0.4·momentum with momentum default 50 ⇒ 80 with no data (`src/domain/owner-sales/metrics.ts:186-233`). Money already enforces "UNKNOWN ≠ HEALTHY" with `healthScoreCeiling = floor(50 + confidence/2)` (`src/domain/owner-finance/metrics.ts:320-360`); `UX-04A-CORE-BUSINESS-DOMAIN-CONTRACT.md:144,179,230-245` records the Sales/Operations gap. Same uncapped formula in marketing, operations, sop, strategy.
@@ -130,25 +130,25 @@ Status column records remediation state on this branch (see section "Remediation
 ### Additional findings surfaced during investigation
 - BIV-22 — `GET /api/owner/businesses/{id}/progress?review=true` accepts a foreign businessId without a membership check and emits an audit event in the caller's own workspace (`owner-mode/owner-progress.service.ts:183,214`; hostile review, not executed because it writes). No data exposure. **DESIGN/SEMANTIC DEFECT**, P3.
 - BIV-23 — Growth pricing catalog: USD creation default and gap analysis across tiers of different currencies (`pricing-engine.ts:168,198,376-408`). **CONFIRMED BUG** (code), P2; not exercised by the review.
-- BIV-18 — `vitest-global-setup.ts` loads and rewrites `.env.test` from whatever `DATABASE_URL` the shell carries; in this container that is the remote Neon endpoint and `TEST_WITH_DB=true` is set globally, so an "offline" unit-test run opens a DB connection. **DESIGN/SEMANTIC DEFECT** (test-harness safety), P2. During this audit, subagent unit-test runs started under that environment and were terminated; the file was deleted; no test body executed against it per agent reports (setup-level ping/keepalive only).
+- BIV-18 — `vitest-global-setup.ts` loaded and rewrote `.env.test` from whatever `DATABASE_URL` the shell carried; in this container that is the remote Neon endpoint and `TEST_WITH_DB=true` is set globally, so an "offline" unit-test run opened a DB connection. **DESIGN/SEMANTIC DEFECT** (test-harness safety); treated as a merge blocker by owner instruction. Status: FIXED (374dbd17, 6c77a12b, d65d2227, aa6038ed) — see "Environment incident" for the guard and its proof.
 - BIV-19 — Assign without assignee (see BIV-09): DESIGN/SEMANTIC DEFECT, P2.
 - BIV-20 — "My Business" skeleton delay: **INSUFFICIENT EVIDENCE**, P3 (sequential fetch waterfall exists; no timing evidence).
 - BIV-21 — Accounting/banking/POS "Not available yet": **EXPECTED BEHAVIOR** (documented beta scope).
 
 ---
 
-## Summary counts (first pass, 21 items; items with two facets counted by primary facet)
+## Summary counts (final, after hostile review; primary facet per item, secondary facets in brackets)
 
-| Classification | Count |
-|---|---|
-| CONFIRMED SECURITY DEFECT | 0 |
-| CONFIRMED BUG | 7 (BIV-03b, 05, 06, 07, 08A, 09, 12) |
-| DESIGN/SEMANTIC DEFECT | 11 (BIV-01 hygiene, 03a, 04, 10, 11, 13, 14, 15, 16, 17, 18, 19) |
-| EXPECTED BEHAVIOR | 2 (BIV-02, 21; plus BIV-01 isolation facet) |
-| NOT REPRODUCIBLE | 1 (BIV-13 Money-80-at-0 facet) |
-| INSUFFICIENT EVIDENCE | 1 (BIV-20) |
+| Classification | Count | Items |
+|---|---|---|
+| CONFIRMED SECURITY DEFECT | 0 | — |
+| CONFIRMED BUG | 7 | BIV-03b, 05, 06, 07, 08A, 14 (raw keys / "No data gaps"), 23, [BIV-09 page-jump P3] |
+| DESIGN/SEMANTIC DEFECT | 15 | BIV-01 (QA data hygiene), 03a, 04, 08B, 09, 10, 11, 12, 13, 15, 16, 17, 18, 19, 22 |
+| EXPECTED BEHAVIOR | 2 | BIV-02 (admin authorization), 21 (manual-only data); [BIV-01 tenant-isolation facet; BIV-07 Evaluate-disabled facet] |
+| NOT REPRODUCIBLE | 0 | — |
+| INSUFFICIENT EVIDENCE | 1 (+1 facet) | BIV-20; [BIV-13 Money "80 at confidence 0" facet] |
 
-P1 set for remediation: BIV-03a, 05, 06 (goals), 07, 08A, 09, 10, 12, 13, 16.
+P0/P1 remediated: BIV-03a, 05, 08A, 09, 10, 12 (P1) and BIV-18 (test-harness safety; merge blocker by owner instruction), plus every P1 found by post-remediation audit rounds 1–8. P2 fixed where they shared the P1 root cause: BIV-04, 06 (goals + labels), 07, 03b. Owner decisions (not changed): BIV-13 Sales Health low-data semantics, BIV-16 Strategy verdict vs action wording.
 
 ---
 
@@ -165,6 +165,13 @@ P1 set for remediation: BIV-03a, 05, 06 (goals), 07, 08A, 09, 10, 12, 13, 16.
 | 07ce73e4 | Final hostile audit round 1 fixes (see below) | BIV-05, BIV-06, BIV-10, BIV-12 |
 | 4a0cc8f3 | Round 2: re-attach engaged actions to the new cycle (all readers agree); bounded goal projections | BIV-03, BIV-05, BIV-12 |
 | 238091d6 | Round 3: keep pre-work baseline on re-attach; finance re-diagnoses latest cycle; guarded re-attach | BIV-10, BIV-12 |
+| 0d4147cd | Round 4: finance measured baseline follows the snapshot amendment chain | BIV-10 |
+| 374dbd17 | Test-harness guard (fail closed on non-throwaway DB) | BIV-18 |
+| 6c77a12b | Round 5 + changed-file audit: unbounded amendment-chain walk; guard host/hostaddr bypass; e2e seed guard; outcome-policy messages allowlisted; dead code / stale comments removed | BIV-08A, BIV-10, BIV-18 |
+| 149a33db | Keep canonical-wrapper line numbers stable (governance baseline) | — |
+| d65d2227 | Round 6: only postgres TCP URLs count as loopback; remaining fixture seeds guarded | BIV-18 |
+| aa6038ed | Round 7: Playwright local-server/DB paths and demo seeds through the guard; library import no longer triggers it | BIV-18 |
+| 24e699c2 | Round 8: Playwright guard uses the exact condition that starts the local dev server (BASE_URL no longer skips it) | BIV-18 |
 
 ### Final hostile audit — round 1 (post-remediation)
 Findings reproduced live and fixed in 07ce73e4:
@@ -187,5 +194,72 @@ Cross-surface agreement re-verified live on dashboard, now-view, command-center,
 - P3 — re-attach update now status-guarded.
 - P3 recorded, not changed: re-attachment moves an action out of its original cycle, so that cycle's history count drops (the move is recorded in the ACTION_UPDATED audit event with from/to cycle); recovery overdue list counts superseded proposals from all cycles (pre-existing); `recommendedNextAction` raw row has no `measuredBaseline` (pre-existing); goal target amount has no upper bound.
 
-### Environment incident (disclosed)
-`vitest-global-setup.ts` loads and rewrites `.env.test` from the shell's `DATABASE_URL`; this container sets `TEST_WITH_DB=true` and a remote Neon `DATABASE_URL`/`TEST_DATABASE_URL` by default. During the investigation phase, several read-only subagents started `npx vitest` under that environment (global setup performs a DB ping/keepalive and `resetStartupStatus` before any test). The processes were terminated, `.env.test` was removed, and all later test runs were pinned to the local sandbox Postgres. Whether the global setup's startup-status write reached the remote database cannot be ruled out from this container. No test body is reported to have executed against it. Tracked as BIV-18.
+### Final hostile audit — round 4
+Round-3 P1s confirmed fixed; cross-surface agreement and tenant isolation hold. New P1 (introduced by 238091d6): after a finance snapshot amendment the kept original finding held a retracted value, recorded as a MEASURED verified_improved → fixed in 0d4147cd (baseline follows the governed amendment chain; unreconciled amendment ⇒ no measured baseline). Regression test fails with the fix stashed, passes with it.
+
+### Round 5 (0d4147cd + guard) and changed-file audit
+- P1 residual: `resolveCurrentSnapshotId` capped at 20 hops, re-opening the retracted-baseline defect at 21+ amendments (live repro) → unbounded walk with cycle/dangling-link fail-closed (6c77a12b); the old test that pinned the cap was replaced.
+- P2: guard accepted `?host=`/`hostaddr` overrides → refused (6c77a12b); 20 e2e fixture seeds unguarded → guarded.
+- Changed-file audit (95 → 120 files): unrelated `.claude/deployment_preflight_report.json` timestamp reverted; dead `isStillFlagged` removed; stale comments fixed; interface placement; audit `actionCount`; original synchronous `require` restored on the permission-denied path; one extra goals-page line removed. Found that the two outcome-policy messages had never been allowlisted in `presentDomainError` (scripted edit had aborted) → fixed, retired template replaced. Lint-only fixes are limited to files the lint ratchet required to be clean (base errors: canonical-route-enforcement 7, vitest-global-setup 6, seed-test-db 2, owner-sales services.db.test 1, seed-e2e-owner 1).
+
+### Rounds 6–7
+- Round 6: no P0/P1 (amendment walk and presenter fix verified live incl. a 22-amendment positive control). P2: `socket:`/non-postgres scheme bypass → fixed (d65d2227); 3 more fixture seeds guarded.
+- Round 7 (harness only): invariant holds for the vitest path (PG* env vars, parser mismatches, pooler rewrite, sibling variables, other runners all refused/irrelevant). P2: Playwright started the local dev server with the inherited DATABASE_URL and 3 specs ran SQL behind a substring regex; 2 demo seeds unguarded → fixed (aa6038ed). Recorded, not changed (P2/P3): two concurrent vitest runs in one checkout share `.env.test` (only guarded URLs can leak between them); workers read `.env.test` from `process.cwd()`; a local tunnel/proxy on loopback to a remote database is indistinguishable from a throwaway database.
+
+### Rounds 8–9
+- Round 8 (aa6038ed, static): **P1**. `playwright.config.ts` guarded the database only when `!CI && !BASE_URL`, but started the local `npm run dev` server whenever `!CI`. So with CI unset and any `BASE_URL` (including `http://localhost:3001`), the dev server booted with the inherited, unguarded `DATABASE_URL`. Fixed in 24e699c2: a single `startsLocalServer` condition drives both. The regression source-contract test fails before the fix and passes after. `playwright test --list` refuses a remote `DATABASE_URL` with a remote or localhost `BASE_URL`, and lists 561 tests with a loopback DB or `CI=true`.
+- Round 9 (24e699c2, static): **no P0/P1**. Every vitest path, both Playwright configs and the fixture/e2e seeds are guarded; CI is unaffected. Recorded, not changed (P2/P3):
+  - an already-running dev server that Playwright reuses is not re-checked;
+  - the `demo:seed` tool (`scripts/seed-demo-workspace.mjs`) and `scripts/seed-case-library.ts` are manual tools with no guard;
+  - outside CI, a remote `BASE_URL` still starts a local dev server, so it now needs a loopback DB or the opt-in.
+
+### Final regression gate (HEAD 24e699c2; the app code is identical to aa6038ed)
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | exit 0 |
+| `npx prisma validate` | valid |
+| `npm run build` (production, at aa6038ed; 24e699c2 changes only `playwright.config.ts` and a test) | exit 0 |
+| `npm run lint:ratchet` | exit 0; changed_file_lint_errors 0 (123 changed lint files) |
+| `governance:scan:strict` / `:auth` / `:a77` | no new errors / all routes comply / all gates green |
+| Non-DB suite (CI lane: `vitest run --maxWorkers 2 --exclude '**/*.db.test.ts'` plus quarantine excludes) | 1225 files passed, 1 failed, 4 skipped; 32,535 tests passed, 1 failed, 184 skipped, 1 todo |
+| Fresh throwaway-DB suite (new `opsiq_final` on loopback, `prisma migrate deploy`, `vitest run .db.test.ts --maxWorkers=1`) | 296/296 files; 2214 passed, 6 skipped; exit 0 |
+| `test-database-guard.test.ts` | 14/14 |
+
+The one non-DB failure is `stage7-g1-proof-binding.test.ts` › "the evidence validator and bundle validator both stay green". It is pre-existing: `validate-evidence-artifacts.mjs` exits 1 with byte-identical output on a clean worktree at mission-start `d9d74eff` ("BLOCKING: 2 artifact(s)…"; `fatal: bad object ffff…` from the shallow clone).
+
+An earlier DB-suite attempt (74 failures) was invalid and was discarded. It ran at the same time as the non-DB run in the same checkout, so the non-DB global setup overwrote `.env.test` with the placeholder URL. This is the recorded shared-`.env.test` P2. The suites above were then run one after the other.
+
+### Environment incident (disclosed; merge blocker until the guard landed)
+**What happened.** This container exports a remote Neon `DATABASE_URL` / `TEST_DATABASE_URL` / `MIGRATION_DATABASE_URL` and `TEST_WITH_DB=true` by default. During the investigation phase, several read-only subagents ran `npx vitest run …` in that environment. At mission start, `vitest-global-setup.ts` trusted the inherited `DATABASE_URL`, loaded any existing `.env.test`, and rewrote `.env.test` with that URL for every worker. With `TEST_WITH_DB=true` it then ran `getDbInstance` → `pingDatabase` → opened a keepalive client → `resetStartupStatus()` / `setStartupStatus("READY")` **before any test body**.
+
+**What may have touched the remote database.** Connection attempts, the ping, the keepalive and the startup-status reset/write from global setup. If any run got past setup, the `*.db.test.ts` fixtures of those runs may also have run (these create and delete their own rows).
+
+**What cannot be proven.** Nothing in this container can prove or rule out whether those connections succeeded or whether the startup-status write landed on the remote database. The agents reported that no test body ran and that one run hung at warm-up. That is their report, not verified evidence. The remote database was not inspected, and was deliberately not contacted afterwards.
+
+**Containment.** The processes were killed and `.env.test` was deleted. Every later run was pinned to the throwaway loopback Postgres (`localhost:5433`), with the remote variables unset.
+
+**Safeguard (commits 374dbd17, 6c77a12b, d65d2227, aa6038ed).** `src/infra/test-database-guard.ts` is called by `vitest-global-setup.ts` before any DB access:
+- A stale `.env.test` is deleted, never loaded.
+- Non-DB runs replace every DB variable with a loopback placeholder.
+- DB runs need an explicit `DATABASE_URL` and refuse production authorization flags.
+- Every DB variable must be loopback (postgres:/postgresql: TCP only, no `host`/`hostaddr` override). Otherwise `OPSIQ_ALLOW_REMOTE_TEST_DB=true` must be set explicitly; only the three remote-test workflows set it.
+- Error messages are sanitized.
+
+The same guard covers:
+- the fixture/e2e/demo seed scripts (`scripts/lib/assert-test-database.ts`, `seed-test-db.ts`, `seed-owner-scenarios` CLI)
+- Playwright's local dev-server path (`playwright.config.ts`) and the 3 specs that issue SQL.
+
+**Fail-closed proof.** `src/infra/__tests__/test-database-guard.test.ts` (13 tests) includes a source-contract check that global setup calls the guard before connecting. Live runs:
+- Incident-shaped env (fake remote `.invalid` host, `TEST_WITH_DB=true`) → vitest aborts `REFUSED`, exit 1, 0 tests, URL not echoed.
+- `socket:` scheme → refused.
+- Planted stale `.env.test` → deleted and ignored.
+- Seeds pointed at a remote URL → refused.
+- `playwright test --list` with a remote `DATABASE_URL` → refused. With loopback, or a remote `BASE_URL`, it lists 561 tests.
+
+**Residual (P2/P3, recorded):**
+- Concurrent runs in one checkout share `.env.test`, but only guarded URLs can leak between them.
+- A loopback tunnel to a remote database cannot be distinguished from a local one.
+
+## Gate verdict (HEAD 24e699c2 + this status update)
+
+BETA INTEGRITY GATE: PASS
