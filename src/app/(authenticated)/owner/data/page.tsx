@@ -310,13 +310,13 @@ function WaysToAdd() {
     {
       href: "/owner/intake",
       title: "Upload a spreadsheet or CSV",
-      body: "We validate every row and show the errors. Nothing counts until you confirm it.",
-      available: true,
-    },
-    {
-      href: "/owner/intake",
-      title: "Upload documents",
-      body: "Invoices, statements and supplier paperwork go through the same review and confirm step.",
+      // Was two separate cards ("Upload a spreadsheet or CSV" and "Upload documents") pointing at
+      // the identical /owner/intake href -- the second implied an invoice/statement/PDF could be
+      // uploaded and processed directly, which /owner/intake does not support: its only input is a
+      // pasted-CSV-text textarea (no <input type="file">, no OCR/PDF parsing anywhere in the app).
+      // Merged into one accurate card: the numbers behind those documents are still a supported
+      // source, entered as CSV rows, not the documents themselves.
+      body: "We validate every row and show the errors. Nothing counts until you confirm it. Works for numbers you take from spreadsheets, bank/POS exports, invoices, statements or supplier paperwork — paste them in as CSV rows.",
       available: true,
     },
     {
