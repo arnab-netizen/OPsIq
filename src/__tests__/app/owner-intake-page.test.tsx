@@ -61,7 +61,7 @@ describe("Owner Data Intake page", () => {
     const { container, findByText, getByLabelText } = renderWithProvider(<OwnerIntakePage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Data Intake"));
 
-    fireEvent.click(await findByText("+ Upload data"));
+    fireEvent.click(await findByText("+ Paste data"));
     fireEvent.change(getByLabelText("Target domain"), { target: { value: "finance" } });
     fireEvent.change(getByLabelText("Source"), { target: { value: "csv_upload" } });
     fireEvent.change(container.querySelector("#intake-csv-text")!, {

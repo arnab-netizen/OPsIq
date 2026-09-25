@@ -30,7 +30,10 @@ function action(overrides: Record<string, unknown> = {}) {
     priorityScore: 1,
     expectedTimeframeDays: 3,
     description: "x",
-    verificationMetric: "revenue",
+    // dataConfidenceScore is a known, higher-is-better metric (VERIFICATION_METRIC_DIRECTION,
+    // domain/owner-mode/verification-direction.ts) -- the exact metric the reported bug named,
+    // whose "target higher" instruction previously disagreed with a hardcoded "down" form default.
+    verificationMetric: "dataConfidenceScore",
     verificationMethod: "x",
     ...overrides,
   };
@@ -206,7 +209,7 @@ describe("Owner Money — inline Complete/Verify action forms (UX-06 Wave B1)", 
     });
   });
 
-  it("F. Verify outcome renders Before/After/Target direction fields with the finance default direction", async () => {
+  it("F. Verify outcome renders Before/After/Target direction fields, pre-filled from the metric's own canonical direction (not a page-wide constant)", async () => {
     renderPage();
     await resolveDashboard(BIZ_A.id, dashboardFixture("A", BIZ_A.id));
     fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
@@ -214,7 +217,8 @@ describe("Owner Money — inline Complete/Verify action forms (UX-06 Wave B1)", 
     expect(await screen.findByRole("heading", { name: "Verify outcome" })).toBeInTheDocument();
     expect(screen.getByLabelText("Before value")).toBeInTheDocument();
     expect(screen.getByLabelText("After value")).toBeInTheDocument();
-    expect(screen.getByLabelText("Target direction")).toHaveValue("down");
+    // dataConfidenceScore is higher-is-better -- pre-fills "up", not the old hardcoded "down".
+    expect(screen.getByLabelText("Target direction")).toHaveValue("up");
   });
 
   it("G. valid verification sends exact beforeValue/afterValue/targetDirection shape", async () => {
@@ -239,7 +243,8 @@ describe("Owner Money — inline Complete/Verify action forms (UX-06 Wave B1)", 
     fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
     await flush();
 
-    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
+    // dataConfidenceScore pre-fills "up" (higher-is-better) -- never touched by this test.
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "up" });
   });
 
   it("I. invalid numeric input never submits a broken value, and the shared validator rejects it directly", async () => {
@@ -268,13 +273,82 @@ describe("Owner Money — inline Complete/Verify action forms (UX-06 Wave B1)", 
     await flush();
 
     expect(verifyCalls).toHaveLength(1);
-    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "up" });
 
     // Direct proof the same validator this form uses rejects a non-blank, non-finite value outright
     // (the exact case the DOM makes unreachable through normal interaction).
     expect(parseOptionalNumericField("1e400")).toEqual({ valid: false });
     expect(parseOptionalNumericField("")).toEqual({ valid: true, value: null });
     expect(parseOptionalNumericField("12.5")).toEqual({ valid: true, value: 12.5 });
+  });
+
+  it("Q. a lower-is-better metric (debtServicePressurePct) pre-fills \"down\", not a page-wide constant", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "debtServicePressurePct" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    expect(screen.getByLabelText("Target direction")).toHaveValue("down");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
+  });
+
+  it("R. a metric with no canonical direction (breakEvenRevenue is a comparison-to-threshold, not a stated up/down) pre-selects nothing and blocks Save until the owner explicitly chooses", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "breakEvenRevenue" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+
+    // No option is pre-selected -- never guesses "up" or "down" for an unmapped metric.
+    expect(screen.getByLabelText("Target direction")).toHaveValue("");
+
+    // Submitting without an explicit choice is blocked, with an explanatory error, and sends
+    // nothing to the server -- the safe failure mode is "ask", never "silently assume".
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(
+      screen.getByText("Select whether higher or lower is the improvement for this metric before saving.")
+    ).toBeInTheDocument();
+
+    // Once the owner explicitly picks a direction, submission proceeds normally.
+    fireEvent.change(screen.getByLabelText("Target direction"), { target: { value: "up" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(1);
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "up" });
+  });
+
+  it("S. an inherited Object.prototype-name metric (\"constructor\") is never resolved to an inherited value -- it pre-selects nothing and blocks Save exactly like an ordinary unmapped metric", async () => {
+    renderPage();
+    await resolveDashboard(
+      BIZ_A.id,
+      dashboardFixture("A", BIZ_A.id, [action({ verificationMetric: "constructor" })])
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+
+    // A buggy `map[key] ?? null` lookup would resolve "constructor" to Object's constructor
+    // function (truthy, not nullish) rather than falling through to null. The fixed lookup
+    // returns exactly null, so no option is pre-selected here.
+    expect(screen.getByLabelText("Target direction")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(
+      screen.getByText("Select whether higher or lower is the improvement for this metric before saving.")
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Target direction"), { target: { value: "down" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(1);
+    expect(verifyCalls[0]!.body).toEqual({ beforeValue: null, afterValue: null, targetDirection: "down" });
   });
 
   it("J. server failure shows a governed owner-safe error, never a raw exception, and leaves the form open", async () => {

@@ -89,8 +89,17 @@ export interface VerificationValues {
 
 export interface VerificationActionFormProps {
   busy?: boolean;
-  /** Freezes each domain's own pre-existing default (Money: down; Sales/Operations/Execution: up). */
-  defaultDirection: "up" | "down";
+  /**
+   * The metric's canonical direction ("up" = higher is better, "down" = lower is
+   * better), sourced by the caller from getVerificationDirection() /
+   * VERIFICATION_METRIC_DIRECTION (domain/owner-mode/verification-direction.ts) --
+   * never a page-level constant. `null` means that metric's own verification text
+   * does not state an unambiguous direction (e.g. a comparison-to-a-threshold or a
+   * presence/validity check): no option is pre-selected in that case, and the
+   * owner must choose explicitly before saving rather than risk a silently wrong
+   * default in either direction.
+   */
+  defaultDirection: "up" | "down" | null;
   /** Humanized metric text shown as "Metric: <this>". */
   metricLabel: string;
   /** DOM id for the <form> element itself, so a caller's trigger button can point its
@@ -151,7 +160,7 @@ export function VerificationActionForm({
 }: VerificationActionFormProps) {
   const [beforeRaw, setBeforeRaw] = useState("");
   const [afterRaw, setAfterRaw] = useState("");
-  const [targetDirection, setTargetDirection] = useState<"up" | "down">(defaultDirection);
+  const [targetDirection, setTargetDirection] = useState<"up" | "down" | null>(defaultDirection);
   const [validationError, setValidationError] = useState<string | null>(null);
   // useId() guarantees a unique id per mounted instance (unlike a static string), so the form's
   // accessible name never collides even if more than one of these were ever mounted at once.
@@ -163,6 +172,12 @@ export function VerificationActionForm({
     const after = parseOptionalNumericField(afterRaw);
     if (!before.valid || !after.valid) {
       setValidationError("Enter a valid number or leave the field blank.");
+      return;
+    }
+    // No canonical direction exists for this metric (defaultDirection was null) and the owner
+    // hasn't explicitly picked one either -- block rather than silently guess either way.
+    if (targetDirection === null) {
+      setValidationError("Select whether higher or lower is the improvement for this metric before saving.");
       return;
     }
     setValidationError(null);
@@ -201,9 +216,10 @@ export function VerificationActionForm({
       <Select
         name="targetDirection"
         label="Target direction"
-        value={targetDirection}
-        onChange={(e) => setTargetDirection(e.target.value === "up" ? "up" : "down")}
+        value={targetDirection ?? ""}
+        onChange={(e) => setTargetDirection(e.target.value === "up" ? "up" : e.target.value === "down" ? "down" : null)}
         disabled={busy}
+        placeholder={defaultDirection === null ? "Select direction" : undefined}
         options={[
           { value: "up", label: "Up" },
           { value: "down", label: "Down" },

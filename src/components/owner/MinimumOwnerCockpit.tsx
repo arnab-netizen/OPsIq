@@ -1529,12 +1529,23 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             </div>
           )}
 
-          {/* Profit Leak — Phase 2 Signal B */}
+          {/* Profit Leak — Phase 2 Signal B. identifyProfitLeaks() (domain/owner-mode/profit-leak-radar.ts)
+              always returns a non-null topLeak, falling back to a leakType: "DATA_INSUFFICIENT"
+              placeholder when no real leak condition fired -- so `topProfitLeak` alone is truthy in
+              both cases and cannot be used to decide whether a leak was actually detected. The
+              heading and the "Area" line (a real business area is meaningless for the placeholder,
+              whose domain is the literal string "data") are gated on the same leakType check
+              business-control-slo.ts already uses for this exact distinction; the impact figure and
+              ownerExplanation continue to render exactly as before for every case. */}
           {topProfitLeak && (
             <div data-testid="cockpit-profit-leak-section" className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-foreground">Profit leak detected</span>
+              <span className="text-sm font-medium text-foreground">
+                {topProfitLeak.leakType === "DATA_INSUFFICIENT" ? "No profit leak detected yet" : "Profit leak detected"}
+              </span>
               <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 2 }}>
-                <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
+                {topProfitLeak.leakType !== "DATA_INSUFFICIENT" && (
+                  <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
+                )}
                 {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
                   <span data-testid="cockpit-profit-leak-impact" style={{ color: "var(--destructive)" }}>
                     Estimated impact: {topProfitLeak.estimatedImpact.rangeLow.toLocaleString()}
