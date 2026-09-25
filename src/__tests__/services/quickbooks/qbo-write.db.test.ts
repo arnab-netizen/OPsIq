@@ -419,7 +419,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks writes", () => {
 
     // Payload B (owner changed the data) under the same logical key.
     const callsBefore = fake.calls.length;
-    await expect(write(55)).rejects.toMatchObject({ name: "ConflictError" });
+    await expect(write(55)).rejects.toMatchObject({ name: "ConflictError", message: expect.stringMatching(/original details/) });
 
     // Rejected before any QBO call — no read, no create, nothing sent with payload B.
     expect(fake.calls.length).toBe(callsBefore);

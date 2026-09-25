@@ -361,7 +361,7 @@ export async function executeGovernedQboWrite(input: GovernedQboWriteInput): Pro
         // Neither is safe, so the changed intent is refused and the ledger
         // row (requestid, payload hash, ambiguity marker) is left untouched.
         throw new ConflictError(
-          "An earlier attempt of this QuickBooks change may already have been recorded in QuickBooks. Sync QuickBooks and check that record before submitting a different version of this change.",
+          "An earlier attempt of this QuickBooks change may already have been recorded in QuickBooks, so a different version cannot be sent in its place. Submit it again with the original details to finish that attempt, then make your changes as a follow-up edit.",
         );
       }
       // Definitively NOT committed in QuickBooks (rejected by QBO or by OpsIQ

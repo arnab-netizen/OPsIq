@@ -144,6 +144,13 @@ retried after correction under a new `requestid`.
   relies on the pre-write checks (links, exact-name matching) rather than a remote natural-key
   lookup. A retry with a corrected payload under a pinned requestid may return the original
   committed record unchanged; correct it with a follow-up update.
+- Once a governed write has been ambiguous, a DIFFERENT version of that same change (for example
+  an edited purchase order under the same one-push-per-PO key) is refused rather than sent under
+  the pinned requestid. The in-product path is to resubmit the original details, which either
+  returns the record QuickBooks already holds or creates it, and then edit it. There is no owner
+  action that clears the pin. In the rare case where the original details are themselves
+  rejected by QuickBooks on every resubmission, that record stays blocked in OpsIQ until it is
+  reconciled outside the product.
 - A sync task that ends in a non-retryable failure is finalized as scheduler status `failed`
   (with the owner-facing reason on the connector); such tasks are not listed in the generic
   automation status view.
