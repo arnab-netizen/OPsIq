@@ -855,4 +855,53 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] F27/F28 — quickBooksSyncTaskHandle
     await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
     await db.ownerConnector.delete({ where: { id: connector.id } });
   }, 30_000);
+
+  it("race window: the lease holder releases the lease between our failed CAS and the re-read — retried exactly once, and the sync proceeds for real (no deferred row created)", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const futureLease = new Date(Date.now() + 60_000); // makes the FIRST CAS attempt fail
+    await db.ownerConnector.update({ where: { id: connector.id }, data: { syncLeaseExpiresAt: futureLease } });
+
+    // Test-side only (no production seam): spy on the real client's
+    // ownerConnector.findFirst — the retry-decision re-read this run makes
+    // right after its first CAS attempt fails is the FIRST such call in the
+    // whole run (the later, comprehensive connector-row lookup only happens
+    // once a lease IS acquired). On that first call, clear the lease for
+    // real BEFORE delegating to the original implementation — simulating
+    // the holder releasing its lease in exactly that gap — then let the
+    // retry logic observe the now-live-lease-free row and retry the CAS.
+    const realDb = await getDbInstance();
+    const originalFindFirst = realDb.ownerConnector.findFirst.bind(realDb.ownerConnector);
+    const findFirstSpy = vi.spyOn(realDb.ownerConnector, "findFirst").mockImplementationOnce(async (...args: unknown[]) => {
+      await realDb.ownerConnector.update({ where: { id: connector.id }, data: { syncLeaseExpiresAt: null } });
+      return originalFindFirst(...args);
+    });
+
+    const client = emptyClient();
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })]]);
+    const scheduler = new DatabaseSchedulerProvider();
+    const { taskId } = await seedPendingTask(workspaceId, connector.id);
+
+    try {
+      await scheduler.processTaskById(taskId, handlers);
+    } finally {
+      findFirstSpy.mockRestore();
+    }
+
+    const row = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(row?.status).toBe("completed");
+
+    const connectorAfter = await db.ownerConnector.findUnique({ where: { id: connector.id } });
+    expect(connectorAfter?.lastSyncAt).not.toBeNull(); // the sync actually ran on the retried CAS, not a NO_WORK
+    expect(connectorAfter?.syncLeaseExpiresAt).toBeNull(); // acquired on retry, then released cleanly
+
+    const deferredRows = await db.scheduledTask.findMany({ where: { workspaceId, idempotencyKey: { contains: ":deferred:" } } });
+    expect(deferredRows).toHaveLength(0); // never reached the deferred path — the retry succeeded
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
 });
