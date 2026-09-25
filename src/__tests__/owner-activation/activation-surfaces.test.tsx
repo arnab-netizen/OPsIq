@@ -114,7 +114,7 @@ describe("intake upload prerequisite", () => {
     await waitFor(() => expect(screen.getByTestId("intake-upload-blocked")).toBeTruthy());
 
     const notice = screen.getByTestId("intake-upload-blocked");
-    expect(notice.textContent).toMatch(/need a business profile before you can upload/i);
+    expect(notice.textContent).toMatch(/need a business profile before you can add data/i);
     expect(screen.getByTestId("intake-upload-blocked-cta").getAttribute("href")).toBe("/owner/data");
   });
 
@@ -124,7 +124,7 @@ describe("intake upload prerequisite", () => {
     await waitFor(() => expect(screen.getByTestId("intake-upload-blocked")).toBeTruthy());
 
     const uploadButton = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("Upload data"),
+      (b.textContent ?? "").includes("Paste data"),
     );
     expect(uploadButton).toBeDefined();
     expect(uploadButton!.hasAttribute("disabled")).toBe(true);
@@ -151,7 +151,7 @@ describe("intake upload prerequisite", () => {
     // notice disappears -- wait for it rather than asserting synchronously.
     await waitFor(() => {
       const uploadButton = Array.from(container.querySelectorAll("button")).find((b) =>
-        (b.textContent ?? "").includes("Upload data"),
+        (b.textContent ?? "").includes("Paste data"),
       );
       expect(uploadButton).toBeDefined();
       expect(uploadButton!.hasAttribute("disabled")).toBe(false);

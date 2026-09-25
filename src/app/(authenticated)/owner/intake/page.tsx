@@ -26,7 +26,11 @@ const VALIDATION_LABEL: Record<string, string> = {
 
 const TARGET_DOMAINS = ["finance", "sales", "operations", "sop", "marketing"];
 const SOURCES = [
-  { value: "csv_upload", label: "CSV upload" },
+  // Label corrected to match the actual mechanism: there is no file upload anywhere on this
+  // page, only a pasted-CSV-text textarea. The stored value ("csv_upload") is preserved
+  // unchanged -- it is persisted on existing intake records and read by intake history/audit
+  // consumers -- only its human-facing label changed.
+  { value: "csv_upload", label: "Pasted CSV" },
   { value: "manual_form", label: "Manual form" },
   { value: "google_sheets", label: "Google Sheets export" },
   { value: "email_import", label: "Email import" },
@@ -184,14 +188,14 @@ export default function OwnerIntakePage() {
       <div className="mb-6">
         <PageHeader
           title="Data Intake & Connectors"
-          description="Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it."
+          description="Paste CSV rows for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it."
           actions={
             <Button
               onClick={() => setShowUpload((s) => !s)}
               disabled={businesses.length === 0}
               aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
             >
-              + Upload data
+              + Paste data
             </Button>
           }
         />
@@ -203,10 +207,10 @@ export default function OwnerIntakePage() {
           data-testid="intake-upload-blocked"
           className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
         >
-          <p className="font-medium">You need a business profile before you can upload.</p>
+          <p className="font-medium">You need a business profile before you can add data.</p>
           <p className="mt-1">
-            Uploads are stored against a business, so OpsIQ needs to know which business the rows
-            belong to. Adding one takes about a minute.
+            Data you add here is stored against a business, so OpsIQ needs to know which business
+            the rows belong to. Adding one takes about a minute.
           </p>
           <Link
             href="/owner/data"
@@ -244,7 +248,7 @@ export default function OwnerIntakePage() {
 
       {businesses.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          <p>No business profile yet, so there is nowhere to put uploaded data.</p>
+          <p>No business profile yet, so there is nowhere to put the data you add.</p>
           <Link href="/owner/data" className="mt-2 inline-block font-medium text-[var(--primary-text)] underline hover:no-underline">
             Add your business profile →
           </Link>
@@ -261,7 +265,7 @@ export default function OwnerIntakePage() {
 
           {showUpload && (
             <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
-              <h2 className="font-semibold">Upload data</h2>
+              <h2 className="font-semibold">Paste data</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: DOMAIN_LABEL[d] ?? d }))} />
                 <Select name="source" label="Source" required options={SOURCES} />
@@ -287,7 +291,7 @@ export default function OwnerIntakePage() {
 
           <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Intake history ({intakes.length})</h2>
-            {intakes.length === 0 && <p className="text-sm text-muted-foreground">No uploads yet.</p>}
+            {intakes.length === 0 && <p className="text-sm text-muted-foreground">No data added yet.</p>}
             <div className="space-y-2">
               {intakes.map((it: any) => (
                 <div key={it.id} className="flex flex-wrap justify-between items-center gap-2 border-b py-2 text-sm">
@@ -369,7 +373,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
         {intake.validationStatus !== "invalid" ? (
           <Button onClick={() => onConfirm(intake.id)} disabled={busy}>Confirm this intake</Button>
         ) : (
-          <span className="text-xs text-destructive">Fix the source data and re-upload — an invalid intake cannot be confirmed.</span>
+          <span className="text-xs text-destructive">Fix the source data and paste it in again — an invalid intake cannot be confirmed.</span>
         )}
       </div>
     </section>

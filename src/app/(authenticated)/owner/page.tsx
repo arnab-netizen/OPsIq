@@ -690,7 +690,7 @@ export default function OwnerCommandCenterPage() {
           ) : !data?.hasData || !profile ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
               Your OpsIQ diagnosis requires business data.{" "}
-              <Link href="/owner/intake" className="underline">Upload your data →</Link>
+              <Link href="/owner/intake" className="underline">Add your data →</Link>
             </div>
           ) : (
             <div className="space-y-6">

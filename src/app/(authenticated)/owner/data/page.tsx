@@ -309,13 +309,16 @@ function WaysToAdd() {
     },
     {
       href: "/owner/intake",
-      title: "Upload a spreadsheet or CSV",
+      title: "Paste in spreadsheet or CSV data",
       // Was two separate cards ("Upload a spreadsheet or CSV" and "Upload documents") pointing at
       // the identical /owner/intake href -- the second implied an invoice/statement/PDF could be
       // uploaded and processed directly, which /owner/intake does not support: its only input is a
       // pasted-CSV-text textarea (no <input type="file">, no OCR/PDF parsing anywhere in the app).
       // Merged into one accurate card: the numbers behind those documents are still a supported
-      // source, entered as CSV rows, not the documents themselves.
+      // source, entered as CSV rows, not the documents themselves. "Upload" (implying a file
+      // picker/drag-drop) was also corrected in the title itself -- the destination's own actual
+      // mechanism is pasting text, never a file upload; see /owner/intake/page.tsx for the same
+      // correction applied to its own heading, button, and guidance text.
       body: "We validate every row and show the errors. Nothing counts until you confirm it. Works for numbers you take from spreadsheets, bank/POS exports, invoices, statements or supplier paperwork — paste them in as CSV rows.",
       available: true,
     },
