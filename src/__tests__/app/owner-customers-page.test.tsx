@@ -98,8 +98,8 @@ afterEach(() => {
 
 describe("CustomersPage", () => {
   it("renders the page heading", async () => {
-    const { findByText } = renderPage();
-    await findByText("Customers");
+    const { findByRole } = renderPage();
+    await findByRole("heading", { name: "Customer records" });
   });
 
   it("fetches businesses then customers on mount", async () => {
@@ -150,8 +150,8 @@ describe("CustomersPage", () => {
   });
 
   it("opens create modal when + New Customer is clicked", async () => {
-    const { findByText } = renderPage();
-    await findByText("Customers");
+    const { findByText, findByRole } = renderPage();
+    await findByRole("heading", { name: "Customer records" });
     await waitFor(async () => {
       const btn = await findByText("+ New Customer");
       fireEvent.click(btn);
@@ -161,8 +161,8 @@ describe("CustomersPage", () => {
   });
 
   it("associates the New Customer modal's fields with their visible labels (G1)", async () => {
-    const { findByText, getByLabelText } = renderPage();
-    await findByText("Customers");
+    const { findByText, findByRole, getByLabelText } = renderPage();
+    await findByRole("heading", { name: "Customer records" });
     await waitFor(async () => {
       const btn = await findByText("+ New Customer");
       fireEvent.click(btn);
