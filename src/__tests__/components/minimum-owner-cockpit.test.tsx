@@ -324,6 +324,19 @@ describe("MinimumOwnerCockpit — goal-state humanization (UX-06 Section G7)", (
     expect(getByTestId("cockpit-goal-scope").textContent).toBe("Workspace goal");
   });
 
+  it("the clean Home (no urgent action) still shows the selected business's goal and its scope", () => {
+    const clean = { routes: [], topRoute: null, summary: { total: 0, ownerApproval: 0, managerStaff: 0, dataTasks: 0, monitorOnly: 0 } };
+    const { getByTestId, rerender } = render(
+      <MinimumOwnerCockpit bridge={clean} onAction={noop} goalAttentionSignal={goalSignal({ state: "ON_TRACK", goalScope: "business", scopeLabel: "Business goal · Alpha Laundry" })} />
+    );
+    expect(getByTestId("cockpit-clean").textContent).toMatch(/no urgent action/i);
+    expect(getByTestId("cockpit-goal-scope").textContent).toBe("Business goal · Alpha Laundry");
+    rerender(
+      <MinimumOwnerCockpit bridge={clean} onAction={noop} goalAttentionSignal={goalSignal({ state: "NO_GOAL", goalScope: null, scopeLabel: "No goal set for Beta", beginnerExplanation: "No goal set for Beta. Add a goal to track your progress." })} />
+    );
+    expect(getByTestId("cockpit-goal-explanation").textContent).toMatch(/No goal set for Beta/);
+  });
+
   it("with no goal for the selected business, names the business and shows no scope badge", () => {
     const { getByTestId, queryByTestId } = render(
       <MinimumOwnerCockpit
