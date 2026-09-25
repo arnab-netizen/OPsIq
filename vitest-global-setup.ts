@@ -5,43 +5,49 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import * as dotenv from "dotenv";
 import { execSync } from "child_process";
 
 // Global keepalive: persistent pg.Client kept connected throughout the suite so
 // Neon never starts its auto-suspend timer between test runs.
 let _globalKeepaliveInterval: ReturnType<typeof setInterval> | undefined;
-let _globalKeepaliveClient: any = undefined;
+let _globalKeepaliveClient: import("pg").Client | null | undefined = undefined;
+
+/** Mutable view of process.env (NODE_ENV is typed read-only by Next.js). */
+const env = process.env as Record<string, string | undefined>;
 
 async function setup() {
   console.log("\n📊 Initializing test environment...");
 
   // Set test environment
-  (process.env as any).NODE_ENV = "test";
-  (process.env as any).VITEST = "true";
-  (process.env as any).SKIP_ENV_VALIDATION = "true";
+  env.NODE_ENV = "test";
+  env.VITEST = "true";
+  env.SKIP_ENV_VALIDATION = "true";
   // TEST_WITH_DB should be set by CI workflow if database tests are needed
   // Default to empty to allow vitest config's test filter to work
 
-  // Load .env.test for database configuration
+  // Test-database guard (src/infra/test-database-guard.ts). `.env.test` is a generated
+  // artifact written below for worker propagation — a pre-existing one is stale (possibly from a
+  // run with a different database) and is deleted, never loaded. The guard fails closed: a DB run
+  // needs an explicit loopback throwaway DATABASE_URL (or OPSIQ_ALLOW_REMOTE_TEST_DB=true for a
+  // declared remote TEST database); a non-DB run never uses an inherited database URL.
   const envTestPath = path.resolve(__dirname, ".env.test");
   if (fs.existsSync(envTestPath)) {
-    console.log("  → Loading .env.test...");
-    dotenv.config({ path: envTestPath });
-    console.log("  ✓ .env.test loaded");
-  } else {
-    console.log("  → .env.test not found, using defaults");
-    // Fallback: use development database
-    if (!process.env.DATABASE_URL) {
-      (process.env as any).DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
-    }
+    fs.unlinkSync(envTestPath);
+    console.log("  → Removed stale .env.test (generated artifact; never loaded)");
   }
+  const { resolveTestDatabase, TEST_DATABASE_VARIABLES } = await import("./src/infra/test-database-guard");
+  const resolution = resolveTestDatabase(process.env);
+  env.DATABASE_URL = resolution.databaseUrl;
+  if (resolution.mode === "no-db") {
+    for (const name of TEST_DATABASE_VARIABLES) env[name] = resolution.databaseUrl;
+  }
+  console.log(`  → Test database target: ${resolution.target}`);
 
   // Strip pgbouncer pooler suffix for Neon URLs in test environments.
   // pgbouncer transaction mode releases Neon connections after each transaction, letting Neon
   // compute suspend between test queries. Direct connections let pg.Pool's TCP keepAlive work.
   if (process.env.DATABASE_URL?.includes("-pooler.")) {
-    (process.env as any).DATABASE_URL = process.env.DATABASE_URL.replace("-pooler.", ".");
+    env.DATABASE_URL = process.env.DATABASE_URL.replace("-pooler.", ".");
     console.log("  → Switched to direct Neon endpoint for test stability (stripped -pooler)");
   }
 
@@ -52,13 +58,15 @@ async function setup() {
   if (process.env.DATABASE_URL) {
     const envTestContent = [
       `DATABASE_URL=${process.env.DATABASE_URL}`,
-      `TEST_WITH_DB=${process.env.TEST_WITH_DB || "false"}`,
+      // Sibling database variables too, so no worker keeps an inherited (unguarded) value.
+      ...TEST_DATABASE_VARIABLES.filter((n) => n !== "DATABASE_URL" && process.env[n]).map((n) => `${n}=${process.env[n]}`),
+      `TEST_WITH_DB=${resolution.mode === "db" ? "true" : "false"}`,
       `NODE_ENV=test`,
       `VITEST=true`,
       `SKIP_ENV_VALIDATION=true`,
     ].join("\n") + "\n";
     fs.writeFileSync(envTestPath, envTestContent, { encoding: "utf8" });
-    console.log("  → Wrote direct Neon URL to .env.test for test worker propagation");
+    console.log("  → Wrote guarded database URL(s) to .env.test for test worker propagation");
   }
 
   console.log("  → Database URL:", (process.env.DATABASE_URL || "not set").replace(/:[^@]*@/, ":***@"));
@@ -74,8 +82,8 @@ async function setup() {
     console.log("  ℹ Prisma Client already generated");
   }
 
-  // Initialize database connection only if TEST_WITH_DB is explicitly true
-  const testWithDb = process.env.TEST_WITH_DB === "true";
+  // Initialize database connection only for a guarded DB run
+  const testWithDb = resolution.mode === "db";
   if (testWithDb) {
     console.log("  → Initializing database connection + warming Neon (may take several minutes for cold-start)...");
     try {
