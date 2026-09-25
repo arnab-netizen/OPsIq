@@ -234,6 +234,13 @@ export type QboSyncTrigger = "INITIAL" | "MANUAL" | "SCHEDULED" | "WEBHOOK";
 export interface QboSyncTaskPayload {
   connectorId: string;
   trigger: QboSyncTrigger;
+  /**
+   * Real user id recorded as the audit actor for OpsIQ records materialized by
+   * this run (canonical snapshot writers require a users.id FK). MANUAL/INITIAL:
+   * the requesting owner. SCHEDULED/WEBHOOK: the owner who connected QuickBooks
+   * (OwnerConnector.registeredBy). Never taken from a webhook body.
+   */
+  requestedBy: string;
 }
 
 // ─── Owner-facing status DTO (never contains tokens, realm internals or payloads) ─
