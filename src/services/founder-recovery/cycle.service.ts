@@ -9,6 +9,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { OPEN_ACTION_STATUSES, withoutOpenDuplicates } from "@/domain/founder-recovery/action-continuity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -65,6 +66,7 @@ export async function runCycle(
       : `Cycle ${cycleNumber}: ${findings.length} finding(s); top issue ${findings[0].title} (${findings[0].severity}).`;
 
   // Persist atomically.
+  let carriedForward = 0;
   await db.$transaction(async (tx: any) => {
     await tx.recoveryCycle.create({
       data: {
@@ -110,8 +112,21 @@ export async function runCycle(
       });
     }
 
+    // Continuity: an action still open for the same finding is carried forward, not
+    // duplicated (see action-continuity.ts).
+    const openPrior = (
+      await tx.recoveryAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...OPEN_ACTION_STATUSES] } },
+        select: { finding: { select: { code: true } } },
+      })
+    )
+      .filter((r: { finding: { code: string } | null }) => r.finding !== null)
+      .map((r: { finding: { code: string } }) => ({ findingCode: r.finding.code }));
+    const continuity = withoutOpenDuplicates(actionSpecs, openPrior);
+    carriedForward = continuity.carriedForward;
+
     const now = Date.now();
-    for (const a of actionSpecs) {
+    for (const a of continuity.toCreate) {
       await tx.recoveryAction.create({
         data: {
           id: randomUUID(),
@@ -150,7 +165,8 @@ export async function runCycle(
           businessId,
           cycleNumber,
           findingCount: findings.length,
-          actionCount: actionSpecs.length,
+          actionCount: actionSpecs.length - carriedForward,
+          carriedForwardCount: carriedForward,
           healthStatus: health.status,
         },
       },

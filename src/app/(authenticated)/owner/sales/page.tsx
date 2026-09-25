@@ -613,6 +613,9 @@ function SalesCycleView({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}</div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>

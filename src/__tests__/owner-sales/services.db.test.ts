@@ -302,4 +302,35 @@ describe("[db] Owner Sales services", () => {
 
     await teardownOwnerBusiness(businessId);
   });
+
+  it("[db] re-diagnosis carries an open action forward instead of duplicating it, and the dashboard still shows it (BIV-12)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
+    const cycle1 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const inFlight = cycle1.actions[0];
+    await updateSalesAction(inFlight.id, { status: "assigned" }, actor, workspaceId);
+    await updateSalesAction(inFlight.id, { status: "in_progress" }, actor, workspaceId);
+
+    const cycle2 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    // No new proposed duplicate for the in-flight action's finding/recommendation.
+    const dupes = cycle2.actions.filter(
+      (a: { findingCode: string; recommendationCode: string }) =>
+        a.findingCode === inFlight.findingCode && a.recommendationCode === inFlight.recommendationCode
+    );
+    expect(dupes).toHaveLength(0);
+    // Every other recommendation that was merely proposed is also carried, not re-created.
+    expect(cycle2.actions).toHaveLength(0);
+
+    const dash = await getSalesDashboard(workspaceId, businessId);
+    const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === inFlight.id) as
+      | { status: string; carriedFromCycleSequence?: number }
+      | undefined;
+    expect(listed?.status).toBe("in_progress");
+    expect(listed?.carriedFromCycleSequence).toBe(cycle1.sequenceNumber);
+    expect(dash.latestCycle!.actions).toHaveLength(cycle1.actions.length);
+
+    await teardownOwnerBusiness(businessId);
+  });
 });
+

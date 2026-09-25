@@ -7,6 +7,7 @@
  * verification), overdue actions, and cycle history. Returns an explicit empty
  * state when the owner has no businesses or no cycles yet.
  */
+import { OPEN_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "./business.service";
 
@@ -115,12 +116,42 @@ export async function getRecoveryDashboard(
     orderBy: { dueAt: "asc" },
   });
 
+  // Open actions from earlier cycles stay visible (carried forward, listed first) until
+  // completed or cancelled — a re-diagnosis never hides in-flight owner work.
+  const carriedActions = latestCycleRow
+    ? await db.recoveryAction.findMany({
+        where: {
+          businessId: selectedBusinessId,
+          workspaceId,
+          cycleId: { not: latestCycleRow.id },
+          status: { in: [...OPEN_ACTION_STATUSES] },
+        },
+        include: {
+          verifications: { orderBy: { createdAt: "desc" } },
+          cycle: { select: { cycleNumber: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const latestCycle = latestCycleRow
+    ? {
+        ...latestCycleRow,
+        actions: [
+          ...carriedActions.map((a: { cycle: { cycleNumber: number } }) => ({
+            ...a,
+            carriedFromCycleSequence: a.cycle.cycleNumber,
+          })),
+          ...latestCycleRow.actions,
+        ],
+      }
+    : null;
+
   return {
     businesses: businessList,
     selectedBusinessId,
     hasData: latestCycleRow !== null,
     latestSnapshot: latestSnapshot ?? null,
-    latestCycle: latestCycleRow ?? null,
+    latestCycle,
     overdueActions,
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

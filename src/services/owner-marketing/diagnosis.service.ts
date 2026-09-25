@@ -14,6 +14,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { OPEN_ACTION_STATUSES, withoutOpenDuplicates } from "@/domain/founder-recovery/action-continuity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -95,6 +96,7 @@ export async function runMarketingDiagnosis(
     expectedTimeframeDays: a.expectedTimeframeDays,
   }));
 
+  let carriedForward = 0;
   await db.$transaction(
     async (tx: any) => {
       await tx.ownerMarketingCycle.create({
@@ -114,7 +116,15 @@ export async function runMarketingDiagnosis(
         },
       });
       if (findingRows.length > 0) await tx.ownerMarketingFinding.createMany({ data: findingRows });
-      if (actionRows.length > 0) await tx.ownerMarketingAction.createMany({ data: actionRows });
+      // Continuity: an action still open for the same finding/recommendation is carried
+      // forward, not duplicated (see action-continuity.ts).
+      const openPrior = await tx.ownerMarketingAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...OPEN_ACTION_STATUSES] } },
+        select: { findingCode: true, recommendationCode: true },
+      });
+      const continuity = withoutOpenDuplicates(actionRows, openPrior);
+      carriedForward = continuity.carriedForward;
+      if (continuity.toCreate.length > 0) await tx.ownerMarketingAction.createMany({ data: continuity.toCreate });
     },
     { maxWait: 10000, timeout: 20000 }
   );
@@ -129,7 +139,8 @@ export async function runMarketingDiagnosis(
       businessId,
       sequenceNumber,
       findingCount: diagnosis.findings.length,
-      actionCount: plan.actions.length,
+      actionCount: plan.actions.length - carriedForward,
+      carriedForwardCount: carriedForward,
       marketingState: diagnosis.metrics.marketingState,
     },
   });

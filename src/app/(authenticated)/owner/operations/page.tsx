@@ -750,6 +750,9 @@ function OperationsCycleView({
                 <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}</div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>

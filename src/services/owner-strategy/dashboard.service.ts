@@ -11,6 +11,7 @@
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
+import { OPEN_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 
 export interface StrategyDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -115,10 +116,34 @@ export async function getStrategyDashboard(
 
   // Each action carries the value the diagnosis measured for its verification
   // metric (null when not measured) — the baseline an outcome is compared to.
+  // Open actions from earlier cycles stay visible (carried forward, listed first) until
+  // completed or cancelled — a re-diagnosis never hides in-flight owner work.
+  const carriedActions = latestCycle
+    ? await db.ownerStrategyAction.findMany({
+        where: {
+          businessId: selectedBusinessId,
+          workspaceId,
+          cycleId: { not: latestCycle.id },
+          status: { in: [...OPEN_ACTION_STATUSES] },
+        },
+        include: {
+          verifications: { orderBy: { createdAt: "desc" } },
+          finding: { select: { sourceMetric: true, sourceValue: true } },
+          cycle: { select: { sequenceNumber: true } },
+        },
+        orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
+      })
+    : [];
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
-        actions: latestCycle.actions.map(withMeasuredBaseline),
+        actions: [
+          ...carriedActions.map((a: { verificationMetric: string; cycle: { sequenceNumber: number } }) => ({
+            ...withMeasuredBaseline(a),
+            carriedFromCycleSequence: a.cycle.sequenceNumber,
+          })),
+          ...latestCycle.actions.map(withMeasuredBaseline),
+        ],
       }
     : null;
 

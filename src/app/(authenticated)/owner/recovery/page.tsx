@@ -439,6 +439,9 @@ function RecoveryCycleView({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}</div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {PRIORITY_LABEL[a.priority] ?? a.priority}
                     </div>
