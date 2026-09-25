@@ -31,6 +31,8 @@ function action(overrides: Record<string, unknown> = {}) {
     expectedTimeframeDays: 3,
     description: "x",
     verificationMetric: "revenue",
+    // Server-derived (dashboard withMeasuredBaseline): value the diagnosis measured.
+    measuredBaseline: 1200,
     verificationMethod: "x",
     ...overrides,
   };
@@ -232,6 +234,18 @@ describe("Owner Operations — inline Complete/Verify action forms (UX-06 Wave B
     expect(verifyCalls[0]!.body).toEqual({ beforeValue: 100, afterValue: 80, targetDirection: "down" });
   });
 
+  it("H2. with no measured baseline, a blank Before value is blocked with a field message and nothing is sent", async () => {
+    const fixture = dashboardFixture("A", BIZ_A.id, [{ ...action(), measuredBaseline: null }]);
+    renderPage();
+    await resolveDashboard(BIZ_A.id, fixture);
+    fireEvent.click(await screen.findByRole("button", { name: "Verify outcome" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await flush();
+    expect(verifyCalls).toHaveLength(0);
+    expect(screen.getByText(/Enter the before value/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Before value").getAttribute("aria-invalid")).toBe("true");
+  });
+
   it("H. blank Before/After submit null, never 0/NaN/\"\"", async () => {
     renderPage();
     await resolveDashboard(BIZ_A.id, dashboardFixture("A", BIZ_A.id));
@@ -285,11 +299,9 @@ describe("Owner Operations — inline Complete/Verify action forms (UX-06 Wave B
     fireEvent.click(screen.getByRole("button", { name: "Save completion" }));
     await flush();
 
-    // This page's own api() helper collapses any failed response into a plain Error carrying the
-    // server's raw "error" string as its message (pre-existing, unchanged by this wave) -- routed
-    // through classifyOperatorError, that still yields a governed, generic action-failure message,
-    // never the raw "boom" text.
-    expect(await screen.findByText("Couldn't process this action. Please try again.")).toBeInTheDocument();
+    // api() now throws an HttpResponseError that keeps the real status; presentDomainError decides
+    // a 5xx by status alone (generic action message) -- never the raw "boom" text.
+    expect(await screen.findByText("Couldn't complete this action. Please try again.")).toBeInTheDocument();
     expect(screen.queryByText(/boom/)).not.toBeInTheDocument();
     // Failure must never clear the open inline form.
     expect(screen.getByText("Complete action")).toBeInTheDocument();

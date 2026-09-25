@@ -8,7 +8,7 @@
  * test file.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, cleanup, screen, fireEvent } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import {
   CompletionActionForm,
   VerificationActionForm,
@@ -132,13 +132,39 @@ describe("VerificationActionForm", () => {
     expect(screen.getByLabelText("Target direction")).toHaveValue("down");
   });
 
-  it("blank Before/After submit null, never 0/NaN/\"\"", () => {
+  it("blank Before/After submit null, never 0/NaN/\"\" (blank Before = use the measured baseline)", async () => {
+    const onSave = vi.fn();
+    render(
+      <VerificationActionForm defaultDirection="up" metricLabel="Revenue" measuredBaseline={1200} onCancel={() => {}} onSave={onSave} />
+    );
+    expect(screen.getByText(/Measured by the diagnosis: 1200/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ beforeValue: null, afterValue: null, targetDirection: "up" }));
+  });
+
+  it("without a measured baseline the Before value is required: blank is blocked inline, never sent", async () => {
     const onSave = vi.fn();
     render(
       <VerificationActionForm defaultDirection="up" metricLabel="Revenue" onCancel={() => {}} onSave={onSave} />
     );
+    expect(screen.getByLabelText("Before value")).toBeRequired();
     fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
-    expect(onSave).toHaveBeenCalledWith({ beforeValue: null, afterValue: null, targetDirection: "up" });
+    expect(await screen.findByText(/Enter the before value/)).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("a server error resolved by onSave is shown inside the form", async () => {
+    render(
+      <VerificationActionForm
+        defaultDirection="up"
+        metricLabel="Revenue"
+        measuredBaseline={5}
+        onCancel={() => {}}
+        onSave={() => Promise.resolve("Start this action before recording its outcome.")}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save verification" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Start this action before recording its outcome.");
   });
 
   it("valid numbers are submitted as numbers, and target direction is switchable", () => {
@@ -166,7 +192,7 @@ describe("VerificationActionForm", () => {
     // form here -- this proves the pure function directly instead.
     const onSave = vi.fn();
     render(
-      <VerificationActionForm defaultDirection="up" metricLabel="Revenue" onCancel={() => {}} onSave={onSave} />
+      <VerificationActionForm defaultDirection="up" metricLabel="Revenue" measuredBaseline={1} onCancel={() => {}} onSave={onSave} />
     );
     expect(parseOptionalNumericField("1e400")).toEqual({ valid: false });
     expect(parseOptionalNumericField("not-a-number")).toEqual({ valid: false });

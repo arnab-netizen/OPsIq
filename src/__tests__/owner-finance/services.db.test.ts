@@ -111,6 +111,12 @@ describe("[db] Owner Finance services", () => {
     const cycle = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
     const action = cycle.actions[0];
 
+    // Outcomes are recordable only once work has started (verification-evidence.ts).
+
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+
     const { verification, result } = await recordFinanceVerification(
       action.id,
       { beforeValue: 15, afterValue: 8, targetDirection: "down", targetValue: 10 },
@@ -120,6 +126,48 @@ describe("[db] Owner Finance services", () => {
     expect(verification.id).toBeTruthy();
     expect(["verified_improved", "verified_not_improved", "inconclusive", "disputed"]).toContain(result.status);
 
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] rejects recording an outcome for an action whose work has not started (BIV-09)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle.actions[0];
+    await expect(
+      recordFinanceVerification(action.id, { beforeValue: 1, afterValue: 2, targetDirection: "up" }, actor, workspaceId)
+    ).rejects.toThrow(/Start this action before recording its outcome/);
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] records baseline provenance: blank before uses the measured value; a different owner value is kept as OWNER_REPORTED (BIV-10)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle.actions[0];
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    const row = await db.ownerFinanceAction.findFirst({ where: { id: action.id }, include: { finding: true } });
+    const measured =
+      row?.finding && row.finding.sourceMetric === row.verificationMetric && row.finding.sourceValue !== null
+        ? row.finding.sourceValue
+        : null;
+    if (measured === null) {
+      await expect(
+        recordFinanceVerification(action.id, { beforeValue: null, afterValue: 2, targetDirection: "up" }, actor, workspaceId)
+      ).rejects.toThrow(/before \(baseline\) value/);
+    } else {
+      const measuredRun = await recordFinanceVerification(action.id, { beforeValue: null, afterValue: measured, targetDirection: "up" }, actor, workspaceId);
+      expect(measuredRun.verification.beforeValue).toBe(measured);
+      expect(measuredRun.verification.baselineSource).toBe("MEASURED");
+    }
+    const reported = (measured ?? 0) + 50;
+    const ownerRun = await recordFinanceVerification(action.id, { beforeValue: reported, afterValue: 1, targetDirection: "up" }, actor, workspaceId);
+    expect(ownerRun.verification.beforeValue).toBe(reported);
+    expect(ownerRun.verification.baselineSource).toBe("OWNER_REPORTED");
+    expect(ownerRun.verification.measuredBeforeValue).toBe(measured);
     await teardownOwnerBusiness(businessId);
   });
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
@@ -248,7 +250,11 @@ export default function OwnerStrategyPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
+      const beforeRaw = window.prompt(
+        action.measuredBaseline == null
+          ? `BEFORE value for ${humanizeMetricKey(action.verificationMetric)} (not measured by the diagnosis — required):`
+          : `BEFORE value for ${humanizeMetricKey(action.verificationMetric)} (measured: ${action.measuredBaseline}; leave blank to use it — a different value is recorded as owner-reported):`
+      );
       if (beforeRaw === null) { setBusy(false); return; }
       const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
@@ -517,16 +523,14 @@ function StrategyCycleView({
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>
+                  {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
-                    <span className="text-muted-foreground">
-                      before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
-                    </span>
+                    <VerificationEvidenceText verification={latestVerification} />
                   </div>
                 )}
               </div>

@@ -10,6 +10,7 @@
  */
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
+import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 
 export interface SalesDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -81,7 +82,11 @@ export async function getSalesDashboard(
         snapshot: true,
         findings: { orderBy: { severity: "asc" } },
         actions: {
-          include: { verifications: { orderBy: { createdAt: "desc" } } },
+          include: {
+            verifications: { orderBy: { createdAt: "desc" } },
+            // Measured baseline for outcome verification (prefill + provenance display).
+            finding: { select: { sourceMetric: true, sourceValue: true } },
+          },
           // Deterministic total order: priorityScore is clamped to [0,100]
           // (calculateOwnerPriorityScore), so ties at the ceiling are a real,
           // expected occurrence whenever multiple critical findings coexist
@@ -112,6 +117,15 @@ export async function getSalesDashboard(
     }),
   ]);
 
+  // Each action carries the value the diagnosis measured for its verification
+  // metric (null when not measured) — the baseline an outcome is compared to.
+  const latestCycleView = latestCycle
+    ? {
+        ...latestCycle,
+        actions: latestCycle.actions.map(withMeasuredBaseline),
+      }
+    : null;
+
   const domainScore = latestCycle
     ? {
         domain: "sales" as const,
@@ -131,7 +145,7 @@ export async function getSalesDashboard(
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
-    latestCycle: latestCycle ?? null,
+    latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
     missingCriticalData: latestSnapshot

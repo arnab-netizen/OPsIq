@@ -1,5 +1,7 @@
 "use client";
 
+import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
@@ -13,7 +15,8 @@ import {
   type VerificationValues,
 } from "@/components/owner/DomainActionInlineForms";
 import { useActiveBusiness } from "@/context/active-business-context";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -65,7 +68,8 @@ async function api(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+  // Keep the HTTP status + server message + field errors (a plain Error loses them).
+  if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
   return data;
 }
 
@@ -180,7 +184,7 @@ export default function OwnerSalesPage() {
       if (loadGenerationRef.current !== generation) return;
       // UX-04B: governed classification, never the raw fetch/exception text -- mirrors Money's
       // already-shipped pattern (see UX-04A Section Q item 4).
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to load"), "load"));
     } finally {
       // A stale request's completion must never toggle the loading flag for a request that's no
       // longer current.
@@ -227,7 +231,7 @@ export default function OwnerSalesPage() {
       if (activeBusinessIdRef.current !== created.id) return;
       await load(created.id);
     } catch (e) {
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to create business"), "save"));
     } finally {
       setBusy(false);
     }
@@ -265,7 +269,7 @@ export default function OwnerSalesPage() {
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save snapshot"), { context: "save" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to save snapshot"), "save"));
     } finally {
       setBusy(false);
     }
@@ -286,7 +290,7 @@ export default function OwnerSalesPage() {
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to run diagnosis"), "action"));
     } finally {
       setBusy(false);
     }
@@ -305,7 +309,7 @@ export default function OwnerSalesPage() {
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to update action"), "action"));
     } finally {
       setBusy(false);
     }
@@ -334,7 +338,7 @@ export default function OwnerSalesPage() {
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Failure must never clear the open inline form.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to update action"), "action"));
     } finally {
       setBusy(false);
       actionMutationInFlightRef.current = false;
@@ -343,8 +347,8 @@ export default function OwnerSalesPage() {
 
   // UX-06 Wave B1: replaces the three native-dialog calls previously inlined in verifyAction().
   // Same POST endpoint/body shape -- the inline form already validated/typed the values.
-  async function verifyActionSubmit(action: any, values: VerificationValues) {
-    if (actionMutationInFlightRef.current) return;
+  async function verifyActionSubmit(action: any, values: VerificationValues): Promise<string | null> {
+    if (actionMutationInFlightRef.current) return null;
     actionMutationInFlightRef.current = true;
     const targetBusinessId = selected;
     setBusy(true);
@@ -358,13 +362,17 @@ export default function OwnerSalesPage() {
           targetDirection: values.targetDirection,
         }),
       });
-      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return; }
+      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return null; }
       setEditingAction(null);
       await load(targetBusinessId);
+      return null;
     } catch (e) {
-      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      if (activeBusinessIdRef.current !== targetBusinessId) return null;
       // Failure must never clear the open inline form.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
+      const message = presentDomainError(e instanceof Error ? e : new Error("Failed to verify"), "action");
+      setError(message);
+      // Also returned so the open inline form shows it next to the fields.
+      return message;
     } finally {
       setBusy(false);
       actionMutationInFlightRef.current = false;
@@ -535,7 +543,7 @@ function SalesCycleView({
   onEditingActionChange: (v: { actionId: string; mode: "complete" | "verify" } | null) => void;
   onUpdateAction: (a: any, s: string) => void;
   onCompleteAction: (a: any, values: CompletionValues) => void;
-  onVerifyAction: (a: any, values: VerificationValues) => void;
+  onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
   const state = score?.salesState ?? cycle.salesState;
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
@@ -630,6 +638,7 @@ function SalesCycleView({
                     </Button>
                   )}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
+                  {canRecordOutcome(a.status) && (
                   <Button
                     ref={(el) => { verifyTriggerRefs.current[a.id] = el; }}
                     aria-expanded={isVerifyOpen}
@@ -639,15 +648,14 @@ function SalesCycleView({
                   >
                     Verify outcome
                   </Button>
+                  )}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
-                    <span className="text-muted-foreground">
-                      before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
-                    </span>
+                    <VerificationEvidenceText verification={latestVerification} />
                   </div>
                 )}
                 {isCompleteOpen && (
@@ -667,6 +675,7 @@ function SalesCycleView({
                     busy={busy}
                     defaultDirection="up"
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
+                    measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {
                       onEditingActionChange(null);
                       verifyTriggerRefs.current[a.id]?.focus();

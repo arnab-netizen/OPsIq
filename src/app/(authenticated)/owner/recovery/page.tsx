@@ -1,5 +1,6 @@
 "use client";
 
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
@@ -452,7 +453,7 @@ function RecoveryCycleView({
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>
+                  {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
@@ -460,7 +461,7 @@ function RecoveryCycleView({
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
-                      after {String(latestVerification.afterValue)} · movement {String(latestVerification.actualMovement)}
+                      after {latestVerification.afterValue ?? "not recorded"} · movement {latestVerification.actualMovement ?? "not recorded"} · baseline measured by diagnosis
                     </span>
                   </div>
                 )}

@@ -1,5 +1,7 @@
 "use client";
 
+import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
@@ -15,7 +17,9 @@ import {
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
+import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -77,7 +81,8 @@ async function api(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+  // Keep the HTTP status + server message + field errors (a plain Error loses them).
+  if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
   return data;
 }
 
@@ -292,7 +297,7 @@ export default function OwnerFinancePage() {
       // already used by addSnapshot() below and by the cockpit page's load handler. A thrown
       // Error here can carry a server-side NotFoundError's raw `"<EntityType> not found: <uuid>"`
       // message (see infra/errors.ts), which must never reach the owner verbatim.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to load"), "load"));
     } finally {
       // A stale request's completion must never toggle the loading flag for a request that's no
       // longer current -- it could otherwise dismiss the skeleton for a newer request still in
@@ -345,7 +350,7 @@ export default function OwnerFinancePage() {
       await load(created.id);
     } catch (e) {
       // Governed classification -- see load()'s comment above.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to create business"), "save"));
     } finally {
       setBusy(false);
     }
@@ -423,7 +428,7 @@ export default function OwnerFinancePage() {
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification -- see load()'s comment above.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to run diagnosis"), "action"));
     } finally {
       setBusy(false);
     }
@@ -444,7 +449,7 @@ export default function OwnerFinancePage() {
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification -- see load()'s comment above.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to update action"), "action"));
     } finally {
       setBusy(false);
     }
@@ -475,7 +480,7 @@ export default function OwnerFinancePage() {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Governed classification -- see load()'s comment above. Failure must never clear the open
       // inline form (Section Z's frozen contract), so editingAction is left untouched here.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to update action"), "action"));
     } finally {
       setBusy(false);
       actionMutationInFlightRef.current = false;
@@ -485,8 +490,8 @@ export default function OwnerFinancePage() {
   // UX-06 Wave B1: replaces the three native-dialog calls previously inlined in verifyAction().
   // Same POST endpoint and body shape -- the inline form has already validated/typed the values
   // before this is called (Section K's frozen semantics: blank -> null, never 0/NaN/"").
-  async function verifyActionSubmit(action: any, values: VerificationValues) {
-    if (actionMutationInFlightRef.current) return;
+  async function verifyActionSubmit(action: any, values: VerificationValues): Promise<string | null> {
+    if (actionMutationInFlightRef.current) return null;
     actionMutationInFlightRef.current = true;
     const targetBusinessId = selected;
     setBusy(true);
@@ -500,14 +505,18 @@ export default function OwnerFinancePage() {
           targetDirection: values.targetDirection,
         }),
       });
-      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return; }
+      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return null; }
       setEditingAction(null);
       await load(targetBusinessId);
+      return null;
     } catch (e) {
-      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      if (activeBusinessIdRef.current !== targetBusinessId) return null;
       // Governed classification -- see load()'s comment above. Failure must never clear the open
       // inline form.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
+      const message = presentDomainError(e instanceof Error ? e : new Error("Failed to verify"), "action");
+      setError(message);
+      // Also returned so the open inline form shows it next to the fields.
+      return message;
     } finally {
       setBusy(false);
       actionMutationInFlightRef.current = false;
@@ -735,7 +744,7 @@ function FinanceCycleView({
   onEditingActionChange: (v: { actionId: string; mode: "complete" | "verify" } | null) => void;
   onUpdateAction: (a: any, s: string) => void;
   onCompleteAction: (a: any, values: CompletionValues) => void;
-  onVerifyAction: (a: any, values: VerificationValues) => void;
+  onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
@@ -860,6 +869,7 @@ function FinanceCycleView({
                     </Button>
                   )}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
+                  {canRecordOutcome(a.status) && (
                   <Button
                     ref={(el) => { verifyTriggerRefs.current[a.id] = el; }}
                     aria-expanded={isVerifyOpen}
@@ -869,15 +879,14 @@ function FinanceCycleView({
                   >
                     Verify outcome
                   </Button>
+                  )}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
-                    <span className="text-muted-foreground">
-                      before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
-                    </span>
+                    <VerificationEvidenceText verification={latestVerification} />
                   </div>
                 )}
                 {isCompleteOpen && (
@@ -899,6 +908,7 @@ function FinanceCycleView({
                     busy={busy}
                     defaultDirection="down"
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
+                    measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {
                       onEditingActionChange(null);
                       verifyTriggerRefs.current[a.id]?.focus();
