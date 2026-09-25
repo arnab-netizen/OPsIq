@@ -80,6 +80,32 @@ at 3; the Sep 24 aggregate **includes QA/verification visits** (the Chrome run
 among them), so none of it is evidence of external traffic. The latest check is
 the one that counts: 10 views, 3 visitors, empty referrer, zero beta requests.
 
+| Check (UTC) | Article views | `/resources` views | Referrers seen | Beta requests attribution |
+|---|---|---|---|---|
+| 2026-09-25 05:18 | 17 (6 visitors), window 09-24→09-26 | 31 (5 visitors), same window | `facebook.com` (1 visitor / 1 pageview) and `m.facebook.com` (1 visitor / 2 pageviews), both timestamped 2026-09-24 (day-granularity only — cannot place before/after the prior 2026-09-24 check-ins); all other traffic in the window is empty-referrer (direct): 5 visitors/43 pageviews on 09-24, 1 visitor/2 pageviews on 09-25 | **NOT QUERIED this pass — see blocker below** |
+
+Source: `aggregate_pageviews`/`count_pageviews` (Vercel Web Analytics API), `by:
+["day","referrerHostname"]`, filtered to `/resources` and
+`/resources/profitable-but-short-on-cash`, window `2026-09-24T00:00:00Z` to
+`2026-09-26T00:00:00Z`. UTM breakdown attempted (`by: ["utmSource"]`) and
+confirmed still blocked: `402 payment_required` — "UTM dimensions require an
+Enterprise plan or the Web Analytics Plus add-on" (same constraint as §1a).
+
+**Facebook referrer — flagged, not claimed as a published post.** §3 records the
+Facebook Page post as PREPARED — NOT SENT. Referrer-hostname data alone cannot
+confirm this was that specific post (no post URL, no UTM breakdown available to
+this session) — it could be the prepared Page post, an unrelated organic share,
+or a link pasted in Messenger/a personal profile. Recording the raw observation
+only; **owner confirmation needed** (see §4).
+
+**`beta_requests` attribution — blocked this pass.** Querying it requires
+production database access gated behind `OPSIQ_DB_TARGET=production` +
+`OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true` (or an authenticated
+`/admin/beta-requests` session); neither is configured/authorized in this agent
+session, and enabling either without explicit owner instruction is out of scope
+for a check-in. Not queried, not guessed — left blank rather than reusing the
+prior pass's zero.
+
 LinkedIn post analytics (LinkedIn-side, from the same run): 2 impressions, 0
 clicks, 0 reactions, 1 comment (the owner's own).
 
@@ -97,7 +123,7 @@ make future clicks attributable at the lead level.
 | Bing Webmaster Tools / IndexNow | NOT STARTED | $0 | Needs owner account (Bing) or a key file + outbound ping; agent session egress is blocked |
 | LinkedIn company post (prior run) | PUBLISHED (existing) — no new post this pass | $0 | Chrome run shows the existing company LinkedIn post is published: 2 impressions, 0 clicks/reactions, 1 owner comment. Share URL as recorded earlier: `https://www.linkedin.com/feed/update/urn:li:share:7508916807861383168/`. Earlier status: OWNER-REPORTED, UNVERIFIED. Do not repost the same copy |
 | Medium article (prior run) | PUBLISHED (existing) — no new post this pass | $0 | `https://medium.com/@arnab.poddar_72328/profitable-on-paper-short-on-cash-a-worked-example-d0d2f635809e`. Earlier status: OWNER-REPORTED, UNVERIFIED. This ledger does not record whether it uses the tagged link (`utm_source=medium&utm_medium=syndication&utm_campaign=resource_1_launch`) |
-| Facebook Page post | PREPARED — NOT SENT | $0 | Draft prepared; not published this pass |
+| Facebook Page post | PREPARED — NOT SENT | $0 | Draft prepared; not published this pass. 2026-09-25 check-in found `facebook.com`/`m.facebook.com` referrer traffic (2 visitors, 3 pageviews, 2026-09-24) not present in the prior check-in — unconfirmed as this post; see §2 note and §4 item 8 |
 | X (`@opsiqsolutions`) | READY TO POST | $0 | Copy + tagged link in `RESOURCE_1_DISTRIBUTION_KIT.md`; no posting connector in agent session |
 | Founder personal LinkedIn | READY TO POST | $0 | Copy + tagged link in `RESOURCE_1_DISTRIBUTION_KIT.md`; no posting connector in agent session |
 | Communities (e.g. small-business subreddits, forums) | READY — CHECK RULES FIRST | $0 | Many prohibit self-promotion; post only where rules allow, value-first |
@@ -117,7 +143,12 @@ promotion, add-on, or Web Analytics Plus), no production change or redeploy.
 3. **Owner:** recheck Search Console for indexing of the article and `/resources`
    (both requested, queued, not indexed yet); record the result here.
 4. **Agent (next check-in):** re-query Vercel page views by path/referrer and
-   `beta_requests` attribution counts; append a dated row to §2.
+   `beta_requests` attribution counts; append a dated row to §2. — **Partially
+   done 2026-09-25:** Vercel page views/referrers re-queried (see §2 row above).
+   `beta_requests` attribution NOT re-queried — no production DB/admin access is
+   configured or authorized in this agent session (see §2 blocker note). Needs
+   either owner-run query or explicit owner instruction to enable production DB
+   access for a scoped read.
 5. **Browser verification gaps** (from §1a): 375/390 widths verified only in iframe
    emulation; axe blocked by the CSP (manual audit only); first-load console
    coverage incomplete; analytics request headers and cookies uninspected.
@@ -126,6 +157,20 @@ promotion, add-on, or Web Analytics Plus), no production change or redeploy.
    only if it becomes noisy.
 7. **Optional:** a resource-specific social image (approved concept: $4,500 / 16%
    profit, $7,000 due, $5,000 gap) — currently the site default image is used.
+8. **Owner:** confirm whether the prepared Facebook Page post (§3) was actually
+   sent — the 2026-09-25 check-in found `facebook.com`/`m.facebook.com` referrer
+   traffic (2 visitors, 3 pageviews, dated 2026-09-24) that was not present in
+   the prior check-in, but referrer-hostname data alone cannot confirm it came
+   from that specific post (no post URL and no UTM breakdown available to this
+   session). If it was sent, record the post URL/date here and in §3 so it can
+   move from PREPARED to PUBLISHED with evidence, matching how the LinkedIn/Medium
+   rows are sourced.
+9. **Cadence / next resource:** no Resource #2 exists yet — `content/resources/`
+   contains only `profitable-but-short-on-cash.md`. Publishing a second piece
+   needs an owner-approved topic/outline first (per `AUTHORING.md`'s workflow);
+   the agent has not drafted one, to avoid inventing content/claims without a
+   source. This is the blocker on keeping the publishing cadence moving beyond
+   distribution of the existing article.
 
 ## 5. Change log
 
@@ -134,3 +179,4 @@ promotion, add-on, or Web Analytics Plus), no production change or redeploy.
 | 2026-09-24 | Ledger created; Resource #1 live verification recorded | this file, sources in §1–§2 |
 | 2026-09-24 | Prior-run LinkedIn + Medium posts recorded as owner-reported/unverified; second measurement row | PR #537 merged (`96271ce8`); Vercel referrer breakdown; `beta_requests` read-only counts |
 | 2026-09-24 | Production gate PASS recorded from the Claude in Chrome run (§1a); third measurement row + reconciliation (9 → 10 views incl. QA); LinkedIn post analytics; Search Console requests/sitemap; LinkedIn + Medium posts moved from owner-reported to published; Facebook post prepared, not sent | Claude in Chrome production run; Vercel Web Analytics Sep 24 aggregate; `beta_requests` count; PR #538 merged (`6feb2931`) |
+| 2026-09-25 | Check-in: fourth measurement row (Vercel page views/referrers re-queried for the 09-24→09-26 window); UTM breakdown re-confirmed blocked (402); flagged unconfirmed `facebook.com`/`m.facebook.com` referrer traffic for owner confirmation against the prepared Facebook post; `beta_requests` attribution not re-queried (no authorized production DB/admin access this session — named as open item); named the no-Resource-#2-exists cadence blocker. No beta request submitted, no spend, no production change | Vercel Web Analytics API (`aggregate_pageviews`/`count_pageviews`), this file's §2 row and sources above |
