@@ -652,56 +652,85 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
   const deadline = startedAt.getTime() + budgetMs;
   const leaseExpiresAt = new Date(startedAt.getTime() + SYNC_LEASE_MS);
 
-  const leased = await db.ownerConnector.updateMany({
-    where: {
-      id: input.connectorId,
-      workspaceId: input.workspaceId,
-      provider: QBO_PROVIDER,
-      status: "ACTIVE",
-      OR: [{ syncLeaseExpiresAt: null }, { syncLeaseExpiresAt: { lt: startedAt } }],
-    },
-    data: { syncLeaseExpiresAt: leaseExpiresAt },
-  });
+  async function tryAcquireLease(): Promise<boolean> {
+    const result = await db.ownerConnector.updateMany({
+      where: {
+        id: input.connectorId,
+        workspaceId: input.workspaceId,
+        provider: QBO_PROVIDER,
+        status: "ACTIVE",
+        OR: [{ syncLeaseExpiresAt: null }, { syncLeaseExpiresAt: { lt: startedAt } }],
+      },
+      data: { syncLeaseExpiresAt: leaseExpiresAt },
+    });
+    return result.count > 0;
+  }
 
-  if (leased.count === 0) {
-    // Resilience fix: distinguish "another run currently holds the lease"
-    // from "the connector isn't ACTIVE" (both make the CAS updateMany above
-    // match 0 rows). A plain NO_WORK for the held-lease case silently drops
-    // whatever prompted THIS call (e.g. a webhook notification) until the
-    // next daily sync — a crashed run's stale-but-not-yet-expired lease, or
-    // a live run whose CDC window started before this notification, both
-    // lose the request. Schedule ONE idempotent follow-up sync for right
-    // after the current lease expires instead of just giving up.
-    const current = await db.ownerConnector.findFirst({
+  async function readConnectorLeaseState(): Promise<{ status: string; syncLeaseExpiresAt: Date | null } | null> {
+    return db.ownerConnector.findFirst({
       where: { id: input.connectorId, workspaceId: input.workspaceId, provider: QBO_PROVIDER },
       select: { status: true, syncLeaseExpiresAt: true },
     });
-    const leaseCurrentlyHeld =
-      current?.status === "ACTIVE" && current.syncLeaseExpiresAt !== null && current.syncLeaseExpiresAt.getTime() >= startedAt.getTime();
+  }
 
-    if (leaseCurrentlyHeld && current?.syncLeaseExpiresAt) {
-      const deferredFor = new Date(current.syncLeaseExpiresAt.getTime() + DEFERRED_SYNC_MARGIN_MS);
-      const scheduler = new DatabaseSchedulerProvider();
-      // Keyed on the OBSERVED lease expiry, not "now" or the run id — every
-      // NO_WORK seen while the SAME lease is held collapses onto the one
-      // follow-up task for that lease, instead of enqueueing a duplicate per
-      // request (e.g. a burst of webhook notifications during one long run).
-      await scheduler.scheduleIdempotent({
-        taskName: TASK_NAME_QUICKBOOKS_SYNC,
-        payload: { connectorId: input.connectorId, trigger: input.trigger, requestedBy: input.requestedBy } satisfies QboSyncTaskPayload,
-        scheduledFor: deferredFor,
-        maxAttempts: 3,
-        workspaceId: input.workspaceId,
-        idempotencyKey: `quickbooks-sync:${input.connectorId}:deferred:${current.syncLeaseExpiresAt.toISOString()}`,
-      });
-      return {
-        status: "NO_WORK",
-        summary: "A QuickBooks sync is already running for this connector; a follow-up sync has been deferred until it finishes.",
-        counts: {},
-      };
+  function isLeaseLive(row: { status: string; syncLeaseExpiresAt: Date | null } | null): boolean {
+    return row?.status === "ACTIVE" && row.syncLeaseExpiresAt !== null && row.syncLeaseExpiresAt.getTime() >= startedAt.getTime();
+  }
+
+  let acquired = await tryAcquireLease();
+
+  if (!acquired) {
+    // Resilience fix: distinguish "another run currently holds the lease"
+    // from "the connector isn't ACTIVE" (both make the CAS updateMany above
+    // match 0 rows) — and from a THIRD case: the holder released its lease
+    // (or it simply expired) in the gap between our failed CAS and this
+    // re-read. That gap case is the exact loss this fix targets — if left
+    // as a plain NO_WORK here, the holder's own CDC window may predate
+    // whatever prompted THIS call (e.g. a webhook notification), and it
+    // would be silently dropped until the next daily sync. So: if the
+    // connector is ACTIVE but no lease is currently live, retry the CAS
+    // exactly once (bounded — never a loop) before falling back to either
+    // scheduling a deferred follow-up (still genuinely held) or a plain
+    // NO_WORK (truly not active).
+    const current = await readConnectorLeaseState();
+    const raceWindow = current?.status === "ACTIVE" && !isLeaseLive(current);
+
+    if (raceWindow) {
+      acquired = await tryAcquireLease();
     }
 
-    return { status: "NO_WORK", summary: "A QuickBooks sync is already running for this connector, or it is not active.", counts: {} };
+    if (!acquired) {
+      // If we retried, `current` is now stale (something changed the row
+      // between our first read and the retry) — re-read once more to decide
+      // held-vs-not accurately. If we did NOT retry (current was already a
+      // genuinely live lease), `current` is still fresh.
+      const finalState = raceWindow ? await readConnectorLeaseState() : current;
+
+      if (isLeaseLive(finalState) && finalState?.syncLeaseExpiresAt) {
+        const deferredFor = new Date(finalState.syncLeaseExpiresAt.getTime() + DEFERRED_SYNC_MARGIN_MS);
+        const scheduler = new DatabaseSchedulerProvider();
+        // Keyed on the OBSERVED lease expiry, not "now" or the run id —
+        // every NO_WORK seen while the SAME lease is held collapses onto
+        // the one follow-up task for that lease, instead of enqueueing a
+        // duplicate per request (e.g. a burst of webhook notifications
+        // during one long run).
+        await scheduler.scheduleIdempotent({
+          taskName: TASK_NAME_QUICKBOOKS_SYNC,
+          payload: { connectorId: input.connectorId, trigger: input.trigger, requestedBy: input.requestedBy } satisfies QboSyncTaskPayload,
+          scheduledFor: deferredFor,
+          maxAttempts: 3,
+          workspaceId: input.workspaceId,
+          idempotencyKey: `quickbooks-sync:${input.connectorId}:deferred:${finalState.syncLeaseExpiresAt.toISOString()}`,
+        });
+        return {
+          status: "NO_WORK",
+          summary: "A QuickBooks sync is already running for this connector; a follow-up sync has been deferred until it finishes.",
+          counts: {},
+        };
+      }
+
+      return { status: "NO_WORK", summary: "A QuickBooks sync is already running for this connector, or it is not active.", counts: {} };
+    }
   }
 
   let leaseHeld = true;

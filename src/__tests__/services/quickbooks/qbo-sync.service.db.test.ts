@@ -751,4 +751,108 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] F27/F28 — quickBooksSyncTaskHandle
     await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
     await db.ownerConnector.delete({ where: { id: connector.id } });
   }, 30_000);
+
+  // Resilience LOW — lost trigger on a held lease.
+  it("lease HELD: task completes, exactly one deferred follow-up task is scheduled at the lease expiry; a second NO_WORK during the same lease adds no row", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    const leaseExpiresAt = new Date(Date.now() + 60_000); // held by "another run", still 60s from expiry
+    await db.ownerConnector.update({ where: { id: connector.id }, data: { syncLeaseExpiresAt: leaseExpiresAt } });
+
+    const client = emptyClient(); // never reached — the lease check runs before client construction
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })]]);
+    const scheduler = new DatabaseSchedulerProvider();
+
+    const { taskId: taskId1 } = await seedPendingTask(workspaceId, connector.id);
+    await scheduler.processTaskById(taskId1, handlers);
+    const row1 = await db.scheduledTask.findUnique({ where: { id: taskId1 } });
+    expect(row1?.status).toBe("completed"); // NO_WORK maps to a completed task, not a failure
+
+    const deferredKey = `quickbooks-sync:${connector.id}:deferred:${leaseExpiresAt.toISOString()}`;
+    const deferredRows1 = await db.scheduledTask.findMany({ where: { workspaceId, idempotencyKey: deferredKey } });
+    expect(deferredRows1).toHaveLength(1);
+    expect(deferredRows1[0].scheduledFor.getTime()).toBe(leaseExpiresAt.getTime() + 30_000);
+
+    // A second NO_WORK against the SAME held lease (e.g. a second webhook
+    // notification arriving mid-run) must collapse onto the SAME deferred task.
+    const { taskId: taskId2 } = await seedPendingTask(workspaceId, connector.id);
+    await scheduler.processTaskById(taskId2, handlers);
+    const deferredRows2 = await db.scheduledTask.findMany({ where: { workspaceId, idempotencyKey: deferredKey } });
+    expect(deferredRows2).toHaveLength(1);
+    expect(deferredRows2[0].id).toBe(deferredRows1[0].id); // the very same row, not a duplicate
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: { in: [taskId1, taskId2, deferredRows1[0].id] } } });
+    await db.scheduledTask.deleteMany({ where: { workspaceId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+
+  it("connector NOT ACTIVE: task completes with NO_WORK and schedules no follow-up", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    await db.ownerConnector.update({ where: { id: connector.id }, data: { status: "DISCONNECTED" } });
+
+    const client = emptyClient();
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })]]);
+    const scheduler = new DatabaseSchedulerProvider();
+    const { taskId } = await seedPendingTask(workspaceId, connector.id);
+
+    await scheduler.processTaskById(taskId, handlers);
+
+    const row = await db.scheduledTask.findUnique({ where: { id: taskId } });
+    expect(row?.status).toBe("completed");
+
+    const anyDeferred = await db.scheduledTask.findMany({ where: { workspaceId, idempotencyKey: { contains: ":deferred:" } } });
+    expect(anyDeferred).toHaveLength(0);
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: taskId } });
+    await db.scheduledTask.delete({ where: { id: taskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
+
+  it("the deferred task, run once the lease has expired, actually performs the sync", async () => {
+    const workspaceId = randomUUID();
+    const realmId = String(Math.floor(100000000 + Math.random() * 800000000));
+    const connector = await createConnector(workspaceId, realmId);
+    // The lease has ALREADY expired by the time this deferred task runs —
+    // exactly the state left behind after the lease-holder's run finished
+    // (or crashed and its lease simply timed out).
+    const pastLease = new Date(Date.now() - 60_000);
+    await db.ownerConnector.update({ where: { id: connector.id }, data: { syncLeaseExpiresAt: pastLease } });
+
+    const deferredTaskId = randomUUID();
+    await db.scheduledTask.create({
+      data: {
+        id: deferredTaskId,
+        taskName: TASK_NAME_QUICKBOOKS_SYNC,
+        payload: { connectorId: connector.id, trigger: "WEBHOOK", requestedBy: actor },
+        status: "pending",
+        scheduledFor: new Date(Date.now() - 1000), // now due
+        maxAttempts: 3,
+        workspaceId,
+        idempotencyKey: `quickbooks-sync:${connector.id}:deferred:${pastLease.toISOString()}`,
+      },
+    });
+
+    const client = emptyClient(); // completes the initial phase instantly for every entity
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QUICKBOOKS_SYNC, buildQuickBooksSyncTaskHandler({ createClient: async () => client })]]);
+    const scheduler = new DatabaseSchedulerProvider();
+
+    await scheduler.processTaskById(deferredTaskId, handlers);
+
+    const row = await db.scheduledTask.findUnique({ where: { id: deferredTaskId } });
+    expect(row?.status).toBe("completed");
+
+    const connectorAfter = await db.ownerConnector.findUnique({ where: { id: connector.id } });
+    expect(connectorAfter?.lastSyncAt).not.toBeNull(); // the sync actually ran, not another NO_WORK
+    expect(connectorAfter?.syncLeaseExpiresAt).toBeNull(); // lease acquired and released by this run
+
+    await db.auditEvent.deleteMany({ where: { entityType: "ScheduledTask", entityId: deferredTaskId } });
+    await db.scheduledTask.delete({ where: { id: deferredTaskId } });
+    await db.ownerConnectorRecord.deleteMany({ where: { connectorId: connector.id } });
+    await db.ownerConnector.delete({ where: { id: connector.id } });
+  }, 30_000);
 });
