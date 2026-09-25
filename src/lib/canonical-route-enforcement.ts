@@ -522,8 +522,7 @@ export function withCanonicalEnforcement(
           const policyRoles = decision.context?.policy?.roles?.map((r) => r.role) || [];
           const policyCapabilities: string[] = [];
           if (decision.context?.policy?.roles) {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports -- pre-existing synchronous load on the denial path
-            const { getCapabilitiesForRole } = require("@/policies/capability-check");
+            const { getCapabilitiesForRole } = require("@/policies/capability-check"); // eslint-disable-line @typescript-eslint/no-require-imports -- pre-existing synchronous load
             for (const role of decision.context.policy.roles) {
               const caps = getCapabilitiesForRole(role.role);
               policyCapabilities.push(...caps);
