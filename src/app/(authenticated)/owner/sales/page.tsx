@@ -69,17 +69,31 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-// Field names match salesSnapshotCreateSchema (Slice 5).
-const SALES_FIELDS: Array<{ name: string; label: string }> = [
+// Field names match salesSnapshotCreateSchema (Slice 5). `hint` is added only where the field
+// name alone is genuinely ambiguous and metrics.ts/types.ts supports a specific clarification --
+// see sales-snapshot-form-hints.test.tsx for the source each hint is checked against. Hints are
+// deliberately narrow: each states only what a formula, fallback, or type comment in
+// domain/owner-sales/{types,metrics}.ts actually establishes (a computed relationship between two
+// fields), never a business-process claim (what counts as a "qualified" lead, whether a customer
+// is new "for the first time ever", whether a pipeline deal is "closed") that the schema doesn't
+// enforce and no source comment states. Where the only available clarification would require
+// inventing such a claim, the field is left without a hint. Fields with no listed ambiguity
+// (orders, revenue, b2b/b2c revenue split, complaints, discounts, refunds, staff count) are left
+// without a hint rather than restating the label.
+const SALES_FIELDS: Array<{ name: string; label: string; hint?: string }> = [
   { name: "leads", label: "Leads" },
-  { name: "qualifiedLeads", label: "Qualified leads" },
+  { name: "qualifiedLeads", label: "Qualified leads", hint: "Tracked as its own number, not calculated from Leads above -- used for a separate conversion-rate measurement." },
   { name: "orders", label: "Orders" },
   { name: "revenue", label: "Revenue" },
-  { name: "averageOrderValue", label: "Average order value" },
-  { name: "newCustomers", label: "New customers" },
-  { name: "repeatCustomers", label: "Repeat customers" },
-  { name: "lostCustomers", label: "Lost customers" },
+  { name: "averageOrderValue", label: "Average order value", hint: "Leave blank to calculate this automatically from revenue and orders. Enter a value only if you track it separately." },
+  { name: "newCustomers", label: "New customers", hint: "New customers plus repeat customers below should add up to your active customers this period." },
+  { name: "repeatCustomers", label: "Repeat customers", hint: "Added with new customers above to total your active customers this period." },
+  { name: "lostCustomers", label: "Lost customers", hint: "Added with active customers above when calculating this period's customer-loss rate." },
   { name: "b2bProspects", label: "B2B prospects" },
+  // b2bPipelineValue: b2bPipelineCoveragePct (metrics.ts) divides this by the general `revenue`
+  // field above (not b2bRevenue, which renders directly below it in this group) -- a hint saying
+  // "compared against your revenue below" would point at the wrong field. Left unresolved rather
+  // than invent a corrected phrasing; no hint.
   { name: "b2bPipelineValue", label: "B2B pipeline value" },
   { name: "b2bRevenue", label: "B2B revenue" },
   { name: "b2cRevenue", label: "B2C revenue" },
@@ -457,7 +471,7 @@ export default function OwnerSalesPage() {
                     <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {group.fieldNames.map((name) => {
                         const f = salesField(name);
-                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />;
+                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
                       })}
                     </div>
                   </div>

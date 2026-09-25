@@ -89,21 +89,31 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-// Field names match operationsSnapshotCreateSchema (Slice 5).
-const OPERATIONS_FIELDS: Array<{ name: string; label: string }> = [
+// Field names match operationsSnapshotCreateSchema (Slice 5). `hint` is added only where the
+// field name alone is genuinely ambiguous and metrics.ts/types.ts supports a specific
+// clarification -- see operations-snapshot-form-hints.test.tsx for the source each hint is
+// checked against. Hints are deliberately narrow: each states only what a formula, fallback, or
+// type comment in domain/owner-operations/{types,metrics}.ts actually establishes (a computed
+// relationship between two fields), never an invented process claim the schema doesn't enforce.
+// Fields with no listed ambiguity (orders received/completed/delayed, rework, complaints,
+// delivery failures) are left without a hint rather than restating the label.
+const OPERATIONS_FIELDS: Array<{ name: string; label: string; hint?: string }> = [
   { name: "ordersReceived", label: "Orders received" },
   { name: "ordersCompleted", label: "Orders completed" },
   { name: "ordersDelayed", label: "Orders delayed" },
   { name: "reworkCount", label: "Rework count" },
   { name: "complaints", label: "Complaints" },
-  { name: "staffHours", label: "Staff hours" },
-  { name: "machineCapacityUnits", label: "Machine capacity (units)" },
+  { name: "staffHours", label: "Staff hours", hint: "Total hours worked by all staff combined this period." },
+  { name: "machineCapacityUnits", label: "Machine capacity (units)", hint: "Maximum units your equipment could process this period." },
+  // idleHours: idleRatePct (metrics.ts) only computes idle / staffHours as a ratio -- it does not
+  // establish what counts as "idle" or that idle hours are drawn from the staffHours total, and no
+  // type comment defines it either. Left unresolved rather than invented; no hint.
   { name: "idleHours", label: "Idle hours" },
-  { name: "deliveryAttempts", label: "Delivery attempts" },
+  { name: "deliveryAttempts", label: "Delivery attempts", hint: "Leave blank to measure delivery success against completed orders instead." },
   { name: "deliveryFailures", label: "Delivery failures" },
-  { name: "inventoryShortages", label: "Inventory shortages" },
-  { name: "sopChecks", label: "SOP checks expected" },
-  { name: "sopMisses", label: "SOP misses" },
+  { name: "inventoryShortages", label: "Inventory shortages", hint: "Number of stockout events (times you ran out of stock) this period." },
+  { name: "sopChecks", label: "SOP checks expected", hint: "Total number of SOP (Standard Operating Procedure) checks expected this period." },
+  { name: "sopMisses", label: "SOP misses", hint: "How many of the expected checks above were missed or not completed." },
 ];
 
 function operationsField(name: string) {
@@ -542,7 +552,7 @@ export default function OwnerOperationsPage() {
                     <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {group.fieldNames.map((name) => {
                         const f = operationsField(name);
-                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />;
+                        return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
                       })}
                     </div>
                   </div>
