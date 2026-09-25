@@ -93,6 +93,7 @@ import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-publi
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
+import type { CockpitDomainPriority } from "@/services/owner-guidance/cockpit-domain-priority.service";
 import type { DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -198,6 +199,7 @@ export default function OwnerCockpitPage() {
   const [executionLifecycle, setExecutionLifecycle] = useState<OwnerExecutionLifecycleView | null>(null);
   const [businessOperatingSystem, setBusinessOperatingSystem] = useState<BusinessOperatingSystemView | null>(null);
   const [financeTopPriority, setFinanceTopPriority] = useState<CockpitFinancePriority | null>(null);
+  const [domainTopPriority, setDomainTopPriority] = useState<CockpitDomainPriority | null>(null);
   // UX-03: the canonical owner-facing assessment (OwnerNowView -> reconcileOwnerAssessment ->
   // composeOwnerAssessment). Cleared at the start of every load() (below) so a business switch
   // never leaves the previous business's assessment visible while the new one is loading, and so
@@ -283,6 +285,7 @@ export default function OwnerCockpitPage() {
       setExecutionLifecycle((data.executionLifecycle as OwnerExecutionLifecycleView) ?? null);
       setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
       setFinanceTopPriority((data.financeTopPriority as CockpitFinancePriority) ?? null);
+      setDomainTopPriority((data.domainTopPriority as CockpitDomainPriority) ?? null);
       // UX-03: build the canonical owner-facing assessment from THIS response's own OwnerNowView
       // (`data.view`) and condition detail (`data.derivedBusinessCondition`) -- never from
       // `activeBusinessId` (the server response's own businessId is the canonical source; see
@@ -537,6 +540,8 @@ export default function OwnerCockpitPage() {
             businessOperatingSystem={businessOperatingSystem}
             onBosAction={onBosAction}
             financeTopPriority={financeTopPriority}
+            domainTopPriority={domainTopPriority}
+            hasBusiness={businesses.length > 0}
             activeBusinessId={activeBusinessId}
             busy={busy}
           />

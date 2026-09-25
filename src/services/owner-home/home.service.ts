@@ -9,6 +9,7 @@
  * guard and every read is workspace-scoped. Reuses the proven Business Condition
  * domain-score/action mappers — no scoring logic is duplicated here.
  */
+import { OPEN_ACTION_STATUSES as OPEN_CONTINUITY_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
@@ -111,6 +112,23 @@ export interface OwnerHomeResult {
 }
 
 /**
+ * Open actions attached to cycles older than the latest one. Diagnosis runs carry an open action
+ * forward instead of duplicating it (action-continuity.ts), so the latest cycle alone no longer
+ * lists every open action — these must be added for "today's required actions" to stay complete.
+ */
+async function openActionsFromEarlierCycles(
+  delegate: { findMany: (args: unknown) => Promise<any[]> },
+  where: { businessId: string; workspaceId: string },
+  latestCycleId: string,
+  include?: Record<string, unknown>
+): Promise<any[]> {
+  return delegate.findMany({
+    where: { ...where, cycleId: { not: latestCycleId }, status: { in: [...OPEN_CONTINUITY_STATUSES] } },
+    ...(include ? { include } : {}),
+  });
+}
+
+/**
  * Build the §19 owner-home summary for a business (or the owner's most-recent one).
  * Deterministic and honest: no domain data ⇒ no summary (not invented).
  */
@@ -200,7 +218,9 @@ export async function getOwnerHome(
 
   if (finance) {
     domainScores.push(financeCycleToDomainScore(finance));
-    for (const a of finance.actions) actions.push(financeActionRowToOwnerAction(a));
+    for (const a of [...finance.actions, ...(await openActionsFromEarlierCycles(db.ownerFinanceAction, where, finance.id))]) {
+      actions.push(financeActionRowToOwnerAction(a));
+    }
     for (const f of finance.findings) findings.push(rowToFinding(f, "finance"));
     for (const v of allFinanceVers) {
       verifications.push({
@@ -216,19 +236,26 @@ export async function getOwnerHome(
   }
   if (recovery) {
     domainScores.push(recoveryCycleToDomainScore(recovery, recovery.snapshot));
-    for (const a of recovery.actions) actions.push(recoveryActionRowToOwnerAction(a));
+    const carriedRecovery = await openActionsFromEarlierCycles(db.recoveryAction, where, recovery.id, {
+      finding: { select: { code: true } },
+    });
+    for (const a of [...recovery.actions, ...carriedRecovery]) actions.push(recoveryActionRowToOwnerAction(a));
     // Recovery findings do not carry the spine findingType/impact shape → excluded from
     // the risk/opportunity lists (honest: nothing inferred). Recovery scores still count.
   }
   if (cashflow) {
     domainScores.push(cashflowCycleToDomainScore(cashflow));
-    for (const a of cashflow.actions) actions.push(cashflowActionRowToOwnerAction(a));
+    for (const a of [...cashflow.actions, ...(await openActionsFromEarlierCycles(db.ownerCashflowAction, where, cashflow.id))]) {
+      actions.push(cashflowActionRowToOwnerAction(a));
+    }
     for (const f of cashflow.findings) findings.push(rowToFinding(f, "cashflow"));
     verifications.push(...flattenVerifications(cashflow, "cashflow"));
   }
   if (sales) {
     domainScores.push(salesCycleToDomainScore(sales));
-    for (const a of sales.actions) actions.push(salesActionRowToOwnerAction(a));
+    for (const a of [...sales.actions, ...(await openActionsFromEarlierCycles(db.ownerSalesAction, where, sales.id))]) {
+      actions.push(salesActionRowToOwnerAction(a));
+    }
     for (const f of sales.findings) findings.push(rowToFinding(f, "sales"));
     for (const v of allSalesVers) {
       verifications.push({
@@ -244,7 +271,9 @@ export async function getOwnerHome(
   }
   if (operations) {
     domainScores.push(operationsCycleToDomainScore(operations));
-    for (const a of operations.actions) actions.push(operationsActionRowToOwnerAction(a));
+    for (const a of [...operations.actions, ...(await openActionsFromEarlierCycles(db.ownerOperationsAction, where, operations.id))]) {
+      actions.push(operationsActionRowToOwnerAction(a));
+    }
     for (const f of operations.findings) findings.push(rowToFinding(f, "operations"));
     for (const v of allOperationsVers) {
       verifications.push({
@@ -260,7 +289,9 @@ export async function getOwnerHome(
   }
   if (sop) {
     domainScores.push(sopCycleToDomainScore(sop));
-    for (const a of sop.actions) actions.push(sopActionRowToOwnerAction(a));
+    for (const a of [...sop.actions, ...(await openActionsFromEarlierCycles(db.ownerSopAction, where, sop.id))]) {
+      actions.push(sopActionRowToOwnerAction(a));
+    }
     for (const f of sop.findings) findings.push(rowToFinding(f, "sop"));
     for (const v of allSopVers) {
       verifications.push({
@@ -276,13 +307,17 @@ export async function getOwnerHome(
   }
   if (marketing) {
     domainScores.push(marketingCycleToDomainScore(marketing));
-    for (const a of marketing.actions) actions.push(marketingActionRowToOwnerAction(a));
+    for (const a of [...marketing.actions, ...(await openActionsFromEarlierCycles(db.ownerMarketingAction, where, marketing.id))]) {
+      actions.push(marketingActionRowToOwnerAction(a));
+    }
     for (const f of marketing.findings) findings.push(rowToFinding(f, "marketing"));
     verifications.push(...flattenVerifications(marketing, "marketing"));
   }
   if (strategy) {
     domainScores.push(strategyCycleToDomainScore(strategy));
-    for (const a of strategy.actions) actions.push(strategyActionRowToOwnerAction(a));
+    for (const a of [...strategy.actions, ...(await openActionsFromEarlierCycles(db.ownerStrategyAction, where, strategy.id))]) {
+      actions.push(strategyActionRowToOwnerAction(a));
+    }
     for (const f of strategy.findings) findings.push(rowToFinding(f, "strategy"));
     for (const v of allStrategyVers) {
       verifications.push({
