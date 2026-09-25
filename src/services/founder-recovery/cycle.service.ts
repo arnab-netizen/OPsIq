@@ -67,6 +67,7 @@ export async function runCycle(
 
   // Persist atomically.
   let carriedForwardIds: string[] = [];
+  let createdActionCount = 0;
   await db.$transaction(async (tx: any) => {
     await tx.recoveryCycle.create({
       data: {
@@ -159,6 +160,7 @@ export async function runCycle(
     const recreate = continuity.carried.map((c) => c.planned).filter((p, i, all) => !movedPlanned.has(p) && all.indexOf(p) === i);
 
     const now = Date.now();
+    createdActionCount = continuity.toCreate.length + recreate.length;
     for (const a of [...continuity.toCreate, ...recreate]) {
       await tx.recoveryAction.create({
         data: {
@@ -198,7 +200,7 @@ export async function runCycle(
           businessId,
           cycleNumber,
           findingCount: findings.length,
-          actionCount: actionSpecs.length - carriedForwardIds.length,
+          actionCount: createdActionCount,
           carriedForwardActionIds: carriedForwardIds,
           healthStatus: health.status,
         },

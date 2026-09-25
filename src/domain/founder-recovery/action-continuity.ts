@@ -15,9 +15,9 @@
  * - Never-touched "proposed" actions are NOT carried: the new cycle's fresh
  *   proposals supersede them (they carry the re-evaluated ranking).
  * - Terminal actions (completed/cancelled) never block a fresh proposal.
- * - An engaged action whose finding the latest diagnosis no longer raises stays
- *   visible for the owner to finish or cancel, but is not treated as current
- *   priority (see `isStillFlagged`).
+ * - An engaged action that is not planned again stays on its older cycle; domain
+ *   dashboards still list it (flagged when the latest diagnosis no longer raises
+ *   its finding) for the owner to finish or cancel.
  */
 import type { RecoveryActionStatus } from "./action-status";
 
@@ -55,9 +55,4 @@ export function planWithContinuity<T extends ContinuityKeyed, P extends Continui
     else toCreate.push(a);
   }
   return { toCreate, carried };
-}
-
-/** True while the latest diagnosis still raises the action's finding. */
-export function isStillFlagged(findingCode: string, latestFindingCodes: ReadonlySet<string>): boolean {
-  return latestFindingCodes.has(findingCode);
 }

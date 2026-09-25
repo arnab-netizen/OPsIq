@@ -251,7 +251,7 @@ describe("Signal A — GoalAttentionSignal state derivation", () => {
 // ─── Signal C: Policy Attention Signal ───────────────────────────────────────
 
 describe("Signal A — goal trajectory edge cases (beta integrity round-2 audit)", () => {
-  const goal = { targetType: "PROFIT", targetAmount: 10_000_000, targetCurrency: "INR", targetDate: new Date("2027-09-01") };
+  const goal = { targetType: "PROFIT", targetAmount: 10_000_000, targetCurrency: "INR", targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) };
   const base = { confidence: "HIGH", confidenceRationale: "ok", gapToClose: 1, requiredMonthlyImprovement: 1, assumptions: [] };
 
   it("an Invalid Date projection never crashes now-view and serialises as null", async () => {

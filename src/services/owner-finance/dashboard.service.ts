@@ -116,9 +116,10 @@ export async function getFinanceDashboard(
 
   // Each action carries the value the diagnosis measured for its verification
   // metric (null when not measured) — the baseline an outcome is compared to.
-  // Engaged actions are re-attached to the new cycle when their finding is still raised
-  // (action-continuity.ts). Any engaged action left on an earlier cycle is one the latest
-  // diagnosis no longer raises: still shown (after current actions) until finished or cancelled.
+  // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
+  // (action-continuity.ts). Engaged actions left on an earlier cycle are still shown (after
+  // current actions, flagged when the latest diagnosis no longer raises their finding) until
+  // finished or cancelled.
   const carriedActions = latestCycle
     ? await db.ownerFinanceAction.findMany({
         where: {

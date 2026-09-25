@@ -25,7 +25,12 @@
  *    workflows that deliberately use a remote test branch). Every database
  *    variable present (DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL_TEST) is
  *    checked, so a remote URL cannot ride along in a sibling variable.
- * 4. Messages are sanitized: no URL, host, user, password or database name.
+ * 4. "Loopback" must be where the pg driver actually connects: its connection
+ *    string parser lets a `host`/`hostaddr` query parameter override the URL
+ *    hostname (incl. a unix socket such as a cloud SQL proxy), so any such
+ *    parameter disqualifies the URL; an encoded socket-path hostname is not a
+ *    loopback name either.
+ * 5. Messages are sanitized: no URL, host, user, password or database name.
  *
  * Loopback is the only location trusted without opt-in because a remote
  * production database cannot be reached at the runner's loopback address; this
@@ -56,11 +61,17 @@ export interface TestDatabaseResolution {
 }
 
 function isLoopback(url: string): boolean {
+  let parsed: URL;
   try {
-    return LOOPBACK_HOSTS.has(new URL(url).hostname.toLowerCase());
+    parsed = new URL(url);
   } catch {
     return false;
   }
+  for (const key of parsed.searchParams.keys()) {
+    const k = key.toLowerCase();
+    if (k === "host" || k === "hostaddr") return false;
+  }
+  return LOOPBACK_HOSTS.has(parsed.hostname.toLowerCase());
 }
 
 export function resolveTestDatabase(env: Readonly<Record<string, string | undefined>>): TestDatabaseResolution {

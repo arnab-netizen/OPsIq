@@ -11,6 +11,8 @@
  * StartupIdeaRecord models — only columns that exist in the schema are set.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import {
   E2E_WORKSPACE_ID,
   E2E_PHASE5_SESSION_ID,

@@ -199,19 +199,30 @@ export async function listFinancialSnapshots(businessId: string, workspaceId: st
 /**
  * Walk the supersession chain forward from a given snapshot ID to find the
  * current (non-superseded) version. Returns the original ID if not superseded.
- * Bounded to 20 hops to prevent infinite loops on data corruption.
+ * Follows the chain to its head however many amendments exist (a fixed hop cap
+ * returned a still-superseded version once a snapshot had been amended more than
+ * 20 times, so retracted values were treated as current). A cycle or a dangling
+ * link is data corruption and fails closed rather than returning a superseded id.
  */
 export async function resolveCurrentSnapshotId(originalId: string): Promise<string> {
+  const visited = new Set<string>();
   let id = originalId;
-  for (let i = 0; i < 20; i++) {
+  for (;;) {
+    if (visited.has(id)) {
+      throw new Error("Financial snapshot supersession chain is cyclic (data corruption).");
+    }
+    visited.add(id);
     const row = await db.ownerFinancialSnapshot.findFirst({
       where: { id },
       select: { id: true, supersededById: true },
     });
-    if (!row || !row.supersededById) return id;
+    if (!row) {
+      if (id === originalId) return id;
+      throw new Error("Financial snapshot supersession chain has a dangling link (data corruption).");
+    }
+    if (!row.supersededById) return id;
     id = row.supersededById;
   }
-  return id;
 }
 
 /**

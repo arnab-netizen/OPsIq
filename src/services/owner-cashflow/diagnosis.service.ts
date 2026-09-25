@@ -10,6 +10,14 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { NotFoundError } from "@/infra/errors";
+import { getBusiness } from "@/services/founder-recovery/business.service";
+import { diagnoseCashflowSnapshot } from "@/domain/owner-cashflow/diagnosis";
+import { planCashflowActionsFromDiagnosis } from "@/domain/owner-cashflow/actions";
+import { getCashflowSnapshot, rowToCashflowInput } from "./snapshot.service";
+
 /** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
 interface EngagedPriorAction {
   id: string;
@@ -18,13 +26,6 @@ interface EngagedPriorAction {
   recommendationCode: string;
   priorityScore: number;
 }
-import { emitAuditEvent } from "@/infra/audit";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
-import { getBusiness } from "@/services/founder-recovery/business.service";
-import { diagnoseCashflowSnapshot } from "@/domain/owner-cashflow/diagnosis";
-import { planCashflowActionsFromDiagnosis } from "@/domain/owner-cashflow/actions";
-import { getCashflowSnapshot, rowToCashflowInput } from "./snapshot.service";
 
 export async function runCashflowDiagnosis(
   businessId: string,
@@ -107,6 +108,7 @@ export async function runCashflowDiagnosis(
   }));
 
   let carriedForwardIds: string[] = [];
+  let createdActionCount = 0;
   await db.$transaction(
     async (tx: any) => {
       await tx.ownerCashflowCycle.create({
@@ -181,6 +183,7 @@ export async function runCashflowDiagnosis(
         if (!movedPlanned.has(c.planned) && !recreate.includes(c.planned)) recreate.push(c.planned);
       }
       const toCreate = [...continuity.toCreate, ...recreate];
+      createdActionCount = toCreate.length;
       if (toCreate.length > 0) await tx.ownerCashflowAction.createMany({ data: toCreate });
     },
     { maxWait: 10000, timeout: 20000 }
@@ -196,7 +199,7 @@ export async function runCashflowDiagnosis(
       businessId,
       sequenceNumber,
       findingCount: diagnosis.findings.length,
-      actionCount: plan.actions.length - carriedForwardIds.length,
+      actionCount: createdActionCount,
       carriedForwardActionIds: carriedForwardIds,
       cashflowState: diagnosis.metrics.cashflowState,
     },

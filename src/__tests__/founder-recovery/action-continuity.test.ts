@@ -7,7 +7,6 @@ import {
   ENGAGED_ACTION_STATUSES,
   continuityKey,
   planWithContinuity,
-  isStillFlagged,
 } from "@/domain/founder-recovery/action-continuity";
 
 describe("action continuity", () => {
@@ -46,8 +45,4 @@ describe("action continuity", () => {
     expect(planWithContinuity([{ findingCode: "F1" }], [{ id: "x", findingCode: "F1" }]).toCreate).toHaveLength(0);
   });
 
-  it("isStillFlagged reflects the latest diagnosis' findings", () => {
-    expect(isStillFlagged("F1", new Set(["F1"]))).toBe(true);
-    expect(isStillFlagged("F1", new Set(["F2"]))).toBe(false);
-  });
 });

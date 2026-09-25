@@ -297,9 +297,6 @@ export default function GoalsPage() {
                   </span>
                 </p>
               )}
-              {traj.targetDatePassed && (
-                <p className="text-sm text-muted-foreground">The target date has passed. Set a new goal to keep tracking.</p>
-              )}
               {traj.confidence === "LOW" && traj.confidenceRationale && (
                 <p className="text-sm text-muted-foreground">Why: {traj.confidenceRationale}</p>
               )}

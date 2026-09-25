@@ -5,6 +5,8 @@
  * Idempotent: safe to re-run. Does NOT touch the representative scenario businesses seeded by
  * seed-owner-scenarios.ts.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "../tests/browser/e2e-fixtures";

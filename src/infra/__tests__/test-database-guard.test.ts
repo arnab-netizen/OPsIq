@@ -80,6 +80,16 @@ describe("resolveTestDatabase", () => {
     ).toThrow(/production/);
   });
 
+  it("a host/hostaddr query override or unix-socket host is never treated as loopback (pg would connect elsewhere)", () => {
+    for (const url of [
+      "postgresql://u:p@localhost:5432/db?host=prod.remote-db.invalid",
+      "postgresql://u:p@localhost/db?host=/cloudsql/proj:region:instance",
+      "postgresql://u:p@localhost/db?hostaddr=203.0.113.9",
+    ]) {
+      expect(() => resolveTestDatabase({ TEST_WITH_DB: "true", DATABASE_URL: url }), url).toThrow(TestDatabaseGuardError);
+    }
+  });
+
   it("an unparseable URL is treated as non-loopback (fail closed)", () => {
     expect(() => resolveTestDatabase({ TEST_WITH_DB: "true", DATABASE_URL: "not a url" })).toThrow(TestDatabaseGuardError);
   });

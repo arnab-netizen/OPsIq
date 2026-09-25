@@ -7,7 +7,7 @@
  * RISKY strategy verdict was told "No urgent action needs your attention".
  *
  * This read-only bridge reuses the EXISTING cross-domain owner-home aggregation (`getOwnerHome`:
- * business resolution, ownership guard, open actions across cycles, spine ranking) and returns its
+ * business resolution, ownership guard, latest-cycle open actions, spine ranking) and returns its
  * highest-ranked open non-Finance action (Finance keeps its own card). Business scoping is inherited
  * from `getOwnerHome`: an explicit, owned `businessId` is honored; with none it resolves only when
  * the workspace has exactly one business, otherwise it returns null (fail closed, never guesses).

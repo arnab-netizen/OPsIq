@@ -10,14 +10,6 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 
-/** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
-interface EngagedPriorAction {
-  id: string;
-  cycleId: string;
-  findingCode: string;
-  recommendationCode: string;
-  priorityScore: number;
-}
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -28,6 +20,15 @@ import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence"
 import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
 import { getFinancialSnapshot, rowToFinanceInput } from "./snapshot.service";
 import { getFinanceEffectivenessMap } from "./effectiveness.service";
+
+/** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
+interface EngagedPriorAction {
+  id: string;
+  cycleId: string;
+  findingCode: string;
+  recommendationCode: string;
+  priorityScore: number;
+}
 
 export async function runFinanceDiagnosis(
   businessId: string,
@@ -138,6 +139,7 @@ export async function runFinanceDiagnosis(
   for (const r of plan.recommendations) recByFinding[r.findingCode] = r.recommendationCode;
 
   let carriedForwardIds: string[] = [];
+  let createdActionCount = 0;
   await db.$transaction(async (tx: any) => {
     await tx.ownerFinanceCycle.create({
       data: {
@@ -237,6 +239,7 @@ export async function runFinanceDiagnosis(
     for (const c of continuity.carried) {
       if (!movedPlanned.has(c.planned) && !recreate.includes(c.planned)) recreate.push(c.planned);
     }
+    createdActionCount = continuity.toCreate.length + recreate.length;
     for (const a of [...continuity.toCreate, ...recreate]) {
       await tx.ownerFinanceAction.create({
         data: {
@@ -282,7 +285,7 @@ export async function runFinanceDiagnosis(
       businessId,
       sequenceNumber,
       findingCount: diagnosis.findings.length,
-      actionCount: plan.actions.length - carriedForwardIds.length,
+      actionCount: createdActionCount,
       carriedForwardActionIds: carriedForwardIds,
       survivalState: diagnosis.metrics.survivalState,
       dataConfidenceScore: confidence.dataConfidenceScore,
