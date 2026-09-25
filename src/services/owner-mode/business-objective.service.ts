@@ -212,14 +212,15 @@ export async function updateObjective(input: UpdateObjectiveInput) {
   if (input.resourceBudget !== undefined) updateData.resourceBudget = input.resourceBudget as Prisma.InputJsonValue;
   if (input.constraints !== undefined) updateData.constraints = input.constraints as Prisma.InputJsonValue;
   if (input.ownerId !== undefined) updateData.ownerId = input.ownerId;
-  if (input.linkedGoalId !== undefined) {
-    if (input.linkedGoalId) {
-      await assertObjectiveGoalLink(input.workspaceId, existing.businessId ?? null, input.linkedGoalId);
-    }
-    updateData.linkedGoalId = input.linkedGoalId;
-  }
+  if (input.linkedGoalId !== undefined) updateData.linkedGoalId = input.linkedGoalId;
 
   const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Validated inside the write transaction (same workspace, ACTIVE, the objective's own scope). A
+    // goal replaced after this check is still resolved correctly at read time: alignment follows
+    // the replaced goal's successor (goal.service.ts resolveAlignedObjectiveLinks).
+    if (input.linkedGoalId) {
+      await assertObjectiveGoalLink(input.workspaceId, existing.businessId ?? null, input.linkedGoalId, tx);
+    }
     const updated = await tx.businessObjective.update({
       where: { id: input.objectiveId },
       data: updateData,

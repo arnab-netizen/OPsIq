@@ -409,17 +409,18 @@ export async function assignLegacyGoalToBusiness(input: AssignLegacyGoalInput): 
   return goalId;
 }
 
-/** Mark a goal as achieved. */
+/** Mark an ACTIVE goal as achieved (a REVISED or already-ACHIEVED goal is never changed). */
 export async function markGoalAchieved(goalId: string, workspaceId: string, actorId: string): Promise<void> {
   const goal = await db.ownerGoal.findFirst({ where: { id: goalId, workspaceId } });
   if (!goal) throw new NotFoundError("OwnerGoal", goalId);
 
-  // Atomic: update + audit in one transaction (fail-closed).
+  // Atomic: guarded update + audit in one transaction (fail-closed).
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.ownerGoal.update({
-      where: { id: goalId },
+    const achieved = await tx.ownerGoal.updateMany({
+      where: { id: goalId, workspaceId, status: "ACTIVE" },
       data: { status: "ACHIEVED", updatedAt: new Date() },
     });
+    if (achieved.count !== 1) throw new ConflictError("Only an active goal can be marked achieved.");
 
     await emitAuditEvent(
       {
@@ -428,7 +429,7 @@ export async function markGoalAchieved(goalId: string, workspaceId: string, acto
         workspaceId,
         entityType: "OwnerGoal",
         entityId: goalId,
-        payload: { scope: goal.businessId ? "business" : "workspace", businessId: goal.businessId ?? null },
+        payload: { scope: goal.businessId ? "business" : "workspace", businessId: goal.businessId ?? null, previousStatus: "ACTIVE" },
       },
       tx
     );
@@ -685,7 +686,9 @@ export async function resolveCurrentGoalId(workspaceId: string, goalId: string, 
 /**
  * Read-time alignment for objective links (goal arbitration, Home): a link counts as aligned only
  * when it resolves — following successors of replaced goals — to an ACTIVE goal in a compatible
- * scope (the objective's own business, or the legacy workspace goal, which predates scoping).
+ * scope: the objective's own business; or the legacy workspace goal for a workspace objective, or
+ * for a business objective only when the workspace has exactly one real business (the same rule
+ * Home uses — in a multi-business workspace a legacy goal describes no single business).
  * Returns the set of objective ids whose link is aligned.
  */
 export async function resolveAlignedObjectiveLinks(
@@ -700,6 +703,7 @@ export async function resolveAlignedObjectiveLinks(
     select: { id: true, businessId: true, status: true, supersededById: true },
   })) as Array<{ id: string; businessId: string | null; status: string; supersededById: string | null }>;
   const byId = new Map(goals.map((g) => [g.id, g]));
+  const legacyDescribesSoleBusiness = await hasExactlyOneRealBusiness(workspaceId);
   for (const link of withLinks) {
     const seen = new Set<string>();
     let goal = byId.get(link.linkedGoalId!);
@@ -708,7 +712,9 @@ export async function resolveAlignedObjectiveLinks(
       goal = byId.get(goal.supersededById);
     }
     if (!goal || goal.status !== "ACTIVE") continue;
-    if (goal.businessId === null || goal.businessId === link.objectiveBusinessId) aligned.add(link.objectiveId);
+    const sameScope = goal.businessId === link.objectiveBusinessId;
+    const legacyCompatible = goal.businessId === null && (link.objectiveBusinessId === null || legacyDescribesSoleBusiness);
+    if (sameScope || legacyCompatible) aligned.add(link.objectiveId);
   }
   return aligned;
 }

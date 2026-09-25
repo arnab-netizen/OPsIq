@@ -418,6 +418,40 @@ describe("[db] tenant isolation", () => {
   });
 });
 
+describe("[db] hostile-review P2 fixes", () => {
+  it("[db] markGoalAchieved changes only an ACTIVE goal — a REVISED goal is never re-labelled", async () => {
+    const ws = newWorkspace();
+    const biz = await business(ws, "Solo");
+    const g1 = await createGoal({ workspaceId: ws, actorId: actor, businessId: biz, targetType: "REVENUE", targetAmount: 1, targetDate: future(30) });
+    const g2 = await createGoal({ workspaceId: ws, actorId: actor, businessId: biz, targetType: "REVENUE", targetAmount: 2, targetDate: future(30) });
+    await expect(markGoalAchieved(g1, ws, actor)).rejects.toBeInstanceOf(ConflictError);
+    expect((await db.ownerGoal.findUnique({ where: { id: g1 } }))!.status).toBe("REVISED");
+    await markGoalAchieved(g2, ws, actor);
+    expect((await db.ownerGoal.findUnique({ where: { id: g2 } }))!.status).toBe("ACHIEVED");
+    await expect(markGoalAchieved(g2, ws, actor)).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("[db] a business objective's link to a legacy goal is aligned only in a single-business workspace", async () => {
+    const multi = newWorkspace();
+    const a = await business(multi, "Alpha");
+    await business(multi, "Beta");
+    const legacyMulti = await legacyGoal(multi);
+    const single = newWorkspace();
+    const solo = await business(single, "Solo");
+    const legacySingle = await legacyGoal(single);
+    const multiAligned = await resolveAlignedObjectiveLinks(multi, [
+      { objectiveId: "biz-obj", objectiveBusinessId: a, linkedGoalId: legacyMulti },
+      { objectiveId: "ws-obj", objectiveBusinessId: null, linkedGoalId: legacyMulti },
+    ]);
+    expect(multiAligned.has("biz-obj")).toBe(false);
+    expect(multiAligned.has("ws-obj")).toBe(true);
+    const singleAligned = await resolveAlignedObjectiveLinks(single, [
+      { objectiveId: "biz-obj", objectiveBusinessId: solo, linkedGoalId: legacySingle },
+    ]);
+    expect(singleAligned.has("biz-obj")).toBe(true);
+  });
+});
+
 describe("[db] objective ↔ goal links", () => {
   it("[db] same-business link is accepted; wrong-business, cross-workspace and replaced goals are refused", async () => {
     const ws = newWorkspace();
