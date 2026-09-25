@@ -24,7 +24,8 @@ import { verifyQboWebhookSignature, parseQboWebhookPayload, type QboWebhookNotif
 import { requestQuickBooksSync } from "@/services/quickbooks/qbo-sync.service";
 
 export interface HandleQuickBooksWebhookInput {
-  rawBody: string;
+  /** Buffer = exact received bytes (preferred — the correct input for signature verification); string is accepted for callers/tests without access to the raw bytes. */
+  rawBody: string | Buffer;
   signatureHeader: string | null;
   env?: Record<string, string | undefined>;
 }
@@ -47,7 +48,8 @@ export async function handleQuickBooksWebhook(input: HandleQuickBooksWebhookInpu
 
   let json: unknown;
   try {
-    json = JSON.parse(input.rawBody);
+    const bodyText = Buffer.isBuffer(input.rawBody) ? input.rawBody.toString("utf8") : input.rawBody;
+    json = JSON.parse(bodyText);
   } catch {
     return { status: 400, dispatched: [] };
   }

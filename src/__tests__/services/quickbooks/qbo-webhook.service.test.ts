@@ -18,9 +18,9 @@ const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
 
 const ownerConnectorFindMany = vi.fn();
-vi.mock("@/lib/db", () => ({
-  db: { ownerConnector: { findMany: (...a: unknown[]) => ownerConnectorFindMany(...a) } },
-}));
+const dbMock = { ownerConnector: { findMany: (...a: unknown[]) => ownerConnectorFindMany(...a) } };
+// DC-20 (vitest.setup.ts contract): every "@/lib/db" mock factory must also export getDbInstance.
+vi.mock("@/lib/db", () => ({ db: dbMock, getDbInstance: vi.fn().mockResolvedValue(dbMock) }));
 
 import { handleQuickBooksWebhook } from "@/services/quickbooks/qbo-webhook.service";
 

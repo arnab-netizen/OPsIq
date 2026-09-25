@@ -482,7 +482,7 @@ describe("OwnerIntegrationsPage — QuickBooks", () => {
     expect(screen.queryByTestId("quickbooks-refresh-note")).toBeNull();
 
     statusResponseQueue.push(() =>
-      Promise.resolve({ ok: false, json: async () => ({ error: { message: "Couldn't reach QuickBooks." } }) } as Response),
+      Promise.resolve({ ok: false, status: 502, json: async () => ({ error: "Couldn't reach QuickBooks." }) } as Response),
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);

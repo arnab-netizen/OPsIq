@@ -48,17 +48,18 @@ const ownerConnectorRecordFindFirst = vi.fn();
 const ownerConnectorRecordUpsert = vi.fn(async () => ({}));
 const ownerConnectorFindFirst = vi.fn(async () => ({ externalAccountId: "789012345" }));
 
-vi.mock("@/lib/db", () => ({
-  db: {
-    ownerFinancialSnapshot: { findFirst: (...a: unknown[]) => ownerFinancialSnapshotFindFirst(...a) },
-    ownerCashflowSnapshot: { findFirst: (...a: unknown[]) => ownerCashflowSnapshotFindFirst(...a) },
-    ownerConnectorRecord: {
-      findFirst: (...a: unknown[]) => ownerConnectorRecordFindFirst(...a),
-      upsert: (...a: unknown[]) => ownerConnectorRecordUpsert(...a),
-    },
-    ownerConnector: { findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a) },
+const dbMock = {
+  ownerFinancialSnapshot: { findFirst: (...a: unknown[]) => ownerFinancialSnapshotFindFirst(...a) },
+  ownerCashflowSnapshot: { findFirst: (...a: unknown[]) => ownerCashflowSnapshotFindFirst(...a) },
+  ownerConnectorRecord: {
+    findFirst: (...a: unknown[]) => ownerConnectorRecordFindFirst(...a),
+    upsert: (...a: unknown[]) => ownerConnectorRecordUpsert(...a),
   },
-}));
+  ownerConnector: { findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a) },
+};
+
+// DC-20 (vitest.setup.ts contract): every "@/lib/db" mock factory must also export getDbInstance.
+vi.mock("@/lib/db", () => ({ db: dbMock, getDbInstance: vi.fn().mockResolvedValue(dbMock) }));
 
 import { materializeQuickBooksSnapshots } from "@/services/quickbooks/qbo-materialize.service";
 

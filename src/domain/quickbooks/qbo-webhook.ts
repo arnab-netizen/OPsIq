@@ -23,9 +23,15 @@ import { QBO_ENTITY_NAMES, type QboEntityName } from "./qbo-entities";
  * verifierToken, message = raw request body bytes)). Compares with
  * `timingSafeEqual` on equal-length buffers only — a length mismatch (or a
  * missing header/token) is treated as a verification failure, never thrown.
+ *
+ * `rawBody` accepts a `Buffer` (the EXACT bytes as received, before any
+ * charset re-encoding — the correct input for HMAC verification) or a
+ * `string` (re-encoded UTF-8; kept for callers/tests that only have text —
+ * ASCII/UTF-8-safe payloads verify identically either way, but a caller with
+ * access to the original bytes should always pass the Buffer).
  */
 export function verifyQboWebhookSignature(
-  rawBody: string,
+  rawBody: string | Buffer,
   signatureHeader: string | null,
   verifierToken: string
 ): boolean {
@@ -35,7 +41,10 @@ export function verifyQboWebhookSignature(
   let expected: Buffer;
   let actual: Buffer;
   try {
-    expected = createHmac("sha256", verifierToken).update(rawBody, "utf8").digest();
+    const hmac = createHmac("sha256", verifierToken);
+    if (Buffer.isBuffer(rawBody)) hmac.update(rawBody);
+    else hmac.update(rawBody, "utf8");
+    expected = hmac.digest();
     actual = Buffer.from(signatureHeader, "base64");
   } catch {
     return false;
@@ -191,7 +200,7 @@ export function parseQboWebhookPayload(json: unknown): QboWebhookParseResult {
   if (Array.isArray(json)) {
     const parsed = CloudEventArraySchema.safeParse(json);
     if (!parsed.success) {
-      return { ok: false, reason: `Malformed QuickBooks webhook payload (CloudEvents): ${parsed.error.issues.map((i) => i.message).join("; ")}` };
+      return { ok: false, reason: `Malformed QuickBooks webhook payload (CloudEvents format, ${parsed.error.issues.length} validation issue(s)).` };
     }
     return { ok: true, notifications: parseCloudEvents(parsed.data) };
   }
@@ -201,7 +210,7 @@ export function parseQboWebhookPayload(json: unknown): QboWebhookParseResult {
     if (parsed.success) {
       return { ok: true, notifications: parseLegacy(parsed.data) };
     }
-    return { ok: false, reason: `Malformed QuickBooks webhook payload: ${parsed.error.issues.map((i) => i.message).join("; ")}` };
+    return { ok: false, reason: `Malformed QuickBooks webhook payload (legacy format, ${parsed.error.issues.length} validation issue(s)).` };
   }
 
   return { ok: false, reason: "Malformed QuickBooks webhook payload: expected a JSON array or object" };

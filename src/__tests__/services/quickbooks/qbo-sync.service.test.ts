@@ -34,17 +34,18 @@ function makeTx() {
 
 const dbTransaction = vi.fn(async (fn: (tx: ReturnType<typeof makeTx>) => unknown) => fn(makeTx()));
 
-vi.mock("@/lib/db", () => ({
-  db: {
-    scheduledTask: { findUnique: (...a: unknown[]) => scheduledTaskFindUnique(...(a as [])), create: (...a: unknown[]) => scheduledTaskCreate(...(a as [{ data: { id: string } }])) },
-    ownerConnector: {
-      findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a),
-      updateMany: (...a: unknown[]) => ownerConnectorUpdateMany(...a),
-      update: (...a: unknown[]) => ownerConnectorUpdate(...a),
-    },
-    $transaction: (...a: unknown[]) => dbTransaction(...(a as [(tx: ReturnType<typeof makeTx>) => unknown])),
+const dbMock = {
+  scheduledTask: { findUnique: (...a: unknown[]) => scheduledTaskFindUnique(...(a as [])), create: (...a: unknown[]) => scheduledTaskCreate(...(a as [{ data: { id: string } }])) },
+  ownerConnector: {
+    findFirst: (...a: unknown[]) => ownerConnectorFindFirst(...a),
+    updateMany: (...a: unknown[]) => ownerConnectorUpdateMany(...a),
+    update: (...a: unknown[]) => ownerConnectorUpdate(...a),
   },
-}));
+  $transaction: (...a: unknown[]) => dbTransaction(...(a as [(tx: ReturnType<typeof makeTx>) => unknown])),
+};
+
+// DC-20 (vitest.setup.ts contract): every "@/lib/db" mock factory must also export getDbInstance.
+vi.mock("@/lib/db", () => ({ db: dbMock, getDbInstance: vi.fn().mockResolvedValue(dbMock) }));
 
 const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
