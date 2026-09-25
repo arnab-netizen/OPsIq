@@ -54,6 +54,10 @@ async function call(query: string) {
 beforeEach(() => {
   vi.resetAllMocks();
   afterCallbacks.length = 0;
+  process.env.QUICKBOOKS_CLIENT_ID = "cid";
+  process.env.QUICKBOOKS_CLIENT_SECRET = "secret";
+  process.env.QUICKBOOKS_REDIRECT_URI = "https://app.example.com/api/owner/integrations/quickbooks/callback";
+  process.env.QUICKBOOKS_ENVIRONMENT = "sandbox";
 });
 
 describe("QuickBooks OAuth callback route", () => {
@@ -101,6 +105,15 @@ describe("QuickBooks OAuth callback route", () => {
     mockComplete.mockResolvedValue({ connectorId: "c1", businessId: "b1", reconnected: false });
     mockRequestSync.mockRejectedValue(new Error("db down"));
     expect((await call("?code=abc&state=st&realmId=123")).get("quickbooks")).toBe("connected");
+  });
+});
+
+describe("public redirect origin", () => {
+  it("uses the registered public redirect origin even when the server sees an internal host", async () => {
+    const res = (await (GET as unknown as (r: Request) => Promise<{ headers: Record<string, string> }>)(
+      new Request("http://localhost:3001/api/owner/integrations/quickbooks/callback?error=access_denied"),
+    ));
+    expect(new URL(res.headers.location).origin).toBe("https://app.example.com");
   });
 });
 

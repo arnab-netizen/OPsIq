@@ -25,6 +25,7 @@ import { requestQuickBooksSync } from "@/services/quickbooks/qbo-sync.service";
 import { drainQuickBooksSyncTask } from "@/services/quickbooks/qbo-sync-dispatch.service";
 import { classifyQuickBooksConnectError } from "@/domain/quickbooks/qbo-connect-outcome";
 import { logger } from "@/infra/logger";
+import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,8 +33,22 @@ export const maxDuration = 60;
 
 const INTEGRATIONS_PATH = "/owner/integrations";
 
+/**
+ * The redirect origin is the PUBLIC origin the owner's browser used — the
+ * registered QUICKBOOKS_REDIRECT_URI Intuit just sent them to — not
+ * request.url, whose host inside the server can be an internal one
+ * (e.g. localhost behind a proxy), which would land the owner on a different
+ * origin without their session. Falls back to NEXT_PUBLIC_APP_URL, then
+ * request.url, only when QuickBooks is not configured.
+ */
+function publicBase(request: Request): string {
+  const cfg = resolveQboConfig(process.env);
+  if (cfg.available) return cfg.config.redirectUri;
+  return process.env.NEXT_PUBLIC_APP_URL || request.url;
+}
+
 function redirectTo(request: Request, query: Record<string, string>) {
-  return canonicalRedirect(request.url, INTEGRATIONS_PATH, query);
+  return canonicalRedirect(publicBase(request), INTEGRATIONS_PATH, query);
 }
 
 export const GET = withCanonicalEnforcement(
