@@ -13,6 +13,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Modal, Input, Select, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { httpResponseErrorFromBody, fieldErrorMap } from "@/lib/operator-safe-errors";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 type TargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
 type GoalStatus = "ACTIVE" | "ACHIEVED" | "REVISED";
@@ -25,24 +27,26 @@ interface GoalSummary {
   targetDate: string;
   baselineAmount: number | null;
   status: GoalStatus;
+  isOverdue: boolean;
   createdAt: string;
 }
 
-interface TrajectoryPoint {
-  period: string;
-  actual: number | null;
-  projected: number | null;
-}
-
+/** Mirrors GoalTrajectoryResult in src/services/owner-strategy/goal-trajectory.service.ts (JSON-serialised). */
 interface GoalTrajectoryResult {
   goal: GoalSummary;
   trajectory: {
-    projectedAchievementDate: string | null;
-    onTrack: boolean;
+    projectedMonthsToGoal: number | null;
+    currentTrajectoryDate: string | null;
     confidence: string;
-    points: TrajectoryPoint[];
-    gapToTarget: number;
-    percentComplete: number;
+    confidenceRationale: string;
+    requiredMonthlyImprovement: number | null;
+    gapToClose: number | null;
+    trajectoryMiss: boolean;
+    assumptions: string[];
+    currentValue: number | null;
+    percentComplete: number | null;
+    onTrack: boolean | null;
+    targetDatePassed: boolean;
   };
 }
 
@@ -78,12 +82,20 @@ async function apiFetch(path: string, options?: RequestInit) {
     ...options,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+  if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
   return data;
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+const NOT_AVAILABLE = "Not enough data";
+
+function formatCurrency(amount: number | null, currency: string): string {
+  if (amount === null || !Number.isFinite(amount)) return NOT_AVAILABLE;
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    // A stored code Intl does not recognise must never crash the page.
+    return `${currency} ${Math.round(amount).toLocaleString()}`;
+  }
 }
 
 function formatDate(iso: string): string {
@@ -98,24 +110,30 @@ interface CreateForm {
   baselineAmount: string;
 }
 
-const EMPTY_FORM: CreateForm = {
-  targetType: "",
-  targetAmount: "",
-  targetCurrency: "USD",
-  targetDate: "",
-  baselineAmount: "",
-};
+/** Empty form; currency defaults to the active business currency (record → business → server resolution). */
+function emptyForm(businessCurrency: string | undefined): CreateForm {
+  return {
+    targetType: "",
+    targetAmount: "",
+    targetCurrency: businessCurrency ?? "",
+    targetDate: "",
+    baselineAmount: "",
+  };
+}
 
 export default function GoalsPage() {
+  const { activeBusiness } = useActiveBusiness();
+  const businessCurrency = activeBusiness?.currency;
   const [goal, setGoal] = useState<GoalSummary | null>(null);
   const [trajectoryResult, setTrajectoryResult] = useState<GoalTrajectoryResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState<CreateForm>(EMPTY_FORM);
+  const [form, setForm] = useState<CreateForm>(() => emptyForm(businessCurrency));
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,28 +162,43 @@ export default function GoalsPage() {
 
   async function handleCreate() {
     setFormError(null);
+    setFieldErrors({});
     if (!form.targetType) { setFormError("Target type is required."); return; }
     if (!form.targetAmount || Number(form.targetAmount) <= 0) { setFormError("Target amount must be positive."); return; }
     if (!form.targetDate) { setFormError("Target date is required."); return; }
+    if (new Date(form.targetDate).getTime() <= Date.now()) {
+      setFieldErrors({ targetDate: "Target date must be in the future" });
+      setFormError("Target date must be in the future.");
+      return;
+    }
 
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
         targetType: form.targetType,
         targetAmount: Number(form.targetAmount),
-        targetCurrency: form.targetCurrency || "USD",
         targetDate: new Date(form.targetDate).toISOString(),
       };
+      // Omitted currency is resolved server-side from the business currency.
+      if (form.targetCurrency) payload.targetCurrency = form.targetCurrency;
       if (form.baselineAmount) payload.baselineAmount = Number(form.baselineAmount);
 
       await apiFetch("/api/owner/goals", { method: "POST", body: JSON.stringify(payload) });
       setModalOpen(false);
       await load();
     } catch (err) {
+      setFieldErrors(fieldErrorMap(err));
       setFormError(classifyOperatorError(err, { context: "save" }).operatorMessage);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function openForm() {
+    setForm(emptyForm(businessCurrency));
+    setFormError(null);
+    setFieldErrors({});
+    setModalOpen(true);
   }
 
   const traj = trajectoryResult?.trajectory;
@@ -176,7 +209,7 @@ export default function GoalsPage() {
         <PageHeader
           title="Financial Goal"
           actions={
-            <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setFormError(null); setModalOpen(true); }}>
+            <Button size="sm" onClick={openForm}>
               {goal ? "Update Goal" : "+ Set Goal"}
             </Button>
           }
@@ -189,7 +222,7 @@ export default function GoalsPage() {
       {!loading && !error && !goal && (
         <div className="rounded-lg border border-border p-8 text-center">
           <p className="text-muted-foreground text-sm mb-4">No financial goal set yet.</p>
-          <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setFormError(null); setModalOpen(true); }}>
+          <Button size="sm" onClick={openForm}>
             Set your first goal
           </Button>
         </div>
@@ -211,7 +244,11 @@ export default function GoalsPage() {
                   </p>
                 )}
               </div>
-              <Badge variant={STATUS_VARIANT[goal.status]}>{STATUS_LABEL[goal.status]}</Badge>
+              {goal.isOverdue ? (
+                <Badge variant="destructive-accessible">Overdue</Badge>
+              ) : (
+                <Badge variant={STATUS_VARIANT[goal.status]}>{STATUS_LABEL[goal.status]}</Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               Target date: <span className="font-medium text-foreground">{formatDate(goal.targetDate)}</span>
@@ -225,20 +262,26 @@ export default function GoalsPage() {
               <div className="grid grid-cols-2 gap-4 mb-4 sm:grid-cols-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Progress</p>
-                  <p className="text-lg font-semibold">{Math.round(traj.percentComplete)}%</p>
+                  <p className="text-lg font-semibold">
+                    {traj.percentComplete === null ? NOT_AVAILABLE : `${Math.round(traj.percentComplete)}%`}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Gap to target</p>
                   <p className="text-lg font-semibold">
-                    {formatCurrency(traj.gapToTarget, goal.targetCurrency)}
+                    {formatCurrency(traj.gapToClose, goal.targetCurrency)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">On track</p>
                   <p className="text-lg font-semibold">
-                    <Badge variant={traj.onTrack ? "success-accessible" : "warning-accessible"}>
-                      {traj.onTrack ? "Yes" : "No"}
-                    </Badge>
+                    {traj.onTrack === null ? (
+                      <Badge variant="default-accessible">Unknown</Badge>
+                    ) : (
+                      <Badge variant={traj.onTrack ? "success-accessible" : "warning-accessible"}>
+                        {traj.onTrack ? "Yes" : "No"}
+                      </Badge>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -246,23 +289,28 @@ export default function GoalsPage() {
                   <p className="text-lg font-semibold">{CONFIDENCE_LABEL[traj.confidence] ?? traj.confidence}</p>
                 </div>
               </div>
-              {traj.projectedAchievementDate && (
+              {traj.currentTrajectoryDate && (
                 <p className="text-sm text-muted-foreground">
                   Projected achievement:{" "}
                   <span className="font-medium text-foreground">
-                    {formatDate(traj.projectedAchievementDate)}
+                    {formatDate(traj.currentTrajectoryDate)}
                   </span>
                 </p>
               )}
-              {/* Progress bar */}
-              <div className="mt-4">
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${Math.min(100, Math.max(0, traj.percentComplete))}%` }}
-                  />
+              {traj.confidence === "LOW" && traj.confidenceRationale && (
+                <p className="text-sm text-muted-foreground">Why: {traj.confidenceRationale}</p>
+              )}
+              {/* Progress bar — only when progress is computable */}
+              {traj.percentComplete !== null && (
+                <div className="mt-4">
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min(100, Math.max(0, traj.percentComplete))}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -312,6 +360,7 @@ export default function GoalsPage() {
                 id="goal-target-amount"
                 type="number"
                 min={0}
+                error={fieldErrors.targetAmount}
                 value={form.targetAmount}
                 onChange={(e) => setField("targetAmount", e.target.value)}
                 placeholder="e.g. 500000"
@@ -323,8 +372,9 @@ export default function GoalsPage() {
                 id="goal-target-currency"
                 value={form.targetCurrency}
                 onChange={(e) => setField("targetCurrency", e.target.value.toUpperCase().slice(0, 3))}
-                placeholder="USD"
+                placeholder="3-letter code"
                 maxLength={3}
+                error={fieldErrors.targetCurrency}
               />
             </div>
           </div>
@@ -335,6 +385,7 @@ export default function GoalsPage() {
             <Input
               id="goal-target-date"
               type="date"
+              error={fieldErrors.targetDate}
               value={form.targetDate}
               onChange={(e) => setField("targetDate", e.target.value)}
             />

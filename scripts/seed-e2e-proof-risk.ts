@@ -9,6 +9,8 @@
  * proof IDs, so the queue shows one adjudicable finding. Deterministic IDs + idempotent upserts →
  * stable, re-runnable assertions. No fraud/theft label is written; this is a governed review flag.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import { randomUUID } from "crypto";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "../tests/browser/e2e-fixtures";
 import { GuidedExecutionPermission } from "../src/domain/workspace/guided-execution-permissions";

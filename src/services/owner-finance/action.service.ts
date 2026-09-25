@@ -93,12 +93,16 @@ export async function updateFinanceAction(
     });
 
     // Attempt automatic re-diagnosis from the causally-linked snapshot (best-effort; non-blocking).
-    // Phase E fix: follow action.cycleId → cycle.snapshotId → current (non-superseded) version
+    // Phase E fix: follow the latest cycle → cycle.snapshotId → current (non-superseded) version
     // instead of blindly picking ORDER BY periodEnd DESC.
     try {
       let targetSnapshotId: string | undefined;
+      // The business's LATEST cycle (not the action's own cycle): an engaged action the latest
+      // diagnosis no longer raises stays on an older cycle, and re-diagnosing that cycle's
+      // snapshot would roll every finance surface back to stale data. Amendments still followed.
       const cycle = await db.ownerFinanceCycle.findFirst({
-        where: { id: updated.cycleId },
+        where: { businessId: updated.businessId, workspaceId },
+        orderBy: { sequenceNumber: "desc" },
         select: { snapshotId: true },
       });
       if (cycle?.snapshotId) {

@@ -21,11 +21,20 @@
  * local-core-journey.spec.ts and scripts/smoke-owner-recovery-runtime.ts.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
 import { randomUUID } from "crypto";
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
-const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(DATABASE_URL) && !/neon\.tech|amazonaws|\.aws\./.test(DATABASE_URL);
+// Same guard as the vitest harness (a substring regex could be satisfied by "?x=@localhost:" or a
+// "?host=" override while the driver connects elsewhere).
+const isLocal = (() => {
+  try {
+    return resolveTestDatabase({ ...process.env, TEST_WITH_DB: "true", DATABASE_URL }).target === "loopback";
+  } catch {
+    return false;
+  }
+})();
 
 const RAW_TOKEN_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
   { label: "raw UUID", pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i },

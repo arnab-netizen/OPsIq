@@ -260,6 +260,8 @@ jobs:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           TEST_WITH_DB: ${{ secrets.TEST_WITH_DB }}
+          # Deliberate remote TEST database: explicit opt-in required by src/infra/test-database-guard.ts.
+          OPSIQ_ALLOW_REMOTE_TEST_DB: 'true'
           NODE_ENV: test
 
       - name: Upload test artifacts

@@ -9,6 +9,8 @@
  * assignment is what grants OWNER_VIEW / OWNER_MANAGE. Membership alone does not grant capabilities,
  * so without the assignment every /api/owner/* call is correctly denied (403 owner:view).
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import {
@@ -52,6 +54,7 @@ async function main() {
   const { Pool } = await import("pg");
   const pool = new Pool({ connectionString: databaseUrl });
   const adapter = new PrismaPg(pool);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pre-existing untyped fixture client (seed script)
   const prisma: any = new PrismaClient({ adapter });
 
   const hashedPassword = bcrypt.hashSync(PASSWORD, 10);

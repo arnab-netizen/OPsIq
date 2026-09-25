@@ -13,6 +13,8 @@
  *  6. ResourcePool (active — for BOS pools display)
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import {
   E2E_WORKSPACE_ID,
   E2E_PHASE4_OBJECTIVE_ID,

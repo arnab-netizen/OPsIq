@@ -25,10 +25,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className="flex flex-col gap-1.5">
+        {/* Required fields get a visible "*" via a pseudo-element, so the accessible name is unchanged. */}
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-foreground"
+            className={`text-sm font-medium text-foreground${props.required ? " after:ml-0.5 after:text-destructive after:content-['*']" : ""}`}
           >
             {label}
           </label>
@@ -42,6 +43,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               ? "border-destructive focus:ring-destructive"
               : "border-border"
           } ${className}`}
+          aria-invalid={error ? true : undefined}
           {...props}
         />
         {error && (

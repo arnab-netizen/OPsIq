@@ -147,11 +147,13 @@ const KNOWN_MESSAGE_TEMPLATES: ReadonlyArray<{ status: number; pattern: RegExp; 
   // Recovery's own wording for the same rule -- "...completionNotes and actualOutcome."
   // (action.service.ts, founder-recovery), always 400.
   { status: 400, pattern: /^Completing a recovery action requires completionNotes and actualOutcome\.$/, message: "Add the required completion details before marking this complete." },
-  // "Cannot verify a <domain> action without a before (baseline) value for the metric."
-  // (Strategy/Marketing/Cashflow ONLY -- Recovery's wording is entirely different, see below) --
-  // verification.service.ts, always 400. Exact, anchored string -- not a `.*` partial match, so
-  // unrelated text merely mentioning a "baseline value" can never match this template.
-  { status: 400, pattern: new RegExp(`^Cannot verify a (?:${THREE_DOMAIN_WORD}) action without a before \\(baseline\\) value for the metric\\.$`), message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
+  // Outcome-evidence policy (src/domain/founder-recovery/verification-evidence.ts), thrown by all
+  // 7 owner-domain verification services + recovery, always 400. Both are fixed, owner-authored
+  // sentences with no internal names, so they are shown as written. (They replace the former
+  // "Cannot verify a <domain> action without a before (baseline) value" template, which no
+  // service throws any more.)
+  { status: 400, pattern: /^Start this action before recording its outcome\.$/, message: "Start this action before recording its outcome." },
+  { status: 400, pattern: /^Enter the before \(baseline\) value — the diagnosis did not measure this metric\.$/, message: "Enter the before (baseline) value — the diagnosis did not measure this metric." },
   // Recovery's own, differently-worded baseline-verification message
   // (verification.service.ts, founder-recovery), always 400. Exact, anchored string.
   { status: 400, pattern: /^Cannot verify an action without a baseline metric value\. Re-run diagnosis to capture a baseline\.$/, message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },

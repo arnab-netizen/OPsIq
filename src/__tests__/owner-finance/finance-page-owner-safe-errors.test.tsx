@@ -180,7 +180,8 @@ describe("Owner Finance page — governed, owner-safe error rendering", () => {
     dashboardFailure = {
       kind: "http",
       status: 400,
-      body: { error: { message: "Invalid business type supplied" } },
+      // Real canonical 400 shape (runtime-verified): the wrapper sends a string `error` + fieldErrors.
+      body: { error: "Validation failed", fieldErrors: [{ path: "businessType", message: "Invalid business type supplied" }] },
     };
     installFetchMock();
     renderPage();

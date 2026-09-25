@@ -33,17 +33,45 @@ export interface OperatorSafeErrorResponse {
  * `Error` so classification below is driven by the real status code, never
  * by guessing by message text.
  */
+export interface HttpFieldError {
+  path: string;
+  message: string;
+}
+
 export class HttpResponseError extends Error {
   readonly status: number;
   /** True when `message` came from the server's own governed error body (safe to show verbatim). */
   readonly hasServerMessage: boolean;
+  /** Field-level validation issues returned by a canonical route on a 4xx (may be empty). */
+  readonly fieldErrors: HttpFieldError[];
 
-  constructor(message: string, status: number, hasServerMessage: boolean) {
+  constructor(message: string, status: number, hasServerMessage: boolean, fieldErrors: HttpFieldError[] = []) {
     super(message);
     this.name = "HttpResponseError";
     this.status = status;
     this.hasServerMessage = hasServerMessage;
+    this.fieldErrors = fieldErrors;
   }
+}
+
+function readFieldErrors(body: unknown): HttpFieldError[] {
+  const raw = (body as { fieldErrors?: unknown } | null)?.fieldErrors;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (e): e is HttpFieldError =>
+      !!e && typeof e === "object" && typeof (e as HttpFieldError).path === "string" && typeof (e as HttpFieldError).message === "string"
+  );
+}
+
+/** Map field errors to `{ [path]: message }` (first message per path). */
+export function fieldErrorMap(error: unknown): Record<string, string> {
+  const map: Record<string, string> = {};
+  if (error instanceof HttpResponseError) {
+    for (const fe of error.fieldErrors) {
+      if (!(fe.path in map)) map[fe.path] = fe.message;
+    }
+  }
+  return map;
 }
 
 /**
@@ -55,8 +83,10 @@ export class HttpResponseError extends Error {
  */
 export async function toHttpResponseError(response: Response): Promise<HttpResponseError> {
   let serverMessage: string | undefined;
+  let fieldErrors: HttpFieldError[] = [];
   try {
     const body = await response.clone().json();
+    fieldErrors = readFieldErrors(body);
     if (body && typeof body === "object" && typeof (body as { error?: unknown }).error === "string") {
       const trimmed = (body as { error: string }).error.trim();
       if (trimmed.length > 0) {
@@ -71,7 +101,8 @@ export async function toHttpResponseError(response: Response): Promise<HttpRespo
   return new HttpResponseError(
     serverMessage ?? `Request failed with status ${response.status}`,
     response.status,
-    serverMessage !== undefined
+    serverMessage !== undefined,
+    fieldErrors
   );
 }
 
@@ -91,7 +122,8 @@ export function httpResponseErrorFromBody(status: number, body: unknown): HttpRe
   return new HttpResponseError(
     serverMessage ?? `Request failed with status ${status}`,
     status,
-    serverMessage !== undefined
+    serverMessage !== undefined,
+    readFieldErrors(body)
   );
 }
 

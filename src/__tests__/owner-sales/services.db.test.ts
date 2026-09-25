@@ -115,7 +115,7 @@ describe("[db] Owner Sales services", () => {
     const dash = await getSalesDashboard(workspaceId);
     expect(dash.selectedBusinessId).toBeNull();
     expect(dash.hasData).toBe(false);
-    expect(dash.businesses.map((b: any) => b.id).sort()).toEqual([businessA, businessB].sort());
+    expect(dash.businesses.map((b: { id: string }) => b.id).sort()).toEqual([businessA, businessB].sort());
 
     await teardownOwnerBusiness(businessA);
     await teardownOwnerBusiness(businessB);
@@ -155,6 +155,12 @@ describe("[db] Owner Sales services", () => {
     const cycle = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
     const action = cycle.actions[0];
 
+    // Outcomes are recordable only once work has started (verification-evidence.ts).
+
+    await updateSalesAction(action.id, { status: "assigned" }, actor, workspaceId);
+
+    await updateSalesAction(action.id, { status: "in_progress" }, actor, workspaceId);
+
     const { verification, result } = await recordSalesVerification(
       action.id,
       { beforeValue: 3, afterValue: 12, targetDirection: "up", targetValue: 10 },
@@ -164,6 +170,48 @@ describe("[db] Owner Sales services", () => {
     expect(verification.id).toBeTruthy();
     expect(["verified_improved", "verified_not_improved", "inconclusive", "disputed"]).toContain(result.status);
 
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] rejects recording an outcome for an action whose work has not started (BIV-09)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
+    const cycle = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle.actions[0];
+    await expect(
+      recordSalesVerification(action.id, { beforeValue: 1, afterValue: 2, targetDirection: "up" }, actor, workspaceId)
+    ).rejects.toThrow(/Start this action before recording its outcome/);
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] records baseline provenance: blank before uses the measured value; a different owner value is kept as OWNER_REPORTED (BIV-10)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
+    const cycle = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle.actions[0];
+    await updateSalesAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateSalesAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    const row = await db.ownerSalesAction.findFirst({ where: { id: action.id }, include: { finding: true } });
+    const measured =
+      row?.finding && row.finding.sourceMetric === row.verificationMetric && row.finding.sourceValue !== null
+        ? row.finding.sourceValue
+        : null;
+    if (measured === null) {
+      await expect(
+        recordSalesVerification(action.id, { beforeValue: null, afterValue: 2, targetDirection: "up" }, actor, workspaceId)
+      ).rejects.toThrow(/before \(baseline\) value/);
+    } else {
+      const measuredRun = await recordSalesVerification(action.id, { beforeValue: null, afterValue: measured, targetDirection: "up" }, actor, workspaceId);
+      expect(measuredRun.verification.beforeValue).toBe(measured);
+      expect(measuredRun.verification.baselineSource).toBe("MEASURED");
+    }
+    const reported = (measured ?? 0) + 50;
+    const ownerRun = await recordSalesVerification(action.id, { beforeValue: reported, afterValue: 1, targetDirection: "up" }, actor, workspaceId);
+    expect(ownerRun.verification.beforeValue).toBe(reported);
+    expect(ownerRun.verification.baselineSource).toBe("OWNER_REPORTED");
+    expect(ownerRun.verification.measuredBeforeValue).toBe(measured);
     await teardownOwnerBusiness(businessId);
   });
 
@@ -254,4 +302,82 @@ describe("[db] Owner Sales services", () => {
 
     await teardownOwnerBusiness(businessId);
   });
+
+  it("[db] re-diagnosis carries an engaged action forward (re-prioritised) instead of duplicating it; untouched proposals are regenerated (BIV-12)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
+    const cycle1 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const inFlight = cycle1.actions[0];
+    await updateSalesAction(inFlight.id, { status: "assigned" }, actor, workspaceId);
+    await updateSalesAction(inFlight.id, { status: "in_progress" }, actor, workspaceId);
+    // Simulate a stale ranking so re-evaluation is observable.
+    await db.ownerSalesAction.update({ where: { id: inFlight.id }, data: { priorityScore: 1 } });
+
+    const cycle2 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const sameIntent = (a: { findingCode: string; recommendationCode: string }) =>
+      a.findingCode === inFlight.findingCode && a.recommendationCode === inFlight.recommendationCode;
+    // The engaged action is re-attached to cycle 2 (no duplicate); untouched proposals are regenerated.
+    const cycle2Rows = await db.ownerSalesAction.findMany({ where: { cycleId: cycle2.id } });
+    expect(cycle2Rows.filter(sameIntent)).toHaveLength(1);
+    expect(cycle2Rows.find(sameIntent)!.id).toBe(inFlight.id);
+    expect(cycle2Rows).toHaveLength(cycle1.actions.length);
+    // The carried action's priority was re-evaluated against the new diagnosis.
+    const reevaluated = await db.ownerSalesAction.findFirst({ where: { id: inFlight.id } });
+    expect(reevaluated!.priorityScore).toBe(inFlight.priorityScore);
+    expect(reevaluated!.status).toBe("in_progress");
+    // The original finding (baseline measured before the work started) is kept, so the
+    // measured baseline does not drift with later diagnoses.
+    expect(reevaluated!.findingId).toBe(inFlight.findingId);
+
+    const dash = await getSalesDashboard(workspaceId, businessId);
+    const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === inFlight.id) as
+      | { status: string; cycleId: string; carriedFromCycleSequence?: number }
+      | undefined;
+    expect(listed?.status).toBe("in_progress");
+    expect(listed?.cycleId).toBe(cycle2.id);
+    expect(listed?.carriedFromCycleSequence).toBeUndefined();
+    // Untouched cycle-1 proposals are superseded by cycle 2's, not listed twice.
+    expect(dash.latestCycle!.actions).toHaveLength(cycle1.actions.length);
+    expect(dash.recommendedNextAction).not.toBeNull();
+    // Every surface reading the latest cycle agrees: Home sees the in-flight action too.
+    const { getOwnerHome } = await import("@/services/owner-home/home.service");
+    const home = await getOwnerHome(workspaceId, businessId);
+    expect(home.summary!.requiredActions.some((a) => a.status === "in_progress" && a.findingCode === inFlight.findingCode)).toBe(true);
+    // The re-attachment is audited.
+    const audit = await db.auditEvent.findFirst({ where: { entityId: inFlight.id, eventName: "owner.sales_action_updated", workspaceId }, orderBy: { occurredAt: "desc" } });
+    expect((audit!.payload as { reason?: string }).reason).toBe("carried_forward_by_diagnosis");
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] an engaged action whose finding the latest diagnosis no longer raises stays visible but is flagged not current (BIV-12)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
+    const cycle1 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const discount = cycle1.actions.find((a: { findingCode: string }) => a.findingCode.includes("DISCOUNT"));
+    expect(discount).toBeTruthy();
+    await updateSalesAction(discount!.id, { status: "assigned" }, actor, workspaceId);
+
+    // Next period: no discounting at all, so no discount finding is raised.
+    const healthier = { ...distressSnapshot(), periodStart: "2026-06-01", periodEnd: "2026-06-30", discountAmount: 0 };
+    const snap2 = await createSalesSnapshot(businessId, healthier, actor, workspaceId);
+    const cycle2 = await runSalesDiagnosis(businessId, snap2.id, actor, workspaceId);
+    expect(cycle2.findings.some((f: { code: string }) => f.code === discount!.findingCode)).toBe(false);
+
+    const dash = await getSalesDashboard(workspaceId, businessId);
+    const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === discount!.id) as
+      | { status: string; stillFlaggedByLatestDiagnosis?: boolean }
+      | undefined;
+    expect(listed?.status).toBe("assigned");
+    expect(listed?.stillFlaggedByLatestDiagnosis).toBe(false);
+
+    const { getOwnerHome } = await import("@/services/owner-home/home.service");
+    const home = await getOwnerHome(workspaceId, businessId);
+    expect(home.summary!.requiredActions.some((a) => a.title === discount!.title && a.findingCode === discount!.findingCode)).toBe(false);
+
+    await teardownOwnerBusiness(businessId);
+  });
 });
+

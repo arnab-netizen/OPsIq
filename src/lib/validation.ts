@@ -7,6 +7,10 @@ export function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown): T {
     const formatted = z.prettifyError(result.error);
     throw new ValidationError("Validation failed", {
       errors: formatted,
+      fieldErrors: result.error.issues.map((issue) => ({
+        path: issue.path.map(String).join("."),
+        message: issue.message,
+      })),
     });
   }
   return result.data;
@@ -39,6 +43,7 @@ export async function parseRequestBody<T>(
     if (unknownKeys.length > 0) {
       throw new ValidationError("Unknown fields in request body", {
         unknownFields: unknownKeys,
+        fieldErrors: unknownKeys.map((key) => ({ path: key, message: "Unknown field" })),
       });
     }
   }

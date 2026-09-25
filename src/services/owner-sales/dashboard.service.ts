@@ -10,6 +10,8 @@
  */
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
+import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
+import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 
 export interface SalesDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -81,7 +83,11 @@ export async function getSalesDashboard(
         snapshot: true,
         findings: { orderBy: { severity: "asc" } },
         actions: {
-          include: { verifications: { orderBy: { createdAt: "desc" } } },
+          include: {
+            verifications: { orderBy: { createdAt: "desc" } },
+            // Measured baseline for outcome verification (prefill + provenance display).
+            finding: { select: { sourceMetric: true, sourceValue: true } },
+          },
           // Deterministic total order: priorityScore is clamped to [0,100]
           // (calculateOwnerPriorityScore), so ties at the ceiling are a real,
           // expected occurrence whenever multiple critical findings coexist
@@ -112,6 +118,43 @@ export async function getSalesDashboard(
     }),
   ]);
 
+  // Each action carries the value the diagnosis measured for its verification
+  // metric (null when not measured) — the baseline an outcome is compared to.
+  // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
+  // (action-continuity.ts). Engaged actions left on an earlier cycle are still shown (after
+  // current actions, flagged when the latest diagnosis no longer raises their finding) until
+  // finished or cancelled.
+  const carriedActions = latestCycle
+    ? await db.ownerSalesAction.findMany({
+        where: {
+          businessId: selectedBusinessId,
+          workspaceId,
+          cycleId: { not: latestCycle.id },
+          status: { in: [...ENGAGED_ACTION_STATUSES] },
+        },
+        include: {
+          verifications: { orderBy: { createdAt: "desc" } },
+          finding: { select: { sourceMetric: true, sourceValue: true } },
+          cycle: { select: { sequenceNumber: true } },
+        },
+        orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
+      })
+    : [];
+  const latestCycleView = latestCycle
+    ? {
+        ...latestCycle,
+        actions: [
+          ...latestCycle.actions.map(withMeasuredBaseline),
+          ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
+            ...withMeasuredBaseline(a),
+            carriedFromCycleSequence: a.cycle.sequenceNumber,
+            // false when the latest diagnosis no longer raises this finding (finish or cancel it).
+            stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
+          })),
+        ],
+      }
+    : null;
+
   const domainScore = latestCycle
     ? {
         domain: "sales" as const,
@@ -131,7 +174,7 @@ export async function getSalesDashboard(
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
-    latestCycle: latestCycle ?? null,
+    latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
     missingCriticalData: latestSnapshot

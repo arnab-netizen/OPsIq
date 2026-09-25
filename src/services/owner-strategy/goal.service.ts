@@ -11,7 +11,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { computeGoalTrajectory } from "./goal-trajectory.service";
 import type { TrailingPeriod } from "./goal-trajectory.service";
@@ -34,13 +34,47 @@ export interface GoalSummary {
   targetAmount: number;
   targetCurrency: string;
   targetDate: Date;
+  baselineAmount: number | null;
   status: string;
+  /** Read-time derivation: an ACTIVE goal whose target date has passed. The stored status is not mutated. */
+  isOverdue: boolean;
   createdAt: Date;
+}
+
+/**
+ * Resolve the currency of a workspace-level goal: the explicit record currency
+ * when supplied, otherwise the single currency shared by the workspace's active
+ * businesses. Never falls back to a hard-coded currency — when the businesses
+ * use more than one currency (or none exist) the owner must choose explicitly.
+ */
+export async function resolveGoalCurrency(workspaceId: string, requested?: string): Promise<string> {
+  if (requested) return requested.toUpperCase();
+  const businesses = (await db.ownerBusiness.findMany({
+    where: { workspaceId, isActive: true, isFixtureBusiness: false },
+    select: { currency: true },
+  })) as Array<{ currency: string }>;
+  const currencies = Array.from(new Set(businesses.map((b) => b.currency.trim().toUpperCase())));
+  // Only a valid 3-letter code may be inherited (the same rule the route applies to an explicit code).
+  if (currencies.length === 1 && /^[A-Z]{3}$/.test(currencies[0])) return currencies[0];
+  throw new ValidationError(
+    currencies.length === 0
+      ? "Choose the goal currency — add a business first or enter a currency code."
+      : "Choose the goal currency — your businesses use more than one currency.",
+    { fieldErrors: [{ path: "targetCurrency", message: "Currency is required" }] }
+  );
 }
 
 /** Create a new ACTIVE goal. Marks any existing ACTIVE goal for this workspace as REVISED. */
 export async function createGoal(input: CreateGoalInput): Promise<string> {
   const goalId = randomUUID();
+  // A newly declared goal is a forward commitment. Past targets are rejected
+  // here (service boundary) as well as in the route schema.
+  if (input.targetDate.getTime() <= Date.now()) {
+    throw new ValidationError("Target date must be in the future.", {
+      fieldErrors: [{ path: "targetDate", message: "Target date must be in the future" }],
+    });
+  }
+  const targetCurrency = await resolveGoalCurrency(input.workspaceId, input.targetCurrency);
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     // Mark any current active goal as REVISED
@@ -56,7 +90,7 @@ export async function createGoal(input: CreateGoalInput): Promise<string> {
         actorId: input.actorId,
         targetType: input.targetType,
         targetAmount: input.targetAmount,
-        targetCurrency: input.targetCurrency ?? "USD",
+        targetCurrency,
         targetDate: input.targetDate,
         baselineAmount: input.baselineAmount ?? null,
         baselineDate: input.baselineDate ?? null,
@@ -73,7 +107,7 @@ export async function createGoal(input: CreateGoalInput): Promise<string> {
         workspaceId: input.workspaceId,
         entityType: "OwnerGoal",
         entityId: goalId,
-        payload: { targetType: input.targetType, targetAmount: input.targetAmount, targetDate: input.targetDate },
+        payload: { targetType: input.targetType, targetAmount: input.targetAmount, targetCurrency, targetDate: input.targetDate },
       },
       tx
     );
@@ -123,7 +157,9 @@ export async function getActiveGoal(workspaceId: string): Promise<GoalSummary | 
     targetAmount: goal.targetAmount,
     targetCurrency: goal.targetCurrency,
     targetDate: goal.targetDate,
+    baselineAmount: goal.baselineAmount ?? null,
     status: goal.status,
+    isOverdue: goal.status === "ACTIVE" && goal.targetDate.getTime() < Date.now(),
     createdAt: goal.createdAt,
   };
 }
@@ -134,32 +170,58 @@ export async function computeActiveGoalTrajectory(workspaceId: string) {
   if (!goal) return null;
 
   type SnapshotRow = {
+    businessId: string;
     periodStart: Date;
     periodEnd: Date;
     revenue: number | null;
     netProfit: number | null;
   };
 
-  const snapshots = (await db.ownerMetricSnapshot.findMany({
-    where: { workspaceId },
-    select: { periodStart: true, periodEnd: true, revenue: true, netProfit: true },
-    orderBy: { periodStart: "asc" },
+  // Newest 12 periods in the goal's currency (then oldest-first for the engine).
+  // Values recorded in another currency are never mixed into the series.
+  const newestFirst = (await db.ownerMetricSnapshot.findMany({
+    // Case-insensitive: snapshot currency is stored as entered. Only active, non-fixture businesses.
+    where: {
+      workspaceId,
+      currency: { equals: goal.targetCurrency, mode: "insensitive" },
+      business: { isActive: true, isFixtureBusiness: false },
+    },
+    select: { businessId: true, periodStart: true, periodEnd: true, revenue: true, netProfit: true },
+    orderBy: { periodStart: "desc" },
     take: 12,
   })) as SnapshotRow[];
+  const snapshots = [...newestFirst].reverse();
 
-  const periods: TrailingPeriod[] = snapshots.map((s) => ({
-    periodStart: s.periodStart,
-    periodEnd: s.periodEnd,
-    revenue: s.revenue,
-    netProfit: s.netProfit,
-  }));
+  // The goal is workspace-level. Per-business snapshots cannot be combined into
+  // one series without per-period workspace totals, so a series spanning more
+  // than one business is not projected (reported as insufficient data).
+  const businessCount = new Set(snapshots.map((s) => s.businessId)).size;
+  const periods: TrailingPeriod[] =
+    businessCount > 1
+      ? []
+      : snapshots.map((s) => ({
+          periodStart: s.periodStart,
+          periodEnd: s.periodEnd,
+          revenue: s.revenue,
+          netProfit: s.netProfit,
+        }));
 
   const trajectory = computeGoalTrajectory({
     targetType: goal.targetType as "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE",
     targetAmount: goal.targetAmount,
     targetDate: goal.targetDate,
+    baselineAmount: goal.baselineAmount,
     periods,
   });
+
+  if (businessCount > 1) {
+    trajectory.confidenceRationale = [
+      trajectory.confidenceRationale,
+      `recorded results come from ${businessCount} businesses — a workspace goal needs one combined series`,
+    ]
+      .filter(Boolean)
+      .join("; ");
+  }
 
   return { goal, trajectory };
 }

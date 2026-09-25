@@ -8,6 +8,11 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import GoalsPage from "@/app/(authenticated)/owner/goals/page";
 
+// The page defaults the goal currency from the active business (INR here, to prove no USD default).
+vi.mock("@/context/active-business-context", () => ({
+  useActiveBusiness: () => ({ activeBusiness: { id: "biz-1", name: "Biz", currency: "INR" } }),
+}));
+
 const ACTIVE_GOAL = {
   goal: {
     id: "goal-uuid-1",
@@ -17,6 +22,7 @@ const ACTIVE_GOAL = {
     targetDate: "2027-06-30T00:00:00.000Z",
     baselineAmount: 120000,
     status: "ACTIVE",
+    isOverdue: false,
     createdAt: "2026-07-01T00:00:00.000Z",
   },
 };
@@ -24,17 +30,23 @@ const ACTIVE_GOAL = {
 const TRAJECTORY_RESULT = {
   result: {
     goal: ACTIVE_GOAL.goal,
+    // Exact JSON shape of GoalTrajectoryResult (src/services/owner-strategy/goal-trajectory.service.ts).
+    // A previous fixture used invented field names (percentComplete/gapToTarget/onTrack/
+    // projectedAchievementDate on a shape the server never sent), which hid "Progress NaN%".
     trajectory: {
-      projectedAchievementDate: "2027-04-15T00:00:00.000Z",
-      onTrack: true,
-      // Real TrajectoryConfidence values are uppercase (see
-      // src/services/owner-strategy/goal-trajectory.service.ts) -- this fixture
-      // previously used lowercase "medium", which never occurs in production and
-      // masked the G5 raw-enum-leak bug this page was fixed for (see CONFIDENCE_LABEL).
+      projectedMonthsToGoal: 7,
+      currentTrajectoryDate: "2027-04-15T00:00:00.000Z",
+      // Real TrajectoryConfidence values are uppercase -- see CONFIDENCE_LABEL.
       confidence: "MEDIUM",
-      points: [],
-      gapToTarget: 280000,
+      confidenceRationale: "trajectory is within normal confidence bounds",
+      requiredMonthlyImprovement: 31000,
+      gapToClose: 280000,
+      trajectoryMiss: false,
+      assumptions: [],
+      currentValue: 220000,
       percentComplete: 44,
+      onTrack: true,
+      targetDatePassed: false,
     },
   },
 };
@@ -228,5 +240,85 @@ describe("GoalsPage", () => {
     expect(getByLabelText("Currency")).toBeTruthy();
     expect(getByLabelText(/Target date/)).toBeTruthy();
     expect(getByLabelText("Baseline amount (optional)")).toBeTruthy();
+  });
+
+  it("renders unavailable data as 'Not enough data' — never NaN — when the trajectory has no recorded values", async () => {
+    fetchMock.mockImplementation((input: string | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/api/owner/goals/trajectory")) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          json: () => Promise.resolve({
+            result: {
+              goal: { ...ACTIVE_GOAL.goal, targetCurrency: "INR", isOverdue: true },
+              trajectory: {
+                projectedMonthsToGoal: null, currentTrajectoryDate: null, confidence: "LOW",
+                confidenceRationale: "only 0 period(s) with data — minimum 3 required for any confidence; target date has already passed",
+                requiredMonthlyImprovement: null, gapToClose: null, trajectoryMiss: false,
+                assumptions: ["Insufficient data for projection"], currentValue: null,
+                percentComplete: null, onTrack: null, targetDatePassed: true,
+              },
+            },
+          }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ goal: { ...ACTIVE_GOAL.goal, targetCurrency: "INR", isOverdue: true } }),
+      } as Response);
+    });
+    const { findByTestId, getByText, getAllByText } = render(<GoalsPage />);
+    const traj = await findByTestId("goal-trajectory");
+    expect(traj.textContent).not.toMatch(/NaN|Infinity|undefined|null/);
+    expect(getAllByText("Not enough data").length).toBeGreaterThanOrEqual(2);
+    expect(getByText("Unknown")).toBeTruthy();
+    expect(getByText("Overdue")).toBeTruthy();
+  });
+
+  it("defaults the new-goal currency to the active business currency, never USD", async () => {
+    const { findByText, getByLabelText } = render(<GoalsPage />);
+    fireEvent.click(await findByText("Update Goal"));
+    await findByText("Update Financial Goal");
+    expect((getByLabelText("Currency") as HTMLInputElement).value).toBe("INR");
+  });
+
+  it("shows the server's field error next to the target date field", async () => {
+    fetchMock.mockImplementation((input: string | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/api/owner/goals") && (init?.method ?? "GET").toUpperCase() === "POST") {
+        return Promise.resolve({
+          ok: false, status: 400,
+          json: () => Promise.resolve({
+            error: "Validation failed",
+            fieldErrors: [{ path: "targetAmount", message: "Too small: expected number to be >0" }],
+          }),
+        } as Response);
+      }
+      if (url.includes("/api/owner/goals/trajectory")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TRAJECTORY_RESULT) } as Response);
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ACTIVE_GOAL) } as Response);
+    });
+    const { findByText, getByLabelText } = render(<GoalsPage />);
+    fireEvent.click(await findByText("Update Goal"));
+    await findByText("Update Financial Goal");
+    fireEvent.change(document.querySelector("select") as HTMLSelectElement, { target: { value: "REVENUE" } });
+    fireEvent.change(getByLabelText(/Target amount/), { target: { value: "750000" } });
+    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2099-01-01" } });
+    fireEvent.click(await findByText("Set new goal"));
+    await findByText("Too small: expected number to be >0");
+    expect(getByLabelText(/Target amount/).getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("rejects a past target date on the client before submitting", async () => {
+    const { findByText, getByLabelText } = render(<GoalsPage />);
+    fireEvent.click(await findByText("Update Goal"));
+    await findByText("Update Financial Goal");
+    fireEvent.change(document.querySelector("select") as HTMLSelectElement, { target: { value: "PROFIT" } });
+    fireEvent.change(getByLabelText(/Target amount/), { target: { value: "750000" } });
+    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2020-01-01" } });
+    fireEvent.click(await findByText("Set new goal"));
+    await findByText("Target date must be in the future");
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("/api/owner/goals"), expect.objectContaining({ method: "POST" }));
   });
 });

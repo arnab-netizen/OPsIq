@@ -26,6 +26,7 @@ import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionIte
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
+import type { CockpitDomainPriority } from "@/services/owner-guidance/cockpit-domain-priority.service";
 
 /** Same survival-state palette as /owner/finance (owner/finance/page.tsx's SURVIVAL_VARIANT) — kept local since that page is a separate client bundle. */
 const SURVIVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted"> = {
@@ -243,6 +244,15 @@ export interface MinimumOwnerCockpitProps {
    */
   financeTopPriority?: CockpitFinancePriority | null;
   /**
+   * BIV-03: highest-ranked open action from the other domain diagnoses (Sales, Strategy, Operations,
+   * SOP, Marketing, Cash flow, Recovery) — see `cockpit-domain-priority.service.ts`. Same precedence
+   * as `financeTopPriority`: never overrides a governed `topRoute`; fills the primary slot in the
+   * clean state when there is no Finance priority; otherwise shown as a secondary card.
+   */
+  domainTopPriority?: CockpitDomainPriority | null;
+  /** False only when the owner has no business yet; drives the "add your business" prompt. */
+  hasBusiness?: boolean;
+  /**
    * The currently active business (ActiveBusinessContext) — used ONLY to reset any open inline
    * action form (the top-priority action form and each execution-lifecycle item's Phase 3
    * RECORD_OUTCOME/VERIFY_OUTCOME/etc. form) when it changes, never to decide what to submit.
@@ -298,6 +308,31 @@ function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinanc
       )}
       <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
         See the full finance diagnosis →
+      </a>
+    </div>
+  );
+}
+
+/** BIV-03: the top open action from a non-Finance domain diagnosis, primary (clean state) or secondary. */
+function DomainTopPriorityCard({ priority, primary }: { priority: CockpitDomainPriority; primary: boolean }) {
+  const testId = primary ? "cockpit-domain-priority-primary" : "cockpit-domain-priority-secondary";
+  return (
+    <div
+      data-testid={testId}
+      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
+      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
+    >
+      <span
+        className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
+        style={primary ? { color: "var(--accent-ink)" } : undefined}
+      >
+        {primary ? `Open action from your ${priority.domainLabel} diagnosis` : `Open ${priority.domainLabel} action`}
+      </span>
+      <strong data-testid="cockpit-domain-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>
+        {priority.title}
+      </strong>
+      <a href={priority.href} style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
+        Open {priority.domainLabel} →
       </a>
     </div>
   );
@@ -1114,7 +1149,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, activeBusinessId = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, domainTopPriority = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -1150,6 +1185,8 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       <section data-testid="cockpit-clean" className="flex flex-col gap-3 rounded-md border border-border bg-card p-5">
         {financeTopPriority ? (
           <FinanceTopPriorityCard priority={financeTopPriority} primary />
+        ) : domainTopPriority ? (
+          <DomainTopPriorityCard priority={domainTopPriority} primary />
         ) : (
           <div>
             <strong className="text-base font-semibold text-foreground">No urgent action needs your attention right now.</strong>
@@ -1160,11 +1197,14 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             {/* Phase 7's no-data-state contract ("what OpsIQ needs, why, and one clear next action")
                 — a lay owner landing here with no business data yet previously had no path forward
                 except finding "My Business" in the sidebar themselves. */}
-            <p className="mt-3 text-sm text-muted-foreground">
-              Haven&rsquo;t added your business yet? <a href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</a> to get your first result.
-            </p>
+            {!hasBusiness && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Haven&rsquo;t added your business yet? <a href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</a> to get your first result.
+              </p>
+            )}
           </div>
         )}
+        {financeTopPriority && domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={false} />}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
         {recovery && <RecoverySection recovery={recovery} />}
@@ -1494,6 +1534,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         MONITOR_ONLY (nothing actionable in the governed queue) so the owner still sees it prominently.
       */}
       {financeTopPriority && <FinanceTopPriorityCard priority={financeTopPriority} primary={isMonitorOnly} />}
+      {domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={isMonitorOnly && !financeTopPriority} />}
 
       {/*
         Also worth knowing — Goal / Profit leak / Operating policies / Trend alerts / Do-not-repeat /
