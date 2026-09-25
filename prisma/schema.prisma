@@ -6835,30 +6835,129 @@ model OwnerConnector {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  token OwnerConnectorToken?
+  // QuickBooks Online integration (additive). externalAccountId is the provider
+  // company identity (QBO realmId) and is written ONLY by the OAuth callback after
+  // the one-time state is consumed — never from client input. The OAuth state is
+  // stored as a SHA-256 hash, bound to the initiating actor and expiry, and is
+  // consumed with a compare-and-set so a replayed callback cannot re-bind.
+  externalAccountId   String?   @map("external_account_id")
+  externalAccountName String?   @map("external_account_name")
+  environment         String?   @map("environment") // "sandbox" | "production"
+  oauthStateHash      String?   @map("oauth_state_hash")
+  oauthStateActorId   String?   @map("oauth_state_actor_id") @db.Uuid
+  oauthStateExpiresAt DateTime? @map("oauth_state_expires_at")
+  syncState           Json?     @map("sync_state") // per-entity cursors / initial-sync progress (no secrets)
+  syncLeaseExpiresAt  DateTime? @map("sync_lease_expires_at") // CAS lease: one sync run per connector at a time
+
+  token   OwnerConnectorToken?
+  records OwnerConnectorRecord[]
+  writes  OwnerConnectorWrite[]
 
   @@unique([workspaceId, provider])
   @@index([workspaceId])
   @@index([workspaceId, status])
   @@index([businessId])
+  @@index([provider, externalAccountId])
   @@map("owner_connectors")
 }
 
 // Token storage is separate — tokens are never joined into public-facing queries.
 // encryptedAccessToken and encryptedRefreshToken use AES-256-GCM ciphertext format.
 model OwnerConnectorToken {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  connectorId           String   @unique @map("connector_id") @db.Uuid
-  encryptedAccessToken  String   @map("encrypted_access_token")
-  encryptedRefreshToken String?  @map("encrypted_refresh_token")
-  tokenType             String   @default("Bearer") @map("token_type")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connectorId           String    @unique @map("connector_id") @db.Uuid
+  encryptedAccessToken  String    @map("encrypted_access_token")
+  encryptedRefreshToken String?   @map("encrypted_refresh_token")
+  tokenType             String    @default("Bearer") @map("token_type")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  // Rotating-refresh-token safety (additive): version is bumped on every token
+  // write (compare-and-set); refreshLockedUntil is a short DB lease so exactly
+  // one process exchanges a given refresh token at a time.
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  version               Int       @default(0)
+  refreshLockedUntil    DateTime? @map("refresh_locked_until")
 
   connector OwnerConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
 
   @@index([connectorId])
   @@map("owner_connector_tokens")
+}
+
+// QuickBooks Online (and future accounting connectors) — external record mirror,
+// external-identity link and provenance. One row per (connector, remote entity type,
+// remote id). QuickBooks remains the system of record: `data` is the last fetched
+// provider state (internal-only; never client-visible), `remoteSyncToken` is the
+// provider concurrency token used for governed updates, and opsiqEntityType/Id link
+// the remote record to the OpsIQ record it was materialized into or pushed from.
+// Reports are stored with entityType "Report:<Name>" and remoteId = parameter key.
+// Rows are never hard-deleted by sync: remote deletions set remoteStatus=DELETED.
+model OwnerConnectorRecord {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  businessId      String?   @map("business_id") @db.Uuid
+  connectorId     String    @map("connector_id") @db.Uuid
+  provider        String    @map("provider")
+  externalAccount String    @map("external_account") // realmId at ingest time
+  entityType      String    @map("entity_type") @db.VarChar(64)
+  remoteId        String    @map("remote_id") @db.VarChar(255)
+  remoteSyncToken String?   @map("remote_sync_token") @db.VarChar(64)
+  remoteUpdatedAt DateTime? @map("remote_updated_at")
+  remoteStatus    String    @default("ACTIVE") @map("remote_status") // ACTIVE | INACTIVE | DELETED | VOIDED
+  data            Json
+  opsiqEntityType String?   @map("opsiq_entity_type") @db.VarChar(64)
+  opsiqEntityId   String?   @map("opsiq_entity_id") @db.VarChar(255)
+  ingestedAt      DateTime  @default(now()) @map("ingested_at")
+  lastSyncRunId   String?   @map("last_sync_run_id") @db.VarChar(64)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  connector OwnerConnector @relation(fields: [connectorId], references: [id], onDelete: Restrict)
+
+  @@unique([connectorId, entityType, remoteId])
+  @@index([workspaceId, entityType])
+  @@index([workspaceId, opsiqEntityType, opsiqEntityId])
+  @@index([connectorId, remoteUpdatedAt])
+  @@map("owner_connector_records")
+}
+
+// Outbound governed-write ledger. Guarantees a retried/duplicated OpsIQ request can
+// never create a second monetary record in QuickBooks: (workspaceId, idempotencyKey)
+// is unique, providerRequestId is the deterministic QBO `requestid` re-sent on every
+// retry so QBO itself de-duplicates a commit whose response was lost, and AMBIGUOUS
+// records the "timed out after QBO may have committed" state for reconciliation.
+// Never deleted and never expired (unlike IdempotencyRecord, which is global, expires
+// and deletes rows — unsafe for money-moving writes).
+model OwnerConnectorWrite {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String?   @map("business_id") @db.Uuid
+  connectorId       String    @map("connector_id") @db.Uuid
+  idempotencyKey    String    @map("idempotency_key") @db.VarChar(200)
+  operation         String    @map("operation") @db.VarChar(64)
+  entityType        String    @map("entity_type") @db.VarChar(64)
+  payloadHash       String    @map("payload_hash") @db.VarChar(64)
+  providerRequestId String    @map("provider_request_id") @db.VarChar(50)
+  status            String    @default("PENDING") @map("status") // PENDING | COMMITTED | FAILED | CONFLICT | AMBIGUOUS
+  attempts          Int       @default(0)
+  remoteId          String?   @map("remote_id") @db.VarChar(255)
+  remoteSyncToken   String?   @map("remote_sync_token") @db.VarChar(64)
+  errorCode         String?   @map("error_code") @db.VarChar(64)
+  errorMessage      String?   @map("error_message") @db.VarChar(500)
+  opsiqEntityType   String?   @map("opsiq_entity_type") @db.VarChar(64)
+  opsiqEntityId     String?   @map("opsiq_entity_id") @db.VarChar(255)
+  requestedBy       String    @map("requested_by") @db.Uuid
+  lockedUntil       DateTime? @map("locked_until")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  completedAt       DateTime? @map("completed_at")
+
+  connector OwnerConnector @relation(fields: [connectorId], references: [id], onDelete: Restrict)
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([connectorId, status])
+  @@index([workspaceId, opsiqEntityType, opsiqEntityId])
+  @@map("owner_connector_writes")
 }
 
 model CustomerRecord {

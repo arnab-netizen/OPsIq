@@ -658,6 +658,24 @@ export const AUDIT_EVENTS = {
   INTEGRATION_EVENT_BCP_TRIGGERED: "integration_event.bcp_triggered",
   INTEGRATION_EVENT_BCP_TRIGGER_FAILED: "integration_event.bcp_trigger_failed",
 
+  // QuickBooks Online integration
+  QUICKBOOKS_CONNECT_STARTED: "quickbooks.connect_started",
+  QUICKBOOKS_CONNECTED: "quickbooks.connected",
+  QUICKBOOKS_CONNECT_FAILED: "quickbooks.connect_failed",
+  QUICKBOOKS_DISCONNECTED: "quickbooks.disconnected",
+  QUICKBOOKS_TOKEN_REFRESHED: "quickbooks.token_refreshed",
+  QUICKBOOKS_TOKEN_REFRESH_FAILED: "quickbooks.token_refresh_failed",
+  QUICKBOOKS_SYNC_REQUESTED: "quickbooks.sync_requested",
+  QUICKBOOKS_SYNC_COMPLETED: "quickbooks.sync_completed",
+  QUICKBOOKS_SYNC_FAILED: "quickbooks.sync_failed",
+  QUICKBOOKS_SNAPSHOT_MATERIALIZED: "quickbooks.snapshot_materialized",
+  QUICKBOOKS_WEBHOOK_RECEIVED: "quickbooks.webhook_received",
+  QUICKBOOKS_WRITE_REQUESTED: "quickbooks.write_requested",
+  QUICKBOOKS_WRITE_COMMITTED: "quickbooks.write_committed",
+  QUICKBOOKS_WRITE_FAILED: "quickbooks.write_failed",
+  QUICKBOOKS_WRITE_CONFLICT: "quickbooks.write_conflict",
+  QUICKBOOKS_WRITE_AMBIGUOUS: "quickbooks.write_ambiguous",
+
   // Stage 3B — Customer Records
   OWNER_CUSTOMER_CREATED: "owner.customer_created",
   OWNER_CUSTOMER_UPDATED: "owner.customer_updated",
