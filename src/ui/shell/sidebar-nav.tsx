@@ -70,11 +70,12 @@ function TaskIcon() {
  *    reachable pages not yet part of the core controlled-beta workflow — each renders as a normal
  *    link with a "Preview" pill (see each item's own comment for why: Compliance's proactive
  *    detection and Procurement's connection to Inventory/Vendors are both real gaps, not
- *    polish; Starting up is a different-persona tool, not an incomplete one). AI Copilot and
- *    Integrations have no owner-facing page at all yet — each renders as a non-interactive row
- *    (no `<a>`, not part of the tab order) with a "Coming soon" pill and a one-line explanation,
- *    so neither looks like a broken control nor implies a working feature the app doesn't have
- *    (no QuickBooks/HubSpot connection exists; there is no working AI assistant surface).
+ *    polish; Starting up is a different-persona tool, not an incomplete one; Integrations is the
+ *    QuickBooks Online connection page, Preview until Intuit production approval). AI Copilot
+ *    has no owner-facing page at all yet — it renders as a non-interactive row (no `<a>`, not
+ *    part of the tab order) with a "Coming soon" pill and a one-line explanation, so it neither
+ *    looks like a broken control nor implies a working feature the app doesn't have (there is
+ *    no working AI assistant surface).
  *    Inventory has no nav entry at all: its one system-generated signal is wired to nothing and
  *    always displays a wrong result today (see its removal comment in the "business" section
  *    below) — a known-wrong live feature, not merely unfinished. Nothing here invents a new page
@@ -341,10 +342,10 @@ const NAV_SECTIONS: NavSection[] = [
     // Marketing (+ its Campaigns sub-page), and Starting up are real, reachable, working pages --
     // each gets a visible "Preview" pill precisely because it is real functionality that just
     // isn't part of the core controlled-beta workflow yet, so an owner never mistakes it for a
-    // broken link. AI Copilot and Integrations have no owner-facing page in this app at all --
-    // each is a non-interactive "Coming soon" row (see the `state`/`href`-optional contract on
-    // NavItem above), not a placeholder page built merely to populate this list, and not a claim
-    // that a working AI assistant or a live QuickBooks/HubSpot connection exists today.
+    // broken link. AI Copilot has no owner-facing page in this app at all -- it is a
+    // non-interactive "Coming soon" row (see the `state`/`href`-optional contract on NavItem
+    // above), not a placeholder page built merely to populate this list, and not a claim that a
+    // working AI assistant exists today. Integrations links to the real QuickBooks Online page.
     id: "more-from-opsiq",
     title: "More from OpsIQ",
     collapsedByDefault: true,
@@ -394,11 +395,15 @@ const NAV_SECTIONS: NavSection[] = [
         state: "coming-soon",
         blurb: "Ask OpsIQ questions about your business in plain language.",
       },
+      // QuickBooks Online is a real, working owner page (/owner/integrations) but not yet
+      // production-approved by Intuit, so it carries a Preview pill like the other real,
+      // not-yet-core pages above. It names only QuickBooks — no other integration exists.
       {
         label: "Integrations",
+        href: "/owner/integrations",
         requiresOwner: true,
-        state: "coming-soon",
-        blurb: "Connect QuickBooks, HubSpot, and other tools you already use.",
+        state: "preview",
+        blurb: "Connect QuickBooks Online so OpsIQ can read your accounting data.",
       },
       // /api/scenario requires ACTION_VIEW, which no self-serve beta owner holds (it is not
       // part of OWNER_SCOPED_CAPABILITIES). Gated to match; was previously visible to every

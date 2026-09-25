@@ -1,0 +1,59 @@
+{
+  "Header": {
+    "ReportName": "ProfitAndLoss",
+    "StartPeriod": "2026-02-01",
+    "EndPeriod": "2026-02-28",
+    "Currency": "USD"
+  },
+  "Columns": {
+    "Column": [
+      { "ColTitle": "", "ColType": "Account" },
+      { "ColTitle": "Total", "ColType": "Money" }
+    ]
+  },
+  "Rows": {
+    "Row": [
+      {
+        "type": "Section",
+        "group": "Income",
+        "Header": { "ColData": [{ "value": "Income" }] },
+        "Rows": {
+          "Row": [{ "type": "Data", "ColData": [{ "value": "Sales", "id": "79" }, { "value": "20000.00" }] }]
+        },
+        "Summary": { "ColData": [{ "value": "Total Income" }, { "value": "20000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "COGS",
+        "Header": { "ColData": [{ "value": "Cost of Goods Sold" }] },
+        "Rows": {
+          "Row": [{ "type": "Data", "ColData": [{ "value": "Cost of Goods Sold", "id": "81" }, { "value": "5000.00" }] }]
+        },
+        "Summary": { "ColData": [{ "value": "Total Cost of Goods Sold" }, { "value": "5000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "Expenses",
+        "Header": { "ColData": [{ "value": "Expenses" }] },
+        "Rows": {
+          "Row": [
+            {
+              "type": "Data",
+              "ColData": [{ "value": "Sales Commissions (variable)", "id": "90" }, { "value": "8000.00" }]
+            },
+            {
+              "type": "Data",
+              "ColData": [{ "value": "Shipping & Freight (variable)", "id": "91" }, { "value": "6000.00" }]
+            },
+            {
+              "type": "Data",
+              "ColData": [{ "value": "Rent (fixed)", "id": "82" }, { "value": "1000.00" }]
+            }
+          ]
+        },
+        "Summary": { "ColData": [{ "value": "Total Expenses" }, { "value": "15000.00" }] }
+      }
+    ]
+  },
+  "time": "2026-09-25T10:00:00-07:00"
+}

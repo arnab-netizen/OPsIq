@@ -76,6 +76,16 @@ function retryDelaySeconds(attempt: number): number {
 
 const LEASE_MS = 5 * 60 * 1000; // 5-minute processing lease
 
+interface ClaimedTaskRow {
+  id: string;
+  task_name: string;
+  payload: unknown;
+  attempts: number;
+  max_attempts: number;
+  workspace_id: string | null;
+  previous_status: string;
+}
+
 /**
  * Best-effort audit emission for scheduler lifecycle transitions. Audit
  * writes must never abort or mask the scheduler's own outcome — a failure
@@ -185,15 +195,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     // previous_status per row (not just for logging, unlike the CTE in
     // claimStartup()) is what lets processDue distinguish a fresh pending
     // pickup from a stale-lease crash-recovery reclaim for audit purposes.
-    const claimed = await db.$queryRaw<Array<{
-      id: string;
-      task_name: string;
-      payload: unknown;
-      attempts: number;
-      max_attempts: number;
-      workspace_id: string | null;
-      previous_status: string;
-    }>>`
+    const claimed = await db.$queryRaw<ClaimedTaskRow[]>`
       WITH "to_claim" AS (
         SELECT "id", "status" AS "previous_status"
         FROM "scheduled_tasks"
@@ -223,79 +225,124 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     let processed = 0;
 
     for (const task of claimed) {
-      const wasReclaimed = task.previous_status === "running";
-      await auditTaskEvent(
-        wasReclaimed ? AUDIT_EVENTS.SCHEDULED_TASK_LEASE_RECLAIMED : AUDIT_EVENTS.SCHEDULED_TASK_CLAIMED,
-        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
-        {}
-      );
-
-      const handler = handlers.get(task.task_name);
-      const context: TaskContext = {
-        taskId: task.id,
-        taskName: task.task_name,
-        workspaceId: task.workspace_id,
-        attempt: task.attempts,
-      };
-
-      if (!handler) {
-        // Unknown task type MUST fail closed — not cycle pending forever.
-        // Routed through the exact same retry/backoff/dead-letter path as a
-        // thrown handler error below, so a persistently-unknown task type
-        // becomes an owner-visible dead letter within maxAttempts, and a
-        // task enqueued moments before its handler is registered (rolling
-        // deploy) still gets a bounded number of retries first.
-        logger.warn("No handler registered for task", {
-          taskName: task.task_name,
-          taskId: task.id,
-        });
-        await this.recordFailure(
-          task,
-          new Error(`No handler registered for task type "${task.task_name}"`)
-        );
-        continue;
-      }
-
-      await auditTaskEvent(
-        AUDIT_EVENTS.SCHEDULED_TASK_STARTED,
-        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
-        {}
-      );
-
-      try {
-        const outcome = await handler(task.payload as Record<string, unknown> | null, context);
-        const result: HandlerResult = outcome ?? { status: "SUCCESS" };
-        const isPartialFailure = result.status === "PARTIAL_FAILURE";
-
-        await db.scheduledTask.update({
-          where: { id: task.id },
-          data: {
-            status: isPartialFailure ? "completed_partial_failure" : "completed",
-            completedAt: new Date(),
-            leaseExpiresAt: null,
-            // `lastError` is repurposed here (not just for the dead-letter
-            // path) as "most recent owner-visible note on this task" — NULL
-            // for a clean SUCCESS/NO_WORK so it never falsely echoes a prior
-            // attempt's failure text once the task is genuinely clean.
-            lastError: isPartialFailure
-              ? result.summary ?? "Partial failure: handler reported PARTIAL_FAILURE with no summary"
-              : null,
-          },
-        });
-        await auditTaskEvent(
-          isPartialFailure
-            ? AUDIT_EVENTS.SCHEDULED_TASK_PARTIAL_FAILURE
-            : AUDIT_EVENTS.SCHEDULED_TASK_SUCCEEDED,
-          { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
-          { outcomeStatus: result.status, summary: result.summary, counts: result.counts }
-        );
-        processed++;
-      } catch (err) {
-        await this.recordFailure(task, err);
-      }
+      if (await this.executeClaimedTask(task, handlers)) processed++;
     }
 
     return processed;
+  }
+
+  /**
+   * Claim and execute ONE specific task now, through exactly the same
+   * claim/lease/handler/retry/dead-letter path as processDue(). Used when a
+   * user action or signed webhook needs its own just-enqueued task to run
+   * without waiting for the next cron drain (the platform cron is daily).
+   * Claimable only under the same conditions as processDue (pending and due,
+   * or running with an expired lease) and under FOR UPDATE SKIP LOCKED, so it
+   * can never double-run a task that a concurrent drain already holds.
+   * Returns true when the task was claimed and its handler succeeded.
+   */
+  async processTaskById(taskId: string, handlers: Map<string, TaskHandler>): Promise<boolean> {
+    const now = new Date();
+    const leaseExpiry = new Date(now.getTime() + LEASE_MS);
+    const claimed = await db.$queryRaw<ClaimedTaskRow[]>`
+      WITH "to_claim" AS (
+        SELECT "id", "status" AS "previous_status"
+        FROM "scheduled_tasks"
+        WHERE "id" = ${taskId}::uuid AND (
+          ("status" = 'pending'  AND "scheduled_for" <= ${now})
+          OR
+          ("status" = 'running'  AND "lease_expires_at" < ${now})
+        )
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE "scheduled_tasks" t
+      SET "status"           = 'running',
+          "started_at"       = ${now},
+          "lease_expires_at" = ${leaseExpiry},
+          "attempts"         = t."attempts" + 1
+      FROM "to_claim"
+      WHERE t."id" = "to_claim"."id"
+      RETURNING
+        t."id", t."task_name", t."payload", t."attempts", t."max_attempts",
+        t."workspace_id", "to_claim"."previous_status"
+    `;
+    if (claimed.length === 0) return false;
+    return this.executeClaimedTask(claimed[0], handlers);
+  }
+
+  /** Execute one already-claimed task. Returns true on handler success. */
+  private async executeClaimedTask(task: ClaimedTaskRow, handlers: Map<string, TaskHandler>): Promise<boolean> {
+    const wasReclaimed = task.previous_status === "running";
+    await auditTaskEvent(
+      wasReclaimed ? AUDIT_EVENTS.SCHEDULED_TASK_LEASE_RECLAIMED : AUDIT_EVENTS.SCHEDULED_TASK_CLAIMED,
+      { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+      {}
+    );
+
+    const handler = handlers.get(task.task_name);
+    const context: TaskContext = {
+      taskId: task.id,
+      taskName: task.task_name,
+      workspaceId: task.workspace_id,
+      attempt: task.attempts,
+    };
+
+    if (!handler) {
+      // Unknown task type MUST fail closed — not cycle pending forever.
+      // Routed through the exact same retry/backoff/dead-letter path as a
+      // thrown handler error below, so a persistently-unknown task type
+      // becomes an owner-visible dead letter within maxAttempts, and a
+      // task enqueued moments before its handler is registered (rolling
+      // deploy) still gets a bounded number of retries first.
+      logger.warn("No handler registered for task", {
+        taskName: task.task_name,
+        taskId: task.id,
+      });
+      await this.recordFailure(
+        task,
+        new Error(`No handler registered for task type "${task.task_name}"`)
+      );
+      return false;
+    }
+
+    await auditTaskEvent(
+      AUDIT_EVENTS.SCHEDULED_TASK_STARTED,
+      { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+      {}
+    );
+
+    try {
+      const outcome = await handler(task.payload as Record<string, unknown> | null, context);
+      const result: HandlerResult = outcome ?? { status: "SUCCESS" };
+      const isPartialFailure = result.status === "PARTIAL_FAILURE";
+
+      await db.scheduledTask.update({
+        where: { id: task.id },
+        data: {
+          status: isPartialFailure ? "completed_partial_failure" : "completed",
+          completedAt: new Date(),
+          leaseExpiresAt: null,
+          // `lastError` is repurposed here (not just for the dead-letter
+          // path) as "most recent owner-visible note on this task" — NULL
+          // for a clean SUCCESS/NO_WORK so it never falsely echoes a prior
+          // attempt's failure text once the task is genuinely clean.
+          lastError: isPartialFailure
+            ? result.summary ?? "Partial failure: handler reported PARTIAL_FAILURE with no summary"
+            : null,
+        },
+      });
+      await auditTaskEvent(
+        isPartialFailure
+          ? AUDIT_EVENTS.SCHEDULED_TASK_PARTIAL_FAILURE
+          : AUDIT_EVENTS.SCHEDULED_TASK_SUCCEEDED,
+        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+        { outcomeStatus: result.status, summary: result.summary, counts: result.counts }
+      );
+      return true;
+    } catch (err) {
+      await this.recordFailure(task, err);
+      return false;
+    }
   }
 
   /**

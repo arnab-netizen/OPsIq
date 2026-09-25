@@ -1,0 +1,18 @@
+{
+  "Header": {
+    "ReportName": "ProfitAndLoss",
+    "StartPeriod": "2026-02-01",
+    "EndPeriod": "2026-02-28",
+    "Currency": "USD"
+  },
+  "Columns": {
+    "Column": [
+      { "ColTitle": "", "ColType": "Account" },
+      { "ColTitle": "Total", "ColType": "Money" }
+    ]
+  },
+  "Rows": {
+    "Row": []
+  },
+  "time": "2026-09-25T10:00:00-07:00"
+}

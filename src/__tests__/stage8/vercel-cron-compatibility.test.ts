@@ -40,6 +40,7 @@ const processDue = vi.fn();
 const enqueueDueEmailRetryTasks = vi.fn();
 const enqueueDueFinanceLearningBridgeTasks = vi.fn();
 const enqueueDueReassessmentScanTasks = vi.fn();
+const enqueueDueQuickBooksSyncTasks = vi.fn();
 
 vi.mock("@/infra/scheduler", () => ({
   DatabaseSchedulerProvider: class {
@@ -55,6 +56,7 @@ vi.mock("@/services/scheduler/scheduler-producers", () => ({
   enqueueDueEmailRetryTasks,
   enqueueDueFinanceLearningBridgeTasks,
   enqueueDueReassessmentScanTasks,
+  enqueueDueQuickBooksSyncTasks,
 }));
 
 vi.mock("@/infra/observability", () => ({ captureError: vi.fn() }));
@@ -105,6 +107,7 @@ beforeEach(() => {
   enqueueDueEmailRetryTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueFinanceLearningBridgeTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueReassessmentScanTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
+  enqueueDueQuickBooksSyncTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   vi.stubEnv("CRON_SECRET", SECRET);
 });
 
@@ -168,10 +171,11 @@ describe("[stage8] 6. cron authentication is fail-closed", () => {
 });
 
 describe("[stage8] producers run before the drain and their results are reported", () => {
-  it("calls all three producers and reports their scan results", async () => {
+  it("calls all four producers and reports their scan results", async () => {
     enqueueDueEmailRetryTasks.mockResolvedValueOnce({ candidatesFound: 5, enqueued: 5 });
     enqueueDueFinanceLearningBridgeTasks.mockResolvedValueOnce({ candidatesFound: 2, enqueued: 2 });
     enqueueDueReassessmentScanTasks.mockResolvedValueOnce({ candidatesFound: 3, enqueued: 3 });
+    enqueueDueQuickBooksSyncTasks.mockResolvedValueOnce({ candidatesFound: 4, enqueued: 4 });
 
     const { GET } = await loadRoute();
     const body = await (await GET(cronRequest(SECRET))).json();
@@ -179,9 +183,11 @@ describe("[stage8] producers run before the drain and their results are reported
     expect(enqueueDueEmailRetryTasks).toHaveBeenCalledTimes(1);
     expect(enqueueDueFinanceLearningBridgeTasks).toHaveBeenCalledTimes(1);
     expect(enqueueDueReassessmentScanTasks).toHaveBeenCalledTimes(1);
+    expect(enqueueDueQuickBooksSyncTasks).toHaveBeenCalledTimes(1);
     expect(body.results.producers.emailRetry).toEqual({ candidatesFound: 5, enqueued: 5 });
     expect(body.results.producers.financeLearningBridge).toEqual({ candidatesFound: 2, enqueued: 2 });
     expect(body.results.producers.reassessmentScan).toEqual({ candidatesFound: 3, enqueued: 3 });
+    expect(body.results.producers.quickBooksSync).toEqual({ candidatesFound: 4, enqueued: 4 });
   });
 
   it("a producer failure does not abort the scheduler drain (207, not 500)", async () => {
@@ -357,10 +363,11 @@ describe("[stage8] 10. selected cadence matches the classified requirement", () 
   it("production code enqueues scheduled tasks via canonical producers, closing the P0-08 dead-scheduler gap", () => {
     // Positive contract replacing the historical negative canary
     // ("no production code enqueues scheduled tasks"). The route wires all
-    // three producers, and each producer genuinely calls scheduler.schedule().
+    // four producers, and each producer genuinely calls scheduler.schedule().
     expect(ROUTE_SRC).toMatch(/enqueueDueEmailRetryTasks/);
     expect(ROUTE_SRC).toMatch(/enqueueDueFinanceLearningBridgeTasks/);
     expect(ROUTE_SRC).toMatch(/enqueueDueReassessmentScanTasks/);
+    expect(ROUTE_SRC).toMatch(/enqueueDueQuickBooksSyncTasks/);
     expect(PRODUCERS_SRC).toMatch(/scheduler\.schedule\(/);
   });
 

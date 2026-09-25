@@ -1,0 +1,62 @@
+{
+  "Header": {
+    "ReportName": "AgedPayables",
+    "StartPeriod": "",
+    "EndPeriod": "2026-01-31",
+    "Currency": "USD"
+  },
+  "Columns": {
+    "Column": [
+      { "ColTitle": "", "ColType": "Vendor" },
+      { "ColTitle": "Current", "ColType": "Money" },
+      { "ColTitle": "1 - 30", "ColType": "Money" },
+      { "ColTitle": "31 - 60", "ColType": "Money" },
+      { "ColTitle": "61 - 90", "ColType": "Money" },
+      { "ColTitle": "91 and over", "ColType": "Money" },
+      { "ColTitle": "Total", "ColType": "Money" }
+    ]
+  },
+  "Rows": {
+    "Row": [
+      {
+        "type": "Data",
+        "ColData": [
+          { "value": "Office Supply Co", "id": "21" },
+          { "value": "600.00" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "600.00" }
+        ]
+      },
+      {
+        "type": "Data",
+        "ColData": [
+          { "value": "Landlord Partners", "id": "22" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "2500.00" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "2500.00" }
+        ]
+      },
+      {
+        "type": "Section",
+        "Summary": {
+          "ColData": [
+            { "value": "TOTAL" },
+            { "value": "600.00" },
+            { "value": "0.00" },
+            { "value": "2500.00" },
+            { "value": "0.00" },
+            { "value": "0.00" },
+            { "value": "3100.00" }
+          ]
+        }
+      }
+    ]
+  },
+  "time": "2026-09-25T10:00:00-07:00"
+}

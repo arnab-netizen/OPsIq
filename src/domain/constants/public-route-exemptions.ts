@@ -72,6 +72,7 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
   WEBHOOK_SIGNED: [
     "/api/webhooks/stripe", // Signature verification is mandatory
     "/api/webhooks/resend", // HMAC-SHA256 (svix) signature verification — fail-closed when RESEND_WEBHOOK_SECRET unset
+    "/api/webhooks/quickbooks", // Intuit HMAC-SHA256 (intuit-signature) verification — fail-closed when QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN unset
   ],
   PRIVACY: [
     // A user filing a privacy request (access/export, deletion, correction) may be
@@ -121,6 +122,7 @@ export const EXEMPTION_REASONS = {
   "/api/auth/resend-verification": "Verification-resend request endpoint - public and enumeration-resistant by design; rate-limited per IP and email",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
   "/api/webhooks/resend": "Email webhook with HMAC-SHA256 (svix) signature verification + timestamp tolerance - fail-closed when RESEND_WEBHOOK_SECRET unset",
+  "/api/webhooks/quickbooks": "QuickBooks Online change-notification webhook - authorized only by Intuit's HMAC-SHA256 intuit-signature over the raw body (constant-time compare), fail-closed (503) when QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN unset; payload is a trigger only (canonical data is refetched via CDC with each workspace's own tokens) and routes solely to connectors already bound to the notified realm",
   "/api/privacy-requests": "Privacy request (access/export, deletion, correction) endpoint - public and enumeration-resistant by design (a locked-out user isn't authenticated); rate-limited per IP and email",
   "/api/beta-requests": "Controlled-beta access request endpoint - public and enumeration-resistant by design (a visitor requesting beta access has no account yet); rate-limited per IP and email",
   "/api/internal/cron/scheduler": "Vercel Cron endpoint - authorized by CRON_SECRET bearer token injected by Vercel, fail-closed when unset",

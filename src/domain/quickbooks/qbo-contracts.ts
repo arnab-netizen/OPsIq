@@ -265,7 +265,16 @@ export interface QuickBooksStatusDTO {
     lastSyncAt: string | null;
     lastSyncRecords: number | null;
     syncFailureMessage: string | null;
+    /** True exactly when allowedActions.reconnect is true (kept for readability in the UI). */
     needsReconnect: boolean;
+    /**
+     * Server-decided owner actions. The UI renders controls ONLY from these
+     * flags — it never derives lifecycle decisions from `status` itself.
+     *  sync:       status ACTIVE and the credentials are usable.
+     *  disconnect: status is not DISCONNECTED.
+     *  reconnect:  status REFRESH_FAILED | EXPIRED | DISCONNECTED, or the refresh token has expired.
+     */
+    allowedActions: { sync: boolean; disconnect: boolean; reconnect: boolean };
     refreshTokenExpiresAt: string | null;
     sync: {
       phase: QboSyncPhase | null;

@@ -151,3 +151,11 @@ export async function enqueueDueReassessmentScanTasks(): Promise<ProducerScanRes
 
   return { candidatesFound: dueWorkspaces.length, enqueued };
 }
+
+/**
+ * QuickBooks Online daily catch-up: one SCHEDULED quickbooks-sync task per
+ * ACTIVE QuickBooks connector (day-bucketed idempotency key). Implemented next
+ * to the sync service it feeds; re-exported here so the cron route consumes
+ * every producer from this one canonical module.
+ */
+export { enqueueDueQuickBooksSyncTasks } from "@/services/quickbooks/qbo-sync.service";

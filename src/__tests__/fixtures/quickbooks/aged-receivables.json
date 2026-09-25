@@ -1,0 +1,74 @@
+{
+  "Header": {
+    "ReportName": "AgedReceivables",
+    "StartPeriod": "",
+    "EndPeriod": "2026-01-31",
+    "Currency": "USD"
+  },
+  "Columns": {
+    "Column": [
+      { "ColTitle": "", "ColType": "Customer" },
+      { "ColTitle": "Current", "ColType": "Money" },
+      { "ColTitle": "1 - 30", "ColType": "Money" },
+      { "ColTitle": "31 - 60", "ColType": "Money" },
+      { "ColTitle": "61 - 90", "ColType": "Money" },
+      { "ColTitle": "91 and over", "ColType": "Money" },
+      { "ColTitle": "Total", "ColType": "Money" }
+    ]
+  },
+  "Rows": {
+    "Row": [
+      {
+        "type": "Data",
+        "ColData": [
+          { "value": "Acme Corp", "id": "12" },
+          { "value": "1200.00" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "1200.00" }
+        ]
+      },
+      {
+        "type": "Data",
+        "ColData": [
+          { "value": "Beta LLC", "id": "13" },
+          { "value": "" },
+          { "value": "3000.00" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "3000.00" }
+        ]
+      },
+      {
+        "type": "Data",
+        "ColData": [
+          { "value": "Gamma Inc", "id": "14" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "" },
+          { "value": "3000.00" },
+          { "value": "3000.00" }
+        ]
+      },
+      {
+        "type": "Section",
+        "Summary": {
+          "ColData": [
+            { "value": "TOTAL" },
+            { "value": "1200.00" },
+            { "value": "3000.00" },
+            { "value": "0.00" },
+            { "value": "0.00" },
+            { "value": "3000.00" },
+            { "value": "7200.00" }
+          ]
+        }
+      }
+    ]
+  },
+  "time": "2026-09-25T10:00:00-07:00"
+}

@@ -101,6 +101,41 @@ const ALLOWLISTED_HEADERS = new Set([
 ]);
 
 /**
+ * Create a canonical SAME-ORIGIN redirect (302) for routes that must answer a
+ * top-level browser navigation (e.g. an OAuth provider returning the user).
+ *
+ * `location` is deliberately NOT in ALLOWLISTED_HEADERS: an arbitrary
+ * canonicalJson caller must never be able to emit a redirect. This helper is
+ * the only way to produce one, and it can only target a path on the request's
+ * own origin — the path must be absolute ("/...") and not protocol-relative
+ * ("//host"), and the resolved URL's origin is re-checked, so no caller input
+ * can turn it into an open redirect. Query values are URL-encoded by URL.
+ *
+ * @throws TypeError if the path is not a same-origin absolute path
+ */
+export function canonicalRedirect(
+  requestUrl: string,
+  path: string,
+  query: Record<string, string> = {},
+): CanonicalJsonResponse {
+  if (typeof path !== "string" || !path.startsWith("/") || path.startsWith("//") || path.includes("\\")) {
+    throw new TypeError("canonicalRedirect only accepts a same-origin absolute path.");
+  }
+  const origin = new URL(requestUrl).origin;
+  const target = new URL(path, origin);
+  if (target.origin !== origin) {
+    throw new TypeError("canonicalRedirect target must stay on the request origin.");
+  }
+  for (const [k, v] of Object.entries(query)) target.searchParams.set(k, v);
+  return {
+    __canonicalJsonResponse: true,
+    body: { redirect: `${target.pathname}${target.search}` },
+    status: 302,
+    headers: { location: target.toString(), "cache-control": "no-store" },
+  };
+}
+
+/**
  * Create a canonical JSON response with custom status and optional safe headers.
  *
  * @param body - JSON-serializable response body

@@ -16,6 +16,8 @@ import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
+import { quickBooksSyncTaskHandler } from "@/services/quickbooks/qbo-sync.service";
+import { TASK_NAME_QUICKBOOKS_SYNC } from "@/domain/quickbooks/qbo-contracts";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
@@ -136,5 +138,7 @@ export function getProductionTaskHandlers(): Map<string, TaskHandler> {
     [TASK_NAME_ALERT_EMAIL_RETRY, alertEmailRetryHandler],
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
     [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
+    // QuickBooks Online initial/incremental sync (connector-scoped; workspace from the claimed row).
+    [TASK_NAME_QUICKBOOKS_SYNC, quickBooksSyncTaskHandler],
   ]);
 }

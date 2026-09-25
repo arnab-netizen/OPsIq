@@ -2,8 +2,8 @@
  * PR C — controlled-beta navigation/exposure consolidation. Contract tests for the new owner IA:
  * Money/Sales/Operations grouped under one "Business" section (not three unrelated top-level
  * peers), Evidence & Trust promoted to a top-level peer entry, Recovery/Strategy/Marketing/
- * Campaigns visibly marked Preview (real, working links), AI Copilot/Integrations visibly marked
- * Coming soon (non-interactive, no `<a>`, no invented placeholder page), and Customer records
+ * Campaigns/Integrations (QuickBooks Online) visibly marked Preview (real, working links), AI
+ * Copilot visibly marked Coming soon (non-interactive, no `<a>`, no invented placeholder page), and Customer records
  * demoted out of the core Money/Sales/Operations trio without being deleted.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -92,6 +92,7 @@ describe("PR C — Preview items are real, working links with a visible Preview 
     ["Strategy", "/owner/strategy"],
     ["Marketing", "/owner/marketing"],
     ["Campaigns", "/owner/marketing/campaigns"],
+    ["Integrations", "/owner/integrations"],
   ])("%s links to %s and carries a visible 'Preview' pill", (label, href) => {
     const { getByText } = ownerNav();
     const link = getByText(label).closest("a")!;
@@ -103,7 +104,6 @@ describe("PR C — Preview items are real, working links with a visible Preview 
 describe("PR C — Coming Soon items are visible but never clickable or link-shaped", () => {
   it.each([
     ["AI Copilot"],
-    ["Integrations"],
   ])("%s renders as a non-interactive row with a 'Coming soon' pill, no <a> anywhere", (label) => {
     const { getByText, container } = ownerNav();
     const labelEl = getByText(label);
@@ -112,7 +112,7 @@ describe("PR C — Coming Soon items are visible but never clickable or link-sha
     expect(row.textContent).toMatch(/coming soon/i);
     // Sanity: neither label resolves to any anchor in the whole tree.
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs.every((h) => h && !h.includes("copilot") && !h.includes("integration"))).toBe(true);
+    expect(hrefs.every((h) => h && !h.includes("copilot"))).toBe(true);
   });
 
   it("never claims a live QuickBooks/HubSpot connection or a working AI assistant", () => {

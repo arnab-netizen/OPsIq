@@ -1,0 +1,84 @@
+{
+  "Header": {
+    "ReportName": "ProfitAndLoss",
+    "StartPeriod": "2026-01-01",
+    "EndPeriod": "2026-01-31",
+    "Currency": "USD",
+    "Option": [{ "Name": "AccountingMethod", "Value": "Accrual" }]
+  },
+  "Columns": {
+    "Column": [
+      { "ColTitle": "", "ColType": "Account" },
+      { "ColTitle": "Total", "ColType": "Money" }
+    ]
+  },
+  "Rows": {
+    "Row": [
+      {
+        "type": "Section",
+        "group": "Income",
+        "Header": { "ColData": [{ "value": "Income" }] },
+        "Rows": {
+          "Row": [
+            { "type": "Data", "ColData": [{ "value": "Sales", "id": "79" }, { "value": "10000.00" }] },
+            { "type": "Data", "ColData": [{ "value": "Services", "id": "80" }, { "value": "2000.00" }] }
+          ]
+        },
+        "Summary": { "ColData": [{ "value": "Total Income" }, { "value": "12000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "COGS",
+        "Header": { "ColData": [{ "value": "Cost of Goods Sold" }] },
+        "Rows": {
+          "Row": [
+            { "type": "Data", "ColData": [{ "value": "Cost of Goods Sold", "id": "81" }, { "value": "3000.00" }] }
+          ]
+        },
+        "Summary": { "ColData": [{ "value": "Total Cost of Goods Sold" }, { "value": "3000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "GrossProfit",
+        "Summary": { "ColData": [{ "value": "Gross Profit" }, { "value": "9000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "Expenses",
+        "Header": { "ColData": [{ "value": "Expenses" }] },
+        "Rows": {
+          "Row": [
+            { "type": "Data", "ColData": [{ "value": "Rent", "id": "82" }, { "value": "1500.00" }] },
+            { "type": "Data", "ColData": [{ "value": "Payroll", "id": "83" }, { "value": "2500.00" }] }
+          ]
+        },
+        "Summary": { "ColData": [{ "value": "Total Expenses" }, { "value": "4000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "NetOperatingIncome",
+        "Summary": { "ColData": [{ "value": "Net Operating Income" }, { "value": "5000.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "OtherIncome",
+        "Header": { "ColData": [{ "value": "Other Income" }] },
+        "Rows": { "Row": [] },
+        "Summary": { "ColData": [{ "value": "Total Other Income" }, { "value": "0.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "OtherExpenses",
+        "Header": { "ColData": [{ "value": "Other Expenses" }] },
+        "Rows": { "Row": [] },
+        "Summary": { "ColData": [{ "value": "Total Other Expenses" }, { "value": "0.00" }] }
+      },
+      {
+        "type": "Section",
+        "group": "NetIncome",
+        "Summary": { "ColData": [{ "value": "Net Income" }, { "value": "5000.00" }] }
+      }
+    ]
+  },
+  "time": "2026-09-25T10:00:00-07:00"
+}
