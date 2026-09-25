@@ -270,9 +270,18 @@ export interface GuidanceDeps {
   validationOutcomes?: (workspaceId: string) => Promise<ValidationOutcomeView[]>;
   /** Optional — persisted opportunity execution-task statuses (PASS 12). Absent on a fake-DI test. */
   executionTasks?: (workspaceId: string) => Promise<Map<string, PersistedTaskStatus>>;
-  /** Optional — active owner goal trajectory (Phase 5). Absent on a fake-DI test → null. */
-  goalTrajectoryFn?: (workspaceId: string) => Promise<{
-    goal: { targetType: string; targetAmount: number; targetCurrency: string; targetDate: Date };
+  /**
+   * Optional — the goal Home shows for the selected business (goal.service.ts resolveHomeGoal): the
+   * business's own ACTIVE goal, or a legacy workspace goal only in a single-business workspace.
+   * Absent on a fake-DI test → null. `goal: null` = no goal applies (scopeLabel says for which business).
+   */
+  goalTrajectoryFn?: (workspaceId: string, businessId: string | null) => Promise<{
+    goal: { targetType: string; targetAmount: number; targetCurrency: string; targetDate: Date; scope?: "business" | "workspace" };
+    /** "Business goal · <name>" | "Workspace goal". */
+    scopeLabel?: string;
+    /** Set when the goal is not projected (e.g. not measured, or a legacy goal spanning businesses). */
+    unavailableReason?: string | null;
+    metricBasis?: string;
     trajectory: {
       confidence: string;
       confidenceRationale: string;
@@ -285,7 +294,16 @@ export interface GuidanceDeps {
       /** Absent on older/fake trajectories; null = cannot be determined. */
       onTrack?: boolean | null;
     };
-  } | null>;
+  } | { goal: null; scopeLabel: string } | null>;
+  /**
+   * Optional — which objectives' linkedGoalId resolves (following successors of replaced goals) to an
+   * ACTIVE goal in the objective's scope (goal.service.ts resolveAlignedObjectiveLinks). Absent on a
+   * fake-DI test → a link counts as aligned when set (previous behaviour).
+   */
+  objectiveGoalAlignmentFn?: (
+    workspaceId: string,
+    links: Array<{ objectiveId: string; objectiveBusinessId: string | null; linkedGoalId: string | null }>,
+  ) => Promise<Set<string>>;
   /** Optional — active operating policies for this workspace (Phase 7). Absent on a fake-DI test → null. */
   policyListFn?: (workspaceId: string) => Promise<Array<{ policyKey: string; isActive: boolean; hardBlock: boolean }>>;
   /** Optional — evaluate a single policy against a live measurement (Phase 7). Absent on a fake-DI test → null. */
@@ -304,7 +322,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getActiveExternalOpportunitySignals } = await import("@/services/owner-mode/external-opportunity-intake.service");
   const { getActiveValidationOutcomes } = await import("@/services/owner-mode/validation-outcome.service");
   const { getPersistedExecutionTasks } = await import("@/services/owner-mode/opportunity-execution.service");
-  const { computeActiveGoalTrajectory } = await import("@/services/owner-strategy/goal.service");
+  const { resolveHomeGoal, resolveAlignedObjectiveLinks } = await import("@/services/owner-strategy/goal.service");
   const { listPolicies, evaluatePolicy } = await import("@/services/governance/operating-policy.service");
   return {
     db: db as unknown as GuidanceDb,
@@ -319,7 +337,18 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     complaintRework: (workspaceId: string) => getComplaintReworkLinks(workspaceId),
     reusedHash: (workspaceId: string) => getReusedHashFindings(workspaceId),
     proofRiskAdjudications: (workspaceId: string) => getProofRiskAdjudications(workspaceId),
-    goalTrajectoryFn: (workspaceId: string) => computeActiveGoalTrajectory(workspaceId),
+    goalTrajectoryFn: async (workspaceId: string, businessId: string | null) => {
+      const home = await resolveHomeGoal(workspaceId, businessId);
+      if (!home.view) return { goal: null, scopeLabel: home.scopeLabel };
+      return {
+        goal: { ...home.view.goal, scope: home.view.goal.scope },
+        trajectory: home.view.trajectory,
+        scopeLabel: home.scopeLabel,
+        unavailableReason: home.view.unavailableReason,
+        metricBasis: home.view.metricBasis,
+      };
+    },
+    objectiveGoalAlignmentFn: (workspaceId, links) => resolveAlignedObjectiveLinks(workspaceId, links),
     policyListFn: (workspaceId: string) => listPolicies(workspaceId),
     policyEvalFn: (workspaceId: string, policyKey: string, value: number, unit: string) => evaluatePolicy(workspaceId, policyKey, value, unit),
   };
@@ -375,6 +404,12 @@ export interface GoalAttentionSignal {
   trajectoryMiss: boolean | null;
   assumptions: string[];
   beginnerExplanation: string;
+  /** "Business goal · <name>" | "Workspace goal" | "No goal set for <name>"; null on fake-DI paths. */
+  scopeLabel?: string | null;
+  /** Which goal scope is shown; null when no goal applies. */
+  goalScope?: "business" | "workspace" | null;
+  /** Why the goal is not projected, when it isn't (stated, never a guessed number). */
+  unavailableReason?: string | null;
 }
 
 export interface ActivePolicyDetail {
@@ -1308,6 +1343,7 @@ async function buildBusinessOperatingSystem(
   workspaceId: string,
   businessId: string | null,
   db: GuidanceDeps["db"],
+  objectiveGoalAlignmentFn?: GuidanceDeps["objectiveGoalAlignmentFn"],
 ): Promise<BusinessOperatingSystemView | null> {
   try {
     // GuidanceDb is deliberately a minimal interface (see its own doc comment); this function
@@ -1457,6 +1493,15 @@ async function buildBusinessOperatingSystem(
       ? Math.round(((linkedSpend as number) / (totalSpend as number)) * 100)
       : null;
 
+    // Goal-link alignment re-evaluated at read time: a link to a replaced goal follows its successor,
+    // and only an ACTIVE goal in the objective's scope counts (the objectives here are all in `businessId`'s scope).
+    const alignedObjectiveIds = objectiveGoalAlignmentFn
+      ? await objectiveGoalAlignmentFn(
+          workspaceId,
+          rawObjectives.map((o) => ({ objectiveId: o.id, objectiveBusinessId: businessId, linkedGoalId: o.linkedGoalId })),
+        )
+      : null;
+
     // Build portfolio view from raw objectives
     const portfolioInputs = rawObjectives.map((obj) => {
       const daysRemaining = obj.deadline
@@ -1479,7 +1524,7 @@ async function buildBusinessOperatingSystem(
         currentValue: obj.currentValue,
         progressPct,
         deadlineDaysRemaining: daysRemaining,
-        linkedGoalAligned: obj.linkedGoalId !== null,
+        linkedGoalAligned: alignedObjectiveIds ? alignedObjectiveIds.has(obj.id) : obj.linkedGoalId !== null,
         hasBlockingDependencies: obj.blockedBy.length > 0,
         resourceBudgetUsedPct: 0,
         childCount: obj._count.children,
@@ -2245,9 +2290,13 @@ export async function getOwnerNowView(
   // Only available on the live path (goalTrajectoryFn present). Absent on fake-DI unit tests → null.
   // When function is present but returns null: NO_GOAL state (workspace has no active goal set).
   const hasGoalFn = typeof deps.goalTrajectoryFn === "function";
-  const goalTrajectoryRaw = hasGoalFn
-    ? await deps.goalTrajectoryFn!(workspaceId).catch(() => null)
+  // Scoped to the selected business: another business's goal is never shown here, and a legacy
+  // workspace goal only in a single-business workspace (goal.service.ts resolveHomeGoal).
+  const goalResolved = hasGoalFn
+    ? await deps.goalTrajectoryFn!(workspaceId, businessId).catch(() => null)
     : null;
+  const goalTrajectoryRaw = goalResolved && goalResolved.goal ? goalResolved : null;
+  const noGoalScopeLabel = goalResolved && !goalResolved.goal ? goalResolved.scopeLabel : null;
   let goalAttentionSignal: GoalAttentionSignal | null = null;
   if (hasGoalFn && !goalTrajectoryRaw) {
     goalAttentionSignal = {
@@ -2263,18 +2312,25 @@ export async function getOwnerNowView(
       confidence: null,
       trajectoryMiss: null,
       assumptions: [],
-      beginnerExplanation: "No active goal is set. Add a goal to track your progress.",
+      beginnerExplanation: `${noGoalScopeLabel ?? "No active goal is set"}. Add a goal to track your progress.`,
+      scopeLabel: noGoalScopeLabel,
+      goalScope: null,
+      unavailableReason: null,
     };
   }
   if (goalTrajectoryRaw) {
     const { goal, trajectory } = goalTrajectoryRaw;
+    const unavailableReason = "unavailableReason" in goalTrajectoryRaw ? goalTrajectoryRaw.unavailableReason ?? null : null;
     const goalTitle = GOAL_TYPE_LABEL[goal.targetType] ?? goal.targetType.toLowerCase().replace(/_/g, " ");
     const ownerMonths = (goal.targetDate.getTime() - Date.now()) / (30.44 * 24 * 60 * 60 * 1000);
 
     let goalState: GoalAttentionSignal["state"];
     let beginnerExplanation: string;
 
-    if (trajectory.confidence === "LOW") {
+    if (unavailableReason) {
+      goalState = "INSUFFICIENT_DATA";
+      beginnerExplanation = unavailableReason;
+    } else if (trajectory.confidence === "LOW") {
       goalState = "INSUFFICIENT_DATA";
       beginnerExplanation = "Not enough data yet to project your goal. Keep recording results.";
     } else if (trajectory.confidence === "MEDIUM" && trajectory.confidenceRationale.includes("days old")) {
@@ -2316,6 +2372,9 @@ export async function getOwnerNowView(
       trajectoryMiss: trajectory.trajectoryMiss,
       assumptions: trajectory.assumptions,
       beginnerExplanation,
+      scopeLabel: "scopeLabel" in goalTrajectoryRaw ? goalTrajectoryRaw.scopeLabel ?? null : null,
+      goalScope: goal.scope ?? null,
+      unavailableReason,
     };
   }
 
@@ -2459,7 +2518,7 @@ export async function getOwnerNowView(
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
       : Promise.resolve(null),
     buildExecutionLifecycle(workspaceId, deps.db, businessId, executionAttributionAmbiguous),
-    buildBusinessOperatingSystem(workspaceId, businessId, deps.db),
+    buildBusinessOperatingSystem(workspaceId, businessId, deps.db, deps.objectiveGoalAlignmentFn),
   ]);
 
   await deps.db.ownerGuidanceSnapshot.create({

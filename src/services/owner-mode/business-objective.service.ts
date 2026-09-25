@@ -11,6 +11,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { assertObjectiveGoalLink } from "@/services/owner-strategy/goal.service";
 import { Prisma } from "@/generated/prisma/client";
 
 export type ObjectiveType =
@@ -119,6 +120,10 @@ async function _createObjectiveCore(tx: Prisma.TransactionClient, input: CreateO
   if (input.businessId != null) {
     await assertBusinessOwnership(tx, input.workspaceId, input.businessId);
   }
+  if (input.linkedGoalId) {
+    // Same workspace, ACTIVE, and the objective's own scope (goal.service.ts).
+    await assertObjectiveGoalLink(input.workspaceId, input.businessId ?? null, input.linkedGoalId, tx);
+  }
 
   const objective = await tx.businessObjective.create({
     data: {
@@ -207,7 +212,12 @@ export async function updateObjective(input: UpdateObjectiveInput) {
   if (input.resourceBudget !== undefined) updateData.resourceBudget = input.resourceBudget as Prisma.InputJsonValue;
   if (input.constraints !== undefined) updateData.constraints = input.constraints as Prisma.InputJsonValue;
   if (input.ownerId !== undefined) updateData.ownerId = input.ownerId;
-  if (input.linkedGoalId !== undefined) updateData.linkedGoalId = input.linkedGoalId;
+  if (input.linkedGoalId !== undefined) {
+    if (input.linkedGoalId) {
+      await assertObjectiveGoalLink(input.workspaceId, existing.businessId ?? null, input.linkedGoalId);
+    }
+    updateData.linkedGoalId = input.linkedGoalId;
+  }
 
   const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const updated = await tx.businessObjective.update({

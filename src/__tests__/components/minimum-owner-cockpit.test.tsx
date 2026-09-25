@@ -312,6 +312,30 @@ describe("MinimumOwnerCockpit — goal-state humanization (UX-06 Section G7)", (
     expect(getByTestId("cockpit-goal-state").textContent).toBe(label);
   });
 
+  it("shows the goal's scope label (business or workspace) so a goal is never read as another business's", () => {
+    const { getByTestId, rerender } = render(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state: "ON_TRACK", goalScope: "business", scopeLabel: "Business goal · Trinity Services" })} />
+    );
+    expect(getByTestId("cockpit-goal-scope").textContent).toBe("Business goal · Trinity Services");
+    expect(getByTestId("cockpit-goal-scope").getAttribute("data-cockpit-goal-scope")).toBe("business");
+    rerender(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state: "ON_TRACK", goalScope: "workspace", scopeLabel: "Workspace goal" })} />
+    );
+    expect(getByTestId("cockpit-goal-scope").textContent).toBe("Workspace goal");
+  });
+
+  it("with no goal for the selected business, names the business and shows no scope badge", () => {
+    const { getByTestId, queryByTestId } = render(
+      <MinimumOwnerCockpit
+        bridge={view()}
+        onAction={noop}
+        goalAttentionSignal={goalSignal({ state: "NO_GOAL", goalScope: null, scopeLabel: "No goal set for Beta", beginnerExplanation: "No goal set for Beta. Add a goal to track your progress." })}
+      />
+    );
+    expect(queryByTestId("cockpit-goal-scope")).toBeNull();
+    expect(getByTestId("cockpit-goal-explanation").textContent).toMatch(/No goal set for Beta/);
+  });
+
   it("an unrecognized future state falls back to a safe label, never the raw value", () => {
     const unknownSignal = goalSignal({ state: "SOME_FUTURE_STATE" as never });
     const { getByTestId } = render(

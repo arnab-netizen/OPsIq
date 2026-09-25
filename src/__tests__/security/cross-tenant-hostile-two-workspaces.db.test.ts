@@ -70,6 +70,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
   let tokenA = "";
   let userB = "";
   let wsB = "";
+  // Goals are business-scoped: each tenant gets one real business of its own.
+  const bizA = randomUUID();
+  const bizB = randomUUID();
   let tokenB = "";
 
   async function signupAndActivate(workspaceName: string, emailPrefix: string) {
@@ -127,9 +130,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     });
   }
 
-  async function getGoals() {
+  async function getGoals(businessId: string) {
     const { GET } = await import("@/app/api/owner/goals/route");
-    const res = await GET(getRequest("/api/owner/goals"), { params: Promise.resolve({}) } as never);
+    const res = await GET(getRequest(`/api/owner/goals?businessId=${businessId}`), { params: Promise.resolve({}) } as never);
     return { status: res.status, json: await res.json() };
   }
 
@@ -162,13 +165,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     wsB = b.workspaceId;
     tokenB = b.sessionToken;
 
+    for (const [id, workspaceId] of [[bizA, wsA], [bizB, wsB]]) {
+      await db.ownerBusiness.create({
+        data: { id, workspaceId, name: `Hostile biz ${id.slice(0, 4)}`, businessType: "laundry_local_service", currency: "INR", updatedAt: new Date() },
+      });
+    }
+
     // Seed each tenant with its own private data via the REAL POST routes,
     // acting as that tenant's own genuine session.
     actingAs(tokenA);
     const goalA = await postGoal({
       targetType: "PROFIT",
       targetAmount: 111111,
-      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      businessId: bizA,
       targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
@@ -180,7 +189,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const goalB = await postGoal({
       targetType: "REVENUE",
       targetAmount: 222222,
-      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      businessId: bizB,
       targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
@@ -196,6 +205,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     if (workspaceIds.length > 0) {
       await db.auditEvent.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
       await db.ownerGoal.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+      await db.ownerBusiness.deleteMany({ where: { id: { in: [bizA, bizB] } } });
       await db.delegatedTask.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
     }
     if (userIds.length > 0) {
@@ -214,10 +224,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
   it("[1] A cannot read B's data via real owner-mode routes (goals, tasks)", async () => {
     actingAs(tokenA);
 
-    const goals = await getGoals();
+    const goals = await getGoals(bizA);
     expect(goals.status).toBe(200);
-    expect(goals.json.goal?.targetAmount).toBe(111111);
-    expect(goals.json.goal?.targetAmount).not.toBe(222222);
+    expect(goals.json.goal?.goal?.targetAmount).toBe(111111);
+    expect(goals.json.goal?.goal?.targetAmount).not.toBe(222222);
 
     const tasks = await getTasks();
     expect(tasks.status).toBe(200);
@@ -229,10 +239,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
   it("[2] B cannot read A's data via real owner-mode routes (symmetric)", async () => {
     actingAs(tokenB);
 
-    const goals = await getGoals();
+    const goals = await getGoals(bizB);
     expect(goals.status).toBe(200);
-    expect(goals.json.goal?.targetAmount).toBe(222222);
-    expect(goals.json.goal?.targetAmount).not.toBe(111111);
+    expect(goals.json.goal?.goal?.targetAmount).toBe(222222);
+    expect(goals.json.goal?.goal?.targetAmount).not.toBe(111111);
 
     const tasks = await getTasks();
     expect(tasks.status).toBe(200);
@@ -263,7 +273,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const rejected = await postGoal({
       targetType: "REVENUE",
       targetAmount: 999999,
-      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      businessId: bizA,
       targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       workspaceId: wsB,
@@ -284,7 +294,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
     const created = await postGoal({
       targetType: "REVENUE",
       targetAmount: 999999,
-      // Explicit currency: these workspaces have no business to inherit one from (BIV-06).
+      businessId: bizA,
       targetCurrency: "INR",
       targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
@@ -297,13 +307,38 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
 
     // B never sees it.
     actingAs(tokenB);
-    const bGoals = await getGoals();
-    expect(bGoals.json.goal?.targetAmount).not.toBe(999999);
+    const bGoals = await getGoals(bizB);
+    expect(bGoals.json.goal?.goal?.targetAmount).not.toBe(999999);
 
     // A does (it superseded her earlier active goal).
     actingAs(tokenA);
-    const aGoals = await getGoals();
-    expect(aGoals.json.goal?.targetAmount).toBe(999999);
+    const aGoals = await getGoals(bizA);
+    expect(aGoals.json.goal?.goal?.targetAmount).toBe(999999);
+  });
+
+  it("[4b] A cannot create, read or assign goals through B's business id (direct ids never bypass tenant scope)", async () => {
+    actingAs(tokenA);
+    const foreignCreate = await postGoal({
+      businessId: bizB,
+      targetType: "REVENUE",
+      targetAmount: 424242,
+      targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    expect(foreignCreate.status).toBe(404);
+    expect(await db.ownerGoal.findFirst({ where: { targetAmount: 424242 } })).toBeNull();
+
+    const foreignRead = await getGoals(bizB);
+    expect(foreignRead.status).toBe(404);
+    expect(JSON.stringify(foreignRead.json)).not.toContain("222222");
+
+    const bGoal = await db.ownerGoal.findFirst({ where: { workspaceId: wsB, status: "ACTIVE" } });
+    const { POST: assign } = await import("@/app/api/owner/goals/assign/route");
+    const res = await assign(
+      postRequest("/api/owner/goals/assign", { legacyGoalId: bGoal!.id, businessId: bizA, confirm: true }),
+      { params: Promise.resolve({}) } as never
+    );
+    expect(res.status).toBe(404);
+    expect((await db.ownerGoal.findUnique({ where: { id: bGoal!.id } }))!.status).toBe("ACTIVE");
   });
 
   it("[5] a foreign workspaceId injected into the x-workspace-id HEADER has no effect on a real, live request (dynamic runtime proof)", async () => {

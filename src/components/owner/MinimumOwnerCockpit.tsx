@@ -1561,6 +1561,11 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                 </span>
                 {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
               </div>
+              {goalAttentionSignal.goalScope && goalAttentionSignal.scopeLabel && (
+                <p data-testid="cockpit-goal-scope" data-cockpit-goal-scope={goalAttentionSignal.goalScope} className="m-0 text-xs font-medium text-muted-foreground">
+                  {goalAttentionSignal.scopeLabel}
+                </p>
+              )}
               {goalAttentionSignal.gapToClose !== null && (
                 <p data-testid="cockpit-goal-gap" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
                   Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
