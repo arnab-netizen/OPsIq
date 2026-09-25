@@ -4,6 +4,15 @@ Evidence-only record of the owned-content acquisition loop. Every row cites how
 it was verified. Nothing is recorded as done without current evidence; anything
 not verifiable is marked **BLOCKED** or **NOT YET OBSERVED**, never assumed.
 
+**Note (2026-09-25):** a second, more actively-maintained tracking system for
+this same growth work exists outside this repo: a "OpsIQ Ruthless Growth Run"
+scheduled Routine (daily 9am IST) and a Content Desk artifact it reads/writes
+(posts, channels/website, channels/automation-access,
+channels/linkedin-rotation). That system is the one actually driving daily
+posting/backlink/blog activity and is more current than this file. Where the
+two disagree, the Content Desk wins — this file is kept updated in parallel
+for git-history visibility, not as the primary source.
+
 Measurement model (owner-approved):
 
 - **Lead-level source of truth:** first-party beta-request attribution on
@@ -180,3 +189,4 @@ promotion, add-on, or Web Analytics Plus), no production change or redeploy.
 | 2026-09-24 | Prior-run LinkedIn + Medium posts recorded as owner-reported/unverified; second measurement row | PR #537 merged (`96271ce8`); Vercel referrer breakdown; `beta_requests` read-only counts |
 | 2026-09-24 | Production gate PASS recorded from the Claude in Chrome run (§1a); third measurement row + reconciliation (9 → 10 views incl. QA); LinkedIn post analytics; Search Console requests/sitemap; LinkedIn + Medium posts moved from owner-reported to published; Facebook post prepared, not sent | Claude in Chrome production run; Vercel Web Analytics Sep 24 aggregate; `beta_requests` count; PR #538 merged (`6feb2931`) |
 | 2026-09-25 | Check-in: fourth measurement row (Vercel page views/referrers re-queried for the 09-24→09-26 window); UTM breakdown re-confirmed blocked (402); flagged unconfirmed `facebook.com`/`m.facebook.com` referrer traffic for owner confirmation against the prepared Facebook post; `beta_requests` attribution not re-queried (no authorized production DB/admin access this session — named as open item); named the no-Resource-#2-exists cadence blocker. No beta request submitted, no spend, no production change | Vercel Web Analytics API (`aggregate_pageviews`/`count_pageviews`), this file's §2 row and sources above |
+| 2026-09-25 | Discovered the Content Desk (this file's replacement source of truth, see note above). Cross-referenced: the Facebook referrer flagged above is corroborated there as a real owner-run manual post (`fb-1`, posted 2026-09-24 11:08am local per the Content Desk, page `facebook.com/profile.php?id=61594306441149`) — this session still could not independently verify it (facebook.com and medium.com are both EGRESS_BLOCKED by this session's own network policy; LinkedIn is robots-blocked to WebFetch), so it remains owner/prior-session-sourced evidence, not independently re-verified here. Drafted and opened PR #540 (Resource #2, `status: draft`, does not change production) after confirming no topic was pre-assigned anywhere. Checked live connector state (`ListConnectors`): Metricool (social posting/scheduling) and Gmail are both installed but `connect_incomplete` — named as the precise blocker for any session (this one or the cloud Routine) to post to LinkedIn/X/Facebook or send outreach email programmatically. No beta request submitted, no spend, no production change | PR #540, PR #541 (this update); Content Desk `posts/fb-1`, `posts/interactive-session-2026-09-25`; `ListConnectors` tool output |
