@@ -260,6 +260,43 @@ describe("[db] multi-currency", () => {
   });
 });
 
+describe("[db] legacy goal projection (hostile-review P1)", () => {
+  it("[db] a legacy goal in a multi-business workspace is never projected, even when only one business has results in its currency", async () => {
+    const ws = newWorkspace();
+    const usd = await business(ws, "Boston", "USD");
+    const eur = await business(ws, "Berlin", "EUR");
+    for (let m = 0; m < 6; m++) await snapshot(ws, usd, m, 1000 + m * 100, "USD");
+    for (let m = 0; m < 6; m++) await snapshot(ws, eur, m, 900 + m * 100, "EUR");
+    await legacyGoal(ws, { targetCurrency: "USD" });
+    const v = await computeGoalTrajectoryView((await getActiveLegacyGoal(ws))!);
+    expect(v.unavailableReason).toMatch(/consolidated reporting/);
+    expect(v.trajectory.currentValue).toBeNull();
+    expect(v.trajectory.percentComplete).toBeNull();
+    expect(v.dataWindow).toBeNull();
+  });
+
+  it("[db] same currency but the second business has no results yet: still not projected", async () => {
+    const ws = newWorkspace();
+    const a = await business(ws, "A", "INR");
+    await business(ws, "B", "INR");
+    for (let m = 0; m < 4; m++) await snapshot(ws, a, m, 1000 + m * 100, "INR");
+    await legacyGoal(ws);
+    const v = await computeGoalTrajectoryView((await getActiveLegacyGoal(ws))!);
+    expect(v.unavailableReason).toMatch(/consolidated reporting/);
+    expect(v.trajectory.currentValue).toBeNull();
+  });
+
+  it("[db] a legacy goal in a single-business workspace is projected on that business's results", async () => {
+    const ws = newWorkspace();
+    const solo = await business(ws, "Solo", "INR");
+    for (let m = 0; m < 4; m++) await snapshot(ws, solo, m, 1000 + m * 100, "INR");
+    await legacyGoal(ws);
+    const v = await computeGoalTrajectoryView((await getActiveLegacyGoal(ws))!);
+    expect(v.unavailableReason).toBeNull();
+    expect(v.trajectory.currentValue).toBe(1300);
+  });
+});
+
 describe("[db] legacy workspace goals", () => {
   it("[db] a null-scope goal is preserved and readable as an explicit workspace goal", async () => {
     const ws = newWorkspace();

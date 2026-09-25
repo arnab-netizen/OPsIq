@@ -533,6 +533,23 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
     };
   }
 
+  // A legacy workspace goal describes one business only when the workspace has exactly one real
+  // business. Decided on the business count, never on which snapshots happen to match: filtering
+  // by currency (or a business without results yet) must not turn one business's results into the
+  // workspace's (hostile-review P1).
+  if (!goal.businessId && !(await hasExactlyOneRealBusiness(goal.workspaceId))) {
+    return {
+      goal,
+      trajectory: emptyTrajectory(goal),
+      metricBasis,
+      unavailableReason:
+        "Your workspace has several businesses. A workspace goal can't be tracked without consolidated reporting, which OpsIQ does not have yet — assign this goal to one business to track it.",
+      dataWindow: null,
+      excludedSnapshotCount,
+      excludedReason,
+    };
+  }
+
   // Newest 12 periods in the goal's currency (then oldest-first for the engine).
   const newestFirst = (await db.ownerMetricSnapshot.findMany({
     where: { ...scopeWhere, currency: currencyMatch },
@@ -541,19 +558,6 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
     take: 12,
   })) as SnapshotRow[];
   const snapshots = [...newestFirst].reverse();
-  const businessCount = new Set(snapshots.map((s) => s.businessId)).size;
-
-  if (!goal.businessId && businessCount > 1) {
-    return {
-      goal,
-      trajectory: emptyTrajectory(goal),
-      metricBasis,
-      unavailableReason: `Recorded results come from ${businessCount} businesses. A workspace goal can't be tracked without consolidated reporting, which OpsIQ does not have yet — assign this goal to one business to track it.`,
-      dataWindow: null,
-      excludedSnapshotCount,
-      excludedReason,
-    };
-  }
 
   const periods: TrailingPeriod[] = snapshots.map((s) => ({
     periodStart: s.periodStart,
