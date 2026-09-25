@@ -292,3 +292,26 @@ describe("goal-trajectory — every numeric output is finite or null (beta integ
     expect(JSON.parse(JSON.stringify(r))).toMatchObject({ requiredMonthlyImprovement: null, targetDatePassed: true });
   });
 });
+
+describe("goal-trajectory — values crossing zero (final hostile audit P1-2)", () => {
+  const series = (vals: number[]) =>
+    vals.map((v, i) => ({ periodStart: monthsAgo(vals.length - i), periodEnd: monthsAgo(vals.length - i - 1), revenue: null, netProfit: v }));
+
+  it("profit falling into a loss: no NaN anywhere and never 'on track'", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 5000, targetDate: monthsAhead(12), periods: series([1000, 800, -500]), now });
+    for (const v of [r.projectedMonthsToGoal, r.requiredMonthlyImprovement, r.gapToClose, r.currentValue, r.percentComplete]) {
+      expect(v === null || Number.isFinite(v)).toBe(true);
+    }
+    expect(r.currentTrajectoryDate === null || Number.isFinite(r.currentTrajectoryDate.getTime())).toBe(true);
+    expect(r.onTrack).toBe(false);
+    expect(r.projectedMonthsToGoal).toBeNull();
+    expect(r.assumptions.join(" ")).not.toMatch(/NaN/);
+    expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("an improving loss (−1000 → −500) is not reported on track and has no NaN", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 5000, targetDate: monthsAhead(12), periods: series([-1000, -800, -500]), now });
+    expect(r.onTrack).not.toBe(true);
+    expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
+  });
+});

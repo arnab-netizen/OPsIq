@@ -541,7 +541,7 @@ export default function OwnerCockpitPage() {
             onBosAction={onBosAction}
             financeTopPriority={financeTopPriority}
             domainTopPriority={domainTopPriority}
-            hasBusiness={businesses.length > 0}
+            hasBusiness={contextLoading || businesses.length > 0}
             activeBusinessId={activeBusinessId}
             busy={busy}
           />

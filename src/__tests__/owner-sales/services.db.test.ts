@@ -303,7 +303,7 @@ describe("[db] Owner Sales services", () => {
     await teardownOwnerBusiness(businessId);
   });
 
-  it("[db] re-diagnosis carries an open action forward instead of duplicating it, and the dashboard still shows it (BIV-12)", async () => {
+  it("[db] re-diagnosis carries an engaged action forward (re-prioritised) instead of duplicating it; untouched proposals are regenerated (BIV-12)", async () => {
     const workspaceId = ws();
     const businessId = await newBusiness(workspaceId);
     const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
@@ -311,24 +311,59 @@ describe("[db] Owner Sales services", () => {
     const inFlight = cycle1.actions[0];
     await updateSalesAction(inFlight.id, { status: "assigned" }, actor, workspaceId);
     await updateSalesAction(inFlight.id, { status: "in_progress" }, actor, workspaceId);
+    // Simulate a stale ranking so re-evaluation is observable.
+    await db.ownerSalesAction.update({ where: { id: inFlight.id }, data: { priorityScore: 1 } });
 
     const cycle2 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
-    // No new proposed duplicate for the in-flight action's finding/recommendation.
-    const dupes = cycle2.actions.filter(
-      (a: { findingCode: string; recommendationCode: string }) =>
-        a.findingCode === inFlight.findingCode && a.recommendationCode === inFlight.recommendationCode
-    );
-    expect(dupes).toHaveLength(0);
-    // Every other recommendation that was merely proposed is also carried, not re-created.
-    expect(cycle2.actions).toHaveLength(0);
+    const sameIntent = (a: { findingCode: string; recommendationCode: string }) =>
+      a.findingCode === inFlight.findingCode && a.recommendationCode === inFlight.recommendationCode;
+    // No duplicate for the engaged action; every untouched proposal is regenerated fresh.
+    expect(cycle2.actions.filter(sameIntent)).toHaveLength(0);
+    expect(cycle2.actions).toHaveLength(cycle1.actions.length - 1);
+    // The carried action's priority was re-evaluated against the new diagnosis.
+    const reevaluated = await db.ownerSalesAction.findFirst({ where: { id: inFlight.id } });
+    expect(reevaluated!.priorityScore).toBe(inFlight.priorityScore);
+    expect(reevaluated!.status).toBe("in_progress");
 
     const dash = await getSalesDashboard(workspaceId, businessId);
     const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === inFlight.id) as
-      | { status: string; carriedFromCycleSequence?: number }
+      | { status: string; carriedFromCycleSequence?: number; stillFlaggedByLatestDiagnosis?: boolean }
       | undefined;
     expect(listed?.status).toBe("in_progress");
     expect(listed?.carriedFromCycleSequence).toBe(cycle1.sequenceNumber);
+    expect(listed?.stillFlaggedByLatestDiagnosis).toBe(true);
+    // Untouched cycle-1 proposals are superseded by cycle 2's, not listed twice.
     expect(dash.latestCycle!.actions).toHaveLength(cycle1.actions.length);
+    expect(dash.recommendedNextAction).not.toBeNull();
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] an engaged action whose finding the latest diagnosis no longer raises stays visible but is flagged not current (BIV-12)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createSalesSnapshot(businessId, distressSnapshot(), actor, workspaceId);
+    const cycle1 = await runSalesDiagnosis(businessId, snap.id, actor, workspaceId);
+    const discount = cycle1.actions.find((a: { findingCode: string }) => a.findingCode.includes("DISCOUNT"));
+    expect(discount).toBeTruthy();
+    await updateSalesAction(discount!.id, { status: "assigned" }, actor, workspaceId);
+
+    // Next period: no discounting at all, so no discount finding is raised.
+    const healthier = { ...distressSnapshot(), periodStart: "2026-06-01", periodEnd: "2026-06-30", discountAmount: 0 };
+    const snap2 = await createSalesSnapshot(businessId, healthier, actor, workspaceId);
+    const cycle2 = await runSalesDiagnosis(businessId, snap2.id, actor, workspaceId);
+    expect(cycle2.findings.some((f: { code: string }) => f.code === discount!.findingCode)).toBe(false);
+
+    const dash = await getSalesDashboard(workspaceId, businessId);
+    const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === discount!.id) as
+      | { status: string; stillFlaggedByLatestDiagnosis?: boolean }
+      | undefined;
+    expect(listed?.status).toBe("assigned");
+    expect(listed?.stillFlaggedByLatestDiagnosis).toBe(false);
+
+    const { getOwnerHome } = await import("@/services/owner-home/home.service");
+    const home = await getOwnerHome(workspaceId, businessId);
+    expect(home.summary!.requiredActions.some((a) => a.title === discount!.title && a.findingCode === discount!.findingCode)).toBe(false);
 
     await teardownOwnerBusiness(businessId);
   });

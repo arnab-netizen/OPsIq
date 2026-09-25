@@ -262,11 +262,20 @@ export default function OwnerMarketingPage() {
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "up");
       if (dir === null) { setBusy(false); return; }
+      // Strict parse: blank = not given; anything else must be a plain number ("₹1200" or "1,200"
+      // must not silently become "not given" and be recorded against the measured baseline).
+      const beforeValue = beforeRaw.trim() === "" ? null : Number(beforeRaw.trim());
+      const afterValue = afterRaw.trim() === "" ? null : Number(afterRaw.trim());
+      if ((beforeValue !== null && !Number.isFinite(beforeValue)) || (afterValue !== null && !Number.isFinite(afterValue))) {
+        setError("Enter plain numbers only (no currency symbols or thousands separators).");
+        setBusy(false);
+        return;
+      }
       await api(`/api/owner/marketing/actions/${action.id}/verify`, {
         method: "POST",
         body: JSON.stringify({
-          beforeValue: beforeRaw.trim() === "" ? null : parseFloat(beforeRaw),
-          afterValue: afterRaw.trim() === "" ? null : parseFloat(afterRaw),
+          beforeValue,
+          afterValue,
           targetDirection: dir === "down" ? "down" : "up",
         }),
       });
@@ -508,7 +517,9 @@ function MarketingCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}</div>
+                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                      </div>
                     )}
                     <div className="text-xs text-muted-foreground">
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d

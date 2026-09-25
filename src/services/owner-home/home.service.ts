@@ -9,7 +9,7 @@
  * guard and every read is workspace-scoped. Reuses the proven Business Condition
  * domain-score/action mappers — no scoring logic is duplicated here.
  */
-import { OPEN_ACTION_STATUSES as OPEN_CONTINUITY_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
@@ -112,19 +112,26 @@ export interface OwnerHomeResult {
 }
 
 /**
- * Open actions attached to cycles older than the latest one. Diagnosis runs carry an open action
- * forward instead of duplicating it (action-continuity.ts), so the latest cycle alone no longer
- * lists every open action — these must be added for "today's required actions" to stay complete.
+ * Actions the owner has taken on (assigned/in progress/blocked) in cycles older than the latest
+ * one, kept only while the latest diagnosis still raises their finding. Diagnosis runs carry such
+ * actions forward instead of duplicating them (action-continuity.ts), so the latest cycle alone no
+ * longer lists them; an action whose finding is no longer raised is not current priority.
  */
-async function openActionsFromEarlierCycles(
+async function engagedActionsFromEarlierCycles(
   delegate: { findMany: (args: unknown) => Promise<any[]> },
   where: { businessId: string; workspaceId: string },
-  latestCycleId: string,
+  latestCycle: { id: string; findings: Array<{ code: string }> },
+  findingCodeOf: (row: any) => string | null,
   include?: Record<string, unknown>
 ): Promise<any[]> {
-  return delegate.findMany({
-    where: { ...where, cycleId: { not: latestCycleId }, status: { in: [...OPEN_CONTINUITY_STATUSES] } },
+  const flagged = new Set(latestCycle.findings.map((f) => f.code));
+  const rows = await delegate.findMany({
+    where: { ...where, cycleId: { not: latestCycle.id }, status: { in: [...ENGAGED_ACTION_STATUSES] } },
     ...(include ? { include } : {}),
+  });
+  return rows.filter((r) => {
+    const code = findingCodeOf(r);
+    return code !== null && flagged.has(code);
   });
 }
 
@@ -218,7 +225,7 @@ export async function getOwnerHome(
 
   if (finance) {
     domainScores.push(financeCycleToDomainScore(finance));
-    for (const a of [...finance.actions, ...(await openActionsFromEarlierCycles(db.ownerFinanceAction, where, finance.id))]) {
+    for (const a of [...finance.actions, ...(await engagedActionsFromEarlierCycles(db.ownerFinanceAction, where, finance, (r) => r.findingCode))]) {
       actions.push(financeActionRowToOwnerAction(a));
     }
     for (const f of finance.findings) findings.push(rowToFinding(f, "finance"));
@@ -236,16 +243,20 @@ export async function getOwnerHome(
   }
   if (recovery) {
     domainScores.push(recoveryCycleToDomainScore(recovery, recovery.snapshot));
-    const carriedRecovery = await openActionsFromEarlierCycles(db.recoveryAction, where, recovery.id, {
-      finding: { select: { code: true } },
-    });
+    const carriedRecovery = await engagedActionsFromEarlierCycles(
+      db.recoveryAction,
+      where,
+      recovery,
+      (r) => r.finding?.code ?? null,
+      { finding: { select: { code: true } } }
+    );
     for (const a of [...recovery.actions, ...carriedRecovery]) actions.push(recoveryActionRowToOwnerAction(a));
     // Recovery findings do not carry the spine findingType/impact shape → excluded from
     // the risk/opportunity lists (honest: nothing inferred). Recovery scores still count.
   }
   if (cashflow) {
     domainScores.push(cashflowCycleToDomainScore(cashflow));
-    for (const a of [...cashflow.actions, ...(await openActionsFromEarlierCycles(db.ownerCashflowAction, where, cashflow.id))]) {
+    for (const a of [...cashflow.actions, ...(await engagedActionsFromEarlierCycles(db.ownerCashflowAction, where, cashflow, (r) => r.findingCode))]) {
       actions.push(cashflowActionRowToOwnerAction(a));
     }
     for (const f of cashflow.findings) findings.push(rowToFinding(f, "cashflow"));
@@ -253,7 +264,7 @@ export async function getOwnerHome(
   }
   if (sales) {
     domainScores.push(salesCycleToDomainScore(sales));
-    for (const a of [...sales.actions, ...(await openActionsFromEarlierCycles(db.ownerSalesAction, where, sales.id))]) {
+    for (const a of [...sales.actions, ...(await engagedActionsFromEarlierCycles(db.ownerSalesAction, where, sales, (r) => r.findingCode))]) {
       actions.push(salesActionRowToOwnerAction(a));
     }
     for (const f of sales.findings) findings.push(rowToFinding(f, "sales"));
@@ -271,7 +282,7 @@ export async function getOwnerHome(
   }
   if (operations) {
     domainScores.push(operationsCycleToDomainScore(operations));
-    for (const a of [...operations.actions, ...(await openActionsFromEarlierCycles(db.ownerOperationsAction, where, operations.id))]) {
+    for (const a of [...operations.actions, ...(await engagedActionsFromEarlierCycles(db.ownerOperationsAction, where, operations, (r) => r.findingCode))]) {
       actions.push(operationsActionRowToOwnerAction(a));
     }
     for (const f of operations.findings) findings.push(rowToFinding(f, "operations"));
@@ -289,7 +300,7 @@ export async function getOwnerHome(
   }
   if (sop) {
     domainScores.push(sopCycleToDomainScore(sop));
-    for (const a of [...sop.actions, ...(await openActionsFromEarlierCycles(db.ownerSopAction, where, sop.id))]) {
+    for (const a of [...sop.actions, ...(await engagedActionsFromEarlierCycles(db.ownerSopAction, where, sop, (r) => r.findingCode))]) {
       actions.push(sopActionRowToOwnerAction(a));
     }
     for (const f of sop.findings) findings.push(rowToFinding(f, "sop"));
@@ -307,7 +318,7 @@ export async function getOwnerHome(
   }
   if (marketing) {
     domainScores.push(marketingCycleToDomainScore(marketing));
-    for (const a of [...marketing.actions, ...(await openActionsFromEarlierCycles(db.ownerMarketingAction, where, marketing.id))]) {
+    for (const a of [...marketing.actions, ...(await engagedActionsFromEarlierCycles(db.ownerMarketingAction, where, marketing, (r) => r.findingCode))]) {
       actions.push(marketingActionRowToOwnerAction(a));
     }
     for (const f of marketing.findings) findings.push(rowToFinding(f, "marketing"));
@@ -315,7 +326,7 @@ export async function getOwnerHome(
   }
   if (strategy) {
     domainScores.push(strategyCycleToDomainScore(strategy));
-    for (const a of [...strategy.actions, ...(await openActionsFromEarlierCycles(db.ownerStrategyAction, where, strategy.id))]) {
+    for (const a of [...strategy.actions, ...(await engagedActionsFromEarlierCycles(db.ownerStrategyAction, where, strategy, (r) => r.findingCode))]) {
       actions.push(strategyActionRowToOwnerAction(a));
     }
     for (const f of strategy.findings) findings.push(rowToFinding(f, "strategy"));

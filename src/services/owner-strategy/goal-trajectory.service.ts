@@ -109,10 +109,17 @@ function coefficientOfVariation(values: number[]): number {
   return Math.sqrt(variance) / Math.abs(mean);
 }
 
-/** Compute compound monthly growth rate from first to last value. */
-function cagr(first: number, last: number, months: number): number {
-  if (months <= 0 || first <= 0) return 0;
-  return (last / first) ** (1 / months) - 1;
+/**
+ * Compound monthly growth rate from first to last value, or null when it is not
+ * defined: a compound rate needs both endpoints positive (a series that starts at
+ * or below zero, or crosses into a loss, has no real-valued rate — raising a
+ * negative ratio to a fractional power is NaN).
+ */
+function cagr(first: number, last: number, months: number): number | null {
+  if (months <= 0) return 0;
+  if (first <= 0 || last <= 0) return null;
+  const rate = (last / first) ** (1 / months) - 1;
+  return Number.isFinite(rate) ? rate : null;
 }
 
 /** Compute trajectory: how many months from now to reach target at current growth rate. */
@@ -190,7 +197,9 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
   const monthsCovered = validValues.length - 1;
   const monthlyGrowthRate = cagr(firstValue, lastValue, monthsCovered);
 
-  assumptions.push(`trailing ${validValues.length}-period compound growth rate: ${(monthlyGrowthRate * 100).toFixed(2)}%/month`);
+  if (monthlyGrowthRate !== null) {
+    assumptions.push(`trailing ${validValues.length}-period compound growth rate: ${(monthlyGrowthRate * 100).toFixed(2)}%/month`);
+  }
   assumptions.push(`projection assumes current growth rate continues unchanged`);
   assumptions.push(`target: ${input.targetType} ≥ ${input.targetAmount}`);
 
@@ -201,6 +210,11 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
     projectedMonthsToGoal = 0;
     currentTrajectoryDate = now;
     assumptions.push("current value already meets or exceeds target");
+  } else if (monthlyGrowthRate === null) {
+    projectedMonthsToGoal = null;
+    currentTrajectoryDate = null;
+    rationale.push("growth rate is not computable (the recorded values start at or cross zero) — no projection");
+    if (confidence === "HIGH") confidence = "MEDIUM";
   } else if (monthlyGrowthRate <= 0) {
     projectedMonthsToGoal = null;
     currentTrajectoryDate = null;
@@ -209,9 +223,10 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
   } else {
     // Solve: lastValue * (1 + rate)^n = target → n = ln(target/lastValue) / ln(1+rate)
     const n = Math.log(input.targetAmount / lastValue) / Math.log(1 + monthlyGrowthRate);
-    projectedMonthsToGoal = Math.ceil(n);
-    const trajectoryMs = now.getTime() + projectedMonthsToGoal * MS_PER_MONTH;
-    currentTrajectoryDate = new Date(trajectoryMs);
+    if (Number.isFinite(n)) {
+      projectedMonthsToGoal = Math.ceil(n);
+      currentTrajectoryDate = new Date(now.getTime() + projectedMonthsToGoal * MS_PER_MONTH);
+    }
   }
 
   const gapToClose = Math.max(0, input.targetAmount - lastValue);
@@ -220,12 +235,15 @@ export function computeGoalTrajectory(input: GoalTrajectoryInput): GoalTrajector
   const trajectoryMiss =
     projectedMonthsToGoal !== null && projectedMonthsToGoal > ownerTimelineMonths * 1.2;
   const reached = lastValue >= input.targetAmount;
+  // No projection: a shrinking series is not on track; otherwise unknown. Never "true" without a projection.
   const onTrack: boolean | null = reached
     ? true
     : projectedMonthsToGoal === null
-      ? monthlyGrowthRate <= 0
+      ? lastValue < firstValue
         ? false
-        : null
+        : monthlyGrowthRate !== null && monthlyGrowthRate <= 0
+          ? false
+          : null
       : !trajectoryMiss && !targetDatePassed;
 
   if (trajectoryMiss) {

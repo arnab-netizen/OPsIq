@@ -156,7 +156,9 @@ export function buildFinanceRiskFindings(
         code: "FIN_BELOW_BREAK_EVEN",
         title: "Revenue is below break-even",
         summary: "Sales do not yet cover fixed + variable costs; revenue must rise or costs must fall to break even.",
-        sourceMetric: "breakEvenRevenue",
+        // sourceValue is revenue (break-even is the threshold) — labelling it
+        // breakEvenRevenue presented revenue as a measured break-even value.
+        sourceMetric: "revenue",
         sourceValue: revenue,
         threshold: m.breakEvenRevenue,
         severity: "high",

@@ -90,7 +90,12 @@ const NOT_AVAILABLE = "Not enough data";
 
 function formatCurrency(amount: number | null, currency: string): string {
   if (amount === null || !Number.isFinite(amount)) return NOT_AVAILABLE;
-  return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    // A stored code Intl does not recognise must never crash the page.
+    return `${currency} ${Math.round(amount).toLocaleString()}`;
+  }
 }
 
 function formatDate(iso: string): string {

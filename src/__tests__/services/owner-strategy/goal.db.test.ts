@@ -23,6 +23,7 @@ const wsA = randomUUID();
 const wsB = randomUUID();
 const wsC = randomUUID();
 const wsD = randomUUID();
+const wsE = randomUUID();
 
 /** Relative future date so the suite never expires (goals must target a future date). */
 function future(days: number): Date {
@@ -48,8 +49,8 @@ afterAll(async () => {
   await db.ownerGoalMilestone.deleteMany({ where: { workspaceId: wsB } });
   await db.ownerGoal.deleteMany({ where: { workspaceId: wsA } });
   await db.ownerGoal.deleteMany({ where: { workspaceId: wsB } });
-  await db.ownerGoal.deleteMany({ where: { workspaceId: { in: [wsC, wsD] } } });
-  await db.ownerBusiness.deleteMany({ where: { workspaceId: { in: [wsC, wsD] } } });
+  await db.ownerGoal.deleteMany({ where: { workspaceId: { in: [wsC, wsD, wsE] } } });
+  await db.ownerBusiness.deleteMany({ where: { workspaceId: { in: [wsC, wsD, wsE] } } });
   await db.auditEvent.deleteMany({ where: { actorId: actor } });
   await db.user.delete({ where: { id: actor } });
 });
@@ -193,4 +194,14 @@ describe("[db] Phase 5 — Owner Goal persistence", () => {
       createGoal({ workspaceId: wsD, actorId: actor, targetType: "REVENUE", targetAmount: 100, targetDate: future(30) })
     ).rejects.toBeInstanceOf(ValidationError);
   });
+
+  it("[db] a business currency that is not a valid 3-letter code is never inherited (final audit P2)", async () => {
+    await db.ownerBusiness.create({
+      data: { id: randomUUID(), workspaceId: wsE, name: "Rs biz", businessType: "laundry_local_service", currency: "Rs", updatedAt: new Date() },
+    });
+    await expect(
+      createGoal({ workspaceId: wsE, actorId: actor, targetType: "REVENUE", targetAmount: 100, targetDate: future(30) })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
 });
+

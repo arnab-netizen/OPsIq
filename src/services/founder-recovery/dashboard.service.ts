@@ -7,7 +7,7 @@
  * verification), overdue actions, and cycle history. Returns an explicit empty
  * state when the owner has no businesses or no cycles yet.
  */
-import { OPEN_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "./business.service";
 
@@ -116,19 +116,20 @@ export async function getRecoveryDashboard(
     orderBy: { dueAt: "asc" },
   });
 
-  // Open actions from earlier cycles stay visible (carried forward, listed first) until
-  // completed or cancelled — a re-diagnosis never hides in-flight owner work.
+  // Actions the owner has taken on in earlier cycles stay visible (carried forward, listed
+  // first) until completed or cancelled — a re-diagnosis never hides in-flight owner work.
   const carriedActions = latestCycleRow
     ? await db.recoveryAction.findMany({
         where: {
           businessId: selectedBusinessId,
           workspaceId,
           cycleId: { not: latestCycleRow.id },
-          status: { in: [...OPEN_ACTION_STATUSES] },
+          status: { in: [...ENGAGED_ACTION_STATUSES] },
         },
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
           cycle: { select: { cycleNumber: true } },
+          finding: { select: { code: true } },
         },
         orderBy: { createdAt: "asc" },
       })
@@ -137,9 +138,11 @@ export async function getRecoveryDashboard(
     ? {
         ...latestCycleRow,
         actions: [
-          ...carriedActions.map((a: { cycle: { cycleNumber: number } }) => ({
+          ...carriedActions.map((a: { cycle: { cycleNumber: number }; finding: { code: string } | null }) => ({
             ...a,
             carriedFromCycleSequence: a.cycle.cycleNumber,
+            stillFlaggedByLatestDiagnosis:
+              a.finding !== null && latestCycleRow.findings.some((f: { code: string }) => f.code === a.finding!.code),
           })),
           ...latestCycleRow.actions,
         ],

@@ -53,8 +53,9 @@ export async function resolveGoalCurrency(workspaceId: string, requested?: strin
     where: { workspaceId, isActive: true, isFixtureBusiness: false },
     select: { currency: true },
   })) as Array<{ currency: string }>;
-  const currencies = Array.from(new Set(businesses.map((b) => b.currency.toUpperCase())));
-  if (currencies.length === 1) return currencies[0];
+  const currencies = Array.from(new Set(businesses.map((b) => b.currency.trim().toUpperCase())));
+  // Only a valid 3-letter code may be inherited (the same rule the route applies to an explicit code).
+  if (currencies.length === 1 && /^[A-Z]{3}$/.test(currencies[0])) return currencies[0];
   throw new ValidationError(
     currencies.length === 0
       ? "Choose the goal currency — add a business first or enter a currency code."
@@ -179,7 +180,12 @@ export async function computeActiveGoalTrajectory(workspaceId: string) {
   // Newest 12 periods in the goal's currency (then oldest-first for the engine).
   // Values recorded in another currency are never mixed into the series.
   const newestFirst = (await db.ownerMetricSnapshot.findMany({
-    where: { workspaceId, currency: goal.targetCurrency },
+    // Case-insensitive: snapshot currency is stored as entered. Only active, non-fixture businesses.
+    where: {
+      workspaceId,
+      currency: { equals: goal.targetCurrency, mode: "insensitive" },
+      business: { isActive: true, isFixtureBusiness: false },
+    },
     select: { businessId: true, periodStart: true, periodEnd: true, revenue: true, netProfit: true },
     orderBy: { periodStart: "desc" },
     take: 12,

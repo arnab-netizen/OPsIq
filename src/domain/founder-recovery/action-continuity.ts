@@ -1,19 +1,27 @@
 /**
  * Action continuity across diagnosis cycles (all owner domains + recovery).
  *
- * Each diagnosis run creates a new cycle. Without continuity, a re-run
- * re-proposed every recommendation as a brand-new "proposed" action while the
- * owner's still-open action for the same finding stayed attached to an older
- * cycle that the UI no longer showed — in-flight work vanished from view and was
- * duplicated. The rule here: a planned action whose finding/recommendation
- * already has an OPEN action (not completed/cancelled) for the same business is
- * carried forward (kept as-is, not duplicated). Terminal actions never block a
- * fresh proposal, so a recurring problem is re-proposed after completion.
+ * Each diagnosis run creates a new cycle and re-plans every recommendation as a
+ * fresh "proposed" action (the asserted per-cycle contract). Without continuity,
+ * an action the owner had already taken on (assigned / in progress / blocked)
+ * stayed attached to an older cycle the UI no longer showed and was duplicated
+ * by a new "proposed" copy — in-flight work vanished from view.
+ *
+ * Rule:
+ * - An ENGAGED prior action whose finding/recommendation is planned again is
+ *   carried forward instead of duplicated, and its priority is re-evaluated to
+ *   the new plan's values (the caller applies `reprioritise`).
+ * - Never-touched "proposed" actions are NOT carried: the new cycle's fresh
+ *   proposals supersede them (they carry the re-evaluated ranking).
+ * - Terminal actions (completed/cancelled) never block a fresh proposal.
+ * - An engaged action whose finding the latest diagnosis no longer raises stays
+ *   visible for the owner to finish or cancel, but is not treated as current
+ *   priority (see `isStillFlagged`).
  */
 import type { RecoveryActionStatus } from "./action-status";
 
-/** Non-terminal statuses: work that is still open for the owner. */
-export const OPEN_ACTION_STATUSES: readonly RecoveryActionStatus[] = ["proposed", "assigned", "in_progress", "blocked"];
+/** Statuses in which the owner has taken on the action (carried across cycles). */
+export const ENGAGED_ACTION_STATUSES: readonly RecoveryActionStatus[] = ["assigned", "in_progress", "blocked"];
 
 export interface ContinuityKeyed {
   findingCode: string;
@@ -24,12 +32,27 @@ export function continuityKey(a: ContinuityKeyed): string {
   return `${a.findingCode}::${a.recommendationCode ?? ""}`;
 }
 
-/** Planned actions minus those already open for the same finding/recommendation. */
-export function withoutOpenDuplicates<T extends ContinuityKeyed>(
+/**
+ * Split planned actions into those to create and those already covered by an
+ * engaged prior action (returned with the prior action id for re-prioritisation).
+ */
+export function planWithContinuity<T extends ContinuityKeyed, P extends ContinuityKeyed & { id: string }>(
   planned: readonly T[],
-  openPrior: readonly ContinuityKeyed[]
-): { toCreate: T[]; carriedForward: number } {
-  const open = new Set(openPrior.map(continuityKey));
-  const toCreate = planned.filter((a) => !open.has(continuityKey(a)));
-  return { toCreate, carriedForward: planned.length - toCreate.length };
+  engagedPrior: readonly P[]
+): { toCreate: T[]; carried: Array<{ priorActionId: string; planned: T }> } {
+  const byKey = new Map<string, P>();
+  for (const p of engagedPrior) if (!byKey.has(continuityKey(p))) byKey.set(continuityKey(p), p);
+  const toCreate: T[] = [];
+  const carried: Array<{ priorActionId: string; planned: T }> = [];
+  for (const a of planned) {
+    const prior = byKey.get(continuityKey(a));
+    if (prior) carried.push({ priorActionId: prior.id, planned: a });
+    else toCreate.push(a);
+  }
+  return { toCreate, carried };
+}
+
+/** True while the latest diagnosis still raises the action's finding. */
+export function isStillFlagged(findingCode: string, latestFindingCodes: ReadonlySet<string>): boolean {
+  return latestFindingCodes.has(findingCode);
 }

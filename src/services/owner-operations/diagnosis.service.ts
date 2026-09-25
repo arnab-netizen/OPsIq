@@ -14,7 +14,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { OPEN_ACTION_STATUSES, withoutOpenDuplicates } from "@/domain/founder-recovery/action-continuity";
+import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -96,7 +96,7 @@ export async function runOperationsDiagnosis(
     expectedTimeframeDays: a.expectedTimeframeDays,
   }));
 
-  let carriedForward = 0;
+  let carriedForwardIds: string[] = [];
   await db.$transaction(
     async (tx: any) => {
       await tx.ownerOperationsCycle.create({
@@ -116,14 +116,26 @@ export async function runOperationsDiagnosis(
         },
       });
       if (findingRows.length > 0) await tx.ownerOperationsFinding.createMany({ data: findingRows });
-      // Continuity: an action still open for the same finding/recommendation is carried
-      // forward, not duplicated (see action-continuity.ts).
-      const openPrior = await tx.ownerOperationsAction.findMany({
-        where: { businessId, workspaceId, status: { in: [...OPEN_ACTION_STATUSES] } },
-        select: { findingCode: true, recommendationCode: true },
+      // Continuity: an action the owner has taken on for the same finding/recommendation is
+      // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
+      const engagedPrior = await tx.ownerOperationsAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        select: { id: true, findingCode: true, recommendationCode: true },
       });
-      const continuity = withoutOpenDuplicates(actionRows, openPrior);
-      carriedForward = continuity.carriedForward;
+      const continuity = planWithContinuity(actionRows, engagedPrior);
+      carriedForwardIds = continuity.carried.map((c) => c.priorActionId);
+      // Re-evaluate each carried action's ranking against this diagnosis.
+      for (const c of continuity.carried) {
+        await tx.ownerOperationsAction.update({
+          where: { id: c.priorActionId },
+          data: {
+            priorityScore: c.planned.priorityScore,
+            expectedImpactScore: c.planned.expectedImpactScore,
+            effortScore: c.planned.effortScore,
+            confidence: c.planned.confidence,
+          },
+        });
+      }
       if (continuity.toCreate.length > 0) await tx.ownerOperationsAction.createMany({ data: continuity.toCreate });
     },
     { maxWait: 10000, timeout: 20000 }
@@ -139,8 +151,8 @@ export async function runOperationsDiagnosis(
       businessId,
       sequenceNumber,
       findingCount: diagnosis.findings.length,
-      actionCount: plan.actions.length - carriedForward,
-      carriedForwardCount: carriedForward,
+      actionCount: plan.actions.length - carriedForwardIds.length,
+      carriedForwardActionIds: carriedForwardIds,
       operationsState: diagnosis.metrics.operationsState,
     },
   });

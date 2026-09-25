@@ -11,7 +11,7 @@
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
-import { OPEN_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 
 export interface SopDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -116,15 +116,15 @@ export async function getSopDashboard(
 
   // Each action carries the value the diagnosis measured for its verification
   // metric (null when not measured) — the baseline an outcome is compared to.
-  // Open actions from earlier cycles stay visible (carried forward, listed first) until
-  // completed or cancelled — a re-diagnosis never hides in-flight owner work.
+  // Actions the owner has taken on in earlier cycles stay visible (carried forward, listed
+  // first) until completed or cancelled — a re-diagnosis never hides in-flight owner work.
   const carriedActions = latestCycle
     ? await db.ownerSopAction.findMany({
         where: {
           businessId: selectedBusinessId,
           workspaceId,
           cycleId: { not: latestCycle.id },
-          status: { in: [...OPEN_ACTION_STATUSES] },
+          status: { in: [...ENGAGED_ACTION_STATUSES] },
         },
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
@@ -138,9 +138,11 @@ export async function getSopDashboard(
     ? {
         ...latestCycle,
         actions: [
-          ...carriedActions.map((a: { verificationMetric: string; cycle: { sequenceNumber: number } }) => ({
+          ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
             ...withMeasuredBaseline(a),
             carriedFromCycleSequence: a.cycle.sequenceNumber,
+            // false when the latest diagnosis no longer raises this finding (finish or cancel it).
+            stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
           })),
           ...latestCycle.actions.map(withMeasuredBaseline),
         ],

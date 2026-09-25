@@ -31,7 +31,8 @@ export function VerificationEvidenceText({ verification }: { verification: Verif
   else provenance = "baseline source not recorded";
   return (
     <span className="text-muted-foreground">
-      before {evidenceNumber(beforeValue)} → after {evidenceNumber(afterValue)} ({targetDirection}) · {provenance}
+      before {evidenceNumber(beforeValue)} → after {evidenceNumber(afterValue)} ({targetDirection}) · {provenance} · after
+      value owner-reported
     </span>
   );
 }
