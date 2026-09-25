@@ -22,7 +22,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
-import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
+import { hasAnyRealBusiness, hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { computeGoalTrajectory } from "./goal-trajectory.service";
 import type { GoalTrajectoryResult, TrailingPeriod } from "./goal-trajectory.service";
 
@@ -543,8 +543,9 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
       goal,
       trajectory: emptyTrajectory(goal),
       metricBasis,
-      unavailableReason:
-        "Your workspace has several businesses. A workspace goal can't be tracked without consolidated reporting, which OpsIQ does not have yet — assign this goal to one business to track it.",
+      unavailableReason: (await hasAnyRealBusiness(goal.workspaceId))
+        ? "Your workspace has several businesses. A workspace goal can't be tracked without consolidated reporting, which OpsIQ does not have yet — assign this goal to one business to track it."
+        : "Your workspace has no active business, so this workspace goal can't be tracked. Add or reactivate a business, then assign the goal to it.",
       dataWindow: null,
       excludedSnapshotCount,
       excludedReason,

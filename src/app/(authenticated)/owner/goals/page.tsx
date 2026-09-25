@@ -391,7 +391,9 @@ export default function GoalsPage() {
               <p className="text-sm text-muted-foreground mt-4" data-testid="legacy-goal-explainer">
                 {overview.legacyAttributable
                   ? "Set before goals belonged to a business. Your workspace has one business, so Home shows this goal for it."
-                  : "Set before goals belonged to a business. Your workspace has several businesses, so this goal isn't shown on any business's Home."}
+                  : businesses.length === 0
+                    ? "Set before goals belonged to a business. Your workspace has no active business, so this goal isn't shown on Home."
+                    : "Set before goals belonged to a business. Your workspace has several businesses, so this goal isn't shown on any business's Home."}
               </p>
               {activeBusinessId && businessName && (
                 <div className="mt-3">

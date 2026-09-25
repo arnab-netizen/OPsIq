@@ -295,6 +295,18 @@ describe("[db] legacy goal projection (hostile-review P1)", () => {
     expect(v.unavailableReason).toBeNull();
     expect(v.trajectory.currentValue).toBe(1300);
   });
+
+  it("[db] with no active real business, a legacy goal is not projected and the reason says so (not \"several businesses\")", async () => {
+    const ws = newWorkspace();
+    const archived = await business(ws, "Closed", "INR", { isActive: false });
+    for (let m = 0; m < 4; m++) await snapshot(ws, archived, m, 1000 + m * 100, "INR");
+    await legacyGoal(ws);
+    const v = await computeGoalTrajectoryView((await getActiveLegacyGoal(ws))!);
+    expect(v.trajectory.currentValue).toBeNull();
+    expect(v.dataWindow).toBeNull();
+    expect(v.unavailableReason).toMatch(/no active business/);
+    expect(v.unavailableReason).not.toMatch(/several businesses/);
+  });
 });
 
 describe("[db] legacy workspace goals", () => {
