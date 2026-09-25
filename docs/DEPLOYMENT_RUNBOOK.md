@@ -109,6 +109,12 @@ sleep 5
 
 ### Step 3: Deploy Database Schema (If Migrations Pending)
 
+> **Hosted production (Vercel + Neon): do not run the commands in this step.** Production
+> migrations run only through the approved *Migrate Production Database* workflow, and the
+> production build is gated on migration state. Follow
+> [`deployment/PRODUCTION_RELEASE_PROCEDURE.md`](deployment/PRODUCTION_RELEASE_PROCEDURE.md).
+> The steps below apply only to a self-hosted deployment that you migrate yourself.
+
 **3-Factor Production Migration Gate — all three must pass before applying migrations:**
 
 **Factor 1 — Pending count matches CI expectation:**

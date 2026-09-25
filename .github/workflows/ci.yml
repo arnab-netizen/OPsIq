@@ -114,6 +114,19 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
+      # Release-migration signal (incident 58f1d87e: app code was promoted before
+      # its production migration ran). Reports PRODUCTION MIGRATION REQUIRED for a
+      # PR that adds prisma/migrations/**, and blocks modified/deleted/misnamed or
+      # unacknowledged destructive migrations. Plain node + git, no credentials;
+      # runs for every PR (a migration-only PR must never skip it). The hard stop
+      # for an unapplied migration is the production build gate
+      # (scripts/release/production-migration-gate.mjs).
+      - name: Production migration release signal
+        run: |
+          node scripts/release/migration-release-signal.mjs \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}"
+
       # CI-MIN-01: every step from here through "Production build" is skipped
       # for a DOCS_ONLY change (docs/*.md-only PRs pay for nothing but
       # checkout + Node setup), and the app-specific steps (everything except

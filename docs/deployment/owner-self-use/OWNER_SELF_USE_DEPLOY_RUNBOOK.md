@@ -65,6 +65,8 @@ npx prisma migrate deploy        # apply pending migrations only — never `migr
 For a hosted production DB, use the manual-only gate `.github/workflows/migrate-production.yml`
 (`workflow_dispatch`, `environment: production`, `PRODUCTION_DATABASE_URL` secret). It runs
 `migrate status` + `migrate deploy` and is forbidden from seeding or resetting.
+The full hosted-production release sequence (build gate, migration, promotion, rollback) is in
+[`../PRODUCTION_RELEASE_PROCEDURE.md`](../PRODUCTION_RELEASE_PROCEDURE.md).
 
 ## 5. Start / serve
 

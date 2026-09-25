@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/release/production-migration-gate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
