@@ -681,10 +681,6 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
       externalAccountId: connectorRow.externalAccountId,
     };
 
-    const client = input.deps?.createClient
-      ? await input.deps.createClient({ workspaceId: input.workspaceId, connectorId: input.connectorId })
-      : await createQboClient({ tokenProvider: createQboTokenProvider({ workspaceId: input.workspaceId, connectorId: input.connectorId }) });
-
     // F25: declared here (not inside the try below) so the catch clause can
     // still read whatever progress this run made — a `let` inside a try
     // block is NOT visible in its own catch clause. On ANY terminal outcome
@@ -696,6 +692,20 @@ export async function runQuickBooksSync(input: RunQuickBooksSyncInput): Promise<
     let totalUpserted = 0;
 
     try {
+      // F26 (root cause): client construction — including the tokenProvider's
+      // OWN credential fetch/refresh inside createQboClient() — used to happen
+      // OUTSIDE this try, so any failure there (a network/proxy error, an
+      // expired/invalid token, a malformed realmId) bypassed classification
+      // and handleSyncFailure entirely and escaped runQuickBooksSync as an
+      // uncaught throw. The scheduler then recorded it as a generic
+      // "Couldn't load that data…" retry/dead-letter — even for a definite,
+      // non-retryable FORBIDDEN/VALIDATION/AUTH failure that should have
+      // returned FAILED immediately. Moved inside so EVERY failure from here
+      // on is classified exactly once, through the same path.
+      const client = input.deps?.createClient
+        ? await input.deps.createClient({ workspaceId: input.workspaceId, connectorId: input.connectorId })
+        : await createQboClient({ tokenProvider: createQboTokenProvider({ workspaceId: input.workspaceId, connectorId: input.connectorId }) });
+
       // ── (b) CompanyInfo + Preferences mirror ────────────────────────────
       const companyInfo = await client.companyInfo();
       const preferences = await client.preferences();

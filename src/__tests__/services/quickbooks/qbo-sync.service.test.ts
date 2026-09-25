@@ -22,7 +22,7 @@ import { QBO_SYNC_ENTITY_ORDER } from "@/domain/quickbooks/qbo-entities";
 // after the vi.mock call would still be in the temporal dead zone when the
 // hoisted factory runs.
 
-const { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, ownerConnectorUpdateMany, ownerConnectorUpdate, txExecuteRaw, txOwnerConnectorUpdate, dbTransaction, dbMock } =
+const { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, ownerConnectorUpdateMany, txExecuteRaw, txOwnerConnectorUpdate, dbTransaction, dbMock } =
   vi.hoisted(() => {
     const scheduledTaskFindUnique = vi.fn(async () => null as { id: string } | null);
     const scheduledTaskCreate = vi.fn(async (args: { data: { id: string } }) => ({ id: args.data.id }));
@@ -42,7 +42,7 @@ const { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, o
       },
       $transaction: (...a: unknown[]) => dbTransaction(...(a as [(tx: ReturnType<typeof makeTx>) => unknown])),
     };
-    return { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, ownerConnectorUpdateMany, ownerConnectorUpdate, txExecuteRaw, txOwnerConnectorUpdate, dbTransaction, dbMock };
+    return { scheduledTaskFindUnique, scheduledTaskCreate, ownerConnectorFindFirst, ownerConnectorUpdateMany, txExecuteRaw, txOwnerConnectorUpdate, dbTransaction, dbMock };
   });
 
 // DC-20 (vitest.setup.ts contract): every "@/lib/db" mock factory must also export getDbInstance.
@@ -695,7 +695,8 @@ describe("[unit] runQuickBooksSync — failure classification", () => {
       deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
     });
     expect(result.status).toBe("FAILED");
-    expect(ownerConnectorUpdate).toHaveBeenCalledWith(
+    // F25: persisted inside a transaction (atomically with syncState), not a bare db.ownerConnector.update.
+    expect(txOwnerConnectorUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ syncFailureMessage: "Reconnect QuickBooks" }) })
     );
     const releaseCall = ownerConnectorUpdateMany.mock.calls.find(
@@ -743,6 +744,97 @@ describe("[unit] runQuickBooksSync — failure classification", () => {
       deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
     });
     expect(result.status).toBe("FAILED");
+  });
+
+  // F26 (diagnostic): a QboApiError with kind FORBIDDEN (the classification an
+  // HTTP 403 response maps to — see classifyQboHttpFailure in qbo-errors.ts)
+  // must be non-retryable and return FAILED, never rethrow. `retryable` on
+  // QboApiError is true only for RATE_LIMITED/TRANSIENT/TIMEOUT, so this proves
+  // the classification/rethrow branch in THIS file is correct for a 403.
+  it("F26 — a FORBIDDEN (HTTP 403) failure returns FAILED without throwing — proves the retry path is NOT reached for a 403", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      }),
+    });
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f26",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+    expect(result.status).toBe("FAILED");
+    expect(scheduledTaskCreate).not.toHaveBeenCalled(); // no continuation/retry task was scheduled
+  });
+
+  // F26 root cause: client construction (deps.createClient / the real
+  // createQboClient + its tokenProvider's own credential fetch) used to run
+  // OUTSIDE the try/catch that classifies failures — any error there escaped
+  // runQuickBooksSync as an UNCAUGHT throw, which the scheduler recorded as
+  // a generic retryable failure even for a definite, non-retryable error.
+  it("F26 root cause — a FORBIDDEN failure during CLIENT CONSTRUCTION (not a client method call) is also classified and returns FAILED, never an uncaught throw", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f26-construct",
+      deps: {
+        createClient: async () => {
+          throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+        },
+        now: () => new Date("2026-09-25T10:00:00.000Z"),
+      },
+    });
+    expect(result.status).toBe("FAILED");
+    expect(scheduledTaskCreate).not.toHaveBeenCalled();
+    // The lease must still be released even though the failure happened before any client call.
+    const releaseCall = ownerConnectorUpdateMany.mock.calls.find(
+      (c) => (c[0] as { data?: { syncLeaseExpiresAt?: unknown } }).data?.syncLeaseExpiresAt === null
+    );
+    expect(releaseCall).toBeDefined();
+  });
+
+  // F25 — a failed run must leave syncState.lastRunStatus/lastRunAt/lastRunSummary
+  // consistent with (never contradicting) OwnerConnector.syncFailureMessage,
+  // persisted in ONE transaction.
+  it("F25 — a FAILED run persists syncState.lastRunStatus=FAILED and lastRunSummary atomically with syncFailureMessage", async () => {
+    ownerConnectorFindFirst.mockResolvedValueOnce(connectorRow());
+    const client = fakeClient({
+      companyInfo: vi.fn(async () => {
+        throw new QboApiError({ kind: "FORBIDDEN", message: "QuickBooks request failed (HTTP 403)", httpStatus: 403 });
+      }),
+    });
+    const result = await runQuickBooksSync({
+      workspaceId: WORKSPACE,
+      connectorId: CONNECTOR,
+      trigger: "SCHEDULED",
+      requestedBy: ACTOR,
+      runId: "run-f25",
+      deps: { createClient: async () => client, now: () => new Date("2026-09-25T10:00:00.000Z") },
+    });
+    expect(result.status).toBe("FAILED");
+
+    // Both writes happen inside the SAME db.$transaction call (atomic) —
+    // both txOwnerConnectorUpdate calls below only exist because dbTransaction
+    // ran its callback against the shared tx mock exactly once for this failure.
+    expect(dbTransaction).toHaveBeenCalledTimes(1);
+
+    expect(txOwnerConnectorUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ syncFailureMessage: expect.stringContaining("403") }) })
+    );
+    const syncStateCall = txOwnerConnectorUpdate.mock.calls.find(
+      (c) => (c[0] as { data?: { syncState?: { lastRunStatus?: string } } }).data?.syncState?.lastRunStatus === "FAILED"
+    );
+    expect(syncStateCall).toBeDefined();
+    const data = (syncStateCall![0] as { data: { syncState: { lastRunStatus: string; lastRunSummary: string; lastRunId: string; lastRunAt: string } } }).data;
+    expect(data.syncState.lastRunSummary).toContain("403");
+    expect(data.syncState.lastRunId).toBe("run-f25");
+    expect(data.syncState.lastRunAt).toBeTruthy();
   });
 });
 
