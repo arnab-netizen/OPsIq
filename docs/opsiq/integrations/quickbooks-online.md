@@ -137,4 +137,14 @@ retried after correction under a new `requestid`.
 - Cashflow snapshots have no amendment path in OpsIQ, so a period already materialized is not
   updated by later syncs (reported as a sync issue).
 - The platform cron is daily; Sync Now, post-connect and webhook-triggered syncs run immediately.
+- A governed write whose outcome was ever ambiguous (timeout or lost response) keeps its
+  provider requestid for every later retry, so QuickBooks' requestid de-duplication returns a
+  record it already committed instead of creating a second one. There is no content-based
+  reconciliation beyond that: a retry sent after Intuit's de-duplication window has elapsed
+  relies on the pre-write checks (links, exact-name matching) rather than a remote natural-key
+  lookup. A retry with a corrected payload under a pinned requestid may return the original
+  committed record unchanged; correct it with a follow-up update.
+- A sync task that ends in a non-retryable failure is finalized as scheduler status `failed`
+  (with the owner-facing reason on the connector); such tasks are not listed in the generic
+  automation status view.
 - Sandbox E2E not executed (no credentials). Intuit production approval not started.
