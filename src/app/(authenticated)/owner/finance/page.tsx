@@ -16,6 +16,7 @@ import {
 } from "@/components/owner/DomainActionInlineForms";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 import { formatHumanDate } from "@/lib/format-human-date";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -911,7 +912,7 @@ function FinanceCycleView({
                   <VerificationActionForm
                     formId={verifyFormId}
                     busy={busy}
-                    defaultDirection="down"
+                    defaultDirection={getVerificationDirection(a.verificationMetric, a.findingCode)}
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
                     measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {

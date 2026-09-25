@@ -19,6 +19,7 @@ import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -815,7 +816,7 @@ function OperationsCycleView({
                   <VerificationActionForm
                     formId={verifyFormId}
                     busy={busy}
-                    defaultDirection="up"
+                    defaultDirection={getVerificationDirection(a.verificationMetric, a.findingCode)}
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
                     measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {

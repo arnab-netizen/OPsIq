@@ -17,6 +17,7 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
+import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -694,7 +695,7 @@ function SopCycleView({
                   <VerificationActionForm
                     formId={verifyFormId}
                     busy={busy}
-                    defaultDirection="up"
+                    defaultDirection={getVerificationDirection(a.verificationMetric, a.findingCode)}
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
                     measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {

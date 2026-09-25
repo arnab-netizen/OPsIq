@@ -19,6 +19,7 @@ import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -678,7 +679,7 @@ function SalesCycleView({
                   <VerificationActionForm
                     formId={verifyFormId}
                     busy={busy}
-                    defaultDirection="up"
+                    defaultDirection={getVerificationDirection(a.verificationMetric, a.findingCode)}
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
                     measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {
