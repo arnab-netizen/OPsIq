@@ -19,7 +19,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the established owner-page pattern */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Badge, Select, CardDashboardSkeleton, PageContainer } from "@/ui/primitives";
+import { Badge, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
@@ -556,12 +556,10 @@ export default function OwnerDataHubPage() {
   return (
     <PageContainer>
       <header>
-        <h1 className="font-display text-[2rem] font-semibold tracking-tight text-foreground">My Business</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This is where you tell OpsIQ about your business and keep its information up to date.
-          The more real information you add, the more specific its findings become — and it will
-          always tell you what is still missing.
-        </p>
+        <PageHeader
+          title="My Business"
+          description="This is where you tell OpsIQ about your business and keep its information up to date. The more real information you add, the more specific its findings become — and it will always tell you what is still missing."
+        />
       </header>
 
       {loading && <div className="mt-8"><CardDashboardSkeleton sections={4} label="Loading your setup" /></div>}

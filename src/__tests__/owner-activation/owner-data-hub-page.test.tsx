@@ -93,6 +93,31 @@ describe("no business yet", () => {
   });
 });
 
+describe("page heading (shared PageHeader primitive)", () => {
+  // Locks in the swap from a page-specific hand-rolled <h1> to the shared PageHeader primitive
+  // (matching every other owner page) -- guards against a regression back to a duplicated or
+  // missing heading, or dropped description text. Renders regardless of business state, so the
+  // simplest (zero-business) mock is enough here.
+  it("renders exactly one H1 with the exact title", async () => {
+    fetchMock.mockImplementation(() => json({ businesses: [] }));
+    renderPage();
+    const heading = await screen.findByRole("heading", { level: 1, name: "My Business" });
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(heading.textContent).toBe("My Business");
+  });
+
+  it("preserves the exact description text under the heading", async () => {
+    fetchMock.mockImplementation(() => json({ businesses: [] }));
+    renderPage();
+    await screen.findByRole("heading", { level: 1, name: "My Business" });
+    expect(
+      screen.getByText(
+        "This is where you tell OpsIQ about your business and keep its information up to date. The more real information you add, the more specific its findings become — and it will always tell you what is still missing."
+      )
+    ).toBeTruthy();
+  });
+});
+
 describe("with a business", () => {
   it("renders real readiness counts from the onboarding contract", async () => {
     mockWithBusiness();
