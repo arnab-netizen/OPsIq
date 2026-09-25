@@ -119,3 +119,15 @@ describe("vitest-global-setup.ts wiring (source contract)", () => {
     expect(src).toMatch(/const testWithDb = resolution\.mode === "db";/);
   });
 });
+
+describe("playwright.config.ts wiring (source contract)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const src: string = require("fs").readFileSync(require("path").resolve(__dirname, "../../../playwright.config.ts"), "utf8");
+
+  it("guards the database whenever it starts the local dev server (same condition, BASE_URL does not skip it)", () => {
+    expect(src).toMatch(/const startsLocalServer = !process\.env\.CI;/);
+    expect(src).toMatch(/if \(startsLocalServer\) \{\s*resolveTestDatabase\(/);
+    expect(src).toMatch(/webServer: startsLocalServer\s*\?/);
+    expect(src).not.toMatch(/!process\.env\.BASE_URL\)\s*\{\s*resolveTestDatabase/);
+  });
+});

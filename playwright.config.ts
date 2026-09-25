@@ -1,10 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 import { resolveTestDatabase } from './src/infra/test-database-guard';
 
-// The local dev server this config starts (no BASE_URL) uses the inherited DATABASE_URL, and the
-// specs sign up users / write rows through it: fail closed unless that is a guarded test database
-// (src/infra/test-database-guard.ts). A remote BASE_URL target does not start a local server.
-if (!process.env.CI && !process.env.BASE_URL) {
+// Outside CI this config starts (or reuses) a local dev server — whatever BASE_URL is — which uses the
+// inherited DATABASE_URL, and the specs sign up users / write rows through it: fail closed unless that
+// is a guarded test database (src/infra/test-database-guard.ts). One condition drives both.
+const startsLocalServer = !process.env.CI;
+if (startsLocalServer) {
   resolveTestDatabase({ ...process.env, TEST_WITH_DB: 'true' });
 }
 
@@ -25,14 +26,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  webServer: process.env.CI
-    ? undefined
-    : {
+  webServer: startsLocalServer
+    ? {
         command: 'npm run dev',
         url: 'http://localhost:3001',
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000,
-      },
+      }
+    : undefined,
   projects: [
     {
       name: 'chromium',
