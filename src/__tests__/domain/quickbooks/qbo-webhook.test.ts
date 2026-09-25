@@ -41,6 +41,25 @@ describe("verifyQboWebhookSignature", () => {
     const body = "{}";
     expect(verifyQboWebhookSignature(body, sign(body), "")).toBe(false);
   });
+
+  // B's LOW finding: prove Buffer input (the exact received bytes — see F23)
+  // works correctly for non-ASCII bytes, not just plain ASCII JSON.
+  it("verifies a Buffer body containing non-ASCII (multi-byte UTF-8) bytes, and rejects tampering to those bytes", () => {
+    const body = JSON.stringify({ name: "Acme Ünïcode Co. — 日本語 🎉" });
+    const bodyBuffer = Buffer.from(body, "utf8");
+    const signature = createHmac("sha256", VERIFIER).update(bodyBuffer).digest("base64");
+    expect(verifyQboWebhookSignature(bodyBuffer, signature, VERIFIER)).toBe(true);
+
+    const tamperedBuffer = Buffer.from(body.replace("🎉", "💥"), "utf8");
+    expect(verifyQboWebhookSignature(tamperedBuffer, signature, VERIFIER)).toBe(false);
+  });
+
+  it("a Buffer body and the equivalent UTF-8 string produce the SAME verification result — no silent byte corruption from re-encoding", () => {
+    const body = "QuickBooks café ☕ ñ 中文 — répertoire";
+    const signature = sign(body); // signed as a UTF-8 string, via the existing helper
+    expect(verifyQboWebhookSignature(body, signature, VERIFIER)).toBe(true);
+    expect(verifyQboWebhookSignature(Buffer.from(body, "utf8"), signature, VERIFIER)).toBe(true);
+  });
 });
 
 describe("parseQboWebhookPayload — CloudEvents format", () => {
