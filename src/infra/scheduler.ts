@@ -23,8 +23,16 @@ export type TaskStatus =
  * per-item failures (e.g. ReconcileResult.errors[], DueScanResult's
  * per-business ok:false) must surface that as PARTIAL_FAILURE, not let it
  * disappear into an undifferentiated "completed".
+ *
+ * FAILED is a TERMINAL, classified failure the handler has already durably
+ * recorded in its own domain state (e.g. a provider rejected the request as
+ * non-retryable: forbidden, invalid, auth revoked). The task is finalized as
+ * status "failed" with the handler's owner-safe summary and is NEVER retried —
+ * retrying cannot change the outcome. A THROWN error keeps its existing
+ * meaning: an unclassified or retryable failure that goes through the
+ * retry/backoff/dead-letter path.
  */
-export type HandlerOutcomeStatus = "SUCCESS" | "NO_WORK" | "PARTIAL_FAILURE";
+export type HandlerOutcomeStatus = "SUCCESS" | "NO_WORK" | "PARTIAL_FAILURE" | "FAILED";
 
 export interface HandlerResult {
   status: HandlerOutcomeStatus;
@@ -314,6 +322,10 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     try {
       const outcome = await handler(task.payload as Record<string, unknown> | null, context);
       const result: HandlerResult = outcome ?? { status: "SUCCESS" };
+      if (result.status === "FAILED") {
+        await this.recordTerminalFailure(task, result);
+        return false;
+      }
       const isPartialFailure = result.status === "PARTIAL_FAILURE";
 
       await db.scheduledTask.update({
@@ -343,6 +355,38 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       await this.recordFailure(task, err);
       return false;
     }
+  }
+
+  /**
+   * Terminal, handler-classified failure (HandlerResult status FAILED): finalize
+   * as "failed", no retry, no next run. The summary is the handler's own
+   * owner-safe text; it is still governed here so nothing unclassified can be
+   * persisted.
+   */
+  private async recordTerminalFailure(
+    task: { id: string; task_name: string; workspace_id: string | null; attempts: number; max_attempts: number },
+    result: HandlerResult
+  ): Promise<void> {
+    const summary = result.summary ?? "Task failed: handler reported FAILED with no summary";
+    await db.scheduledTask.update({
+      where: { id: task.id },
+      data: {
+        status: "failed",
+        completedAt: new Date(),
+        leaseExpiresAt: null,
+        lastError: summary,
+      },
+    });
+    await auditTaskEvent(
+      AUDIT_EVENTS.SCHEDULED_TASK_FAILED,
+      { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+      { error: summary, terminal: true, isDeadLetter: false, counts: result.counts }
+    );
+    logger.warn("Task finished with a terminal (non-retryable) failure", {
+      taskId: task.id,
+      taskName: task.task_name,
+      attempts: task.attempts,
+    });
   }
 
   /**

@@ -98,3 +98,39 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("processTaskById [db]", () => {
     expect(results.filter(Boolean)).toHaveLength(1);
   });
 });
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("HandlerResult FAILED — terminal, never retried [db]", () => {
+  const scheduler = new DatabaseSchedulerProvider();
+
+  it("a FAILED outcome finalizes the task as failed with no retry and no next run", async () => {
+    // Own task name: processDue below must not see other tests' pending rows.
+    const FAILED_TASK = `${TASK}-terminal`;
+    const id = randomUUID();
+    created.push(id);
+    await db.scheduledTask.create({ data: { id, taskName: FAILED_TASK, scheduledFor: new Date(Date.now() - 1000), status: "pending", maxAttempts: 3 } });
+    const before = await db.scheduledTask.findUnique({ where: { id } });
+    let runs = 0;
+    const handler: TaskHandler = async () => { runs++; return { status: "FAILED", summary: "Provider rejected the request (not retryable)." }; };
+    expect(await scheduler.processTaskById(id, new Map([[FAILED_TASK, handler]]))).toBe(false);
+    const row = await db.scheduledTask.findUnique({ where: { id } });
+    expect(row?.status).toBe("failed");
+    expect(row?.attempts).toBe(1);
+    expect(row?.lastError).toBe("Provider rejected the request (not retryable).");
+    expect(row?.completedAt).not.toBeNull();
+    expect(row?.leaseExpiresAt).toBeNull();
+    expect(row?.scheduledFor.getTime()).toBe(before!.scheduledFor.getTime());
+    // Not claimable again by either drain path.
+    expect(await scheduler.processTaskById(id, new Map([[FAILED_TASK, handler]]))).toBe(false);
+    await scheduler.processDue(new Map([[FAILED_TASK, handler]]));
+    expect(runs).toBe(1);
+  });
+
+  it("a thrown error still takes the retry path (unchanged)", async () => {
+    const id = await makeTask();
+    const handler: TaskHandler = async () => { throw new Error("transient"); };
+    await scheduler.processTaskById(id, new Map([[TASK, handler]]));
+    const row = await db.scheduledTask.findUnique({ where: { id } });
+    expect(row?.status).toBe("pending");
+    expect(row?.scheduledFor.getTime()).toBeGreaterThan(Date.now());
+  });
+});
