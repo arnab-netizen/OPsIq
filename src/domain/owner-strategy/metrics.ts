@@ -43,20 +43,34 @@ export function baseMonthlyProfitDelta(input: StrategySnapshotInput): number | n
   return round1(rev - cost);
 }
 
-export function bestMonthlyProfitDelta(input: StrategySnapshotInput): number | null {
+/**
+ * Scenario range. The owner-rated risk level applies a symmetric spread to the REVENUE change
+ * only; cost changes are treated as certain (a documented limitation of the current model). Both
+ * candidate outcomes are computed and ordered, so the worst case is always the lower result and
+ * the best case the higher one — for a negative revenue change `revenue × (1 + spread)` is the
+ * LOWER outcome, not the higher one.
+ */
+export function rawScenarioRange(input: StrategySnapshotInput): { worst: number; best: number } | null {
   const rev = num(input.expectedRevenueChange);
   const cost = num(input.costChange);
   if (rev === null || cost === null || !input.riskLevel) return null;
   const spread = RISK_LEVEL_SPREAD[input.riskLevel];
-  return round1(rev * (1 + spread) - cost);
+  const lowRevenueOutcome = rev * (1 - spread) - cost;
+  const highRevenueOutcome = rev * (1 + spread) - cost;
+  return {
+    worst: Math.min(lowRevenueOutcome, highRevenueOutcome),
+    best: Math.max(lowRevenueOutcome, highRevenueOutcome),
+  };
+}
+
+export function bestMonthlyProfitDelta(input: StrategySnapshotInput): number | null {
+  const range = rawScenarioRange(input);
+  return range ? round1(range.best) : null;
 }
 
 export function worstMonthlyProfitDelta(input: StrategySnapshotInput): number | null {
-  const rev = num(input.expectedRevenueChange);
-  const cost = num(input.costChange);
-  if (rev === null || cost === null || !input.riskLevel) return null;
-  const spread = RISK_LEVEL_SPREAD[input.riskLevel];
-  return round1(rev * (1 - spread) - cost);
+  const range = rawScenarioRange(input);
+  return range ? round1(range.worst) : null;
 }
 
 export function roiAnnualPct(input: StrategySnapshotInput): number | null {
