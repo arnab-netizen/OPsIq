@@ -233,12 +233,17 @@ export async function getCycle(cycleId: string, workspaceId: string) {
 
 export async function listCycles(businessId: string, workspaceId: string) {
   await getBusiness(businessId, workspaceId);
-  return db.recoveryCycle.findMany({
+  const cycles = await db.recoveryCycle.findMany({
     where: { businessId, workspaceId },
     orderBy: { cycleNumber: "desc" },
     include: {
-      findings: { select: { id: true, code: true, severity: true } },
+      // confidence is RecoveryFinding's only ranking column besides severity/code.
+      findings: { select: { id: true, code: true, severity: true, confidence: true } },
       actions: { select: { id: true, status: true } },
     },
   });
+  return cycles.map(<C extends { findings: Array<{ code: string; severity: string; confidence: number }> }>(c: C) => ({
+    ...c,
+    findings: rankOwnerFindingsBySeverity(c.findings),
+  }));
 }
