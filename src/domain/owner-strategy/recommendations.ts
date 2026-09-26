@@ -170,6 +170,17 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     effortScore: 10,
     ownerRole: "owner",
   },
+  STR_NO_CASH_RESERVE: {
+    recommendationCode: "STRREC_KEEP_RESERVE",
+    category: "secure_funding",
+    title: "Keep a cash reserve",
+    requiredOwnerAction:
+      "This uses all the cash you have for it. Stage the spend or line up a buffer so one bad month doesn't leave you short.",
+    verificationMethod: "Re-run with the staged amount or new cash position; target cash left after the investment > 0.",
+    expectedTimeframeDays: 14,
+    effortScore: 30,
+    ownerRole: "owner",
+  },
   STR_OPP_STRONG_RETURN: {
     recommendationCode: "STRREC_PURSUE",
     category: "pursue",

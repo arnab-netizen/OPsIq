@@ -17,7 +17,7 @@ import {
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
 import { isValidCurrency } from "./data-confidence";
-import { num, ruleConsistentValue } from "./metrics";
+import { num, rawFundingShortfall, ruleConsistentValue } from "./metrics";
 import { classifyStrategyInputs } from "./input-status";
 
 /** Default urgency by severity (deterministic baseline). */
@@ -333,6 +333,27 @@ export function buildStrategyRiskFindings(
         })
       );
     }
+  }
+
+  // Investment uses exactly all the cash available for it (covered, but nothing left in reserve).
+  // Only when the option is otherwise worth doing — a loss-making option is not "short of reserve".
+  if (rawFundingShortfall(input) === 0 && r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta > 0) {
+    findings.push(
+      risk({
+        code: "STR_NO_CASH_RESERVE",
+        title: "No cash left in reserve",
+        summary:
+          "The investment uses all the cash available for it — one bad month could leave you short. Stage the spend or line up a buffer.",
+        sourceMetric: "affordabilityRatio",
+        sourceValue: r.affordabilityRatio,
+        threshold: t.minAffordabilityRatio,
+        severity: "medium",
+        confidence: conf,
+        impactScore: 40,
+        evidence: [`cashAvailable = investmentRequired = ${num(input.investmentRequired)}`],
+        verificationMetric: "affordabilityRatio",
+      })
+    );
   }
 
   // High qualitative execution risk (owner-flagged)
