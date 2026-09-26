@@ -33,6 +33,21 @@ interface EngagedPriorAction {
   title: string;
 }
 
+/**
+ * The scenario behind the current decision: the snapshot the latest evaluation used. Automatic
+ * re-evaluations (after an action is completed or verified) must re-evaluate this scenario — never
+ * pick one by latest assessment period, which would silently replace the owner's chosen scenario.
+ * Null when the business has never been evaluated.
+ */
+export async function currentStrategyScenarioId(businessId: string, workspaceId: string): Promise<string | null> {
+  const latest = await db.ownerStrategyCycle.findFirst({
+    where: { businessId, workspaceId },
+    orderBy: { sequenceNumber: "desc" },
+    select: { snapshotId: true },
+  });
+  return latest?.snapshotId ?? null;
+}
+
 export async function runStrategyDiagnosis(
   businessId: string,
   snapshotId: string,

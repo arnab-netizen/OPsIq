@@ -96,14 +96,11 @@ export async function recordStrategyVerification(
   // On verified success, trigger re-diagnosis to capture improved business state.
   if (result.reachedTarget) {
     try {
-      const latestSnapshot = await db.ownerStrategySnapshot.findFirst({
-        where: { businessId: action.businessId, workspaceId },
-        orderBy: { periodEnd: "desc" },
-        select: { id: true },
-      });
-      if (latestSnapshot) {
-        const { runStrategyDiagnosis } = await import("./diagnosis.service");
-        const newCycle = await runStrategyDiagnosis(action.businessId, latestSnapshot.id, actorId, workspaceId);
+      // Re-evaluate the scenario behind the current decision, not the latest assessment period.
+      const { currentStrategyScenarioId, runStrategyDiagnosis } = await import("./diagnosis.service");
+      const scenarioId = await currentStrategyScenarioId(action.businessId, workspaceId);
+      if (scenarioId) {
+        const newCycle = await runStrategyDiagnosis(action.businessId, scenarioId, actorId, workspaceId);
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.OWNER_STRATEGY_VERIFICATION_REASSESSMENT_TRIGGERED,
           actorId,
