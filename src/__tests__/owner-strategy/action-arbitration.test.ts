@@ -49,7 +49,8 @@ const CASES: Record<string, Partial<StrategySnapshotInput>> = {
   G_NOT_YET_ZERO_CASH: { investmentRequired: 150000, cashAvailable: 0, expectedRevenueChange: 30000, costChange: 12000 },
   H_GWC_RISK: { investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 60000, costChange: 12000, riskLevel: undefined },
   I_GWC_DOWNSIDE: { investmentRequired: 50000, cashAvailable: 400000, expectedRevenueChange: 30000, costChange: 20000, riskLevel: "high" },
-  J_GWC_WEAK: { investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 2000, costChange: 0 },
+  J_DONT_PAYBACK: { investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 2000, costChange: 0 },
+  J_GWC_LONG: { investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 5000, costChange: 0 },
   K_ZERO_INVESTMENT: { investmentRequired: 0, expectedRevenueChange: 20000, costChange: 5000 },
   L_ZERO_PROFIT: { investmentRequired: 50000, cashAvailable: 400000, expectedRevenueChange: 12000, costChange: 12000 },
   M_NO_RESERVE: { investmentRequired: 150000, cashAvailable: 150000, expectedRevenueChange: 60000, costChange: 12000 },
@@ -64,8 +65,9 @@ const EXPECTED: Record<string, { code: string; titles: string[] }> = {
   F_NEED_INFO_CASH: { code: "NEED_INFO", titles: ["Enter the cash you can put into this", "Choose an execution risk level"] },
   G_NOT_YET_ZERO_CASH: { code: "NOT_YET", titles: ["Close the ₹1,50,000 funding gap"] },
   H_GWC_RISK: { code: "GO_WITH_CONDITIONS", titles: ["Choose an execution risk level"] },
-  I_GWC_DOWNSIDE: { code: "GO_WITH_CONDITIONS", titles: ["Cap the downside before committing", "De-risk execution with a pilot"] },
-  J_GWC_WEAK: { code: "GO_WITH_CONDITIONS", titles: ["Shorten or stage the payback", "Compare a higher-ROI use of the cash"] },
+  I_GWC_DOWNSIDE: { code: "GO_WITH_CONDITIONS", titles: ["Cap the downside before committing", "Run a small pilot first"] },
+  J_DONT_PAYBACK: { code: "DONT_AS_PLANNED", titles: ["Change the plan, re-scope it, or drop it"] },
+  J_GWC_LONG: { code: "GO_WITH_CONDITIONS", titles: ["Shorten or stage the payback"] },
   K_ZERO_INVESTMENT: { code: "GO", titles: ["Go ahead and track the result"] },
   L_ZERO_PROFIT: { code: "DONT_AS_PLANNED", titles: ["Change the plan, re-scope it, or drop it"] },
   M_NO_RESERVE: { code: "GO_WITH_CONDITIONS", titles: ["Keep a cash reserve"] },
@@ -80,12 +82,13 @@ describe("planned actions per decision (scenario matrix A–M)", () => {
       const exp = EXPECTED[name];
       expect(p.decision.code).toBe(exp.code);
       expect(p.actions.map((a) => a.title)).toEqual(exp.titles);
-      // Exactly one primary: first, priority 100, is the recommended next action and the decision's step.
+      // Exactly one primary: first, strictly highest priority (computed, never pinned to 100),
+      // the recommended next action and the decision's step.
       expect(p.recommendedNextAction).toBe(p.actions[0]);
-      expect(p.actions[0].priorityScore).toBe(100);
+      expect(p.actions[0].priorityScore).toBeLessThanOrEqual(100); // Spine-computed (critical blockers can reach the clamp)
       expect(p.actions[0].title).toBe(p.decision.primaryStep.title);
       expect(p.actions[0].description).toBe(p.decision.primaryStep.description);
-      for (const a of p.actions.slice(1)) expect(a.priorityScore).toBeLessThanOrEqual(99);
+      for (const a of p.actions.slice(1)) expect(a.priorityScore).toBeLessThan(p.actions[0].priorityScore);
       for (const a of p.actions) expect(a.title).not.toMatch(FORBIDDEN_TITLE);
       if (exp.code !== "GO") for (const a of p.actions) expect(a.title).not.toMatch(/^Go ahead/);
       expect(new Set(p.actions.map((a) => a.title)).size).toBe(p.actions.length);
@@ -133,7 +136,7 @@ describe("N — persisted rows from an earlier cycle are arbitrated against the 
       data: "supporting",
       rescope: "on_hold",
     });
-    expect(a.find((r) => r.id === "pursue")!.decisionFitNote).toBe("On hold — doesn't fit the current decision (Not yet).");
+    expect(a.find((r) => r.id === "pursue")!.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it, or finish it if it's already under way.");
     expect(coherentStrategyActionRows(rows, notYet).map((r) => r.id)).toEqual(["funding", "data"]);
   });
 
@@ -172,5 +175,41 @@ describe("N — persisted rows from an earlier cycle are arbitrated against the 
 
   it("without a decision, retired go-ahead commands are still filtered", () => {
     expect(withoutRetiredStrategyActions(rows).map((r) => r.id)).toEqual(["funding", "data", "rescope"]);
+  });
+});
+
+describe("audit fixes — arbitration", () => {
+  const need = deriveStrategyDecision(scenario({ investmentRequired: 150000, cashAvailable: 400000, costChange: 12000 }), { now: NOW });
+
+  it("a generic data step for the same finding as the primary is covered by it (superseded)", () => {
+    const rows = [
+      { id: "p", findingCode: "STR_MISSING_CRITICAL_DATA", recommendationCode: "STRREC_PROVIDE_REVENUE_CHANGE", status: "proposed" },
+      { id: "g", findingCode: "STR_MISSING_CRITICAL_DATA", recommendationCode: "STRREC_IMPROVE_DATA_QUALITY", status: "assigned" },
+    ];
+    expect(arbitrateStrategyActionRows(rows, need).map((r) => r.decisionFit)).toEqual(["primary", "superseded"]);
+  });
+
+  it("each missing input has its own step code, so a carried step is never re-worded into a request for another input", () => {
+    const codes = new Set(
+      [
+        { expectedRevenueChange: undefined, costChange: 1 },
+        { expectedRevenueChange: 1, costChange: undefined },
+        { expectedRevenueChange: 60000, costChange: 1, investmentRequired: undefined },
+        { expectedRevenueChange: 60000, costChange: 1, investmentRequired: -1 },
+        { expectedRevenueChange: 60000, costChange: 1, investmentRequired: 5, cashAvailable: undefined },
+        { expectedRevenueChange: 60000, costChange: 1, investmentRequired: 5, cashAvailable: -1 },
+      ].map((o) => `${deriveStrategyDecision(scenario(o), { now: NOW }).primaryStep.findingCode}::${deriveStrategyDecision(scenario(o), { now: NOW }).primaryStep.recommendationCode}`)
+    );
+    expect(codes.size).toBe(6);
+  });
+
+  it("the same advice as the primary step (another finding) is superseded, not 'on hold'", () => {
+    const dont = deriveStrategyDecision(scenario(CASES.C_DONT), { now: NOW });
+    expect(strategyActionFit({ findingCode: "STR_NEGATIVE_ROI", recommendationCode: "STRREC_DROP_OR_RESCOPE" }, dont)).toBe("superseded");
+  });
+
+  it("the primary step's priority is not pinned: a GO step ranks by its own impact, not above every other domain", () => {
+    const p = plan(CASES.A_GO);
+    expect(p.actions[0].priorityScore).toBeLessThan(80);
   });
 });

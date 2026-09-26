@@ -123,7 +123,7 @@ describe("Strategy page — decision first", () => {
     expect(card.getAttribute("data-decision")).toBe("NOT_YET");
     expect(within(card).getByRole("heading", { level: 2 }).textContent).toBe("Not yet");
     expect(within(card).getByText("You're ₹50,000 short.")).toBeTruthy();
-    expect(screen.getByTestId("strategy-dimension-profit").textContent).toBe("Adds about ₹18,000 a month · earns back ₹1,50,000 in about 8.3 months.");
+    expect(screen.getByTestId("strategy-dimension-profit").textContent).toBe("Adds about ₹18,000 a month · earns back ₹1,50,000 in about 8 months.");
     expect(screen.getByTestId("strategy-dimension-cash").textContent).toBe("₹1,00,000 available for this — ₹50,000 short.");
     expect(screen.getByTestId("strategy-dimension-downside").textContent).toBe("If the extra sales come in 40% lower, this still adds about ₹6,000 a month.");
     expect(screen.getByTestId("strategy-dimension-evidence").textContent).toBe("9 of 9 inputs provided · values are owner estimates");
@@ -133,6 +133,8 @@ describe("Strategy page — decision first", () => {
     expect(within(next).getByText("In your action list below — proposed.")).toBeTruthy();
     // Positive facts are reasons, not commands.
     expect(within(card).getByText("Why this looks promising")).toBeTruthy();
+    // The gap is stated once as the detail — not repeated as a "why" line.
+    expect(within(card).queryByText("Why")).toBeNull();
     // The three /100 scores are not the headline: they sit in a collapsed "Detailed scores".
     const details = screen.getByText("Detailed scores").closest("details")!;
     expect(details.open).toBe(false);
@@ -151,8 +153,11 @@ describe("Strategy page — decision first", () => {
     expect(within(cards[0] as HTMLElement).getByText("Next step")).toBeTruthy();
     expect(within(cards[0] as HTMLElement).getByRole("button", { name: "Assign" })).toBeTruthy();
     const pursue = cards[1] as HTMLElement;
-    expect(pursue.textContent).toContain("On hold — doesn't fit the current decision (Not yet).");
+    expect(pursue.textContent).toContain("Not part of the current decision (not yet) — cancel it, or finish it if it's already under way.");
     expect(within(pursue).queryByRole("button", { name: "Assign" })).toBeNull();
+    // It can still be closed: Cancel is offered for on-hold work.
+    expect(within(pursue).getByRole("button", { name: "Cancel" })).toBeTruthy();
+    expect(within(cards[0] as HTMLElement).queryByRole("button", { name: "Cancel" })).toBeNull();
     expect(screen.getByTestId("strategy-decision").textContent).not.toMatch(/pursue|size up/i);
   });
 
@@ -161,7 +166,7 @@ describe("Strategy page — decision first", () => {
     renderPage();
     await screen.findByTestId("strategy-decision");
     expect(screen.getByText(/Current decision: Not yet/)).toBeTruthy();
-    expect(screen.getByText(/Earlier rating \(previous model\): Strong go/)).toBeTruthy();
+    expect(screen.getByText(/Stored rating \(previous scoring model\): Strong go/)).toBeTruthy();
   });
 
   it("NEED_INFO: 'Can't say yet', profit unknown (never scored as poor), missing values read 'not entered'", async () => {
@@ -200,6 +205,23 @@ describe("Strategy page — decision first", () => {
       unmount();
       vi.unstubAllGlobals();
     }
+  });
+
+  it("evidence names what is not entered; findings: technical numbers collapsed, no severity on upsides, invalid currency reads 'not valid'", async () => {
+    const sparse = input({ investmentRequired: 150000, cashAvailable: 100000, expectedRevenueChange: 30000, costChange: 12000, staffImpact: undefined, capacityImpactPct: undefined });
+    const findings = [
+      { id: "f1", code: "STR_OPP_FAST_PAYBACK", findingType: "opportunity", title: "Capital comes back quickly", summary: "s", sourceMetric: "paybackMonths", sourceValue: 8.3, threshold: 18, severity: "low", confidence: 0.9, evidence: ["paybackMonths = 8.3 ≤ 18"], verificationMetric: "paybackMonths" },
+      { id: "f2", code: "STR_INVALID_CURRENCY", findingType: "risk", title: "Reporting currency is invalid", summary: "s", sourceMetric: "currency", sourceValue: null, threshold: null, severity: "medium", confidence: 1, evidence: [], verificationMetric: "currency" },
+    ];
+    installFetch(dashboard(sparse, findings));
+    renderPage();
+    await screen.findByTestId("strategy-decision");
+    expect(screen.getByTestId("strategy-evidence-missing").textContent).toBe("Not entered: capacity impact, staff impact");
+    const section = screen.getByText(/What the evaluation found/).closest("section")!;
+    const upside = within(section).getByText("Capital comes back quickly").closest("div.border-l-4") as HTMLElement;
+    expect(within(upside).queryByText("Low")).toBeNull();
+    expect(within(upside).getByText("Numbers behind this").closest("details")!.open).toBe(false);
+    expect(section.textContent).toContain("currency = not valid");
   });
 
   it("scenario inputs are labelled with explicit units", async () => {

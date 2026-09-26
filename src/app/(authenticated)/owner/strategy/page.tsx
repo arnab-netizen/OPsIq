@@ -35,6 +35,10 @@ const FINDING_TYPE_LABEL: Record<string, string> = {
 const FINDING_CODE_TYPE_LABEL: Record<string, string> = {
   STR_OPP_DATA_QUALITY: "Data gap", // data completeness is evidence, not an opportunity
 };
+/** How a finding's empty source value reads (default: "not entered"). */
+const FINDING_NULL_VALUE_LABEL: Record<string, string> = {
+  STR_INVALID_CURRENCY: "not valid",
+};
 
 /**
  * Own-property-only lookup for a plain object literal used as a label/variant table. A bare
@@ -486,17 +490,17 @@ function StrategyCycleView({
             ) : (
               <p className="tabular-nums">{scoresLine} · {confidenceLine}</p>
             )}
-            <p className="mt-1">Earlier rating model: {STATE_LABEL[state] ?? state} (kept for reference; the decision above replaces it).</p>
+            <p className="mt-1">Stored rating (previous scoring model): {STATE_LABEL[state] ?? state} — kept for reference; the decision above replaces it.</p>
           </Disclosure>
         </>
       ) : (
         <>
-          <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
-            <div>
+          <div className="border rounded-lg p-4 bg-card flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <div className="text-xs uppercase text-muted-foreground">{caption}</div>
               <div className="text-lg font-semibold tabular-nums">{scoresLine}</div>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
               <div className="text-xs text-muted-foreground mt-1">{confidenceLine}</div>
             </div>
@@ -522,29 +526,35 @@ function StrategyCycleView({
       )}
 
       <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
+        <h2 className="font-bold mb-3">What the evaluation found ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No scenario risks or upsides detected.</p>}
         <div className="space-y-3">
           {cycle.findings.map((f: any) => (
-            <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>
-              <div className="flex justify-between">
-                <span className="font-semibold">{f.title}</span>
+            <div key={f.id} className={`border-l-4 pl-3 py-1 ${f.findingType === "opportunity" ? "border-success" : "border-warning"}`}>
+              <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                <span className="font-semibold min-w-0 break-words">{f.title}</span>
                 <span className="flex gap-1">
                   <Badge variant="muted-accessible">{ownLookup(FINDING_CODE_TYPE_LABEL, f.code) ?? ownLookup(FINDING_TYPE_LABEL, f.findingType) ?? f.findingType}</Badge>
-                  <Badge variant={ownLookup(SEVERITY_VARIANT, f.severity)}>{ownLookup(SEVERITY_LABEL, f.severity) ?? f.severity}</Badge>
+                  {/* Severity grades problems; an upside has none to show. */}
+                  {f.findingType !== "opportunity" && (
+                    <Badge variant={ownLookup(SEVERITY_VARIANT, f.severity)}>{ownLookup(SEVERITY_LABEL, f.severity) ?? f.severity}</Badge>
+                  )}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {f.sourceValue == null ? "not entered" : String(f.sourceValue)}
-                {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · confidence {Math.round((f.confidence ?? 0) * 100)}%
-              </p>
-              {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
-              )}
-              {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
-              )}
+              <Disclosure summary="Numbers behind this" className="mt-1">
+                <p className="text-xs">
+                  <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} ={" "}
+                  {f.sourceValue == null ? (ownLookup(FINDING_NULL_VALUE_LABEL, f.code) ?? "not entered") : String(f.sourceValue)}
+                  {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                </p>
+                {Array.isArray(f.evidence) && f.evidence.length > 0 && (
+                  <p className="text-xs"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
+                )}
+                {f.verificationMetric && (
+                  <p className="text-xs"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
+                )}
+              </Disclosure>
             </div>
           ))}
         </div>
@@ -557,7 +567,7 @@ function StrategyCycleView({
             const latestVerification = a.verifications?.[0];
             return (
               <div key={a.id} className="border rounded p-3">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {ownLookup(ACTION_FIT_LABEL, a.decisionFit) && (
@@ -585,6 +595,9 @@ function StrategyCycleView({
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
                   {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
+                  {FIT_WITHOUT_FORWARD_STEPS.has(a.decisionFit) && a.status !== "completed" && a.status !== "cancelled" && (
+                    <Button onClick={() => onUpdateAction(a, "cancelled")} disabled={busy}>Cancel</Button>
+                  )}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
@@ -609,7 +622,7 @@ function StrategyCycleView({
               <span className="text-muted-foreground">
                 {decision && c.id === cycle.id
                   ? `Current decision: ${decision.headline}`
-                  : `Earlier rating (previous model): ${STATE_LABEL[c.strategyState] ?? c.strategyState}`}{" "}
+                  : `Stored rating (previous scoring model): ${STATE_LABEL[c.strategyState] ?? c.strategyState}`}{" "}
                 · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>

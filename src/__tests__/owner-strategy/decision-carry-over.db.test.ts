@@ -98,7 +98,9 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       const pursue = actions.find((a: any) => a.recommendationCode === "STRREC_PURSUE");
       expect(pursue.carriedFromCycleSequence).toBe(1);
       expect(pursue.decisionFit).toBe("on_hold");
-      expect(pursue.decisionFitNote).toBe("On hold — doesn't fit the current decision (Not yet).");
+      expect(pursue.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it, or finish it if it's already under way.");
+      // Server-side: an on-hold action cannot be taken on or started — only finished or cancelled.
+      await expect(updateStrategyAction(pursue.id, { status: "in_progress" }, actor, workspaceId)).rejects.toThrow(/isn't part of the current Strategy decision/);
       expect(actions.filter((a: any) => a.decisionFit === "primary")).toHaveLength(1);
       // The never-touched "Go ahead" proposal of cycle 1 is superseded, not carried.
       expect(actions.some((a: any) => a.recommendationCode === "STRREC_PROCEED")).toBe(false);
@@ -114,6 +116,11 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       const topStrategy = (condition.profile?.topActions ?? []).filter((a) => a.domain === "strategy").map((a) => a.title);
       expect(topStrategy).toEqual(["Close the ₹50,000 funding gap"]);
       expect(condition.profile?.recommendedNextAction?.title).not.toMatch(/pursue|size up|go ahead/i);
+      const strategyScore = condition.profile?.domainScores.find((d) => d.domain === "strategy");
+      expect(strategyScore?.topActionCodes).toEqual(["STR_UNAFFORDABLE"]);
+      // The owner cancels the on-hold legacy action (allowed).
+      const cancelled = await updateStrategyAction(pursue.id, { status: "cancelled" }, actor, workspaceId);
+      expect(cancelled.status).toBe("cancelled");
 
       // The owner takes on the funding step; the next evaluation (₹30,000 short) re-words it.
       await updateStrategyAction(dash.recommendedNextAction.id, { status: "assigned" }, actor, workspaceId);

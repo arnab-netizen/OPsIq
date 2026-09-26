@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn(async () => undefined),
   db: {
     ownerStrategyCycle: { findFirst: mocks.findFirst },
     ownerStrategyFinding: { findMany: mocks.findMany },

@@ -56,10 +56,10 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_NEGATIVE_BASE_CASE: {
     recommendationCode: "STRREC_DROP_OR_RESCOPE",
     category: "drop_or_rescope",
-    title: "Drop or re-scope this option",
+    title: "Change the plan, re-scope it, or drop it",
     requiredOwnerAction:
-      "As framed, the expected case loses money — do not pursue it. Re-scope it (lower cost / higher price / smaller scale) until the base case is positive, or drop it.",
-    verificationMethod: "Re-run the scenario with revised inputs; target baseMonthlyProfitDelta > 0.",
+      "As planned it doesn't add profit. Change the numbers (lower cost, higher price, smaller scale) until it does, or put the money to another use.",
+    verificationMethod: "Evaluate an updated scenario; the monthly profit change should be above 0.",
     expectedTimeframeDays: 7,
     effortScore: 25,
     ownerRole: "owner",
@@ -67,10 +67,10 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_NEGATIVE_ROI: {
     recommendationCode: "STRREC_DROP_OR_RESCOPE",
     category: "drop_or_rescope",
-    title: "Do not commit capital at a negative return",
+    title: "Change the plan, re-scope it, or drop it",
     requiredOwnerAction:
-      "The investment is not recovered — re-scope to cut the upfront cost or raise the profit gain, or redirect the cash to a positive-ROI option.",
-    verificationMethod: "Re-run the scenario; target roiAnnualPct above break-even, then above target.",
+      "The investment is never earned back. Cut the upfront cost or raise the profit it adds, or put the money to another use.",
+    verificationMethod: "Evaluate an updated scenario; the investment should be earned back.",
     expectedTimeframeDays: 7,
     effortScore: 25,
     ownerRole: "owner",
@@ -78,10 +78,10 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_WEAK_ROI: {
     recommendationCode: "STRREC_COMPARE_ALTERNATIVES",
     category: "compare_alternatives",
-    title: "Compare a higher-ROI use of the cash",
+    title: "Compare a better use of the cash",
     requiredOwnerAction:
-      "The return is weak — list 1–2 alternative uses of the same capital and compare ROI/payback before committing to this one.",
-    verificationMethod: "Document the comparison; commit only if this option's roiAnnualPct is the best safe choice.",
+      "The return is low. Compare 1–2 other uses of the same money (what each adds a month and how fast it earns back) before committing to this one.",
+    verificationMethod: "Write down the comparison; go ahead only if this option is the best safe choice.",
     expectedTimeframeDays: 14,
     effortScore: 30,
     ownerRole: "owner",
@@ -91,8 +91,8 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     category: "cap_downside",
     title: "Cap the downside before committing",
     requiredOwnerAction:
-      "Size the bet so a bad month is survivable: stage the spend, add an exit trigger, or shrink the commitment until the worst case is not a loss.",
-    verificationMethod: "Re-run with the staged/smaller scope; target worstMonthlyProfitDelta ≥ 0.",
+      "Make a bad month survivable: stage the spend, set an exit trigger, or shrink the commitment until the downside is not a loss.",
+    verificationMethod: "Evaluate the staged or smaller plan; the downside should no longer lose money.",
     expectedTimeframeDays: 14,
     effortScore: 35,
     ownerRole: "owner",
@@ -102,8 +102,8 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     category: "stage_payback",
     title: "Shorten or stage the payback",
     requiredOwnerAction:
-      "Capital is tied up too long — phase the investment, negotiate vendor terms, or start smaller so cash returns sooner and the risk window shrinks.",
-    verificationMethod: "Re-run with the staged plan; target paybackMonths within the comfortable window.",
+      "The investment takes a long time to come back. Phase it, negotiate vendor terms, or start smaller so cash returns sooner.",
+    verificationMethod: "Evaluate the staged plan; it should earn back within the target time.",
     expectedTimeframeDays: 14,
     effortScore: 35,
     ownerRole: "owner",
@@ -111,10 +111,10 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_UNAFFORDABLE: {
     recommendationCode: "STRREC_SECURE_FUNDING",
     category: "secure_funding",
-    title: "Secure funding or stage the spend",
+    title: "Close the funding gap",
     requiredOwnerAction:
-      "Available cash cannot safely fund this — stage the investment to fit cash, keep a reserve, or secure financing before committing.",
-    verificationMethod: "Re-run with the staged amount / new cash position; target affordabilityRatio ≥ 1.",
+      "The cash you have doesn't cover the investment. Stage the spend to fit your cash, reduce the scope, or secure funding before committing.",
+    verificationMethod: "Evaluate an updated scenario with the new cash or amount; there should be no funding gap.",
     expectedTimeframeDays: 21,
     effortScore: 40,
     ownerRole: "owner",
@@ -122,10 +122,10 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_HIGH_EXECUTION_RISK: {
     recommendationCode: "STRREC_DE_RISK",
     category: "de_risk",
-    title: "De-risk execution with a pilot",
+    title: "Run a small pilot first",
     requiredOwnerAction:
-      "Run a small pilot / staged rollout with a clear success metric and an exit trigger before committing fully to the high-risk option.",
-    verificationMethod: "Define the pilot's success metric up front; proceed only if the pilot hits it.",
+      "Run a small pilot or staged rollout with a clear success measure and an exit trigger before committing fully.",
+    verificationMethod: "Set the pilot's success measure up front; commit fully only if the pilot meets it.",
     expectedTimeframeDays: 30,
     effortScore: 40,
     ownerRole: "owner",
@@ -133,9 +133,9 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_INVALID_CURRENCY: {
     recommendationCode: "STRREC_FIX_CURRENCY",
     category: "improve_data_quality",
-    title: "Set a valid reporting currency",
-    requiredOwnerAction: "Set a valid 3–8 letter currency code on the scenario.",
-    verificationMethod: "Confirm currencyValid is true on the next scenario.",
+    title: "Set a valid currency",
+    requiredOwnerAction: "Use a valid 3-letter currency code (for example INR) in an updated scenario.",
+    verificationMethod: "The next evaluation shows the money figures in that currency.",
     expectedTimeframeDays: 3,
     effortScore: 10,
     ownerRole: "owner",
@@ -143,9 +143,9 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_MISSING_CRITICAL_DATA: {
     recommendationCode: "STRREC_IMPROVE_DATA_QUALITY",
     category: "improve_data_quality",
-    title: "Provide missing scenario inputs",
-    requiredOwnerAction: "Enter the listed missing inputs (revenue change, cost change, investment) so the recommendation is trustworthy.",
-    verificationMethod: "Re-run the scenario; target dataConfidenceScore higher.",
+    title: "Enter the missing scenario inputs",
+    requiredOwnerAction: "Add an updated scenario with the missing inputs (expected revenue change per month, expected cost change per month, upfront investment), then evaluate it.",
+    verificationMethod: "The next evaluation calculates the profit effect and affordability.",
     expectedTimeframeDays: 7,
     effortScore: 20,
     ownerRole: "owner",
@@ -156,7 +156,7 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     title: "Enter the cash you can put into this",
     requiredOwnerAction:
       "Enter how much cash you can put into this option so affordability and any funding gap can be calculated.",
-    verificationMethod: "Re-run the scenario with the cash figure; affordability is then calculated.",
+    verificationMethod: "The next evaluation calculates affordability and any funding gap.",
     expectedTimeframeDays: 3,
     effortScore: 10,
     ownerRole: "owner",
@@ -167,18 +167,18 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     title: "Choose an execution risk level",
     requiredOwnerAction:
       "Choose low, medium or high execution risk so the downside (lower sales than expected) can be calculated.",
-    verificationMethod: "Re-run the scenario with a risk level; the downside is then calculated.",
+    verificationMethod: "The next evaluation calculates the downside.",
     expectedTimeframeDays: 3,
     effortScore: 10,
     ownerRole: "owner",
   },
-  STR_NO_CASH_RESERVE: {
+  STR_LOW_CASH_RESERVE: {
     recommendationCode: "STRREC_KEEP_RESERVE",
     category: "secure_funding",
     title: "Keep a cash reserve",
     requiredOwnerAction:
-      "This uses all the cash you have for it. Stage the spend or line up a buffer so one bad month doesn't leave you short.",
-    verificationMethod: "Re-run with the staged amount or new cash position; target cash left after the investment > 0.",
+      "This leaves little or no cash in reserve. Stage the spend or line up a buffer so one bad month doesn't leave you short.",
+    verificationMethod: "Evaluate the staged plan or new cash position; more cash should be left in reserve.",
     expectedTimeframeDays: 14,
     effortScore: 30,
     ownerRole: "owner",

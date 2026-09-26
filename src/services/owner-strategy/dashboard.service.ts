@@ -13,7 +13,7 @@ import { listBusinesses, getBusiness } from "@/services/founder-recovery/busines
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import type { StrategyDecision } from "@/domain/owner-strategy/decision";
-import { arbitrateStrategyActionRows, orderByDecisionFit, withoutRetiredStrategyActions } from "@/domain/owner-strategy/action-arbitration";
+import { arbitrateStrategyActionRows, orderByDecisionFit, presentStoredStrategyFinding, withoutRetiredStrategyActions } from "@/domain/owner-strategy/action-arbitration";
 import { currentStrategyDecision } from "./decision-view";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 
@@ -166,7 +166,7 @@ export async function getStrategyDashboard(
     ? {
         ...latestCycle,
         // Canonical severity order (critical → low), not the alphabetical order of the string column.
-        findings: rankOwnerFindingsBySeverity(latestCycle.findings),
+        findings: rankOwnerFindingsBySeverity(latestCycle.findings.map(presentStoredStrategyFinding)),
         actions: arbitratedActions,
       }
     : null;

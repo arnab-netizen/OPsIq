@@ -14,6 +14,8 @@ import {
   STRATEGY_DECISION_HEADLINE,
   formatStrategyMoney,
   formatStrategyMonths,
+  inAboutStrategyMonths,
+  aboutStrategyMoney,
   type StrategyDecision,
   type StrategySnapshotInput,
 } from "@/domain/owner-strategy";
@@ -71,10 +73,18 @@ describe("formatting", () => {
     expect(formatStrategyMoney(1500, "BADCODE1")).toBe("BADCODE1 1,500");
   });
   it("formats months without re-rounding", () => {
-    expect(formatStrategyMonths(8.3)).toBe("8.3 months");
+    expect(formatStrategyMonths(8)).toBe("8 months");
     expect(formatStrategyMonths(1)).toBe("1 month");
-    expect(formatStrategyMonths(0)).toBe("under a month");
     expect(formatStrategyMonths(18.0001)).toBe("18.0001 months");
+    expect(inAboutStrategyMonths(0)).toBe("in less than a month");
+    expect(inAboutStrategyMonths(8)).toBe("in about 8 months");
+  });
+  it("never says 'about less than', and currencies without minor units get no decimals", () => {
+    expect(aboutStrategyMoney(0.001, "INR")).toBe("less than ₹0.01");
+    expect(aboutStrategyMoney(18000, "INR")).toBe("about ₹18,000");
+    expect(formatStrategyMoney(50.5, "JPY")).toBe("¥51");
+    expect(formatStrategyMoney(0.4, "INR", 2)).toBe("₹0.40");
+    expect(formatStrategyMoney(10000, "INR", 2)).toBe("₹10,000.00");
   });
 });
 
@@ -89,7 +99,7 @@ describe("A — strong economics, affordable, low risk → GO", () => {
     expect(d.dimensions.evidence.state).toBe("good");
   });
   it("support lines", () => {
-    expect(d.dimensions.profit.line).toBe("Adds about ₹48,000 a month · earns back ₹1,50,000 in about 3.1 months.");
+    expect(d.dimensions.profit.line).toBe("Adds about ₹48,000 a month · earns back ₹1,50,000 in about 3 months.");
     expect(d.dimensions.profit.profitClass).toBe("strong");
     expect(d.dimensions.cash.line).toBe("₹4,00,000 available — covers the ₹1,50,000 with ₹2,50,000 to spare.");
     expect(d.dimensions.downside.line).toBe("If the extra sales come in 20% lower, this still adds about ₹36,000 a month.");
@@ -113,7 +123,7 @@ describe("B — the known case (150,000 / 100,000 / +30,000 / +12,000 / medium) 
     expect(d.dimensions.evidence.state).toBe("good");
   });
   it("support lines are exact and concrete (no vague 'Stretched')", () => {
-    expect(d.dimensions.profit.line).toBe("Adds about ₹18,000 a month · earns back ₹1,50,000 in about 8.3 months.");
+    expect(d.dimensions.profit.line).toBe("Adds about ₹18,000 a month · earns back ₹1,50,000 in about 8 months.");
     expect(d.dimensions.cash.line).toBe("₹1,00,000 available for this — ₹50,000 short.");
     expect(d.dimensions.cash.state).toBe("blocker");
     expect(d.dimensions.downside.line).toBe("If the extra sales come in 40% lower, this still adds about ₹6,000 a month.");
@@ -250,24 +260,35 @@ describe("I — negative downside with good expected economics → GO_WITH_CONDI
   });
 });
 
-describe("J — weak/long but positive economics → conditional, deterministic order", () => {
-  it("weak ROI + long payback → LONG_PAYBACK then WEAK_RETURN", () => {
+describe("J — weak/long but positive economics → deterministic by payback band", () => {
+  it("payback beyond the critical limit (75 months, 16% a year) → DONT_AS_PLANNED, not a conditional go", () => {
     const d = decide({ investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 2000, costChange: 0 });
     expect(d.values).toMatchObject({ monthlyProfitChange: 2000, roiAnnualPct: 16, paybackMonths: 75 });
+    expect(d.code).toBe("DONT_AS_PLANNED");
+    expect(reasonCodes(d)).toEqual(["PAYBACK_TOO_LONG"]);
+    expect(d.reasons[0].message).toBe("It would take about 75 months to earn back the investment — longer than the 36-month limit.");
+    expect(d.dimensions.profit).toMatchObject({ state: "blocker", profitClass: "no_profit", line: "Adds about ₹2,000 a month, but takes about 75 months to earn back ₹1,50,000." });
+    expect(d.primaryStep).toMatchObject({ recommendationCode: "STRREC_DROP_OR_RESCOPE", findingCode: "STR_LONG_PAYBACK" });
+    expect(d.promising).toEqual([]);
+  });
+  it("long payback within the limit (30 months) → GO_WITH_CONDITIONS on LONG_PAYBACK", () => {
+    const d = decide({ investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 5000, costChange: 0 });
     expect(d.code).toBe("GO_WITH_CONDITIONS");
-    expect(d.conditions.map((c) => c.code)).toEqual(["LONG_PAYBACK", "WEAK_RETURN"]);
+    expect(d.conditions.map((c) => c.code)).toEqual(["LONG_PAYBACK"]);
     expect(d.dimensions.profit).toMatchObject({ state: "caution", profitClass: "weak" });
     expect(d.primaryStep.recommendationCode).toBe("STRREC_STAGE_PAYBACK");
-    expect(d.reasons.find((r) => r.code === "WEAK_RETURN")?.message).toBe("It returns only about 16% a year on the investment.");
-  });
-  it("long payback alone", () => {
-    const d = decide({ investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 5000, costChange: 0 });
-    expect(d.conditions.map((c) => c.code)).toEqual(["LONG_PAYBACK"]);
     expect(d.reasons[0].message).toBe("It takes about 30 months to earn back the investment (target: 18 months or less).");
   });
-  it("industry thresholds apply (laundry: long payback > 12)", () => {
+  it("critical payback boundary: exactly 36 months is a condition, just over is DONT", () => {
+    expect(decide({ investmentRequired: 180000, cashAvailable: 400000, expectedRevenueChange: 5000, costChange: 0 }).code).toBe("GO_WITH_CONDITIONS");
+    const over = decide({ investmentRequired: 180001, cashAvailable: 400000, expectedRevenueChange: 5000, costChange: 0 });
+    expect(over.code).toBe("DONT_AS_PLANNED");
+    expect(over.reasons[0].message).toContain("36.0002 months"); // never displayed as "36" while the rule fires
+  });
+  it("industry thresholds apply (laundry: long payback > 12, limit 24)", () => {
     const d = decide({ industryTemplate: "laundry_local_service", investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 11000, costChange: 0 });
     expect(d.conditions.map((c) => c.code)).toEqual(["LONG_PAYBACK"]);
+    expect(decide({ industryTemplate: "laundry_local_service", investmentRequired: 150000, cashAvailable: 400000, expectedRevenueChange: 6000, costChange: 0 }).code).toBe("DONT_AS_PLANNED");
   });
 });
 
@@ -290,7 +311,7 @@ describe("L — zero profit", () => {
     expect(d.values.monthlyProfitChange).toBe(0);
     expect(d.code).toBe("DONT_AS_PLANNED");
     expect(reasonCodes(d)).toEqual(["NO_PROFIT_GAIN"]);
-    expect(d.dimensions.profit.line).toBe("Doesn't add profit — the extra revenue only covers the extra cost.");
+    expect(d.dimensions.profit.line).toBe("Doesn't add profit — the revenue and cost changes cancel out.");
     expect(d.primaryStep.description).toMatch(/^As planned it adds no profit\./);
   });
 });
@@ -299,9 +320,9 @@ describe("M — Phase 1 boundary values", () => {
   const good = { expectedRevenueChange: 60000, costChange: 12000 };
   it("cash exactly equal to the investment → covered, no reserve (condition)", () => {
     const d = decide({ ...good, investmentRequired: 150000, cashAvailable: 150000 });
-    expect(d.values).toMatchObject({ fundingGap: 0, cashLeftAfter: 0 });
+    expect(d.values).toMatchObject({ fundingGap: 0, cashLeftAfter: 0, lowReserveThreshold: 15000 });
     expect(d.code).toBe("GO_WITH_CONDITIONS");
-    expect(d.conditions.map((c) => c.code)).toEqual(["NO_CASH_RESERVE"]);
+    expect(d.conditions.map((c) => c.code)).toEqual(["LOW_CASH_RESERVE"]);
     expect(d.dimensions.cash.line).toBe("₹1,50,000 available — covers the ₹1,50,000 but leaves nothing in reserve.");
     expect(d.primaryStep.recommendationCode).toBe("STRREC_KEEP_RESERVE");
   });
@@ -311,10 +332,26 @@ describe("M — Phase 1 boundary values", () => {
     expect(d.values.fundingGap).toBe(0.01);
     expect(d.headlineDetail).toBe("You're ₹0.01 short.");
   });
-  it("one paisa spare → GO", () => {
-    const d = decide({ ...good, investmentRequired: 150000, cashAvailable: 150000.01 });
+  it("a little spare (₹1, or anything under 10% of the investment) is still a low reserve, not a clean GO", () => {
+    for (const cash of [150000.01, 150001, 164999.99]) {
+      const d = decide({ ...good, investmentRequired: 150000, cashAvailable: cash });
+      expect(d.code).toBe("GO_WITH_CONDITIONS");
+      expect(d.conditions.map((c) => c.code)).toEqual(["LOW_CASH_RESERVE"]);
+    }
+    const one = decide({ ...good, investmentRequired: 150000, cashAvailable: 150001 });
+    expect(one.dimensions.cash.line).toBe("₹1,50,001 available — covers the ₹1,50,000, leaving only ₹1 in reserve.");
+    expect(one.primaryStep.description).toContain("only ₹1 of your cash in reserve");
+  });
+  it("10% of the investment or more to spare → GO", () => {
+    const d = decide({ ...good, investmentRequired: 150000, cashAvailable: 165000 });
     expect(d.code).toBe("GO");
-    expect(d.values.cashLeftAfter).toBe(0.01);
+    expect(d.dimensions.cash.line).toBe("₹1,65,000 available — covers the ₹1,50,000 with ₹15,000 to spare.");
+  });
+  it("a paise-level gap shows every amount in that sentence with paise (no '₹10,000 available — ₹0.40 short')", () => {
+    const d = decide({ ...good, investmentRequired: 10000.4, cashAvailable: 10000 });
+    expect(d.code).toBe("NOT_YET");
+    expect(d.dimensions.cash.line).toBe("₹10,000.00 available for this — ₹0.40 short.");
+    expect(d.primaryStep.title).toBe("Close the ₹0.40 funding gap");
   });
   it("decimal amounts without float noise (16384.1 − 6384.1 = 10000 exactly)", () => {
     const d = decide({ expectedRevenueChange: 16384.1, costChange: 6384.1, investmentRequired: 180000, cashAvailable: 180000.1 });
@@ -331,13 +368,26 @@ describe("M — Phase 1 boundary values", () => {
     const d = decide({ expectedRevenueChange: 10000, costChange: 8000, investmentRequired: 20000, cashAvailable: 400000 });
     expect(d.values.worstMonthlyProfitChange).toBe(0);
     expect(reasonCodes(d)).not.toContain("DOWNSIDE_LOSS");
-    expect(d.dimensions.downside.line).toBe("If the extra sales come in 20% lower, this only breaks even.");
+    expect(d.dimensions.downside).toEqual({ state: "good", line: "If the extra sales come in 20% lower, this only breaks even." });
     expect(d.promising.map((p) => p.code)).not.toContain("DOWNSIDE_STILL_PROFITABLE");
   });
-  it("ROI exactly at the weak bar is not weak; just below is", () => {
-    // ROI 20% ⇔ payback 60 months: long payback either way, weak return only below 20%.
-    expect(reasonCodes(decide({ expectedRevenueChange: 1000, costChange: 0, investmentRequired: 60000, cashAvailable: 400000 }))).not.toContain("WEAK_RETURN");
-    expect(reasonCodes(decide({ expectedRevenueChange: 999.99, costChange: 0, investmentRequired: 60000, cashAvailable: 400000 }))).toContain("WEAK_RETURN");
+  it("a weak ROI (< 20% a year) always means payback > 60 months, beyond every critical limit → DONT", () => {
+    // ROI 20% ⇔ payback 60 months, so with the configured thresholds weak return is subsumed by
+    // the critical payback limit; the persisted STR_WEAK_ROI finding still records it.
+    const d = decide({ expectedRevenueChange: 999.99, costChange: 0, investmentRequired: 60000, cashAvailable: 400000 });
+    expect(d.code).toBe("DONT_AS_PLANNED");
+    expect(reasonCodes(d)).toEqual(["PAYBACK_TOO_LONG"]);
+    expect(diagnoseStrategySnapshot(scenario({ expectedRevenueChange: 999.99, costChange: 0, investmentRequired: 60000, cashAvailable: 400000 }), { now: NOW }).findings.map((f) => f.code)).toContain("STR_WEAK_ROI");
+  });
+  it("negative or zero revenue change: every downside message uses the right wording", () => {
+    const loss = decide({ expectedRevenueChange: -20000, costChange: -30000, investmentRequired: 0, riskLevel: "high" });
+    expect(loss.values.worstMonthlyProfitChange).toBe(-2000);
+    expect(loss.conditions[0].message).toBe("If revenue drops 60% more than expected, this loses about ₹2,000 a month.");
+    expect(loss.primaryStep.description).toMatch(/^If revenue drops 60% more than expected, this loses about ₹2,000 a month\./);
+    const savings = decide({ expectedRevenueChange: 0, costChange: -500, investmentRequired: 0, riskLevel: "medium" });
+    expect(savings.promising.map((p) => p.code)).not.toContain("DOWNSIDE_STILL_PROFITABLE");
+    expect(savings.dimensions.downside.line).toBe("No revenue change is expected, so sales can't come in lower — the result depends on the cost change.");
+    for (const d of [loss, savings]) for (const t of allText(d)) expect(t).not.toContain("extra sales");
   });
   it("negative revenue change phrases the downside as a bigger drop", () => {
     const d = decide({ expectedRevenueChange: -2000, costChange: -10000, investmentRequired: 0 });
@@ -389,21 +439,28 @@ describe("contract invariants across the matrix", () => {
   });
   it("a stale assessment is noted in evidence", () => {
     const d = decide(inputs[7]);
-    expect(d.dimensions.evidence.line).toBe("9 of 9 inputs provided · values are owner estimates · assessed more than 60 days ago");
+    expect(d.dimensions.evidence.line).toBe("9 of 9 inputs provided · values are owner estimates · the assessment period ended more than 60 days ago");
     expect(d.dimensions.evidence.state).toBe("caution");
   });
 });
 
 describe("decision conditions are backed by findings (so a persisted action can reference one)", () => {
-  it("cash exactly equal to the investment emits STR_NO_CASH_RESERVE with a template; ±1 paisa does not", () => {
+  it("a low reserve emits STR_LOW_CASH_RESERVE with a template, on exactly the decision's predicate", () => {
     const at = scenario({ expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 150000, cashAvailable: 150000 });
     const diag = diagnoseStrategySnapshot(at, { now: NOW });
-    expect(diag.findings.map((f) => f.code)).toContain("STR_NO_CASH_RESERVE");
+    expect(diag.findings.map((f) => f.code)).toContain("STR_LOW_CASH_RESERVE");
     expect(planStrategyActionsFromDiagnosis(diag).missingActionInputs).toEqual([]);
-    for (const cash of [149999.99, 150000.01]) {
+    for (const [cash, expected] of [[149999.99, false], [150000.01, true], [164999.99, true], [165000, false]] as const) {
       const codes = diagnoseStrategySnapshot({ ...at, cashAvailable: cash }, { now: NOW }).findings.map((f) => f.code);
-      expect(codes).not.toContain("STR_NO_CASH_RESERVE");
+      expect(codes.includes("STR_LOW_CASH_RESERVE")).toBe(expected);
+      expect(decide({ expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 150000, cashAvailable: cash }).conditions.some((c) => c.code === "LOW_CASH_RESERVE")).toBe(expected);
     }
+  });
+  it("affordability findings agree with the funding gap at sub-paisa precision", () => {
+    const s = scenario({ expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 3790.46, cashAvailable: 3790.4599999962 });
+    const codes = diagnoseStrategySnapshot(s, { now: NOW }).findings.map((f) => f.code);
+    const d = deriveStrategyDecision(s, { now: NOW });
+    expect(codes.includes("STR_UNAFFORDABLE")).toBe((d.values.fundingGap ?? 0) > 0);
   });
   it("a loss-making option is not flagged for reserve", () => {
     const loss = scenario({ expectedRevenueChange: 1000, costChange: 12000, investmentRequired: 150000, cashAvailable: 150000 });

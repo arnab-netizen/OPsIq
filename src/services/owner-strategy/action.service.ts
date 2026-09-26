@@ -18,6 +18,8 @@ import {
 } from "@/domain/founder-recovery/action-status";
 import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
 import type { StrategyActionUpdateInput } from "@/domain/owner-strategy/validation";
+import { strategyActionFit, STRATEGY_FITS_WITHOUT_FORWARD_STEPS } from "@/domain/owner-strategy/action-arbitration";
+import { currentStrategyDecision } from "./decision-view";
 
 export async function updateStrategyAction(
   actionId: string,
@@ -42,6 +44,22 @@ export async function updateStrategyAction(
       throw new ValidationError(`Invalid strategy action transition: ${from} → ${input.status}`);
     }
     const to = input.status;
+
+    // Decision fit (server-side): an action that is on hold or covered by the current decision's
+    // next step may be finished or cancelled, never taken on or started (action-arbitration.ts).
+    if (to === "assigned" || to === "in_progress") {
+      const latest = await db.ownerStrategyCycle.findFirst({
+        where: { businessId: action.businessId, workspaceId },
+        orderBy: { sequenceNumber: "desc" },
+        include: { snapshot: true },
+      });
+      const decision = currentStrategyDecision(latest);
+      if (decision && STRATEGY_FITS_WITHOUT_FORWARD_STEPS.includes(strategyActionFit(action, decision))) {
+        throw new ValidationError(
+          `This step isn't part of the current Strategy decision (${decision.headline}). Cancel it, or finish it if it's already under way.`
+        );
+      }
+    }
 
     // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
     await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "strategy", toStatus: to });

@@ -289,7 +289,8 @@ export function strategyCycleToDomainScore(cycle: any): DomainScore {
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
     // Canonical severity order: the persisted string column sorts alphabetically in the DB.
     topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
-    topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
+    // Only steps that fit the current decision (never an on-hold legacy "Pursue").
+    topActionCodes: coherentStrategyActions(cycle, cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
 }

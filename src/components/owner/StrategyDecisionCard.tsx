@@ -48,8 +48,12 @@ export function StrategyDecisionCard({
   /** The persisted action carrying the primary step, when one exists. */
   nextStepRow: StrategyNextStepRow | null;
 }) {
-  // Conditions are listed under "Before you go ahead"; every other reason is a "why".
-  const why = decision.code === "GO_WITH_CONDITIONS" ? [] : decision.reasons;
+  // Conditions are listed under "Before you go ahead"; every other reason is a "why". For "Not yet"
+  // the gap is already the detail line, the Cash line and the next step — not repeated as a "why".
+  const why =
+    decision.code === "GO_WITH_CONDITIONS"
+      ? []
+      : decision.reasons.filter((r) => !(decision.code === "NOT_YET" && r.code === "FUNDING_GAP"));
   // The detail line completes the headline unless it would repeat a "why" line word for word.
   const detail = decision.headlineDetail && !why.some((r) => r.message === decision.headlineDetail) ? decision.headlineDetail : null;
   return (
@@ -91,6 +95,11 @@ export function StrategyDecisionCard({
               <dd className="text-sm mt-1 break-words" data-testid={`strategy-dimension-${key}`}>
                 {dim.line}
               </dd>
+              {key === "evidence" && decision.dimensions.evidence.missingLabels.length > 0 && (
+                <dd className="text-xs text-muted-foreground mt-1 break-words" data-testid="strategy-evidence-missing">
+                  Not entered: {decision.dimensions.evidence.missingLabels.join(", ")}
+                </dd>
+              )}
             </div>
           );
         })}
@@ -119,7 +128,7 @@ export function StrategyDecisionCard({
       )}
 
       <div className="rounded-md bg-muted/40 p-3" data-testid="strategy-next-step">
-        <div className="text-xs uppercase text-muted-foreground">Your next step</div>
+        <h3 className="text-xs uppercase text-muted-foreground font-normal">Your next step</h3>
         <div className="font-semibold">{decision.primaryStep.title}</div>
         <p className="text-sm">{decision.primaryStep.description}</p>
         {decision.primaryStep.options.length > 0 && (
@@ -132,7 +141,7 @@ export function StrategyDecisionCard({
         <p className="text-xs text-muted-foreground mt-2">
           {nextStepRow
             ? `In your action list below — ${nextStepRow.statusLabel.toLowerCase()}.`
-            : "Evaluate the scenario again to add this step to your action list."}
+            : "Click “Evaluate scenario” to add this step to your action list."}
         </p>
       </div>
     </section>

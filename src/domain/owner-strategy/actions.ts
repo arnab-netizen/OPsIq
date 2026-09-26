@@ -75,19 +75,18 @@ export interface StrategyActionPlan {
   generatedAt: Date;
 }
 
-/** Ranking ceiling for supporting steps, so the primary step (100) always ranks first. */
-const SUPPORTING_PRIORITY_CEILING = 99;
-
 /**
  * Plan strategy actions from a scenario diagnosis, arbitrated against the decision:
- *  - the decision's primary step is the first action (priority 100), re-using the finding's
- *    recommendation when one exists (re-worded to the decision's concrete step), else created
- *    from the step itself (e.g. the GO "go ahead" step);
- *  - supporting steps are the recommendations the decision allows (action-arbitration.ts),
- *    one per recommendation code, ranked by the Spine ranker and capped below the primary;
+ *  - the decision's primary step is the first action, re-using the finding's recommendation when
+ *    one exists (re-worded to the decision's concrete step, e.g. "Close the ₹50,000 funding gap"),
+ *    else created from the step itself (e.g. the GO "go ahead" step);
+ *  - supporting steps are the recommendations the decision allows (action-arbitration.ts), one per
+ *    recommendation code, ranked by the Spine ranker;
  *  - everything else (retired Pursue/Size up, steps that conflict with the decision) is dropped.
- * Opportunity findings intentionally have no template and are not "missing" inputs. Findings
- * without a template are reported in `missingActionInputs` (never invented).
+ * Priorities stay the Spine-computed values, so Strategy never outranks other domains just by
+ * being "primary"; supporting steps are capped one point below the primary so every priority-
+ * ordered list still shows the primary first. Opportunity findings intentionally have no template
+ * and are not "missing" inputs. Findings without a template are reported in `missingActionInputs`.
  */
 export function planStrategyActionsFromDiagnosis(
   diagnosis: StrategyDiagnosisResult
@@ -105,13 +104,14 @@ export function planStrategyActionsFromDiagnosis(
 
   const primaryCandidate = candidates.find((_, i) => fits[i].decisionFit === "primary");
   const primary: OwnerAction = primaryCandidate
-    ? { ...primaryCandidate.action, title: step.title, description: step.description, priorityScore: 100 }
-    : primaryStepToOwnerAction(decision, diagnosis.metrics.dataConfidenceScore / 100);
+    ? { ...primaryCandidate.action, title: step.title, description: step.description }
+    : primaryStepToOwnerAction(decision, diagnosis, pressureScore);
 
+  const ceiling = Math.max(primary.priorityScore - 1, 0);
   const supporting = rankOwnerActions(
     candidates
       .filter((_, i) => fits[i].decisionFit === "supporting")
-      .map((c) => ({ ...c.action, priorityScore: Math.min(c.action.priorityScore, SUPPORTING_PRIORITY_CEILING) }))
+      .map((c) => ({ ...c.action, priorityScore: Math.min(c.action.priorityScore, ceiling) }))
   );
   const actions = [primary, ...supporting];
 
@@ -129,27 +129,48 @@ export function planStrategyActionsFromDiagnosis(
   };
 }
 
-/** The decision's primary step as an action when no finding recommendation carries it. */
-function primaryStepToOwnerAction(decision: StrategyDecision, confidence: number): OwnerAction {
+/**
+ * The decision's primary step as an action when no finding recommendation carries it (the GO step,
+ * a specific missing-input step, an invalid input). Its priority is computed the Spine way from the
+ * finding it addresses (or neutral defaults for GO) — never pinned to the maximum.
+ */
+function primaryStepToOwnerAction(
+  decision: StrategyDecision,
+  diagnosis: StrategyDiagnosisResult,
+  pressureScore: number
+): OwnerAction {
   const step = decision.primaryStep;
   const go = step.recommendationCode === "STRREC_PROCEED";
+  const finding = diagnosis.findings.find((f) => f.code === step.findingCode);
+  const confidence = clampConfidence(finding?.confidence ?? diagnosis.metrics.dataConfidenceScore / 100);
+  const expectedImpactScore = clampScore(finding?.impactScore ?? (go ? 60 : 40));
+  const urgencyScore = clampScore(finding?.urgencyScore ?? (go ? 40 : 45));
+  const effortScore = clampScore(go ? 45 : 15);
+  const severity = finding?.severity ?? (go ? "low" : "medium");
   return {
     domain: "strategy",
     findingCode: step.findingCode,
     title: step.title,
     description: step.description,
     ownerRole: "owner",
-    priorityScore: 100,
-    effortScore: go ? 45 : 20,
-    expectedImpactScore: go ? 60 : 40,
-    urgencyScore: go ? 40 : 50,
-    severity: "low",
-    confidence: clampConfidence(confidence),
+    priorityScore: calculateOwnerPriorityScore({
+      expectedImpactScore,
+      confidence,
+      urgencyScore,
+      effortScore,
+      severity,
+      survivalRiskScore: clampScore(pressureScore),
+    }),
+    effortScore,
+    expectedImpactScore,
+    urgencyScore,
+    severity,
+    confidence,
     status: "proposed",
-    verificationMetric: go ? "baseMonthlyProfitDelta" : "dataConfidenceScore",
+    verificationMetric: go ? "baseMonthlyProfitDelta" : (finding?.verificationMetric ?? "dataConfidenceScore"),
     verificationMethod: go
-      ? "Once it is running, compare actual monthly profit change with the estimate."
-      : "Correct the input and evaluate the scenario again.",
+      ? "Once it is running, compare the actual monthly profit change with the estimate."
+      : "Evaluate an updated scenario with the corrected input.",
     expectedTimeframeDays: go ? 30 : 3,
   };
 }

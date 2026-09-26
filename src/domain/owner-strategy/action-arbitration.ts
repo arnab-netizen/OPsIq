@@ -15,7 +15,17 @@
 import type { StrategyDecision, StrategyDecisionCode } from "./decision";
 
 /** Steps that gather or correct an input. */
-const DATA_STEPS = ["STRREC_IMPROVE_DATA_QUALITY", "STRREC_PROVIDE_CASH", "STRREC_SET_RISK_LEVEL", "STRREC_FIX_CURRENCY"] as const;
+const DATA_STEPS = [
+  "STRREC_PROVIDE_REVENUE_CHANGE",
+  "STRREC_PROVIDE_COST_CHANGE",
+  "STRREC_PROVIDE_INVESTMENT",
+  "STRREC_CORRECT_INVESTMENT",
+  "STRREC_PROVIDE_CASH",
+  "STRREC_CORRECT_CASH",
+  "STRREC_IMPROVE_DATA_QUALITY",
+  "STRREC_SET_RISK_LEVEL",
+  "STRREC_FIX_CURRENCY",
+] as const;
 /** Steps that handle a condition of an otherwise-worthwhile option. */
 const CONDITION_STEPS = [
   "STRREC_CAP_DOWNSIDE",
@@ -57,10 +67,10 @@ export function strategyActionFit(a: ArbitrableStrategyAction, d: StrategyDecisi
   if (isPrimaryStep(a, d)) return "primary";
   if (RETIRED_STRATEGY_RECOMMENDATION_CODES.includes(code)) return d.code === "GO" ? "superseded" : "on_hold";
   if (d.prohibitedRecommendationCodes.includes(code)) return "on_hold";
-  if (STRATEGY_SUPPORTING_STEPS[d.code].includes(code)) {
-    // The same step as the primary but for a different finding duplicates it.
-    return code === d.primaryStep.recommendationCode ? "superseded" : "supporting";
-  }
+  // The same advice as the primary step (same step for another finding, or another step for the
+  // same finding — e.g. the generic "enter the missing inputs") duplicates it.
+  if (code === d.primaryStep.recommendationCode || a.findingCode === d.primaryStep.findingCode) return "superseded";
+  if (STRATEGY_SUPPORTING_STEPS[d.code].includes(code)) return "supporting";
   return "on_hold";
 }
 
@@ -106,10 +116,33 @@ export function arbitrateStrategyActionRows<T extends ArbitrableStrategyAction>(
   return rows.map((r, i) => ({ ...r, decisionFit: fits[i], decisionFitNote: fitNote(fits[i], d) }));
 }
 
+const DECISION_SHORT_LABEL: Record<StrategyDecision["code"], string> = {
+  NEED_INFO: "can't say yet",
+  DONT_AS_PLANNED: "don't do it as planned",
+  NOT_YET: "not yet",
+  GO_WITH_CONDITIONS: "go ahead with conditions",
+  GO: "go ahead",
+};
+
 function fitNote(fit: StrategyActionFit, d: StrategyDecision): string | null {
-  if (fit === "on_hold") return `On hold — doesn't fit the current decision (${d.headline}).`;
-  if (fit === "superseded") return "Replaced by the current next step.";
+  if (fit === "on_hold") return `Not part of the current decision (${DECISION_SHORT_LABEL[d.code]}) — cancel it, or finish it if it's already under way.`;
+  if (fit === "superseded") return "Covered by the current next step — cancel it, or finish it if it's already under way.";
   return null;
+}
+
+/** Fits for which the owner must not start or take on the action (only finish or cancel it). */
+export const STRATEGY_FITS_WITHOUT_FORWARD_STEPS: readonly StrategyActionFit[] = ["on_hold", "superseded"];
+
+/**
+ * Retired findings whose stored type no longer describes them. STR_OPP_DATA_QUALITY (no longer
+ * emitted) was stored as an "opportunity" but is a data gap: readers present it as a risk so it
+ * never appears as an upside. The stored row itself is not changed.
+ */
+const RETIRED_FINDING_TYPE: Record<string, string> = { STR_OPP_DATA_QUALITY: "risk" };
+
+export function presentStoredStrategyFinding<T extends { code: string; findingType: string }>(row: T): T {
+  const type = Object.prototype.hasOwnProperty.call(RETIRED_FINDING_TYPE, row.code) ? RETIRED_FINDING_TYPE[row.code] : null;
+  return type && type !== row.findingType ? { ...row, findingType: type } : row;
 }
 
 /** Actions that belong in any "what to do next" list: the primary and supporting steps only. */

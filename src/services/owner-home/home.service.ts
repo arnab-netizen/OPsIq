@@ -11,6 +11,7 @@
  */
 import { db } from "@/lib/db";
 import { coherentStrategyActions } from "@/services/owner-strategy/decision-view";
+import { presentStoredStrategyFinding } from "@/domain/owner-strategy/action-arbitration";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
   buildOwnerHomeSummary,
@@ -287,7 +288,8 @@ export async function getOwnerHome(
     // Only the decision's primary step and allowed supporting steps reach Home (never a stale
     // "Pursue"/"Proceed" that conflicts with the current decision).
     for (const a of coherentStrategyActions(strategy, strategy.actions)) actions.push(strategyActionRowToOwnerAction(a));
-    for (const f of strategy.findings) findings.push(rowToFinding(f, "strategy"));
+    // Retired "data quality" rows are data gaps, not upside (presentStoredStrategyFinding).
+    for (const f of strategy.findings) findings.push(rowToFinding(presentStoredStrategyFinding(f), "strategy"));
     for (const v of allStrategyVers) {
       verifications.push({
         domain: "strategy",
