@@ -17,6 +17,7 @@ import {
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
 import { isValidCurrency } from "./data-confidence";
+import { ruleConsistentValue } from "./metrics";
 
 /** Default urgency by severity (deterministic baseline). */
 const SEVERITY_URGENCY: Record<OwnerSeverity, number> = {
@@ -74,6 +75,9 @@ export function buildStrategyRiskFindings(
 ): OwnerFinding[] {
   const findings: OwnerFinding[] = [];
   const conf = clampConfidence(m.dataConfidenceScore / 100);
+  // Thresholds are compared on FULL-PRECISION values only; display values are shown (made
+  // rule-consistent at boundaries) but never decide an outcome.
+  const r = m.raw;
 
   // Invalid currency (certain)
   if (!isValidCurrency(input.currency)) {
@@ -120,7 +124,8 @@ export function buildStrategyRiskFindings(
   }
 
   // Negative base case (the option loses money in the expected case)
-  if (m.baseMonthlyProfitDelta !== null && m.baseMonthlyProfitDelta <= 0) {
+  if (r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta <= 0) {
+    const shown = ruleConsistentValue(r.baseMonthlyProfitDelta, m.baseMonthlyProfitDelta!, (v) => v <= 0);
     findings.push(
       risk({
         code: "STR_NEGATIVE_BASE_CASE",
@@ -128,17 +133,18 @@ export function buildStrategyRiskFindings(
         summary:
           "On the expected numbers this option reduces monthly profit — it should not be pursued as framed. Re-scope it or drop it.",
         sourceMetric: "baseMonthlyProfitDelta",
-        sourceValue: m.baseMonthlyProfitDelta,
+        sourceValue: shown,
         threshold: 0,
         severity: "critical",
         confidence: conf,
         impactScore: 85,
-        evidence: [`baseMonthlyProfitDelta = ${m.baseMonthlyProfitDelta} ≤ 0`],
+        evidence: [`baseMonthlyProfitDelta = ${shown} ≤ 0`],
         verificationMetric: "baseMonthlyProfitDelta",
       })
     );
-  } else if (m.roiAnnualPct !== null && m.roiAnnualPct < t.criticalRoiPct) {
+  } else if (r.roiAnnualPct !== null && r.roiAnnualPct < t.criticalRoiPct) {
     // Negative ROI with a (barely) positive base is still value-destroying on capital.
+    const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v < t.criticalRoiPct);
     findings.push(
       risk({
         code: "STR_NEGATIVE_ROI",
@@ -146,16 +152,17 @@ export function buildStrategyRiskFindings(
         summary:
           "The capital required is not recovered by the profit gain — the option destroys value as framed.",
         sourceMetric: "roiAnnualPct",
-        sourceValue: m.roiAnnualPct,
+        sourceValue: shown,
         threshold: t.criticalRoiPct,
         severity: "critical",
         confidence: conf,
         impactScore: 80,
-        evidence: [`roiAnnualPct = ${m.roiAnnualPct}% < ${t.criticalRoiPct}%`],
+        evidence: [`roiAnnualPct = ${shown}% < ${t.criticalRoiPct}%`],
         verificationMetric: "roiAnnualPct",
       })
     );
-  } else if (m.roiAnnualPct !== null && m.roiAnnualPct < t.lowRoiPct) {
+  } else if (r.roiAnnualPct !== null && r.roiAnnualPct < t.lowRoiPct) {
+    const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v < t.lowRoiPct);
     findings.push(
       risk({
         code: "STR_WEAK_ROI",
@@ -163,12 +170,12 @@ export function buildStrategyRiskFindings(
         summary:
           "The option returns little on the capital; a higher-ROI use of the same cash likely exists — compare before committing.",
         sourceMetric: "roiAnnualPct",
-        sourceValue: m.roiAnnualPct,
+        sourceValue: shown,
         threshold: t.lowRoiPct,
         severity: "high",
         confidence: conf,
         impactScore: 50,
-        evidence: [`roiAnnualPct = ${m.roiAnnualPct}% < ${t.lowRoiPct}%`],
+        evidence: [`roiAnnualPct = ${shown}% < ${t.lowRoiPct}%`],
         verificationMetric: "roiAnnualPct",
       })
     );
@@ -176,11 +183,12 @@ export function buildStrategyRiskFindings(
 
   // Negative worst case (downside loses money even though the base case is positive)
   if (
-    m.worstMonthlyProfitDelta !== null &&
-    m.worstMonthlyProfitDelta < 0 &&
-    m.baseMonthlyProfitDelta !== null &&
-    m.baseMonthlyProfitDelta > 0
+    r.worstMonthlyProfitDelta !== null &&
+    r.worstMonthlyProfitDelta < 0 &&
+    r.baseMonthlyProfitDelta !== null &&
+    r.baseMonthlyProfitDelta > 0
   ) {
+    const shown = ruleConsistentValue(r.worstMonthlyProfitDelta, m.worstMonthlyProfitDelta!, (v) => v < 0);
     findings.push(
       risk({
         code: "STR_NEGATIVE_WORST_CASE",
@@ -188,22 +196,23 @@ export function buildStrategyRiskFindings(
         summary:
           "If revenue lands at the low end, this option turns into a monthly loss — size the bet so a bad month is survivable, or de-risk it.",
         sourceMetric: "worstMonthlyProfitDelta",
-        sourceValue: m.worstMonthlyProfitDelta,
+        sourceValue: shown,
         threshold: 0,
         severity: "high",
         confidence: conf,
         impactScore: 55,
-        evidence: [`worstMonthlyProfitDelta = ${m.worstMonthlyProfitDelta} < 0`],
+        evidence: [`worstMonthlyProfitDelta = ${shown} < 0`],
         verificationMetric: "worstMonthlyProfitDelta",
       })
     );
   }
 
   // Payback bands (only meaningful when the base case is positive)
-  if (m.baseMonthlyProfitDelta !== null && m.baseMonthlyProfitDelta > 0) {
-    if (m.paybackMonths === null) {
+  if (r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta > 0) {
+    if (r.paybackMonths === null) {
       // positive base but payback not computable here only if investment missing — skip
-    } else if (m.paybackMonths > t.criticalPaybackMonths) {
+    } else if (r.paybackMonths > t.criticalPaybackMonths) {
+      const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v > t.criticalPaybackMonths);
       findings.push(
         risk({
           code: "STR_LONG_PAYBACK",
@@ -211,28 +220,29 @@ export function buildStrategyRiskFindings(
           summary:
             "The capital takes a very long time to come back, tying up cash and raising the risk that conditions change first.",
           sourceMetric: "paybackMonths",
-          sourceValue: m.paybackMonths,
+          sourceValue: shown,
           threshold: t.criticalPaybackMonths,
           severity: "high",
           confidence: conf,
           impactScore: 55,
-          evidence: [`paybackMonths = ${m.paybackMonths} > ${t.criticalPaybackMonths}`],
+          evidence: [`paybackMonths = ${shown} > ${t.criticalPaybackMonths}`],
           verificationMetric: "paybackMonths",
         })
       );
-    } else if (m.paybackMonths > t.longPaybackMonths) {
+    } else if (r.paybackMonths > t.longPaybackMonths) {
+      const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v > t.longPaybackMonths);
       findings.push(
         risk({
           code: "STR_LONG_PAYBACK",
           title: "Payback is slower than target",
           summary: "The capital comes back slowly; confirm cash can be spared that long before committing.",
           sourceMetric: "paybackMonths",
-          sourceValue: m.paybackMonths,
+          sourceValue: shown,
           threshold: t.longPaybackMonths,
           severity: "medium",
           confidence: conf,
           impactScore: 40,
-          evidence: [`paybackMonths = ${m.paybackMonths} > ${t.longPaybackMonths}`],
+          evidence: [`paybackMonths = ${shown} > ${t.longPaybackMonths}`],
           verificationMetric: "paybackMonths",
         })
       );
@@ -240,8 +250,9 @@ export function buildStrategyRiskFindings(
   }
 
   // Affordability bands (cash cannot fund the investment)
-  if (m.affordabilityRatio !== null) {
-    if (m.affordabilityRatio < t.criticalAffordabilityRatio) {
+  if (r.affordabilityRatio !== null) {
+    if (r.affordabilityRatio < t.criticalAffordabilityRatio) {
+      const shown = ruleConsistentValue(r.affordabilityRatio, m.affordabilityRatio!, (v) => v < t.criticalAffordabilityRatio);
       findings.push(
         risk({
           code: "STR_UNAFFORDABLE",
@@ -249,16 +260,17 @@ export function buildStrategyRiskFindings(
           summary:
             "Available cash covers only a fraction of the required investment — pursuing it would create a liquidity risk. Stage it or secure funding first.",
           sourceMetric: "affordabilityRatio",
-          sourceValue: m.affordabilityRatio,
+          sourceValue: shown,
           threshold: t.criticalAffordabilityRatio,
           severity: "critical",
           confidence: conf,
           impactScore: 75,
-          evidence: [`affordabilityRatio = ${m.affordabilityRatio} < ${t.criticalAffordabilityRatio}`],
+          evidence: [`affordabilityRatio = ${shown} < ${t.criticalAffordabilityRatio}`],
           verificationMetric: "affordabilityRatio",
         })
       );
-    } else if (m.affordabilityRatio < t.minAffordabilityRatio) {
+    } else if (r.affordabilityRatio < t.minAffordabilityRatio) {
+      const shown = ruleConsistentValue(r.affordabilityRatio, m.affordabilityRatio!, (v) => v < t.minAffordabilityRatio);
       findings.push(
         risk({
           code: "STR_UNAFFORDABLE",
@@ -266,12 +278,12 @@ export function buildStrategyRiskFindings(
           summary:
             "The investment uses most/all available cash, leaving little buffer; stage the spend or keep a reserve.",
           sourceMetric: "affordabilityRatio",
-          sourceValue: m.affordabilityRatio,
+          sourceValue: shown,
           threshold: t.minAffordabilityRatio,
           severity: "high",
           confidence: conf,
           impactScore: 55,
-          evidence: [`affordabilityRatio = ${m.affordabilityRatio} < ${t.minAffordabilityRatio}`],
+          evidence: [`affordabilityRatio = ${shown} < ${t.minAffordabilityRatio}`],
           verificationMetric: "affordabilityRatio",
         })
       );

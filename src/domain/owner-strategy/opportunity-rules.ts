@@ -14,6 +14,7 @@ import {
 } from "@/domain/owner-spine/contracts";
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
+import { ruleConsistentValue } from "./metrics";
 
 interface OppArgs {
   code: string;
@@ -58,9 +59,12 @@ export function buildStrategyOpportunityFindings(
   const findings: OwnerFinding[] = [];
   const conf = clampConfidence(m.dataConfidenceScore / 100);
   void input;
+  // Thresholds are compared on FULL-PRECISION values only (see risk-rules.ts).
+  const r = m.raw;
 
   // Strong-ROI option worth pursuing/scaling (only when ROI computable + strong)
-  if (m.roiAnnualPct !== null && m.roiAnnualPct >= t.strongRoiPct) {
+  if (r.roiAnnualPct !== null && r.roiAnnualPct >= t.strongRoiPct) {
+    const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v >= t.strongRoiPct);
     findings.push(
       opportunity({
         code: "STR_OPP_STRONG_RETURN",
@@ -68,20 +72,21 @@ export function buildStrategyOpportunityFindings(
         summary:
           "The return on capital is strong; this is a high-ROI use of cash. Commit (staged) while the numbers hold.",
         sourceMetric: "roiAnnualPct",
-        sourceValue: m.roiAnnualPct,
+        sourceValue: shown,
         threshold: t.strongRoiPct,
         severity: "low",
         confidence: conf,
-        impactScore: clampScore(Math.min(m.roiAnnualPct / 8, 60)),
+        impactScore: clampScore(Math.min(r.roiAnnualPct / 8, 60)),
         urgencyScore: 40,
-        evidence: [`roiAnnualPct = ${m.roiAnnualPct}% ≥ ${t.strongRoiPct}%`],
+        evidence: [`roiAnnualPct = ${shown}% ≥ ${t.strongRoiPct}%`],
         verificationMetric: "roiAnnualPct",
       })
     );
   }
 
   // Fast payback (only when payback computable and within the long-payback bar)
-  if (m.paybackMonths !== null && m.paybackMonths <= t.longPaybackMonths && m.baseMonthlyProfitDelta !== null && m.baseMonthlyProfitDelta > 0) {
+  if (r.paybackMonths !== null && r.paybackMonths <= t.longPaybackMonths && r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta > 0) {
+    const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v <= t.longPaybackMonths);
     findings.push(
       opportunity({
         code: "STR_OPP_FAST_PAYBACK",
@@ -89,20 +94,21 @@ export function buildStrategyOpportunityFindings(
         summary:
           "Payback is within the comfortable window, so the cash is not tied up long — a low-regret bet if the downside is survivable.",
         sourceMetric: "paybackMonths",
-        sourceValue: m.paybackMonths,
+        sourceValue: shown,
         threshold: t.longPaybackMonths,
         severity: "low",
         confidence: conf,
-        impactScore: clampScore(Math.min((t.longPaybackMonths - m.paybackMonths) * 2 + 20, 50)),
+        impactScore: clampScore(Math.min((t.longPaybackMonths - r.paybackMonths) * 2 + 20, 50)),
         urgencyScore: 35,
-        evidence: [`paybackMonths = ${m.paybackMonths} ≤ ${t.longPaybackMonths}`],
+        evidence: [`paybackMonths = ${shown} ≤ ${t.longPaybackMonths}`],
         verificationMetric: "paybackMonths",
       })
     );
   }
 
   // Safe upside (worst case still profitable) — a robust option
-  if (m.worstMonthlyProfitDelta !== null && m.worstMonthlyProfitDelta > 0) {
+  if (r.worstMonthlyProfitDelta !== null && r.worstMonthlyProfitDelta > 0) {
+    const shown = ruleConsistentValue(r.worstMonthlyProfitDelta, m.worstMonthlyProfitDelta!, (v) => v > 0);
     findings.push(
       opportunity({
         code: "STR_OPP_SAFE_UPSIDE",
@@ -110,13 +116,13 @@ export function buildStrategyOpportunityFindings(
         summary:
           "The worst case still adds monthly profit — this is a high-safety option; it can be sized up with confidence.",
         sourceMetric: "worstMonthlyProfitDelta",
-        sourceValue: m.worstMonthlyProfitDelta,
+        sourceValue: shown,
         threshold: 0,
         severity: "low",
         confidence: conf,
-        impactScore: clampScore(Math.min(m.worstMonthlyProfitDelta / 1000, 50)),
+        impactScore: clampScore(Math.min(r.worstMonthlyProfitDelta / 1000, 50)),
         urgencyScore: 30,
-        evidence: [`worstMonthlyProfitDelta = ${m.worstMonthlyProfitDelta} > 0`],
+        evidence: [`worstMonthlyProfitDelta = ${shown} > 0`],
         verificationMetric: "worstMonthlyProfitDelta",
       })
     );
