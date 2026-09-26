@@ -9,6 +9,7 @@
  */
 
 import { db } from "@/lib/db";
+import { resolveAlignedObjectiveLinks } from "@/services/owner-strategy/goal.service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { Prisma } from "@/generated/prisma/client";
@@ -82,6 +83,17 @@ export async function runGoalArbitration(
       _count: { select: { children: true } },
     },
   });
+
+  // Goal-link alignment re-evaluated at read time: a link to a replaced goal follows its successor,
+  // and only an ACTIVE goal in the objective's own scope counts (goal.service.ts).
+  const alignedObjectiveIds = await resolveAlignedObjectiveLinks(
+    workspaceId,
+    objectives.map((o: { id: string; businessId: string | null; linkedGoalId: string | null }) => ({
+      objectiveId: o.id,
+      objectiveBusinessId: o.businessId ?? null,
+      linkedGoalId: o.linkedGoalId,
+    })),
+  );
 
   // Fetch active CANDIDATE opportunity signals for unified portfolio arbitration
   const dbAny = db as unknown as Record<string, { findMany: (opts: unknown) => Promise<unknown[]> }>;
@@ -177,7 +189,7 @@ export async function runGoalArbitration(
       progressPct,
       resourceBudgetUsedPct,
       hasBlockingDependencies: obj.blockedBy.length > 0,
-      linkedGoalAligned: obj.linkedGoalId !== null,
+      linkedGoalAligned: alignedObjectiveIds.has(obj.id),
       timeHorizon: timeHorizonFromDays(daysLeft),
       deadlineDaysRemaining: daysLeft,
       confidence: 0.7, // default; enriched from DecisionConfidenceRecord when available

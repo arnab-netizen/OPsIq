@@ -69,6 +69,8 @@ async function main() {
   // than accumulating duplicates across repeated runs.
   const priorBusinessIds = (await prisma.ownerBusiness.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { id: true } })).map((b: any) => b.id);
   if (priorBusinessIds.length > 0) {
+    // owner_goals.business_id is ON DELETE RESTRICT: remove those businesses' goals first.
+    await prisma.ownerGoal.deleteMany({ where: { businessId: { in: priorBusinessIds } } });
     await prisma.ownerBusiness.deleteMany({ where: { id: { in: priorBusinessIds } } });
     console.log(`[trust-journey] cleared ${priorBusinessIds.length} business(es) from a prior seed run`);
   }

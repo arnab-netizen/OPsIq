@@ -461,6 +461,8 @@ export const AUDIT_EVENTS = {
   // Phase 5: Owner Goal + Trajectory Engine
   OWNER_GOAL_CREATED: "owner.goal_created",
   OWNER_GOAL_ACHIEVED: "owner.goal_achieved",
+  /** A goal was REVISED because a successor replaced it (payload names old/new goal, scopes and reason). */
+  OWNER_GOAL_REVISED: "owner.goal_revised",
 
   // Phase 6: Google Sheets Spreadsheet Allowlist
   SPREADSHEET_ALLOWLIST_ADDED: "external.spreadsheet_allowlist_added",

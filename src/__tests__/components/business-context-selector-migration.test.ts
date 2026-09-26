@@ -114,9 +114,15 @@ describe("Business-context selector migration — negative control (workspace-sc
     expect(src).not.toContain('name="businessSelector"');
   });
 
-  it("owner/goals (workspace-level financial goal, proven via getActiveGoal(workspaceId)) was NOT given a business selector", () => {
+  it("owner/goals is business-scoped (approved goals-scope decision): it uses the canonical selector and sends an explicit businessId", () => {
+    // Superseded contract: goals were workspace-level (getActiveGoal(workspaceId)) until the
+    // business-scoped goals decision; a goal now belongs to one business, chosen explicitly.
     const src = readOwnerPage("goals/page.tsx");
-    expect(src).not.toContain("BusinessContextSelector");
+    expect(src).toContain('import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector"');
+    expect(src).toMatch(/<BusinessContextSelector[\s\S]*?selectedId=\{activeBusinessId\}/);
+    expect(src).toContain("useActiveBusiness");
+    expect(src).toContain("businessId: activeBusinessId");
+    expect(src).toContain("requestSeq");
     expect(src).not.toContain('name="businessSelector"');
   });
 

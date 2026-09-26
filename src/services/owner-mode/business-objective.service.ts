@@ -11,6 +11,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { assertObjectiveGoalLink } from "@/services/owner-strategy/goal.service";
 import { Prisma } from "@/generated/prisma/client";
 
 export type ObjectiveType =
@@ -119,6 +120,10 @@ async function _createObjectiveCore(tx: Prisma.TransactionClient, input: CreateO
   if (input.businessId != null) {
     await assertBusinessOwnership(tx, input.workspaceId, input.businessId);
   }
+  if (input.linkedGoalId) {
+    // Same workspace, ACTIVE, and the objective's own scope (goal.service.ts).
+    await assertObjectiveGoalLink(input.workspaceId, input.businessId ?? null, input.linkedGoalId, tx);
+  }
 
   const objective = await tx.businessObjective.create({
     data: {
@@ -210,6 +215,12 @@ export async function updateObjective(input: UpdateObjectiveInput) {
   if (input.linkedGoalId !== undefined) updateData.linkedGoalId = input.linkedGoalId;
 
   const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Validated inside the write transaction (same workspace, ACTIVE, the objective's own scope). A
+    // goal replaced after this check is still resolved correctly at read time: alignment follows
+    // the replaced goal's successor (goal.service.ts resolveAlignedObjectiveLinks).
+    if (input.linkedGoalId) {
+      await assertObjectiveGoalLink(input.workspaceId, existing.businessId ?? null, input.linkedGoalId, tx);
+    }
     const updated = await tx.businessObjective.update({
       where: { id: input.objectiveId },
       data: updateData,

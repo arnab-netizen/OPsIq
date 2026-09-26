@@ -1149,6 +1149,37 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
+/**
+ * Goal Attention Signal (Phase 2 Signal A). One component for both Home layouts: the selected
+ * business's goal (or its explicit "No goal set for <business>" / "Workspace goal" state) must be
+ * visible whether or not a governed top action exists — the clean state is the normal Home for a
+ * business with no urgent action, and hiding the goal there hid it from most owners.
+ */
+function GoalAttentionSection({ signal }: { signal: GoalAttentionSignal }) {
+  return (
+    <div data-testid="cockpit-goal-section" className="flex flex-col gap-1">
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span className="text-sm font-medium text-foreground">Goal</span>
+        <span data-testid="cockpit-goal-state" data-cockpit-goal-state={signal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: signal.state === "AT_RISK" || signal.state === "NO_GROWTH" ? "#fef2f2" : signal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: signal.state === "AT_RISK" || signal.state === "NO_GROWTH" ? "#b91c1c" : signal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
+          {GOAL_STATE_LABEL[signal.state] ?? GOAL_STATE_FALLBACK}
+        </span>
+        {signal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{signal.goalTitle}</span>}
+      </div>
+      {signal.goalScope && signal.scopeLabel && (
+        <p data-testid="cockpit-goal-scope" data-cockpit-goal-scope={signal.goalScope} className="m-0 text-xs font-medium text-muted-foreground">
+          {signal.scopeLabel}
+        </p>
+      )}
+      {signal.gapToClose !== null && (
+        <p data-testid="cockpit-goal-gap" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
+          Gap to close: {signal.targetCurrency ?? ""} {signal.gapToClose.toLocaleString()}
+        </p>
+      )}
+      <p data-testid="cockpit-goal-explanation" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{signal.beginnerExplanation}</p>
+    </div>
+  );
+}
+
 export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, domainTopPriority = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
@@ -1206,6 +1237,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
         {financeTopPriority && domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={false} />}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
+        {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
         {recovery && <RecoverySection recovery={recovery} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
@@ -1552,23 +1584,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Also worth knowing</span>
 
           {/* Goal Attention Signal — Phase 2 Signal A */}
-          {goalAttentionSignal && (
-            <div data-testid="cockpit-goal-section" className="flex flex-col gap-1">
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <span className="text-sm font-medium text-foreground">Goal</span>
-                <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
-                  {GOAL_STATE_LABEL[goalAttentionSignal.state] ?? GOAL_STATE_FALLBACK}
-                </span>
-                {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
-              </div>
-              {goalAttentionSignal.gapToClose !== null && (
-                <p data-testid="cockpit-goal-gap" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
-                  Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
-                </p>
-              )}
-              <p data-testid="cockpit-goal-explanation" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
-            </div>
-          )}
+          {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
 
           {/* Profit Leak — Phase 2 Signal B. identifyProfitLeaks() (domain/owner-mode/profit-leak-radar.ts)
               always returns a non-null topLeak, falling back to a leakType: "DATA_INSUFFICIENT"
