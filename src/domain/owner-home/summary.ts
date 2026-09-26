@@ -17,12 +17,12 @@ import {
   EXECUTION_DOMAINS,
   clampConfidence,
   clampScore,
+  ownerSeverityRank,
   rankOwnerActions,
   type DomainScore,
   type OwnerAction,
   type OwnerDomain,
   type OwnerFinding,
-  type OwnerSeverity,
 } from "@/domain/owner-spine/contracts";
 import type {
   DangerLevel,
@@ -39,8 +39,6 @@ export const OPEN_ACTION_STATUSES: readonly string[] = ["proposed", "assigned", 
 
 /** Max number of "today's required actions" surfaced on the home screen. */
 export const MAX_REQUIRED_ACTIONS = 5;
-
-const SEVERITY_RANK: Record<OwnerSeverity, number> = { low: 0, medium: 1, high: 2, critical: 3 };
 
 /** A verification candidate fed to the summary (already workspace-scoped upstream). */
 export interface OwnerHomeVerificationInput {
@@ -106,15 +104,21 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
 
   const businessHealthScore = clampScore(average(input.domainScores.map((s) => clampScore(s.healthScore))));
 
-  // Top 3 risks: real risk findings, worst first (severity → impact → confidence → domain → code).
+  // Top 3 risks: real risk findings, worst first, in the canonical spine order
+  // (severity → impact → urgency → confidence → domain → code); an unknown stored
+  // severity ranks below low (ownerSeverityRank) rather than corrupting the sort.
   const top3Risks: OwnerHomeRisk[] = input.findings
     .filter((f) => f.findingType === "risk")
     .slice()
     .sort((a, b) => {
-      if (SEVERITY_RANK[b.severity] !== SEVERITY_RANK[a.severity]) return SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
+      const sev = ownerSeverityRank(b.severity) - ownerSeverityRank(a.severity);
+      if (sev !== 0) return sev;
       const ib = clampScore(b.impactScore);
       const ia = clampScore(a.impactScore);
       if (ib !== ia) return ib - ia;
+      const ub = clampScore(b.urgencyScore);
+      const ua = clampScore(a.urgencyScore);
+      if (ub !== ua) return ub - ua;
       const cb = clampConfidence(b.confidence);
       const ca = clampConfidence(a.confidence);
       if (cb !== ca) return cb - ca;
