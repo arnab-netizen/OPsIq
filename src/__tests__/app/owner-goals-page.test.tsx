@@ -1,85 +1,104 @@
 /**
- * Owner Goals page — jsdom integration test.
+ * Owner Goals page — jsdom integration test (business-scoped goals).
  *
- * Stubs fetch to serve active goal + trajectory. Asserts: page renders goal
- * summary card, trajectory progress bar, and create modal submits correctly.
+ * Stubs fetch to serve the GET /api/owner/goals?businessId= overview. Asserts: explicit scope
+ * labels, the selected business is sent explicitly, currency is the business's (not editable),
+ * only Revenue / Net profit can be created, legacy workspace goals are labelled and assignable
+ * only through an owner confirmation, and no NaN / guessed numbers reach the owner.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import GoalsPage from "@/app/(authenticated)/owner/goals/page";
 
-// The page defaults the goal currency from the active business (INR here, to prove no USD default).
-vi.mock("@/context/active-business-context", () => ({
-  useActiveBusiness: () => ({ activeBusiness: { id: "biz-1", name: "Biz", currency: "INR" } }),
-}));
+const BIZ = { id: "b1000001-0000-4000-8000-000000000001", name: "Trinity Services", currency: "INR" };
+const ctx = {
+  businesses: [BIZ] as Array<typeof BIZ>,
+  activeBusinessId: BIZ.id as string | null,
+  activeBusiness: BIZ as typeof BIZ | null,
+  needsBusinessRecovery: false,
+  setActiveBusinessId: vi.fn(),
+  refreshBusinesses: vi.fn(),
+  loading: false,
+};
+vi.mock("@/context/active-business-context", () => ({ useActiveBusiness: () => ctx }));
 
-const ACTIVE_GOAL = {
-  goal: {
+function trajectory(overrides: Record<string, unknown> = {}) {
+  return {
+    projectedMonthsToGoal: 7,
+    currentTrajectoryDate: "2027-04-15T00:00:00.000Z",
+    confidence: "MEDIUM",
+    confidenceRationale: "trajectory is within normal confidence bounds",
+    gapToClose: 280000,
+    currentValue: 220000,
+    percentComplete: 44,
+    onTrack: true,
+    ...overrides,
+  };
+}
+
+function goal(overrides: Record<string, unknown> = {}) {
+  return {
     id: "goal-uuid-1",
-    targetType: "PROFIT",
+    businessId: BIZ.id,
+    scope: "business",
+    businessName: BIZ.name,
+    businessActive: true,
+    targetType: "REVENUE",
     targetAmount: 500000,
-    targetCurrency: "USD",
+    targetCurrency: "INR",
     targetDate: "2027-06-30T00:00:00.000Z",
-    baselineAmount: 120000,
+    baselineAmount: null,
     status: "ACTIVE",
     isOverdue: false,
     createdAt: "2026-07-01T00:00:00.000Z",
-  },
-};
+    ...overrides,
+  };
+}
 
-const TRAJECTORY_RESULT = {
-  result: {
-    goal: ACTIVE_GOAL.goal,
-    // Exact JSON shape of GoalTrajectoryResult (src/services/owner-strategy/goal-trajectory.service.ts).
-    // A previous fixture used invented field names (percentComplete/gapToTarget/onTrack/
-    // projectedAchievementDate on a shape the server never sent), which hid "Progress NaN%".
-    trajectory: {
-      projectedMonthsToGoal: 7,
-      currentTrajectoryDate: "2027-04-15T00:00:00.000Z",
-      // Real TrajectoryConfidence values are uppercase -- see CONFIDENCE_LABEL.
-      confidence: "MEDIUM",
-      confidenceRationale: "trajectory is within normal confidence bounds",
-      requiredMonthlyImprovement: 31000,
-      gapToClose: 280000,
-      trajectoryMiss: false,
-      assumptions: [],
-      currentValue: 220000,
-      percentComplete: 44,
-      onTrack: true,
-      targetDatePassed: false,
-    },
-  },
-};
+function view(g: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
+  return {
+    goal: g,
+    metricBasis: g.targetType === "REVENUE" ? "revenue" : g.targetType === "PROFIT" ? "net_profit" : "not_measured",
+    unavailableReason: null,
+    dataWindow: { from: "2026-01-01T00:00:00.000Z", to: "2026-06-30T00:00:00.000Z", periods: 6 },
+    excludedSnapshotCount: 0,
+    excludedReason: null,
+    trajectory: trajectory(),
+    ...overrides,
+  };
+}
 
+let overview: Record<string, unknown>;
 let fetchMock: ReturnType<typeof vi.fn>;
+let postResponses: Record<string, { status: number; body: unknown }>;
+
+function respond(status: number, body: unknown) {
+  return Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) } as Response);
+}
 
 beforeEach(() => {
+  ctx.businesses = [BIZ];
+  ctx.activeBusinessId = BIZ.id;
+  ctx.activeBusiness = BIZ;
+  ctx.needsBusinessRecovery = false;
+  overview = {
+    business: { ...BIZ, isActive: true },
+    goal: view(goal()),
+    legacyGoal: null,
+    legacyAttributable: true,
+    history: [],
+  };
+  postResponses = {
+    "/api/owner/goals": { status: 201, body: { goalId: "goal-uuid-2" } },
+    "/api/owner/goals/assign": { status: 201, body: { goalId: "goal-uuid-3" } },
+  };
   fetchMock = vi.fn((input: string | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
     const method = (init?.method ?? "GET").toUpperCase();
-
-    if (url.includes("/api/owner/goals/trajectory")) {
-      return Promise.resolve({
-        ok: true, status: 200,
-        json: () => Promise.resolve(TRAJECTORY_RESULT),
-      } as Response);
-    }
-    if (url.endsWith("/api/owner/goals") && method === "GET") {
-      return Promise.resolve({
-        ok: true, status: 200,
-        json: () => Promise.resolve(ACTIVE_GOAL),
-      } as Response);
-    }
-    if (url.endsWith("/api/owner/goals") && method === "POST") {
-      return Promise.resolve({
-        ok: true, status: 201,
-        json: () => Promise.resolve({ goalId: "goal-uuid-2" }),
-      } as Response);
-    }
-    return Promise.resolve({
-      ok: false, status: 404,
-      json: () => Promise.resolve({ error: "not found" }),
-    } as Response);
+    if (method === "GET" && url.startsWith("/api/owner/goals/trajectory")) return respond(200, { result: overview.goal });
+    if (method === "GET" && url.startsWith("/api/owner/goals")) return respond(200, overview);
+    if (method === "POST" && postResponses[url]) return respond(postResponses[url].status, postResponses[url].body);
+    return respond(404, { error: "not found" });
   });
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -89,236 +108,177 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("GoalsPage", () => {
-  it("renders the page heading", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("Financial Goal");
+function postCalls(path: string) {
+  return fetchMock.mock.calls.filter(
+    ([u, init]) => u === path && ((init as RequestInit | undefined)?.method ?? "GET").toUpperCase() === "POST"
+  );
+}
+
+describe("GoalsPage — business-scoped goals", () => {
+  it("renders the heading and states that portfolio/group goals are not supported", async () => {
+    const { findByText, getByTestId } = render(<GoalsPage />);
+    await findByText("Goals");
+    expect(getByTestId("goals-consolidation-notice").textContent).toMatch(/consolidated reporting/);
+    expect(getByTestId("goals-consolidation-notice").textContent).toMatch(/currency conversion/);
   });
 
-  it("loads and renders the active goal card", async () => {
-    const { findByTestId } = render(<GoalsPage />);
-    const detail = await findByTestId("goal-detail");
-    expect(detail.textContent).toMatch(/Net Profit/);
-  });
-
-  it("fetches both goals and trajectory endpoints", async () => {
+  it("requests the goal of the selected business explicitly (single business preselected)", async () => {
     const { findByTestId } = render(<GoalsPage />);
     await findByTestId("goal-detail");
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/goals"),
-      expect.anything(),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/goals/trajectory"),
-      expect.anything(),
-    );
+    expect(fetchMock).toHaveBeenCalledWith(`/api/owner/goals?businessId=${BIZ.id}`, expect.anything());
+    expect(fetchMock).toHaveBeenCalledWith(`/api/owner/goals/trajectory?businessId=${BIZ.id}`, expect.anything());
   });
 
-  it("renders the trajectory section when trajectory is available", async () => {
+  it("labels the goal's scope with the business name, and shows currency, target, date, current value and data window", async () => {
     const { findByTestId } = render(<GoalsPage />);
-    await findByTestId("goal-trajectory");
+    const card = await findByTestId("goal-detail");
+    expect(within(card).getByTestId("goal-scope").textContent).toBe("Business goal · Trinity Services");
+    expect(card.textContent).toMatch(/Revenue target/);
+    expect(card.textContent).toMatch(/Currency: INR/);
+    expect(card.textContent).toMatch(/Target date:/);
+    expect(card.textContent).toMatch(/Current value/);
+    expect(within(card).getByTestId("goal-data-window").textContent).toMatch(/Based on 6 recorded periods/);
   });
 
-  it("displays on-track badge as Yes", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("Yes");
-  });
-
-  it("displays progress percentage from trajectory", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("44%");
-  });
-
-  it("shows the humanized status badge with its accessible semantic variant, and never leaks the raw ACTIVE enum value (G5 + G6)", async () => {
-    const { findByText, queryByText } = render(<GoalsPage />);
-    const badge = await findByText("Active");
-    // The raw GoalStatus enum value must never leak into the rendered badge.
-    expect(queryByText("ACTIVE")).toBeNull();
-    // STATUS_VARIANT.ACTIVE migrated from "default" to "default-accessible" (G6). "default"
-    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
-    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
-    // migration were fully reverted. Pin the accessible variant specifically by asserting the
-    // "default-accessible"-only text token, not just the shared category fill.
-    expect(badge.className).toMatch(/bg-primary/);
-    expect(badge.className).toMatch(/text-\[var\(--primary-text\)\]/);
-    expect(badge.className).not.toMatch(/bg-destructive|bg-warning/);
-  });
-
-  it("shows Update Goal button when a goal exists", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("Update Goal");
-  });
-
-  it("opens create modal when Update Goal is clicked", async () => {
-    const { findByText } = render(<GoalsPage />);
-    const btn = await findByText("Update Goal");
-    fireEvent.click(btn);
-    const modalTitle = await findByText("Update Financial Goal");
-    expect(modalTitle).toBeTruthy();
-  });
-
-  it("shows No financial goal set when goal is null", async () => {
-    fetchMock.mockImplementation((input: string | URL) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("/api/owner/goals/trajectory")) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ result: null }) } as Response);
-      }
-      if (url.includes("/api/owner/goals")) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ goal: null }) } as Response);
-      }
-      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+  it("shows excluded other-currency results explicitly", async () => {
+    overview.goal = view(goal(), {
+      excludedSnapshotCount: 2,
+      excludedReason: "2 recorded results are in a different currency than this INR goal and are not included (OpsIQ does not convert currencies).",
     });
-    const { findByText } = render(<GoalsPage />);
-    await findByText("No financial goal set yet.");
+    const { findByTestId } = render(<GoalsPage />);
+    expect((await findByTestId("goal-excluded")).textContent).toMatch(/2 recorded results are in a different currency/);
   });
 
-  it("shows Set your first goal button when no goal exists", async () => {
-    fetchMock.mockImplementation((input: string | URL) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("/api/owner/goals")) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ goal: null, result: null }) } as Response);
-      }
-      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
-    });
-    const { findByText } = render(<GoalsPage />);
-    await findByText("Set your first goal");
+  it("shows 'No goal set for <business>' when the selected business has no goal", async () => {
+    overview.goal = null;
+    const { findByTestId } = render(<GoalsPage />);
+    expect((await findByTestId("goal-empty")).textContent).toMatch(/No goal set for Trinity Services/);
   });
 
-  it("submits new goal via POST to /api/owner/goals", async () => {
-    const { findByText } = render(<GoalsPage />);
-    const btn = await findByText("Update Goal");
-    fireEvent.click(btn);
-    await findByText("Update Financial Goal");
-
-    await waitFor(() => {
-      const typeSelect = document.querySelector('select') as HTMLSelectElement | null;
-      if (typeSelect) fireEvent.change(typeSelect, { target: { value: "REVENUE" } });
-    });
-
-    const inputs = document.querySelectorAll('input');
-    const amountInput = Array.from(inputs).find((i) => (i as HTMLInputElement).type === "number");
-    if (amountInput) fireEvent.change(amountInput, { target: { value: "750000" } });
-
-    const dateInput = Array.from(inputs).find((i) => (i as HTMLInputElement).type === "date");
-    if (dateInput) fireEvent.change(dateInput, { target: { value: "2028-01-01" } });
-
-    const createBtn = await findByText("Set new goal");
-    fireEvent.click(createBtn);
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/api/owner/goals"),
-        expect.objectContaining({ method: "POST" }),
-      );
-    });
-  });
-
-  it("shows projected achievement date from trajectory", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText(/Projected achievement/);
-  });
-
-  it("renders the humanized confidence value, not the raw MEDIUM enum value", async () => {
-    const { findByText, queryByText } = render(<GoalsPage />);
-    await findByText("Medium");
-    // The raw TrajectoryConfidence enum value must never leak into the rendered text.
-    expect(queryByText("MEDIUM")).toBeNull();
-    expect(queryByText("medium")).toBeNull();
-  });
-
-  it("associates the create-goal modal's fields with their visible labels (G1)", async () => {
-    const { findByText, getByLabelText } = render(<GoalsPage />);
-    const btn = await findByText("Update Goal");
-    fireEvent.click(btn);
-    await findByText("Update Financial Goal");
-
-    // getByLabelText resolves via the label's htmlFor -> input/select id association;
-    // it throws if no element has that accessible name, so this fails if the wiring
-    // (G1 fix) regresses even though the label text is still visually present.
-    expect(getByLabelText(/Goal type/)).toBeTruthy();
-    expect(getByLabelText(/Target amount/)).toBeTruthy();
-    expect(getByLabelText("Currency")).toBeTruthy();
-    expect(getByLabelText(/Target date/)).toBeTruthy();
-    expect(getByLabelText("Baseline amount (optional)")).toBeTruthy();
-  });
-
-  it("renders unavailable data as 'Not enough data' — never NaN — when the trajectory has no recorded values", async () => {
-    fetchMock.mockImplementation((input: string | URL) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("/api/owner/goals/trajectory")) {
-        return Promise.resolve({
-          ok: true, status: 200,
-          json: () => Promise.resolve({
-            result: {
-              goal: { ...ACTIVE_GOAL.goal, targetCurrency: "INR", isOverdue: true },
-              trajectory: {
-                projectedMonthsToGoal: null, currentTrajectoryDate: null, confidence: "LOW",
-                confidenceRationale: "only 0 period(s) with data — minimum 3 required for any confidence; target date has already passed",
-                requiredMonthlyImprovement: null, gapToClose: null, trajectoryMiss: false,
-                assumptions: ["Insufficient data for projection"], currentValue: null,
-                percentComplete: null, onTrack: null, targetDatePassed: true,
-              },
-            },
-          }),
-        } as Response);
-      }
-      return Promise.resolve({
-        ok: true, status: 200,
-        json: () => Promise.resolve({ goal: { ...ACTIVE_GOAL.goal, targetCurrency: "INR", isOverdue: true } }),
-      } as Response);
-    });
-    const { findByTestId, getByText, getAllByText } = render(<GoalsPage />);
-    const traj = await findByTestId("goal-trajectory");
-    expect(traj.textContent).not.toMatch(/NaN|Infinity|undefined|null/);
-    expect(getAllByText("Not enough data").length).toBeGreaterThanOrEqual(2);
-    expect(getByText("Unknown")).toBeTruthy();
-    expect(getByText("Overdue")).toBeTruthy();
-  });
-
-  it("defaults the new-goal currency to the active business currency, never USD", async () => {
-    const { findByText, getByLabelText } = render(<GoalsPage />);
-    fireEvent.click(await findByText("Update Goal"));
-    await findByText("Update Financial Goal");
-    expect((getByLabelText("Currency") as HTMLInputElement).value).toBe("INR");
-  });
-
-  it("shows the server's field error next to the target date field", async () => {
-    fetchMock.mockImplementation((input: string | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url.endsWith("/api/owner/goals") && (init?.method ?? "GET").toUpperCase() === "POST") {
-        return Promise.resolve({
-          ok: false, status: 400,
-          json: () => Promise.resolve({
-            error: "Validation failed",
-            fieldErrors: [{ path: "targetAmount", message: "Too small: expected number to be >0" }],
-          }),
-        } as Response);
-      }
-      if (url.includes("/api/owner/goals/trajectory")) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TRAJECTORY_RESULT) } as Response);
-      }
-      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ACTIVE_GOAL) } as Response);
-    });
-    const { findByText, getByLabelText } = render(<GoalsPage />);
-    fireEvent.click(await findByText("Update Goal"));
-    await findByText("Update Financial Goal");
-    fireEvent.change(document.querySelector("select") as HTMLSelectElement, { target: { value: "REVENUE" } });
+  it("creates a goal for the selected business: explicit businessId, Revenue/Net profit only, currency shown not editable", async () => {
+    overview.goal = null;
+    const { findByTestId, getByLabelText, getByRole, queryByLabelText, getByTestId } = render(<GoalsPage />);
+    const empty = await findByTestId("goal-empty");
+    fireEvent.click(within(empty).getByRole("button"));
+    expect(getByTestId("goal-form-scope").textContent).toMatch(/Trinity Services · Currency: INR/);
+    expect(queryByLabelText(/^Currency/)).toBeNull();
+    const typeSelect = getByLabelText(/Goal type/) as HTMLSelectElement;
+    const options = Array.from(typeSelect.options).map((o) => o.textContent);
+    expect(options).toEqual(expect.arrayContaining(["Revenue", "Net profit"]));
+    expect(options).not.toContain("Net worth");
+    expect(options).not.toContain("Business multiple");
+    fireEvent.change(typeSelect, { target: { value: "REVENUE" } });
     fireEvent.change(getByLabelText(/Target amount/), { target: { value: "750000" } });
-    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2099-01-01" } });
-    fireEvent.click(await findByText("Set new goal"));
-    await findByText("Too small: expected number to be >0");
-    expect(getByLabelText(/Target amount/).getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2030-01-01" } });
+    fireEvent.click(getByRole("button", { name: "Create goal" }));
+    await waitFor(() => expect(postCalls("/api/owner/goals")).toHaveLength(1));
+    const body = JSON.parse((postCalls("/api/owner/goals")[0][1] as RequestInit).body as string);
+    expect(body).toMatchObject({ businessId: BIZ.id, targetType: "REVENUE", targetAmount: 750000 });
+    expect(body).not.toHaveProperty("targetCurrency");
   });
 
   it("rejects a past target date on the client before submitting", async () => {
-    const { findByText, getByLabelText } = render(<GoalsPage />);
-    fireEvent.click(await findByText("Update Goal"));
-    await findByText("Update Financial Goal");
-    fireEvent.change(document.querySelector("select") as HTMLSelectElement, { target: { value: "PROFIT" } });
-    fireEvent.change(getByLabelText(/Target amount/), { target: { value: "750000" } });
-    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2020-01-01" } });
-    fireEvent.click(await findByText("Set new goal"));
-    await findByText("Target date must be in the future");
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("/api/owner/goals"), expect.objectContaining({ method: "POST" }));
+    overview.goal = null;
+    const { findByTestId, getByLabelText, getByRole, findByText } = render(<GoalsPage />);
+    fireEvent.click(within(await findByTestId("goal-empty")).getByRole("button"));
+    fireEvent.change(getByLabelText(/Goal type/), { target: { value: "PROFIT" } });
+    fireEvent.change(getByLabelText(/Target amount/), { target: { value: "1000" } });
+    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2000-01-01" } });
+    fireEvent.click(getByRole("button", { name: "Create goal" }));
+    await findByText("Target date must be in the future.");
+    expect(postCalls("/api/owner/goals")).toHaveLength(0);
+  });
+
+  it("shows the server's field error next to the field", async () => {
+    overview.goal = null;
+    postResponses["/api/owner/goals"] = {
+      status: 400,
+      body: { error: "Validation failed", code: "VALIDATION_ERROR", fieldErrors: [{ path: "targetAmount", message: "Enter a positive amount" }] },
+    };
+    const { findByTestId, getByLabelText, getByRole, findByText } = render(<GoalsPage />);
+    fireEvent.click(within(await findByTestId("goal-empty")).getByRole("button"));
+    fireEvent.change(getByLabelText(/Goal type/), { target: { value: "PROFIT" } });
+    fireEvent.change(getByLabelText(/Target amount/), { target: { value: "1000" } });
+    fireEvent.change(getByLabelText(/Target date/), { target: { value: "2030-01-01" } });
+    fireEvent.click(getByRole("button", { name: "Create goal" }));
+    await findByText("Enter a positive amount");
+  });
+
+  it("labels a legacy goal as a workspace goal and, in a multi-business workspace, says it is not shown on any Home", async () => {
+    overview.legacyGoal = view(goal({ id: "legacy-1", businessId: null, scope: "workspace", businessName: null, businessActive: null }), {
+      unavailableReason: "Recorded results come from 2 businesses. A workspace goal can't be tracked without consolidated reporting, which OpsIQ does not have yet — assign this goal to one business to track it.",
+      dataWindow: null,
+    });
+    overview.legacyAttributable = false;
+    const { findByTestId } = render(<GoalsPage />);
+    const card = await findByTestId("legacy-goal");
+    expect(within(card).getByTestId("goal-scope").textContent).toBe("Workspace goal");
+    expect(within(card).getByTestId("legacy-goal-explainer").textContent).toMatch(/isn't shown on any business's Home/);
+    expect(within(card).getByTestId("goal-unavailable").textContent).toMatch(/consolidated reporting/);
+  });
+
+  it("assigns a legacy goal only after the owner confirms, sending the explicit business and confirm: true", async () => {
+    overview.legacyGoal = view(goal({ id: "legacy-1", businessId: null, scope: "workspace", businessName: null, businessActive: null }));
+    overview.goal = null;
+    const { findByTestId, getByRole, findByTestId: findAgain } = render(<GoalsPage />);
+    const card = await findByTestId("legacy-goal");
+    fireEvent.click(within(card).getByRole("button", { name: "Assign to Trinity Services" }));
+    expect(postCalls("/api/owner/goals/assign")).toHaveLength(0);
+    await findAgain("assign-confirm");
+    fireEvent.click(getByRole("button", { name: "Assign goal" }));
+    await waitFor(() => expect(postCalls("/api/owner/goals/assign")).toHaveLength(1));
+    const body = JSON.parse((postCalls("/api/owner/goals/assign")[0][1] as RequestInit).body as string);
+    expect(body).toEqual({ legacyGoalId: "legacy-1", businessId: BIZ.id, confirm: true });
+  });
+
+  it("states that a legacy net-worth goal is not measured instead of presenting revenue/profit as net worth", async () => {
+    overview.legacyGoal = view(goal({ id: "legacy-nw", businessId: null, scope: "workspace", businessName: null, businessActive: null, targetType: "NET_WORTH" }), {
+      metricBasis: "not_measured",
+      unavailableReason: "OpsIQ does not measure net worth, so this goal is not projected. Recorded revenue or profit is not the same measure.",
+      dataWindow: null,
+    });
+    const { findByTestId } = render(<GoalsPage />);
+    const card = await findByTestId("legacy-goal");
+    expect(card.textContent).toMatch(/Net worth target/);
+    expect(card.textContent).toMatch(/Not measured by OpsIQ/);
+    expect(within(card).getByTestId("goal-unavailable").textContent).toMatch(/does not measure net worth/);
+    expect(card.textContent).not.toMatch(/Current value/);
+  });
+
+  it("labels a goal of an archived business as such", async () => {
+    overview.goal = view(goal({ businessActive: false }));
+    const { findByTestId } = render(<GoalsPage />);
+    expect(within(await findByTestId("goal-detail")).getByTestId("goal-scope").textContent).toBe(
+      "Business goal · Trinity Services (archived business)"
+    );
+  });
+
+  it("renders unavailable numbers as 'Not enough data' — never NaN", async () => {
+    overview.goal = view(goal(), {
+      dataWindow: null,
+      trajectory: trajectory({ currentValue: null, percentComplete: null, gapToClose: null, onTrack: null, currentTrajectoryDate: null, confidence: "LOW" }),
+    });
+    const { findByTestId } = render(<GoalsPage />);
+    const card = await findByTestId("goal-detail");
+    expect(card.textContent).not.toMatch(/NaN|Infinity|undefined/);
+    expect(card.textContent).toMatch(/Not enough data/);
+  });
+
+  it("shows humanized status and confidence, never raw enums", async () => {
+    const { findByTestId } = render(<GoalsPage />);
+    const card = await findByTestId("goal-detail");
+    expect(card.textContent).toMatch(/Active/);
+    expect(card.textContent).toMatch(/Medium/);
+    expect(card.textContent).not.toMatch(/\bACTIVE\b|\bMEDIUM\b/);
+  });
+
+  it("does not load or show any goal while a business-recovery choice is pending", async () => {
+    ctx.needsBusinessRecovery = true;
+    ctx.activeBusinessId = null;
+    ctx.activeBusiness = null;
+    const { findByTestId, queryByTestId } = render(<GoalsPage />);
+    await findByTestId("goals-choose-business");
+    expect(queryByTestId("goal-detail")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

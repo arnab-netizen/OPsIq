@@ -2598,6 +2598,13 @@ model StartupIdeaCandidate {
 model OwnerGoal {
   id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId    String               @map("workspace_id") @db.Uuid
+  /// Goal scope. Non-null: the goal belongs to that business. null: an EXPLICIT legacy workspace
+  /// goal (created before goals were business-scoped) — never "unset", and never inferred from the
+  /// caller's selected business. New goals are always business-scoped (goal.service.ts).
+  businessId     String?              @map("business_id") @db.Uuid
+  /// Successor pointer, set when this goal is REVISED by a replacement or an owner-confirmed
+  /// assignment (same convention as other supersededById columns). null for the current goal.
+  supersededById String?              @map("superseded_by_id") @db.Uuid
   actorId        String               @map("actor_id") @db.Uuid
   targetType     String               @map("target_type") // PROFIT | REVENUE | NET_WORTH | MULTIPLE
   targetAmount   Float                @map("target_amount")
@@ -2609,8 +2616,14 @@ model OwnerGoal {
   createdAt      DateTime             @default(now()) @map("created_at")
   updatedAt      DateTime             @updatedAt @map("updated_at")
   milestones     OwnerGoalMilestone[]
+  business       OwnerBusiness?       @relation(fields: [businessId], references: [id], onDelete: Restrict)
 
+  /// At most one ACTIVE goal per business, and at most one ACTIVE legacy workspace goal per
+  /// workspace — enforced by the database, not only by createGoal().
+  @@unique([businessId], where: raw("((status = 'ACTIVE'::text) AND (business_id IS NOT NULL))"), map: "owner_goals_one_active_per_business")
+  @@unique([workspaceId], where: raw("((status = 'ACTIVE'::text) AND (business_id IS NULL))"), map: "owner_goals_one_active_legacy_per_workspace")
   @@index([workspaceId, status])
+  @@index([workspaceId, businessId, status])
   @@map("owner_goals")
 }
 
@@ -2691,6 +2704,7 @@ model OwnerBusiness {
   createdAt               DateTime                      @default(now()) @map("created_at")
   updatedAt               DateTime                      @updatedAt @map("updated_at")
   snapshots               OwnerMetricSnapshot[]
+  goals                   OwnerGoal[]
   cycles                  RecoveryCycle[]
   financeSnapshots        OwnerFinancialSnapshot[]
   financeCycles           OwnerFinanceCycle[]
