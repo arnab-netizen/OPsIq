@@ -14,6 +14,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 
 import { emitAuditEvent } from "@/infra/audit";
@@ -211,7 +212,9 @@ export async function getSalesDiagnosis(cycleId: string, workspaceId: string) {
     where: { id: cycleId, workspaceId },
     include: {
       snapshot: true,
-      findings: { orderBy: { severity: "asc" } },
+      // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+      // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+      findings: true,
       actions: {
         include: { verifications: { orderBy: { createdAt: "desc" } } },
         // Deterministic total order: priorityScore is clamped to [0,100], so
@@ -230,7 +233,7 @@ export async function getSalesDiagnosis(cycleId: string, workspaceId: string) {
     },
   });
   if (!cycle) throw new NotFoundError("OwnerSalesCycle", cycleId);
-  return cycle;
+  return { ...cycle, findings: rankOwnerFindingsBySeverity(cycle.findings) };
 }
 
 export async function listSalesCycleFindings(cycleId: string, workspaceId: string) {
@@ -239,10 +242,7 @@ export async function listSalesCycleFindings(cycleId: string, workspaceId: strin
     select: { id: true },
   });
   if (!cycle) throw new NotFoundError("OwnerSalesCycle", cycleId);
-  return db.ownerSalesFinding.findMany({
-    where: { cycleId, workspaceId },
-    orderBy: [{ severity: "asc" }, { impactScore: "desc" }],
-  });
+  return rankOwnerFindingsBySeverity(await db.ownerSalesFinding.findMany({ where: { cycleId, workspaceId } }));
 }
 
 export async function listSalesCycleActions(cycleId: string, workspaceId: string) {

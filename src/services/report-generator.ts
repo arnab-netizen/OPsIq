@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { ownerSeverityRank } from "@/domain/owner-spine/contracts";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
@@ -209,15 +210,18 @@ export async function generateEngagementReport(
   }
 
   // Fetch all required data in parallel to ensure consistency
-  const [currentCondition, findings, recommendations, actions, kpis] =
+  const [currentCondition, findingRows, recommendations, actions, kpis] =
     await Promise.all([
       db.businessConditionProfile.findFirst({
         where: { engagementId, workspaceId, isCurrent: true },
         orderBy: { createdAt: "desc" },
       }),
+      // Severity is a plain string, so a DB orderBy sorts it alphabetically
+      // (desc = medium, low, high, critical). Read newest-first, then rank by
+      // canonical severity after read (stable sort keeps newest-first within a tier).
       db.finding.findMany({
         where: { engagementId, engagement: { workspaceId } },
-        orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+        orderBy: { createdAt: "desc" },
       }),
       db.recommendation.findMany({
         where: { engagementId, workspaceId },
@@ -232,6 +236,9 @@ export async function generateEngagementReport(
         orderBy: { createdAt: "asc" },
       }),
     ]);
+  const findings = [...findingRows].sort(
+    (a: { severity: string }, b: { severity: string }) => ownerSeverityRank(b.severity) - ownerSeverityRank(a.severity)
+  );
 
   // Build summary
   const summary: EngagementReportSummary = {

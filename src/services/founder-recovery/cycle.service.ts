@@ -9,6 +9,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -217,7 +218,9 @@ export async function getCycle(cycleId: string, workspaceId: string) {
     where: { id: cycleId, workspaceId },
     include: {
       snapshot: true,
-      findings: { orderBy: { severity: "asc" } },
+      // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+      // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+      findings: true,
       actions: {
         include: { verifications: { orderBy: { createdAt: "desc" } } },
         orderBy: { createdAt: "asc" },
@@ -225,7 +228,7 @@ export async function getCycle(cycleId: string, workspaceId: string) {
     },
   });
   if (!cycle) throw new NotFoundError("RecoveryCycle", cycleId);
-  return cycle;
+  return { ...cycle, findings: rankOwnerFindingsBySeverity(cycle.findings) };
 }
 
 export async function listCycles(businessId: string, workspaceId: string) {

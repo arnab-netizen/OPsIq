@@ -9,6 +9,7 @@
  */
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "./business.service";
 
 export interface RecoveryDashboardPayload {
@@ -88,7 +89,9 @@ export async function getRecoveryDashboard(
       orderBy: { cycleNumber: "desc" },
       include: {
         snapshot: true,
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+        // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+        findings: true,
         actions: {
           include: { verifications: { orderBy: { createdAt: "desc" } } },
           orderBy: { createdAt: "asc" },
@@ -139,6 +142,7 @@ export async function getRecoveryDashboard(
   const latestCycle = latestCycleRow
     ? {
         ...latestCycleRow,
+        findings: rankOwnerFindingsBySeverity(latestCycleRow.findings),
         actions: [
           ...latestCycleRow.actions,
           ...carriedActions.map((a: { cycle: { cycleNumber: number }; finding: { code: string } | null }) => ({
