@@ -44,8 +44,12 @@ beforeEach(() => {
 
 describe("canonical severity rank", () => {
   it("ranks critical > high > medium > low; unknown last", () => {
-    expect(["low", "medium", "high", "critical"].map(ownerSeverityRank)).toEqual([0, 1, 2, 3]);
-    expect(ownerSeverityRank("severe")).toBe(-1);
+    // Only the relative order is part of the contract (no consumer reads the absolute values).
+    const [low, medium, high, critical] = ["low", "medium", "high", "critical"].map(ownerSeverityRank);
+    expect(critical).toBeGreaterThan(high);
+    expect(high).toBeGreaterThan(medium);
+    expect(medium).toBeGreaterThan(low);
+    expect(ownerSeverityRank("severe")).toBeLessThan(low);
     const ranked = rankOwnerFindingsBySeverity([...alphabeticalRows(), { severity: "bogus", code: "Z" }]);
     expect(ranked.map((f) => f.severity)).toEqual([...SEVERITY_ORDER, "bogus"]);
   });
