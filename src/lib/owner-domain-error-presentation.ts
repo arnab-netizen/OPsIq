@@ -168,6 +168,10 @@ const KNOWN_MESSAGE_TEMPLATES: ReadonlyArray<{ status: number; pattern: RegExp; 
   // against is never repeating whichever name arrives, not enumerating every model.
   // Never shown verbatim: the model name and UUID are internal implementation detail.
   { status: 404, pattern: /^\S+ not found: /, message: "That item couldn't be found. It may have been removed or updated elsewhere. Please refresh and try again." },
+  // Duplicate assessment/reporting period (ConflictError in each domain's snapshot.service.ts
+  // createXSnapshot). Retrying cannot succeed, so the generic "please try again" would mislead.
+  { status: 409, pattern: /^A strategy scenario for this business and assessment period already exists\. Edit it instead of creating a duplicate\.$/, message: "You already have a scenario for these dates. Choose different dates, or evaluate the saved one under “Saved scenarios”." },
+  { status: 409, pattern: /^A (?:metric|marketing|cashflow) snapshot for this business and reporting period already exists\. Edit it instead of creating a duplicate\.$/, message: "You already have an entry for these dates. Choose different dates, or use the one you already saved." },
 ];
 
 function safe(message: string, context: PresentationContext): string {
