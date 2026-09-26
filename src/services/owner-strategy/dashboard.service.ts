@@ -9,9 +9,15 @@
  * only — no mock, nothing invented.
  */
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import type { StrategyDecision } from "@/domain/owner-strategy/decision";
+import { arbitrateStrategyActionRows, orderByDecisionFit, presentStoredStrategyFinding, withoutRetiredStrategyActions } from "@/domain/owner-strategy/action-arbitration";
+import { currentStrategyDecision } from "./decision-view";
+
+const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
 
 export interface StrategyDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -28,11 +34,14 @@ export interface StrategyDashboardPayload {
     strategyState: string;
   } | null;
   recommendedNextAction: any | null;
+  /** The current decision for the latest evaluation (derived on read, not persisted). */
+  decision: StrategyDecision | null;
   missingCriticalData: string[];
   cycleHistory: Array<{
     id: string;
     sequenceNumber: number;
     strategyState: string;
+    verdictSource: "stored_legacy_state";
     healthScore: number;
     findingCount: number;
     actionCount: number;
@@ -64,7 +73,7 @@ export async function getStrategyDashboard(
   if (!selectedBusinessId) {
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
-      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
+      latestCycle: null, domainScore: null, recommendedNextAction: null, decision: null, missingCriticalData: [],
       cycleHistory: [],
     };
   }
@@ -81,7 +90,9 @@ export async function getStrategyDashboard(
       orderBy: { sequenceNumber: "desc" },
       include: {
         snapshot: true,
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+        // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+        findings: true,
         actions: {
           include: {
             verifications: { orderBy: { createdAt: "desc" } },
@@ -136,18 +147,29 @@ export async function getStrategyDashboard(
         orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
       })
     : [];
+  // The current decision (derived from the evaluated snapshot, not persisted — decision-view.ts).
+  // Every action, current or carried from an earlier cycle, is arbitrated against it: exactly one
+  // open action is the primary step; steps that conflict with the decision (e.g. a carried
+  // "Pursue" when the decision is "Not yet") are shown on hold, never as a recommendation.
+  const decision = latestCycle ? currentStrategyDecision(latestCycle) : null;
+  const allActions: any[] = latestCycle
+    ? [
+        ...latestCycle.actions.map(withMeasuredBaseline),
+        ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
+          ...withMeasuredBaseline(a),
+          carriedFromCycleSequence: a.cycle.sequenceNumber,
+          // false when the latest diagnosis no longer raises this finding (finish or cancel it).
+          stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
+        })),
+      ]
+    : [];
+  const arbitratedActions: any[] = decision ? orderByDecisionFit(arbitrateStrategyActionRows(allActions, decision)) : allActions;
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
-        actions: [
-          ...latestCycle.actions.map(withMeasuredBaseline),
-          ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
-            ...withMeasuredBaseline(a),
-            carriedFromCycleSequence: a.cycle.sequenceNumber,
-            // false when the latest diagnosis no longer raises this finding (finish or cancel it).
-            stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
-          })),
-        ],
+        // Canonical severity order (critical → low), not the alphabetical order of the string column.
+        findings: rankOwnerFindingsBySeverity(latestCycle.findings.map(presentStoredStrategyFinding)),
+        actions: arbitratedActions,
       }
     : null;
 
@@ -162,8 +184,12 @@ export async function getStrategyDashboard(
       }
     : null;
 
-  const recommendedNextAction =
-    latestCycle && latestCycle.actions.length > 0 ? latestCycle.actions[0] : null;
+  // The persisted row carrying the decision's primary step (null when the latest cycle was
+  // evaluated before this step existed — the page then shows `decision.primaryStep` itself). Without
+  // a decision, fall back to the top open action, never a retired "Pursue"/"Size up".
+  const recommendedNextAction = decision
+    ? (arbitratedActions.find((a) => a.decisionFit === "primary" && !TERMINAL_STATUSES.has(a.status)) ?? null)
+    : (withoutRetiredStrategyActions(latestCycle?.actions ?? []).find((a: any) => !TERMINAL_STATUSES.has(a.status)) ?? null);
 
   return {
     businesses: businessList,
@@ -173,13 +199,16 @@ export async function getStrategyDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
+    decision,
     missingCriticalData: latestSnapshot
       ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
       : [],
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,
       sequenceNumber: c.sequenceNumber,
+      // Stored rating from the earlier scoring model, shown as such — never re-derived.
       strategyState: c.strategyState,
+      verdictSource: "stored_legacy_state" as const,
       healthScore: c.healthScore,
       findingCount: c.findings.length,
       actionCount: c.actions.length,

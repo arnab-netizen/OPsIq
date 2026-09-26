@@ -3,7 +3,9 @@
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer, Disclosure } from "@/ui/primitives";
+import { StrategyDecisionCard } from "@/components/owner/StrategyDecisionCard";
+import type { StrategyDecision } from "@/domain/owner-strategy/decision";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -28,6 +30,14 @@ const SEVERITY_LABEL: Record<string, string> = {
 const FINDING_TYPE_LABEL: Record<string, string> = {
   opportunity: "Opportunity",
   risk: "Risk",
+};
+/** Findings from earlier evaluations whose stored type no longer describes them. */
+const FINDING_CODE_TYPE_LABEL: Record<string, string> = {
+  STR_OPP_DATA_QUALITY: "Data gap", // data completeness is evidence, not an opportunity
+};
+/** How a finding's empty source value reads (default: "not entered"). */
+const FINDING_NULL_VALUE_LABEL: Record<string, string> = {
+  STR_INVALID_CURRENCY: "not valid",
 };
 
 /**
@@ -65,6 +75,14 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   in_progress: "In progress",
   completed: "Completed",
   blocked: "Blocked",
+  cancelled: "Cancelled",
+};
+/** How an action relates to the current decision (server-derived `decisionFit`). */
+const ACTION_FIT_LABEL: Record<string, string> = {
+  primary: "Next step",
+  on_hold: "On hold",
+  superseded: "Replaced",
+  resolved: "No longer needed",
 };
 
 const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -81,6 +99,8 @@ const STATE_LABEL: Record<string, string> = {
   RISKY: "Risky",
   AVOID: "Avoid",
 };
+/** Server-derived fits whose proposed actions are not to be taken on (only cancelled). */
+const FIT_WITHOUT_FORWARD_STEPS = new Set(["on_hold", "superseded", "resolved"]);
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -93,15 +113,16 @@ async function api(path: string, init?: RequestInit) {
 }
 
 // Numeric scenario fields; expectedRevenueChange/costChange/staffImpact may be negative.
-const STRATEGY_FIELDS: Array<{ name: string; label: string }> = [
-  { name: "currentRevenue", label: "Current monthly revenue" },
-  { name: "expectedRevenueChange", label: "Expected revenue change (+/-)" },
-  { name: "costChange", label: "Cost change (+ more / - savings)" },
-  { name: "investmentRequired", label: "Investment required (upfront)" },
+// `money` fields are labelled with the business currency (explicit units).
+const STRATEGY_FIELDS: Array<{ name: string; label: string; money?: boolean }> = [
+  { name: "currentRevenue", label: "Current revenue per month", money: true },
+  { name: "expectedRevenueChange", label: "Expected revenue change per month (+/−)", money: true },
+  { name: "costChange", label: "Expected cost change per month (+ more / − savings)", money: true },
+  { name: "investmentRequired", label: "Upfront investment (one-time)", money: true },
   { name: "timeToImpactMonths", label: "Time to impact (months)" },
-  { name: "cashAvailable", label: "Cash available" },
-  { name: "capacityImpactPct", label: "Capacity impact %" },
-  { name: "staffImpact", label: "Staff impact (+/-)" },
+  { name: "cashAvailable", label: "Cash you can put into this", money: true },
+  { name: "capacityImpactPct", label: "Capacity impact (%)" },
+  { name: "staffImpact", label: "Staff impact (+/− people)" },
 ];
 
 export default function OwnerStrategyPage() {
@@ -303,7 +324,7 @@ export default function OwnerStrategyPage() {
       <div className="mb-6">
         <PageHeader
           title="Owner Strategy & Scenarios"
-          description="Should you add staff, buy equipment, raise price, or open a branch? Score one option's profit, payback, downside, and safe upside — then a clear go / no-go."
+          description="Should you add staff, buy equipment, raise price, or open a branch? Check one option's profit, cash, downside and evidence — then get one clear decision and your next step."
           actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
         />
       </div>
@@ -363,7 +384,7 @@ export default function OwnerStrategyPage() {
               <h2 className="font-semibold">
                 Strategic option {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input name="optionName" label="Option name (e.g. Open 2nd branch)" />
                 <Select
                   name="riskLevel"
@@ -378,13 +399,20 @@ export default function OwnerStrategyPage() {
                 <Input name="periodStart" label="Assessed from" type="date" required />
                 <Input name="periodEnd" label="Assessed to" type="date" required />
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {STRATEGY_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
+                  <Input
+                    key={f.name}
+                    name={f.name}
+                    label={f.money && currentBusiness?.currency ? `${f.label} (${currentBusiness.currency})` : f.label}
+                    type="number"
+                    step="any"
+                    placeholder="—"
+                  />
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Leave fields blank if unknown — missing data is reported, never invented. Revenue/cost changes and staff impact may be negative.
+                Leave a field blank if you don&apos;t know it — it is reported as missing, never guessed. Enter 0 when an amount really is zero (for example, no upfront investment or no cash available). Revenue/cost changes and staff impact may be negative.
               </p>
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save scenario"}</Button>
             </form>
@@ -402,7 +430,7 @@ export default function OwnerStrategyPage() {
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
               {dashboard.latestSnapshot
-                ? "Scenario recorded. Click “Evaluate scenario” to generate the go / no-go analysis and an action plan."
+                ? "Scenario recorded. Click “Evaluate scenario” to get a decision and your next step."
                 : "No scenario yet. Add a strategic option, then evaluate it."}
             </div>
           ) : (
@@ -411,6 +439,7 @@ export default function OwnerStrategyPage() {
               score={score}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
+              decision={dashboard.decision ?? null}
               history={dashboard.cycleHistory}
               busy={busy}
               onUpdateAction={updateAction}
@@ -428,6 +457,7 @@ function StrategyCycleView({
   score,
   missing,
   recommended,
+  decision,
   history,
   busy,
   onUpdateAction,
@@ -437,71 +467,96 @@ function StrategyCycleView({
   score: any;
   missing: string[];
   recommended: any;
+  decision: StrategyDecision | null;
   history: any[];
   busy: boolean;
   onUpdateAction: (a: any, s: string) => void;
   onVerifyAction: (a: any) => void;
 }) {
   const state = score?.strategyState ?? cycle.strategyState;
+  const caption = `Latest evaluation · #${cycle.sequenceNumber}${cycle.snapshot?.optionName ? ` · ${cycle.snapshot.optionName}` : ""}`;
+  const scoresLine = `Attractiveness ${Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk ${Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Upside ${Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100`;
+  const confidenceLine = `data confidence ${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100`;
   return (
     <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">
-            Latest evaluation · #{cycle.sequenceNumber}{cycle.snapshot?.optionName ? ` · ${cycle.snapshot.optionName}` : ""}
+      {decision ? (
+        <>
+          <StrategyDecisionCard
+            decision={decision}
+            caption={caption}
+            nextStepRow={recommended ? { status: recommended.status, statusLabel: ACTION_STATUS_LABEL[recommended.status] ?? recommended.status } : null}
+          />
+          <Disclosure summary="Detailed scores">
+            {decision.dimensions.profit.state === "unknown" ? (
+              <p>Not scored — the profit effect is unknown until the missing inputs are entered.</p>
+            ) : (
+              <p className="tabular-nums">{scoresLine} · {confidenceLine}</p>
+            )}
+            <p className="mt-1">Stored rating (previous scoring model): {STATE_LABEL[state] ?? state} — kept for reference; the decision above replaces it.</p>
+          </Disclosure>
+        </>
+      ) : (
+        <>
+          <div className="border rounded-lg p-4 bg-card flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs uppercase text-muted-foreground">{caption}</div>
+              <div className="text-lg font-semibold tabular-nums">{scoresLine}</div>
+            </div>
+            <div className="sm:text-right">
+              <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
+              <div className="text-xs text-muted-foreground mt-1">{confidenceLine}</div>
+            </div>
           </div>
-          <div className="text-lg font-semibold tabular-nums">
-            Attractiveness {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Upside {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
-          </div>
-        </div>
-        <div className="text-right">
-          <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
-          <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
-          </div>
-        </div>
-      </div>
 
-      {missing.length > 0 && (
-        <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical inputs:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
-        </div>
-      )}
+          {missing.length > 0 && (
+            <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
+              <strong>Missing critical inputs:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
+            </div>
+          )}
 
-      {recommended && (
-        <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next strategy action</div>
-          <div className="font-semibold">{recommended.title}</div>
-          <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
-        </div>
+          {recommended && (
+            <div className="border rounded-lg p-4 bg-card">
+              <div className="text-xs uppercase text-muted-foreground">Recommended next strategy action</div>
+              <div className="font-semibold">{recommended.title}</div>
+              <p className="text-xs text-muted-foreground">{recommended.description}</p>
+              <p className="text-xs text-muted-foreground">
+                priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
+        <h2 className="font-bold mb-3">What the evaluation found ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No scenario risks or upsides detected.</p>}
         <div className="space-y-3">
           {cycle.findings.map((f: any) => (
-            <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>
-              <div className="flex justify-between">
-                <span className="font-semibold">{f.title}</span>
+            <div key={f.id} className={`border-l-4 pl-3 py-1 ${f.findingType === "opportunity" ? "border-success" : "border-warning"}`}>
+              <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                <span className="font-semibold min-w-0 break-words">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted-accessible">{ownLookup(FINDING_TYPE_LABEL, f.findingType) ?? f.findingType}</Badge>
-                  <Badge variant={ownLookup(SEVERITY_VARIANT, f.severity)}>{ownLookup(SEVERITY_LABEL, f.severity) ?? f.severity}</Badge>
+                  <Badge variant="muted-accessible">{ownLookup(FINDING_CODE_TYPE_LABEL, f.code) ?? ownLookup(FINDING_TYPE_LABEL, f.findingType) ?? f.findingType}</Badge>
+                  {/* Severity grades problems; an upside has none to show. */}
+                  {f.findingType !== "opportunity" && (
+                    <Badge variant={ownLookup(SEVERITY_VARIANT, f.severity)}>{ownLookup(SEVERITY_LABEL, f.severity) ?? f.severity}</Badge>
+                  )}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
-              </p>
-              {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
-              )}
-              {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
-              )}
+              <Disclosure summary="Numbers behind this" className="mt-1">
+                <p className="text-xs">
+                  <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} ={" "}
+                  {f.sourceValue == null ? (ownLookup(FINDING_NULL_VALUE_LABEL, f.code) ?? "not entered") : String(f.sourceValue)}
+                  {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                </p>
+                {Array.isArray(f.evidence) && f.evidence.length > 0 && (
+                  <p className="text-xs"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
+                )}
+                {f.verificationMetric && (
+                  <p className="text-xs"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
+                )}
+              </Disclosure>
             </div>
           ))}
         </div>
@@ -514,12 +569,16 @@ function StrategyCycleView({
             const latestVerification = a.verifications?.[0];
             return (
               <div key={a.id} className="border rounded p-3">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {ownLookup(ACTION_FIT_LABEL, a.decisionFit) && (
+                      <Badge variant={a.decisionFit === "primary" ? "default-accessible" : "muted-accessible"}>{ownLookup(ACTION_FIT_LABEL, a.decisionFit)}</Badge>
+                    )}
+                    {a.decisionFitNote && <div className="text-xs text-muted-foreground">{a.decisionFitNote}</div>}
                     {a.carriedFromCycleSequence != null && (
                       <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
-                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.stillFlaggedByLatestDiagnosis === false && !a.decisionFitNote && " — the latest diagnosis no longer flags this; finish or cancel it"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">
@@ -530,14 +589,18 @@ function StrategyCycleView({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
+                  How to check: {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
-                  {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
+                  {a.status === "proposed" && !FIT_WITHOUT_FORWARD_STEPS.has(a.decisionFit) && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
+                  {a.status === "blocked" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Resume</Button>}
                   {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
+                  {FIT_WITHOUT_FORWARD_STEPS.has(a.decisionFit) && a.status !== "completed" && a.status !== "cancelled" && (
+                    <Button onClick={() => onUpdateAction(a, "cancelled")} disabled={busy}>Cancel</Button>
+                  )}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
@@ -557,10 +620,13 @@ function StrategyCycleView({
         <h2 className="font-bold mb-3">Evaluation history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (
-            <div key={c.id} className="flex justify-between border-b py-1">
+            <div key={c.id} className="flex flex-wrap justify-between gap-x-3 border-b py-1">
               <span>#{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
               <span className="text-muted-foreground">
-                {STATE_LABEL[c.strategyState] ?? c.strategyState} · {c.findingCount} findings · {c.actionCount} actions
+                {decision && c.id === cycle.id
+                  ? `Current decision: ${decision.headline}`
+                  : `Stored rating (previous scoring model): ${STATE_LABEL[c.strategyState] ?? c.strategyState}`}{" "}
+                · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}

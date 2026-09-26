@@ -270,6 +270,59 @@ export function rankOwnerActions(actions: OwnerAction[]): OwnerAction[] {
   });
 }
 
+/** Canonical severity rank (higher = more severe). */
+const OWNER_SEVERITY_RANK: Record<OwnerSeverity, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+};
+
+/**
+ * Canonical rank for a persisted severity string. Finding `severity` columns are
+ * plain strings, so a DB `orderBy: { severity }` sorts alphabetically
+ * (critical, high, low, medium). Unknown values rank 0 (below `low`) — they are
+ * never promoted above a known severity.
+ */
+export function ownerSeverityRank(severity: string): number {
+  return Object.prototype.hasOwnProperty.call(OWNER_SEVERITY_RANK, severity)
+    ? OWNER_SEVERITY_RANK[severity as OwnerSeverity]
+    : 0;
+}
+
+export interface RankableOwnerFinding {
+  severity: string;
+  code: string;
+  impactScore?: number | null;
+  urgencyScore?: number | null;
+  confidence?: number | null;
+}
+
+/**
+ * Rank findings most-severe first with a fully deterministic tie-break
+ * (severity → impact → urgency → confidence → code). Pure; does not mutate the
+ * input array. Use after reading findings instead of a DB `orderBy: { severity }`.
+ * Missing scores fail closed to 0.
+ */
+export function rankOwnerFindingsBySeverity<T extends RankableOwnerFinding>(findings: readonly T[]): T[] {
+  return [...findings].sort((a, b) => {
+    const sb = ownerSeverityRank(b.severity);
+    const sa = ownerSeverityRank(a.severity);
+    if (sb !== sa) return sb - sa;
+    const ib = clampScore(b.impactScore ?? 0);
+    const ia = clampScore(a.impactScore ?? 0);
+    if (ib !== ia) return ib - ia;
+    const ub = clampScore(b.urgencyScore ?? 0);
+    const ua = clampScore(a.urgencyScore ?? 0);
+    if (ub !== ua) return ub - ua;
+    const cb = clampConfidence(b.confidence ?? 0);
+    const ca = clampConfidence(a.confidence ?? 0);
+    if (cb !== ca) return cb - ca;
+    if (a.code !== b.code) return a.code < b.code ? -1 : 1;
+    return 0;
+  });
+}
+
 function average(values: number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((sum, v) => sum + v, 0) / values.length;

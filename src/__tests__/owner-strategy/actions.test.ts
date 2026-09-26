@@ -86,11 +86,13 @@ describe("owner-strategy planner — recommendation/action creation", () => {
     expect(rec?.recommendationCode).toBe("STRREC_DROP_OR_RESCOPE");
   });
 
-  it("a strong-go option creates a pursue action", () => {
+  it("a strong-go option gets ONE go-ahead step; its strong return is a reason, not a Pursue action", () => {
+    // Decision Overhaul: positive findings no longer create "Pursue"/"Size up" actions.
     const p = plan(strongGo());
-    expect(actionCodes(p)).toContain("STR_OPP_STRONG_RETURN");
-    const rec = p.recommendations.find((r) => r.findingCode === "STR_OPP_STRONG_RETURN");
-    expect(rec?.category).toBe("pursue");
+    expect(p.decision.code).toBe("GO");
+    expect(p.actions.map((a) => a.title)).toEqual(["Go ahead and track the result"]);
+    expect(p.recommendations.map((r) => r.findingCode)).not.toContain("STR_OPP_STRONG_RETURN");
+    expect(p.decision.promising.map((x) => x.code)).toContain("STRONG_RETURN");
   });
 
   it("recommendations are traceable to a real source metric/value", () => {
