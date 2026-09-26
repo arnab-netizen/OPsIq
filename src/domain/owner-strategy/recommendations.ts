@@ -148,6 +148,28 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     effortScore: 20,
     ownerRole: "owner",
   },
+  STR_MISSING_CASH: {
+    recommendationCode: "STRREC_PROVIDE_CASH",
+    category: "improve_data_quality",
+    title: "Enter the cash you can put into this",
+    requiredOwnerAction:
+      "Enter how much cash you can put into this option so affordability and any funding gap can be calculated.",
+    verificationMethod: "Re-run the scenario with the cash figure; affordability is then calculated.",
+    expectedTimeframeDays: 3,
+    effortScore: 10,
+    ownerRole: "owner",
+  },
+  STR_MISSING_RISK_LEVEL: {
+    recommendationCode: "STRREC_SET_RISK_LEVEL",
+    category: "improve_data_quality",
+    title: "Choose an execution risk level",
+    requiredOwnerAction:
+      "Choose low, medium or high execution risk so the downside (lower sales than expected) can be calculated.",
+    verificationMethod: "Re-run the scenario with a risk level; the downside is then calculated.",
+    expectedTimeframeDays: 3,
+    effortScore: 10,
+    ownerRole: "owner",
+  },
   STR_OPP_STRONG_RETURN: {
     recommendationCode: "STRREC_PURSUE",
     category: "pursue",

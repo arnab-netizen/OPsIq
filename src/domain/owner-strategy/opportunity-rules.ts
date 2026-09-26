@@ -14,7 +14,7 @@ import {
 } from "@/domain/owner-spine/contracts";
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
-import { ruleConsistentValue } from "./metrics";
+import { num, ruleConsistentValue } from "./metrics";
 
 interface OppArgs {
   code: string;
@@ -58,7 +58,6 @@ export function buildStrategyOpportunityFindings(
 ): OwnerFinding[] {
   const findings: OwnerFinding[] = [];
   const conf = clampConfidence(m.dataConfidenceScore / 100);
-  void input;
   // Thresholds are compared on FULL-PRECISION values only (see risk-rules.ts).
   const r = m.raw;
 
@@ -84,8 +83,17 @@ export function buildStrategyOpportunityFindings(
     );
   }
 
-  // Fast payback (only when payback computable and within the long-payback bar)
-  if (r.paybackMonths !== null && r.paybackMonths <= t.longPaybackMonths && r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta > 0) {
+  // Fast payback (only when capital is actually at risk, payback is computable and within the
+  // long-payback bar). With zero investment nothing is "paid back": payback 0 is not a finding.
+  const investment = num(input.investmentRequired);
+  if (
+    investment !== null &&
+    investment > 0 &&
+    r.paybackMonths !== null &&
+    r.paybackMonths <= t.longPaybackMonths &&
+    r.baseMonthlyProfitDelta !== null &&
+    r.baseMonthlyProfitDelta > 0
+  ) {
     const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v <= t.longPaybackMonths);
     findings.push(
       opportunity({
@@ -128,31 +136,8 @@ export function buildStrategyOpportunityFindings(
     );
   }
 
-  // Data quality improvement opportunity (confidence below 100)
-  if (m.dataConfidenceScore < 100) {
-    findings.push(
-      opportunity({
-        code: "STR_OPP_DATA_QUALITY",
-        title: "Improve data completeness for a sharper decision",
-        summary:
-          "Some inputs are missing or stale; supplying them increases the confidence of the recommendation for this option.",
-        sourceMetric: "dataConfidenceScore",
-        sourceValue: m.dataConfidenceScore,
-        threshold: 100,
-        severity: "low",
-        confidence: 1,
-        impactScore: clampScore(100 - m.dataConfidenceScore),
-        urgencyScore: 20,
-        evidence: [
-          `dataConfidenceScore = ${m.dataConfidenceScore} < 100`,
-          m.missingRequiredInputs.length > 0
-            ? `missing: ${m.missingRequiredInputs.join(", ")}`
-            : "some non-critical fields missing",
-        ],
-        verificationMetric: "dataConfidenceScore",
-      })
-    );
-  }
+  // Missing or stale inputs are NOT an opportunity: evidence completeness is reported as its own
+  // decision dimension and missing inputs as explicit risk findings (STR_MISSING_*).
 
   return findings;
 }

@@ -17,7 +17,8 @@ import {
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
 import { isValidCurrency } from "./data-confidence";
-import { ruleConsistentValue } from "./metrics";
+import { num, ruleConsistentValue } from "./metrics";
+import { classifyStrategyInputs } from "./input-status";
 
 /** Default urgency by severity (deterministic baseline). */
 const SEVERITY_URGENCY: Record<OwnerSeverity, number> = {
@@ -119,6 +120,50 @@ export function buildStrategyRiskFindings(
         ],
         missingData: m.missingRequiredInputs,
         verificationMetric: "dataConfidenceScore",
+      })
+    );
+  }
+
+  // Missing cash while an investment is required (certain about the absence). Affordability and
+  // the funding gap are UNKNOWN — not "affordable". A known cash = 0 is a fact handled by the
+  // affordability bands below; with no (or zero) investment, missing cash blocks nothing.
+  const status = classifyStrategyInputs(input);
+  if (status.cashNeededButMissing) {
+    findings.push(
+      risk({
+        code: "STR_MISSING_CASH",
+        title: "Cash available is not entered",
+        summary:
+          "This option needs an upfront investment, but the cash you can put into it is not entered — whether you can afford it, and how much you would be short, is unknown.",
+        sourceMetric: "cashAvailable",
+        sourceValue: null,
+        severity: "high",
+        confidence: 1,
+        impactScore: 45,
+        evidence: ["cashAvailable not provided", `investmentRequired = ${num(input.investmentRequired)}`],
+        missingData: ["cashAvailable"],
+        verificationMetric: "affordabilityRatio",
+      })
+    );
+  }
+
+  // Missing execution risk (certain about the absence). The downside range cannot be calculated,
+  // so no downside (and no "safe upside") is asserted either way.
+  if (status.riskLevel === null) {
+    findings.push(
+      risk({
+        code: "STR_MISSING_RISK_LEVEL",
+        title: "Execution risk is not chosen",
+        summary:
+          "Without an execution risk level the downside (what happens if sales come in lower) cannot be calculated — it is unknown, not safe.",
+        sourceMetric: "riskLevel",
+        sourceValue: null,
+        severity: "medium",
+        confidence: 1,
+        impactScore: 35,
+        evidence: ["riskLevel not provided"],
+        missingData: ["riskLevel"],
+        verificationMetric: "worstMonthlyProfitDelta",
       })
     );
   }
