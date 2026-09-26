@@ -48,6 +48,19 @@ export const REVERSED_DB_FINDINGS = [
   ALPHABETICAL_DB_FINDINGS[0],
 ];
 
+/**
+ * High-severity rows tied on impact, listed so that DB order, code order and
+ * confidence order all disagree with the canonical urgency → confidence → code
+ * tie-break. Canonical: TIE_URGENT, TIE_CONF, TIE_A, TIE_B.
+ */
+export const TIE_BREAK_DB_FINDINGS = [
+  { ...base, id: "t-b", code: "F_TIE_B", title: "Tie B", severity: "high", impactScore: 60, urgencyScore: 50, confidence: 0.5 },
+  { ...base, id: "t-a", code: "F_TIE_A", title: "Tie A", severity: "high", impactScore: 60, urgencyScore: 50, confidence: 0.5 },
+  { ...base, id: "t-conf", code: "F_TIE_CONF", title: "Tie conf", severity: "high", impactScore: 60, urgencyScore: 50, confidence: 0.95 },
+  { ...base, id: "t-urg", code: "F_TIE_URGENT", title: "Tie urgent", severity: "high", impactScore: 60, urgencyScore: 90, confidence: 0.1 },
+];
+export const TIE_BREAK_CANONICAL_CODES = ["F_TIE_URGENT", "F_TIE_CONF", "F_TIE_A", "F_TIE_B"];
+
 /** Canonical order: severity → impact → urgency → confidence → code. */
 export const CANONICAL_CODES = ["F_CRIT", "F_HIGH", "F_MED_Y", "F_MED_X", "F_LOW"];
 

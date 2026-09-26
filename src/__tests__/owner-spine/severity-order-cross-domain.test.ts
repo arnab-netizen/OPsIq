@@ -3,7 +3,8 @@
  * severity (critical → high → medium → low, ties by impact) regardless of the
  * order the DB returns rows in. The fake DB here returns findings fully
  * reversed (least severe first), so any reader that keeps DB order — or sorts
- * the plain String column lexically — fails on every position.
+ * the plain String column lexically — fails on every position. A second fixture
+ * ties severity and impact so the urgency → confidence → code steps are exercised.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
@@ -13,6 +14,8 @@ import {
   resetFakeDb,
   REVERSED_DB_FINDINGS,
   setDbFindingOrder,
+  TIE_BREAK_CANONICAL_CODES,
+  TIE_BREAK_DB_FINDINGS,
 } from "@/__tests__/owner-spine/severity-order-fixtures";
 
 vi.mock("@/lib/db", async () => ({
@@ -35,6 +38,8 @@ import { getSopDashboard } from "@/services/owner-sop/dashboard.service";
 import { getSopDiagnosis, listSopCycleFindings } from "@/services/owner-sop/diagnosis.service";
 import { getMarketingDashboard } from "@/services/owner-marketing/dashboard.service";
 import { getMarketingDiagnosis, listMarketingCycleFindings } from "@/services/owner-marketing/diagnosis.service";
+import { getStrategyDashboard } from "@/services/owner-strategy/dashboard.service";
+import { getStrategyDiagnosis, listStrategyCycleFindings } from "@/services/owner-strategy/diagnosis.service";
 import { getRecoveryDashboard } from "@/services/founder-recovery/dashboard.service";
 import { getCycle } from "@/services/founder-recovery/cycle.service";
 import { getBusinessCondition } from "@/services/owner-condition/business-condition.service";
@@ -74,6 +79,11 @@ const DOMAIN_READERS: Record<string, { dashboard: Reader; diagnosis: Reader; lis
     diagnosis: () => getMarketingDiagnosis("c-1", "ws-1"),
     list: () => listMarketingCycleFindings("c-1", "ws-1"),
   },
+  strategy: {
+    dashboard: async () => (await getStrategyDashboard("ws-1", "b-1")).latestCycle,
+    diagnosis: () => getStrategyDiagnosis("c-1", "ws-1"),
+    list: () => listStrategyCycleFindings("c-1", "ws-1"),
+  },
 };
 
 function findingCodes(result: Awaited<ReturnType<Reader>>): string[] {
@@ -97,6 +107,15 @@ describe("cross-domain severity order — DB returns findings least-severe first
       expect(findingCodes(await readers.diagnosis())).toEqual(CANONICAL_CODES);
       expect(findingCodes(await readers.list())).toEqual(CANONICAL_CODES);
       expect(anyQueryOrdersBySeverity()).toBe(false);
+    });
+
+    it(`${domain}: equal severity and impact break ties by urgency → confidence → code in every reader`, async () => {
+      setDbFindingOrder(TIE_BREAK_DB_FINDINGS);
+      expect(findingCodes(await readers.dashboard())).toEqual(TIE_BREAK_CANONICAL_CODES);
+      expect(findingCodes(await readers.diagnosis())).toEqual(TIE_BREAK_CANONICAL_CODES);
+      expect(findingCodes(await readers.list())).toEqual(TIE_BREAK_CANONICAL_CODES);
+      const trust = await getCycleExplanations(domain as Parameters<typeof getCycleExplanations>[0], "c-1", "ws-1");
+      expect(trust.explanations.map((e) => e.findingCode)).toEqual(TIE_BREAK_CANONICAL_CODES);
     });
 
     it(`${domain}: Trust explanations rank canonically`, async () => {
