@@ -474,7 +474,7 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
         snapshot: true, // actions are arbitrated against the current decision (decision-view.ts)
       },

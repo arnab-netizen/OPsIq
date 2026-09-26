@@ -221,7 +221,9 @@ export async function getStrategyDiagnosis(cycleId: string, workspaceId: string)
     where: { id: cycleId, workspaceId },
     include: {
       snapshot: true,
-      findings: { orderBy: { severity: "asc" } },
+      // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+      // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+      findings: true,
       actions: {
         include: { verifications: { orderBy: { createdAt: "desc" } } },
         // Deterministic total order: priorityScore is clamped to [0,100], so
@@ -240,7 +242,6 @@ export async function getStrategyDiagnosis(cycleId: string, workspaceId: string)
     },
   });
   if (!cycle) throw new NotFoundError("OwnerStrategyCycle", cycleId);
-  // Severity is a plain string column: the DB order is alphabetical, so rank canonically here.
   return { ...cycle, findings: rankOwnerFindingsBySeverity(cycle.findings) };
 }
 
@@ -250,11 +251,7 @@ export async function listStrategyCycleFindings(cycleId: string, workspaceId: st
     select: { id: true },
   });
   if (!cycle) throw new NotFoundError("OwnerStrategyCycle", cycleId);
-  const rows = await db.ownerStrategyFinding.findMany({
-    where: { cycleId, workspaceId },
-    orderBy: [{ impactScore: "desc" }, { id: "asc" }],
-  });
-  return rankOwnerFindingsBySeverity(rows);
+  return rankOwnerFindingsBySeverity(await db.ownerStrategyFinding.findMany({ where: { cycleId, workspaceId } }));
 }
 
 export async function listStrategyCycleActions(cycleId: string, workspaceId: string) {
