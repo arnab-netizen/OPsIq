@@ -187,6 +187,42 @@ export const DATA_CONFIDENCE_CAUTION = 70;
 export const DATA_CONFIDENCE_INSUFFICIENT = 40;
 
 /**
+ * Canonical severity rank from OWNER_SEVERITIES (low 0 … critical 3); unknown values rank -1 so
+ * they sort last. Severity is stored as a plain string, so a database `orderBy severity` is
+ * alphabetical (critical, high, low, medium) — always rank with this instead.
+ */
+export function ownerSeverityRank(severity: string | null | undefined): number {
+  return (OWNER_SEVERITIES as readonly string[]).indexOf(severity ?? "");
+}
+
+interface RankableFinding {
+  severity: string;
+  impactScore?: number | null;
+  urgencyScore?: number | null;
+  confidence?: number | null;
+  code?: string | null;
+}
+
+/**
+ * Deterministic finding order: severity desc (canonical rank) → impact desc → urgency desc →
+ * confidence desc → code asc. Pure; returns a new array. Works on domain findings and on
+ * persisted finding rows alike.
+ */
+export function rankOwnerFindingsBySeverity<T extends RankableFinding>(findings: readonly T[]): T[] {
+  const n = (x: number | null | undefined) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+  return [...findings].sort((a, b) => {
+    const s = ownerSeverityRank(b.severity) - ownerSeverityRank(a.severity);
+    if (s !== 0) return s;
+    if (n(b.impactScore) !== n(a.impactScore)) return n(b.impactScore) - n(a.impactScore);
+    if (n(b.urgencyScore) !== n(a.urgencyScore)) return n(b.urgencyScore) - n(a.urgencyScore);
+    if (n(b.confidence) !== n(a.confidence)) return n(b.confidence) - n(a.confidence);
+    const ac = a.code ?? "";
+    const bc = b.code ?? "";
+    return ac < bc ? -1 : ac > bc ? 1 : 0;
+  });
+}
+
+/**
  * Clamp any number to an integer score in [0, 100]. Non-finite / missing values
  * fail closed to 0 (never invented as high). Decimals are rounded to nearest int.
  */

@@ -19,6 +19,7 @@ import { getBusiness, listBusinesses } from "@/services/founder-recovery/busines
 import {
   buildBusinessConditionProfile,
   clampScore,
+  rankOwnerFindingsBySeverity,
   type DomainScore,
   type OwnerAction,
   type BusinessConditionProfile,
@@ -286,7 +287,8 @@ export function strategyCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // strategy is decision-support: risk scores the option, not survival/execution
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    // Canonical severity order: the persisted string column sorts alphabetically in the DB.
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };

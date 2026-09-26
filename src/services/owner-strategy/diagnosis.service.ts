@@ -12,6 +12,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 
 import { emitAuditEvent } from "@/infra/audit";
@@ -239,7 +240,8 @@ export async function getStrategyDiagnosis(cycleId: string, workspaceId: string)
     },
   });
   if (!cycle) throw new NotFoundError("OwnerStrategyCycle", cycleId);
-  return cycle;
+  // Severity is a plain string column: the DB order is alphabetical, so rank canonically here.
+  return { ...cycle, findings: rankOwnerFindingsBySeverity(cycle.findings) };
 }
 
 export async function listStrategyCycleFindings(cycleId: string, workspaceId: string) {
@@ -248,10 +250,11 @@ export async function listStrategyCycleFindings(cycleId: string, workspaceId: st
     select: { id: true },
   });
   if (!cycle) throw new NotFoundError("OwnerStrategyCycle", cycleId);
-  return db.ownerStrategyFinding.findMany({
+  const rows = await db.ownerStrategyFinding.findMany({
     where: { cycleId, workspaceId },
-    orderBy: [{ severity: "asc" }, { impactScore: "desc" }],
+    orderBy: [{ impactScore: "desc" }, { id: "asc" }],
   });
+  return rankOwnerFindingsBySeverity(rows);
 }
 
 export async function listStrategyCycleActions(cycleId: string, workspaceId: string) {

@@ -10,7 +10,7 @@
  */
 import { buildExplanations, TRUST_DOMAINS, type ExplanationCard } from "@/domain/owner-trust";
 import type { TrustDomain } from "@/domain/owner-trust";
-import type { OwnerAction, OwnerFinding, OwnerDomain } from "@/domain/owner-spine/contracts";
+import { rankOwnerFindingsBySeverity, type OwnerAction, type OwnerFinding, type OwnerDomain } from "@/domain/owner-spine/contracts";
 import { db } from "@/lib/db";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { queryAuditEvents } from "@/infra/audit";
@@ -89,7 +89,9 @@ export async function getCycleExplanations(
   workspaceId: string
 ): Promise<CycleExplanations> {
   const cycle = await DIAGNOSIS_READERS[domain](cycleId, workspaceId); // throws NotFound if absent / cross-workspace
-  const findings = (cycle.findings ?? []).map((f: any) => rowToFinding(f, domain));
+  // Canonical severity order for every domain's explanations (the DB severity column is a plain
+  // string, so readers that order by it return critical, high, low, medium).
+  const findings = rankOwnerFindingsBySeverity<OwnerFinding>((cycle.findings ?? []).map((f: any) => rowToFinding(f, domain)));
   const actions = (cycle.actions ?? []).map((a: any) => rowToAction(a, domain));
   const explanations = buildExplanations(findings, actions);
   return {

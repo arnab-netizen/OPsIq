@@ -15,6 +15,7 @@ import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-contin
 import type { StrategyDecision } from "@/domain/owner-strategy/decision";
 import { arbitrateStrategyActionRows, withoutRetiredStrategyActions } from "@/domain/owner-strategy/action-arbitration";
 import { currentStrategyDecision } from "./decision-view";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
 
@@ -164,6 +165,8 @@ export async function getStrategyDashboard(
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
+        // Canonical severity order (critical → low), not the alphabetical order of the string column.
+        findings: rankOwnerFindingsBySeverity(latestCycle.findings),
         actions: arbitratedActions,
       }
     : null;
