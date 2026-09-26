@@ -129,6 +129,13 @@ export default function OwnerStrategyPage() {
   // The saved scenario whose evaluation is in flight (its button shows progress).
   const [evaluatingScenarioId, setEvaluatingScenarioId] = useState<string | null>(null);
   const requestSeq = useRef(0);
+  // The business selected right now. A mutation's follow-up reload targets it, not the business
+  // captured when the mutation started: if the owner switched business meanwhile, reloading the
+  // old one would win the requestSeq race and show its scenarios under the new selection.
+  const selectedBusinessRef = useRef<string | null>(activeBusinessId);
+  useEffect(() => {
+    selectedBusinessRef.current = activeBusinessId;
+  }, [activeBusinessId]);
 
   const load = useCallback(async (businessId: string) => {
     const seq = ++requestSeq.current;
@@ -145,6 +152,11 @@ export default function OwnerStrategyPage() {
       if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
+
+  const reloadSelected = useCallback(async () => {
+    const id = selectedBusinessRef.current;
+    if (id) await load(id);
+  }, [load]);
 
   useEffect(() => {
     if (contextLoading) return;
@@ -213,7 +225,7 @@ export default function OwnerStrategyPage() {
         body: JSON.stringify(body),
       });
       setShowSnapshotForm(false);
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "save"));
     } finally {
@@ -232,7 +244,7 @@ export default function OwnerStrategyPage() {
         method: "POST",
         body: JSON.stringify({ snapshotId: scenarioId }),
       });
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "action"));
     } finally {
@@ -256,7 +268,7 @@ export default function OwnerStrategyPage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "action"));
     } finally {
@@ -296,7 +308,7 @@ export default function OwnerStrategyPage() {
           targetDirection: dir === "down" ? "down" : "up",
         }),
       });
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "action"));
     } finally {
@@ -317,6 +329,16 @@ export default function OwnerStrategyPage() {
   const score = dashboard?.domainScore ?? null;
   const missing: string[] = dashboard?.missingCriticalData ?? [];
   const scenarios: StrategyScenarioSummary[] = Array.isArray(dashboard?.scenarios) ? dashboard.scenarios : [];
+  // Shown after the decision once one exists (the decision stays first on the page), and above the
+  // empty state before any evaluation.
+  const scenarioList = scenarios.length > 0 ? (
+    <StrategyScenarioList
+      scenarios={scenarios}
+      busy={busy}
+      evaluatingScenarioId={evaluatingScenarioId}
+      onEvaluate={evaluateScenario}
+    />
+  ) : null;
 
   return (
     <PageContainer>
@@ -423,20 +445,14 @@ export default function OwnerStrategyPage() {
               load must never render "No scenario yet." next to the error banner above: that
               would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
-          {dashboard !== null && scenarios.length > 0 && (
-            <StrategyScenarioList
-              scenarios={scenarios}
-              busy={busy}
-              evaluatingScenarioId={evaluatingScenarioId}
-              onEvaluate={evaluateScenario}
-            />
-          )}
-
           {dashboard === null ? null : !dashboard.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {scenarios.length > 0
-                ? "Scenario recorded. Choose a saved scenario above and click “Evaluate this scenario” to get a decision and your next step."
-                : "No scenario yet. Add a strategic option, then evaluate it."}
+            <div className="space-y-6">
+              {scenarioList}
+              <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                {scenarios.length > 0
+                  ? "Scenario recorded. Choose a saved scenario above and click “Evaluate this scenario” to get a decision and your next step."
+                  : "No scenario yet. Add a strategic option, then evaluate it."}
+              </div>
             </div>
           ) : (
             <StrategyCycleView
@@ -446,6 +462,7 @@ export default function OwnerStrategyPage() {
               recommended={dashboard.recommendedNextAction}
               decision={dashboard.decision ?? null}
               history={dashboard.cycleHistory}
+              scenarioList={scenarioList}
               busy={busy}
               onUpdateAction={updateAction}
               onVerifyAction={verifyAction}
@@ -469,9 +486,9 @@ function StrategyScenarioList({
   onEvaluate: (scenarioId: string) => void;
 }) {
   return (
-    <section className="mb-6 border rounded-lg p-4 bg-card" aria-labelledby="strategy-scenarios-heading" data-testid="strategy-scenarios">
+    <section className="border rounded-lg p-4 bg-card" aria-labelledby="strategy-scenarios-heading" data-testid="strategy-scenarios">
       <h2 id="strategy-scenarios-heading" className="font-bold">Saved scenarios ({scenarios.length})</h2>
-      <p className="text-xs text-muted-foreground mb-3">Pick the scenario to evaluate — the decision below always comes from the one you chose.</p>
+      <p className="text-xs text-muted-foreground mb-3">Pick the scenario to evaluate — the decision on this page always comes from the one marked “Current decision”.</p>
       <ul className="space-y-2">
         {scenarios.map((sc) => {
           const name = strategyScenarioName(sc.optionName);
@@ -529,10 +546,12 @@ function StrategyCycleView({
   recommended,
   decision,
   history,
+  scenarioList,
   busy,
   onUpdateAction,
   onVerifyAction,
 }: {
+  scenarioList: React.ReactNode;
   cycle: any;
   score: any;
   missing: string[];
@@ -599,6 +618,8 @@ function StrategyCycleView({
           )}
         </>
       )}
+
+      {scenarioList}
 
       <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">What the evaluation found ({cycle.findings.length})</h2>

@@ -143,7 +143,7 @@ export function StrategyDecisionCard({
         <p className="text-xs text-muted-foreground mt-2">
           {nextStepRow
             ? `In your action list below — ${nextStepRow.statusLabel.toLowerCase()}.`
-            : "Evaluate this scenario again (under “Saved scenarios”) to add this step to your action list."}
+            : "Evaluate this scenario again (under “Saved scenarios” below) to add this step to your action list."}
         </p>
       </div>
     </section>

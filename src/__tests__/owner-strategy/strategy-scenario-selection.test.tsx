@@ -31,6 +31,8 @@ const SCN_B: Scn = { id: "snap-b", input: { ...NEWER, optionName: "Beta oven" } 
 const state: Record<string, { scenarios: Scn[]; evaluations: string[] }> = {};
 let posts: Array<{ url: string; body: Record<string, unknown> }> = [];
 let snapshotPostResponse: { status: number; body: unknown } | null = null;
+/** When set, diagnosis POSTs wait for this promise (to interleave a business switch). */
+let diagnosisGate: Promise<void> | null = null;
 
 function dashboardFor(businessId: string) {
   const s = state[businessId];
@@ -91,6 +93,7 @@ function installFetch() {
       posts.push({ url, body });
       const diag = url.match(/^\/api\/owner\/strategy\/businesses\/([^/]+)\/diagnoses$/);
       if (diag) {
+        if (diagnosisGate) await diagnosisGate;
         state[diag[1]].evaluations.unshift(String(body.snapshotId));
         return jsonResponse({ id: "cycle" }, true, 201);
       }
@@ -122,6 +125,7 @@ beforeEach(() => {
   state[BIZ_B.id] = { scenarios: [SCN_B], evaluations: [] };
   posts = [];
   snapshotPostResponse = null;
+  diagnosisGate = null;
 });
 
 afterEach(() => {
@@ -204,6 +208,37 @@ describe("Strategy page — the owner explicitly chooses which saved scenario to
     expect(posts.filter((p) => p.url.endsWith("/diagnoses"))).toEqual([
       { url: `/api/owner/strategy/businesses/${BIZ_B.id}/diagnoses`, body: { snapshotId: "snap-b" } },
     ]);
+  });
+
+  it("once a decision exists it comes first; the saved scenarios follow it", async () => {
+    state[BIZ_A.id].evaluations = ["snap-old"];
+    installFetch();
+    renderPage();
+    const card = await screen.findByTestId("strategy-decision");
+    const list = screen.getByTestId("strategy-scenarios");
+    expect(card.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const details = screen.getByText("Detailed scores").closest("details")!;
+    expect(details.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("switching business while an evaluation is in flight reloads the business now selected", async () => {
+    let release!: () => void;
+    diagnosisGate = new Promise<void>((r) => { release = r; });
+    installFetch();
+    renderPage();
+    await screen.findByTestId("strategy-scenarios");
+    fireEvent.click(within(scenarioRow(/Second van/)).getByRole("button", { name: /Evaluate this scenario/ }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Business" }), { target: { value: BIZ_B.id } });
+    await waitFor(() => expect(screen.getAllByTestId("strategy-scenario").map((r) => r.getAttribute("data-scenario-id"))).toEqual(["snap-b"]));
+    release();
+    // The in-flight evaluation belonged to A and is posted to A...
+    await waitFor(() => expect(posts.filter((p) => p.url.endsWith("/diagnoses"))).toHaveLength(1));
+    expect(posts.find((p) => p.url.endsWith("/diagnoses"))!.url).toBe(`/api/owner/strategy/businesses/${BIZ_A.id}/diagnoses`);
+    // ...but its follow-up reload shows B (the selection), never A's scenarios or decision.
+    await new Promise((r) => setTimeout(r, 50));
+    await waitFor(() => expect(screen.getAllByTestId("strategy-scenario").map((r) => r.getAttribute("data-scenario-id"))).toEqual(["snap-b"]));
+    expect(screen.queryByText(/Second van/)).toBeNull();
+    expect(screen.queryByTestId("strategy-decision")).toBeNull();
   });
 
   it("a duplicate assessment period is refused with the owner-safe conflict message", async () => {
