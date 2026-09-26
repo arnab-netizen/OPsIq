@@ -848,6 +848,9 @@ export function withCanonicalEnforcement(
       };
       if (expectedClientRejection) {
         logger.warn("[WRAPPER_CLIENT_REJECTION]", wrapperLogContext);
+        // WARN lines are buffered; write them now so a serverless instance frozen after the
+        // response cannot drop them (ERROR lines are already written immediately).
+        logger.flush();
       } else {
         // The error goes in the error slot (the context was previously passed there and logged
         // as "[object Object]").

@@ -126,6 +126,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] duplicate-period 409 — REAL route 
     const errorMessages = error.mock.calls.map((c) => String(c[0]));
     expect(errorMessages).not.toContain("[WRAPPER_FAILED]");
     expect(errorMessages).not.toContain("Handler failed");
+    // Written before the response returns (no reliance on the buffer timer, which a frozen
+    // serverless instance may never run).
+    expect(lines.some((l) => l.includes("[WRAPPER_CLIENT_REJECTION]"))).toBe(true);
+    expect(lines.some((l) => l.includes("Handler rejected request"))).toBe(true);
     logger.flush();
     expect(lines.join("\n")).not.toContain("[object Object]");
 
