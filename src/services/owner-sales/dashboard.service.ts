@@ -9,6 +9,7 @@
  * data only — no mock, nothing invented.
  */
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
@@ -81,7 +82,9 @@ export async function getSalesDashboard(
       orderBy: { sequenceNumber: "desc" },
       include: {
         snapshot: true,
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+        // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+        findings: true,
         actions: {
           include: {
             verifications: { orderBy: { createdAt: "desc" } },
@@ -143,6 +146,7 @@ export async function getSalesDashboard(
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
+        findings: rankOwnerFindingsBySeverity(latestCycle.findings),
         actions: [
           ...latestCycle.actions.map(withMeasuredBaseline),
           ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({

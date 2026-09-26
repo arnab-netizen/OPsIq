@@ -86,7 +86,10 @@ function flattenVerifications(cycle: any, domain: OwnerDomain): OwnerHomeVerific
 }
 
 const spineCycleInclude = {
-  findings: { orderBy: { severity: "asc" } },
+  // Severity is a plain string, so a DB orderBy sorts it alphabetically
+  // (critical, high, low, medium). Findings are ranked after read: by
+  // buildOwnerHomeSummary and by the *CycleToDomainScore adapters.
+  findings: true,
   actions: {
     // Deterministic total order: priorityScore is clamped to [0,100], so
     // ties at the ceiling are a real, expected occurrence -- a single-key
@@ -158,7 +161,7 @@ export async function getOwnerHome(
       orderBy: { cycleNumber: "desc" },
       include: {
         snapshot: true,
-        findings: { select: { code: true } },
+        findings: { select: { code: true, severity: true, confidence: true } },
         actions: { include: { finding: { select: { code: true } } }, orderBy: { createdAt: "asc" } },
       },
     }),

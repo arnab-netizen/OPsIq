@@ -52,7 +52,7 @@ export function financeCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.survivalRiskScore),
     opportunityScore: clampScore(cycle.growthOpportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -98,7 +98,7 @@ export function recoveryCycleToDomainScore(cycle: any, snapshot: any): DomainSco
     riskScore: clampScore(RECOVERY_HEALTH_STATUS_RISK[cycle.healthStatus] ?? (100 - clampScore(cycle.healthScore))),
     opportunityScore: 0, // recovery does not score opportunity (honest 0, not invented)
     dataConfidenceScore: clampScore(100 - missingCritical.length * 30), // from real snapshot completeness
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.finding?.code ?? a.metricToMove),
     generatedAt: cycle.createdAt instanceof Date ? cycle.createdAt : new Date(cycle.createdAt),
   };
@@ -112,7 +112,7 @@ export function cashflowCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.dangerScore),
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -147,7 +147,7 @@ export function salesCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore),
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -182,7 +182,7 @@ export function operationsCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // operations ∈ EXECUTION_DOMAINS → routes into executionRiskScore
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -217,7 +217,7 @@ export function sopCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // sop ∈ EXECUTION_DOMAINS → routes into executionRiskScore
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -252,7 +252,7 @@ export function marketingCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // marketing is growth: risk does not raise survival/execution rollup
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -409,7 +409,9 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read (see *CycleToDomainScore): severity is a plain string, so
+        // a DB orderBy sorts it alphabetically (critical, high, low, medium).
+        findings: true,
         // Deterministic total order: priorityScore is clamped to [0,100], so
         // ties at the ceiling are a real, expected occurrence. Same fix/
         // rationale as dashboard.service.ts (PR #361).
@@ -426,7 +428,7 @@ export async function getBusinessCondition(
       orderBy: { cycleNumber: "desc" },
       include: {
         snapshot: true,
-        findings: { select: { code: true } },
+        findings: { select: { code: true, severity: true, confidence: true } },
         actions: { include: { finding: { select: { code: true } } }, orderBy: { createdAt: "asc" } },
       },
     }),
@@ -434,7 +436,7 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
@@ -442,7 +444,7 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
@@ -450,7 +452,7 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
@@ -458,7 +460,7 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
@@ -466,7 +468,7 @@ export async function getBusinessCondition(
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),

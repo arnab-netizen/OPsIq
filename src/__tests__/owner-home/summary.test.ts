@@ -164,6 +164,31 @@ describe("buildOwnerHomeSummary", () => {
     expect(summary.top3Risks.some((r) => r.code === "O1")).toBe(false);
   });
 
+  it("orders top risks with the canonical spine tie-break (severity → impact → urgency → confidence), reversed input", () => {
+    // Least severe first; the two highs tie on impact and differ on urgency only
+    // (the lower-urgency one has the higher confidence, so skipping urgency flips them).
+    const findings: OwnerFinding[] = [
+      finding({ code: "R_LOW", severity: "low", impactScore: 99, findingType: "risk" }),
+      finding({ code: "R_MED", severity: "medium", impactScore: 90, findingType: "risk" }),
+      finding({ code: "R_HIGH_SLOW", severity: "high", impactScore: 60, urgencyScore: 20, confidence: 0.95, findingType: "risk" }),
+      finding({ code: "R_HIGH_URGENT", severity: "high", impactScore: 60, urgencyScore: 90, confidence: 0.4, findingType: "risk" }),
+      finding({ code: "R_CRIT", severity: "critical", impactScore: 5, findingType: "risk" }),
+    ];
+    const summary = buildOwnerHomeSummary({ domainScores: [score("finance")], findings, actions: [], verifications: [], now: NOW });
+    expect(summary.top3Risks.map((r) => r.code)).toEqual(["R_CRIT", "R_HIGH_URGENT", "R_HIGH_SLOW"]);
+  });
+
+  it("ranks an unknown stored severity below low instead of corrupting the sort", () => {
+    const findings: OwnerFinding[] = [
+      finding({ code: "R_BOGUS", severity: "severe" as OwnerFinding["severity"], impactScore: 99, findingType: "risk" }),
+      finding({ code: "R_LOW", severity: "low", impactScore: 10, findingType: "risk" }),
+      finding({ code: "R_CRIT", severity: "critical", impactScore: 10, findingType: "risk" }),
+      finding({ code: "R_MED", severity: "medium", impactScore: 10, findingType: "risk" }),
+    ];
+    const summary = buildOwnerHomeSummary({ domainScores: [score("finance")], findings, actions: [], verifications: [], now: NOW });
+    expect(summary.top3Risks.map((r) => r.code)).toEqual(["R_CRIT", "R_MED", "R_LOW"]);
+  });
+
   it("surfaces only the top 3 opportunities best-first (impact → confidence)", () => {
     const findings: OwnerFinding[] = [
       finding({ code: "O1", findingType: "opportunity", impactScore: 40 }),

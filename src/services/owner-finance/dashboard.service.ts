@@ -9,6 +9,7 @@
  * persisted data only — no mock, nothing invented.
  */
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
@@ -81,7 +82,9 @@ export async function getFinanceDashboard(
       orderBy: { sequenceNumber: "desc" },
       include: {
         snapshot: true,
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+        // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+        findings: true,
         actions: {
           include: {
             verifications: { orderBy: { createdAt: "desc" } },
@@ -144,6 +147,7 @@ export async function getFinanceDashboard(
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
+        findings: rankOwnerFindingsBySeverity(latestCycle.findings),
         actions: [
           ...(await Promise.all(latestCycle.actions.map(withBaseline))),
           ...(await Promise.all(
