@@ -170,7 +170,8 @@ function primaryStepToOwnerAction(
     verificationMetric: go ? "baseMonthlyProfitDelta" : (finding?.verificationMetric ?? "dataConfidenceScore"),
     verificationMethod: go
       ? "Once it is running, compare the actual monthly profit change with the estimate."
-      : "Evaluate an updated scenario with the corrected input.",
+      : (Object.values(STRATEGY_REC_TEMPLATES).find((t) => t.recommendationCode === step.recommendationCode)?.verificationMethod
+        ?? "Evaluate an updated scenario with the corrected input."),
     expectedTimeframeDays: go ? 30 : 3,
   };
 }

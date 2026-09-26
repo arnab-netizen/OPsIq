@@ -15,6 +15,8 @@ import {
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
 import { num, ruleConsistentValue } from "./metrics";
+import { downsideWhen } from "./decision-format";
+import { RISK_LEVEL_SPREAD } from "./thresholds";
 
 interface OppArgs {
   code: string;
@@ -100,7 +102,7 @@ export function buildStrategyOpportunityFindings(
         code: "STR_OPP_FAST_PAYBACK",
         title: "Capital comes back quickly",
         summary:
-          "Payback is within the comfortable window, so the cash is not tied up for long.",
+          "It earns back the investment within the target time, so the cash is not tied up for long.",
         sourceMetric: "paybackMonths",
         sourceValue: shown,
         threshold: t.longPaybackMonths,
@@ -121,8 +123,12 @@ export function buildStrategyOpportunityFindings(
       opportunity({
         code: "STR_OPP_SAFE_UPSIDE",
         title: "Even the downside is profitable",
-        summary:
-          "Even if sales come in at the low end of your estimate, the option still adds monthly profit.",
+        summary: (() => {
+          const when = input.riskLevel ? downsideWhen(num(input.expectedRevenueChange), RISK_LEVEL_SPREAD[input.riskLevel]) : null;
+          return when
+            ? `${when}, the option still adds monthly profit.`
+            : "No revenue change is expected, so the result doesn't depend on sales — it adds monthly profit either way.";
+        })(),
         sourceMetric: "worstMonthlyProfitDelta",
         sourceValue: shown,
         threshold: 0,

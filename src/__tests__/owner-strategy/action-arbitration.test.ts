@@ -133,11 +133,14 @@ describe("N — persisted rows from an earlier cycle are arbitrated against the 
       "proceed-legacy": "on_hold",
       scale: "on_hold",
       funding: "primary",
-      data: "supporting",
+      data: "resolved", // a stale data step: nothing is missing any more
       rescope: "on_hold",
     });
-    expect(a.find((r) => r.id === "pursue")!.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it, or finish it if it's already under way.");
-    expect(coherentStrategyActionRows(rows, notYet).map((r) => r.id)).toEqual(["funding", "data"]);
+    // Engaged work may be finished; a proposal should just be cancelled.
+    expect(a.find((r) => r.id === "pursue")!.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it, or carry on and finish it since you've taken it on.");
+    expect(a.find((r) => r.id === "proceed-legacy")!.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it.");
+    expect(a.find((r) => r.id === "data")!.decisionFitNote).toBe("The latest evaluation no longer flags this — cancel it.");
+    expect(coherentStrategyActionRows(rows, notYet).map((r) => r.id)).toEqual(["funding"]);
   });
 
   it("under GO: the proceed step is primary; legacy Pursue/Size up are superseded (deduplicated), never a second go-ahead", () => {
@@ -211,5 +214,36 @@ describe("audit fixes — arbitration", () => {
   it("the primary step's priority is not pinned: a GO step ranks by its own impact, not above every other domain", () => {
     const p = plan(CASES.A_GO);
     expect(p.actions[0].priorityScore).toBeLessThan(80);
+  });
+});
+
+describe("round-2 audit fixes — arbitration", () => {
+  it("a step whose problem is gone is 'resolved', never a supporting step on Home (stale 'enter the missing inputs' under GO)", () => {
+    const go = deriveStrategyDecision(scenario(CASES.A_GO), { now: NOW });
+    const rows = [{ id: "stale", findingCode: "STR_MISSING_CRITICAL_DATA", recommendationCode: "STRREC_IMPROVE_DATA_QUALITY", status: "assigned" }];
+    expect(arbitrateStrategyActionRows(rows, go)[0].decisionFit).toBe("resolved");
+    expect(coherentStrategyActionRows(rows, go)).toEqual([]);
+  });
+  it("a condition step stays supporting only while its condition applies", () => {
+    const i = deriveStrategyDecision(scenario(CASES.I_GWC_DOWNSIDE), { now: NOW }); // downside loss + high risk
+    const rows = [
+      { id: "derisk", findingCode: "STR_HIGH_EXECUTION_RISK", recommendationCode: "STRREC_DE_RISK", status: "proposed" },
+      { id: "reserve", findingCode: "STR_LOW_CASH_RESERVE", recommendationCode: "STRREC_KEEP_RESERVE", status: "proposed" },
+    ];
+    expect(arbitrateStrategyActionRows(rows, i).map((r) => r.decisionFit)).toEqual(["supporting", "resolved"]);
+  });
+  it("every planned supporting step addresses a reason the decision raises (grid)", () => {
+    for (const rev of [undefined, -20000, 0, 5000, 30000, 60000])
+      for (const cost of [undefined, 0, 12000, 30000])
+        for (const inv of [undefined, 0, 150000])
+          for (const cash of [undefined, 0, 100000, 150000, 400000])
+            for (const risk of [undefined, "low", "medium", "high"] as const) {
+              const p = plan({ expectedRevenueChange: rev, costChange: cost, investmentRequired: inv, cashAvailable: cash, riskLevel: risk });
+              const fits = arbitrateStrategyActionRows(
+                p.actions.slice(1).map((a) => ({ findingCode: a.findingCode, recommendationCode: STRATEGY_REC_TEMPLATES[a.findingCode]?.recommendationCode, status: "proposed" })),
+                p.decision
+              );
+              for (const f of fits) expect(f.decisionFit).toBe("supporting");
+            }
   });
 });

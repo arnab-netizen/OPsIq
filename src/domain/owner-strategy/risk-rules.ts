@@ -19,7 +19,14 @@ import type { StrategyThresholds } from "./thresholds";
 import { isValidCurrency } from "./data-confidence";
 import { num, rawFundingShortfall, ruleConsistentValue } from "./metrics";
 import { classifyStrategyInputs } from "./input-status";
-import { aboutStrategyMoney, formatStrategyMoney } from "./decision-format";
+import { aboutStrategyMoney, downsideWhen, formatStrategyMoney } from "./decision-format";
+import { RISK_LEVEL_SPREAD } from "./thresholds";
+
+/** The risk-level spread applied to the revenue change (0 when no valid level is set). */
+function riskSpread(input: StrategySnapshotInput): number {
+  const level = input.riskLevel;
+  return level && Object.prototype.hasOwnProperty.call(RISK_LEVEL_SPREAD, level) ? RISK_LEVEL_SPREAD[level] : 0;
+}
 
 /** Default urgency by severity (deterministic baseline). */
 const SEVERITY_URGENCY: Record<OwnerSeverity, number> = {
@@ -87,9 +94,9 @@ export function buildStrategyRiskFindings(
     findings.push(
       risk({
         code: "STR_INVALID_CURRENCY",
-        title: "Reporting currency is invalid",
+        title: "Currency code is not valid",
         summary:
-          "The snapshot currency is missing or not a valid 3–8 letter code; fix it so the money figures are trustworthy.",
+          "The scenario's currency code isn't valid, so the money figures can't be trusted.",
         sourceMetric: "currency",
         sourceValue: null,
         severity: "medium",
@@ -157,7 +164,7 @@ export function buildStrategyRiskFindings(
         code: "STR_MISSING_RISK_LEVEL",
         title: "Execution risk is not chosen",
         summary:
-          "Without an execution risk level the downside (what happens if sales come in lower) cannot be calculated — it is unknown, not safe.",
+          "Without an execution risk level the downside can't be calculated — it is unknown, not safe.",
         sourceMetric: "riskLevel",
         sourceValue: null,
         severity: "medium",
@@ -243,7 +250,7 @@ export function buildStrategyRiskFindings(
         code: "STR_NEGATIVE_WORST_CASE",
         title: "The downside loses money",
         summary:
-          `If sales come in at the low end of your estimate, this becomes a monthly loss of ${about(r.worstMonthlyProfitDelta)}.`,
+          `${downsideWhen(num(input.expectedRevenueChange), riskSpread(input)) ?? "In the downside case"}, this becomes a monthly loss of ${about(r.worstMonthlyProfitDelta)}.`,
         sourceMetric: "worstMonthlyProfitDelta",
         sourceValue: shown,
         threshold: 0,
@@ -348,15 +355,20 @@ export function buildStrategyRiskFindings(
   }
 
   // Investment covered but little or no cash left in reserve (< lowReserveRatio of the investment).
-  // Only when the option adds profit — a loss-making option is not "short of reserve".
+  // Only when the economics work (adds profit, earns back within the critical limit, ROI not below
+  // the critical ROI) — the same predicate as the decision's LOW_CASH_RESERVE condition.
   const investmentForReserve = num(input.investmentRequired);
+  const economicsWork =
+    r.baseMonthlyProfitDelta !== null &&
+    r.baseMonthlyProfitDelta > 0 &&
+    (r.roiAnnualPct === null || r.roiAnnualPct >= t.criticalRoiPct) &&
+    (r.paybackMonths === null || r.paybackMonths <= t.criticalPaybackMonths);
   if (
     shortfall !== null &&
     shortfall <= 0 &&
     investmentForReserve !== null &&
     -shortfall < investmentForReserve * t.lowReserveRatio &&
-    r.baseMonthlyProfitDelta !== null &&
-    r.baseMonthlyProfitDelta > 0
+    economicsWork
   ) {
     const left = -shortfall || 0;
     findings.push(

@@ -22,7 +22,9 @@ function localeFor(currency: string): string {
 export function formatStrategyMoney(amount: number, currency: string, fractionDigits?: number): string {
   const abs = Math.abs(amount);
   const maxDigits = currencyMinorDigits(currency);
-  if (maxDigits > 0 && abs > 0 && abs < 0.005) return `less than ${formatWithDigits(0.01, currency, 2)}`;
+  // Never show a real non-zero amount as 0: below the smallest displayable unit (₹0.01, ¥1) say "less than" it.
+  const smallest = 10 ** -maxDigits;
+  if (abs > 0 && abs < smallest / 2) return `less than ${formatWithDigits(smallest, currency, maxDigits)}`;
   const digits = fractionDigits ?? (abs >= 100 || Number.isInteger(abs) ? 0 : 2);
   return formatWithDigits(abs, currency, Math.min(digits, maxDigits));
 }
@@ -74,4 +76,15 @@ export function formatStrategyMonths(months: number): string {
 /** "in about 8 months", or "in less than a month". */
 export function inAboutStrategyMonths(months: number): string {
   return months < 1 ? "in less than a month" : `in about ${formatStrategyMonths(months)}`;
+}
+
+/**
+ * How the downside test reads for a revenue change: the risk spread moves the REVENUE change only,
+ * so a revenue gain "comes in lower", a revenue drop "drops more", and with no revenue change there
+ * is no sales downside to describe (null).
+ */
+export function downsideWhen(rev: number | null, spread: number): string | null {
+  const pct = Math.round(spread * 100);
+  if (rev === null || rev === 0) return null;
+  return rev < 0 ? `If revenue drops ${pct}% more than expected` : `If the extra sales come in ${pct}% lower`;
 }

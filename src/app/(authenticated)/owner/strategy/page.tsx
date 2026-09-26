@@ -82,6 +82,7 @@ const ACTION_FIT_LABEL: Record<string, string> = {
   primary: "Next step",
   on_hold: "On hold",
   superseded: "Replaced",
+  resolved: "No longer needed",
 };
 
 const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -98,7 +99,8 @@ const STATE_LABEL: Record<string, string> = {
   RISKY: "Risky",
   AVOID: "Avoid",
 };
-const FIT_WITHOUT_FORWARD_STEPS = new Set(["on_hold", "superseded"]);
+/** Server-derived fits whose proposed actions are not to be taken on (only cancelled). */
+const FIT_WITHOUT_FORWARD_STEPS = new Set(["on_hold", "superseded", "resolved"]);
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -587,11 +589,11 @@ function StrategyCycleView({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
+                  How to check: {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && !FIT_WITHOUT_FORWARD_STEPS.has(a.decisionFit) && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
-                  {a.status === "assigned" && !FIT_WITHOUT_FORWARD_STEPS.has(a.decisionFit) && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
+                  {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
                   {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}

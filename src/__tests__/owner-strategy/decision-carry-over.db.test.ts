@@ -98,9 +98,24 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       const pursue = actions.find((a: any) => a.recommendationCode === "STRREC_PURSUE");
       expect(pursue.carriedFromCycleSequence).toBe(1);
       expect(pursue.decisionFit).toBe("on_hold");
-      expect(pursue.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it, or finish it if it's already under way.");
-      // Server-side: an on-hold action cannot be taken on or started — only finished or cancelled.
-      await expect(updateStrategyAction(pursue.id, { status: "in_progress" }, actor, workspaceId)).rejects.toThrow(/isn't part of the current Strategy decision/);
+      expect(pursue.decisionFitNote).toBe("Not part of the current decision (not yet) — cancel it, or carry on and finish it since you've taken it on.");
+      // Server-side: a PROPOSED step that doesn't fit the decision cannot be taken on...
+      const proposedPursueId = randomUUID();
+      await db.ownerStrategyAction.create({
+        data: {
+          id: proposedPursueId, workspaceId, businessId, cycleId: c2.id, findingId: null,
+          recommendationCode: "STRREC_PURSUE", findingCode: "STR_OPP_FAST_PAYBACK",
+          title: "Low-regret bet — proceed", description: "legacy", ownerRole: "owner", status: "proposed",
+          priorityScore: 60, effortScore: 40, expectedImpactScore: 40, confidence: 0.9,
+          verificationMetric: "paybackMonths", verificationMethod: "legacy", expectedTimeframeDays: 21,
+        },
+      });
+      await expect(updateStrategyAction(proposedPursueId, { status: "assigned" }, actor, workspaceId)).rejects.toThrow(
+        "This step isn't part of the current Strategy decision. Refresh to see your current next step."
+      );
+      await updateStrategyAction(proposedPursueId, { status: "cancelled" }, actor, workspaceId);
+      // ...while work already taken on stays the owner's to continue (never recommended, though).
+      expect((await updateStrategyAction(pursue.id, { status: "in_progress" }, actor, workspaceId)).status).toBe("in_progress");
       expect(actions.filter((a: any) => a.decisionFit === "primary")).toHaveLength(1);
       // The never-touched "Go ahead" proposal of cycle 1 is superseded, not carried.
       expect(actions.some((a: any) => a.recommendationCode === "STRREC_PROCEED")).toBe(false);

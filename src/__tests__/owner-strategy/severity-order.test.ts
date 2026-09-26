@@ -82,3 +82,13 @@ describe("Strategy readers return canonical order", () => {
     expect(out.explanations.map((e: { severity: string }) => e.severity)).toEqual(SEVERITY_ORDER);
   });
 });
+
+describe("owner-safe error for the decision-fit gate", () => {
+  it("the gate's message is shown as written (allowlisted), not the generic fallback", async () => {
+    const { presentDomainError } = await import("@/lib/owner-domain-error-presentation");
+    const { httpResponseErrorFromBody } = await import("@/lib/operator-safe-errors");
+    const { STRATEGY_STEP_NOT_IN_DECISION_MESSAGE } = await import("@/domain/owner-strategy/action-arbitration");
+    const err = httpResponseErrorFromBody(400, { error: STRATEGY_STEP_NOT_IN_DECISION_MESSAGE });
+    expect(presentDomainError(err, "action")).toBe(STRATEGY_STEP_NOT_IN_DECISION_MESSAGE);
+  });
+});

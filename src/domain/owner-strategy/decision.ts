@@ -36,7 +36,7 @@ import { resolveStrategyThresholds, RISK_LEVEL_SPREAD, type StrategyThresholds }
 import { computeStrategyMetrics, num, rawFundingShortfall, ruleConsistentValue } from "./metrics";
 import { classifyStrategyInputs, type StrategyInputStatus } from "./input-status";
 import { isValidCurrency, isStaleSnapshot } from "./data-confidence";
-import { aboutStrategyMoney, formatStrategyMoney, formatStrategyMonths, inAboutStrategyMonths } from "./decision-format";
+import { aboutStrategyMoney, downsideWhen, formatStrategyMoney, formatStrategyMonths, inAboutStrategyMonths } from "./decision-format";
 
 export const STRATEGY_DECISION_MODEL_VERSION = "strategy-decision-v1" as const;
 
@@ -234,17 +234,6 @@ function shownConsistent(raw: number, rule: (v: number) => boolean, round: (v: n
   return ruleConsistentValue(raw, round(raw), rule);
 }
 
-/**
- * How the downside test reads for this revenue change: the risk spread moves the REVENUE change
- * only, so a revenue gain "comes in lower", a revenue drop "drops more", and with no revenue
- * change there is no sales downside to test (null).
- */
-function downsideWhen(rev: number | null, spread: number): string | null {
-  const pct = Math.round(spread * 100);
-  if (rev === null || rev === 0) return null;
-  return rev < 0 ? `If revenue drops ${pct}% more than expected` : `If the extra sales come in ${pct}% lower`;
-}
-
 /** Amounts in one sentence share a precision: paise shown for all when a small non-whole gap is involved. */
 function sharedDigits(...amounts: Array<number | null>): number | undefined {
   return amounts.some((x) => x !== null && x > 0 && x < 100 && !Number.isInteger(Math.round(x * 100) / 100)) ? 2 : undefined;
@@ -327,12 +316,15 @@ export function deriveStrategyDecision(
       : `You're ${cashMoney(fundingGap)} short of the ${cashMoney(investment!)} needed.`);
   }
 
+  // Conditions only exist for an option whose economics are known to work: with profit unknown or
+  // failing, "handle this first" would be meaningless (and the findings agree: see risk-rules.ts).
+  const canCondition = profitKnown && !economicsFail;
   const when = spread === null ? null : downsideWhen(rev, spread);
-  const downsideLoss = !economicsFail && worst !== null && worst < 0;
+  const downsideLoss = canCondition && worst !== null && worst < 0;
   if (downsideLoss) add("DOWNSIDE_LOSS", "downside", "condition", `${when ?? "In the downside case"}, this loses ${about(worst!)} a month.`);
-  if (!economicsFail && s.riskLevel === "high") add("HIGH_EXECUTION_RISK", "downside", "condition", "You rated execution risk high.");
-  if (!economicsFail && s.riskLevel === null && profitKnown) add("DOWNSIDE_UNKNOWN", "downside", "condition", "Execution risk isn't chosen, so the downside isn't calculated.");
-  if (!economicsFail && lowReserve) {
+  if (canCondition && s.riskLevel === "high") add("HIGH_EXECUTION_RISK", "downside", "condition", "You rated execution risk high.");
+  if (canCondition && s.riskLevel === null) add("DOWNSIDE_UNKNOWN", "downside", "condition", "Execution risk isn't chosen, so the downside isn't calculated.");
+  if (canCondition && lowReserve) {
     add("LOW_CASH_RESERVE", "cash", "condition", cashLeftAfter === 0
       ? `The ${cashMoney(investment!)} uses all the cash you have for this — nothing is left in reserve.`
       : `After the ${cashMoney(investment!)} only ${cashMoney(cashLeftAfter!)} of your cash is left in reserve.`);
@@ -485,7 +477,7 @@ const MISSING_STEP: Partial<Record<StrategyDecisionReasonCode, StepTemplate>> = 
     recommendationCode: "STRREC_FIX_CURRENCY",
     findingCode: "STR_INVALID_CURRENCY",
     title: "Set a valid currency",
-    description: "Use a valid 3-letter currency code (for example INR) in an updated scenario so the money figures can be trusted.",
+    description: "Use a valid currency code (for example INR) in an updated scenario so the money figures can be trusted.",
   },
 };
 
@@ -539,7 +531,7 @@ function primaryStepFor(
       recommendationCode: "STRREC_SECURE_FUNDING",
       findingCode: "STR_UNAFFORDABLE",
       title: `Close the ${gap} funding gap`,
-      description: `The numbers work, but you're ${gap} short. Close the gap before committing.`,
+      description: "The numbers work — close the gap before committing.",
       options: [
         "Stage the spend so the first step fits the cash you have",
         ctx.cash !== null && ctx.cash > 0 ? `Reduce the scope to fit ${cashMoney(ctx.cash)}` : "Reduce the scope so less cash is needed upfront",
@@ -702,7 +694,13 @@ function buildDimensions(a: {
   const notes: string[] = ["values are owner estimates"];
   if (!isValidCurrency(a.input.currency)) notes.push("currency code is not valid");
   if (a.now && isStaleSnapshot(a.input.periodEnd, a.now, t.staleSnapshotDays)) notes.push(`the assessment period ended more than ${t.staleSnapshotDays} days ago`);
-  const decisionInputMissing = s.coreEconomicsMissing || s.investmentRequired === "missing" || s.cashNeededButMissing || !isValidCurrency(a.input.currency);
+  const decisionInputMissing =
+    s.coreEconomicsMissing ||
+    s.investmentRequired === "missing" ||
+    s.investmentRequired === "negative" ||
+    s.cashNeededButMissing ||
+    s.cashAvailable === "negative" ||
+    !isValidCurrency(a.input.currency);
   const evidence: StrategyDecisionDimensions["evidence"] = {
     state: decisionInputMissing ? "unknown" : provided.length < EVIDENCE_INPUTS.length || notes.length > 1 ? "caution" : "good",
     line: `${provided.length} of ${EVIDENCE_INPUTS.length} inputs provided · ${notes.join(" · ")}`,

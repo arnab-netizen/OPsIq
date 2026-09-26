@@ -48,8 +48,40 @@ export const STRATEGY_SUPPORTING_STEPS: Record<StrategyDecisionCode, readonly st
 /** Retired recommendation codes: positive findings are reasons, not commands. */
 export const RETIRED_STRATEGY_RECOMMENDATION_CODES: readonly string[] = ["STRREC_PURSUE", "STRREC_SCALE"];
 
-/** "closed": completed/cancelled — history, never a next step. */
-export type StrategyActionFit = "primary" | "supporting" | "on_hold" | "superseded" | "closed";
+/**
+ * "resolved": a step whose problem the current evaluation no longer raises (e.g. "enter the cash"
+ * once cash is entered). "closed": completed/cancelled — history, never a next step.
+ */
+export type StrategyActionFit = "primary" | "supporting" | "on_hold" | "superseded" | "resolved" | "closed";
+
+/**
+ * The decision reason (or missing input) each step addresses. A persisted step is a supporting step
+ * only while the current decision still raises its reason; otherwise it is "resolved".
+ */
+const STEP_ADDRESSES: Record<string, (d: StrategyDecision) => boolean> = {
+  STRREC_PROVIDE_REVENUE_CHANGE: (d) => missing(d, "expectedRevenueChange"),
+  STRREC_PROVIDE_COST_CHANGE: (d) => missing(d, "costChange"),
+  STRREC_PROVIDE_INVESTMENT: (d) => missing(d, "investmentRequired"),
+  STRREC_IMPROVE_DATA_QUALITY: (d) => missing(d, "expectedRevenueChange") || missing(d, "costChange") || missing(d, "investmentRequired"),
+  STRREC_PROVIDE_CASH: (d) => hasReason(d, "MISSING_CASH"),
+  STRREC_CORRECT_INVESTMENT: (d) => hasReason(d, "INVALID_INVESTMENT"),
+  STRREC_CORRECT_CASH: (d) => hasReason(d, "INVALID_CASH"),
+  STRREC_FIX_CURRENCY: (d) => hasReason(d, "INVALID_CURRENCY"),
+  STRREC_SET_RISK_LEVEL: (d) => missing(d, "riskLevel"),
+  STRREC_CAP_DOWNSIDE: (d) => hasReason(d, "DOWNSIDE_LOSS"),
+  STRREC_DE_RISK: (d) => hasReason(d, "HIGH_EXECUTION_RISK"),
+  STRREC_KEEP_RESERVE: (d) => hasReason(d, "LOW_CASH_RESERVE"),
+  STRREC_STAGE_PAYBACK: (d) => hasReason(d, "LONG_PAYBACK"),
+  STRREC_COMPARE_ALTERNATIVES: (d) => hasReason(d, "WEAK_RETURN"),
+};
+
+function missing(d: StrategyDecision, input: string): boolean {
+  return d.dimensions.evidence.missingInputs.includes(input);
+}
+
+function hasReason(d: StrategyDecision, code: string): boolean {
+  return d.reasons.some((r) => r.code === code);
+}
 
 export interface ArbitrableStrategyAction {
   findingCode: string;
@@ -70,7 +102,10 @@ export function strategyActionFit(a: ArbitrableStrategyAction, d: StrategyDecisi
   // The same advice as the primary step (same step for another finding, or another step for the
   // same finding — e.g. the generic "enter the missing inputs") duplicates it.
   if (code === d.primaryStep.recommendationCode || a.findingCode === d.primaryStep.findingCode) return "superseded";
-  if (STRATEGY_SUPPORTING_STEPS[d.code].includes(code)) return "supporting";
+  if (STRATEGY_SUPPORTING_STEPS[d.code].includes(code)) {
+    const addresses = STEP_ADDRESSES[code];
+    return addresses && !addresses(d) ? "resolved" : "supporting";
+  }
   return "on_hold";
 }
 
@@ -113,7 +148,7 @@ export function arbitrateStrategyActionRows<T extends ArbitrableStrategyAction>(
     }
   }
 
-  return rows.map((r, i) => ({ ...r, decisionFit: fits[i], decisionFitNote: fitNote(fits[i], d) }));
+  return rows.map((r, i) => ({ ...r, decisionFit: fits[i], decisionFitNote: fitNote(fits[i], d, r.status ?? "proposed") }));
 }
 
 const DECISION_SHORT_LABEL: Record<StrategyDecision["code"], string> = {
@@ -124,14 +159,24 @@ const DECISION_SHORT_LABEL: Record<StrategyDecision["code"], string> = {
   GO: "go ahead",
 };
 
-function fitNote(fit: StrategyActionFit, d: StrategyDecision): string | null {
-  if (fit === "on_hold") return `Not part of the current decision (${DECISION_SHORT_LABEL[d.code]}) — cancel it, or finish it if it's already under way.`;
-  if (fit === "superseded") return "Covered by the current next step — cancel it, or finish it if it's already under way.";
+function fitNote(fit: StrategyActionFit, d: StrategyDecision, status: string): string | null {
+  // Work the owner has already taken on may be finished; a proposal should just be cancelled.
+  const what = ENGAGED.has(status) ? "cancel it, or carry on and finish it since you've taken it on" : "cancel it";
+  if (fit === "on_hold") return `Not part of the current decision (${DECISION_SHORT_LABEL[d.code]}) — ${what}.`;
+  if (fit === "superseded") return `Covered by the current next step — ${what}.`;
+  if (fit === "resolved") return `The latest evaluation no longer flags this — ${what}.`;
   return null;
 }
 
-/** Fits for which the owner must not start or take on the action (only finish or cancel it). */
-export const STRATEGY_FITS_WITHOUT_FORWARD_STEPS: readonly StrategyActionFit[] = ["on_hold", "superseded"];
+/** Owner-safe rejection when a proposed step that doesn't fit the decision is taken on. */
+export const STRATEGY_STEP_NOT_IN_DECISION_MESSAGE =
+  "This step isn't part of the current Strategy decision. Refresh to see your current next step.";
+
+/**
+ * Fits whose actions the owner must not newly take on (proposed → assigned). Work already taken on
+ * stays the owner's to finish or cancel; it is simply never recommended.
+ */
+export const STRATEGY_FITS_WITHOUT_FORWARD_STEPS: readonly StrategyActionFit[] = ["on_hold", "superseded", "resolved"];
 
 /**
  * Retired findings whose stored type no longer describes them. STR_OPP_DATA_QUALITY (no longer
@@ -156,7 +201,7 @@ export function withoutRetiredStrategyActions<T extends ArbitrableStrategyAction
   return rows.filter((r) => !RETIRED_STRATEGY_RECOMMENDATION_CODES.includes(r.recommendationCode ?? ""));
 }
 
-const FIT_ORDER: Record<StrategyActionFit, number> = { primary: 0, supporting: 1, on_hold: 2, superseded: 3, closed: 4 };
+const FIT_ORDER: Record<StrategyActionFit, number> = { primary: 0, supporting: 1, on_hold: 2, superseded: 3, resolved: 4, closed: 5 };
 
 /** Stable display order: the primary step, supporting steps, then on-hold, superseded and closed. */
 export function orderByDecisionFit<T extends { decisionFit: StrategyActionFit }>(rows: readonly T[]): T[] {

@@ -143,13 +143,13 @@ export function rawAffordabilityRatio(input: StrategySnapshotInput): number | nu
 
 /**
  * Funding shortfall = investment − cash (full precision; > 0 short, 0 exactly covered, < 0 spare).
- * `null` when there is no positive investment or cash is not entered — a known cash of 0 is a
- * real shortfall of the whole investment, never "missing".
+ * `null` when there is no positive investment, or cash is not entered or invalid (negative) — a
+ * known cash of 0 is a real shortfall of the whole investment, never "missing".
  */
 export function rawFundingShortfall(input: StrategySnapshotInput): number | null {
   const cash = num(input.cashAvailable);
   const investment = num(input.investmentRequired);
-  if (cash === null || investment === null || investment <= 0) return null;
+  if (cash === null || cash < 0 || investment === null || investment <= 0) return null;
   return toDecisionPrecision(investment - cash, Math.max(Math.abs(investment), Math.abs(cash)));
 }
 

@@ -467,3 +467,53 @@ describe("decision conditions are backed by findings (so a persisted action can 
     expect(diagnoseStrategySnapshot(loss, { now: NOW }).findings.map((f) => f.code)).not.toContain("STR_NO_CASH_RESERVE");
   });
 });
+
+describe("round-2 audit fixes", () => {
+  const diag = (over: Partial<StrategySnapshotInput>) => diagnoseStrategySnapshot(scenario(over), { now: NOW });
+  const codes = (over: Partial<StrategySnapshotInput>) => diag(over).findings.map((f) => f.code);
+
+  it("no conditions are listed while profit is unknown (NEED_INFO) — and no reserve finding either", () => {
+    const d = decide({ investmentRequired: 150000, cashAvailable: 150000, riskLevel: "high" });
+    expect(d.code).toBe("NEED_INFO");
+    expect(reasonCodes(d)).toEqual(["MISSING_REVENUE_CHANGE", "MISSING_COST_CHANGE"]);
+    expect(codes({ investmentRequired: 150000, cashAvailable: 150000, riskLevel: "high" })).not.toContain("STR_LOW_CASH_RESERVE");
+  });
+
+  it("the reserve finding and condition agree when payback is beyond the limit (neither)", () => {
+    const over = { expectedRevenueChange: 2000, costChange: 0, investmentRequired: 150000, cashAvailable: 150000 };
+    expect(decide(over).code).toBe("DONT_AS_PLANNED");
+    expect(reasonCodes(decide(over))).not.toContain("LOW_CASH_RESERVE");
+    expect(codes(over)).not.toContain("STR_LOW_CASH_RESERVE");
+  });
+
+  it("a sub-unit gap in a currency without minor units never reads as 0", () => {
+    const d = decide({ currency: "JPY", expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 60000.4, cashAvailable: 60000 });
+    expect(d.code).toBe("NOT_YET");
+    expect(d.primaryStep.title).toBe("Close the less than ¥1 funding gap");
+    for (const t of allText(d)) expect(t).not.toMatch(/¥0(?![.\d])/);
+  });
+
+  it("negative cash (rejected by the schema) never produces an affordability finding or a 'good' evidence state", () => {
+    const over = { expectedRevenueChange: 1000, costChange: 5000, investmentRequired: 60000, cashAvailable: -5000 };
+    expect(codes(over)).not.toContain("STR_UNAFFORDABLE");
+    expect(decide(over).code).toBe("DONT_AS_PLANNED");
+    expect(decide({ expectedRevenueChange: 60000, costChange: 5000, investmentRequired: 60000, cashAvailable: -5000 }).dimensions.evidence.state).toBe("unknown");
+    expect(decide({ expectedRevenueChange: 60000, costChange: 5000, investmentRequired: -60000, cashAvailable: 5000 }).dimensions.evidence.state).toBe("unknown");
+  });
+
+  it("finding copy follows the sign of the revenue change", () => {
+    const neg = diag({ expectedRevenueChange: -20000, costChange: -30000, investmentRequired: 0, riskLevel: "high" });
+    expect(neg.findings.find((f) => f.code === "STR_NEGATIVE_WORST_CASE")!.summary).toBe("If revenue drops 60% more than expected, this becomes a monthly loss of about ₹2,000.");
+    const zero = diag({ expectedRevenueChange: 0, costChange: -3000, investmentRequired: 60000, cashAvailable: 400000 });
+    expect(zero.findings.find((f) => f.code === "STR_OPP_SAFE_UPSIDE")!.summary).toBe("No revenue change is expected, so the result doesn't depend on sales — it adds monthly profit either way.");
+    const pos = diag({ expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 150000, cashAvailable: 400000 });
+    expect(pos.findings.find((f) => f.code === "STR_OPP_SAFE_UPSIDE")!.summary).toBe("If the extra sales come in 20% lower, the option still adds monthly profit.");
+    for (const f of [...neg.findings, ...zero.findings, ...pos.findings]) expect(`${f.title} ${f.summary}`).not.toMatch(/ROI|base case|comfortable window|affordabilityRatio|pursue/i);
+  });
+
+  it("a synthesized re-scope step carries the re-scope verification copy, not 'corrected input'", () => {
+    const p = planStrategyActionsFromDiagnosis(diag({ expectedRevenueChange: 2000, costChange: 0, investmentRequired: 150000, cashAvailable: 400000 }));
+    expect(p.actions[0].title).toBe("Change the plan, re-scope it, or drop it");
+    expect(p.actions[0].verificationMethod).not.toMatch(/corrected input/);
+  });
+});

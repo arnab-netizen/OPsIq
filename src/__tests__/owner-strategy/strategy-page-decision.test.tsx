@@ -153,7 +153,9 @@ describe("Strategy page — decision first", () => {
     expect(within(cards[0] as HTMLElement).getByText("Next step")).toBeTruthy();
     expect(within(cards[0] as HTMLElement).getByRole("button", { name: "Assign" })).toBeTruthy();
     const pursue = cards[1] as HTMLElement;
-    expect(pursue.textContent).toContain("Not part of the current decision (not yet) — cancel it, or finish it if it's already under way.");
+    expect(pursue.textContent).toContain("Not part of the current decision (not yet) — cancel it.");
+    expect(pursue.textContent).toContain("How to check:");
+    expect(pursue.textContent).not.toMatch(/affordability ratio|Verify /);
     expect(within(pursue).queryByRole("button", { name: "Assign" })).toBeNull();
     // It can still be closed: Cancel is offered for on-hold work.
     expect(within(pursue).getByRole("button", { name: "Cancel" })).toBeTruthy();
