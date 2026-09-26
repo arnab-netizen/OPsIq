@@ -45,13 +45,40 @@ function roundOrNull(x: number | null, round: (v: number) => number): number | n
   return x === null ? null : round(x);
 }
 
+/**
+ * Decision precision: 12 significant digits relative to the magnitude of the operands.
+ *
+ * Money inputs are decimal amounts but are held as binary doubles, so exact decimal results
+ * pick up representation error (16384.1 − 6384.1 = 10000.000000000002; 1.5 × 0.6 − 0.9 =
+ * −1.1e-16). Compared against inclusive/strict thresholds unmodified, that noise flips a result
+ * that is exactly ON a threshold. This removes the noise only: 12 significant digits is ~1000×
+ * coarser than double error (~1e-15 relative after a few operations) and far finer than any real
+ * amount (at ₹1,00,00,000 it still resolves a thousandth of a rupee). It is NOT display rounding.
+ * `scale` is the magnitude of the operands (cancellation in `a − b` is judged against max(|a|,|b|),
+ * so a difference that is pure noise becomes exactly 0); ratios use their own magnitude.
+ */
+const DECISION_SIGNIFICANT_DIGITS = 12;
+
+export function toDecisionPrecision(x: number, scale: number = x): number {
+  if (!Number.isFinite(x) || x === 0) return x;
+  const magnitude = Math.abs(scale) > 0 && Number.isFinite(scale) ? Math.abs(scale) : Math.abs(x);
+  const decimals = DECISION_SIGNIFICANT_DIGITS - Math.ceil(Math.log10(magnitude));
+  if (decimals > 100) return x; // below toFixed's range: already far beyond decision precision
+  if (decimals < 0) {
+    const step = 10 ** -decimals;
+    return Math.round(x / step) * step || 0;
+  }
+  return Number(x.toFixed(decimals)) || 0; // `|| 0` normalises −0
+}
+
 // --- scenario economics -------------------------------------------------------
 //
 // Mathematical contract (Phase 1 calculation integrity):
 //  - Units: `expectedRevenueChange` and `costChange` are MONTHLY amounts in the snapshot
 //    currency; `investmentRequired` and `cashAvailable` are one-off amounts. ROI annualises the
 //    monthly profit change (×12); payback is expressed in months.
-//  - Every `raw*` function returns the FULL-PRECISION value. Business rules (verdict, findings,
+//  - Every `raw*` function returns the value at DECISION precision (toDecisionPrecision: float
+//    noise removed, nothing else). Business rules (verdict, findings,
 //    composite scores) must only ever read raw values. The exported non-raw functions are the
 //    display values — the raw value rounded for presentation — and must never feed a rule.
 //  - `null` means "not computable from the provided inputs"; nothing is invented.
@@ -61,7 +88,7 @@ export function rawBaseMonthlyProfitDelta(input: StrategySnapshotInput): number 
   const rev = num(input.expectedRevenueChange);
   const cost = num(input.costChange);
   if (rev === null || cost === null) return null;
-  return rev - cost;
+  return toDecisionPrecision(rev - cost, Math.max(Math.abs(rev), Math.abs(cost)));
 }
 
 /**
@@ -76,11 +103,14 @@ export function rawScenarioRange(input: StrategySnapshotInput): { worst: number;
   const cost = num(input.costChange);
   if (rev === null || cost === null || !input.riskLevel) return null;
   const spread = RISK_LEVEL_SPREAD[input.riskLevel];
-  const lowRevenueOutcome = rev * (1 - spread) - cost;
-  const highRevenueOutcome = rev * (1 + spread) - cost;
+  // The two candidates: revenue shrunk by the spread, and revenue grown by it. Which one is the
+  // worse outcome depends on the sign of the revenue change, so neither is named "worst" here.
+  const scale = Math.max(Math.abs(rev) * (1 + spread), Math.abs(cost));
+  const revenueMinusSpread = toDecisionPrecision(rev * (1 - spread) - cost, scale);
+  const revenuePlusSpread = toDecisionPrecision(rev * (1 + spread) - cost, scale);
   return {
-    worst: Math.min(lowRevenueOutcome, highRevenueOutcome),
-    best: Math.max(lowRevenueOutcome, highRevenueOutcome),
+    worst: Math.min(revenueMinusSpread, revenuePlusSpread),
+    best: Math.max(revenueMinusSpread, revenuePlusSpread),
   };
 }
 
@@ -90,7 +120,7 @@ export function rawRoiAnnualPct(input: StrategySnapshotInput): number | null {
   const base = rawBaseMonthlyProfitDelta(input);
   if (investment === null || base === null) return null;
   if (investment <= 0) return null; // no-capital move — ROI ratio is not applicable
-  return ((base * 12) / investment) * 100;
+  return toDecisionPrecision(((base * 12) / investment) * 100);
 }
 
 /** Payback in months = investment ÷ monthly profit change (full precision). */
@@ -99,7 +129,7 @@ export function rawPaybackMonths(input: StrategySnapshotInput): number | null {
   const base = rawBaseMonthlyProfitDelta(input);
   if (investment === null) return null;
   if (investment <= 0) return 0; // recovered immediately — no capital at risk
-  if (base !== null && base > 0) return investment / base;
+  if (base !== null && base > 0) return toDecisionPrecision(investment / base);
   return null; // never pays back
 }
 
@@ -108,7 +138,7 @@ export function rawAffordabilityRatio(input: StrategySnapshotInput): number | nu
   const cash = num(input.cashAvailable);
   const investment = num(input.investmentRequired);
   if (cash === null || investment === null || investment <= 0) return null;
-  return cash / investment;
+  return toDecisionPrecision(cash / investment);
 }
 
 /** All full-precision decision values for one option. */

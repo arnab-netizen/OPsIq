@@ -50,7 +50,8 @@ export interface StrategySnapshotInput {
 }
 
 /**
- * Full-precision scenario economics — the ONLY values business rules (verdict, findings,
+ * Decision-precision scenario economics (full precision minus binary floating-point noise; see
+ * toDecisionPrecision in metrics.ts) — the ONLY values business rules (verdict, findings,
  * composite scores) may compare against thresholds. `null` = not computable. Monthly amounts are
  * per month in the snapshot currency; ROI is an annual %; payback is in months; affordability is
  * cash ÷ investment. Invariant: worstMonthlyProfitDelta ≤ baseMonthlyProfitDelta ≤

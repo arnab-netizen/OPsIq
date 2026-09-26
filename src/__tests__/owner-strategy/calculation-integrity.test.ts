@@ -56,8 +56,9 @@ describe("known scenario — 150k investment / 100k cash / +30k revenue / +12k c
     const { raw } = computeStrategyMetrics(known, { now: NOW });
     expect(raw.baseMonthlyProfitDelta).toBe(18000);
     expect(raw.roiAnnualPct).toBe(144);
-    expect(raw.paybackMonths).toBeCloseTo(150000 / 18000, 12); // 8.333…
-    expect(raw.affordabilityRatio).toBeCloseTo(100000 / 150000, 12); // 0.6666…
+    // decision precision is 12 significant digits (float noise removed), so compare to 9 decimals
+    expect(raw.paybackMonths).toBeCloseTo(150000 / 18000, 9); // 8.333…
+    expect(raw.affordabilityRatio).toBeCloseTo(100000 / 150000, 9); // 0.6666…
     expect(raw.worstMonthlyProfitDelta).toBe(6000); // 30000 × (1 − 0.4) − 12000
     expect(raw.bestMonthlyProfitDelta).toBe(30000); // 30000 × (1 + 0.4) − 12000
   });
@@ -85,14 +86,25 @@ describe("scenario range — worst ≤ base ≤ best for every sign", () => {
     expect(baseMonthlyProfitDelta(cut)).toBe(5000);
   });
 
-  it("negative revenue with a downside loss now raises the downside finding it previously missed", () => {
+  it("negative revenue with a negative base: the range is ordered around the base", () => {
     // candidates: −20000×0.4 + 10000 = 2000 and −20000×1.6 + 10000 = −22000 → worst −22000
     const i = scenario({ expectedRevenueChange: -20000, costChange: -10000, riskLevel: "high", investmentRequired: 1, cashAvailable: 400000 });
     const m = computeStrategyMetrics(i, { now: NOW });
     expect(m.raw.worstMonthlyProfitDelta).toBe(-22000);
     expect(m.raw.bestMonthlyProfitDelta).toBe(2000);
-    // base = −10000 ≤ 0 → the negative-base-case rule dominates; downside is still ordered
     expect(m.raw.baseMonthlyProfitDelta).toBe(-10000);
+  });
+
+  it("negative revenue with a positive base: a real downside loss is now flagged (previously read the optimistic case)", () => {
+    // base = −20000 + 30000 = 10000; candidates −20000×0.4 + 30000 = 22000 and −20000×1.6 + 30000 = −2000
+    const i = scenario({ expectedRevenueChange: -20000, costChange: -30000, riskLevel: "high", investmentRequired: 10000, cashAvailable: 400000 });
+    const m = computeStrategyMetrics(i, { now: NOW });
+    expect(m.raw.worstMonthlyProfitDelta).toBe(-2000);
+    expect(m.raw.bestMonthlyProfitDelta).toBe(22000);
+    const c = codes(i);
+    expect(c).toContain("STR_NEGATIVE_WORST_CASE");
+    expect(c).not.toContain("STR_OPP_SAFE_UPSIDE");
+    expect(finding(i, "STR_NEGATIVE_WORST_CASE")!.sourceValue).toBe(-2000);
   });
 
   const revenues = [-50000, -10000, -1, -0.3, 0, 0.3, 1, 10000, 50000];
@@ -155,7 +167,7 @@ describe("rules use full-precision values — affordability boundaries (critical
 
   it("0.4999 is critically unaffordable (display 0.5 must not hide it)", () => {
     const i = afford(4999);
-    expect(computeStrategyMetrics(i, { now: NOW }).raw.affordabilityRatio).toBeCloseTo(0.4999, 12);
+    expect(computeStrategyMetrics(i, { now: NOW }).raw.affordabilityRatio).toBe(0.4999);
     expect(computeStrategyMetrics(i, { now: NOW }).strategyState).toBe("AVOID");
     const f = finding(i, "STR_UNAFFORDABLE")!;
     expect(f.severity).toBe("critical");
@@ -336,5 +348,62 @@ describe("zero and missing handling", () => {
       paybackMonths: null,
       affordabilityRatio: null,
     });
+  });
+});
+
+describe("decimal inputs exactly on a threshold are not flipped by binary floating-point error", () => {
+  // 16384.1 − 6384.1 is exactly 10000 in decimal but 10000.000000000002 in binary floating point.
+  const dec = (investmentRequired: number) =>
+    scenario({ expectedRevenueChange: 16384.1, costChange: 6384.1, investmentRequired, cashAvailable: 10000000, riskLevel: "low" });
+
+  it("monthly profit of exactly 10000 is exactly 10000", () => {
+    expect(computeStrategyMetrics(dec(180000), { now: NOW }).raw.baseMonthlyProfitDelta).toBe(10000);
+  });
+  it("payback of exactly 18 months is not long", () => {
+    const i = dec(180000);
+    expect(computeStrategyMetrics(i, { now: NOW }).raw.paybackMonths).toBe(18);
+    expect(codes(i)).not.toContain("STR_LONG_PAYBACK");
+    expect(codes(i)).toContain("STR_OPP_FAST_PAYBACK");
+  });
+  it("payback of exactly 36 months is long but not critical", () => {
+    const i = dec(360000);
+    expect(finding(i, "STR_LONG_PAYBACK")!.severity).toBe("medium");
+    expect(computeStrategyMetrics(i, { now: NOW }).strategyState).toBe("MARGINAL");
+  });
+  it("ROI of exactly 100% is a strong return", () => {
+    const i = dec(120000);
+    expect(computeStrategyMetrics(i, { now: NOW }).raw.roiAnnualPct).toBe(100);
+    expect(codes(i)).toContain("STR_OPP_STRONG_RETURN");
+    expect(computeStrategyMetrics(i, { now: NOW }).strategyState).toBe("STRONG_GO");
+  });
+  it("a downside of exactly 0 (medium risk, 1.5 − 0.9 spread arithmetic) is neither a loss nor a safe upside", () => {
+    // medium: 1.5 × 0.6 − 0.9 = 0 exactly in decimal, −1.1e-16 in binary
+    const i = scenario({ expectedRevenueChange: 1.5, costChange: 0.9, investmentRequired: 1, cashAvailable: 1000, riskLevel: "medium" });
+    expect(computeStrategyMetrics(i, { now: NOW }).raw.worstMonthlyProfitDelta).toBe(0);
+    const c = codes(i);
+    expect(c).not.toContain("STR_NEGATIVE_WORST_CASE");
+    expect(c).not.toContain("STR_OPP_SAFE_UPSIDE");
+  });
+  it("a downside of exactly 0 (low risk, 0.1 − 0.08) is not a safe upside", () => {
+    const i = scenario({ expectedRevenueChange: 0.1, costChange: 0.08, investmentRequired: 1, cashAvailable: 1000, riskLevel: "low" });
+    expect(computeStrategyMetrics(i, { now: NOW }).raw.worstMonthlyProfitDelta).toBe(0);
+    expect(codes(i)).not.toContain("STR_OPP_SAFE_UPSIDE");
+  });
+  it("real paise-level differences are still distinguished (not swallowed by noise removal)", () => {
+    // 0.01/month of profit is real money, not floating-point noise
+    const i = scenario({ expectedRevenueChange: 10000.01, costChange: 10000, investmentRequired: 1000, cashAvailable: 1000000 });
+    expect(computeStrategyMetrics(i, { now: NOW }).raw.baseMonthlyProfitDelta).toBeCloseTo(0.01, 10);
+    expect(codes(i)).not.toContain("STR_NEGATIVE_BASE_CASE");
+  });
+  it("a large exhaustive decimal sweep keeps exact-threshold inputs on the inclusive side", () => {
+    // every paise pair whose decimal difference is exactly 10000 → payback exactly 18 with 180000 invested
+    for (let paise = 1; paise <= 999; paise += 7) {
+      const cost = 6384 + paise / 100;
+      const rev = 16384 + paise / 100;
+      const i = scenario({ expectedRevenueChange: rev, costChange: cost, investmentRequired: 180000, cashAvailable: 10000000 });
+      const m = computeStrategyMetrics(i, { now: NOW });
+      expect(m.raw.baseMonthlyProfitDelta).toBe(10000);
+      expect(m.raw.paybackMonths).toBe(18);
+    }
   });
 });
