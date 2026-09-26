@@ -63,6 +63,7 @@ CREATE TABLE "owner_connector_writes" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "completed_at" TIMESTAMP(3),
+    "last_ambiguous_at" TIMESTAMP(3),
 
     CONSTRAINT "owner_connector_writes_pkey" PRIMARY KEY ("id")
 );
