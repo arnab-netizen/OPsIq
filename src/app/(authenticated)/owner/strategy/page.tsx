@@ -578,7 +578,7 @@ function StrategyCycleView({
                     {a.decisionFitNote && <div className="text-xs text-muted-foreground">{a.decisionFitNote}</div>}
                     {a.carriedFromCycleSequence != null && (
                       <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
-                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.stillFlaggedByLatestDiagnosis === false && !a.decisionFitNote && " — the latest diagnosis no longer flags this; finish or cancel it"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">
@@ -596,6 +596,7 @@ function StrategyCycleView({
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
+                  {a.status === "blocked" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Resume</Button>}
                   {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
                   {FIT_WITHOUT_FORWARD_STEPS.has(a.decisionFit) && a.status !== "completed" && a.status !== "cancelled" && (
                     <Button onClick={() => onUpdateAction(a, "cancelled")} disabled={busy}>Cancel</Button>

@@ -163,6 +163,19 @@ describe("Strategy page — decision first", () => {
     expect(screen.getByTestId("strategy-decision").textContent).not.toMatch(/pursue|size up/i);
   });
 
+  it("blocked work can be resumed from the page; a carried note is not duplicated", async () => {
+    const body = dashboard(KNOWN_CASE);
+    body.latestCycle.actions = body.latestCycle.actions.map((a) =>
+      a.id === "a-primary" ? { ...a, status: "blocked" } : { ...a, stillFlaggedByLatestDiagnosis: false }
+    );
+    installFetch(body);
+    renderPage();
+    await screen.findByTestId("strategy-decision");
+    const cards = screen.getByText(/Strategy actions/).closest("section")!.querySelectorAll(".border.rounded.p-3");
+    expect(within(cards[0] as HTMLElement).getByRole("button", { name: "Resume" })).toBeTruthy();
+    expect(cards[1].textContent).not.toContain("the latest diagnosis no longer flags this");
+  });
+
   it("history: the latest row shows the current decision; earlier rows are labelled as the previous model", async () => {
     installFetch(dashboard(KNOWN_CASE));
     renderPage();

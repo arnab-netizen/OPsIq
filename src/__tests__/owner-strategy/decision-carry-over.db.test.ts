@@ -114,6 +114,11 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
         "This step isn't part of the current Strategy decision. Refresh to see your current next step."
       );
       await updateStrategyAction(proposedPursueId, { status: "cancelled" }, actor, workspaceId);
+      // A proposal left on an older cycle (cycle 1's "Go ahead") was replaced by the latest plan.
+      const oldProceed = c1.actions.find((a: any) => a.recommendationCode === "STRREC_PROCEED")!;
+      await expect(updateStrategyAction(oldProceed.id, { status: "assigned" }, actor, workspaceId)).rejects.toThrow(
+        "This step isn't part of the current Strategy decision. Refresh to see your current next step."
+      );
       // ...while work already taken on stays the owner's to continue (never recommended, though).
       expect((await updateStrategyAction(pursue.id, { status: "in_progress" }, actor, workspaceId)).status).toBe("in_progress");
       expect(actions.filter((a: any) => a.decisionFit === "primary")).toHaveLength(1);

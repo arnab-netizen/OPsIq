@@ -20,7 +20,6 @@ import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate
 import type { StrategyActionUpdateInput } from "@/domain/owner-strategy/validation";
 import {
   arbitrateStrategyActionRows,
-  strategyActionFit,
   STRATEGY_FITS_WITHOUT_FORWARD_STEPS,
   STRATEGY_STEP_NOT_IN_DECISION_MESSAGE,
 } from "@/domain/owner-strategy/action-arbitration";
@@ -69,12 +68,20 @@ export async function updateStrategyAction(
             workspaceId,
             OR: [{ cycleId: latest.id }, { status: { in: [...ENGAGED_ACTION_STATUSES] } }],
           },
-          select: { id: true, findingCode: true, recommendationCode: true, status: true, cycleId: true, priorityScore: true },
-          orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
+          select: { id: true, findingCode: true, recommendationCode: true, status: true, cycleId: true },
+          // The Strategy dashboard's order (dashboard.service.ts), so duplicates resolve the same way.
+          orderBy: [
+            { priorityScore: "desc" },
+            { expectedImpactScore: "desc" },
+            { confidence: "desc" },
+            { findingCode: "asc" },
+            { title: "asc" },
+            { id: "asc" },
+          ],
         });
         const ordered = [...rows.filter((r: { cycleId: string }) => r.cycleId === latest.id), ...rows.filter((r: { cycleId: string }) => r.cycleId !== latest.id)];
-        const fit = arbitrateStrategyActionRows(ordered, decision).find((r: { id: string }) => r.id === actionId)?.decisionFit
-          ?? strategyActionFit(action, decision);
+        // A proposal left on an older cycle was replaced by the latest evaluation's plan.
+        const fit = arbitrateStrategyActionRows(ordered, decision).find((r: { id: string }) => r.id === actionId)?.decisionFit ?? "superseded";
         if (STRATEGY_FITS_WITHOUT_FORWARD_STEPS.includes(fit)) {
           throw new ValidationError(STRATEGY_STEP_NOT_IN_DECISION_MESSAGE);
         }
