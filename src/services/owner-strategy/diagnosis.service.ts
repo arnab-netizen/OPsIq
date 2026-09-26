@@ -29,6 +29,7 @@ interface EngagedPriorAction {
   findingCode: string;
   recommendationCode: string;
   priorityScore: number;
+  title: string;
 }
 
 export async function runStrategyDiagnosis(
@@ -89,7 +90,12 @@ export async function runStrategyDiagnosis(
     businessId,
     cycleId,
     findingId: findingIdByCode[a.findingCode] ?? null,
-    recommendationCode: recByFinding[a.findingCode] ?? a.findingCode,
+    // The primary step may not come from a finding template (e.g. the GO "go ahead" step), so its
+    // recommendation code comes from the decision; supporting steps map 1:1 from their finding.
+    recommendationCode:
+      a === plan.recommendedNextAction
+        ? plan.decision.primaryStep.recommendationCode
+        : (recByFinding[a.findingCode] ?? a.findingCode),
     findingCode: a.findingCode,
     title: a.title,
     description: a.description,
@@ -129,7 +135,7 @@ export async function runStrategyDiagnosis(
       // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
       const engagedPrior: EngagedPriorAction[] = await tx.ownerStrategyAction.findMany({
         where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
-        select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true },
+        select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true, title: true },
       });
       const continuity = planWithContinuity(actionRows, engagedPrior);
       carriedForwardIds = [];
@@ -145,6 +151,7 @@ export async function runStrategyDiagnosis(
           where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
           data: {
             cycleId,
+            title: c.planned.title,
             description: c.planned.description,
             verificationMethod: c.planned.verificationMethod,
             expectedTimeframeDays: c.planned.expectedTimeframeDays,
@@ -168,6 +175,7 @@ export async function runStrategyDiagnosis(
               fromCycleId: c.prior.cycleId,
               toCycleId: cycleId,
               priorityScore: { from: c.prior.priorityScore, to: c.planned.priorityScore },
+              title: { from: c.prior.title, to: c.planned.title },
             },
           },
           tx
@@ -197,6 +205,10 @@ export async function runStrategyDiagnosis(
       actionCount: createdActionCount,
       carriedForwardActionIds: carriedForwardIds,
       strategyState: diagnosis.metrics.strategyState,
+      // Additive, not persisted on the cycle: the decision is re-derived from the snapshot on read.
+      decisionModelVersion: plan.decision.modelVersion,
+      decision: plan.decision.code,
+      primaryStep: plan.decision.primaryStep.recommendationCode,
     },
   });
 

@@ -14,6 +14,7 @@
  * integrating it is a future slice and must not modify Module 1.)
  */
 import { db } from "@/lib/db";
+import { coherentStrategyActions } from "@/services/owner-strategy/decision-view";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
   buildBusinessConditionProfile,
@@ -472,6 +473,7 @@ export async function getBusinessCondition(
       include: {
         findings: { orderBy: { severity: "asc" } },
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        snapshot: true, // actions are arbitrated against the current decision (decision-view.ts)
       },
     }),
   ]);
@@ -508,7 +510,7 @@ export async function getBusinessCondition(
   }
   if (strategyCycle) {
     domainScores.push(strategyCycleToDomainScore(strategyCycle));
-    for (const a of strategyCycle.actions) topActions.push(strategyActionRowToOwnerAction(a));
+    for (const a of coherentStrategyActions(strategyCycle, strategyCycle.actions)) topActions.push(strategyActionRowToOwnerAction(a));
   }
 
   const missingCriticalData =

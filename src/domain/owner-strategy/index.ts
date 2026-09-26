@@ -16,6 +16,7 @@ export * from "./opportunity-rules";
 export * from "./diagnosis";
 export * from "./recommendations";
 export * from "./actions";
+export * from "./action-arbitration";
 export * from "./validation";
 export * from "./wealth-path.types";
 export * from "./wealth-path";

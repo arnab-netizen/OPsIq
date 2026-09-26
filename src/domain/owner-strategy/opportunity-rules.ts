@@ -61,15 +61,15 @@ export function buildStrategyOpportunityFindings(
   // Thresholds are compared on FULL-PRECISION values only (see risk-rules.ts).
   const r = m.raw;
 
-  // Strong-ROI option worth pursuing/scaling (only when ROI computable + strong)
+  // Strong ROI (only when ROI computable + strong) — a reason, not a command
   if (r.roiAnnualPct !== null && r.roiAnnualPct >= t.strongRoiPct) {
     const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v >= t.strongRoiPct);
     findings.push(
       opportunity({
         code: "STR_OPP_STRONG_RETURN",
-        title: "High-return option — pursue it",
+        title: "Strong return on the investment",
         summary:
-          "The return on capital is strong; this is a high-ROI use of cash. Commit (staged) while the numbers hold.",
+          "The profit it adds is a strong annual return on the money put in.",
         sourceMetric: "roiAnnualPct",
         sourceValue: shown,
         threshold: t.strongRoiPct,
@@ -100,7 +100,7 @@ export function buildStrategyOpportunityFindings(
         code: "STR_OPP_FAST_PAYBACK",
         title: "Capital comes back quickly",
         summary:
-          "Payback is within the comfortable window, so the cash is not tied up long — a low-regret bet if the downside is survivable.",
+          "Payback is within the comfortable window, so the cash is not tied up for long.",
         sourceMetric: "paybackMonths",
         sourceValue: shown,
         threshold: t.longPaybackMonths,
@@ -122,7 +122,7 @@ export function buildStrategyOpportunityFindings(
         code: "STR_OPP_SAFE_UPSIDE",
         title: "Even the downside is profitable",
         summary:
-          "The worst case still adds monthly profit — this is a high-safety option; it can be sized up with confidence.",
+          "Even if sales come in at the low end of your estimate, the option still adds monthly profit.",
         sourceMetric: "worstMonthlyProfitDelta",
         sourceValue: shown,
         threshold: 0,

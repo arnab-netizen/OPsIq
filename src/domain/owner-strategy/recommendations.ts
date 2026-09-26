@@ -47,8 +47,10 @@ interface StrategyRecTemplate {
 /**
  * Finding code → recommendation template. Categories cover the strategy decision
  * set: drop/re-scope a value-destroying option, compare a better use of capital,
- * cap the downside, stage the payback, secure funding, de-risk execution, and
- * pursue/scale a strong option.
+ * cap the downside, stage the payback, secure funding / keep a reserve, de-risk
+ * execution, and supply missing inputs. Opportunity findings have NO template: a strong
+ * return, fast payback or profitable downside is a reason the option looks promising, not
+ * a command. The only "go ahead" step is the GO decision's primary step (action-arbitration.ts).
  */
 export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
   STR_NEGATIVE_BASE_CASE: {
@@ -179,49 +181,6 @@ export const STRATEGY_REC_TEMPLATES: Record<string, StrategyRecTemplate> = {
     verificationMethod: "Re-run with the staged amount or new cash position; target cash left after the investment > 0.",
     expectedTimeframeDays: 14,
     effortScore: 30,
-    ownerRole: "owner",
-  },
-  STR_OPP_STRONG_RETURN: {
-    recommendationCode: "STRREC_PURSUE",
-    category: "pursue",
-    title: "Pursue this high-return option",
-    requiredOwnerAction:
-      "The return is strong — commit in a staged way (start partial, scale as results confirm) while keeping a cash reserve.",
-    verificationMethod: "After execution, re-measure actual roiAnnualPct vs the projection.",
-    expectedTimeframeDays: 30,
-    effortScore: 45,
-    ownerRole: "owner",
-  },
-  STR_OPP_FAST_PAYBACK: {
-    recommendationCode: "STRREC_PURSUE",
-    category: "pursue",
-    title: "Low-regret bet — proceed",
-    requiredOwnerAction:
-      "Capital returns quickly, so the risk window is short — proceed (staged) provided the downside is survivable.",
-    verificationMethod: "After execution, re-measure actual paybackMonths vs the projection.",
-    expectedTimeframeDays: 21,
-    effortScore: 40,
-    ownerRole: "owner",
-  },
-  STR_OPP_SAFE_UPSIDE: {
-    recommendationCode: "STRREC_SCALE",
-    category: "scale",
-    title: "Size up a high-safety option",
-    requiredOwnerAction:
-      "Even the worst case adds profit — this is high-safety. Size it up to capture more of the upside while the numbers hold.",
-    verificationMethod: "After scaling, re-measure actual worstMonthlyProfitDelta vs the projection.",
-    expectedTimeframeDays: 30,
-    effortScore: 40,
-    ownerRole: "owner",
-  },
-  STR_OPP_DATA_QUALITY: {
-    recommendationCode: "STRREC_IMPROVE_DATA_QUALITY",
-    category: "improve_data_quality",
-    title: "Improve data completeness",
-    requiredOwnerAction: "Supply the missing/stale inputs to sharpen the decision for this option.",
-    verificationMethod: "Re-run the scenario; target dataConfidenceScore higher.",
-    expectedTimeframeDays: 7,
-    effortScore: 20,
     ownerRole: "owner",
   },
 };
