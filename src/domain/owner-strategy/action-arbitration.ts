@@ -122,3 +122,13 @@ export function coherentStrategyActionRows<T extends ArbitrableStrategyAction>(r
 export function withoutRetiredStrategyActions<T extends ArbitrableStrategyAction>(rows: readonly T[]): T[] {
   return rows.filter((r) => !RETIRED_STRATEGY_RECOMMENDATION_CODES.includes(r.recommendationCode ?? ""));
 }
+
+const FIT_ORDER: Record<StrategyActionFit, number> = { primary: 0, supporting: 1, on_hold: 2, superseded: 3, closed: 4 };
+
+/** Stable display order: the primary step, supporting steps, then on-hold, superseded and closed. */
+export function orderByDecisionFit<T extends { decisionFit: StrategyActionFit }>(rows: readonly T[]): T[] {
+  return rows
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => FIT_ORDER[a.r.decisionFit] - FIT_ORDER[b.r.decisionFit] || a.i - b.i)
+    .map((x) => x.r);
+}
