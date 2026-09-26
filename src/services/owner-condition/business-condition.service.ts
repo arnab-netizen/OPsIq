@@ -14,6 +14,7 @@
  * integrating it is a future slice and must not modify Module 1.)
  */
 import { db } from "@/lib/db";
+import { coherentStrategyActions } from "@/services/owner-strategy/decision-view";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
   buildBusinessConditionProfile,
@@ -286,8 +287,10 @@ export function strategyCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // strategy is decision-support: risk scores the option, not survival/execution
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
+    // Canonical severity order: the persisted string column sorts alphabetically in the DB.
     topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
-    topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
+    // Only steps that fit the current decision (never an on-hold legacy "Pursue").
+    topActionCodes: coherentStrategyActions(cycle, cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
 }
@@ -475,6 +478,7 @@ export async function getBusinessCondition(
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        snapshot: true, // actions are arbitrated against the current decision (decision-view.ts)
       },
     }),
   ]);
@@ -511,7 +515,7 @@ export async function getBusinessCondition(
   }
   if (strategyCycle) {
     domainScores.push(strategyCycleToDomainScore(strategyCycle));
-    for (const a of strategyCycle.actions) topActions.push(strategyActionRowToOwnerAction(a));
+    for (const a of coherentStrategyActions(strategyCycle, strategyCycle.actions)) topActions.push(strategyActionRowToOwnerAction(a));
   }
 
   const missingCriticalData =

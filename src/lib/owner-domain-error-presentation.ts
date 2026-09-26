@@ -157,6 +157,9 @@ const KNOWN_MESSAGE_TEMPLATES: ReadonlyArray<{ status: number; pattern: RegExp; 
   // Recovery's own, differently-worded baseline-verification message
   // (verification.service.ts, founder-recovery), always 400. Exact, anchored string.
   { status: 400, pattern: /^Cannot verify an action without a baseline metric value\. Re-run diagnosis to capture a baseline\.$/, message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
+  // Strategy decision-fit gate (owner-strategy action.service.ts, STRATEGY_STEP_NOT_IN_DECISION_MESSAGE),
+  // always 400: a proposed step that no longer fits the current decision cannot be taken on.
+  { status: 400, pattern: /^This step isn't part of the current Strategy decision\. Refresh to see your current next step\.$/, message: "This step isn't part of the current Strategy decision. Refresh to see your current next step." },
   // NotFoundError("<ModelName>", "<uuid>") -> "<ModelName> not found: <uuid>" --
   // action.service.ts / verification.service.ts / snapshot.service.ts, all 4 domains,
   // always 404 (NotFoundError's fixed status). The entity-name portion is intentionally
