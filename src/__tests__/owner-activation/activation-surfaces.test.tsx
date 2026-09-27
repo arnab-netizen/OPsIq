@@ -1,6 +1,8 @@
 /**
- * Owner activation surfaces — the dashboard activation panel, the intake upload prerequisite
- * explanation, and the honest diagnosis scope notice.
+ * Owner activation surfaces — the dashboard activation panel and the intake upload prerequisite
+ * explanation. (The quick-diagnosis honesty guarantees — reported figures labelled as not
+ * independently verified, abstention when evidence is thin — are pinned in
+ * src/__tests__/generic-diagnosis/.)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, waitFor } from "@testing-library/react";
@@ -15,7 +17,6 @@ vi.mock("next/link", () => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/owner/intake" }));
 
 import OwnerActivationPanel from "@/components/dashboard/OwnerActivationPanel";
-import DiagnosisEvidenceScopeNotice from "@/components/diagnosis/DiagnosisEvidenceScopeNotice";
 import OwnerIntakePage from "@/app/(authenticated)/owner/intake/page";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
 
@@ -159,19 +160,3 @@ describe("intake upload prerequisite", () => {
   });
 });
 
-describe("diagnosis evidence scope notice", () => {
-  it("states the limitation on the form and links to the data hub", () => {
-    render(<DiagnosisEvidenceScopeNotice placement="form" />);
-    const notice = screen.getByTestId("diagnosis-evidence-scope-notice");
-    expect(notice.textContent).toMatch(/only what you type below/i);
-    expect(notice.textContent).toMatch(/does not yet read the revenue, costs, uploads or records/i);
-    expect(notice.querySelector("a")!.getAttribute("href")).toBe("/owner/data");
-  });
-
-  it("states the limitation on the result so template output is never presented as evidence-based", () => {
-    render(<DiagnosisEvidenceScopeNotice placement="result" />);
-    const notice = screen.getByTestId("diagnosis-evidence-scope-notice");
-    expect(notice.textContent).toMatch(/only what you typed above/i);
-    expect(notice.textContent).toMatch(/rather than an evidence-based diagnosis/i);
-  });
-});
