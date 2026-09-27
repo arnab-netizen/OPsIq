@@ -6,10 +6,10 @@ import { describe, it, expect } from "vitest";
 import {
   buildOwnerHomeSummary,
   dangerLevel,
-  OPEN_ACTION_STATUSES,
-  MAX_REQUIRED_ACTIONS,
   type OwnerHomeVerificationInput,
 } from "@/domain/owner-home";
+import { OPEN_OWNER_ACTION_STATUSES, domainActionToCandidate } from "@/services/owner-home/owner-decision-candidates";
+import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import type { DomainScore, OwnerAction, OwnerFinding, OwnerDomain } from "@/domain/owner-spine/contracts";
 
 const NOW = new Date("2026-06-14T00:00:00.000Z");
@@ -84,9 +84,11 @@ function verification(over: Partial<OwnerHomeVerificationInput> = {}): OwnerHome
 describe("owner-home summary — module contract assertions", () => {
   it("buildOwnerHomeSummary is a function", () => { expect(typeof buildOwnerHomeSummary).toBe("function"); });
   it("dangerLevel is a function", () => { expect(typeof dangerLevel).toBe("function"); });
-  it("OPEN_ACTION_STATUSES is an array", () => { expect(Array.isArray(OPEN_ACTION_STATUSES)).toBe(true); });
-  it("OPEN_ACTION_STATUSES.length is greater than 0", () => { expect(OPEN_ACTION_STATUSES.length).toBeGreaterThan(0); });
-  it("MAX_REQUIRED_ACTIONS is a number", () => { expect(typeof MAX_REQUIRED_ACTIONS).toBe("number"); });
+  it("OPEN_OWNER_ACTION_STATUSES is an array", () => { expect(Array.isArray(OPEN_OWNER_ACTION_STATUSES)).toBe(true); });
+  it("OPEN_OWNER_ACTION_STATUSES excludes terminal statuses", () => {
+    expect(OPEN_OWNER_ACTION_STATUSES).not.toContain("completed");
+    expect(OPEN_OWNER_ACTION_STATUSES).not.toContain("cancelled");
+  });
   it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
   it("score is a function", () => { expect(typeof score).toBe("function"); });
   it("finding is a function", () => { expect(typeof finding).toBe("function"); });
@@ -202,22 +204,30 @@ describe("buildOwnerHomeSummary", () => {
     expect(summary.top3Opportunities.some((o) => o.code === "R1")).toBe(false);
   });
 
-  it("lists today's required actions: open only, ranked, capped", () => {
-    const actions: OwnerAction[] = [
-      action({ findingCode: "A_DONE", status: "completed", priorityScore: 99 }),
-      action({ findingCode: "A_CANCELLED", status: "cancelled", priorityScore: 98 }),
-      action({ findingCode: "A1", status: "proposed", priorityScore: 30 }),
-      action({ findingCode: "A2", status: "in_progress", priorityScore: 90 }),
-      action({ findingCode: "A3", status: "assigned", priorityScore: 60 }),
-      action({ findingCode: "A4", status: "blocked", priorityScore: 70 }),
-      action({ findingCode: "A5", status: "proposed", priorityScore: 50 }),
-      action({ findingCode: "A6", status: "proposed", priorityScore: 80 }),
-    ];
-    const summary = buildOwnerHomeSummary({ domainScores: [score("finance")], findings: [], actions, verifications: [], now: NOW });
-    expect(summary.requiredActions.length).toBe(MAX_REQUIRED_ACTIONS);
-    // closed actions excluded; remaining ranked by priority desc
-    expect(summary.requiredActions.map((a) => a.findingCode)).toEqual(["A2", "A6", "A4", "A3", "A5"]);
-    expect(summary.requiredActions.every((a) => OPEN_ACTION_STATUSES.includes(a.status))).toBe(true);
+  it("today's open work is the canonical decision's attention order: open only, ranked, nothing dropped", () => {
+    // The Home summary no longer builds its own required-actions list; the ONE canonical owner
+    // decision owns "what to do, in what order" (home.service → resolveOwnerDecision).
+    const rows = [
+      { id: "done", findingCode: "A_DONE", status: "completed", priorityScore: 99 },
+      { id: "cancelled", findingCode: "A_CANCELLED", status: "cancelled", priorityScore: 98 },
+      { id: "a1", findingCode: "A1", status: "proposed", priorityScore: 30 },
+      { id: "a2", findingCode: "A2", status: "in_progress", priorityScore: 90 },
+      { id: "a3", findingCode: "A3", status: "assigned", priorityScore: 60 },
+      { id: "a4", findingCode: "A4", status: "blocked", priorityScore: 70 },
+      { id: "a5", findingCode: "A5", status: "proposed", priorityScore: 50 },
+      { id: "a6", findingCode: "A6", status: "proposed", priorityScore: 80 },
+    ].map((r) => ({ ...r, title: r.findingCode, expectedImpactScore: 50, effortScore: 30, confidence: 0.8 }));
+    const ctx = { businessId: "b", workspaceId: "w", domain: "finance" as const, findingsById: new Map(), evidenceAsOf: NOW, stale: false, verifiedFixes: new Map() };
+    const summary = buildOwnerHomeSummary({ domainScores: [score("finance")], findings: [], verifications: [], now: NOW });
+    const decision = resolveOwnerDecision({
+      businessId: "b", workspaceId: "w", candidates: rows.map((r) => domainActionToCandidate(r, ctx)),
+      diagnosedDomains: ["finance"], dataSufficiency: summary.dataSufficiency, staleDomains: [], strategy: null,
+      reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [], now: NOW,
+    });
+    expect(decision.attention.map((a) => a.findingCode)).toEqual(["A2", "A6", "A4", "A3", "A5", "A1"]);
+    expect(decision.attention.every((a) => OPEN_OWNER_ACTION_STATUSES.includes(a.status))).toBe(true);
+    expect(decision.excluded.map((e) => e.reason).sort()).toEqual(["cancelled", "completed"]);
+    expect(summary).not.toHaveProperty("requiredActions");
   });
 
   it("returns the most recent verified improvement, or null when none", () => {
@@ -262,7 +272,7 @@ describe("buildOwnerHomeSummary", () => {
     expect(empty.businessHealthScore).toBe(0);
     expect(empty.top3Risks).toEqual([]);
     expect(empty.top3Opportunities).toEqual([]);
-    expect(empty.requiredActions).toEqual([]);
+    expect(empty).not.toHaveProperty("requiredActions");
     expect(empty.lastVerifiedImprovement).toBeNull();
     expect(empty.cashDanger.level).toBe("unknown");
   });

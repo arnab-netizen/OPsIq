@@ -219,7 +219,18 @@ describe("production defect — verified Minor Finance item vs active Strategy f
     expect(d.attention.map((t) => t.title)).not.toContain("Improve data completeness");
     expect(d.excluded).toEqual([expect.objectContaining({ title: "Improve data completeness", reason: "verified_complete" })]);
     expect(d.whatCanWait.map((t) => t.title)).toContain("Improve revenue quality");
-    expect(d.whatNotToDo.join(" ")).toMatch(/Don't commit to "New van" yet/);
+    // The main target IS the Strategy step, so the gate reads as its precondition (not a contradiction).
+    expect(d.whatNotToDo.join(" ")).toMatch(/Don't commit to "New van" until "Close the ₹50,000 funding gap" is done — Strategy says "Not yet"/);
+  });
+
+  it("with a non-Strategy main target, the Strategy gate stays a plain 'not yet'", () => {
+    const d = resolveOwnerDecision(input([
+      cand({ domain: "cashflow", findingCode: "CF_LOW_RUNWAY", title: "Protect your cash runway", priorityScore: 60, severity: "high" }),
+    ], {
+      strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: "You're ₹50,000 short.", optionName: "New van", fundingGap: 50000, currency: "INR" },
+    }));
+    expect(d.primaryTarget?.domain).toBe("cashflow");
+    expect(d.whatNotToDo.join(" ")).toMatch(/Don't commit to "New van" yet — Strategy says "Not yet": You're ₹50,000 short\./);
   });
 
   it("a verified fix re-proposed from the same unchanged evidence stays out until new data arrives", () => {

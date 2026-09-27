@@ -7,7 +7,8 @@
 import { describe, it, expect } from "vitest";
 import { buildPortfolioView } from "@/domain/owner-portfolio";
 import type { PortfolioBusinessInput } from "@/domain/owner-portfolio";
-import type { BusinessConditionProfile, DomainScore, OwnerAction, OwnerDomain } from "@/domain/owner-spine/contracts";
+import type { BusinessConditionProfile, DomainScore, OwnerDomain } from "@/domain/owner-spine/contracts";
+import type { CurrentOwnerDecision, OwnerDecisionTarget, OwnerPriorityClass, OwnerSeverity } from "@/domain/owner-spine/owner-decision";
 
 const NOW = new Date("2026-06-05T00:00:00.000Z");
 
@@ -15,26 +16,13 @@ function ds(domain: OwnerDomain, healthScore: number, riskScore: number, opportu
   return { domain, healthScore, riskScore, opportunityScore, dataConfidenceScore: 80, topFindingCodes: [], topActionCodes: [], generatedAt: NOW };
 }
 
-function action(over: Partial<OwnerAction> = {}): OwnerAction {
-  return {
-    id: over.id ?? "act",
-    domain: over.domain ?? "finance",
-    findingCode: over.findingCode ?? "X",
-    title: over.title ?? "Do the thing",
-    description: "desc",
-    ownerRole: "owner",
-    priorityScore: over.priorityScore ?? 50,
-    effortScore: 40,
-    expectedImpactScore: over.expectedImpactScore ?? 60,
-    urgencyScore: 0,
-    severity: over.severity,
-    confidence: 0.7,
-    status: "proposed",
-    verificationMetric: "m",
-    verificationMethod: "before/after",
-    expectedTimeframeDays: 14,
-    ...over,
+/** A business's canonical main target, as the owner-home resolver returns it (only the fields the engine reads). */
+function decision(businessId: string, id: string, domain: OwnerDomain, priorityClass: OwnerPriorityClass, severity: OwnerSeverity | null): CurrentOwnerDecision {
+  const primaryTarget: OwnerDecisionTarget = {
+    candidateId: `domain_action:${domain}:${id}`, source: "domain_action", domain, domainLabel: domain, priorityClass,
+    findingCode: "X", title: `Target ${id}`, explanation: "", severity, status: "proposed", targetRoute: `/owner/${domain}`,
   };
+  return { businessId, primaryTarget } as unknown as CurrentOwnerDecision;
 }
 
 function profile(over: Partial<BusinessConditionProfile>): BusinessConditionProfile {
@@ -60,24 +48,24 @@ function portfolio(): PortfolioBusinessInput[] {
       profile: profile({
         overallHealthScore: 85, survivalRiskScore: 20, growthOpportunityScore: 80, executionRiskScore: 15, dataConfidenceScore: 90,
         domainScores: [ds("finance", 85, 20, 80), ds("sales", 80, 25, 70), ds("cashflow", 80, 15)],
-        recommendedNextAction: action({ id: "a-act", domain: "sales", priorityScore: 50 }),
       }),
+      ownerDecision: decision("A", "a-act", "sales", "GROWTH_OPPORTUNITY", "low"),
     },
     {
       businessId: "B", name: "Bravo", businessType: "generic_local_service", currency: "INR",
       profile: profile({
         overallHealthScore: 30, survivalRiskScore: 85, growthOpportunityScore: 40, executionRiskScore: 30, dataConfidenceScore: 70,
         domainScores: [ds("finance", 25, 80), ds("cashflow", 20, 88)],
-        recommendedNextAction: action({ id: "b-act", domain: "cashflow", priorityScore: 92, severity: "critical" }),
       }),
+      ownerDecision: decision("B", "b-act", "cashflow", "SURVIVAL_CASH", "critical"),
     },
     {
       businessId: "C", name: "Charlie", businessType: "generic_local_service", currency: "INR",
       profile: profile({
         overallHealthScore: 55, survivalRiskScore: 40, growthOpportunityScore: 60, executionRiskScore: 80, dataConfidenceScore: 75,
         domainScores: [ds("operations", 55, 70), ds("sop", 30, 80)],
-        recommendedNextAction: action({ id: "c-act", domain: "sop", priorityScore: 70 }),
       }),
+      ownerDecision: decision("C", "c-act", "sop", "BLOCKED_EXECUTION", "high"),
     },
   ];
 }
@@ -86,14 +74,14 @@ describe("owner-portfolio engine — module contract assertions", () => {
   it("buildPortfolioView is a function", () => { expect(typeof buildPortfolioView).toBe("function"); });
   it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
   it("ds is a function", () => { expect(typeof ds).toBe("function"); });
-  it("action is a function", () => { expect(typeof action).toBe("function"); });
+  it("decision is a function", () => { expect(typeof decision).toBe("function"); });
   it("profile is a function", () => { expect(typeof profile).toBe("function"); });
   it("portfolio is a function", () => { expect(typeof portfolio).toBe("function"); });
   it("portfolio() returns an array", () => { expect(Array.isArray(portfolio())).toBe(true); });
   it("portfolio().length equals 3", () => { expect(portfolio().length).toBe(3); });
   it("buildPortfolioView(portfolio(), { now: NOW }) returns an object", () => { expect(typeof buildPortfolioView(portfolio(), { now: NOW })).toBe("object"); });
   it("buildPortfolioView(portfolio(), { now: NOW }) has hasData field", () => { expect(buildPortfolioView(portfolio(), { now: NOW })).toHaveProperty("hasData"); });
-  it("action() returns an object", () => { expect(typeof action()).toBe("object"); });
+  it("decision() returns a business-scoped canonical target", () => { expect(decision("A", "x", "sales", "GROWTH_OPPORTUNITY", null).primaryTarget?.priorityClass).toBe("GROWTH_OPPORTUNITY"); });
   it("profile({ overallHealthScore: 50 }) returns an object", () => { expect(typeof profile({ overallHealthScore: 50 })).toBe("object"); });
   it("describe is a function", () => { expect(typeof describe).toBe("function"); });
   it("it is a function", () => { expect(typeof it).toBe("function"); });
@@ -130,10 +118,25 @@ describe("Owner Portfolio engine — cross-business ranking", () => {
 });
 
 describe("Owner Portfolio engine — priorities, alerts, investment", () => {
-  it("today's top 3 priorities are the highest-priority next actions across businesses", () => {
+  it("today's top 3 priorities are each business's canonical main target, ordered by business class", () => {
     const v = buildPortfolioView(portfolio(), { now: NOW });
-    expect(v.top3Priorities.map((p) => p.businessId)).toEqual(["B", "C", "A"]); // priority 92, 70, 50
-    expect(v.top3Priorities[0].action.id).toBe("b-act");
+    expect(v.top3Priorities.map((p) => p.businessId)).toEqual(["B", "C", "A"]); // survival cash, blocked execution, growth
+    expect(v.top3Priorities[0].target.candidateId).toBe("domain_action:cashflow:b-act");
+  });
+
+  it("class outranks severity across businesses (a critical growth item never beats a medium blocker)", () => {
+    const input = portfolio();
+    input[0].ownerDecision = decision("A", "a-act", "sales", "GROWTH_OPPORTUNITY", "critical");
+    input[2].ownerDecision = decision("C", "c-act", "sop", "BLOCKED_EXECUTION", "medium");
+    const v = buildPortfolioView(input, { now: NOW });
+    expect(v.top3Priorities.map((p) => p.businessId)).toEqual(["B", "C", "A"]);
+  });
+
+  it("never attributes another business's decision to this business", () => {
+    const input = portfolio();
+    input[0].ownerDecision = decision("B", "stray", "cashflow", "SURVIVAL_CASH", "critical");
+    const v = buildPortfolioView(input, { now: NOW });
+    expect(v.top3Priorities.map((p) => p.businessId)).toEqual(["B", "C"]);
   });
 
   it("raises survival, cash, and execution risk alerts above threshold", () => {

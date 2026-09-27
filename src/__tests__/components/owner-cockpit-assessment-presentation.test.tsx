@@ -15,6 +15,7 @@ import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation
 import { IssueCategory, type BusinessIssue } from "@/domain/owner-guidance/issue-priority";
 import { BusinessFunction } from "@/domain/owner-guidance/business-function";
 import type { OwnerNowView, AreaStatus } from "@/domain/owner-guidance/guidance-orchestrator";
+import { resolveOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 
 const BIZ_A = { id: "11111111-1111-4111-8111-111111111111", name: "ZZ-TEST-FIELD-SERVICE" };
@@ -100,11 +101,32 @@ function nowViewResponse(
   businessId: string,
   viewOverrides: Partial<OwnerNowView> = {},
   conditionDimensions: DerivedBusinessConditionSignals | null = ALL_KNOWN_CONDITION_DIMENSIONS,
+  primaryClass: OwnerPriorityClass | null = null,
 ) {
   return {
     view: viewFixture(businessId, viewOverrides),
     derivedBusinessCondition: conditionDimensions,
+    // The primary concern comes ONLY from the canonical owner decision's main target class.
+    ownerDecision: primaryClass ? decisionWithClass(businessId, primaryClass) : null,
   };
+}
+
+/** A complete canonical decision (real resolver) whose main target has the given class. */
+function decisionWithClass(businessId: string, priorityClass: OwnerPriorityClass) {
+  return JSON.parse(JSON.stringify(resolveOwnerDecision({
+    businessId, workspaceId: "ws-1",
+    candidates: [{
+      candidateId: `domain_action:finance:${priorityClass}`, businessId, workspaceId: "ws-1", source: "domain_action", domain: "finance",
+      sourceId: priorityClass, priorityClass, findingCode: "FIN_TEST", findingId: null, title: `Main target (${priorityClass})`, explanation: "",
+      severity: "high", priorityScore: 60, expectedImpactScore: 50, confidence: 0.8, effortScore: 30, status: "proposed",
+      ownerActionRequired: true, blocking: false, evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null,
+      stale: false, exclusion: null, targetRoute: "/owner/finance",
+    }],
+    diagnosedDomains: ["finance"],
+    dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [],
+    now: new Date("2026-06-30T00:00:00Z"),
+  })));
 }
 
 /** Test-only harness — this page renders no business selector of its own by design. */
@@ -209,7 +231,7 @@ describe("Owner Cockpit (Home) — UX-03 canonical assessment presentation", () 
           cashDangerStatus: "DANGER",
           topOwnerActions: [issue("i1", IssueCategory.CASH_DANGER, "HIGH")],
           missingDataRequests: ["latest cash position (cash on hand + obligations)"],
-        }),
+        }, ALL_KNOWN_CONDITION_DIMENSIONS, "SURVIVAL_CASH"),
       );
     });
     await flush();
@@ -300,15 +322,15 @@ describe("Owner Cockpit (Home) — UX-03 canonical assessment presentation", () 
     );
   });
 
-  it("F. the primary issue is not reranked by a more severe urgent risk", async () => {
+  it("F. the primary concern follows the canonical main target, never Now View's own #1 or a more severe urgent risk", async () => {
     renderPage();
     const call = await waitForCall(BIZ_A.id);
     await act(async () => {
       call.resolve(
         nowViewResponse(BIZ_A.id, {
-          topOwnerActions: [issue("i1", IssueCategory.PROCESS_IMPROVEMENT, "LOW")],
+          topOwnerActions: [issue("i0", IssueCategory.CASH_DANGER, "HIGH")],
           urgentRisks: [issue("i2", IssueCategory.CASH_DANGER, "CRITICAL")],
-        }),
+        }, ALL_KNOWN_CONDITION_DIMENSIONS, "PROCESS_OPTIMISATION"),
       );
     });
     await flush();
@@ -319,6 +341,17 @@ describe("Owner Cockpit (Home) — UX-03 canonical assessment presentation", () 
       ),
     );
     expect(screen.queryByText("Cash flow is the first issue to address.")).not.toBeInTheDocument();
+  });
+
+  it("F2. without a canonical decision there is no primary concern (Now View never elects one)", async () => {
+    renderPage();
+    const call = await waitForCall(BIZ_A.id);
+    await act(async () => {
+      call.resolve(nowViewResponse(BIZ_A.id, { topOwnerActions: [issue("i0", IssueCategory.CASH_DANGER, "HIGH")] }));
+    });
+    await flush();
+    await waitFor(() => expect(screen.getByTestId("owner-assessment-headline")).toBeInTheDocument());
+    expect(screen.queryByTestId("owner-assessment-primary-concern")).not.toBeInTheDocument();
   });
 
   it("G. an out-of-order business switch never lets a stale assessment replace the current one", async () => {

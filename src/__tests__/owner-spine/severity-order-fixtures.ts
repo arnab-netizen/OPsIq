@@ -127,6 +127,8 @@ export const fakeDb: Record<string, ReturnType<typeof model>> = new Proxy(
 export const businessServiceMock = {
   listBusinesses: vi.fn(async () => [BUSINESS]),
   getBusiness: vi.fn(async () => BUSINESS),
+  // The fixture workspace holds exactly one real business (BUSINESS).
+  hasExactlyOneRealBusiness: vi.fn(async () => true),
 };
 
 export function resetFakeDb(): void {

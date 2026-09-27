@@ -11,7 +11,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mocks = vi.hoisted(() => ({ getOwnerNowView: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getOwnerNowView: vi.fn(), getOwnerHome: vi.fn() }));
+
+/** The canonical decision the owner-home service resolves for (workspace, business). */
+function decisionFor(workspaceId: string, businessId: string | null) {
+  return { contractVersion: "owner-decision-v1", primaryCandidateId: `decision:${workspaceId}:${businessId ?? "auto"}` };
+}
 
 vi.mock("@/lib/canonical-route-enforcement", () => ({
   withCanonicalEnforcement: (
@@ -26,6 +31,10 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
 
 vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
   getOwnerNowView: mocks.getOwnerNowView,
+}));
+
+vi.mock("@/services/owner-home/home.service", () => ({
+  getOwnerHome: mocks.getOwnerHome,
 }));
 
 import { GET } from "@/app/api/owner/now-view/route";
@@ -61,7 +70,13 @@ const sample = {
   derivedBusinessCondition: DERIVED_BC_SAMPLE,
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.getOwnerHome.mockImplementation(async (workspaceId: string, businessId: string | null) => ({
+    selectedBusinessId: businessId ?? "biz-auto",
+    currentOwnerDecision: decisionFor(workspaceId, businessId),
+  }));
+});
 
 describe("[module41] GET /api/owner/now-view", () => {
   it("declares OWNER_VIEW capability and requires a workspace", () => {
@@ -125,33 +140,41 @@ describe("[module41] GET /api/owner/now-view", () => {
   it("calls getOwnerNowView with verified workspaceId, not client-supplied", async () => {
     mocks.getOwnerNowView.mockResolvedValue(sample);
     await GET(makeCtx("https://x/api/owner/now-view", "ws-verified"));
-    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-verified", null, undefined, "actor-1", { restrictExecutionToAttributableBusiness: false });
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-verified", null, undefined, "actor-1", { restrictExecutionToAttributableBusiness: false, ownerDecision: decisionFor("ws-verified", null) });
   });
 
   it("workspace isolation: WS-A and WS-B result in separate service calls", async () => {
     mocks.getOwnerNowView.mockResolvedValue(sample);
     await GET(makeCtx("https://x/api/owner/now-view", "ws-A"));
     await GET(makeCtx("https://x/api/owner/now-view", "ws-B"));
-    expect(mocks.getOwnerNowView).toHaveBeenNthCalledWith(1, "ws-A", null, undefined, "actor-1", { restrictExecutionToAttributableBusiness: false });
-    expect(mocks.getOwnerNowView).toHaveBeenNthCalledWith(2, "ws-B", null, undefined, "actor-1", { restrictExecutionToAttributableBusiness: false });
+    expect(mocks.getOwnerNowView).toHaveBeenNthCalledWith(1, "ws-A", null, undefined, "actor-1", { restrictExecutionToAttributableBusiness: false, ownerDecision: decisionFor("ws-A", null) });
+    expect(mocks.getOwnerNowView).toHaveBeenNthCalledWith(2, "ws-B", null, undefined, "actor-1", { restrictExecutionToAttributableBusiness: false, ownerDecision: decisionFor("ws-B", null) });
+  });
+
+  it("never pairs a requested business's Now View with ANOTHER business's decision", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    mocks.getOwnerHome.mockResolvedValue({ selectedBusinessId: "biz-other", currentOwnerDecision: decisionFor("ws-1", "biz-other") });
+    const res = (await GET(makeCtx("https://x/api/owner/now-view?businessId=biz-abc", "ws-1"))) as { ownerDecision: unknown };
+    expect(res.ownerDecision).toBeNull();
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: false, ownerDecision: null });
   });
 
   it("passes businessId from query param to service", async () => {
     mocks.getOwnerNowView.mockResolvedValue(sample);
     await GET(makeCtx("https://x/api/owner/now-view?businessId=biz-abc", "ws-1"));
-    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: false });
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: false, ownerDecision: decisionFor("ws-1", "biz-abc") });
   });
 
   it("restrictExecutionToBusiness=true (cockpit's opt-in) is threaded through as restrictExecutionToAttributableBusiness: true (controlled-beta cockpit business-scoping fix, D-cockpit)", async () => {
     mocks.getOwnerNowView.mockResolvedValue(sample);
     await GET(makeCtx("https://x/api/owner/now-view?businessId=biz-abc&restrictExecutionToBusiness=true", "ws-1"));
-    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: true });
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: true, ownerDecision: decisionFor("ws-1", "biz-abc") });
   });
 
   it("omitting restrictExecutionToBusiness defaults to false — every other now-view consumer (/owner/priorities, /owner/process-intelligence, /owner/now) is unaffected by the cockpit's opt-in", async () => {
     mocks.getOwnerNowView.mockResolvedValue(sample);
     await GET(makeCtx("https://x/api/owner/now-view?businessId=biz-abc", "ws-1"));
-    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: false });
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1", { restrictExecutionToAttributableBusiness: false, ownerDecision: decisionFor("ws-1", "biz-abc") });
   });
 
   it("passes different businessId when specified", async () => {

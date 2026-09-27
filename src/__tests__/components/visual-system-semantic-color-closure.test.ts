@@ -172,8 +172,10 @@ describe("the base --primary/--warning/--success tokens are NOT redefined by thi
 describe("MinimumOwnerCockpit + owner/cockpit/page: the 6 originally-reported elements (and their same-root-cause siblings) use the new -text tokens, not the bare fill token, for plain text color", () => {
   const cockpitSource = read("src/components/owner/MinimumOwnerCockpit.tsx");
 
-  it("FinanceTopPriorityCard's 'See the full finance diagnosis' link uses --primary-text", () => {
-    expect(cockpitSource).toMatch(/href="\/owner\/finance" style=\{\{ fontSize: 12, color: "var\(--primary-text\)"/);
+  it("the OwnerDecisionCard's links (which replaced FinanceTopPriorityCard's finance link) use --primary-text", () => {
+    const cardSource = read("src/components/owner/OwnerDecisionCard.tsx");
+    expect(cardSource).toMatch(/data-testid="owner-decision-go"[^>]*text-\[var\(--primary-text\)\]/);
+    expect(cardSource).not.toMatch(/var\(--(primary|warning|success)\)"/);
   });
 
   it("ExecutionLifecycleSection's 'In execution' summary heading uses --primary-text", () => {
@@ -232,9 +234,10 @@ describe("MinimumOwnerCockpit + owner/cockpit/page: the 6 originally-reported el
 
 describe("PRIORITY_LOGIC / precedence contract is unchanged by the semantic-color-closure pass (presentation-only diff)", () => {
   const cockpitSource = read("src/components/owner/MinimumOwnerCockpit.tsx");
-  it("financeTopPriority / topRoute precedence wiring is byte-identical to before", () => {
-    expect(cockpitSource).toMatch(/financeTopPriority && <FinanceTopPriorityCard priority=\{financeTopPriority\} primary=\{isMonitorOnly\} \/>/);
+  it("canonical decision / topRoute precedence wiring: the decision card owns the primary slot", () => {
+    expect(cockpitSource).toMatch(/const decisionCard = ownerDecision \? <OwnerDecisionCard decision=\{ownerDecision\} \/> : null;/);
     expect(cockpitSource).toMatch(/const top = bridge\?\.topRoute \?\? null;/);
+    expect(cockpitSource).not.toMatch(/FinanceTopPriorityCard/);
   });
 });
 

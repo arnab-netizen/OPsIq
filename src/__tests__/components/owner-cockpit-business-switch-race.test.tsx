@@ -20,8 +20,8 @@
  * This is a pure client-side async race. Server-side now-view scoping for
  * businessId+restrictExecutionToBusiness is already proven correct by real-Postgres tests (see
  * cockpit-business-scoping.db.test.ts's suppress=true A/B/C isolation tests and its own
- * CASH_PROFIT-attribution A/B tests, plus cockpit-finance-priority.db.test.ts's "returns ONLY that
- * business's action — never the other business's" test) — Workstream A2 of the forensic
+ * CASH_PROFIT-attribution A/B tests, plus owner-decision-consolidation.db.test.ts's business-switch test
+ * — each business resolves its own decision, no leakage) — Workstream A2 of the forensic
  * remediation task confirmed no server-side fix was needed.
  *
  * FIX: `load()` now stamps a monotonically increasing generation number (a ref, not state, so
@@ -35,7 +35,7 @@ import OwnerCockpitPage from "@/app/(authenticated)/owner/cockpit/page";
 import { ActiveBusinessProvider, useActiveBusiness } from "@/context/active-business-context";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerExecutionLifecycleView, ExecutionLifecycleItem } from "@/services/owner-guidance/owner-now-view.service";
-import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
+import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 const BIZ_A = { id: "11111111-1111-4111-8111-111111111111", name: "ZZ-TEST-FIELD-SERVICE" };
 const BIZ_B = { id: "22222222-2222-4222-8222-222222222222", name: "Trinity Services" };
@@ -78,19 +78,29 @@ function lifecycleFor(label: string): OwnerExecutionLifecycleView {
   };
 }
 
-function financeFor(label: string, businessId: string): CockpitFinancePriority {
-  return {
-    businessId, businessName: label, cycleId: `cycle-${label}`, generatedAt: new Date().toISOString(),
-    survivalState: "SAFE", overallHealthScore: 0.9,
-    topAction: { id: `action-${label}`, title: `BUSINESS_${label}_FINANCE_ACTION`, description: "x", priorityScore: 1 },
-  };
+/** The business's ONE canonical owner decision (real resolver), labelled so leaks are detectable. */
+function decisionFor(label: string, businessId: string) {
+  return JSON.parse(JSON.stringify(resolveOwnerDecision({
+    businessId, workspaceId: "ws-1",
+    candidates: [{
+      candidateId: `domain_action:finance:action-${label}`, businessId, workspaceId: "ws-1", source: "domain_action", domain: "finance",
+      sourceId: `action-${label}`, priorityClass: "PROFIT_LOSS", findingCode: "FIN_NEGATIVE_NET_MARGIN", findingId: null,
+      title: `BUSINESS_${label}_MAIN_TARGET`, explanation: "x", severity: "high", priorityScore: 60, expectedImpactScore: 50,
+      confidence: 0.8, effortScore: 30, status: "proposed", ownerActionRequired: true, blocking: false, evidence: [], missingData: [],
+      verificationMetric: null, evidenceAsOf: null, stale: false, exclusion: null, targetRoute: "/owner/finance",
+    }],
+    diagnosedDomains: ["finance"],
+    dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [],
+    now: new Date("2026-06-30T00:00:00Z"),
+  })));
 }
 
 function nowViewFixture(label: string, businessId: string) {
   return {
     processExecution: bridgeFor(label),
     executionLifecycle: lifecycleFor(label),
-    financeTopPriority: financeFor(label, businessId),
+    ownerDecision: decisionFor(label, businessId),
   };
 }
 
@@ -185,7 +195,7 @@ afterEach(() => {
 });
 
 describe("Owner Cockpit — stale business-switch response race (P1-B)", () => {
-  it("a stale A response arriving AFTER a switch to B must never overwrite B's Top Priority / lifecycle / finance priority", async () => {
+  it("a stale A response arriving AFTER a switch to B must never overwrite B's main target / governed work / lifecycle", async () => {
     renderPage();
 
     // Initial resolution (no stored preference, businesses[0]) is BIZ_A; its now-view request is
@@ -201,7 +211,7 @@ describe("Owner Cockpit — stale business-switch response race (P1-B)", () => {
     await flush();
     await waitFor(() => expect(screen.getByTestId("cockpit-top-action-title")).toHaveTextContent("BUSINESS_B_TOP_PRIORITY"));
     expect(screen.getByText("BUSINESS_B_LIFECYCLE_ITEM")).toBeInTheDocument();
-    expect(screen.getByTestId("cockpit-finance-priority-title")).toHaveTextContent("BUSINESS_B_FINANCE_ACTION");
+    expect(screen.getByTestId("owner-decision-title")).toHaveTextContent("BUSINESS_B_MAIN_TARGET");
 
     // The stale A response finally arrives.
     await act(async () => { callA.resolve(nowViewFixture("A", BIZ_A.id)); });
@@ -210,10 +220,10 @@ describe("Owner Cockpit — stale business-switch response race (P1-B)", () => {
     // B must still be displayed everywhere — no A content leaks in.
     expect(screen.getByTestId("cockpit-top-action-title")).toHaveTextContent("BUSINESS_B_TOP_PRIORITY");
     expect(screen.getByText("BUSINESS_B_LIFECYCLE_ITEM")).toBeInTheDocument();
-    expect(screen.getByTestId("cockpit-finance-priority-title")).toHaveTextContent("BUSINESS_B_FINANCE_ACTION");
+    expect(screen.getByTestId("owner-decision-title")).toHaveTextContent("BUSINESS_B_MAIN_TARGET");
     expect(screen.queryByText("BUSINESS_A_TOP_PRIORITY")).not.toBeInTheDocument();
     expect(screen.queryByText("BUSINESS_A_LIFECYCLE_ITEM")).not.toBeInTheDocument();
-    expect(screen.queryByText("BUSINESS_A_FINANCE_ACTION")).not.toBeInTheDocument();
+    expect(screen.queryByText("BUSINESS_A_MAIN_TARGET")).not.toBeInTheDocument();
   });
 
   it("inverse timing: A resolves first, B resolves second (the ordinary case) — B must win", async () => {

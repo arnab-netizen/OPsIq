@@ -11,6 +11,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent } from "@testing-library/react";
 import { MinimumOwnerCockpit } from "@/components/owner/MinimumOwnerCockpit";
+import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 
 afterEach(() => cleanup());
@@ -38,7 +39,10 @@ describe("MinimumOwnerCockpit", () => {
 
   it("2. owner sees why this is first (max 3 bullets)", () => {
     const { getByTestId, getAllByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
-    expect(getByTestId("cockpit-why").textContent).toMatch(/why this is first/i);
+    // Governed work is subordinate to the canonical decision: it explains why it matters, never
+    // that it "is first" (only the owner decision card says what comes first).
+    expect(getByTestId("cockpit-why").textContent).toMatch(/why this matters/i);
+    expect(getByTestId("cockpit-why").textContent).not.toMatch(/why this is first/i);
     expect(getAllByTestId("cockpit-why-bullet").length).toBeGreaterThan(0);
     expect(getAllByTestId("cockpit-why-bullet").length).toBeLessThanOrEqual(3);
   });
@@ -192,37 +196,50 @@ describe("MinimumOwnerCockpit", () => {
     expect(queryByTestId("cockpit-top-action-title")).toBeNull();
   });
 
-  // F3 — cockpit surfaces the Finance diagnosis's top action, without overwriting an urgent governed issue.
-  const financePriority = {
-    businessId: "biz-1", businessName: "Test Biz", cycleId: "cycle-1", generatedAt: "2026-06-30T00:00:00Z",
-    survivalState: "WATCH", overallHealthScore: 60,
-    topAction: { id: "act-1", title: "Fix your thin gross margin", description: "Raise price or cut cost of goods.", priorityScore: 90 },
-  };
+  // The canonical owner decision (owner-home → Spine arbiter) replaced the Finance-first bridge: the
+  // Cockpit renders the SAME decision as Home/Priorities, first, and never elects its own target.
+  const ownerDecision = resolveOwnerDecision({
+    businessId: "biz-1", workspaceId: "ws-1",
+    candidates: [{
+      candidateId: "domain_action:finance:act-1", businessId: "biz-1", workspaceId: "ws-1", source: "domain_action", domain: "finance",
+      sourceId: "act-1", priorityClass: "PROFIT_LOSS", findingCode: "FIN_NEGATIVE_GROSS_MARGIN", findingId: null,
+      title: "Fix your thin gross margin", explanation: "Raise price or cut cost of goods.", severity: "high", priorityScore: 90,
+      expectedImpactScore: 60, confidence: 0.8, effortScore: 30, status: "proposed", ownerActionRequired: true, blocking: false,
+      evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: false, exclusion: null, targetRoute: "/owner/finance",
+    }],
+    diagnosedDomains: ["finance"],
+    dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [],
+    now: new Date("2026-06-30T00:00:00Z"),
+  });
 
-  it("18b. (F3) clean state (no governed route) surfaces the finance diagnosis's top action as primary", () => {
+  it("18b. clean state (no governed route) shows the canonical main target as primary — no Finance-first card", () => {
     const { getByTestId, queryByTestId } = render(
       <MinimumOwnerCockpit
         bridge={{ routes: [], topRoute: null, summary: { total: 0, ownerApproval: 0, managerStaff: 0, dataTasks: 0, monitorOnly: 0 } }}
-        financeTopPriority={financePriority}
+        ownerDecision={ownerDecision}
         onAction={noop}
       />,
     );
-    expect(getByTestId("cockpit-finance-priority-primary").textContent).toMatch(/fix your thin gross margin/i);
-    expect(queryByTestId("cockpit-finance-priority-secondary")).toBeNull();
-  });
-
-  it("18c. (F3) a real actionable governed route stays primary; the finance action still surfaces, but only as secondary", () => {
-    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} financeTopPriority={financePriority} onAction={noop} />);
-    // The governed route keeps the primary "top priority" slot — untouched, never overwritten.
-    expect(getByTestId("cockpit-top-action-title").textContent).toMatch(/approve the process correction/i);
-    // The finance action is still visible, just as a secondary signal.
-    expect(getByTestId("cockpit-finance-priority-secondary").textContent).toMatch(/fix your thin gross margin/i);
-  });
-
-  it("18d. (F3) with no finance diagnosis available, nothing finance-related renders (no fabrication)", () => {
-    const { queryByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    expect(getByTestId("owner-decision-title").textContent).toMatch(/fix your thin gross margin/i);
     expect(queryByTestId("cockpit-finance-priority-primary")).toBeNull();
-    expect(queryByTestId("cockpit-finance-priority-secondary")).toBeNull();
+  });
+
+  it("18c. with a governed route, the canonical target comes first and the route is subordinate governed work", () => {
+    const { getByTestId, getByText, queryByText } = render(<MinimumOwnerCockpit bridge={view()} ownerDecision={ownerDecision} onAction={noop} />);
+    const decisionEl = getByTestId("owner-decision");
+    const governedEl = getByTestId("cockpit-top-action");
+    expect(decisionEl.compareDocumentPosition(governedEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getByTestId("cockpit-top-action-title").textContent).toMatch(/approve the process correction/i);
+    expect(getByText("Governed work you can start")).toBeTruthy();
+    expect(queryByText("Your top priority now")).toBeNull();
+    expect(getByTestId("cockpit-top-action-title").className).not.toMatch(/font-display/);
+  });
+
+  it("18d. with no canonical decision, nothing is fabricated and the governed route is not called the main target", () => {
+    const { queryByTestId, getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    expect(queryByTestId("owner-decision")).toBeNull();
+    expect(getByTestId("cockpit-no-canonical-decision").textContent).toMatch(/not your overall priority/i);
   });
 
   // F6: zero-data owner-facing copy must not read as internal jargon ("Business Operating System —

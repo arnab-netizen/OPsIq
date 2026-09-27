@@ -11,12 +11,14 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 const {
   mockGetBusinessCondition,
+  mockGetOwnerHome,
   mockGetOwnerBlockMetrics,
   mockGetOwnerControlCenter,
   mockCanonicalJson,
   mockWithCanonical,
 } = vi.hoisted(() => ({
   mockGetBusinessCondition: vi.fn(),
+  mockGetOwnerHome: vi.fn(),
   mockGetOwnerBlockMetrics: vi.fn(),
   mockGetOwnerControlCenter: vi.fn(),
   mockCanonicalJson: vi.fn(),
@@ -25,6 +27,10 @@ const {
 
 vi.mock("@/services/owner-condition/business-condition.service", () => ({
   getBusinessCondition: mockGetBusinessCondition,
+}));
+
+vi.mock("@/services/owner-home/home.service", () => ({
+  getOwnerHome: mockGetOwnerHome,
 }));
 
 vi.mock("@/services/owner-mode/owner-control-center.service", () => ({
@@ -77,8 +83,10 @@ function makeCtx(overrides: Record<string, unknown> = {}): Record<string, unknow
 const MOCK_PROFILE = {
   dataSufficiencyStatus: "sufficient" as const,
   lowConfidenceDomains: [],
-  recommendedNextAction: { title: "Fix cash flow" },
 };
+
+// The ONE canonical owner decision (owner-home service) supplies the next best action.
+const MOCK_HOME = { selectedBusinessId: null, currentOwnerDecision: { primaryTarget: { title: "Fix cash flow" } } };
 
 const MOCK_BLOCKS = {
   blockedRecommendations: 2,
@@ -139,6 +147,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   allowAll();
   mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE });
+  mockGetOwnerHome.mockResolvedValue(MOCK_HOME);
   mockGetOwnerBlockMetrics.mockResolvedValue(MOCK_BLOCKS);
   mockGetOwnerControlCenter.mockResolvedValue(MOCK_PANEL);
   mockCanonicalJson.mockImplementation((data: unknown, opts: { status: number }) => ({ body: data, status: opts?.status ?? 200 }));
@@ -268,11 +277,18 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
       expect(ccCtx.lowConfidenceDomains).toEqual([]);
     });
 
-    it("uses null nextBestAction when profile is null", async () => {
-      mockGetBusinessCondition.mockResolvedValue({ profile: null });
+    it("uses null nextBestAction when the canonical decision has no target", async () => {
+      mockGetOwnerHome.mockResolvedValue({ selectedBusinessId: null, currentOwnerDecision: { primaryTarget: null } });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.nextBestAction).toBeNull();
+    });
+
+    it("nextBestAction is the canonical decision's primary target, resolved for the verified workspace", async () => {
+      await controlCenterGet(makeCtx());
+      const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
+      expect(ccCtx.nextBestAction).toBe("Fix cash flow");
+      expect(mockGetOwnerHome).toHaveBeenCalledWith(WS_A, BIZ_ID);
     });
   });
 
