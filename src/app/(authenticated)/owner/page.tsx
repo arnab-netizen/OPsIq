@@ -9,7 +9,9 @@ import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { humanizeMetricKey } from "@/lib/metric-label";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -404,7 +406,9 @@ export default function OwnerCommandCenterPage() {
 
   const businessList: any[] = businesses;
   const profile = data?.profile ?? null;
-  const next = profile?.recommendedNextAction ?? null;
+  // The ONE canonical owner decision (owner-home service → Spine arbiter) — the same main target
+  // Home, Cockpit and Priorities show. Nothing on this page elects a different one.
+  const decision = (data?.currentOwnerDecision ?? null) as CurrentOwnerDecision | null;
   const missing: string[] = profile?.missingCriticalData ?? [];
   const missingWithPriority: Array<{ field: string; priority: string }> = data?.missingInputsWithPriority ?? [];
 
@@ -439,7 +443,7 @@ export default function OwnerCommandCenterPage() {
             { label: "Automation", href: "/owner/automation", domain: null },
             { label: "Growth Pricing", href: "/owner/growth-pricing", domain: null },
           ].map(({ label, href, domain }) => {
-            const isRecommended = domain !== null && next?.domain === domain;
+            const isRecommended = domain !== null && decision?.primaryDomain === domain;
             return (
               <Link key={href} href={href}>
                 <Button
@@ -480,6 +484,12 @@ export default function OwnerCommandCenterPage() {
             </h2>
           )}
 
+          {decision && (
+            <div className="mb-6 rounded-lg border bg-card p-4" data-testid="command-center-owner-decision">
+              <OwnerDecisionCard decision={decision} />
+            </div>
+          )}
+
           {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} />}
 
           {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
@@ -503,7 +513,7 @@ export default function OwnerCommandCenterPage() {
               </div>
 
               <div className="rounded-md border border-foreground/20 bg-foreground/5 p-3 mb-3" data-testid="wbp-top-priority">
-                <div className="text-xs uppercase text-muted-foreground">Top priority</div>
+                <div className="text-xs uppercase text-muted-foreground">Plan analysis focus (supporting context — your main target is shown above)</div>
                 <div className="text-lg font-semibold">{wbp.topPriority.label}</div>
                 <div className="text-xs text-muted-foreground">
                   Dominant constraint: <span data-testid="wbp-dominant-constraint">{String(wbp.dominantConstraint).replace(/_/g, " ")}</span>
@@ -511,7 +521,7 @@ export default function OwnerCommandCenterPage() {
               </div>
 
               <div className="text-sm mb-3" data-testid="wbp-next-action">
-                <span className="font-medium">Next best action:</span> {wbp.nextBestAction}
+                <span className="font-medium">The plan analysis suggests:</span> {wbp.nextBestAction}
               </div>
 
               {wbp.doNotDo.length > 0 && (
@@ -709,18 +719,6 @@ export default function OwnerCommandCenterPage() {
                   </Badge>
                   <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
-                {(() => {
-                  const topFindings: any[] = profile.topFindings ?? [];
-                  const driver = topFindings.find((f: any) => f.severity === "critical") ??
-                    topFindings.find((f: any) => f.severity === "high") ??
-                    topFindings[0];
-                  return driver ? (
-                    <div className="text-xs text-muted-foreground mt-2">
-                      <span className="font-medium">Primary driver:</span>{" "}
-                      <span>{DOMAIN_LABEL[driver.domain] ?? driver.domain}</span> — {driver.title}
-                    </div>
-                  ) : null;
-                })()}
                 <div className="text-xs text-muted-foreground mt-1">
                   Domains wired: {(data.domainsWired ?? []).map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ") || "none"}
                 </div>
@@ -759,7 +757,7 @@ export default function OwnerCommandCenterPage() {
 
                   {control.nextBestAction && (
                     <div className="text-sm mb-3">
-                      <span className="font-medium">Next best action:</span> {control.nextBestAction}
+                      <span className="font-medium">Your main target:</span> {control.nextBestAction}
                     </div>
                   )}
 
@@ -822,40 +820,6 @@ export default function OwnerCommandCenterPage() {
                   <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
                 </div>
               )}
-
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground">Do this next</div>
-                {next ? (
-                  <>
-                    <div className="text-lg font-semibold">{next.title}</div>
-                    <p className="text-sm text-muted-foreground">{next.description}</p>
-                    {next.evidenceRationale && (
-                      <p className="text-xs text-muted-foreground mt-1 italic">
-                        Why: {next.evidenceRationale}
-                      </p>
-                    )}
-                    {next.evidence && next.evidence.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Based on: {next.evidence.map(humanizeEvidenceLine).join(" · ")}
-                      </p>
-                    )}
-                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
-                      <Badge variant="muted-accessible">{DOMAIN_LABEL[next.domain] ?? next.domain}</Badge>
-                      <span>priority {Math.round(next.priorityScore)}</span>
-                      <span>· impact {Math.round(next.expectedImpactScore)}</span>
-                      <span>· effort {Math.round(next.effortScore)}</span>
-                      <span>· verify via {humanizeMetricKey(next.verificationMetric)}</span>
-                    </div>
-                    {DOMAIN_LINK[next.domain] && (
-                      <Link href={DOMAIN_LINK[next.domain]} className="inline-block mt-3">
-                        <Button className="min-h-[44px]">Open {DOMAIN_LABEL[next.domain] ?? next.domain}</Button>
-                      </Link>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No outstanding action — keep verifying outcomes.</p>
-                )}
-              </section>
 
               <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-3">Domain scores</h2>

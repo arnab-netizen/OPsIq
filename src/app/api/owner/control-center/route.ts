@@ -4,13 +4,15 @@
  * GET /api/owner/control-center?businessId=... — the single owner decision panel:
  *     data sufficiency + blocked items + SOP/training/equipment/process + attention.
  * Reuses the existing cross-domain Business Condition Profile (Slice 1 fields) for
- * data-sufficiency + next-best-action, then layers the Slice 0–8 control aggregates.
+ * data-sufficiency and the canonical owner decision (owner-home service) for the next-best
+ * action, then layers the Slice 0–8 control aggregates.
  * OWNER_VIEW, workspace-scoped, canonically enforced.
  */
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getBusinessCondition } from "@/services/owner-condition/business-condition.service";
+import { getOwnerHome } from "@/services/owner-home/home.service";
 import { getOwnerControlCenter } from "@/services/owner-mode/owner-control-center.service";
 import { getOwnerBlockMetrics } from "@/services/owner-mode/owner-block-metrics.service";
 
@@ -21,8 +23,9 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
-    const [{ profile }, blocks] = await Promise.all([
+    const [{ profile }, home, blocks] = await Promise.all([
       getBusinessCondition(ctx.verifiedWorkspaceId, businessId),
+      getOwnerHome(ctx.verifiedWorkspaceId, businessId),
       // Live block counts derived from the audit log (gate/do-not-repeat/completion blocks).
       getOwnerBlockMetrics(ctx.verifiedWorkspaceId),
     ]);
@@ -34,7 +37,7 @@ export const GET = withCanonicalEnforcement(
       financeBlocked: blocks.financeBlocked,
       ownerApprovalsRequired: 0,
       approvalsAvoided: blocks.approvalsAvoided,
-      nextBestAction: profile?.recommendedNextAction?.title ?? null,
+      nextBestAction: home.currentOwnerDecision?.primaryTarget?.title ?? null,
     });
     return canonicalJson(panel, { status: 200 });
   },

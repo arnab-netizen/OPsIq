@@ -7,6 +7,8 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -50,16 +52,6 @@ const DANGER_LABEL: Record<string, string> = {
 const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
   score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
 
-const DOMAIN_LINK: Record<string, string> = {
-  finance: "/owner/finance",
-  cashflow: "/owner/cashflow",
-  sales: "/owner/sales",
-  operations: "/owner/operations",
-  sop: "/owner/execution",
-  marketing: "/owner/marketing",
-  strategy: "/owner/strategy",
-  recovery: "/owner/recovery",
-};
 // Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
 const DOMAIN_LABEL: Record<string, string> = {
   finance: "Finance",
@@ -215,6 +207,12 @@ export default function OwnerHomePage() {
             />
           </div>
 
+          {data?.currentOwnerDecision && (
+            <div className="mb-5 rounded-lg border bg-card p-4" data-testid="home-owner-decision">
+              <OwnerDecisionCard decision={data.currentOwnerDecision as CurrentOwnerDecision} />
+            </div>
+          )}
+
           {!data?.hasData || !s ? (
             <div className="border rounded-lg p-6 text-center text-muted-foreground">
               No business condition yet. Run a diagnosis in{" "}
@@ -245,36 +243,27 @@ export default function OwnerHomePage() {
                 <DangerCard label="Execution danger" danger={s.executionDanger} />
               </section>
 
-              {/* Today's required actions */}
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s required actions</div>
-                {s.requiredActions.length === 0 ? (
+              {/* Today's open work — the canonical owner-attention order, rendered exactly as the server
+                  resolved it (main target first). This page never re-sorts or re-elects. */}
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card" data-testid="home-attention-order">
+                <div className="text-xs uppercase text-muted-foreground mb-2">Everything open, in the order to handle it</div>
+                {(data?.currentOwnerDecision?.attention ?? []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">No open actions from diagnosed domains — run a diagnosis in each domain to see required actions.</p>
                 ) : (
                   <div className="space-y-1">
-                    {s.requiredActions.map((a: any, i: number) => (
-                      DOMAIN_LINK[a.domain] ? (
-                        <Link
-                          key={`${a.domain}-${a.findingCode}-${i}`}
-                          href={DOMAIN_LINK[a.domain]}
-                          className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
-                        >
-                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
-                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted-accessible">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
-                            <span>priority {Math.round(a.priorityScore)}</span>
-                            <span>· impact {Math.round(a.expectedImpactScore)}</span>
-                          </div>
-                        </Link>
-                      ) : (
-                        <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
-                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
-                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted-accessible">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
-                            <span>priority {Math.round(a.priorityScore)}</span>
-                          </div>
+                    {(data.currentOwnerDecision as CurrentOwnerDecision).attention.map((a, i) => (
+                      <Link
+                        key={a.candidateId}
+                        href={a.targetRoute}
+                        data-testid="home-attention-item"
+                        className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
+                      >
+                        <div className="font-semibold text-sm">{i + 1}. {a.title}{i === 0 ? " — main target" : ""}</div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
+                          <Badge variant="muted-accessible">{a.domainLabel}</Badge>
+                          {a.severity && <span>{a.severity}</span>}
                         </div>
-                      )
+                      </Link>
                     ))}
                   </div>
                 )}

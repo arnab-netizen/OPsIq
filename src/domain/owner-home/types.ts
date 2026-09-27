@@ -3,9 +3,10 @@
  *
  * Pure types for the deterministic Owner Home Summary: the exact set of things the
  * §19 owner home screen must show — business health; cash/sales/operations/execution
- * danger; the top 3 risks; the top 3 opportunities; today's required actions; and the
- * last verified improvement. Pure data only (no DB, no I/O, no LLM). Nothing here is
- * invented: a domain with no diagnosis is reported as `unknown`, never as 0 danger.
+ * danger; the top 3 risks; the top 3 opportunities; and the last verified improvement. Today's
+ * ranked actions are the canonical owner decision, not part of this summary. Pure data only
+ * (no DB, no I/O, no LLM). Nothing here is invented: a domain with no diagnosis is reported as
+ * `unknown`, never as 0 danger.
  */
 import type { OwnerDomain, OwnerSeverity } from "@/domain/owner-spine/contracts";
 
@@ -41,19 +42,6 @@ export interface OwnerHomeOpportunity {
   confidence: number; // 0..1
 }
 
-/** One of today's required actions (an open, ranked owner action). */
-export interface RequiredAction {
-  domain: OwnerDomain;
-  findingCode: string;
-  title: string;
-  ownerRole: string;
-  status: string;
-  priorityScore: number; // 0..100
-  expectedImpactScore: number; // 0..100
-  effortScore: number; // 0..100
-  verificationMetric: string;
-}
-
 /** A real, recorded before/after improvement that was verified as an improvement. */
 export interface VerifiedImprovement {
   domain: OwnerDomain;
@@ -85,7 +73,6 @@ export interface OwnerHomeSummary {
   executionDanger: DomainDanger;
   top3Risks: OwnerHomeRisk[];
   top3Opportunities: OwnerHomeOpportunity[];
-  requiredActions: RequiredAction[];
   lastVerifiedImprovement: VerifiedImprovement | null;
   dataSufficiency: OwnerHomeDataSufficiency;
   generatedAt: Date;

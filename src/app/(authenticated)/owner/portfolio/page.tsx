@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
-import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
 
@@ -123,10 +122,10 @@ export default function OwnerPortfolioPage() {
               <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s top 3 priorities</div>
               <div className="space-y-2">
                 {view.top3Priorities.map((p: any, i: number) => (
-                  <div key={p.action?.id ?? i} className="border-b py-1">
-                    <div className="font-semibold">{i + 1}. {p.action?.title}</div>
+                  <div key={p.target?.candidateId ?? i} className="border-b py-1">
+                    <div className="font-semibold">{i + 1}. {p.target?.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.businessName} · {DOMAIN_LABEL[p.action?.domain] ?? p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
+                      {p.businessName}&apos;s main target · {p.target?.domainLabel ?? DOMAIN_LABEL[p.target?.domain] ?? p.target?.domain}
                     </div>
                   </div>
                 ))}

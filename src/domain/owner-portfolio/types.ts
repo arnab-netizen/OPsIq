@@ -7,7 +7,8 @@
  * business is healthiest, which needs attention today, which is leaking money,
  * where the owner should spend time, and which should receive investment.
  */
-import type { BusinessConditionProfile, OwnerAction } from "@/domain/owner-spine/contracts";
+import type { BusinessConditionProfile } from "@/domain/owner-spine/contracts";
+import type { CurrentOwnerDecision, OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
 /** One business + its latest condition profile (or null when it has no data yet). */
 export interface PortfolioBusinessInput {
@@ -17,6 +18,8 @@ export interface PortfolioBusinessInput {
   currency?: string;
   isActive?: boolean;
   profile: BusinessConditionProfile | null;
+  /** The business's ONE canonical owner decision (owner-home service); null when none resolved. */
+  ownerDecision?: CurrentOwnerDecision | null;
 }
 
 /** Per-business roll-up used in the portfolio view (16.1). */
@@ -37,7 +40,8 @@ export interface PortfolioBusinessSummary {
   operationsScore: number | null;
   cashflowScore: number | null;
   executionScore: number | null;
-  recommendedNextAction: OwnerAction | null;
+  /** The business's canonical main target (never re-ranked here). */
+  mainTarget: OwnerDecisionTarget | null;
 }
 
 /** Cross-business ranking (16.2) — each is a businessId or null when undeterminable. */
@@ -49,11 +53,11 @@ export interface PortfolioRanking {
   bestGrowthCandidateBusinessId: string | null;
 }
 
-/** A portfolio-level priority: a business's next action surfaced for the owner. */
+/** A portfolio-level priority: a business's canonical main target surfaced for the owner. */
 export interface PortfolioPriority {
   businessId: string;
   businessName: string;
-  action: OwnerAction;
+  target: OwnerDecisionTarget;
 }
 
 /** A portfolio-level risk alert. */

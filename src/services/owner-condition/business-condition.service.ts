@@ -360,11 +360,18 @@ export interface BusinessConditionResult {
  */
 export function computeReassessmentCadence(
   survivalRiskScore: number,
-  executionRiskScore: number
+  executionRiskScore: number,
+  dataSufficiency?: "sufficient" | "caution" | "insufficient"
 ): { days: number; reason: string } {
   const risk = Math.max(survivalRiskScore, executionRiskScore);
   if (risk >= 70) {
     return { days: 7, reason: "High survival/execution risk — weekly cash, complaint and capacity review until the condition stabilises." };
+  }
+  // Missing ≠ zero: a low risk score computed from insufficient data is not evidence of stability
+  // (e.g. Finance with costs and cash missing persists risk 0), so it must never earn the relaxed
+  // "stable, monthly" cadence.
+  if (dataSufficiency === "insufficient") {
+    return { days: 7, reason: "Key business data is missing, so OpsIQ cannot confirm the business is stable — review weekly until it is entered." };
   }
   if (risk >= 40) {
     return { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." };
@@ -392,7 +399,7 @@ export async function getBusinessCondition(
     if (owned) selectedBusinessId = owned.id;
   }
   // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
-  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // and owner-home/home.service.ts for the same rule. With 0 businesses this falls
   // through to the existing empty-state return below; with 2+, it now also falls through
   // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
   // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
@@ -581,7 +588,7 @@ export async function getBusinessCondition(
   });
 
   // Adaptive review cadence driven by the diagnosed condition (not a fixed 30 days).
-  const cadence = computeReassessmentCadence(profile.survivalRiskScore, profile.executionRiskScore);
+  const cadence = computeReassessmentCadence(profile.survivalRiskScore, profile.executionRiskScore, profile.dataSufficiencyStatus);
   const nextReassessmentDue = lastDate
     ? new Date(lastDate.getTime() + cadence.days * 86_400_000).toISOString()
     : null;

@@ -74,6 +74,7 @@ import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -1102,8 +1103,12 @@ export async function assembleGuidanceContext(
   };
 }
 
-function buildBeginner(view: OwnerNowView, steps: GuidanceStep[]): BeginnerExplanation {
-  const headline = view.topOwnerActions[0]?.headline ?? "Your business has no urgent issues right now";
+function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?: CurrentOwnerDecision | null): BeginnerExplanation {
+  // The overall headline is the canonical owner decision's main target — Now View's own operating
+  // signals (topOwnerActions) are context and may not name a different overall priority.
+  const canonicalHeadline = ownerDecision?.primaryTarget ? `Your main target: ${ownerDecision.primaryTarget.title}` : null;
+  const headline = canonicalHeadline
+    ?? (ownerDecision ? "Your business has no urgent issues right now" : view.topOwnerActions[0]?.headline ?? "Your business has no urgent issues right now");
   const whatToDoFirst = steps.length > 0 ? steps.map((s) => s.exactStep) : ["Keep tracking cash and complaints"];
   const whatNotToDo = view.actionsToAvoid.length > 0
     ? view.actionsToAvoid.map((a) => a.avoid)
@@ -1637,6 +1642,13 @@ async function buildBusinessOperatingSystem(
  */
 export interface GetOwnerNowViewOptions {
   restrictExecutionToAttributableBusiness?: boolean;
+  /**
+   * The ONE canonical owner decision (owner-home service → Spine arbiter). Now View ENRICHES it and
+   * never elects a competing overall target: when supplied, the plain-language headline names this
+   * decision's primary target, and its condensed memory is persisted with this snapshot so the next
+   * read can report "what changed" (main target, critical issues, confidence, funding gap).
+   */
+  ownerDecision?: CurrentOwnerDecision | null;
 }
 
 /** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
@@ -2508,7 +2520,7 @@ export async function getOwnerNowView(
 
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
-  const beginnerExplanation = buildBeginner(view, stepByStep);
+  const beginnerExplanation = buildBeginner(view, stepByStep, options?.ownerDecision);
 
   // Do-Not-Repeat Annotation — check if the top priority guidance action is blocked by a DNR rule.
   const topActionCategory = view.topOwnerActions[0]?.category;
@@ -2532,7 +2544,11 @@ export async function getOwnerNowView(
       staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
       supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
       outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
-      payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
+      payload: {
+        view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype,
+        // Canonical owner-decision memory for "what changed" (read back by the owner-home resolver).
+        ...(options?.ownerDecision && options.ownerDecision.businessId === businessId ? { ownerDecision: options.ownerDecision.memory } : {}),
+      } as unknown as Record<string, unknown>,
     },
   });
 

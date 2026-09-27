@@ -25,17 +25,8 @@ import type { DerivedBusinessConditionSignals } from "@/services/business-condit
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
-import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
-import type { CockpitDomainPriority } from "@/services/owner-guidance/cockpit-domain-priority.service";
-
-/** Same survival-state palette as /owner/finance (owner/finance/page.tsx's SURVIVAL_VARIANT) — kept local since that page is a separate client bundle. */
-const SURVIVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted"> = {
-  SAFE: "success-accessible",
-  WATCH: "default-accessible",
-  AT_RISK: "warning-accessible",
-  CRITICAL: "destructive-accessible",
-  INSOLVENT_RISK: "destructive-accessible",
-};
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -128,14 +119,6 @@ export function groupRequiresDecisionItems(items: readonly ExecutionLifecycleIte
   }
   return order.map((key) => ({ key, items: byKey.get(key)! }));
 }
-
-const SURVIVAL_LABEL: Record<string, string> = {
-  SAFE: "Safe",
-  WATCH: "Watch",
-  AT_RISK: "At risk",
-  CRITICAL: "Critical",
-  INSOLVENT_RISK: "Insolvency risk",
-};
 
 const POLICY_DECISION_LABEL: Record<string, string> = {
   BLOCK: "Blocked",
@@ -233,23 +216,13 @@ export interface MinimumOwnerCockpitProps {
   /** Phase 4 — BOS action: run-arbitration | override | resolve-constraint | accept-constraint. */
   onBosAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
   /**
-   * F3 — the latest fresh Finance-diagnosis top action for the currently resolvable business (see
-   * `cockpit-finance-priority.service.ts` for scoping + freshness rules). Precedence: the governed
-   * process-execution bridge's `topRoute` (an actionable CRITICAL/HIGH/MEDIUM/LOW governed route)
-   * always wins the primary "Your top priority now" slot when one exists — this never overwrites an
-   * urgent existing governed issue. When there is no actionable bridge route (the clean state, or a
-   * MONITOR_ONLY-only route), the Finance diagnosis's own top action is what fills the primary slot
-   * instead of a bare "nothing to do" message. When a governed route IS primary, the Finance action
-   * still surfaces as a secondary signal card (same tier as `topProfitLeak`), so it is never hidden.
+   * The ONE canonical owner decision (owner-home service → Spine arbiter), delivered by the now-view
+   * route as `ownerDecision`. It is ALWAYS the primary "Your main business target" slot. The governed
+   * process-execution bridge's `topRoute` is execution work (Now View context) rendered beneath it —
+   * it is never labelled as the owner's top priority, so the Cockpit can never elect a different
+   * winner from Home or Priorities.
    */
-  financeTopPriority?: CockpitFinancePriority | null;
-  /**
-   * BIV-03: highest-ranked open action from the other domain diagnoses (Sales, Strategy, Operations,
-   * SOP, Marketing, Cash flow, Recovery) — see `cockpit-domain-priority.service.ts`. Same precedence
-   * as `financeTopPriority`: never overrides a governed `topRoute`; fills the primary slot in the
-   * clean state when there is no Finance priority; otherwise shown as a secondary card.
-   */
-  domainTopPriority?: CockpitDomainPriority | null;
+  ownerDecision?: CurrentOwnerDecision | null;
   /** False only when the owner has no business yet; drives the "add your business" prompt. */
   hasBusiness?: boolean;
   /**
@@ -274,68 +247,6 @@ export interface MinimumOwnerCockpitProps {
    * Never used to alter what gets sent for a submit that happens before that change.
    */
   activeBusinessId?: string | null;
-}
-
-/** F3: the Finance-diagnosis top-action card, shared by the primary (clean-state) and secondary renders. */
-function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinancePriority; primary: boolean }) {
-  const testId = primary ? "cockpit-finance-priority-primary" : "cockpit-finance-priority-secondary";
-  return (
-    <div
-      data-testid={testId}
-      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
-      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
-    >
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span
-          className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
-          style={primary ? { color: "var(--accent-ink)" } : undefined}
-        >
-          {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
-        </span>
-        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default-accessible"}>
-          {SURVIVAL_LABEL[priority.survivalState] ?? priority.survivalState.replace(/_/g, " ")}
-        </Badge>
-      </div>
-      {priority.topAction ? (
-        <>
-          <strong data-testid="cockpit-finance-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>{priority.topAction.title}</strong>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{priority.topAction.description}</p>
-        </>
-      ) : (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
-          A finance diagnosis ran for {priority.businessName || "your business"} but has no ranked action yet.
-        </p>
-      )}
-      <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
-        See the full finance diagnosis →
-      </a>
-    </div>
-  );
-}
-
-/** BIV-03: the top open action from a non-Finance domain diagnosis, primary (clean state) or secondary. */
-function DomainTopPriorityCard({ priority, primary }: { priority: CockpitDomainPriority; primary: boolean }) {
-  const testId = primary ? "cockpit-domain-priority-primary" : "cockpit-domain-priority-secondary";
-  return (
-    <div
-      data-testid={testId}
-      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
-      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
-    >
-      <span
-        className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
-        style={primary ? { color: "var(--accent-ink)" } : undefined}
-      >
-        {primary ? `Open action from your ${priority.domainLabel} diagnosis` : `Open ${priority.domainLabel} action`}
-      </span>
-      <strong data-testid="cockpit-domain-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>
-        {priority.title}
-      </strong>
-      <a href={priority.href} style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
-        Open {priority.domainLabel} →
-      </a>
-    </div>
-  );
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -1180,7 +1091,7 @@ function GoalAttentionSection({ signal }: { signal: GoalAttentionSignal }) {
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, domainTopPriority = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, ownerDecision = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -1208,17 +1119,15 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
     }
   }, [activeBusinessId]);
 
-  // ── Clean state: no governed process-execution route. Nothing is fabricated to fill the primary
-  // slot — but a real Finance diagnosis, when one exists, is a real prioritized recommendation, not a
-  // fabrication, so it takes the primary slot here (F3). ──
+  // The canonical owner decision always owns the primary slot (see `ownerDecision`'s doc comment).
+  const decisionCard = ownerDecision ? <OwnerDecisionCard decision={ownerDecision} /> : null;
+
+  // ── Clean state: no governed process-execution route. The primary slot is the canonical owner
+  // decision; nothing is fabricated when there is none. ──
   if (!top) {
     return (
       <section data-testid="cockpit-clean" className="flex flex-col gap-3 rounded-md border border-border bg-card p-5">
-        {financeTopPriority ? (
-          <FinanceTopPriorityCard priority={financeTopPriority} primary />
-        ) : domainTopPriority ? (
-          <DomainTopPriorityCard priority={domainTopPriority} primary />
-        ) : (
+        {decisionCard ?? (
           <div>
             <strong className="text-base font-semibold text-foreground">No urgent action needs your attention right now.</strong>
             <p className="mt-1.5 text-sm text-muted-foreground">
@@ -1235,7 +1144,6 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             )}
           </div>
         )}
-        {financeTopPriority && domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={false} />}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
         {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
@@ -1303,6 +1211,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   return (
     <section data-testid="owner-cockpit" data-execution-route={top.executionRoute}
       className="flex max-w-2xl flex-col gap-3.5">
+      {decisionCard}
 
       {/* 1. Top Priority Action — an editorial "briefing" treatment (a thin accent rule + open
           layout) rather than a boxed admin-panel card, per the premium-redesign visual pass.
@@ -1310,14 +1219,14 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           unchanged from before; only the surrounding markup/classNames changed. */}
       <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>Your top priority now</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>Governed work you can start</span>
           <Badge variant={SEVERITY_VARIANT(top.severity)}>{severityLabel(top.severity)}</Badge>
         </div>
         <strong data-testid="cockpit-top-action-title" className="font-display text-[1.375rem] font-semibold leading-snug tracking-tight text-foreground">{top.ownerVisibleSummary}</strong>
 
         {/* 2. Why This Is First — stays visible; it's the one thing a lay owner needs up front. */}
         <div data-testid="cockpit-why">
-          <span className="text-sm font-medium text-foreground">Why this is first</span>
+          <span className="text-sm font-medium text-foreground">Why this matters</span>
           <ul className="mt-1.5 list-disc space-y-1 pl-[18px]">
             {whyBullets.map((b, i) => (
               <li key={i} data-testid="cockpit-why-bullet" className="text-[0.9375rem] leading-relaxed text-muted-foreground">{b}</li>
@@ -1559,14 +1468,6 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
       </details>
 
-      {/*
-        Finance diagnosis top action (F3) — secondary here because a real governed process-execution
-        route (`top`, rendered above as "Your top priority now") is currently primary; never
-        overwrites it. Shown whenever a fresh diagnosis exists, including when `top` is itself only
-        MONITOR_ONLY (nothing actionable in the governed queue) so the owner still sees it prominently.
-      */}
-      {financeTopPriority && <FinanceTopPriorityCard priority={financeTopPriority} primary={isMonitorOnly} />}
-      {domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={isMonitorOnly && !financeTopPriority} />}
 
       {/*
         Also worth knowing — Goal / Profit leak / Operating policies / Trend alerts / Do-not-repeat /

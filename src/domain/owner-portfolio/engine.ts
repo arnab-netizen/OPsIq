@@ -8,7 +8,8 @@
  * priorities, risk alerts, and an investment recommendation. Nothing is invented —
  * businesses without data are reported as such and never fabricated into scores.
  */
-import { clampScore, rankOwnerActions, type OwnerDomain, type OwnerAction } from "@/domain/owner-spine/contracts";
+import { clampScore, ownerSeverityRank, type OwnerDomain } from "@/domain/owner-spine/contracts";
+import { ownerPriorityClassRank } from "@/domain/owner-spine/owner-decision";
 import type {
   PortfolioBusinessInput,
   PortfolioBusinessSummary,
@@ -51,7 +52,7 @@ export function toBusinessSummary(input: PortfolioBusinessInput): PortfolioBusin
     operationsScore: domainHealth(input, "operations"),
     cashflowScore: domainHealth(input, "cashflow"),
     executionScore: domainHealth(input, "sop"),
-    recommendedNextAction: p?.recommendedNextAction ?? null,
+    mainTarget: input.ownerDecision?.primaryTarget ?? null,
   };
 }
 
@@ -114,16 +115,21 @@ export function buildPortfolioView(
     ),
   };
 
-  // Today's top 3 priorities: each business's recommended next action, spine-ranked.
-  const priorityActions: Array<{ summary: PortfolioBusinessSummary; action: OwnerAction }> = [];
-  for (const s of withData) {
-    if (s.recommendedNextAction) priorityActions.push({ summary: s, action: s.recommendedNextAction });
-  }
-  const rankedActions = rankOwnerActions(priorityActions.map((p) => p.action));
-  const top3Priorities: PortfolioPriority[] = rankedActions.slice(0, 3).map((action) => {
-    const owner = priorityActions.find((p) => p.action === action)!;
-    return { businessId: owner.summary.businessId, businessName: owner.summary.name, action };
-  });
+  // Today's top 3 priorities: each business's CANONICAL main target (never re-elected here), ordered
+  // across businesses by the same business-semantic precedence the arbiter uses (class → severity),
+  // then by the business's survival risk, then businessId for stability.
+  const withTarget = withData.filter((s): s is PortfolioBusinessSummary & { mainTarget: NonNullable<PortfolioBusinessSummary["mainTarget"]> } => s.mainTarget !== null);
+  const top3Priorities: PortfolioPriority[] = [...withTarget]
+    .sort((a, b) => {
+      const cls = ownerPriorityClassRank(a.mainTarget.priorityClass) - ownerPriorityClassRank(b.mainTarget.priorityClass);
+      if (cls !== 0) return cls;
+      const sev = ownerSeverityRank(b.mainTarget.severity ?? "") - ownerSeverityRank(a.mainTarget.severity ?? "");
+      if (sev !== 0) return sev;
+      if (b.survivalRiskScore !== a.survivalRiskScore) return b.survivalRiskScore - a.survivalRiskScore;
+      return a.businessId < b.businessId ? -1 : a.businessId > b.businessId ? 1 : 0;
+    })
+    .slice(0, 3)
+    .map((s) => ({ businessId: s.businessId, businessName: s.name, target: s.mainTarget }));
 
   // Risk alerts (deterministic, ordered by score desc within type, businessId asc tie-break).
   const riskAlerts: PortfolioRiskAlert[] = [];

@@ -3,26 +3,26 @@
 /**
  * /owner/priorities — "What needs my attention?"
  *
- * A lay owner should not have to understand that risks, alerts, the decision inbox, and Home's
- * top governed action are four separate internal systems (src/services/owner-mode/business-risk.
- * service.ts, src/services/alerts/alert-service.ts, the OperatorItem table read directly by
- * /api/decisions/list, and the process-execution bridge behind /api/owner/now-view) to find out
- * what needs their attention today. This page reads all four existing, already-governed GET
- * endpoints and merges them into one plain-language list — no new business logic, no new severity
- * computation: every severity/status shown here is the same value the owner would see on
- * /owner/risks, /owner/alerts, /dashboard/inbox, or the Home page, just translated to plain
- * language and ranked together instead of split across separate pages.
+ * Renders the ONE canonical owner decision (owner-home service → Spine arbiter,
+ * src/domain/owner-spine/owner-decision.ts) exactly as the server resolved it: the main target
+ * first, then every other open item in the server's canonical order. This page does NOT rank:
+ * the same decision object is what Home (Cockpit) and the Command Center render, so
+ * "Priorities #1 == Home primary" holds by construction, not by coincidence.
  *
- * The fourth source (now-view's topRoute) is included so this page satisfies a hard invariant:
- * Home must never show an actionable top priority while this page claims nothing needs attention.
- * It reuses Home's exact canonical item (same taskKey/title/severity) rather than re-deriving one,
- * so the two surfaces never disagree about what "the" priority is.
+ * Two further, clearly separated and UNRANKED sections keep nothing hidden:
+ *   - Governed work — the process-execution bridge's current governed route (Now View execution
+ *     context), with its real status, worked on Home;
+ *   - Also on your radar — open risks, unread alerts and blocked decisions, grouped by source in
+ *     each source's own order. They inform; they never outrank the main target. (Critical risks
+ *     that are unambiguously this business's are already competing inside the canonical decision.)
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, CardDashboardSkeleton, EmptyState, ErrorState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -43,20 +43,8 @@ async function api(path: string) {
 type PriorityTier = "critical" | "attention" | "normal";
 
 interface PriorityItem {
-  id: string;
-  source: "risk" | "alert" | "decision" | "priority";
-  title: string;
-  why: string | null;
-  tier: PriorityTier;
-  actionLabel: string;
-  actionHref: string;
-  detailHref: string;
-  /** Overrides the tier-derived badge text/variant (TIER_LABEL/TIER_VARIANT[tier]) when present.
-   *  Only ever set for the "priority" source (Home's canonical topRoute item) — its badge must
-   *  reflect the SAME server-computed status/canStart the action text below it already reads, not
-   *  the severity-only tier label every other source uses, so the badge and action text can never
-   *  contradict each other. */
-  statusLabel?: string;
+  /** Governed-work badge variant: derived from the SAME server status/canStart as its action text,
+   *  so the badge and the action text can never contradict each other. */
   statusVariant?: "destructive-accessible" | "warning-accessible" | "muted-accessible" | "default-accessible" | "success-accessible";
 }
 
@@ -98,13 +86,6 @@ function decisionTier(status: string): PriorityTier {
   return status === "blocked" ? "critical" : "attention";
 }
 
-const BRIDGE_SEVERITY_TIER: Record<string, PriorityTier> = {
-  CRITICAL: "critical",
-  HIGH: "critical",
-  MEDIUM: "attention",
-  LOW: "normal",
-};
-
 /** Terminal statuses a completed/rejected bridged task can carry — never a priority once resolved. */
 const BRIDGE_TERMINAL_STATUSES = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
 
@@ -127,9 +108,36 @@ function bridgeStatusVariant(status: string, canStart: boolean): PriorityItem["s
   return undefined; // fall through to the normal severity-tier variant
 }
 
+interface RadarItem {
+  id: string;
+  source: "risk" | "alert" | "decision";
+  title: string;
+  why: string | null;
+  tier: PriorityTier;
+  actionLabel: string;
+  actionHref: string;
+}
+
+interface GovernedWork {
+  id: string;
+  title: string;
+  why: string | null;
+  statusLabel: string;
+  statusVariant: NonNullable<PriorityItem["statusVariant"]>;
+  actionLabel: string;
+}
+
+const RADAR_SOURCE_LABEL: Record<RadarItem["source"], string> = {
+  risk: "Open risks",
+  alert: "Unread alerts",
+  decision: "Blocked decisions",
+};
+
 export default function OwnerPrioritiesPage() {
   const { activeBusinessId } = useActiveBusiness();
-  const [items, setItems] = useState<PriorityItem[] | null>(null);
+  const [decision, setDecision] = useState<CurrentOwnerDecision | null>(null);
+  const [governed, setGoverned] = useState<GovernedWork | null>(null);
+  const [radar, setRadar] = useState<RadarItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -152,81 +160,40 @@ export default function OwnerPrioritiesPage() {
         return;
       }
 
-      const merged: PriorityItem[] = [];
+      // The canonical decision — rendered, never re-ranked.
+      setDecision((nowViewRes?.ownerDecision as CurrentOwnerDecision | null | undefined) ?? null);
 
-      // Home's canonical top governed action (process-execution bridge) — the SAME item Home shows,
-      // never re-derived, so this page can never say "nothing needs attention" while Home shows one.
+      // Governed execution work (Now View context): shown with its real status, never ranked.
       const topRoute = nowViewRes?.processExecution?.topRoute as
-        | { taskKey: string; title: string; ownerVisibleSummary?: string | null; severity: string; executionRoute: string; status: string; canStart: boolean }
+        | { taskKey: string; ownerVisibleSummary?: string | null; riskIfIgnored?: string | null; executionRoute: string; status: string; canStart: boolean }
         | null
         | undefined;
-      if (
-        topRoute &&
-        topRoute.executionRoute !== "MONITOR_ONLY" &&
-        !BRIDGE_TERMINAL_STATUSES.has(topRoute.status)
-      ) {
-        // Reflect the SAME server-computed canStart Home uses to decide its own button state --
-        // never re-derive "started" from status text here. Once the owner has clicked Start Work
-        // on Home, this item is still an open priority (in-progress work still deserves attention),
-        // but the CTA must stop implying it hasn't been started yet.
-        merged.push({
+      if (topRoute && topRoute.executionRoute !== "MONITOR_ONLY" && !BRIDGE_TERMINAL_STATUSES.has(topRoute.status)) {
+        setGoverned({
           id: `priority-${topRoute.taskKey}`,
-          source: "priority",
-          title: topRoute.title,
-          why: topRoute.ownerVisibleSummary ?? null,
-          tier: BRIDGE_SEVERITY_TIER[topRoute.severity] ?? "attention",
-          actionLabel: topRoute.canStart ? "Go to Home to start this" : "In progress — continue on Home",
-          actionHref: "/owner/cockpit",
-          detailHref: "/owner/cockpit",
+          title: topRoute.ownerVisibleSummary ?? "Governed work is ready on Home",
+          why: topRoute.riskIfIgnored ?? null,
           statusLabel: bridgeStatusLabel(topRoute.status, topRoute.canStart),
-          statusVariant: bridgeStatusVariant(topRoute.status, topRoute.canStart),
+          statusVariant: bridgeStatusVariant(topRoute.status, topRoute.canStart) ?? "warning-accessible",
+          actionLabel: topRoute.canStart ? "Go to Home to start this" : "In progress — continue on Home",
         });
+      } else {
+        setGoverned(null);
       }
 
-      for (const r of (risksRes?.risks ?? []) as Array<{ id: string; title: string; description: string | null; severity: number; status: string }>) {
+      // Radar: each source in its own order; sources are never merged into one ranking.
+      const items: RadarItem[] = [];
+      for (const r of (risksRes?.risks ?? []) as Array<{ id: string; title: string; description?: string | null; severity: number; status: string }>) {
         if (!OPEN_RISK_STATUSES.has(r.status)) continue;
-        merged.push({
-          id: `risk-${r.id}`,
-          source: "risk",
-          title: r.title,
-          why: r.description,
-          tier: riskTier(r.severity),
-          actionLabel: "Review this risk",
-          actionHref: "/owner/risks",
-          detailHref: "/owner/risks",
-        });
+        items.push({ id: `risk-${r.id}`, source: "risk", title: r.title, why: r.description ?? null, tier: riskTier(r.severity), actionLabel: "Review this risk", actionHref: `/owner/risks/${r.id}` });
       }
-
-      for (const a of (alertsRes?.alerts ?? alertsRes ?? []) as Array<{ id: string; message: string; severity: string }>) {
-        merged.push({
-          id: `alert-${a.id}`,
-          source: "alert",
-          title: a.message,
-          why: null,
-          tier: ALERT_TIER[a.severity] ?? "attention",
-          actionLabel: "Open alert",
-          actionHref: "/owner/alerts",
-          detailHref: "/owner/alerts",
-        });
+      for (const a of (alertsRes?.alerts ?? []) as Array<{ id: string; message: string; severity: string }>) {
+        items.push({ id: `alert-${a.id}`, source: "alert", title: a.message, why: null, tier: ALERT_TIER[a.severity] ?? "attention", actionLabel: "See alert", actionHref: "/owner/alerts" });
       }
-
-      for (const d of (decisionsRes?.decisions ?? decisionsRes ?? []) as Array<{ id: string; title: string; blockReason: string | null; status: string }>) {
-        merged.push({
-          id: `decision-${d.id}`,
-          source: "decision",
-          title: d.title,
-          why: d.blockReason,
-          tier: decisionTier(d.status),
-          actionLabel: "Check this decision",
-          actionHref: "/dashboard/inbox",
-          detailHref: "/dashboard/inbox",
-        });
+      for (const d of (decisionsRes?.decisions ?? []) as Array<{ id: string; problem?: string; action?: string; status: string; blockReason?: string | null }>) {
+        items.push({ id: `decision-${d.id}`, source: "decision", title: d.problem ?? d.action ?? "Blocked decision", why: d.blockReason ?? null, tier: decisionTier(d.status), actionLabel: "Open decision", actionHref: "/dashboard/inbox" });
       }
-
-      const rank: Record<PriorityTier, number> = { critical: 0, attention: 1, normal: 2 };
-      merged.sort((a, b) => rank[a.tier] - rank[b.tier]);
-
-      setItems(merged);
+      setRadar(items);
       setLoading(false);
     })();
     return () => {
@@ -237,48 +204,86 @@ export default function OwnerPrioritiesPage() {
   if (loading) return <PageContainer narrow><CardDashboardSkeleton label="Loading your priorities" sections={2} /></PageContainer>;
   if (error) return <PageContainer narrow><ErrorState message={error} onRetry={() => window.location.reload()} /></PageContainer>;
 
+  const attention = decision?.attention ?? [];
+  const radarGroups = (["risk", "alert", "decision"] as const)
+    .map((source) => ({ source, items: radar.filter((r) => r.source === source) }))
+    .filter((g) => g.items.length > 0);
+
   return (
     <PageContainer narrow className="flex flex-col gap-6" data-testid="owner-priorities">
-      <PageHeader title="Priorities" description="What needs your attention, in one place." />
+      <PageHeader title="Priorities" description="Your main target first, then everything else in order." />
 
-      {items && items.length === 0 ? (
-        <EmptyState
-          title="Nothing needs your attention right now"
-          description="OpsIQ checks your risks, alerts, blocked decisions, and Home's top action continuously. This stays empty until something real needs you."
-        />
+      {decision ? (
+        <OwnerDecisionCard decision={decision} detail="compact" />
       ) : (
-        <>
-          <ol className="flex flex-col gap-6">
-            {items?.map((item, i) => (
-              <li
-                key={item.id}
-                className="border-l-2 pl-5 py-0.5"
-                style={{ borderColor: TIER_RULE_COLOR[item.tier] }}
-                data-testid="priority-item"
-              >
+        <EmptyState
+          title="Choose a business to see its main target"
+          description="OpsIQ picks one main target per business. Select the business you want to work on."
+        />
+      )}
+
+      {attention.length > 0 && (
+        <section data-testid="priorities-attention">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Everything open, in the order to handle it</h2>
+          <ol className="flex flex-col gap-5">
+            {attention.map((t, i) => (
+              <li key={t.candidateId} className="border-l-2 pl-5 py-0.5" style={{ borderColor: i === 0 ? "var(--accent-ink)" : "var(--border)" }} data-testid="priority-item" data-candidate-id={t.candidateId}>
                 <div className="flex flex-wrap items-baseline gap-2.5">
                   <span className="font-display text-base font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
-                  <Badge variant={item.statusVariant ?? TIER_VARIANT[item.tier]}>{item.statusLabel ?? TIER_LABEL[item.tier]}</Badge>
+                  {i === 0 ? <Badge variant="default-accessible">Main target</Badge> : <Badge variant="muted-accessible">{t.domainLabel}</Badge>}
                 </div>
-                <strong className="mt-1 block font-display text-[1.15rem] font-semibold leading-snug tracking-tight text-foreground">{item.title}</strong>
-                {item.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{item.why}</p>}
-                <Link
-                  href={item.actionHref}
-                  className="mt-2.5 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
-                >
-                  {item.actionLabel} →
+                <strong className="mt-1 block font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground">{t.title}</strong>
+                <Link href={t.targetRoute} className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
+                  Open {t.domainLabel} →
                 </Link>
               </li>
             ))}
           </ol>
-          {/* A one- or two-item list otherwise trails off into a mostly-empty page -- this closing
-              line is the same honest continuously-checked framing as the zero-item EmptyState
-              above, just for the "some, but not many" case, so the page reads as complete by
-              design rather than unfinished. */}
-          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
-            That{"'"}s everything OpsIQ is tracking as a priority right now. Risks, alerts, blocked decisions, and Home{"'"}s top action are checked continuously — this list updates as things change.
-          </p>
-        </>
+        </section>
+      )}
+
+      {governed && (
+        <section data-testid="priorities-governed-work" className="border-t border-border pt-4">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">Governed work</h2>
+          <div className="border-l-2 pl-5 py-0.5" style={{ borderColor: "var(--border)" }} data-testid="priority-governed-item">
+            <Badge variant={governed.statusVariant}>{governed.statusLabel}</Badge>
+            <strong className="mt-1 block text-base font-semibold leading-snug text-foreground">{governed.title}</strong>
+            {governed.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{governed.why}</p>}
+            <Link href="/owner/cockpit" className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
+              {governed.actionLabel} →
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {radarGroups.length > 0 && (
+        <section data-testid="priorities-radar" className="border-t border-border pt-4">
+          <h2 className="mb-1 text-sm font-semibold text-foreground">Also on your radar</h2>
+          <p className="mb-3 text-xs text-muted-foreground">Listed by source, not ranked above your main target.</p>
+          {radarGroups.map((g) => (
+            <div key={g.source} className="mb-4">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{RADAR_SOURCE_LABEL[g.source]}</h3>
+              <ul className="flex flex-col gap-3">
+                {g.items.map((item) => (
+                  <li key={item.id} className="border-l-2 pl-4" style={{ borderColor: TIER_RULE_COLOR[item.tier] }} data-testid="priority-radar-item">
+                    <Badge variant={TIER_VARIANT[item.tier]}>{TIER_LABEL[item.tier]}</Badge>
+                    <span className="mt-1 block text-sm font-medium text-foreground">{item.title}</span>
+                    {item.why && <span className="mt-0.5 block text-xs text-muted-foreground">{item.why}</span>}
+                    <Link href={item.actionHref} className="mt-1 inline-block text-xs font-medium text-[var(--primary-text)] underline hover:no-underline">
+                      {item.actionLabel} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {attention.length === 0 && !governed && radarGroups.length === 0 && decision && decision.state !== "TARGET" && (
+        <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+          Nothing else needs your attention right now. OpsIQ re-checks as your data and work change.
+        </p>
       )}
     </PageContainer>
   );

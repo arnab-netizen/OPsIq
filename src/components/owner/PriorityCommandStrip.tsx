@@ -30,7 +30,7 @@ export function PriorityCommandStrip({ cards }: { cards: PriorityCardView[] }) {
   return (
     <section className="mb-6" data-testid="owner-priority-strip">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs uppercase text-muted-foreground">Your top priorities</div>
+        <div className="text-xs uppercase text-muted-foreground">Plan checkpoints (supporting analysis)</div>
         <Badge variant="muted">{cards.length} of 5</Badge>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

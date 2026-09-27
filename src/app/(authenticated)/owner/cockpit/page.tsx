@@ -92,8 +92,7 @@ import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-reco
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
-import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
-import type { CockpitDomainPriority } from "@/services/owner-guidance/cockpit-domain-priority.service";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import type { DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -198,8 +197,7 @@ export default function OwnerCockpitPage() {
   const [activeEscalations, setActiveEscalations] = useState<EscalationAttentionItem[] | null>(null);
   const [executionLifecycle, setExecutionLifecycle] = useState<OwnerExecutionLifecycleView | null>(null);
   const [businessOperatingSystem, setBusinessOperatingSystem] = useState<BusinessOperatingSystemView | null>(null);
-  const [financeTopPriority, setFinanceTopPriority] = useState<CockpitFinancePriority | null>(null);
-  const [domainTopPriority, setDomainTopPriority] = useState<CockpitDomainPriority | null>(null);
+  const [ownerDecision, setOwnerDecision] = useState<CurrentOwnerDecision | null>(null);
   // UX-03: the canonical owner-facing assessment (OwnerNowView -> reconcileOwnerAssessment ->
   // composeOwnerAssessment). Cleared at the start of every load() (below) so a business switch
   // never leaves the previous business's assessment visible while the new one is loading, and so
@@ -221,7 +219,7 @@ export default function OwnerCockpitPage() {
   // older request happens to resolve AFTER the newer one (a normal, unpredictable race on the
   // network — nothing guarantees request/response ordering), its stale response silently
   // overwrote the correctly-rendered newer business's `bridge`/`executionLifecycle`/
-  // `financeTopPriority` state — with no error and no visible loading transition, since the
+  // `ownerDecision` state — with no error and no visible loading transition, since the
   // loading skeleton had already been dismissed by the newer, faster request. The header (driven
   // directly by ActiveBusinessContext, never by this response) stayed correct throughout, which is
   // exactly why the live report saw a correct header alongside stale cockpit widgets. A stale
@@ -230,8 +228,8 @@ export default function OwnerCockpitPage() {
   //
   // Server-side now-view scoping for businessId+restrictExecutionToBusiness is already proven
   // correct by real-Postgres tests (cockpit-business-scoping.db.test.ts's suppress=true A/B/C
-  // isolation + CASH_PROFIT-attribution tests; cockpit-finance-priority.db.test.ts's "returns ONLY
-  // that business's action" test) — this is a pure client-side async race, not a server defect.
+  // isolation + CASH_PROFIT-attribution tests; owner-decision-consolidation.db.test.ts's business-
+  // switch isolation test) — this is a pure client-side async race, not a server defect.
   //
   // FIX: a monotonically increasing generation number (a ref, not state, so incrementing it never
   // itself triggers a render) is stamped at the start of every load() call. Every state commit —
@@ -284,8 +282,9 @@ export default function OwnerCockpitPage() {
       setActiveEscalations(Array.isArray(data.activeEscalations) ? (data.activeEscalations as EscalationAttentionItem[]) : null);
       setExecutionLifecycle((data.executionLifecycle as OwnerExecutionLifecycleView) ?? null);
       setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
-      setFinanceTopPriority((data.financeTopPriority as CockpitFinancePriority) ?? null);
-      setDomainTopPriority((data.domainTopPriority as CockpitDomainPriority) ?? null);
+      // The ONE canonical owner decision (server-resolved; same object Home/Priorities render).
+      const decision = (data.ownerDecision as CurrentOwnerDecision | null | undefined) ?? null;
+      setOwnerDecision(decision);
       // UX-03: build the canonical owner-facing assessment from THIS response's own OwnerNowView
       // (`data.view`) and condition detail (`data.derivedBusinessCondition`) -- never from
       // `activeBusinessId` (the server response's own businessId is the canonical source; see
@@ -311,6 +310,7 @@ export default function OwnerCockpitPage() {
           growthReadinessStatus: view.growthReadinessStatus,
           topOwnerActions: view.topOwnerActions,
           urgentRisks: view.urgentRisks,
+          canonicalPrimaryClass: decision?.primaryTarget?.priorityClass ?? null,
           conditionDimensions: (data.derivedBusinessCondition as DerivedBusinessConditionSignals) ?? null,
         });
         setAssessmentNarrative(composeOwnerAssessment(canonicalAssessment));
@@ -539,8 +539,7 @@ export default function OwnerCockpitPage() {
             executionLifecycle={executionLifecycle}
             businessOperatingSystem={businessOperatingSystem}
             onBosAction={onBosAction}
-            financeTopPriority={financeTopPriority}
-            domainTopPriority={domainTopPriority}
+            ownerDecision={ownerDecision}
             hasBusiness={contextLoading || businesses.length > 0}
             activeBusinessId={activeBusinessId}
             busy={busy}

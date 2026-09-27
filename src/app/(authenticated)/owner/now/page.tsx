@@ -6,6 +6,8 @@ import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from 
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
 
@@ -172,6 +174,10 @@ export default function OwnerNowViewPage() {
       />
 
       <BusinessContextSelector businesses={businesses} selectedId={activeBusinessId} onChange={onSwitchBusiness} />
+
+      {/* The ONE canonical owner decision (same object Home/Cockpit/Priorities render). The operating
+          signals below are Now View's context around it — they never name a different main target. */}
+      {data.ownerDecision && <OwnerDecisionCard decision={data.ownerDecision as CurrentOwnerDecision} detail="compact" />}
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
         Business selection scopes cash, finance, quality and retention signals below. Staff workload,
         supply/capacity, process-breakdown, and proof-risk signals are workspace-wide and do not change
@@ -201,8 +207,9 @@ export default function OwnerNowViewPage() {
       )}
 
       <section>
-        <h2>Top {Math.min(steps.length, 3) || ""} actions now</h2>
-        {steps.length === 0 && <p>No urgent owner actions right now.</p>}
+        <h2>Operating signals to act on</h2>
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#6b7280" }}>Day-to-day signals from your operating data. Your main target is shown above; these support it and never replace it.</p>
+        {steps.length === 0 && <p>No urgent operating signals right now.</p>}
         {steps.map((s, i) => (
           <div key={i} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 12 }}>
             <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{s.exactStep}</p>

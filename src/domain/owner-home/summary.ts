@@ -4,12 +4,15 @@
  * Turns the already-proven per-domain spine data (domain scores, findings, actions,
  * verifications) into the exact §19 owner-home payload: business health; cash / sales
  * / operations / execution danger; the top 3 risks; the top 3 opportunities; today's
- * required (open, ranked) actions; and the last verified improvement.
+ * owner decision is NOT computed here (see below); and the last verified improvement.
  *
  * Pure and honest: no DB, no I/O, no LLM. A domain with no diagnosis is reported as
- * `unknown` danger (not 0). Risks/opportunities are real findings; required actions
- * are real open actions ranked by the proven spine priority; the last verified
+ * `unknown` danger (not 0). Risks/opportunities are real findings; the last verified
  * improvement is a real recorded verification — nothing is invented.
+ *
+ * The owner's ranked actions ("what to do today", the main target) are deliberately NOT part of
+ * this summary: they are the single canonical owner decision (owner-spine/owner-decision.ts),
+ * resolved once by the owner-home service and rendered by every owner surface.
  */
 import {
   DATA_CONFIDENCE_CAUTION,
@@ -18,9 +21,7 @@ import {
   clampConfidence,
   clampScore,
   ownerSeverityRank,
-  rankOwnerActions,
   type DomainScore,
-  type OwnerAction,
   type OwnerDomain,
   type OwnerFinding,
 } from "@/domain/owner-spine/contracts";
@@ -30,15 +31,8 @@ import type {
   OwnerHomeOpportunity,
   OwnerHomeRisk,
   OwnerHomeSummary,
-  RequiredAction,
   VerifiedImprovement,
 } from "./types";
-
-/** Action statuses that still require owner attention (i.e. not closed). */
-export const OPEN_ACTION_STATUSES: readonly string[] = ["proposed", "assigned", "in_progress", "blocked"];
-
-/** Max number of "today's required actions" surfaced on the home screen. */
-export const MAX_REQUIRED_ACTIONS = 5;
 
 /** A verification candidate fed to the summary (already workspace-scoped upstream). */
 export interface OwnerHomeVerificationInput {
@@ -54,7 +48,6 @@ export interface OwnerHomeVerificationInput {
 export interface OwnerHomeSummaryInput {
   domainScores: DomainScore[];
   findings: OwnerFinding[];
-  actions: OwnerAction[];
   verifications: OwnerHomeVerificationInput[];
   /** Slice 1 — missing-critical-data carried from the diagnosis layer (never invented). */
   missingCriticalData?: string[];
@@ -160,22 +153,6 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
       confidence: clampConfidence(f.confidence),
     }));
 
-  // Today's required actions: open actions only, ranked by the proven spine priority.
-  const openActions = input.actions.filter((a) => OPEN_ACTION_STATUSES.includes(a.status));
-  const requiredActions: RequiredAction[] = rankOwnerActions(openActions)
-    .slice(0, MAX_REQUIRED_ACTIONS)
-    .map((a) => ({
-      domain: a.domain,
-      findingCode: a.findingCode,
-      title: a.title,
-      ownerRole: a.ownerRole,
-      status: a.status,
-      priorityScore: clampScore(a.priorityScore),
-      expectedImpactScore: clampScore(a.expectedImpactScore),
-      effortScore: clampScore(a.effortScore),
-      verificationMetric: a.verificationMetric,
-    }));
-
   // Last verified improvement: the most recent verification recorded as an improvement.
   const improvements = input.verifications
     .filter((v) => v.status === "verified_improved")
@@ -221,7 +198,6 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
     executionDanger: executionDanger(scoreByDomain),
     top3Risks,
     top3Opportunities,
-    requiredActions,
     lastVerifiedImprovement,
     dataSufficiency,
     generatedAt: input.now ?? new Date(),
