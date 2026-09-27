@@ -464,7 +464,6 @@
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [
         "src/__tests__/owner-activation/onboarding-cash-wiring.test.tsx",
-        "src/__tests__/owner-decision/first-value-disposition.test.tsx",
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/onboarding/page.tsx",
         "src/app/(authenticated)/owner/page.tsx",
@@ -1121,39 +1120,15 @@
       "persona": "owner",
       "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
-      "apiCapabilityRequirements": [
-        {
-          "endpoint": "/api/owner/first-value",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
-        {
-          "capabilities": [
-            "OWNER_VIEW"
-          ],
-          "endpoint": "/api/owner/home",
-          "method": "GET"
-        }
-      ],
+      "apiCapabilityRequirements": [],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
-      "readApis": [
-        {
-          "method": "GET",
-          "path": "/api/owner/first-value"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/home"
-        }
-      ],
+      "businessContextBehavior": "NOT_APPLICABLE",
+      "readApis": [],
       "writeApis": [],
       "majorActions": [],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [],
-      "componentTreeFileCount": 2
+      "componentTreeFileCount": 1
     },
     {
       "route": "/owner/goals",
@@ -2329,6 +2304,7 @@
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
         "src/__tests__/owner-condition/owner-home-page.test.ts",
         "src/__tests__/owner-decision/home-cockpit-priorities-invariant.test.tsx",
+        "src/__tests__/owner-decision/owner-imperatives.test.ts",
         "src/__tests__/owner-decision/survival-reading-candidate.test.ts",
         "src/__tests__/owner-decision/user-hostile-audit-regressions.test.ts",
         "src/__tests__/owner-finance/finance-page.test.ts",
@@ -8740,6 +8716,7 @@
         "src/services/owner-finance/dashboard.service.ts",
         "src/services/owner-finance/diagnosis.service.ts",
         "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/financial-snapshot-selection.ts",
         "src/services/owner-finance/learning-bridge.service.ts",
         "src/services/owner-finance/recommendation-cash-safety.service.ts",
         "src/services/owner-finance/recommendation-margin-safety.service.ts",
@@ -11461,6 +11438,7 @@
         "src/services/owner-finance/dashboard.service.ts",
         "src/services/owner-finance/diagnosis.service.ts",
         "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/financial-snapshot-selection.ts",
         "src/services/owner-finance/learning-bridge.service.ts",
         "src/services/owner-finance/recommendation-cash-safety.service.ts",
         "src/services/owner-finance/recommendation-margin-safety.service.ts",
@@ -12499,9 +12477,9 @@
   ],
   "businessContextClassificationCounts": {
     "NO_BUSINESS_CONTEXT": 11,
-    "NOT_APPLICABLE": 5,
+    "NOT_APPLICABLE": 6,
     "SHARED_ACTIVE_BUSINESS": 28,
-    "WORKSPACE_ONLY": 3
+    "WORKSPACE_ONLY": 2
   },
   "businessContextFindings": [],
   "publicRoutesTouchedBySharedComponents": [
