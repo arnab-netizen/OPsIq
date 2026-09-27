@@ -506,7 +506,6 @@ export default function OwnerCockpitPage() {
       />
       {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
       {assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
-      <StartHereContinuationCard businessId={activeBusinessId} />
       {loading ? (
         <CardDashboardSkeleton label="Loading your business" sections={2} />
       ) : error ? (
@@ -546,6 +545,8 @@ export default function OwnerCockpitPage() {
           />
         </>
       )}
+      {/* Setup continuation is secondary to the canonical main target, so it renders after it. */}
+      <StartHereContinuationCard businessId={activeBusinessId} />
     </PageContainer>
   );
 }

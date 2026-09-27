@@ -49,6 +49,10 @@ describe("canonical owner priority class table", () => {
     expect(unclassified).toEqual([]);
   });
 
+  it("PLAN_COMMITMENT_RISK is never assigned by code (only from Strategy's resolved decision)", () => {
+    expect(Object.values(OWNER_PRIORITY_CLASS_BY_CODE)).not.toContain("PLAN_COMMITMENT_RISK");
+  });
+
   it("assigns each code to exactly one known class", () => {
     for (const cls of Object.values(OWNER_PRIORITY_CLASS_BY_CODE)) {
       expect(OWNER_PRIORITY_CLASSES).toContain(cls);
@@ -69,6 +73,7 @@ describe("canonical owner priority class table", () => {
       "OVERLOAD_BLOCKING",
       "PROFIT_LOSS",
       "BLOCKED_EXECUTION",
+      "PLAN_COMMITMENT_RISK",
       "MISSING_CRITICAL_EVIDENCE",
       "GROWTH_OPPORTUNITY",
       "PROCESS_OPTIMISATION",

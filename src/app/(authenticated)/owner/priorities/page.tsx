@@ -139,6 +139,7 @@ export default function OwnerPrioritiesPage() {
   const [governed, setGoverned] = useState<GovernedWork | null>(null);
   const [radar, setRadar] = useState<RadarItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [nowViewFailed, setNowViewFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -161,6 +162,7 @@ export default function OwnerPrioritiesPage() {
         return;
       }
 
+      setNowViewFailed(nowViewRes === null);
       // The canonical decision — rendered, never re-ranked.
       const decisionRes = (nowViewRes?.ownerDecision as CurrentOwnerDecision | null | undefined) ?? null;
       setDecision(decisionRes);
@@ -218,10 +220,15 @@ export default function OwnerPrioritiesPage() {
 
       {decision ? (
         <OwnerDecisionCard decision={decision} detail="compact" />
+      ) : nowViewFailed ? (
+        <EmptyState
+          title="Couldn't load your main target"
+          description="The rest of this page may still be useful. Refresh to try again."
+        />
       ) : (
         <EmptyState
-          title="Choose a business to see its main target"
-          description="OpsIQ picks one main target per business. Select the business you want to work on."
+          title="No main target for this business yet"
+          description="OpsIQ picks one main target per business from its numbers. Add or update your business information to get one."
         />
       )}
 

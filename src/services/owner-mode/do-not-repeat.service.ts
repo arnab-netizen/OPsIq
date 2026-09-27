@@ -20,7 +20,10 @@ interface DnrDb {
   };
   ownerDoNotRepeatRule: {
     findFirst(args: {
-      where: { workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean };
+      where: {
+        workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean;
+        OR?: Array<{ businessId: string | null }>;
+      };
       orderBy: { createdAt: "desc" };
     }): Promise<{ blocksRepetition: boolean; changedContextExplanation: string | null } | null>;
     create(args: { data: Record<string, unknown> }): Promise<{ id: string }>;
@@ -110,7 +113,10 @@ export interface DoNotRepeatAnnotation {
 export interface DnrGuidanceDb {
   ownerDoNotRepeatRule?: {
     findFirst(args: {
-      where: { workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean };
+      where: {
+        workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean;
+        OR?: Array<{ businessId: string | null }>;
+      };
       orderBy: { createdAt: "desc" };
     }): Promise<{ memoryKey: string; summary: string; reason: string; changedContextExplanation: string | null; blocksRepetition: boolean } | null>;
   };
@@ -127,6 +133,9 @@ export async function checkDoNotRepeatForGuidance(
   impactArea: string | null | undefined,
   findingId: string | null | undefined,
   db: DnrGuidanceDb,
+  /** When given, only this business's rules (and workspace-wide rules with no business) apply —
+   *  another business's do-not-repeat memory never annotates this business's main target. */
+  businessId?: string | null,
 ): Promise<DoNotRepeatAnnotation | null> {
   if (!db.ownerDoNotRepeatRule) return null;
   const scopeKey = scopeKeyForImpactArea(impactArea);
@@ -136,7 +145,10 @@ export async function checkDoNotRepeatForGuidance(
   const keysToSearch: string[] = newCanonicalKey ? [newCanonicalKey, scopeKey] : [scopeKey];
 
   const rule = await db.ownerDoNotRepeatRule.findFirst({
-    where: { workspaceId, memoryKey: { in: keysToSearch }, blocksRepetition: true, active: true },
+    where: {
+      workspaceId, memoryKey: { in: keysToSearch }, blocksRepetition: true, active: true,
+      ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
+    },
     orderBy: { createdAt: "desc" },
   });
 

@@ -172,9 +172,12 @@ describe("the base --primary/--warning/--success tokens are NOT redefined by thi
 describe("MinimumOwnerCockpit + owner/cockpit/page: the 6 originally-reported elements (and their same-root-cause siblings) use the new -text tokens, not the bare fill token, for plain text color", () => {
   const cockpitSource = read("src/components/owner/MinimumOwnerCockpit.tsx");
 
-  it("the OwnerDecisionCard's links (which replaced FinanceTopPriorityCard's finance link) use --primary-text", () => {
+  it("the OwnerDecisionCard's main call to action is the page's primary (filled) control, and its text links use --primary-text", () => {
     const cardSource = read("src/components/owner/OwnerDecisionCard.tsx");
-    expect(cardSource).toMatch(/data-testid="owner-decision-go"[^>]*text-\[var\(--primary-text\)\]/);
+    // The main target owns the strongest control on every surface (hostile review F: a secondary
+    // governed-work button must not out-shout it). Theme tokens only — no literal colours.
+    expect(cardSource).toMatch(/data-testid="owner-decision-go"[^>]*bg-primary[^>]*text-primary-foreground/);
+    expect(cardSource).toMatch(/text-\[var\(--primary-text\)\] underline/);
     expect(cardSource).not.toMatch(/var\(--(primary|warning|success)\)"/);
   });
 

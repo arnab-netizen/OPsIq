@@ -108,19 +108,26 @@ describe("[db] canonical owner decision — consolidation", () => {
     // The verified Minor item is not eligible (it was the Cockpit's pre-consolidation primary).
     expect(d.attention.some((t) => t.candidateId.endsWith(minorId))).toBe(false);
     expect(d.excluded).toEqual(expect.arrayContaining([expect.objectContaining({ reason: "verified_complete" })]));
-    // Exactly one primary. Strategy resolved NOT_YET because the plan is unaffordable: committing would
-    // put money at risk, which OpsIQ handles before the (still reported) missing Finance data.
-    expect(d.primaryTarget?.findingCode).toBe("STR_UNAFFORDABLE");
+    // Exactly one primary: the MEASURED money leak (₹5,000 of discounts on ₹100,000 revenue) comes
+    // first. Strategy resolved NOT_YET because the van is unaffordable — a risk only if the owner
+    // commits (PLAN_COMMITMENT_RISK) — so its funding step follows present losses, and the
+    // "don't commit yet" warning stays visible.
+    expect(d.primaryTarget?.domain).toBe("finance");
     expect(d.primaryTarget?.priorityClass).toBe("PROFIT_LOSS");
     expect(d.attention.filter((t) => t.candidateId === d.primaryCandidateId)).toHaveLength(1);
-    // The Finance-vs-Strategy conflict is explained, and the Finance data request waits (not hidden).
-    expect(d.whyThisWins.join(" ")).toMatch(/would put at risk/);
-    expect(d.whyThisWins.join(" ")).toMatch(/Finance/);
-    expect(d.whatCanWait.map((t) => t.findingCode)).toContain("FIN_MISSING_CRITICAL_DATA");
-    expect(d.whatNotToDo.join(" ")).toMatch(/New delivery van/);
-    // Missing costs/cash are carried from the diagnosed snapshot and cap confidence.
+    const strategyStep = d.attention.find((t) => t.findingCode === "STR_UNAFFORDABLE");
+    expect(strategyStep?.priorityClass).toBe("PLAN_COMMITMENT_RISK");
+    const idx = (code: string) => d.attention.findIndex((t) => t.findingCode === code);
+    expect(idx("STR_UNAFFORDABLE")).toBeGreaterThan(0);
+    expect(idx("STR_UNAFFORDABLE")).toBeLessThan(idx("FIN_MISSING_CRITICAL_DATA"));
+    // The Finance data request is still reported (it waits; it is not hidden).
+    expect(d.whatCanWait.map((t) => t.findingCode).concat(d.supportingSteps.map((t) => t.findingCode))).toContain("FIN_MISSING_CRITICAL_DATA");
+    expect(d.whatNotToDo.join(" ")).toMatch(/Don't commit to "New delivery van" yet/);
+    // Missing costs/cash are carried from the diagnosed snapshot; confidence is held at or under the
+    // data-sufficiency cap and the reason is always stated (also when the score was already below it).
     expect(d.missingInformation.length).toBeGreaterThan(0);
-    expect(d.confidence.capped).toBe(true);
+    expect(d.confidence.reasons.join(" ")).toMatch(/provisional|caution/);
+    expect(d.confidence.score).toBeLessThanOrEqual(70);
     expect(d.confidence.level).not.toBe("high");
 
     await teardownOwnerBusiness(businessId);
@@ -250,9 +257,11 @@ describe("[db] canonical owner decision — consolidation", () => {
   it("[db] a superseded unsafe cash reading never wins over a NEWER safe Finance diagnosis", async () => {
     const workspaceId = randomUUID();
     const businessId = await newBusiness(workspaceId, "QA Decision Cash Supersession");
-    // Older cash triage: critical.
+    // Older cash triage (its evidence period ended 20 days before the Finance one): critical.
+    const cfEnd = new Date(Date.now() - 20 * 86_400_000);
+    const cfStart = new Date(cfEnd.getTime() - 29 * 86_400_000);
     const cf = await createCashflowSnapshot(businessId, {
-      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      periodStart: cfStart.toISOString().slice(0, 10), periodEnd: cfEnd.toISOString().slice(0, 10), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     const cashCycle = await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
@@ -314,6 +323,28 @@ describe("[db] canonical owner decision — consolidation", () => {
     // Re-reading (any route) keeps reporting the same change relative to the previous distinct decision.
     const again = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
     expect(again.whatChanged.map((c) => c.kind)).toContain("MAIN_TARGET_CHANGED");
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] concurrent reads record ONE decision event (advisory lock), under its own entity type, with an unforked hash chain", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Concurrency");
+    const sSnap = await createSalesSnapshot(businessId, {
+      ...period(), currency: "INR", leads: 200, qualifiedLeads: 100, orders: 5, revenue: 50000, averageOrderValue: 10000,
+      newCustomers: 5, repeatCustomers: 0, lostCustomers: 10, complaints: 20, discountAmount: 30000, refundAmount: 5000, staffCount: 2,
+    } as any, actor, workspaceId);
+    await runSalesDiagnosis(businessId, sSnap.id, actor, workspaceId);
+    // Five simultaneous reads of a decision nobody has recorded yet (two tabs, Portfolio fan-out, ...).
+    await Promise.all(Array.from({ length: 5 }, () => getOwnerHome(workspaceId, businessId)));
+    const events = await db.auditEvent.findMany({
+      where: { workspaceId, eventName: "owner.decision_changed" },
+      select: { entityType: true, entityId: true, previousHash: true },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ entityType: "OwnerDecision", entityId: businessId });
+    // Never recorded against the owner-business entity (keeps its governed audit trail clean).
+    expect(await db.auditEvent.count({ where: { workspaceId, eventName: "owner.decision_changed", entityType: "OwnerBusiness" } })).toBe(0);
 
     await teardownOwnerBusiness(businessId);
   });

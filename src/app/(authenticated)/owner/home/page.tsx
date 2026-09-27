@@ -218,7 +218,7 @@ export default function OwnerHomePage() {
                       return (
                         <li key={a.id} className="text-xs text-muted-foreground" data-testid="home-notification">
                           · {a.message}
-                          {i >= 0 && <span data-testid="home-notification-linked"> — {i === 0 ? "this is your main target above" : `item ${i + 1} in the order above`}</span>}
+                          {i >= 0 && <span data-testid="home-notification-linked"> — {i === 0 ? "this is your main target" : `item ${i + 1} in the order below`}</span>}
                         </li>
                       );
                     })}
@@ -244,7 +244,7 @@ export default function OwnerHomePage() {
                   </Badge>
                   {typeof s.dataConfidenceScore === "number" && (
                     <Badge variant="muted-accessible">
-                      confidence {Math.round(s.dataConfidenceScore)}/100
+                      data completeness {Math.round(s.dataConfidenceScore)}/100
                     </Badge>
                   )}
                 </div>

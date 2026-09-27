@@ -16,6 +16,7 @@
  * proven Business Condition domain-score mappers — no domain scoring is duplicated here.
  */
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -132,6 +133,16 @@ export interface OwnerHomeResult {
   currentOwnerDecision: CurrentOwnerDecision | null;
 }
 
+/**
+ * Decision-memory events live under their own entity type (keyed by businessId) so they never crowd
+ * the owner-business entity's governed audit trail (trust.service getEntityAuditTrail).
+ */
+export const OWNER_DECISION_ENTITY_TYPE = "OwnerDecision";
+
+function ownerDecisionMemoryWhere(workspaceId: string, businessId: string) {
+  return { workspaceId, eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED, entityType: OWNER_DECISION_ENTITY_TYPE, entityId: businessId };
+}
+
 const SAFE_SURVIVAL_STATES = new Set<SurvivalLikeState>(["SAFE", "WATCH"]);
 
 type DomainKey = "finance" | "cashflow" | "sales" | "operations" | "sop" | "marketing" | "strategy";
@@ -220,7 +231,7 @@ export async function getOwnerHome(
     // Decision memory for "what changed": the resolver's own OWNER_DECISION_CHANGED audit trail for
     // this business (written below whenever the decision materially changes, on ANY route).
     db.auditEvent.findMany({
-      where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED, entityType: "OwnerBusiness", entityId: businessId },
+      where: ownerDecisionMemoryWhere(workspaceId, businessId),
       orderBy: { occurredAt: "desc" },
       take: 5,
       select: { payload: true },
@@ -335,8 +346,10 @@ export async function getOwnerHome(
   // source must not win the election. Incomparable freshness fails safe (nothing is excluded).
   if (cashflow && finance) {
     const cashFinance = resolveCashFinanceSignal(
-      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: asDate(cashflow.createdAt) },
-      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: asDate(finance.createdAt) }
+      // The period each reading describes — not the cycle's createdAt (a re-diagnosis from an old
+      // snapshot after an action is completed/verified would otherwise look newer). Same as Now View.
+      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: cashflow.snapshot?.periodEnd ? asDate(cashflow.snapshot.periodEnd) : null },
+      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: finance.snapshot?.periodEnd ? asDate(finance.snapshot.periodEnd) : null }
     );
     const supersededDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
     if (supersededDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
@@ -456,23 +469,39 @@ export async function getOwnerHome(
   const currentOwnerDecision = resolveOwnerDecision({ ...decisionInput, previous, domainsDiagnosedSince });
 
   // Record the decision when it materially changed (or is the first one): an auditable trail of what
-  // OpsIQ told the owner, and the memory above. Best-effort — a failed write never breaks the read.
+  // OpsIQ told the owner, and the memory above. This write happens on read paths that can run
+  // concurrently (two tabs, Portfolio resolving every business at once), so it is serialized per
+  // workspace with a Postgres advisory transaction lock — the same pattern as platform-settings —
+  // and the latest memory is RE-READ inside the lock: a concurrent reader that already recorded the
+  // same decision makes this a no-op (no duplicate events), and the workspace audit hash chain is
+  // never forked by two decision writes reading the same previous event. Best-effort — a failed
+  // write never breaks the read.
   const latestMemory = memories[0] ?? null;
   if (!latestMemory || !sameOwnerDecisionMemory(latestMemory, currentOwnerDecision.memory)) {
     try {
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED,
-        actorType: "system",
-        workspaceId,
-        entityType: "OwnerBusiness",
-        entityId: businessId,
-        payload: {
-          memory: currentOwnerDecision.memory,
-          state: currentOwnerDecision.state,
-          primaryCandidateId: currentOwnerDecision.primaryCandidateId,
-          primaryTitle: currentOwnerDecision.primaryTarget?.title ?? null,
-          priorityClass: currentOwnerDecision.primaryTarget?.priorityClass ?? null,
-        },
+      await db.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-decision:${workspaceId}`}))`;
+        const latest = await tx.auditEvent.findFirst({
+          where: ownerDecisionMemoryWhere(workspaceId, businessId),
+          orderBy: { occurredAt: "desc" },
+          select: { payload: true },
+        });
+        const recorded = parseOwnerDecisionMemory((latest?.payload as { memory?: unknown } | null)?.memory);
+        if (recorded && sameOwnerDecisionMemory(recorded, currentOwnerDecision.memory)) return;
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED,
+          actorType: "system",
+          workspaceId,
+          entityType: OWNER_DECISION_ENTITY_TYPE,
+          entityId: businessId,
+          payload: {
+            memory: currentOwnerDecision.memory,
+            state: currentOwnerDecision.state,
+            primaryCandidateId: currentOwnerDecision.primaryCandidateId,
+            primaryTitle: currentOwnerDecision.primaryTarget?.title ?? null,
+            priorityClass: currentOwnerDecision.primaryTarget?.priorityClass ?? null,
+          },
+        }, tx);
       });
     } catch {
       // The decision is still correct and returned; only its change history misses this entry.

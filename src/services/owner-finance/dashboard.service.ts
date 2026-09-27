@@ -74,8 +74,9 @@ export async function getFinanceDashboard(
 
   const [latestSnapshot, latestCycle, cycles] = await Promise.all([
     db.ownerFinancialSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
+      // Current (never amended/superseded) versions only, in a deterministic order.
+      where: { businessId: selectedBusinessId, workspaceId, supersededById: null },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     }),
     db.ownerFinanceCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },

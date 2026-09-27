@@ -212,4 +212,20 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     await checkDoNotRepeatForGuidance("specific-workspace-id", "operations", null, db);
     expect(capturedWhere[0].workspaceId).toBe("specific-workspace-id");
   });
+
+  it("with a businessId, only that business's rules (or workspace-wide rules) can annotate its target", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const db: DnrGuidanceDb = {
+      ownerDoNotRepeatRule: {
+        findFirst: async (args) => {
+          captured.push(args.where as unknown as Record<string, unknown>);
+          return null;
+        },
+      },
+    };
+    await checkDoNotRepeatForGuidance(WS, "cash", null, db, "biz-A");
+    expect(captured[0].OR).toEqual([{ businessId: "biz-A" }, { businessId: null }]);
+    await checkDoNotRepeatForGuidance(WS, "cash", null, db);
+    expect(captured[1]).not.toHaveProperty("OR");
+  });
 });

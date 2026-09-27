@@ -43,6 +43,7 @@ const PRIMARY_CONCERN_BY_CLASS: Record<OwnerPriorityClass, string> = {
   OVERLOAD_BLOCKING: "Staff or owner workload is the first issue to address.",
   PROFIT_LOSS: "Profitability is the first issue to address.",
   BLOCKED_EXECUTION: "Work that cannot move forward is the first issue to address.",
+  PLAN_COMMITMENT_RISK: "A plan you are considering carries risk; settle it before committing.",
   MISSING_CRITICAL_EVIDENCE: "Missing business information is the first issue to address.",
   GROWTH_OPPORTUNITY: "Growth is the first opportunity to consider.",
   PROCESS_OPTIMISATION: "Process improvement is the first opportunity to consider.",

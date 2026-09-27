@@ -70,11 +70,14 @@ export interface VerificationFact {
 
 /** Normalize a verification row (Recovery names its direction column `direction`). */
 export function verificationReachedTarget(v: any): boolean {
+  // Only a directional target can be "reached"; anything else never excludes work as verified.
+  const direction = String(v?.targetDirection ?? v?.direction ?? "");
+  if (direction !== "up" && direction !== "down") return false;
   return extractReachedTargetFromVerification({
     status: String(v?.status ?? ""),
     afterValue: typeof v?.afterValue === "number" ? v.afterValue : null,
     targetValue: typeof v?.targetValue === "number" ? v.targetValue : null,
-    targetDirection: String(v?.targetDirection ?? v?.direction ?? ""),
+    targetDirection: direction,
   });
 }
 
@@ -245,9 +248,12 @@ export function complianceItemToCandidate(
         : `Finish renewing "${name}" — it expired and is ${status === "review_pending" ? "awaiting review" : "awaiting evidence"}`,
     explanation: typeof item.penaltyDescription === "string" && item.penaltyDescription
       ? `Consequence if left unresolved: ${item.penaltyDescription}`
-      : hardBlock
-        ? "A legal or contractual obligation is not being met; OpsIQ holds material actions until it is resolved."
-        : "The renewal is in progress; finish it so the obligation is met again.",
+      : gateHardStop
+        // The action gate stops material actions on an active-but-expired obligation (compliance-boundary).
+        ? "A legal or contractual obligation has expired; OpsIQ holds material actions until it is renewed or reviewed."
+        : breached
+          ? "This obligation is recorded as breached — a legal or contractual requirement is not being met."
+          : "The renewal is in progress; finish it so the obligation is met again.",
     severity: breached ? "critical" : null,
     priorityScore: 0,
     expectedImpactScore: 0,

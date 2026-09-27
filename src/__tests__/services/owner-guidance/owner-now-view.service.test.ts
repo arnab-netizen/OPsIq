@@ -8,8 +8,8 @@ import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
 import { GuidanceClassification } from "@/domain/owner-guidance/guidance-classification";
 
 interface Rows {
-  cash?: { cashflowState: string; dataConfidenceScore: number; createdAt?: Date } | null;
-  fin?: { survivalState: string; dataConfidenceScore: number; createdAt?: Date } | null;
+  cash?: { cashflowState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } } | null;
+  fin?: { survivalState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } } | null;
   emp?: { overburdened: boolean; utilizationPct: number } | null;
   own?: { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number } | null;
   cap?: { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number } | null;
@@ -238,8 +238,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("reproduces the human-test bug (same business: older AT_RISK cash + newer SAFE finance) — Home must not present the stale AT_RISK reading as current truth", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01") },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01") },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01"), snapshot: { periodEnd: new Date("2026-01-01") } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01"), snapshot: { periodEnd: new Date("2026-06-01") } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(true);
@@ -249,8 +249,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("newer cash reading is unsafe, superseding an older SAFE finance diagnosis — uses the newer (unsafe) reading and names the superseded source", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01") },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01") },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01"), snapshot: { periodEnd: new Date("2026-06-01") } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01"), snapshot: { periodEnd: new Date("2026-01-01") } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
@@ -259,6 +259,19 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
     expect(cashIssue?.headline).toContain("CRITICAL");
     expect(cashIssue?.headline).toContain("finance diagnosis showed SAFE");
     expect(cashIssue?.severity).toBe("CRITICAL");
+  });
+
+  it("a Finance RE-DIAGNOSIS of old figures (newer cycle row, older evidence period) never supersedes a current CRITICAL cash reading", async () => {
+    // Completing/verifying a Finance action re-diagnoses from the SAME old snapshot: the cycle row is
+    // new, the evidence is not. Freshness is the evidence period, so the current cash danger stands.
+    const { deps } = fakeDeps({
+      ...healthy,
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-10"), snapshot: { periodEnd: new Date("2026-06-10") } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-12"), snapshot: { periodEnd: new Date("2026-06-01") } },
+    });
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(ctx.cashSafe).toBe(false);
+    expect(ctx.issues.find((i) => i.id === "cash")?.severity).toBe("CRITICAL");
   });
 
   it("disagreement with no timestamps: fails safe and surfaces an explicit conflicting-information headline, never silently picking one side", async () => {

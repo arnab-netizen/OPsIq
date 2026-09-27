@@ -278,9 +278,48 @@ describe("what changed", () => {
     ));
     const kinds = later.whatChanged.map((c) => c.kind);
     expect(kinds).toEqual(expect.arrayContaining([
-      "MAIN_TARGET_CHANGED", "CRITICAL_ISSUE_APPEARED", "ACTION_COMPLETED", "EVIDENCE_UPDATED", "FUNDING_GAP_CHANGED", "CONFIDENCE_CHANGED",
+      "MAIN_TARGET_CHANGED", "CRITICAL_ISSUE_APPEARED", "ACTION_COMPLETED", "EVIDENCE_UPDATED", "FUNDING_GAP_CHANGED",
     ]));
+    // The main target changed, so confidence in the OLD advice is not compared with the new advice.
+    expect(kinds).not.toContain("CONFIDENCE_CHANGED");
     expect(later.whatChanged.find((c) => c.kind === "FUNDING_GAP_CHANGED")?.message).toMatch(/₹50,000 to ₹20,000/);
+  });
+
+  it("reports a confidence move only for the SAME main target", () => {
+    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 })]));
+    const memory = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
+    const later = resolveOwnerDecision(input(
+      [cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.3 })],
+      { previous: memory, now: new Date("2026-09-28T10:00:00.000Z") }
+    ));
+    expect(later.whatChanged.map((c) => c.kind)).toEqual(["CONFIDENCE_CHANGED"]);
+  });
+
+  it("two 'covered' funding gaps are not reported as a change", () => {
+    const strategy = (fundingGap: number) => ({ code: "GO" as const, headline: "Go", headlineDetail: null, optionName: null, fundingGap, currency: "INR" });
+    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(-100) }));
+    const later = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], {
+      strategy: strategy(-500), previous: parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory))), now: new Date("2026-09-28T10:00:00.000Z"),
+    }));
+    expect(later.whatChanged.map((c) => c.kind)).not.toContain("FUNDING_GAP_CHANGED");
+  });
+
+  it("a critical issue that merely went STALE is not reported as resolved; the owner is told the figures are out of date", () => {
+    const insolvent = { findingCode: "FIN_INSOLVENT_RUNWAY", title: "Cash runs out in 20 days", severity: "critical" as const };
+    const first = resolveOwnerDecision(input([cand(insolvent)]));
+    const later = resolveOwnerDecision(input([cand({ ...insolvent, stale: true })], {
+      previous: parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory))),
+      staleDomains: ["finance"],
+      now: new Date("2026-11-20T10:00:00.000Z"),
+    }));
+    const kinds = later.whatChanged.map((c) => c.kind);
+    expect(kinds).not.toContain("CRITICAL_ISSUE_RESOLVED");
+    expect(kinds).not.toContain("CRITICAL_ISSUE_APPEARED");
+    expect(later.whatChanged.find((c) => c.kind === "EVIDENCE_OUT_OF_DATE")?.message).toMatch(/figures in Finance are now out of date/);
+    // The refresh target keeps the survival urgency of what it stands in for.
+    expect(later.primaryTarget?.source).toBe("evidence_refresh");
+    expect(later.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
+    expect(later.memory.criticalKeys).toEqual(first.memory.criticalKeys);
   });
 
   it("first check (no memory) reports nothing rather than inventing changes", () => {

@@ -418,7 +418,7 @@ export default function OwnerCommandCenterPage() {
       <div className="mb-6">
         <PageHeader
           title="Owner Command Center"
-          description="One business condition. One highest-impact next action. Evidence, not guesses."
+          description="One business condition. One main target. Evidence, not guesses."
         />
         <div className="mt-4 flex flex-wrap gap-2">
           {[
@@ -490,6 +490,12 @@ export default function OwnerCommandCenterPage() {
             </div>
           )}
 
+          {/* Supporting plan analysis: the whole-business plan model runs its own analysis, so it is
+              collapsed behind one disclosure BELOW the canonical decision and never presented as a
+              competing "first" (hostile review A P1-1). */}
+          {(wbp?.supervisor?.found || priorities?.found || wbp?.found) && (
+          <Disclosure summary="Supporting plan analysis (context for your main target above)" className="mb-6" data-testid="command-center-plan-analysis">
+          <div className="p-3">
           {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} />}
 
           {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
@@ -587,6 +593,9 @@ export default function OwnerCommandCenterPage() {
               </Disclosure>
             </section>
           )}
+          </div>
+          </Disclosure>
+          )}
 
           {readiness?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-readiness-score">
@@ -667,6 +676,7 @@ export default function OwnerCommandCenterPage() {
           )}
 
           {actionPlan?.found && actionPlan.assignment && (
+            <Disclosure summary="Plan action & proof (supporting analysis)" className="mb-6" data-testid="owner-action-plan-disclosure">
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-action-plan">
               <div className="text-xs uppercase text-muted-foreground mb-2">Plan action &amp; proof (supporting analysis)</div>
               <div className="text-sm font-medium mb-2" data-testid="action-title">{actionPlan.assignment.actionTitle}</div>
@@ -691,6 +701,7 @@ export default function OwnerCommandCenterPage() {
                 </div>
               </div>
             </section>
+            </Disclosure>
           )}
 
           {profileLoading ? (
@@ -752,12 +763,6 @@ export default function OwnerCommandCenterPage() {
                       <ul className="list-disc ml-5">
                         {control.whatNotToDo.map((a: string, i: number) => <li key={i}>{a}</li>)}
                       </ul>
-                    </div>
-                  )}
-
-                  {control.nextBestAction && (
-                    <div className="text-sm mb-3">
-                      <span className="font-medium">Your main target:</span> {control.nextBestAction}
                     </div>
                   )}
 

@@ -75,6 +75,7 @@ import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -85,7 +86,7 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date }
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } | null }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -474,6 +475,7 @@ const IMPACT_AREA_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
   OVERLOAD_BLOCKING: "management",
   PROFIT_LOSS: "finance",
   BLOCKED_EXECUTION: "operations",
+  PLAN_COMMITMENT_RISK: "growth",
   MISSING_CRITICAL_EVIDENCE: "governance",
   GROWTH_OPPORTUNITY: "growth",
   PROCESS_OPTIMISATION: "operations",
@@ -888,8 +890,8 @@ export async function assembleGuidanceContext(
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true } }),
+    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
+    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -946,8 +948,11 @@ export async function assembleGuidanceContext(
   // presented as current truth alongside a newer SAFE finance diagnosis for the same business.
   // See src/domain/owner-guidance/cash-finance-conflict.ts for the full arbitration rule.
   const cashFinanceResolution = resolveCashFinanceSignal(
-    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: cash?.createdAt ?? null },
-    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: fin?.createdAt ?? null }
+    // Freshness is the period each reading DESCRIBES (its snapshot's periodEnd), never when the cycle
+    // row was written: completing/verifying an action re-diagnoses from the SAME old snapshot, which
+    // would otherwise make old evidence look "newer" than a current reading of the other source.
+    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: cash?.snapshot?.periodEnd ?? null },
+    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: fin?.snapshot?.periodEnd ?? null }
   );
   // Growth/high-impact gating stays conservative exactly as before when either signal is
   // entirely missing (fail closed on missing critical data, tracked separately below via
@@ -1125,6 +1130,7 @@ const BUSINESS_FUNCTION_BY_OWNER_CLASS: Record<OwnerPriorityClass, BusinessFunct
   OVERLOAD_BLOCKING: BusinessFunction.CAPACITY,
   PROFIT_LOSS: BusinessFunction.PROFITABILITY,
   BLOCKED_EXECUTION: BusinessFunction.SOP_PROCESS,
+  PLAN_COMMITMENT_RISK: BusinessFunction.STRATEGY,
   MISSING_CRITICAL_EVIDENCE: BusinessFunction.DATA_QUALITY,
   GROWTH_OPPORTUNITY: BusinessFunction.GROWTH_READINESS,
   PROCESS_OPTIMISATION: BusinessFunction.SOP_PROCESS,
@@ -1138,10 +1144,29 @@ const IF_IGNORED_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
   OVERLOAD_BLOCKING: "the overload keeps blocking work and the backlog grows",
   PROFIT_LOSS: "the business keeps losing money it could keep",
   BLOCKED_EXECUTION: "the blocked work stays stuck and the problems behind it get worse",
+  PLAN_COMMITMENT_RISK: "committing to the plan now could put money or delivery at risk",
   MISSING_CRITICAL_EVIDENCE: "OpsIQ's advice stays based on missing or old numbers and can point you the wrong way",
   GROWTH_OPPORTUNITY: "the opportunity stays unused",
   PROCESS_OPTIMISATION: "the process keeps costing more time than it needs to",
 };
+
+const GROWTH_GATE_AVOID_ID = "avoid_growth_before_gates";
+
+/**
+ * Reconcile Now View's "do not" list with the ONE canonical owner decision so the two never
+ * contradict: when the main target is itself a growth step, the (fail-closed) growth gate becomes a
+ * precondition on HOW to do it — keep it to a small trial until the gates pass — instead of a veto
+ * on the main target. Every other avoid is unrelated to the target and kept as-is.
+ */
+export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {
+  const primary = decision.primaryTarget;
+  if (!primary || primary.priorityClass !== "GROWTH_OPPORTUNITY") return avoids;
+  return avoids.map((a) =>
+    a.id === GROWTH_GATE_AVOID_ID
+      ? { ...a, avoid: `Do not scale "${primary.title}" beyond a small trial until cash, profit, capacity, workload and quality gates pass` }
+      : a
+  );
+}
 
 function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?: CurrentOwnerDecision | null): BeginnerExplanation {
   // When the canonical owner decision is available, EVERY overall-priority field (headline, what to
@@ -1155,17 +1180,24 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?
     const whatToDoFirst = primary
       ? [primary.title, ...ownerDecision.supportingSteps.map((t) => t.title)]
       : ownerDecision.whatToDoFirst
-        ? [ownerDecision.whatToDoFirst, ...ownerDecision.missingInformation]
+        ? [...new Set([ownerDecision.whatToDoFirst, ...ownerDecision.missingInformation])]
         : ownerDecision.missingInformation.length > 0
           ? ownerDecision.missingInformation
           : ["Keep your business numbers up to date so OpsIQ can spot problems early"];
-    const whatNotToDo = [...new Set([...ownerDecision.whatNotToDo, ...avoidFromView])];
+    // The decision's own "don't" list only: Now View's avoid list is shown separately on the page
+    // (and was already reconciled with the main target), so repeating it here would duplicate it.
+    const whatNotToDo = ownerDecision.whatNotToDo;
+    // No open diagnosed action is not the same as "no danger": the operating signals on this same
+    // page can still show cash danger, so the headline never contradicts them.
+    const cashSignalUnsafe = view.cashDangerStatus === "CRITICAL" || view.cashDangerStatus === "DANGER";
     return buildBeginnerExplanation({
       headline: primary
         ? `Your main target: ${primary.title}`
         : ownerDecision.state === "NO_EVIDENCE"
           ? "OpsIQ needs your business numbers before it can pick a main target"
-          : "Your business has no urgent issues right now",
+          : cashSignalUnsafe
+            ? "No diagnosed area has an open action, but your cash signals need a check"
+            : "No diagnosed area has an open action right now",
       businessFunction: [primary ? BUSINESS_FUNCTION_BY_OWNER_CLASS[primary.priorityClass] : BusinessFunction.DATA_QUALITY],
       whatToDoFirst,
       whatNotToDo: whatNotToDo.length > 0 ? whatNotToDo : ["Do not take on risk you cannot measure yet"],
@@ -1175,7 +1207,9 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?
         : "OpsIQ can name a main target from your numbers",
       ifIgnoredConsequence: primary
         ? IF_IGNORED_BY_OWNER_CLASS[primary.priorityClass]
-        : "problems can build up unnoticed",
+        : cashSignalUnsafe
+          ? "you may run out of cash without warning"
+          : "problems can build up unnoticed",
       dataIsWeak: ownerDecision.confidence.capped || view.confidenceCapped,
     });
   }
@@ -2584,7 +2618,11 @@ export async function getOwnerNowView(
     growthReadinessTier: state.growthReadinessTier,
   });
 
-  const view = buildOwnerNowView({ ...ctx, changes });
+  const builtView = buildOwnerNowView({ ...ctx, changes });
+  // Now View's avoid list never vetoes the owner's canonical main target (see reconcileAvoidsWithOwnerDecision).
+  const view = options?.ownerDecision
+    ? { ...builtView, actionsToAvoid: reconcileAvoidsWithOwnerDecision(builtView.actionsToAvoid, options.ownerDecision) }
+    : builtView;
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep, options?.ownerDecision);
 
@@ -2598,7 +2636,7 @@ export async function getOwnerNowView(
     : topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
   const [doNotRepeatAnnotation, executionLifecycle, businessOperatingSystem] = await Promise.all([
     topActionImpactArea
-      ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
+      ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db, businessId).catch(() => null)
       : Promise.resolve(null),
     buildExecutionLifecycle(workspaceId, deps.db, businessId, executionAttributionAmbiguous),
     buildBusinessOperatingSystem(workspaceId, businessId, deps.db, deps.objectiveGoalAlignmentFn),

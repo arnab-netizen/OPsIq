@@ -132,6 +132,17 @@ describe("Owner Portfolio engine — priorities, alerts, investment", () => {
     expect(v.top3Priorities.map((p) => p.businessId)).toEqual(["B", "C", "A"]);
   });
 
+  it("'needing attention first', the business list and top-3 #1 use ONE order (a safety target beats a higher survival-risk score)", () => {
+    const input = portfolio();
+    // B: high survival risk (85) but a PROFIT_LOSS target; C: lower survival risk (40) but a safety target.
+    input[1].ownerDecision = decision("B", "b-act", "finance", "PROFIT_LOSS", "high");
+    input[2].ownerDecision = decision("C", "c-act", "compliance", "SAFETY_COMPLIANCE", null);
+    const v = buildPortfolioView(input, { now: NOW });
+    expect(v.top3Priorities[0].businessId).toBe("C");
+    expect(v.ranking.mostUrgentBusinessId).toBe("C");
+    expect(v.businesses[0].businessId).toBe("C");
+  });
+
   it("never attributes another business's decision to this business", () => {
     const input = portfolio();
     input[0].ownerDecision = decision("B", "stray", "cashflow", "SURVIVAL_CASH", "critical");

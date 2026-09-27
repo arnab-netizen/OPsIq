@@ -13,6 +13,7 @@
  * adopt the spine DomainScore. (Recovery does not yet emit a spine DomainScore;
  * integrating it is a future slice and must not modify Module 1.)
  */
+import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 import { db } from "@/lib/db";
 import { coherentStrategyActions } from "@/services/owner-strategy/decision-view";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
@@ -433,8 +434,9 @@ export async function getBusinessCondition(
     }),
     // Only used when there is NO Finance diagnosis yet (pre-diagnosis input guidance).
     db.ownerFinancialSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
+      // Current (never amended/superseded) versions only, in a deterministic order.
+      where: { businessId: selectedBusinessId, workspaceId, supersededById: null },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     }),
     // Read-only read of the proven Module 1 recovery cycle (no recovery mutation).
     db.recoveryCycle.findFirst({
@@ -541,8 +543,9 @@ export async function getBusinessCondition(
       ? (financeEvidenceSnapshot.missingCriticalData as string[])
       : [];
 
-  // Compute data staleness from the diagnosed finance snapshot's periodEnd (honest: 0 when no snapshot).
-  const STALE_DAYS = 45;
+  // Data staleness uses the SAME rule as the canonical owner decision (owner-home service): the
+  // evidence period ended more than OWNER_DECISION_STALE_EVIDENCE_DAYS ago, or the diagnosed snapshot
+  // has since been amended (honest: not stale, age null, when there is no snapshot).
   const now = opts.now ?? new Date();
   let isStaleData = false;
   let dataAgeDays: number | null = null;
@@ -550,9 +553,9 @@ export async function getBusinessCondition(
     const periodEnd = financeEvidenceSnapshot.periodEnd instanceof Date
       ? financeEvidenceSnapshot.periodEnd
       : new Date(financeEvidenceSnapshot.periodEnd as string);
-    const ageDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
-    dataAgeDays = ageDays;
-    isStaleData = ageDays > STALE_DAYS;
+    dataAgeDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
+    isStaleData = periodEnd.getTime() < now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000
+      || Boolean(financeEvidenceSnapshot.supersededById);
   }
 
   const missingInputsWithPriority = financeEvidenceSnapshot

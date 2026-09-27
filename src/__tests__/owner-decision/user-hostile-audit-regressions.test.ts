@@ -37,19 +37,33 @@ function input(candidates: OwnerDecisionCandidate[]): ResolveOwnerDecisionInput 
 }
 
 describe("item 1 — a stale diagnosis is never an authoritative 'do this now'", () => {
-  it("a stale high-class action does not beat a fresh lower-class action; it becomes an explicit refresh target", () => {
+  it("a stale high-class action never becomes 'do this now': it is replaced by an explicit refresh target that keeps its urgency", () => {
     const d = resolveOwnerDecision(input([
       cand({ findingCode: "CF_LOW_RUNWAY", title: "Protect runway", domain: "cashflow", severity: "critical", stale: true }),
       cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", severity: "medium" }),
     ]));
-    expect(d.primaryTarget?.title).toBe("Tighten discounting");
+    // The stale action itself is neither the target nor in the order.
     expect(d.attention.map((t) => t.title)).not.toContain("Protect runway");
-    const refresh = d.attention.find((t) => t.source === "evidence_refresh");
-    expect(refresh?.domain).toBe("cashflow");
-    expect(refresh?.priorityClass).toBe("MISSING_CRITICAL_EVIDENCE");
-    expect(refresh?.severity).toBe("critical");
-    expect(refresh?.explanation).toMatch(/Protect runway/);
     expect(d.excluded).toEqual(expect.arrayContaining([expect.objectContaining({ title: "Protect runway", reason: "stale_evidence" })]));
+    // What leads is CONFIRMING the out-of-date survival danger — never acting on it blind, and never
+    // demoted behind fresh minor work (hostile review B/C: an insolvency warning must not vanish by ageing).
+    const refresh = d.primaryTarget!;
+    expect(refresh.source).toBe("evidence_refresh");
+    expect(refresh.domain).toBe("cashflow");
+    expect(refresh.title).toMatch(/^Update the figures in Cash flow before acting on them$/);
+    expect(refresh.priorityClass).toBe("SURVIVAL_CASH");
+    expect(refresh.severity).toBe("critical");
+    expect(refresh.explanation).toMatch(/Protect runway/);
+    expect(d.attention[1].title).toBe("Tighten discounting");
+  });
+
+  it("a stale LOWER-class item never jumps ahead of fresh higher-class work", () => {
+    const d = resolveOwnerDecision(input([
+      cand({ findingCode: "SALES_OPP_WINBACK", title: "Win back lapsed customers", domain: "sales", severity: "low", stale: true }),
+      cand({ findingCode: "CF_LOW_RUNWAY", title: "Protect runway", domain: "cashflow", severity: "high" }),
+    ]));
+    expect(d.primaryTarget?.title).toBe("Protect runway");
+    expect(d.attention.find((t) => t.source === "evidence_refresh")?.priorityClass).toBe("GROWTH_OPPORTUNITY");
   });
 
   it("with only stale evidence, the main target is to refresh it (evidence is not silently dropped)", () => {
@@ -73,36 +87,38 @@ describe("item 3 — Strategy precedence follows the resolved five-state decisio
     expect(strategyCandidatePriorityClass("GO_WITH_CONDITIONS", "STR_LOW_CASH_RESERVE")).toBe("GROWTH_OPPORTUNITY");
     expect(strategyCandidatePriorityClass("NEED_INFO", "STR_MISSING_CASH")).toBe("GROWTH_OPPORTUNITY");
   });
-  it("NOT_YET because unaffordable / DONT_AS_PLANNED on bad economics guard money the plan would put at risk; execution risk is execution", () => {
-    // Prospective (only if the owner commits) — so it ranks with money at risk, never above a PRESENT
-    // cash-survival danger or customer failure, which Finance/Cashflow/Operations report directly.
-    expect(strategyCandidatePriorityClass("NOT_YET", "STR_UNAFFORDABLE")).toBe("PROFIT_LOSS");
-    expect(strategyCandidatePriorityClass("NOT_YET", "STR_LOW_CASH_RESERVE")).toBe("PROFIT_LOSS");
-    expect(strategyCandidatePriorityClass("DONT_AS_PLANNED", "STR_NEGATIVE_BASE_CASE")).toBe("PROFIT_LOSS");
-    expect(strategyCandidatePriorityClass("DONT_AS_PLANNED", "STR_NEGATIVE_ROI")).toBe("PROFIT_LOSS");
-    expect(strategyCandidatePriorityClass("DONT_AS_PLANNED", "STR_LONG_PAYBACK")).toBe("PROFIT_LOSS");
-    expect(strategyCandidatePriorityClass("DONT_AS_PLANNED", "STR_HIGH_EXECUTION_RISK")).toBe("BLOCKED_EXECUTION");
+  it("NOT_YET because unaffordable / DONT_AS_PLANNED on bad economics or execution risk: the actual blocker makes it a plan-commitment risk", () => {
+    for (const [decision, code] of [
+      ["NOT_YET", "STR_UNAFFORDABLE"], ["NOT_YET", "STR_LOW_CASH_RESERVE"], ["DONT_AS_PLANNED", "STR_NEGATIVE_BASE_CASE"],
+      ["DONT_AS_PLANNED", "STR_NEGATIVE_ROI"], ["DONT_AS_PLANNED", "STR_LONG_PAYBACK"], ["DONT_AS_PLANNED", "STR_HIGH_EXECUTION_RISK"],
+      ["NOT_YET", "STR_HIGH_EXECUTION_RISK"],
+    ] as const) {
+      expect(strategyCandidatePriorityClass(decision, code)).toBe("PLAN_COMMITMENT_RISK");
+    }
     // The same finding under a GO decision is a condition of an upside, not a danger.
     expect(strategyCandidatePriorityClass("GO", "STR_UNAFFORDABLE")).toBe("GROWTH_OPPORTUNITY");
+    // Positive upside is never a risk class, whatever the decision.
+    expect(strategyCandidatePriorityClass("NOT_YET", "STR_OPP_STRONG_RETURN")).toBe("GROWTH_OPPORTUNITY");
   });
-  it("cross-domain: an unaffordable NOT_YET outranks optional growth and missing evidence; present cash danger and customer failure still outrank bad plan economics", () => {
-    const strat = (code: string, title: string) => cand({ findingCode: code, title, domain: "strategy", severity: "high", priorityClass: strategyCandidatePriorityClass(code === "STR_UNAFFORDABLE" ? "NOT_YET" : "DONT_AS_PLANNED", code) });
+  it("cross-domain: a plan guard outranks optional growth and data requests, but every PRESENT problem (cash, customers, measured losses, blocked work) outranks it", () => {
+    const strat = (code: string, title: string) => cand({ findingCode: code, title, domain: "strategy", severity: "critical", priorityClass: strategyCandidatePriorityClass(code === "STR_UNAFFORDABLE" ? "NOT_YET" : "DONT_AS_PLANNED", code) });
     const a = resolveOwnerDecision(input([
       strat("STR_UNAFFORDABLE", "Close the ₹50,000 funding gap"),
       cand({ findingCode: "MKT_OPP_SCALE_WINNER", title: "Scale the winning campaign", domain: "marketing", severity: "low", priorityScore: 100 }),
       cand({ findingCode: "SALES_MISSING_CRITICAL_DATA", title: "Enter your sales numbers", domain: "sales", severity: "high" }),
     ]));
     expect(a.primaryTarget?.title).toBe("Close the ₹50,000 funding gap");
-    const cash = resolveOwnerDecision(input([
-      strat("STR_UNAFFORDABLE", "Close the ₹50,000 funding gap"),
+    for (const present of [
       cand({ findingCode: "CF_LOW_RUNWAY", title: "Protect runway", domain: "cashflow", severity: "high" }),
-    ]));
-    expect(cash.primaryTarget?.title).toBe("Protect runway");
-    const b = resolveOwnerDecision(input([
-      strat("STR_NEGATIVE_BASE_CASE", "Rework the plan"),
-      cand({ findingCode: "OPS_DELIVERY_FAILURE", title: "Stop failed deliveries", domain: "operations", severity: "critical" }),
-    ]));
-    expect(b.primaryTarget?.title).toBe("Stop failed deliveries");
+      cand({ findingCode: "OPS_DELIVERY_FAILURE", title: "Stop failed deliveries", domain: "operations", severity: "medium" }),
+      // Hostile review C P1-1: a business below break-even must not be told to raise money for an optional plan first.
+      cand({ findingCode: "FIN_BELOW_BREAK_EVEN", title: "Get back above break-even", severity: "high" }),
+      cand({ findingCode: "SOP_REPEATED_FAILURES", title: "Stop repeated action failures", domain: "sop", severity: "medium" }),
+    ]) {
+      const d = resolveOwnerDecision(input([strat("STR_UNAFFORDABLE", "Close the ₹5,00,000 funding gap"), present]));
+      expect(d.primaryTarget?.title).toBe(present.title);
+      expect(d.whatNotToDo.join(" ")).not.toMatch(new RegExp(present.title));
+    }
   });
 });
 
@@ -125,6 +141,24 @@ describe("item 4 — compliance precedence is never fabricated", () => {
     expect(c.priorityClass).not.toBe("SAFETY_COMPLIANCE");
     const d = resolveOwnerDecision(input([c, cand({ findingCode: "CF_LOW_RUNWAY", title: "Protect runway", domain: "cashflow", severity: "high" })]));
     expect(d.primaryTarget?.title).toBe("Protect runway");
+  });
+  it("a RECORDED hard block precedes an owner-estimated critical compliance risk, and no 0/null is presented as a rating", () => {
+    const expired = complianceItemToCandidate({ id: "c6", name: "Trade licence", status: "active", expiresAt: new Date("2026-09-01T00:00:00Z"), businessId: BIZ }, ctx)!;
+    const estimatedRisk = cand({
+      candidateId: "business_risk:r1", source: "business_risk", domain: "risk", findingCode: "RISK_COMPLIANCE",
+      title: "Possible inspection failure", priorityClass: "SAFETY_COMPLIANCE", severity: "critical", priorityScore: 80,
+    });
+    const d = resolveOwnerDecision(input([estimatedRisk, expired]));
+    expect(d.primaryTarget?.candidateId).toBe("compliance_item:c6");
+    const why = d.whyThisWins.join(" ");
+    expect(why).toMatch(/recorded compliance problem, not an estimate/);
+    expect(why).not.toMatch(/\b0\b|unrated/);
+  });
+  it("wording only claims the action gate for the gate's own hard stop", () => {
+    const breach = complianceItemToCandidate({ id: "c7", name: "Fire cert", status: "breached", businessId: BIZ }, ctx)!;
+    const expired = complianceItemToCandidate({ id: "c8", name: "Licence", status: "active", expiresAt: new Date("2026-09-01T00:00:00Z"), businessId: BIZ }, ctx)!;
+    expect(breach.explanation).not.toMatch(/holds material actions/);
+    expect(expired.explanation).toMatch(/holds material actions/);
   });
   it("confidence comes from recorded provenance, not a constant", () => {
     const owner = complianceItemToCandidate({ id: "c4", name: "x", status: "breached", provenanceSource: "owner_input", businessId: BIZ }, ctx)!;

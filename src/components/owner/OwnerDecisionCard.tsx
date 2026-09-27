@@ -57,11 +57,13 @@ export function OwnerDecisionCard({
       style={{ borderColor: "var(--accent-ink)" }}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>{heading}</span>
+        <h2 className="m-0 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>{heading}</h2>
         {p?.severity && <Badge variant={SEVERITY_VARIANT(p.severity)}>{SEVERITY_LABEL[p.severity] ?? p.severity}</Badge>}
         {(p || decision.state === "NO_EVIDENCE") && (
           <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
-            <span data-testid="owner-decision-confidence">{CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level}</span>
+            <span data-testid="owner-decision-confidence">
+              {p && decision.confidence.level === "insufficient" ? "Very low confidence" : CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level}
+            </span>
           </Badge>
         )}
       </div>
@@ -71,7 +73,7 @@ export function OwnerDecisionCard({
           <strong data-testid="owner-decision-title" className="font-display text-[1.3rem] font-semibold leading-snug tracking-tight text-foreground">
             {p.title}
           </strong>
-          <p className="m-0 text-xs text-muted-foreground">From your {p.domainLabel} evidence</p>
+          <p className="m-0 text-xs text-muted-foreground">Area: {p.domainLabel}</p>
           {p.explanation && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{p.explanation}</p>}
           {decision.whyThisWins.length > 0 && (
             <div data-testid="owner-decision-why">
@@ -83,7 +85,7 @@ export function OwnerDecisionCard({
               </ul>
             </div>
           )}
-          <Link data-testid="owner-decision-go" href={p.targetRoute} className="self-start text-sm font-medium text-[var(--primary-text)] underline">
+          <Link data-testid="owner-decision-go" href={p.targetRoute} className="inline-flex self-start items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             Work on this in {p.domainLabel} →
           </Link>
         </>
@@ -95,15 +97,15 @@ export function OwnerDecisionCard({
               : "None of your diagnosed areas has an open action right now."}
           </strong>
           {decision.whatToDoFirst && <p className="mt-1.5 text-sm text-muted-foreground">{decision.whatToDoFirst}</p>}
-          {decision.state === "NO_EVIDENCE" && (
-            <p className="mt-2 text-sm">
-              <Link href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</Link>
-            </p>
-          )}
+          <p className="mt-2 text-sm">
+            <Link href="/owner/data" className="text-[var(--primary-text)] underline">
+              {decision.state === "NO_EVIDENCE" ? "Add your business information" : "Add your latest figures so OpsIQ can re-check"}
+            </Link>
+          </p>
         </div>
       )}
 
-      {decision.confidence.capped && decision.confidence.reasons.length > 0 && (
+      {decision.confidence.reasons.length > 0 && (
         <p data-testid="owner-decision-confidence-reason" className="m-0 text-sm" style={{ color: "var(--warning-text)" }}>
           {decision.confidence.reasons[0]}
         </p>

@@ -84,18 +84,20 @@ Domain dashboards' `recommendedNextAction = latestCycle.actions[0]` (e.g. `owner
 4. `OVERLOAD_BLOCKING`
 5. `PROFIT_LOSS`
 6. `BLOCKED_EXECUTION`
-7. `MISSING_CRITICAL_EVIDENCE`
-8. `GROWTH_OPPORTUNITY`
-9. `PROCESS_OPTIMISATION`
+7. `PLAN_COMMITMENT_RISK` — a plan being evaluated that would put money or delivery at risk if committed now (assigned only from Strategy's resolved decision)
+8. `MISSING_CRITICAL_EVIDENCE`
+9. `GROWTH_OPPORTUNITY`
+10. `PROCESS_OPTIMISATION`
 
 Classification is by finding code, from a total table covering every code the domain rule files emit. An exhaustiveness test enforces it. Codes are classed by the business harm they describe, not by their domain: e.g. `OPS_CAPACITY_BOTTLENECK` is overload, `OPS_HIGH_DELAY`/`SALES_WEAK_REPEAT` are customer failure, loss/cash-leak opportunities are profit loss, `FIN_HIGH_PAYABLES` is survival cash.
 
 **Source-specific classes (never fabricated):**
-- **Strategy** is classed from its RESOLVED five-state decision (`NEED_INFO`/`DONT_AS_PLANNED`/`NOT_YET`/`GO_WITH_CONDITIONS`/`GO`) and the actual blocker (`strategyCandidatePriorityClass`): under `NOT_YET`/`DONT_AS_PLANNED` a money-at-risk blocker (unaffordable, low reserve, negative case/ROI, weak ROI, long payback) is `PROFIT_LOSS` and high execution risk is `BLOCKED_EXECUTION`; every other Strategy step is `GROWTH_OPPORTUNITY`.
+- **Strategy** is classed from its RESOLVED five-state decision (`NEED_INFO`/`DONT_AS_PLANNED`/`NOT_YET`/`GO_WITH_CONDITIONS`/`GO`) and the actual blocker (`strategyCandidatePriorityClass`): under `NOT_YET`/`DONT_AS_PLANNED` a money-at-risk blocker (unaffordable, low reserve, negative case/ROI, weak ROI, long payback) or high execution risk is `PLAN_COMMITMENT_RISK` — above optional growth and data requests, below every PRESENT problem (the harm happens only if the owner commits; the "don't commit yet" warning is always in `whatNotToDo`). Every other Strategy step, and all positive upside, is `GROWTH_OPPORTUNITY`.
 - **Compliance** uses the existing compliance/action-gate semantics only: a hard block (`breached`, or `active` and expired — the gate's hard stop) is `SAFETY_COMPLIANCE`; an expired item already in evidence/review is `BLOCKED_EXECUTION` (`COMPLIANCE_RENEWAL_IN_PROGRESS`). Severity is set only where the compliance service itself raises a critical alert (`breached`); priority score and impact are 0 (none exist in the model); confidence comes from the item's recorded provenance. Upcoming/non-blocking items are not candidates. This reorders compliance relative to the old Now View ladder (which put it below profit leak) — deliberately, per the CRISIS precedence above.
 - **Business risks** (workspace-level) are candidates only when the workspace has exactly one real business, fixture rows and fixture-tainted startup sessions excluded; mitigating risks use residual risk; confidence is the fixed owner-recorded value 0.6.
 
 Within a class the order is:
+0. a RECORDED compliance block (a breach, or an active expired obligation the action gate stops on) before estimates and diagnosed actions
 1. severity (restored from the linked finding; Recovery from its `priority`)
 2. `priorityScore` (the existing spine score)
 3. expected impact
@@ -111,28 +113,32 @@ A candidate is excluded from the election when any of these holds:
 - its latest verification reached its target (`extractReachedTargetFromVerification`, `owner-finance/outcome-signals.ts:112`);
 - it is not on its domain's latest cycle. Engaged actions whose finding is still raised are re-attached to the new cycle (`owner-finance/dashboard.service.ts:120-125`), so an older-cycle action is one current evidence no longer raises;
 - it is a Strategy action that is incoherent with the live decision (`coherentStrategyActions`);
-- it is a survival-class Cash or Finance action whose unsafe reading was superseded by a NEWER, disagreeing reading of the other source (`resolveCashFinanceSignal`, the same arbitration Now View uses; incomparable freshness excludes nothing).
+- it is a survival-class Cash or Finance action whose unsafe reading was superseded by a NEWER, disagreeing reading of the other source (`resolveCashFinanceSignal`, the same arbitration Now View uses). "Newer" is the evidence PERIOD each reading describes (its snapshot's `periodEnd`), never the cycle's `createdAt` — a re-diagnosis from an old snapshot after an action is completed/verified must not look current. Incomparable freshness (equal or missing periods) excludes nothing.
 
-**Stale evidence** (evidence period older than 45 days, or a Finance snapshot amended after diagnosis) never lets an old high-class item win: the stale domain's actions are excluded as `stale_evidence` and replaced by ONE explicit `evidence_refresh` target per stale domain (class `MISSING_CRITICAL_EVIDENCE`, carrying the worst stale severity and naming the stale items). Current hard safety/compliance items are not domain actions and are unaffected.
+**Stale evidence** (evidence period older than 45 days, or a Finance snapshot amended after diagnosis) never lets an old high-class item win: the stale domain's actions are excluded as `stale_evidence` and replaced by ONE explicit `evidence_refresh` target per stale domain, which keeps the class and worst severity of the most serious item it stands in for (an out-of-date survival danger stays urgent to CONFIRM, never demoted behind fresh minor work) and names the stale items. Ageing never "resolves" a critical issue in "what changed": stale critical issues stay open and the owner is told the figures are out of date. Current hard safety/compliance items are not domain actions and are unaffected.
 
 **Finance missing data** comes from the EXACT snapshot attached to the latest Finance cycle (`finance.snapshot`) — in Home, Business Condition and the Finance dashboard — never from whichever snapshot has the latest period.
 
 ## 5a. Decision memory ("what changed")
 
-The resolver persists its memory as the audit event `owner.decision_changed` (entity `OwnerBusiness`/businessId) whenever the decision materially changes, on whichever route resolved it. "What changed" compares against the previous distinct memory, so it no longer depends on the owner visiting Now View. No schema change.
+The resolver persists its memory as the audit event `owner.decision_changed` (its own entity type `OwnerDecision`, keyed by businessId, so it never crowds the owner-business audit trail) whenever the decision materially changes, on whichever route resolved it. The write is serialized per workspace with a Postgres advisory transaction lock and re-reads the latest memory inside the lock, so concurrent reads (two tabs, Portfolio fan-out) record one event and never fork the workspace audit hash chain. "What changed" compares against the previous distinct memory, so it no longer depends on the owner visiting Now View. No schema change.
 
 ## 5b. Surfaces that are explicitly subordinate or domain-local
 
 - Home, Cockpit, Priorities, Command Center and the `/owner/now` headline/plain-language block all render the one `CurrentOwnerDecision`.
-- Plan analysis (supervisor summary, plan checkpoints, plan action & proof, dominant plan constraint) is labelled as supporting analysis.
+- Plan analysis (supervisor summary, plan checkpoints, plan action & proof, dominant plan constraint) runs its own model, so on the Command Center it is collapsed behind one "Supporting plan analysis" disclosure below the decision card.
+- Now View's avoid list is reconciled with the decision (a growth main target turns the growth gate into a "small trial" precondition), and the do-not-repeat annotation is keyed to the main target's class and business.
 - Domain dashboards' next action is labelled "this area only" and is the top OPEN action of that domain; wealth and budget moves are labelled as area-only.
 - Consultant decisions (`ENGAGEMENT_VIEW`) are not fetched on owner pages; owner alerts are shown below the decision and linked to their canonical position.
 
 ## 6. Legacy `/diagnosis`: dependency proof summary (retired in PR B)
 
-- **Runtime importers.** `services/diagnosis.ts` ← only `api/diagnosis/route.ts`. `recommendation/engine.ts`, `src/engines/*` and `services/diagnosis-signals.ts` ← only `services/diagnosis.ts`. `FirstDiagnosisCta` ← only `dashboard/page.tsx`.
-- **Shared code that stays.** `assessCondition` (engagement condition route). The four `api/diagnosis/{archetype,maturity,root-cause,bottleneck}` routes (`DIAGNOSIS_READ`, `diagnostic-core`) are separate and are **kept**.
-- **Access.** Owners never hold `ENGAGEMENT_CREATE` (`policies/capability-check.ts:255,272,346-366`). Owner surfaces deliberately avoid the route (`owner/data/page.tsx:252-264`).
-- **What it produces.** 6 fixed recommendations re-sorted; missing revenue, costs and customers become 0 (`services/diagnosis.ts:242-261`). It writes template Evidence and Findings outside a single transaction.
-- **No unique reader.** The rows it writes are generic engagement rows, and historical rows stay readable through the engagement workspace.
-- **Consulting Mode** imports none of it.
+- **Runtime importers.** `services/diagnosis.ts` ← only `api/diagnosis/route.ts`. `recommendation/engine.ts`, `src/engines/*` and `services/diagnosis-signals.ts` ← only `services/diagnosis.ts`.
+- **Pages, components and navigation that PR B must remove or rewrite.** `src/app/(authenticated)/diagnosis/page.tsx` (calls `/api/diagnosis`, renders its own "Why this is first"), `src/components/diagnosis/DiagnosisBetaNotice.tsx`, `src/components/diagnosis/DiagnosisEvidenceScopeNotice.tsx`, `FirstDiagnosisCta` (used by `dashboard/page.tsx` and imported by tests), the `/diagnosis` nav entry in `src/ui/shell/sidebar-nav.tsx`, and the `dashboard/page.tsx` fallback link to `/diagnosis`.
+- **Tests PR B must delete or rewrite.** `src/services/__tests__/diagnosis.integration.test.ts`, `src/services/__tests__/diagnoseBusiness-db-workspace-isolation.db.test.ts`, `src/__tests__/services/diagnosis-audit.db.test.ts`, `src/__tests__/r1-runtime/recommendation-engine.test.ts`, `src/__tests__/services/diagnosis-signals.test.ts`, `src/__tests__/api/diagnosis-error-visibility.test.ts`, `src/__tests__/components/diagnosis-browser-contract.test.ts`, `src/__tests__/components/dashboard-first-diagnosis-cta.test.tsx`, `src/__tests__/owner-activation/branding-render.test.tsx`, `src/__tests__/owner-activation/activation-surfaces.test.tsx`, `src/__tests__/app/commercial-trust-basics.test.tsx`, `src/__tests__/components/sidebar-nav-pr-c-exposure.test.tsx`.
+- **Scripts, workflows and baselines.** `scripts/smoke-production-diagnosis-dashboard.ts` and `.github/workflows/smoke-production-diagnosis-dashboard.yml` post to `/api/diagnosis`; `docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json` lists `/diagnosis` (its removal needs the owner-approved preservation-change process).
+- **Shared code that stays.** `assessCondition` (also used by `api/engagements/[engagementId]/condition/route.ts`), the four `api/diagnosis/{archetype,maturity,root-cause,bottleneck}` routes (`DIAGNOSIS_READ`, `diagnostic-core`), `lib/security/diagnostic-key` and the `DIAGNOSIS_ERROR` observability category.
+- **Access.** Self-serve owners (`isSelfServeOwnerContext`) and `CLIENT_OWNER` never hold `ENGAGEMENT_CREATE` (`policies/capability-check.ts`). A provisioned `ADMIN_OR_PORTFOLIO_MANAGER` or `SYSTEM_ADMIN` holds both `OWNER_VIEW` and `ENGAGEMENT_CREATE` and can reach `/diagnosis` from the nav today — a pre-existing competing "first" for those roles only, removed with the nav item in PR B. Owner surfaces for self-serve owners avoid the route (`owner/data/page.tsx`).
+- **What it produces.** 6 fixed recommendations re-sorted; missing revenue, costs and customers become 0 (`services/diagnosis.ts`). Evidence, Findings, Recommendations and Actions are written in one `$transaction`; ClientAccount, Engagement (with interventionMode/interventionPhase) and a BusinessCondition row (`assessCondition`) are written outside it, and four audit events are emitted. PR B removes a path that writes condition and intervention records, so historical rows stay readable but no new ones are created by it.
+- **No unique reader.** The rows it writes are generic engagement rows; historical rows stay readable through the engagement workspace. PR A's canonical candidate pipeline never reads engagement Recommendation/Action rows.
+- **Consulting Mode** (`domain/consulting`, `services/consulting`, `api/consulting`) imports none of it.

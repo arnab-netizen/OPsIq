@@ -243,7 +243,7 @@ export default function OwnerNowViewPage() {
           <p>{beginner.whyItMatters}</p>
           <p>If ignored: {beginner.whatHappensIfIgnored}</p>
           {Array.isArray(beginner.whatToDoFirst) && (
-            <><p style={{ marginBottom: 4, fontWeight: 600 }}>Do first:</p>
+            <><p style={{ marginBottom: 4, fontWeight: 600 }}>{data.ownerDecision ? "Do first:" : "Operating signals to act on:"}</p>
             <ul>{beginner.whatToDoFirst.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul></>
           )}
           {Array.isArray(beginner.whatNotToDo) && (

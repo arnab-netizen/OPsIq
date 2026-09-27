@@ -23,6 +23,7 @@
  * is reported as missing, confidence is capped when evidence is insufficient, and an owner with no
  * diagnosed domain gets honest "add data" guidance instead of a fabricated target.
  */
+import { humanizeMetricKey } from "@/lib/metric-label";
 import {
   clampConfidence,
   clampScore,
@@ -40,6 +41,9 @@ export const OWNER_PRIORITY_CLASSES = [
   "OVERLOAD_BLOCKING",
   "PROFIT_LOSS",
   "BLOCKED_EXECUTION",
+  // A plan the owner is evaluating that would put money or delivery at risk IF they commit now
+  // (Strategy NOT_YET / DONT_AS_PLANNED). Prospective, so it follows every PRESENT problem above.
+  "PLAN_COMMITMENT_RISK",
   "MISSING_CRITICAL_EVIDENCE",
   "GROWTH_OPPORTUNITY",
   "PROCESS_OPTIMISATION",
@@ -52,8 +56,9 @@ export const OWNER_PRIORITY_CLASS_LABEL: Record<OwnerPriorityClass, string> = {
   SURVIVAL_CASH: "a cash-survival danger",
   CUSTOMER_SERVICE_FAILURE: "a customer or service failure",
   OVERLOAD_BLOCKING: "overload that is blocking work",
-  PROFIT_LOSS: "money the business is losing, cannot collect, or would put at risk",
+  PROFIT_LOSS: "money the business is losing or cannot collect",
   BLOCKED_EXECUTION: "work that cannot move forward",
+  PLAN_COMMITMENT_RISK: "a plan that would put money or delivery at risk if you commit to it now",
   MISSING_CRITICAL_EVIDENCE: "missing information OpsIQ needs to advise you safely",
   GROWTH_OPPORTUNITY: "a growth or investment decision",
   PROCESS_OPTIMISATION: "a process improvement",
@@ -91,13 +96,16 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "FIN_DISCOUNT_LEAKAGE", "FIN_REFUND_REWORK_LEAKAGE",
     // Loss-reduction / cash-release fixes for the same money problems (never "growth" to defer).
     "FIN_OPP_BREAK_EVEN_RECOVERY", "FIN_OPP_DEBT_REDUCTION", "FIN_OPP_LEAKAGE_REDUCTION", "FIN_OPP_MARGIN_IMPROVEMENT",
-    "FIN_OPP_RECEIVABLES_COLLECTION", "FIN_OPP_REVENUE_QUALITY",
+    "FIN_OPP_RECEIVABLES_COLLECTION",
     "CF_HIGH_OVERDUE_RECEIVABLES", "CF_SLOW_COLLECTIONS", "CF_OWNER_WITHDRAWAL_PRESSURE",
     "CF_OPP_COLLECT_OVERDUE", "CF_OPP_DEFER_PAYABLES", "CF_OPP_REDUCE_OWNER_WITHDRAWAL",
     // The current revenue engine failing (sales lost now), not optional upside.
     "SALES_LOST_CUSTOMER_LEAKAGE", "SALES_DISCOUNT_DEPENDENCE", "SALES_LOW_CONVERSION", "SALES_POOR_FOLLOW_UP",
     "SALES_WEAK_B2B_PIPELINE",
-    "MKT_WASTED_SPEND", "MKT_POOR_CONVERSION", "MKT_NO_FOLLOWUP", "MKT_WEAK_OFFER", "MKT_WRONG_CHANNEL_MIX", "MKT_LOW_REFERRAL",
+    "MKT_WASTED_SPEND", "MKT_POOR_CONVERSION", "MKT_NO_FOLLOWUP", "MKT_WEAK_OFFER",
+    // Discount capping and idle paid hours "recover margin" (their own rule text): the same loss as
+    // SALES_DISCOUNT_DEPENDENCE / LOW_STAFF_PRODUCTIVITY, never optional growth or process polish.
+    "SALES_OPP_TIGHTEN_DISCOUNT", "OPS_HIGH_IDLE",
     "HIGH_COST_RATIO", "DISCOUNT_LEAKAGE", "DELIVERY_COST_LEAKAGE", "RECEIVABLES_PRESSURE", "LOW_REVENUE",
     "LOW_STAFF_PRODUCTIVITY", "POOR_CAMPAIGN_CONVERSION", "LOW_AOV", "B2B_CONCENTRATION",
   ],
@@ -108,6 +116,8 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     // Internal actions failing repeatedly ("needs an SOP, not another reminder") — execution, not customers.
     "SOP_REPEATED_FAILURES",
   ],
+  // Assigned only from Strategy's resolved decision (strategyCandidatePriorityClass), never by code.
+  PLAN_COMMITMENT_RISK: [],
   MISSING_CRITICAL_EVIDENCE: [
     "FIN_MISSING_CRITICAL_DATA", "FIN_INVALID_CURRENCY",
     "CF_MISSING_CRITICAL_DATA", "CF_INVALID_CURRENCY",
@@ -118,7 +128,13 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
   ],
   GROWTH_OPPORTUNITY: [
     "SALES_OPP_CONVERT_PIPELINE", "SALES_OPP_IMPROVE_RETENTION", "SALES_OPP_RAISE_CONVERSION",
-    "SALES_OPP_TIGHTEN_DISCOUNT", "SALES_OPP_WINBACK",
+    "SALES_OPP_WINBACK",
+    // A composite revenue-quality score below target (low severity, "diversify and de-discount"):
+    // resilience upside, not a measured loss — the actual discount loss is FIN_DISCOUNT_LEAKAGE.
+    "FIN_OPP_REVENUE_QUALITY",
+    // Their own rule text calls these growth ("growth is not rented", "the cheapest growth is being
+    // left on the table") — the same condition as MKT_OPP_ACTIVATE_REFERRALS / MKT_OPP_BUILD_ORGANIC.
+    "MKT_LOW_REFERRAL", "MKT_WRONG_CHANNEL_MIX",
     "MKT_OPP_ACTIVATE_REFERRALS", "MKT_OPP_ADD_FOLLOWUP", "MKT_OPP_BUILD_ORGANIC", "MKT_OPP_LIFT_CONVERSION",
     "MKT_OPP_SCALE_WINNER",
     // Strategy evaluates an optional investment: its warnings AND its data gaps are part of that
@@ -133,7 +149,7 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "SOP_OPP_DATA_QUALITY", "MKT_OPP_DATA_QUALITY",
     // A low-severity "enter the EMI for the recorded debt" data request (opportunity-rules.ts).
     "FIN_NOTABLE_OUTSTANDING_DEBT",
-    "OPS_HIGH_IDLE", "OPS_OPP_CLOSE_SOP_GAP", "OPS_OPP_CUT_REWORK", "OPS_OPP_RECLAIM_IDLE", "OPS_OPP_RECOVER_DELAYS",
+    "OPS_OPP_CLOSE_SOP_GAP", "OPS_OPP_CUT_REWORK", "OPS_OPP_RECLAIM_IDLE", "OPS_OPP_RECOVER_DELAYS",
     "OPS_OPP_USE_CAPACITY_HEADROOM",
     "SOP_OPP_CLEAR_OVERDUE", "SOP_OPP_CLOSE_COVERAGE_GAP", "SOP_OPP_CONVERT_TO_SOP", "SOP_OPP_RAISE_VERIFICATION",
   ],
@@ -182,16 +198,16 @@ const STRATEGY_EXECUTION_CODES = new Set(["STR_HIGH_EXECUTION_RISK"]);
  * Class of a Strategy step, from Strategy's RESOLVED decision — never from the finding code alone.
  * Strategy evaluates an optional plan. Under GO / GO_WITH_CONDITIONS / NEED_INFO every step is part of
  * pursuing (or evaluating) that upside → growth. Under NOT_YET / DONT_AS_PLANNED Strategy is holding
- * the owner back from a plan, and the step guards the actual blocker: money the plan would put at risk
- * (unaffordable, or economics that lose money) → PROFIT_LOSS; the business cannot execute it →
- * BLOCKED_EXECUTION. That risk only materialises if the owner commits, so it never outranks a PRESENT
- * cash-survival danger or customer failure (reported directly by Finance/Cashflow/Operations), but it
- * does outrank optional upside, process work and data requests about other areas.
+ * the owner back from a plan because of an actual blocker — money the plan would put at risk
+ * (unaffordable, or economics that lose money) or a plan the business cannot execute — so its guard
+ * step is PLAN_COMMITMENT_RISK: above optional upside, process work and data requests, but below
+ * every PRESENT problem (survival cash, customer failure, overload, measured losses, blocked work),
+ * because the harm only happens if the owner commits. The "don't commit yet" warning stays visible
+ * in whatNotToDo whatever the main target is.
  */
 export function strategyCandidatePriorityClass(decisionCode: StrategyDecisionCodeForPriority | null, findingCode: string): OwnerPriorityClass {
   if (decisionCode === "NOT_YET" || decisionCode === "DONT_AS_PLANNED") {
-    if (STRATEGY_MONEY_AT_RISK_CODES.has(findingCode)) return "PROFIT_LOSS";
-    if (STRATEGY_EXECUTION_CODES.has(findingCode)) return "BLOCKED_EXECUTION";
+    if (STRATEGY_MONEY_AT_RISK_CODES.has(findingCode) || STRATEGY_EXECUTION_CODES.has(findingCode)) return "PLAN_COMMITMENT_RISK";
   }
   return "GROWTH_OPPORTUNITY";
 }
@@ -271,12 +287,17 @@ export function ownerDecisionCandidateIdForEntity(entityType: string | null | un
 /** The factor that decided the order between two candidates (for "why this wins"). */
 export type OwnerPrecedenceFactor =
   | "class"
+  | "recorded_block"
   | "severity"
   | "priority"
   | "impact"
   | "confidence"
   | "effort"
   | "identifier";
+
+function isRecordedComplianceBlock(c: OwnerDecisionCandidate): boolean {
+  return c.source === "compliance_item" && c.blocking;
+}
 
 function severityRankOrUnknown(s: OwnerSeverity | null): number {
   return s === null ? -1 : ownerSeverityRank(s);
@@ -289,6 +310,10 @@ export function compareOwnerCandidatesWithFactor(
 ): [number, OwnerPrecedenceFactor] {
   const cls = ownerPriorityClassRank(a.priorityClass) - ownerPriorityClassRank(b.priorityClass);
   if (cls !== 0) return [cls, "class"];
+  // A RECORDED compliance block (a breach, or an expired obligation the action gate stops on) is a
+  // fact, not an estimate: within its class it precedes owner-estimated risks and diagnosed actions.
+  const rb = Number(isRecordedComplianceBlock(b)) - Number(isRecordedComplianceBlock(a));
+  if (rb !== 0) return [rb, "recorded_block"];
   const sev = severityRankOrUnknown(b.severity) - severityRankOrUnknown(a.severity);
   if (sev !== 0) return [sev, "severity"];
   const pr = clampScore(b.priorityScore) - clampScore(a.priorityScore);
@@ -348,6 +373,7 @@ export type OwnerDecisionChangeKind =
   | "ACTION_COMPLETED"
   | "ACTION_VERIFIED"
   | "EVIDENCE_UPDATED"
+  | "EVIDENCE_OUT_OF_DATE"
   | "FUNDING_GAP_CHANGED"
   | "CONFIDENCE_CHANGED";
 
@@ -394,7 +420,10 @@ export interface OwnerDecisionMemory {
   generatedAt: string;
   primaryKey: string | null;
   primaryTitle: string | null;
+  /** Critical issues still open — including ones awaiting an evidence refresh (never "resolved" by ageing). */
   criticalKeys: string[];
+  /** Domains whose evidence was out of date at this decision. */
+  staleDomains: string[];
   confidenceScore: number;
   confidenceLevel: OwnerDecisionConfidenceLevel;
   fundingGap: number | null;
@@ -491,24 +520,33 @@ function factorSentence(
   winner: OwnerDecisionCandidate,
   runnerUp: OwnerDecisionCandidate
 ): string {
-  const other = `"${runnerUp.title}" (${ownerDomainLabel(runnerUp.domain)})`;
+  const other = `"${runnerUp.title}" in ${ownerDomainLabel(runnerUp.domain)}`;
+  const rating = (c: OwnerDecisionCandidate) => (clampScore(c.priorityScore) > 0 ? String(Math.round(clampScore(c.priorityScore))) : "not rated");
   switch (factor) {
+    case "recorded_block":
+      return `It is a recorded compliance problem, not an estimate, so it comes before ${other}.`;
     case "class":
       return `It is ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}, and OpsIQ always deals with that before ${OWNER_PRIORITY_CLASS_LABEL[runnerUp.priorityClass]} such as ${other}.`;
     case "severity":
-      return `It is rated ${winner.severity ?? "unrated"}, more serious than ${other} (${runnerUp.severity ?? "unrated"}).`;
+      return runnerUp.severity === null
+        ? `It is rated ${winner.severity}; ${other} has no severity rating.`
+        : `It is rated ${winner.severity}, more serious than ${other} (rated ${runnerUp.severity}).`;
     case "priority": {
       const sameSeverity = winner.severity !== null ? ` rated ${winner.severity}` : "";
       // Only Spine domain actions carry the combined urgency/impact/pressure score; Recovery and
       // control records carry a fixed rating on the same 0–100 scale, so the wording stays generic.
       const bothSpine = winner.source === "domain_action" && runnerUp.source === "domain_action" && winner.domain !== "recovery" && runnerUp.domain !== "recovery";
       const measure = bothSpine ? "higher combined urgency, impact and pressure score" : "higher priority rating";
-      return `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has the ${measure} (${Math.round(clampScore(winner.priorityScore))} vs ${Math.round(clampScore(runnerUp.priorityScore))} for ${other}).`;
+      const w = rating(winner);
+      const r = rating(runnerUp);
+      return w === r
+        ? `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has a slightly ${measure.replace(/^higher /, "higher ")} than ${other}.`
+        : `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has the ${measure} (${w} vs ${r} for ${other}).`;
     }
     case "impact":
       return `It is as urgent as ${other} but is expected to make a bigger difference to the business.`;
     case "confidence":
-      return `It is as urgent and as valuable as ${other}, and the evidence behind it is stronger.`;
+      return `Nothing else separates it from ${other}, and the evidence behind it is stronger.`;
     case "effort":
       return `It is as urgent and as valuable as ${other} and takes less effort, so it comes first.`;
     case "identifier":
@@ -530,10 +568,24 @@ function formatMoney(value: number, currency: string): string {
   return symbol ? `${symbol}${rounded.toLocaleString(locale)}` : `${rounded.toLocaleString(locale)} ${currency}`;
 }
 
+/**
+ * Critical issues that are still OPEN: eligible critical items (refresh targets stand in for, and are
+ * not themselves, issues) plus critical items whose evidence merely went stale — ageing never
+ * resolves a problem.
+ */
+function openCriticalIssues(ranked: readonly OwnerDecisionCandidate[], staleExcluded: readonly OwnerDecisionCandidate[]): Map<string, OwnerDecisionCandidate> {
+  const open = new Map<string, OwnerDecisionCandidate>();
+  for (const c of [...ranked, ...staleExcluded]) {
+    if (c.severity === "critical" && c.source !== "evidence_refresh") open.set(ownerCandidateIssueKey(c), c);
+  }
+  return open;
+}
+
 function buildMemory(
   generatedAt: string,
   primary: OwnerDecisionTarget | null,
-  attention: OwnerDecisionTarget[],
+  openCritical: Map<string, OwnerDecisionCandidate>,
+  staleDomains: string[],
   confidenceScore: number,
   confidenceLevel: OwnerDecisionConfidenceLevel,
   fundingGap: number | null
@@ -542,7 +594,8 @@ function buildMemory(
     generatedAt,
     primaryKey: primary ? ownerCandidateIssueKey(primary) : null,
     primaryTitle: primary ? primary.title : null,
-    criticalKeys: [...new Set(attention.filter((t) => t.severity === "critical").map((t) => ownerCandidateIssueKey(t)))],
+    criticalKeys: [...openCritical.keys()].sort(),
+    staleDomains: [...staleDomains].sort(),
     confidenceScore,
     confidenceLevel,
     fundingGap,
@@ -552,7 +605,7 @@ function buildMemory(
 /** True when two decision memories describe the same decision (no material change between them). */
 export function sameOwnerDecisionMemory(a: OwnerDecisionMemory, b: OwnerDecisionMemory): boolean {
   const key = (m: OwnerDecisionMemory) =>
-    JSON.stringify([m.primaryKey, [...m.criticalKeys].sort(), m.confidenceLevel, m.confidenceScore, m.fundingGap === null ? null : Math.round(m.fundingGap)]);
+    JSON.stringify([m.primaryKey, [...m.criticalKeys].sort(), [...m.staleDomains].sort(), m.confidenceLevel, m.confidenceScore, m.fundingGap === null ? null : Math.round(m.fundingGap)]);
   return key(a) === key(b);
 }
 
@@ -569,6 +622,7 @@ export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | 
     primaryKey: typeof v.primaryKey === "string" ? v.primaryKey : null,
     primaryTitle: typeof v.primaryTitle === "string" ? v.primaryTitle : null,
     criticalKeys: Array.isArray(v.criticalKeys) ? v.criticalKeys.filter((k): k is string => typeof k === "string") : [],
+    staleDomains: Array.isArray(v.staleDomains) ? v.staleDomains.filter((k): k is string => typeof k === "string") : [],
     confidenceScore: clampScore(v.confidenceScore),
     confidenceLevel:
       level === "high" || level === "moderate" || level === "low" || level === "insufficient" ? level : "insufficient",
@@ -578,7 +632,8 @@ export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | 
 
 function detectChanges(
   input: ResolveOwnerDecisionInput,
-  ranked: OwnerDecisionCandidate[],
+  openCritical: Map<string, OwnerDecisionCandidate>,
+  staleDomains: string[],
   primary: OwnerDecisionCandidate | null,
   confidenceScore: number,
   confidenceLevel: OwnerDecisionConfidenceLevel
@@ -599,12 +654,11 @@ function detectChanges(
     }
   }
 
-  const currentCritical = new Map(ranked.filter((c) => c.severity === "critical").map((c) => [ownerCandidateIssueKey(c), c]));
   const prevCritical = new Set(prev.criticalKeys);
-  for (const [key, c] of currentCritical) {
-    if (!prevCritical.has(key)) changes.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue: "${c.title}" (${ownerDomainLabel(c.domain)}).` });
+  for (const [key, c] of openCritical) {
+    if (!prevCritical.has(key)) changes.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue in ${ownerDomainLabel(c.domain)}: "${c.title}".` });
   }
-  const resolvedCount = prev.criticalKeys.filter((k) => !currentCritical.has(k)).length;
+  const resolvedCount = prev.criticalKeys.filter((k) => !openCritical.has(k)).length;
   if (resolvedCount > 0) {
     changes.push({
       kind: "CRITICAL_ISSUE_RESOLVED",
@@ -621,21 +675,29 @@ function detectChanges(
     );
   }
 
+  const prevStale = new Set(prev.staleDomains);
+  for (const d of staleDomains) {
+    if (!prevStale.has(d)) {
+      changes.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The figures in ${ownerDomainLabel(d)} are now out of date — update them before acting on what they flagged.` });
+    }
+  }
+
   for (const d of input.domainsDiagnosedSince) {
-    changes.push({ kind: "EVIDENCE_UPDATED", message: `New ${ownerDomainLabel(d)} data was analysed since your last check.` });
+    changes.push({ kind: "EVIDENCE_UPDATED", message: `New data in ${ownerDomainLabel(d)} was analysed since your last check.` });
   }
 
   const gap = input.strategy?.fundingGap ?? null;
   const roundedGap = gap === null ? null : Math.round(gap);
   const roundedPrevGap = prev.fundingGap === null ? null : Math.round(prev.fundingGap);
-  if (roundedGap !== roundedPrevGap) {
-    const currency = input.strategy?.currency ?? "INR";
-    const fmt = (v: number | null) => (v === null ? "unknown" : v <= 0 ? "covered" : formatMoney(v, currency));
+  const currency = input.strategy?.currency ?? "INR";
+  const fmt = (v: number | null) => (v === null ? "unknown" : v <= 0 ? "covered" : formatMoney(v, currency));
+  // Compared as the owner reads it: two "covered" gaps (e.g. -100 and -500) are not a change.
+  if (roundedGap !== roundedPrevGap && fmt(prev.fundingGap) !== fmt(gap)) {
     changes.push({ kind: "FUNDING_GAP_CHANGED", message: `Funding gap changed from ${fmt(prev.fundingGap)} to ${fmt(gap)}.` });
   }
 
-  // Confidence only means something while there is a target on both sides of the comparison.
-  if (primary && prev.primaryKey !== null) {
+  // Confidence is only comparable for the SAME advice (a new target is reported as a target change).
+  if (primary && prev.primaryKey !== null && primaryKey === prev.primaryKey) {
     if (confidenceLevel !== prev.confidenceLevel) {
       changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice changed from ${prev.confidenceLevel} to ${confidenceLevel}.` });
     } else if (Math.abs(confidenceScore - prev.confidenceScore) >= 15) {
@@ -667,10 +729,12 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: R
       source: "evidence_refresh",
       domain: top.domain,
       sourceId: domain,
-      priorityClass: "MISSING_CRITICAL_EVIDENCE",
+      // Keeps the urgency class of the most serious item it stands in for: an out-of-date survival
+      // danger is still urgent to CONFIRM — refreshing it must not fall behind fresh minor work.
+      priorityClass: top.priorityClass,
       findingCode: "EVIDENCE_REFRESH",
       findingId: null,
-      title: `Update your ${label} figures before acting on them`,
+      title: `Update the figures in ${label} before acting on them`,
       explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
       severity: worstSeverity,
       priorityScore: Math.max(...ordered.map((c) => clampScore(c.priorityScore))),
@@ -733,13 +797,12 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   // data completeness, so business-wide data sufficiency never caps them.
   const primaryIsRecordedFact = primary !== null && primary.source !== "domain_action";
   if (primary && !primaryIsDataRequest && !primaryIsRecordedFact) {
-    if (input.dataSufficiency.status === "insufficient" && score > 40) {
-      score = 40;
-      capped = true;
+    // The reason is stated whenever data is short — also when the score was already at or below the cap.
+    if (input.dataSufficiency.status === "insufficient") {
+      if (score > 40) { score = 40; capped = true; }
       reasons.push("Important business data is missing, so this advice is provisional.");
-    } else if (input.dataSufficiency.status === "caution" && score > 70) {
-      score = 70;
-      capped = true;
+    } else if (input.dataSufficiency.status === "caution") {
+      if (score > 70) { score = 70; capped = true; }
       reasons.push("Some data is incomplete, so treat this advice with some caution.");
     }
   }
@@ -813,11 +876,14 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const whatToDoFirst = primary ? primary.title : !hasEvidence ? missingInformation[0] ?? null : null;
 
   const reassessmentTrigger = primary
-    ? `Check again when "${primary.title}" is done${primary.verificationMetric ? ` or ${primary.verificationMetric} changes` : ""}, when new ${ownerDomainLabel(primary.domain)} data is added, or within ${input.reassessment.days} days (${input.reassessment.reason})`
+    ? `Check again when "${primary.title}" is done${primary.verificationMetric ? ` or your ${humanizeMetricKey(primary.verificationMetric)} changes` : ""}, when new ${ownerDomainLabel(primary.domain)} data is added, or within ${input.reassessment.days} days (${input.reassessment.reason}).`
     : hasEvidence
-      ? `Check again when new data is added, or within ${input.reassessment.days} days (${input.reassessment.reason})`
+      ? `Check again when new data is added, or within ${input.reassessment.days} days (${input.reassessment.reason}).`
       : "Check again as soon as you add your business numbers.";
 
+  const staleExcluded = processed.filter((c) => c.exclusion === "stale_evidence");
+  const openCritical = openCriticalIssues(ranked, staleExcluded);
+  const staleDomainsNow = [...new Set(refreshTargets.map((t) => t.domain))];
   const generatedAt = input.now.toISOString();
   const primaryTarget = primary ? toTarget(primary) : null;
   const attention = ranked.map(toTarget);
@@ -838,10 +904,10 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whatCanWait: canWait.map(toTarget),
     whatNotToDo,
     missingInformation,
-    whatChanged: detectChanges(input, ranked, primary, score, level),
+    whatChanged: detectChanges(input, openCritical, staleDomainsNow, primary, score, level),
     reassessmentTrigger,
     attention,
     excluded,
-    memory: buildMemory(generatedAt, primaryTarget, attention, score, level, input.strategy?.fundingGap ?? null),
+    memory: buildMemory(generatedAt, primaryTarget, openCritical, staleDomainsNow, score, level, input.strategy?.fundingGap ?? null),
   };
 }
