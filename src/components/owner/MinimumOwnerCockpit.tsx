@@ -1051,7 +1051,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
             )}
             {recovery.linkedProcessExecutionTaskIds.length > 0 && (
-              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — find them under "Governed work you can start".</p>
+              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — find them under &ldquo;Governed work you can start&rdquo;.</p>
             )}
           </>
         )}
