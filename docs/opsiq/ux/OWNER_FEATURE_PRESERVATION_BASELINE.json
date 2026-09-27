@@ -1138,7 +1138,7 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "WORKSPACE_ONLY",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -2329,6 +2329,7 @@
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
         "src/__tests__/owner-condition/owner-home-page.test.ts",
         "src/__tests__/owner-decision/home-cockpit-priorities-invariant.test.tsx",
+        "src/__tests__/owner-decision/survival-reading-candidate.test.ts",
         "src/__tests__/owner-decision/user-hostile-audit-regressions.test.ts",
         "src/__tests__/owner-finance/finance-page.test.ts",
         "src/__tests__/owner-home/home-page.test.ts",
