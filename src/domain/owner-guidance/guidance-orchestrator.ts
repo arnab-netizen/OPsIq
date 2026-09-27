@@ -53,6 +53,11 @@ export interface GuidanceContext {
   growthGatePassed: boolean;
   /** Whether cash survival (M4/M5) is safe. */
   cashSafe: boolean;
+  /**
+   * Exactly one of the two survival readings (cash check / Finance diagnosis) exists and it is safe: cash
+   * safety is only half-measured — a caution (WATCH), never a danger issue and never "OK".
+   */
+  cashHalfMeasured?: boolean;
   staffOverloaded: boolean;
   ownerOverloaded: boolean;
   /** Hard safety block — e.g. a required boundary is missing or guidance is unsafe to show. */
@@ -176,7 +181,7 @@ export function buildOwnerNowView(ctx: GuidanceContext): OwnerNowView {
     : ctx.dataConfidence;
 
   // Per-function status surface.
-  const cashDangerStatus = categoryStatus(ctx.issues, IssueCategory.CASH_DANGER);
+  const cashDangerStatus = maxStatus(categoryStatus(ctx.issues, IssueCategory.CASH_DANGER), ctx.cashHalfMeasured ? "WATCH" : "OK");
   const profitLeakStatus = categoryStatus(ctx.issues, IssueCategory.PROFIT_LEAK);
   const overloadStatus = categoryStatus(ctx.issues, IssueCategory.OVERLOAD);
   const staffOverloadStatus = maxStatus(overloadStatus, ctx.staffOverloaded ? "DANGER" : "OK");

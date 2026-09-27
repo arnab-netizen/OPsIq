@@ -190,14 +190,15 @@ describe("P2 — low-data Finance page: consistent with the canonical decision (
 
   it("the Finance page renders the shared notice (never a hard-coded 'should not be acted on' beside its own main target)", () => {
     const page = readFileSync(join(ROOT, "src/app/(authenticated)/owner/finance/page.tsx"), "utf8");
-    expect(page).toMatch(/<DomainDataGapNotice\s+domain="finance"/);
+    expect(page).toMatch(/<DomainDataGapNotice\s+revision=\{cycle\}\s+domain="finance"/);
   });
 });
 
 describe("P2 — the target is visible on the destination domain page", () => {
   it.each(["finance", "cashflow", "sales", "operations", "execution", "marketing", "strategy"])("the %s page renders the canonical main-target context", (page) => {
     const src = readFileSync(join(ROOT, `src/app/(authenticated)/owner/${page}/page.tsx`), "utf8");
-    expect(src).toMatch(/<DomainMainTargetContext domain="[a-z]+" businessId=\{dashboard\?\.selectedBusinessId\} \/>/);
+    // The page's data is the revision: every reload after a mutation refetches the canonical decision.
+    expect(src).toMatch(/<DomainMainTargetContext domain="[a-z]+" businessId=\{dashboard\?\.selectedBusinessId\} revision=\{dashboard\} \/>/);
   });
 
   it("the decision card's go link lands on the domain page's main-target anchor", () => {

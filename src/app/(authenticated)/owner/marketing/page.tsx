@@ -401,7 +401,7 @@ export default function OwnerMarketingPage() {
               load must never render "No marketing snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
-          <DomainMainTargetContext domain="marketing" businessId={dashboard?.selectedBusinessId} />
+          <DomainMainTargetContext domain="marketing" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">

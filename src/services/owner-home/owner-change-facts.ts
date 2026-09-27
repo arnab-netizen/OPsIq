@@ -7,7 +7,7 @@
  */
 import { db } from "@/lib/db";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 import {
   asDate,
   complianceItemToCandidate,
@@ -30,15 +30,19 @@ const DAY_MS = 86_400_000;
 
 type SpineDomain = "finance" | "cashflow" | "sales" | "operations" | "sop" | "marketing" | "strategy" | "recovery";
 
-/** Each spine domain's cycle model and its current-diagnosis order (Recovery predates the Spine). */
-const CYCLE_MODELS: ReadonlyArray<{ domain: SpineDomain; model: string; order: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER | typeof CURRENT_RECOVERY_CYCLE_ORDER | typeof CURRENT_STRATEGY_CYCLE_ORDER }> = [
+/**
+ * Each EVIDENCE domain's cycle model and its current-diagnosis order (Recovery predates the Spine).
+ * Strategy is not here: a Strategy evaluation assesses a hypothetical plan the owner is considering, not
+ * the running business, so switching or re-evaluating a scenario is never "new figures" and never shows
+ * an issue as appeared or resolved (its own completions/verifications still count as work events).
+ */
+const CYCLE_MODELS: ReadonlyArray<{ domain: SpineDomain; model: string; order: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER | typeof CURRENT_RECOVERY_CYCLE_ORDER }> = [
   { domain: "finance", model: "ownerFinanceCycle", order: CURRENT_DIAGNOSIS_CYCLE_ORDER },
   { domain: "cashflow", model: "ownerCashflowCycle", order: CURRENT_DIAGNOSIS_CYCLE_ORDER },
   { domain: "sales", model: "ownerSalesCycle", order: CURRENT_DIAGNOSIS_CYCLE_ORDER },
   { domain: "operations", model: "ownerOperationsCycle", order: CURRENT_DIAGNOSIS_CYCLE_ORDER },
   { domain: "sop", model: "ownerSopCycle", order: CURRENT_DIAGNOSIS_CYCLE_ORDER },
   { domain: "marketing", model: "ownerMarketingCycle", order: CURRENT_DIAGNOSIS_CYCLE_ORDER },
-  { domain: "strategy", model: "ownerStrategyCycle", order: CURRENT_STRATEGY_CYCLE_ORDER },
   { domain: "recovery", model: "recoveryCycle", order: CURRENT_RECOVERY_CYCLE_ORDER },
 ];
 
@@ -56,11 +60,17 @@ interface CycleFactsRow {
   snapshot?: { createdAt?: unknown; periodEnd?: unknown } | null;
   findings?: readonly FindingFacts[];
 }
-/** The one read this module makes on each spine cycle model. */
+/** The two reads this module makes on each evidence cycle model. */
 interface CycleModelReader {
+  /** When the current evidence was FIRST diagnosed (a later re-diagnosis of it is not a new business state). */
+  aggregate(args: {
+    where: { workspaceId: string; businessId: string; snapshotId: string };
+    _min: { createdAt: true };
+  }): Promise<{ _min: { createdAt: Date | null } }>;
+  /** The baseline: the current diagnosis of the evidence that was available before the current evidence. */
   findFirst(args: {
-    where: { workspaceId: string; businessId: string; snapshotId: { not: string } };
-    orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER | typeof CURRENT_RECOVERY_CYCLE_ORDER | typeof CURRENT_STRATEGY_CYCLE_ORDER;
+    where: { workspaceId: string; businessId: string; snapshotId: { not: string }; createdAt: { lt: Date }; snapshot: { periodEnd: { lte: Date } } };
+    orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER | typeof CURRENT_RECOVERY_CYCLE_ORDER;
     select: typeof cycleSelect;
   }): Promise<CycleFactsRow | null>;
 }
@@ -90,7 +100,8 @@ const COMPLIANCE_CLEARED_STATUSES: ReadonlySet<string> = new Set(["active", "com
 const cycleSelect = {
   snapshotId: true,
   snapshot: { select: { id: true, createdAt: true, periodEnd: true } },
-  findings: { select: { code: true, severity: true, title: true } },
+  // Deterministic: when a cycle repeats a code at equal severity, the same row's title is reported every read.
+  findings: { select: { code: true, severity: true, title: true }, orderBy: [{ code: "asc" }, { id: "asc" }] },
 } as const;
 
 function issuesOf(domain: SpineDomain, findings: readonly FindingFacts[]): Record<string, { severity: OwnerSeverity | null; title: string }> {
@@ -135,24 +146,37 @@ function isNewerEvidence(current: { periodEnd: Date | null; createdAt: Date }, p
 }
 
 /**
- * One domain's evidence transition: its CURRENT diagnosis (latest evidence period) against the
- * diagnosis of the next-latest evidence on a DIFFERENT snapshot — the same current-diagnosis order, so a
- * back-filled older period diagnosed later is never the baseline (a re-diagnosis of the same figures is
- * not new evidence). Only causally newer evidence (isNewerEvidence) can report an issue as appeared,
- * changed or resolved; the window is judged by when the current diagnosis ran.
+ * One domain's evidence transition, dated by EVIDENCE chronology — never by insertion or re-diagnosis time:
+ *   - its time is when the CURRENT evidence (snapshot) was FIRST diagnosed: re-running the engine on the
+ *     same figures is not a new business state, so it never re-dates the transition into the window;
+ *   - its baseline is the current diagnosis (same shared order) of the evidence that was AVAILABLE before
+ *     that — cycles created before the current evidence's first diagnosis, on a different snapshot. A
+ *     back-filled older period, entered after the current evidence, is never the baseline (it was not
+ *     what the business looked like before the current figures), so it cannot produce a false
+ *     appeared / resolved / worsened / improved line.
+ * Only causally newer evidence (a later period, or the same period re-captured later) reports changes.
  */
 async function evidenceTransition(
   workspaceId: string,
   businessId: string,
   spec: (typeof CYCLE_MODELS)[number],
-  current: CurrentDiagnosisFacts | null
+  current: CurrentDiagnosisFacts | null,
+  now: Date
 ): Promise<OwnerEvidenceTransition | null> {
   if (!current?.snapshotId) return null;
   const currentAt = asDate(current.snapshot?.createdAt);
   if (!currentAt) return null;
+  // Figures for a period that has not ended are not trusted current evidence: they report no change.
+  const currentPeriodEnd = asDate(current.snapshot?.periodEnd);
+  if (currentPeriodEnd && currentPeriodEnd.getTime() > now.getTime()) return null;
   const model = (db as Record<string, CycleModelReader>)[spec.model];
+  const first = await model.aggregate({
+    where: { workspaceId, businessId, snapshotId: String(current.snapshotId) },
+    _min: { createdAt: true },
+  });
+  const firstDiagnosedAt = asDate(first._min.createdAt) ?? asDate(current.createdAt) ?? currentAt;
   const previous = await model.findFirst({
-    where: { workspaceId, businessId, snapshotId: { not: current.snapshotId } },
+    where: { workspaceId, businessId, snapshotId: { not: String(current.snapshotId) }, createdAt: { lt: firstDiagnosedAt }, snapshot: { periodEnd: { lte: now } } },
     orderBy: spec.order,
     select: cycleSelect,
   });
@@ -164,7 +188,7 @@ async function evidenceTransition(
       { periodEnd: asDate(current.snapshot?.periodEnd), createdAt: currentAt },
       { periodEnd: asDate(previous.snapshot?.periodEnd), createdAt: asDate(previous.snapshot?.createdAt) }
     ),
-    at: asDate(current.createdAt) ?? currentAt,
+    at: firstDiagnosedAt,
     previousIssues: previous ? issuesOf(spec.domain, previous.findings ?? []) : {},
     currentIssues: issuesOf(spec.domain, current.findings ?? []),
   };
@@ -195,7 +219,7 @@ export async function gatherOwnerChangeFacts(input: OwnerChangeFactsInput): Prom
   const { workspaceId, businessId, now } = input;
   const since = new Date(now.getTime() - OWNER_WHAT_CHANGED_WINDOW_DAYS * DAY_MS);
 
-  const transitions = (await Promise.all(CYCLE_MODELS.map((spec) => evidenceTransition(workspaceId, businessId, spec, input.currentDiagnoses[spec.domain] ?? null))))
+  const transitions = (await Promise.all(CYCLE_MODELS.map((spec) => evidenceTransition(workspaceId, businessId, spec, input.currentDiagnoses[spec.domain] ?? null, now))))
     .filter((t): t is OwnerEvidenceTransition => t !== null);
 
   // Record lifecycle transitions come from the records' own audit trail (never inferred from absence).

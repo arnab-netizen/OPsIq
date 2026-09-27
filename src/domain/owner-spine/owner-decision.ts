@@ -40,6 +40,7 @@ import {
   type OwnerDomain,
   type OwnerSeverity,
 } from "./contracts";
+import { evaluateOwnerActionGate, type OwnerGateBlockCode, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 
 // --- Business-semantic priority classes ---------------------------------------------------------
 
@@ -83,12 +84,14 @@ export function ownerPriorityClassRank(c: OwnerPriorityClass): number {
 // loss it fixes; a data gap about a hypothetical Strategy option is part of that growth decision, not
 // a gap in the evidence about the running business.
 const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
-  SAFETY_COMPLIANCE: ["COMPLIANCE_BREACH"],
+  SAFETY_COMPLIANCE: ["COMPLIANCE_BREACH", "COMPLIANCE_UNATTRIBUTED", "GATE_COMPLIANCE_EXPIRED"],
   SURVIVAL_CASH: [
     "FIN_INSOLVENT_RUNWAY", "FIN_LOW_RUNWAY", "FIN_LOW_ABSOLUTE_CASH", "FIN_HIGH_DEBT_PRESSURE",
     // Its own rule text: "vendor-cutoff and liquidity risk are elevated" — the same danger as CF_VENDOR_CUTOFF_RISK.
     "FIN_HIGH_PAYABLES",
     "CF_INSOLVENT_RUNWAY", "CF_LOW_RUNWAY", "CF_URGENT_PAYMENT_RISK", "CF_VENDOR_CUTOFF_RISK", "CF_DEBT_DEFAULT_RISK",
+    // The action gate holds growth work while cash is unsafe (canonicalEligibility's blocker target).
+    "GATE_CASH_UNSAFE",
   ],
   CUSTOMER_SERVICE_FAILURE: [
     "OPS_DELIVERY_FAILURE", "OPS_HIGH_COMPLAINT_RATE", "OPS_HIGH_REWORK", "OPS_HIGH_DELAY", "OPS_LOW_COMPLETION",
@@ -100,7 +103,7 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "QUALITY_FAILURE", "SLOW_TURNAROUND", "WEAK_REPEAT_RATE",
   ],
   // Demand exceeding capacity is overload that blocks the business from serving customers.
-  OVERLOAD_BLOCKING: ["OPS_CAPACITY_BOTTLENECK"],
+  OVERLOAD_BLOCKING: ["OPS_CAPACITY_BOTTLENECK", "GATE_CAPACITY_UNSAFE"],
   PROFIT_LOSS: [
     "FIN_BELOW_BREAK_EVEN", "FIN_NEGATIVE_GROSS_MARGIN", "FIN_NEGATIVE_NET_MARGIN", "FIN_HIGH_FIXED_COST_BURDEN",
     "FIN_HIGH_PAYROLL_BURDEN", "FIN_HIGH_RECEIVABLES",
@@ -119,6 +122,8 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "SALES_OPP_TIGHTEN_DISCOUNT", "OPS_HIGH_IDLE",
     "HIGH_COST_RATIO", "DISCOUNT_LEAKAGE", "DELIVERY_COST_LEAKAGE", "RECEIVABLES_PRESSURE", "LOW_REVENUE",
     "LOW_STAFF_PRODUCTIVITY", "POOR_CAMPAIGN_CONVERSION", "LOW_AOV",
+    // A known gross margin below the floor holds pricing/growth work (canonicalEligibility's blocker target).
+    "GATE_MARGIN_BELOW_FLOOR",
   ],
   BLOCKED_EXECUTION: [
     "OPS_SOP_NONCOMPLIANCE",
@@ -126,6 +131,8 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "SOP_HIGH_REASSIGNMENT", "SOP_LOW_COVERAGE",
     // Internal actions failing repeatedly ("needs an SOP, not another reminder") — execution, not customers.
     "SOP_REPEATED_FAILURES",
+    // A do-not-repeat memory holds a growth step until the memory records what has changed.
+    "GATE_DO_NOT_REPEAT_REVIEW",
   ],
   // Assigned only from Strategy's resolved decision (strategyCandidatePriorityClass), never by code.
   PLAN_COMMITMENT_RISK: [],
@@ -195,6 +202,19 @@ export function classifyOwnerFindingCode(code: string): OwnerPriorityClass {
   return "GROWTH_OPPORTUNITY";
 }
 
+/**
+ * What drives a Finance survival reading, from that diagnosis's OWN findings: "cash" when any finding is a
+ * cash-survival danger (runway, cash, debt or payables pressure), "profit" when its dangers are only
+ * profit/margin losses, null when its findings do not say (none loaded, or none of either kind). A Finance
+ * survival state driven by profit is never described as a cash danger.
+ */
+export function financeSurvivalDriver(findings: ReadonlyArray<{ code?: unknown }> | null | undefined): "cash" | "profit" | null {
+  if (!findings) return null;
+  const classes = findings.map((f) => (typeof f?.code === "string" ? classifyOwnerFindingCode(f.code) : null));
+  if (classes.includes("SURVIVAL_CASH")) return "cash";
+  return classes.includes("PROFIT_LOSS") ? "profit" : null;
+}
+
 // --- Strategy: precedence from the resolved five-state decision -------------------------------------
 
 /** Strategy decision codes (owner-strategy/decision.ts STRATEGY_DECISION_CODES). */
@@ -234,6 +254,12 @@ export type OwnerCandidateSource =
   | "business_risk"
   | "evidence_refresh"
   /**
+   * The safety state that holds an otherwise-eligible step at the owner action gate (capacity, cash,
+   * margin, compliance, do-not-repeat), elected as work in its own right: clear the blocker first.
+   * Synthesized by canonicalEligibility from the gate's own constraints — never an action row.
+   */
+  | "safety_gate"
+  /**
    * A survival ISSUE raised by a cash/finance diagnosis that no eligible action for the SAME issue
    * represents (its action was completed/cancelled, or none exists) — the issue stays open while the
    * evidence that raised it is the evidence OpsIQ holds.
@@ -248,7 +274,12 @@ export type OwnerCandidateExclusion =
   | "verified_fix_awaiting_new_evidence"
   | "superseded"
   /** Its evidence is older than the freshness window: replaced by an explicit refresh target. */
-  | "stale_evidence";
+  | "stale_evidence"
+  /**
+   * The owner action gate would refuse it at the current safety state (owner-action-gate-policy.ts):
+   * never elected or listed as a step; the blocker is elected instead (a "safety_gate" target).
+   */
+  | "held_by_safety_gate";
 
 /** One normalized candidate that competes for the owner's overall priority. */
 export interface OwnerDecisionCandidate {
@@ -281,8 +312,10 @@ export interface OwnerDecisionCandidate {
   verificationMetric: string | null;
   /** When the evidence that raised this candidate was captured (snapshot time); null if unknown. */
   evidenceAsOf: Date | null;
-  /** True when the evidence is older than the owner-decision freshness window. */
+  /** True when the evidence cannot be shown to be current (older than the freshness window, amended, or future-dated). */
   stale: boolean;
+  /** True when the evidence's period ends after `now`: future-dated figures are never trusted current evidence. */
+  futurePeriod?: boolean;
   /** Lifecycle exclusion computed by the normalizer; null ⇒ eligible. */
   exclusion: OwnerCandidateExclusion | null;
   /** Owner page where this is worked. */
@@ -492,12 +525,19 @@ export interface ResolveOwnerDecisionInput {
     lowConfidenceDomains: string[];
     missingCriticalData: string[];
   };
-  /** Domains whose latest evidence is older than the freshness window. */
+  /** Domains whose latest evidence cannot be shown to be current (out of date, amended or future-dated). */
   staleDomains: readonly string[];
+  /** Of those, the domains whose latest figures are for a period that has not ended yet. */
+  futureDomains?: readonly string[];
   strategy: OwnerDecisionStrategyContext | null;
   reassessment: { days: number; reason: string };
   /** Persisted mutation facts for "what changed" (gathered read-only by the caller). */
   changeFacts: OwnerChangeFacts;
+  /**
+   * The business's owner action-gate constraints (loadOwnerGateConstraints). Production callers always
+   * pass them (src/__tests__/governance/owner-decision-gate-constraints.test.ts); pure tests may omit them.
+   */
+  gate?: OwnerGateConstraints | null;
   now: Date;
 }
 
@@ -515,7 +555,7 @@ export interface OwnerEvidenceTransition {
   currentEvidenceId: string;
   /** True only when the current evidence is causally newer (a different, later snapshot) — a re-diagnosis of the same figures is not. */
   newerEvidence: boolean;
-  /** When the current diagnosis ran (the window test: new figures analysed recently). */
+  /** When the current evidence was FIRST diagnosed (the window test; a re-diagnosis never re-dates it). */
   at: Date;
   previousIssues: Readonly<Record<string, { severity: OwnerSeverity | null; title: string }>>;
   currentIssues: Readonly<Record<string, { severity: OwnerSeverity | null; title: string }>>;
@@ -751,6 +791,8 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: {
     const label = ownerDomainLabel(domain);
     const more = ordered.length > 1 ? ` and ${ordered.length - 1} other item${ordered.length === 2 ? "" : "s"}` : "";
     const asOf = ordered.reduce<Date | null>((d, c) => (c.evidenceAsOf && (!d || c.evidenceAsOf < d) ? c.evidenceAsOf : d), null);
+    // Future-dated figures are named as such — never called "out of date", never trusted as current.
+    const future = ordered.some((c) => c.futurePeriod);
     out.push({
       candidateId: `evidence_refresh:${domain}`,
       businessId: input.businessId,
@@ -763,8 +805,10 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: {
       priorityClass: top.priorityClass,
       findingCode: "EVIDENCE_REFRESH",
       findingId: null,
-      title: `Update the figures in ${label} before acting on them`,
-      explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
+      title: future ? `Correct the future-dated figures in ${label} before acting on them` : `Update the figures in ${label} before acting on them`,
+      explanation: future
+        ? `Your latest ${label} figures are for a period that has not ended yet, so OpsIQ cannot treat them as current and will not tell you to act on them. They flagged "${top.title}"${more}. Correct the period (or enter figures for a period that has ended) and re-run the ${label} diagnosis.`
+        : `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
       // Every ranking attribute comes from the SAME most-serious item (never mixed across items or
       // classes); confidence is also capped at "low" — the figures are out of date.
       severity: top.severity,
@@ -787,26 +831,161 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: {
   return out;
 }
 
+/** A step the owner action gate would refuse at the current safety state (canonicalEligibility). */
+export interface OwnerGateHold {
+  candidateId: string;
+  title: string;
+  domain: OwnerDecisionCandidate["domain"];
+  code: OwnerGateBlockCode;
+  reason: string;
+}
+
+const MARGIN_REPAIR_CODES = new Set(["FIN_NEGATIVE_GROSS_MARGIN", "FIN_NEGATIVE_NET_MARGIN", "FIN_OPP_MARGIN_IMPROVEMENT", "HIGH_COST_RATIO"]);
+
+/** Whether an eligible candidate already IS the work that clears a gate blocker (so none is synthesized). */
+function addressesBlocker(c: OwnerDecisionCandidate, code: OwnerGateBlockCode): boolean {
+  switch (code) {
+    case "COMPLIANCE_BLOCKED":
+      return c.source === "compliance_item" && c.blocking;
+    case "CASH_SAFETY_BLOCKED":
+      return c.priorityClass === "SURVIVAL_CASH";
+    case "MARGIN_SAFETY_BLOCKED":
+      return MARGIN_REPAIR_CODES.has(c.findingCode);
+    case "CAPACITY_BLOCKED":
+    case "DO_NOT_REPEAT_BLOCKED":
+      return false;
+  }
+}
+
+const GATE_TARGET: Record<OwnerGateBlockCode, { findingCode: string; priorityClass: OwnerPriorityClass; route: (domain: string) => string }> = {
+  COMPLIANCE_BLOCKED: { findingCode: "GATE_COMPLIANCE_EXPIRED", priorityClass: "SAFETY_COMPLIANCE", route: () => "/owner/compliance" },
+  CASH_SAFETY_BLOCKED: { findingCode: "GATE_CASH_UNSAFE", priorityClass: "SURVIVAL_CASH", route: () => "/owner/cashflow" },
+  MARGIN_SAFETY_BLOCKED: { findingCode: "GATE_MARGIN_BELOW_FLOOR", priorityClass: "PROFIT_LOSS", route: () => "/owner/finance" },
+  CAPACITY_BLOCKED: { findingCode: "GATE_CAPACITY_UNSAFE", priorityClass: "OVERLOAD_BLOCKING", route: () => "/owner/operations" },
+  DO_NOT_REPEAT_BLOCKED: { findingCode: "GATE_DO_NOT_REPEAT_REVIEW", priorityClass: "BLOCKED_EXECUTION", route: (d) => DOMAIN_ROUTE_FOR_GATE[d] ?? "/owner" },
+};
+const DOMAIN_ROUTE_FOR_GATE: Record<string, string> = {
+  finance: "/owner/finance", cashflow: "/owner/cashflow", strategy: "/owner/strategy", recovery: "/owner/recovery",
+  sales: "/owner/sales", operations: "/owner/operations", sop: "/owner/execution", marketing: "/owner/marketing",
+};
+const GATE_TARGET_DOMAIN: Record<Exclude<OwnerGateBlockCode, "DO_NOT_REPEAT_BLOCKED">, OwnerDecisionCandidate["domain"]> = {
+  COMPLIANCE_BLOCKED: "compliance",
+  CASH_SAFETY_BLOCKED: "cashflow",
+  MARGIN_SAFETY_BLOCKED: "finance",
+  CAPACITY_BLOCKED: "operations",
+};
+
+function gateBlockerTitle(code: OwnerGateBlockCode, gate: OwnerGateConstraints, domainLabel: string): string {
+  switch (code) {
+    case "COMPLIANCE_BLOCKED":
+      return `Renew "${gate.expiredCompliance?.name ?? "the expired obligation"}" (or get professional review) — work is on hold until then`;
+    case "CASH_SAFETY_BLOCKED":
+      return "Stabilise cash before advancing the work it holds back";
+    case "MARGIN_SAFETY_BLOCKED":
+      return "Restore gross margin above the safety floor before scaling sales or marketing";
+    case "CAPACITY_BLOCKED":
+      return `Clear the capacity bottleneck${gate.capacity.bottlenecks.length ? ` (${gate.capacity.bottlenecks.join(", ")})` : ""} before taking on more work`;
+    case "DO_NOT_REPEAT_BLOCKED":
+      return `Review the earlier ${domainLabel} result marked do-not-repeat before repeating that growth step`;
+  }
+}
+
+/** One explicit "clear this blocker" target per gate blocker that holds eligible work and that no eligible item already addresses. */
+function buildGateBlockerTargets(
+  holds: readonly OwnerGateHold[],
+  eligible: readonly OwnerDecisionCandidate[],
+  gate: OwnerGateConstraints,
+  scope: { businessId: string; workspaceId: string }
+): OwnerDecisionCandidate[] {
+  const out: OwnerDecisionCandidate[] = [];
+  const groups = new Map<string, OwnerGateHold[]>();
+  for (const h of holds) {
+    const key = h.code === "DO_NOT_REPEAT_BLOCKED" ? `${h.code}:${h.domain}` : h.code;
+    groups.set(key, [...(groups.get(key) ?? []), h]);
+  }
+  for (const [key, group] of groups) {
+    const code = group[0].code;
+    if (eligible.some((c) => addressesBlocker(c, code))) continue;
+    const t = GATE_TARGET[code];
+    const domain = code === "DO_NOT_REPEAT_BLOCKED" ? group[0].domain : GATE_TARGET_DOMAIN[code];
+    const held = quoteHeld(group.map((h) => h.title));
+    out.push({
+      candidateId: `safety_gate:${key}`,
+      businessId: scope.businessId,
+      workspaceId: scope.workspaceId,
+      source: "safety_gate",
+      domain,
+      sourceId: key,
+      priorityClass: t.priorityClass,
+      findingCode: t.findingCode,
+      findingId: null,
+      title: gateBlockerTitle(code, gate, ownerDomainLabel(group[0].domain)),
+      explanation: `${group[0].reason} OpsIQ holds ${held} until this is cleared, so it is not a step for now.`,
+      // Nothing is invented: the gate records no severity, score or effort for its own constraint.
+      severity: null,
+      priorityScore: 0,
+      expectedImpactScore: 0,
+      confidence: 1,
+      effortScore: 50,
+      status: "open",
+      ownerActionRequired: true,
+      blocking: true,
+      evidence: group.map((h) => `On hold: ${h.title}`),
+      missingData: [],
+      verificationMetric: null,
+      evidenceAsOf: null,
+      stale: false,
+      exclusion: null,
+      targetRoute: t.route(group[0].domain),
+    });
+  }
+  return out;
+}
+
+function quoteHeld(titles: readonly string[]): string {
+  const q = titles.slice(0, 3).map((t) => `"${t}"`);
+  const more = titles.length > 3 ? ` and ${titles.length - 3} other step${titles.length === 4 ? "" : "s"}` : "";
+  return q.length <= 1 ? `${q[0] ?? "this work"}${more}` : `${q.slice(0, -1).join(", ")} and ${q[q.length - 1]}${more}`;
+}
+
 /**
  * The canonical eligibility contract, shared by the owner decision and by every domain page's local
  * "next step" (which is this list filtered to its domain — never raw action rows): candidates outside
  * the scope are dropped; stale domain actions and survival issues leave the election and are replaced,
  * per domain, by ONE explicit refresh-evidence target; lifecycle exclusions are kept for transparency.
+ *
+ * With the business's owner-gate constraints (`scope.gate` — the SAME constraints the server-side action
+ * gate enforces, owner-action-gate-policy.ts), an action the gate would refuse is never a step: it is
+ * excluded as "held_by_safety_gate" and the blocker itself is elected as work ("safety_gate" target)
+ * unless an eligible item already addresses it. So a canonical step is always gate-compatible at the
+ * state it was resolved with; the gate still re-checks at mutation time. Without `gate` (pure callers that
+ * model no safety state) no action is held.
  */
 export function canonicalEligibility(
   candidates: readonly OwnerDecisionCandidate[],
-  scope: { businessId: string; workspaceId: string }
-): { processed: OwnerDecisionCandidate[]; ranked: OwnerDecisionCandidate[] } {
+  scope: { businessId: string; workspaceId: string; gate?: OwnerGateConstraints | null }
+): { processed: OwnerDecisionCandidate[]; ranked: OwnerDecisionCandidate[]; holds: OwnerGateHold[] } {
   const scoped = candidates.filter((c) => c.businessId === scope.businessId && c.workspaceId === scope.workspaceId);
   // A stale diagnosis is never an authoritative "do this now": its otherwise-eligible actions leave the
   // election and are replaced by an explicit "refresh this evidence" target that carries what they
   // flagged (nothing is silently dropped). Survival issues on stale evidence are replaced the same way.
   // Recorded control facts are never stale.
-  const processed = scoped.map((c) =>
-    c.exclusion === null && c.stale && (c.source === "domain_action" || c.source === "survival_reading") ? { ...c, exclusion: "stale_evidence" as const } : c
-  );
+  const holds: OwnerGateHold[] = [];
+  const processed = scoped.map((c) => {
+    if (c.exclusion === null && c.stale && (c.source === "domain_action" || c.source === "survival_reading")) return { ...c, exclusion: "stale_evidence" as const };
+    if (c.exclusion === null && c.source === "domain_action" && scope.gate) {
+      const verdict = evaluateOwnerActionGate(scope.gate, { domain: c.domain, intent: ownerTargetIntent(c), findingId: c.findingId });
+      if (!verdict.allowed) {
+        holds.push({ candidateId: c.candidateId, title: c.title, domain: c.domain, code: verdict.code, reason: verdict.reason });
+        return { ...c, exclusion: "held_by_safety_gate" as const };
+      }
+    }
+    return c;
+  });
   const refreshTargets = buildRefreshTargets(processed.filter((c) => c.exclusion === "stale_evidence"), scope);
-  return { processed, ranked: rankOwnerCandidates([...processed, ...refreshTargets]) };
+  const eligible = [...processed, ...refreshTargets].filter(isEligibleOwnerCandidate);
+  const blockerTargets = scope.gate ? buildGateBlockerTargets(holds, eligible, scope.gate, scope) : [];
+  return { processed, ranked: rankOwnerCandidates([...eligible, ...blockerTargets]), holds };
 }
 
 /**
@@ -815,7 +994,7 @@ export function canonicalEligibility(
  */
 export function domainLocalCanonicalStep(
   candidates: readonly OwnerDecisionCandidate[],
-  scope: { businessId: string; workspaceId: string },
+  scope: { businessId: string; workspaceId: string; gate?: OwnerGateConstraints | null },
   domain: OwnerDecisionCandidate["domain"]
 ): OwnerDecisionCandidate | null {
   return canonicalEligibility(candidates, scope).ranked.find((c) => c.domain === domain) ?? null;
@@ -826,7 +1005,7 @@ export function domainLocalCanonicalStep(
  * target when any eligible candidate exists; otherwise an honest non-target state.
  */
 export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentOwnerDecision {
-  const { processed, ranked } = canonicalEligibility(input.candidates, input);
+  const { processed, ranked, holds } = canonicalEligibility(input.candidates, input);
   const excluded = processed
     .filter((c) => c.exclusion !== null)
     .map((c) => ({ candidateId: c.candidateId, title: c.title, reason: c.exclusion as OwnerCandidateExclusion }));
@@ -843,7 +1022,13 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (!hasEvidence) pushMissing("Add your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
   for (const m of input.dataSufficiency.missingCriticalData) pushMissing(m);
   if (primary) for (const m of primary.missingData) pushMissing(m);
-  for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`);
+  for (const d of input.staleDomains) {
+    pushMissing(
+      input.futureDomains?.includes(d)
+        ? `Figures for ${ownerDomainLabel(d)} for a period that has ended — the latest ones are dated in the future, so they cannot be treated as current.`
+        : `Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`
+    );
+  }
 
   // Confidence: the primary's own evidence confidence, capped by business-wide data sufficiency.
   const reasons: string[] = [];
@@ -882,7 +1067,9 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
               ? `from your ${ownerDomainLabel(primary.domain)} diagnosis`
               : primary.source === "survival_reading"
                 ? `still shown by your current ${ownerDomainLabel(primary.domain)} figures, and no open action addresses it`
-                : `from what is recorded in ${ownerDomainLabel(primary.domain)}`
+                : primary.source === "safety_gate"
+                  ? `and OpsIQ's safety checks hold other work until it is cleared`
+                  : `from what is recorded in ${ownerDomainLabel(primary.domain)}`
           }.`
     );
     const runnerUp = ranked[1] ?? null;
@@ -939,6 +1126,11 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       );
     }
   }
+  // Steps the action gate holds at the current safety state: stated as what not to do yet, with the reason
+  // (the blocker itself is a canonical target — canonicalEligibility).
+  for (const h of holds.slice(0, MAX_CAN_WAIT)) {
+    reconciled.push({ kind: "prohibition", text: `Don't start "${h.title}" yet — ${h.reason}`, conditionOn: [] });
+  }
   const s = input.strategy;
   if (s && (s.code === "NOT_YET" || s.code === "DONT_AS_PLANNED" || s.code === "NEED_INFO")) {
     const option = s.optionName ? `"${s.optionName}"` : "the plan you are evaluating";
@@ -980,7 +1172,9 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       ? `Check again after you update the ${ownerDomainLabel(primary.domain)} figures and re-run its diagnosis, ${cadence}.`
       : primary.source === "survival_reading"
         ? `Check again when new ${ownerDomainLabel(primary.domain)} figures are added (only new figures can show this has gone), ${cadence}.`
-        : primary.source === "domain_action"
+        : primary.source === "safety_gate"
+          ? `Check again once this is cleared — the work it holds then becomes available — ${cadence}.`
+          : primary.source === "domain_action"
           ? `Check again when "${primary.title}" is done${primary.verificationMetric ? ` or your ${humanizeMetricKey(primary.verificationMetric)} changes` : ""}, when new ${ownerDomainLabel(primary.domain)} data is added, ${cadence}.`
           : `Check again when the ${ownerDomainLabel(primary.domain)} record for this is updated, ${cadence}.`
     : hasEvidence

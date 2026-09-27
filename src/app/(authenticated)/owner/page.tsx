@@ -15,6 +15,7 @@ import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import {
   ownerImperativeContext,
   planConstraintAsCondition,
+  planNextActionText,
   reconcilePlanCards,
   reconcilePlanGrowthGate,
   reconcilePlanProse,
@@ -538,7 +539,7 @@ export default function OwnerCommandCenterPage() {
               </div>
 
               <div className="text-sm mb-3" data-testid="wbp-next-action">
-                <span className="font-medium">The plan analysis suggests:</span> {wbp.nextBestAction}
+                <span className="font-medium">The plan analysis suggests:</span> {planNextActionText(wbp.nextBestAction, imperativeCtx)}
               </div>
 
               {/* Beside a canonical decision the plan's stop list is restated as constraints on the main target. */}

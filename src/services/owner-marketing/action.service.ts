@@ -16,7 +16,7 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
 import type { MarketingActionUpdateInput } from "@/domain/owner-marketing/validation";
 
 export async function updateMarketingAction(
@@ -31,6 +31,7 @@ export async function updateMarketingAction(
   if (!action) throw new NotFoundError("OwnerMarketingAction", actionId);
 
   const data: Record<string, unknown> = {};
+  let gateAssessment: OwnerGateAssessment | null = null;
   const now = new Date();
 
   if (input.status !== undefined) {
@@ -44,7 +45,7 @@ export async function updateMarketingAction(
     const to = input.status;
 
     // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
-    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "marketing", toStatus: to, findingCode: action.findingCode });
+    gateAssessment = await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "marketing", toStatus: to, findingCode: action.findingCode, findingId: action.findingId });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
@@ -78,6 +79,8 @@ export async function updateMarketingAction(
     entityId: actionId,
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
+  // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
+  if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
 
   // On action completion, emit a dedicated event and trigger re-diagnosis from
   // latest snapshot -- matches every other owner-domain action service

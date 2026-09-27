@@ -446,7 +446,7 @@ export default function OwnerStrategyPage() {
               load must never render "No scenario yet." next to the error banner above: that
               would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
-          <DomainMainTargetContext domain="strategy" businessId={dashboard?.selectedBusinessId} />
+          <DomainMainTargetContext domain="strategy" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="space-y-6">
@@ -561,7 +561,7 @@ function StrategyCycleView({
   score: any;
   missing: string[];
   recommended: any;
-  decisionStep: { state: "current" | "not_listed" | "replaced"; replacedBecause: string | null } | null;
+  decisionStep: { state: "current" | "not_listed" | "replaced"; replacedBecause: string | null; openStep?: { title: string; description: string } | null } | null;
   decision: StrategyDecision | null;
   history: any[];
   busy: boolean;
@@ -581,6 +581,7 @@ function StrategyCycleView({
             caption={caption}
             nextStepRow={decisionStep?.state === "current" && recommended ? { status: recommended.status, statusLabel: ACTION_STATUS_LABEL[recommended.status] ?? recommended.status } : null}
             replacedStep={decisionStep?.state === "replaced" ? { replacedBecause: decisionStep.replacedBecause ?? "", step: recommended ? { title: recommended.title, description: recommended.description } : null } : null}
+            openStep={decisionStep?.state === "not_listed" ? decisionStep.openStep ?? null : null}
           />
           <Disclosure summary="Detailed scores">
             {decision.dimensions.profit.state === "unknown" ? (

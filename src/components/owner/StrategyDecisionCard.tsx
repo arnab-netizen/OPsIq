@@ -54,12 +54,18 @@ export function StrategyDecisionCard({
   caption,
   nextStepRow,
   replacedStep = null,
+  openStep = null,
 }: {
   decision: StrategyDecision;
   caption: string;
   /** The persisted action carrying the primary step, when one exists. */
   nextStepRow: StrategyNextStepRow | null;
   replacedStep?: StrategyReplacedStep | null;
+  /**
+   * While the decision's own step has no action row yet: the first open Strategy item that IS in the action
+   * list (server-decided), shown beside the decision's step.
+   */
+  openStep?: { title: string; description: string } | null;
 }) {
   // Conditions are listed under "Before you go ahead"; every other reason is a "why". For "Not yet"
   // the gap is already the detail line, the Cash line and the next step — not repeated as a "why".
@@ -172,6 +178,13 @@ export function StrategyDecisionCard({
             ? `In your action list below — ${nextStepRow.statusLabel.toLowerCase()}.`
             : "Evaluate this scenario again (under “Saved scenarios” below) to add this step to your action list."}
         </p>
+        {!nextStepRow && openStep && (
+          <div className="mt-3 border-t pt-2" data-testid="strategy-open-step">
+            <div className="text-xs uppercase text-muted-foreground">Open in your action list now</div>
+            <div className="font-semibold">{openStep.title}</div>
+            <p className="text-sm">{openStep.description}</p>
+          </div>
+        )}
       </div>
       )}
     </section>

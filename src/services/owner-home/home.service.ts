@@ -7,8 +7,9 @@
  * actions, recorded verifications) and:
  *   1. builds the §19 owner-home summary (health, dangers, risks, opportunities, verified improvement);
  *   2. normalizes every competing source into the Spine's candidate contract — all eight domain
- *      engines' actions, breached/expired compliance obligations, and (only when the workspace holds
- *      exactly one real business) critical owner-recorded risks — and resolves the single canonical
+ *      engines' actions, breached/expired compliance obligations (a business-less one in a multi-business
+ *      workspace as an attribution request, never a block), and (only when the workspace holds exactly one
+ *      real business) critical owner-recorded risks — and resolves the single canonical
  *      `currentOwnerDecision` with the Spine arbiter (owner-spine/owner-decision.ts).
  * Home, Cockpit, Priorities, the Command Center and Portfolio all render that decision; none of
  * them ranks on its own. Owns no table and mutates nothing; workspace ownership is enforced by the
@@ -20,8 +21,9 @@ import { getBusiness, hasExactlyOneRealBusiness, listBusinesses } from "@/servic
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 import { buildOwnerHomeSummary, type OwnerHomeSummary } from "@/domain/owner-home";
 import { buildBusinessConditionProfile, ownerSeverityRank, type OwnerSeverity } from "@/domain/owner-spine/contracts";
-import { classifyOwnerFindingCode, resolveOwnerDecision, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
-import { businessRiskToCandidate, complianceItemToCandidate, toOwnerSeverity } from "@/services/owner-home/owner-decision-candidates";
+import { classifyOwnerFindingCode, financeSurvivalDriver, resolveOwnerDecision, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { businessRiskToCandidate, complianceItemToCandidate, toOwnerSeverity, unattributedComplianceItemToCandidate } from "@/services/owner-home/owner-decision-candidates";
+import { loadOwnerGateConstraints } from "@/services/owner-mode/owner-action-gate.service";
 import { buildOwnerSpineCandidates, loadOwnerSpineEvidence } from "@/services/owner-home/owner-candidate-builder";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 import { gatherOwnerChangeFacts } from "@/services/owner-home/owner-change-facts";
@@ -76,14 +78,18 @@ export async function getOwnerHome(
   await getBusiness(businessId, workspaceId); // ownership guard
 
   // Spine evidence → canonical candidates: the SAME builder every domain page's local step uses.
-  const [evidence, complianceItems, singleRealBusiness] = await Promise.all([
+  const [evidence, complianceItems, singleRealBusiness, gate] = await Promise.all([
     loadOwnerSpineEvidence(workspaceId, businessId),
-    // Business-attributable compliance obligations (a null businessId is attributable only when the
-    // workspace holds exactly one real business — filtered below). Terminal items raise nothing.
+    // This business's compliance obligations and the business-less ones (a null businessId is attributable
+    // only when the workspace holds exactly one real business; otherwise it is surfaced for attribution —
+    // below). Terminal items raise nothing.
     db.ownerComplianceItem.findMany({
       where: { workspaceId, OR: [{ businessId }, { businessId: null }], status: { notIn: ["compliant", "waived"] } },
     }),
     hasExactlyOneRealBusiness(workspaceId),
+    // The owner action gate's constraints for this business: the decision never elects a step the gate
+    // would refuse at this state (canonicalEligibility); the gate still re-checks at mutation time.
+    loadOwnerGateConstraints(workspaceId, businessId, { db: db as never, now: () => now }),
   ]);
   const build = buildOwnerSpineCandidates(evidence, { businessId, workspaceId, now });
   const { domainScores, findings, verifications, staleDomains, survivalReadings, missingCriticalData } = build;
@@ -95,7 +101,13 @@ export async function getOwnerHome(
     const c = complianceItemToCandidate(item, { businessId, workspaceId, now });
     if (item.businessId === null) {
       if (c?.blocking) unassignedCritical++;
-      if (!singleRealBusiness) continue;
+      if (!singleRealBusiness) {
+        // Several businesses: applicability of a business-less item is unknown — surfaced for attribution,
+        // never silently blocking this business (the gate does not attribute it either).
+        const u = unattributedComplianceItemToCandidate(item, { businessId, workspaceId, now });
+        if (u) candidates.push(u);
+        continue;
+      }
     }
     if (c) candidates.push(c);
   }
@@ -168,9 +180,11 @@ export async function getOwnerHome(
     diagnosedDomains: domainScores.map((d) => d.domain),
     dataSufficiency,
     staleDomains,
+    futureDomains: build.futureDomains,
     strategy: build.strategyContext,
     reassessment,
     changeFacts,
+    gate,
     now,
   });
 
@@ -187,7 +201,10 @@ export async function getOwnerHome(
     evidence.finance ? { state: evidence.finance.survivalState as string | null, snapshot: evidence.finance.snapshot } : null,
     now.getTime()
   );
-  const cashFinanceConflict = cashFinance.conflicting && cashFinance.cashState && cashFinance.financeState
+  // A disagreement is shown on the CASH card only when Finance's own findings are about cash; a
+  // profit-driven Finance state is Finance's own card (with its provenance), never a cash conflict.
+  const financeProfitDriven = financeSurvivalDriver(evidence.finance?.findings) === "profit";
+  const cashFinanceConflict = cashFinance.conflicting && cashFinance.cashState && cashFinance.financeState && !financeProfitDriven
     ? { cashState: cashFinance.cashState, financeState: cashFinance.financeState }
     : null;
   const summary = baseSummary

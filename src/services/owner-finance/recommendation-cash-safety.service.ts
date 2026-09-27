@@ -1,16 +1,18 @@
 /**
- * Modules 4 & 5 — cash/finance-safety enforcement at recommendation promotion.
+ * Modules 4 & 5 — cash/finance-safety enforcement at recommendation promotion (Formal Consulting Mode).
  *
- * Reads the ONE current cash/finance reading (current-cash-finance-reading.ts: current diagnosis
- * cycles, arbitrated by evidence period, amended Finance figures fail safe) of the ONE business the
- * recommendation is attributable to (the workspace's only real business; never workspace-wide cycles,
- * which could belong to another business). A missing reading — no business (consulting-only), several
- * businesses (unattributable), no diagnosis, or a Finance diagnosis on amended figures — is AT_RISK: the
- * recommendation gate's long-standing semantics (growth is blocked, non-growth allowed), unchanged for
- * Consulting Mode and never broadened. No business's figures leak into another's. Derives the
- * recommendation's sensitivity from its linked finding, and runs the fail-closed cash-safety gate.
- * Enforced only when the workspace opted into the Owner Mode governance suite
- * (same flag as M1/M2/M3). Reuses the proven owner-finance/owner-cashflow domains.
+ * Semantics are the pre-consolidation gate's, unchanged: BOTH persisted states are passed to the pure
+ * gate, which takes the WORSE of the two (cash-safety-gate.ts worseState) — a newer SAFE Finance reading
+ * never wipes out a still-recorded CRITICAL cash reading, and there is no source arbitration here (that is
+ * Owner Mode's current-cash-finance-reading.ts). A missing half is AT_RISK (growth blocked, non-growth
+ * allowed), exactly as before.
+ *
+ * The only change from the base is attribution/isolation: the cycles read are those of the ONE business
+ * the recommendation is attributable to (the workspace's only real business — a recommendation's
+ * engagement carries no owner business), in current-cycle order (current-diagnosis-cycle.ts), never the
+ * workspace-wide latest cycle that could belong to another business. No attributable business → both
+ * halves are missing → AT_RISK.
+ * Enforced only when the workspace opted into the Owner Mode governance suite (same flag as M1/M2/M3).
  */
 
 import {
@@ -19,8 +21,14 @@ import {
 } from "@/domain/owner-finance/cash-safety-gate";
 import { mapImpactAreaToSensitivity, RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
-import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
+const VALID_STATES = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
+
+function toState(v: string | undefined): FinancialHealthState {
+  // Missing/unknown finance data → AT_RISK: blocks growth, allows non-growth (the
+  // spec requires proven cash safety before growth, not before everything).
+  return v && VALID_STATES.has(v) ? (v as FinancialHealthState) : "AT_RISK";
+}
 
 interface CashDb {
   clientAccount: {
@@ -37,15 +45,15 @@ interface CashDb {
     findFirst(args: {
       where: { workspaceId: string; businessId: string };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
-    }): Promise<{ cashflowState: string; snapshot?: { periodEnd: Date } | null } | null>;
+      select: { cashflowState: true };
+    }): Promise<{ cashflowState: string } | null>;
   };
   ownerFinanceCycle: {
     findFirst(args: {
       where: { workspaceId: string; businessId: string };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
-    }): Promise<{ survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
+      select: { survivalState: true };
+    }): Promise<{ survivalState: string } | null>;
   };
   recommendation: {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { findingId: true } }): Promise<{ findingId: string | null } | null>;
@@ -57,7 +65,6 @@ interface CashDb {
 
 export interface CashDeps {
   db: CashDb;
-  now?: () => Date;
 }
 
 async function resolveDefaultDeps(): Promise<CashDeps> {
@@ -95,23 +102,15 @@ export async function enforceCashSafetyForPromotion(
   const businessId = businesses.length === 1 ? businesses[0].id : null;
   const [cashRow, finRow, sensitivity] = await Promise.all([
     businessId
-      ? deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId, businessId }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, snapshot: { select: { periodEnd: true } } } })
+      ? deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId, businessId }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true } })
       : Promise.resolve(null),
     businessId
-      ? deps.db.ownerFinanceCycle.findFirst({ where: { workspaceId, businessId }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } } })
+      ? deps.db.ownerFinanceCycle.findFirst({ where: { workspaceId, businessId }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true } })
       : Promise.resolve(null),
     resolveSensitivity(recommendationId, workspaceId, deps),
   ]);
-  const reading = currentCashFinanceReading(
-    cashRow ? { state: cashRow.cashflowState, snapshot: cashRow.snapshot } : null,
-    finRow ? { state: finRow.survivalState, snapshot: finRow.snapshot } : null,
-    (deps.now ?? (() => new Date()))().getTime()
-  );
-  // A missing current reading (no business, unattributable, no diagnosis, or amended Finance figures) is
-  // AT_RISK — the gate's unchanged base semantics.
-  const state = (reading.gateState ?? "AT_RISK") as FinancialHealthState;
-  const halfMissing = !reading.cashState || !reading.financeState;
-  assertCashSafetyForPromotion(state, halfMissing ? "AT_RISK" : state, sensitivity, recommendationId);
+  // Base semantics: the gate takes the worse of the two states; a missing half is AT_RISK.
+  assertCashSafetyForPromotion(toState(cashRow?.cashflowState), toState(finRow?.survivalState), sensitivity, recommendationId);
 }
 
 /** Backward-compatible guard: enforce only when the workspace opted in (default off). */

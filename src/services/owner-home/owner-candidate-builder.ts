@@ -11,6 +11,7 @@
  * Read-only: loads persisted, workspace- and business-scoped rows and normalizes them. Owns no table.
  */
 import { db } from "@/lib/db";
+import { loadOwnerGateConstraints } from "@/services/owner-mode/owner-action-gate.service";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { currentCashFinanceReading, currentEvidenceTime } from "@/services/owner-spine/current-cash-finance-reading";
@@ -21,6 +22,7 @@ import { clampConfidence, clampScore, type DomainScore, type OwnerDomain, type O
 import {
   canonicalEligibility,
   domainLocalCanonicalStep,
+  financeSurvivalDriver,
   strategyCandidatePriorityClass,
   type OwnerDecisionCandidate,
   type OwnerDecisionEvent,
@@ -230,6 +232,8 @@ export interface OwnerSpineBuild {
   verifications: OwnerHomeVerificationInput[];
   events: OwnerDecisionEvent[];
   staleDomains: string[];
+  /** Domains whose current evidence is for a period ending after now (a subset of staleDomains). */
+  futureDomains: string[];
   survivalReadings: SurvivalEvidenceReading[];
   strategyContext: OwnerDecisionStrategyContext | null;
   /** Missing critical data of the EXACT snapshot the latest Finance diagnosis ran on. */
@@ -249,6 +253,7 @@ export function buildOwnerSpineCandidates(
   const candidates: OwnerDecisionCandidate[] = [];
   const events: OwnerDecisionEvent[] = [];
   const staleDomains: string[] = [];
+  const futureDomains: string[] = [];
   const staleCutoff = now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000;
   const issueVerifications: Record<"finance" | "cashflow", IssueVerificationFact[]> = { finance: [], cashflow: [] };
 
@@ -282,9 +287,14 @@ export function buildOwnerSpineCandidates(
     for (const f of findingRows) findings.push(rowToFinding(f, domain));
     const evidenceAsOf = cycle.snapshot?.createdAt ? asDate(cycle.snapshot.createdAt) : null;
     const periodEnd = cycle.snapshot?.periodEnd ? asDate(cycle.snapshot.periodEnd) : null;
-    // Stale: the evidence period is old, or (Finance) the diagnosed snapshot has since been amended.
-    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || Boolean(cycle.snapshot?.supersededById);
+    // Not current: the evidence period is old, dated after now (future figures are never trusted current
+    // evidence), or (Finance) the diagnosed snapshot has since been amended.
+    // Strategy's snapshots are scenarios the owner is planning — a forward-looking period is their nature,
+    // not future-dated business evidence.
+    const futurePeriod = domain !== "strategy" && periodEnd !== null && periodEnd.getTime() > now.getTime();
+    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || futurePeriod || Boolean(cycle.snapshot?.supersededById);
     if (stale) staleDomains.push(domain);
+    if (futurePeriod) futureDomains.push(domain);
     const verRows: Array<{ v: PersistedRow; findingCode: string; title: string }> = allVers.map((v) => ({
       v, findingCode: String(v.action?.findingCode ?? ""), title: String(v.action?.title ?? ""),
     }));
@@ -302,7 +312,8 @@ export function buildOwnerSpineCandidates(
       verifiedFixes: fixesFrom(verRows),
     };
     for (const a of actionRows) {
-      candidates.push(domainActionToCandidate(a, ctx));
+      const c = domainActionToCandidate(a, ctx);
+      candidates.push(futurePeriod ? { ...c, futurePeriod: true } : c);
       if (a.status === "completed" && a.completedAt) events.push({ kind: "ACTION_COMPLETED", title: a.title, at: asDate(a.completedAt) });
     }
   };
@@ -314,8 +325,10 @@ export function buildOwnerSpineCandidates(
     // the risk/opportunity lists (honest: nothing inferred). Recovery scores still count.
     const evidenceAsOf = recovery.snapshot?.createdAt ? asDate(recovery.snapshot.createdAt) : null;
     const periodEnd = recovery.snapshot?.periodEnd ? asDate(recovery.snapshot.periodEnd) : null;
-    const stale = periodEnd !== null && periodEnd.getTime() < staleCutoff;
+    const recoveryFuture = periodEnd !== null && periodEnd.getTime() > now.getTime();
+    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || recoveryFuture;
     if (stale) staleDomains.push("recovery");
+    if (recoveryFuture) futureDomains.push("recovery");
     // Recovery persists targetValue 0 when its action had no target: "reached target" is judged
     // against the ACTION's own target (null ⇒ never reached), not the placeholder.
     const recoveryVerRows = ev.verifications.recovery.map((v) => ({
@@ -329,7 +342,8 @@ export function buildOwnerSpineCandidates(
     const ctx = { businessId, workspaceId, domain: "recovery" as const, findingsById: new Map(), evidenceAsOf, stale, verifiedFixes: fixesFrom(recoveryVerRows) };
     for (const a of recovery.actions) {
       const targetValue = typeof a.targetValue === "number" ? a.targetValue : null;
-      candidates.push(recoveryActionToCandidate({ ...a, verifications: (a.verifications ?? []).map((v) => ({ ...v, targetValue })) }, ctx));
+      const c = recoveryActionToCandidate({ ...a, verifications: (a.verifications ?? []).map((v) => ({ ...v, targetValue })) }, ctx);
+      candidates.push(recoveryFuture ? { ...c, futurePeriod: true } : c);
       if (a.status === "completed" && a.completedAt) events.push({ kind: "ACTION_COMPLETED", title: a.title, at: asDate(a.completedAt) });
     }
   }
@@ -339,8 +353,8 @@ export function buildOwnerSpineCandidates(
   // which survival reading is current: a survival-class action from a reading superseded by a NEWER,
   // disagreeing reading of the other source must not win the election. Freshness is the period each
   // reading describes; an out-of-date or amended reading never supersedes the other (fails safe).
-  const cashAt = cashflow ? currentEvidenceTime(cashflow.snapshot, staleCutoff) : null;
-  const financeAt = finance ? currentEvidenceTime(finance.snapshot, staleCutoff) : null;
+  const cashAt = cashflow ? currentEvidenceTime(cashflow.snapshot, staleCutoff, now.getTime()) : null;
+  const financeAt = finance ? currentEvidenceTime(finance.snapshot, staleCutoff, now.getTime()) : null;
   let supersededSurvivalDomain: "cashflow" | "finance" | null = null;
   if (cashflow && finance) {
     const cashFinance = currentCashFinanceReading(
@@ -348,7 +362,10 @@ export function buildOwnerSpineCandidates(
       { state: finance.survivalState as string | null, snapshot: finance.snapshot },
       now.getTime()
     );
-    supersededSurvivalDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
+    // A newer Finance reading supersedes the cash check only when Finance's own findings are about cash: a
+    // profit-driven Finance state is a profit problem and never replaces the cash reading.
+    const financeProfitDriven = financeSurvivalDriver(finance.findings) === "profit";
+    supersededSurvivalDomain = cashFinance.supersededSource === "cash" && !financeProfitDriven ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
     if (supersededSurvivalDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
       for (let i = 0; i < candidates.length; i++) {
         const c = candidates[i];
@@ -427,7 +444,7 @@ export function buildOwnerSpineCandidates(
     ? (finance.snapshot.missingCriticalData as unknown[]).filter((m): m is string => typeof m === "string")
     : [];
 
-  return { candidates, domainScores, findings, verifications, events, staleDomains, survivalReadings, strategyContext, missingCriticalData };
+  return { candidates, domainScores, findings, verifications, events, staleDomains, futureDomains, survivalReadings, strategyContext, missingCriticalData };
 }
 
 /**
@@ -441,9 +458,12 @@ export async function getDomainEligibleOwnerSteps(
   domain: OwnerDecisionCandidate["domain"],
   now: Date = new Date()
 ): Promise<OwnerDecisionCandidate[]> {
-  const ev = await loadOwnerSpineEvidence(workspaceId, businessId);
+  const [ev, gate] = await Promise.all([
+    loadOwnerSpineEvidence(workspaceId, businessId),
+    loadOwnerGateConstraints(workspaceId, businessId, { db: db as never, now: () => now }),
+  ]);
   const { candidates } = buildOwnerSpineCandidates(ev, { businessId, workspaceId, now });
-  return canonicalEligibility(candidates, { businessId, workspaceId }).ranked.filter((c) => c.domain === domain);
+  return canonicalEligibility(candidates, { businessId, workspaceId, gate }).ranked.filter((c) => c.domain === domain);
 }
 
 /**
@@ -456,9 +476,12 @@ export async function getDomainLocalOwnerStep(
   domain: OwnerDecisionCandidate["domain"],
   now: Date = new Date()
 ): Promise<OwnerDecisionCandidate | null> {
-  const ev = await loadOwnerSpineEvidence(workspaceId, businessId);
+  const [ev, gate] = await Promise.all([
+    loadOwnerSpineEvidence(workspaceId, businessId),
+    loadOwnerGateConstraints(workspaceId, businessId, { db: db as never, now: () => now }),
+  ]);
   const { candidates } = buildOwnerSpineCandidates(ev, { businessId, workspaceId, now });
-  return domainLocalCanonicalStep(candidates, { businessId, workspaceId }, domain);
+  return domainLocalCanonicalStep(candidates, { businessId, workspaceId, gate }, domain);
 }
 
 /**
@@ -513,7 +536,11 @@ export type StrategyDecisionStepState =
 
 export interface StrategyLocalStepSelection<T> {
   recommended: (T & { localStepSource: "domain_action" }) | DomainLocalStepView | null;
-  decisionStep: { state: StrategyDecisionStepState; replacedBecause: string | null };
+  /**
+   * `openStep` (only when "not_listed"): the first canonically eligible Strategy item while the decision's
+   * own step has no action row yet — shown beside the decision's step, never instead of it.
+   */
+  decisionStep: { state: StrategyDecisionStepState; replacedBecause: string | null; openStep?: { title: string; description: string } | null };
 }
 
 /**
@@ -543,7 +570,12 @@ export function selectStrategyLocalStep<T extends { id: string; status?: string;
       decisionStep: { state: "replaced", replacedBecause: "The Strategy figures it rests on are out of date, so OpsIQ will not tell you to act on it until they are updated." },
     };
   }
-  if (stepRows.length === 0) return { recommended, decisionStep: { state: "not_listed", replacedBecause: null } };
+  if (stepRows.length === 0) {
+    // The decision's step is not persisted yet: the card still shows it (the decision's real step), and the
+    // first eligible Strategy item — which IS in the action list — is shown with it, never dropped.
+    const openStep = first && recommended ? { title: recommended.title ?? first.title, description: ("description" in recommended && typeof recommended.description === "string") ? recommended.description : first.explanation } : null;
+    return { recommended, decisionStep: { state: "not_listed", replacedBecause: null, openStep } };
+  }
   const eligibleRowIds = new Set(eligible.filter((c) => c.source === "domain_action").map((c) => c.sourceId));
   const openEligible = stepRows.find((r) => eligibleRowIds.has(String(r.id)));
   const replacedBecause = openEligible && first

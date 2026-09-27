@@ -16,7 +16,7 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
 import type { StrategyActionUpdateInput } from "@/domain/owner-strategy/validation";
 import {
   arbitrateStrategyActionRows,
@@ -41,6 +41,7 @@ export async function updateStrategyAction(
 
   const data: Record<string, unknown> = {};
   const now = new Date();
+  let gateAssessment: OwnerGateAssessment | null = null;
 
   if (input.status !== undefined) {
     if (!isValidRecoveryStatus(input.status)) {
@@ -51,18 +52,21 @@ export async function updateStrategyAction(
       throw new ValidationError(`Invalid strategy action transition: ${from} → ${input.status}`);
     }
     const to = input.status;
+    // Strategy's current evaluation (read once): the decision-fit check and the gate's intent both use it.
+    const current = await db.ownerStrategyCycle.findFirst({
+      where: { businessId: action.businessId, workspaceId },
+      orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
+      include: { snapshot: true },
+    });
+    const liveDecision = currentStrategyDecision(current);
 
     // Decision fit (server-side): a proposed step that is on hold, covered by the current next step,
     // or no longer flagged must not be newly taken on (action-arbitration.ts). Work the owner has
     // already taken on stays theirs to finish or cancel. Arbitrated over the same set the Strategy
     // page shows (latest cycle + engaged work carried from earlier cycles), so duplicates agree too.
     if (from === "proposed" && to === "assigned") {
-      const latest = await db.ownerStrategyCycle.findFirst({
-        where: { businessId: action.businessId, workspaceId },
-        orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
-        include: { snapshot: true },
-      });
-      const decision = currentStrategyDecision(latest);
+      const latest = current;
+      const decision = liveDecision;
       if (decision && latest) {
         const rows = await db.ownerStrategyAction.findMany({
           where: {
@@ -92,19 +96,14 @@ export async function updateStrategyAction(
 
     // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition,
     // with the step's intent under the live decision (the class the canonical owner decision gives it).
-    const current = await db.ownerStrategyCycle.findFirst({
-      where: { businessId: action.businessId, workspaceId },
-      orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
-      include: { snapshot: true },
-    });
-    const liveDecision = currentStrategyDecision(current);
-    await enforceOwnerActionGates({
+    gateAssessment = await enforceOwnerActionGates({
       workspaceId,
       businessId: action.businessId,
       actionId,
       domain: "strategy",
       toStatus: to,
       findingCode: action.findingCode,
+      findingId: action.findingId,
       intent: ownerStrategyStepIntent(liveDecision?.code ?? null, action.findingCode),
     });
 
@@ -140,6 +139,8 @@ export async function updateStrategyAction(
     entityId: actionId,
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
+  // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
+  if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
 
   // On action completion, emit a dedicated event and trigger re-diagnosis of the current scenario.
   if (updated.status === "completed") {

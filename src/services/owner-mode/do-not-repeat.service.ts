@@ -10,6 +10,8 @@
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { evaluateDoNotRepeat, type DoNotRepeatMemory } from "@/domain/owner-mode/do-not-repeat";
+import { canonicalOwnerScopeDomain, consultingScopeKey, exactScopeKey, ownerDoNotRepeatApplies, ownerScopeLookupKeys } from "@/domain/owner-mode/do-not-repeat-scope";
+import type { OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
 
 interface DnrDb {
   recommendation: {
@@ -30,11 +32,12 @@ interface DnrDb {
   };
 }
 
-/** Stable scope token for an impact area, e.g. impactArea "operations" → "scope:operations". */
+/**
+ * Formal Consulting Mode's scope token for a finding's impact area, e.g. "operations" → "scope:operations"
+ * (unchanged semantics; built by the one scope taxonomy, do-not-repeat-scope.ts).
+ */
 export function scopeKeyForImpactArea(impactArea: string | null | undefined): string | null {
-  if (!impactArea) return null;
-  const norm = impactArea.trim().toLowerCase();
-  return norm ? `scope:${norm}` : null;
+  return consultingScopeKey(impactArea);
 }
 
 export interface DnrDeps {
@@ -109,6 +112,12 @@ export interface DoNotRepeatAnnotation {
    * failed approach, so surfaces present it as a caution about the approach, never as a veto.
    */
   areaOnly: boolean;
+  /**
+   * Whether the memory would hold back the target itself (ownerDoNotRepeatApplies): an exact memory
+   * always; a broad area memory only for growth (or an unknown intent). Protective work (safety, stabilise,
+   * repair, evidence) is never held back by a broad area memory.
+   */
+  holdsBackTarget: boolean;
   priorActionSummary: string;
   blockedReason: string;
   changedContextCondition: string | null;
@@ -129,9 +138,9 @@ export interface DnrGuidanceDb {
 }
 
 /**
- * Check whether the top guidance action for a workspace is blocked by an active
- * do-not-repeat rule. Uses dual-key strategy: prefers new canonical key
- * (scope:area:finding:id) but falls back to legacy key (scope:area).
+ * Check whether the owner's main target matches an active do-not-repeat memory. Keys come from the ONE
+ * scope taxonomy: an owner domain matches its canonical key and legacy spellings (scope:cashflow and
+ * scope:cash); any other area its recorded key. Prefers the exact key (area:finding:id) over the area key.
  * Returns null when no matching rule exists or the ownerDoNotRepeatRule table is unavailable.
  */
 export async function checkDoNotRepeatForGuidance(
@@ -142,13 +151,15 @@ export async function checkDoNotRepeatForGuidance(
   /** When given, only this business's rules (and workspace-wide rules with no business) apply —
    *  another business's do-not-repeat memory never annotates this business's main target. */
   businessId?: string | null,
+  /** The target's intent: decides whether an area-only match holds it back (null ⇒ unknown). */
+  intent: OwnerTargetIntent | null = null,
 ): Promise<DoNotRepeatAnnotation | null> {
   if (!db.ownerDoNotRepeatRule) return null;
-  const scopeKey = scopeKeyForImpactArea(impactArea);
-  if (!scopeKey) return null;
+  const areaKeys = canonicalOwnerScopeDomain(impactArea) ? ownerScopeLookupKeys(impactArea) : [consultingScopeKey(impactArea)].filter((k): k is string => k !== null);
+  if (areaKeys.length === 0) return null;
 
-  const newCanonicalKey = findingId ? `${scopeKey}:finding:${findingId}` : null;
-  const keysToSearch: string[] = newCanonicalKey ? [newCanonicalKey, scopeKey] : [scopeKey];
+  const exactKeys = findingId ? areaKeys.map((k) => exactScopeKey(k, findingId)) : [];
+  const keysToSearch: string[] = [...exactKeys, ...areaKeys];
 
   const rule = await db.ownerDoNotRepeatRule.findFirst({
     where: {
@@ -160,12 +171,14 @@ export async function checkDoNotRepeatForGuidance(
 
   if (!rule) return null;
 
-  const legacyMatch = rule.memoryKey === scopeKey && newCanonicalKey !== null;
+  const areaOnly = areaKeys.includes(rule.memoryKey);
+  const legacyMatch = areaOnly && exactKeys.length > 0;
 
   return {
     blocked: true,
     legacyMatch,
-    areaOnly: rule.memoryKey === scopeKey,
+    areaOnly,
+    holdsBackTarget: ownerDoNotRepeatApplies(areaOnly ? "broad" : "exact", intent),
     priorActionSummary: rule.summary,
     blockedReason: rule.reason,
     changedContextCondition: rule.changedContextExplanation,

@@ -76,8 +76,8 @@ import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-f
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
-import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
-import { ownerImperativeContext, quoteTitles, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
+import { financeSurvivalDriver, type CurrentOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { ownerImperativeContext, ownerTargetIntent, quoteTitles, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
 export type { DoNotRepeatAnnotation };
 
@@ -89,7 +89,7 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date; supersededById?: string | null } | null }
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date; supersededById?: string | null } | null; findings?: Array<{ code: string }> }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -468,20 +468,6 @@ const ISSUE_CATEGORY_TO_IMPACT_AREA: Record<string, string> = {
   PENDING_PROOF_OUTCOME: "governance",
   GROWTH_OPPORTUNITY: "growth",
   PROCESS_IMPROVEMENT: "operations",
-};
-
-/** Do-not-repeat impact area of each canonical owner priority class (same vocabulary as above). */
-const IMPACT_AREA_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
-  SAFETY_COMPLIANCE: "compliance",
-  SURVIVAL_CASH: "cash",
-  CUSTOMER_SERVICE_FAILURE: "operations",
-  OVERLOAD_BLOCKING: "management",
-  PROFIT_LOSS: "finance",
-  BLOCKED_EXECUTION: "operations",
-  PLAN_COMMITMENT_RISK: "growth",
-  MISSING_CRITICAL_EVIDENCE: "governance",
-  GROWTH_OPPORTUNITY: "growth",
-  PROCESS_OPTIMISATION: "operations",
 };
 
 export interface GuidanceStep {
@@ -894,7 +880,7 @@ export async function assembleGuidanceContext(
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
     deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } } } }),
+    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } } }),
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -959,6 +945,8 @@ export async function assembleGuidanceContext(
   // Growth/high-impact gating stays conservative when either current signal is missing (fail closed on
   // missing critical data, tracked separately below via missingCriticalData).
   const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe;
+  // One safe reading with the other missing: a caution on the cash status, never a manufactured danger issue.
+  const cashHalfMeasured = (!!cashState !== !!finState) && cashFinanceResolution.safe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
   // Deliberately conservative, matching cashSafe above: no capacity snapshot means growth
@@ -1000,57 +988,102 @@ export async function assembleGuidanceContext(
   if (!supplier) missingCriticalData.push("supplier reliability + stock levels");
 
   const issues: BusinessIssue[] = [];
+  // Finance's survival state reads overall financial survival; its OWN findings say whether a danger there
+  // is about cash (runway, debt, payables) or about profit/margin. A profit-driven Finance state is
+  // described as the profit problem it is — never as "cash danger".
+  const financeDriver = financeSurvivalDriver(fin?.findings);
+  const financeProfitDriven = financeDriver === "profit";
+  let profitIssueRaised = false;
+  const pushFinanceProfitIssue = (state: string, note: string) => {
+    const sev = cashSeverity(state);
+    issues.push({ id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
+      severity: sev,
+      headline: `Financial survival (Finance diagnosis) is ${state}, driven by profit and margin rather than cash.${note}`,
+      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
+    profitIssueRaised = true;
+  };
   if (cashState && finState) {
     // Both signals present — use the freshness/conflict-aware resolution so a stale reading is
     // never presented as unqualified current truth (see cash-finance-conflict.ts). A newer SAFE
     // reading that supersedes an older unsafe one means NO issue is pushed here at all — that is
     // the fix for "Home must not present the stale action as current truth."
     if (cashFinanceResolution.conflicting) {
-      issues.push({
-        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
-        headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
-        requiresOwnerAction: true,
-      });
+      if (financeProfitDriven) {
+        // Not a disagreement about cash: the cash check reads cash; Finance's danger is profit.
+        if (!SAFE_STATES.has(cashState)) {
+          const sev = cashSeverity(cashState);
+          issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+            severity: sev, headline: `Cash survival (cash check) is ${cashState}.`, requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
+        }
+        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, "");
+      } else {
+        issues.push({
+          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+          severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
+          headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
+          requiresOwnerAction: true,
+        });
+      }
     } else if (!cashFinanceResolution.safe) {
       const effectiveState = cashFinanceResolution.effectiveState as string;
       const sev = cashSeverity(effectiveState);
       const supersedeNote = cashFinanceResolution.supersededSource
         ? ` An earlier ${cashFinanceResolution.supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${cashFinanceResolution.supersededState}; that reading is now out of date.`
         : "";
-      // Name the reading it comes from: the cash check reads the cash position; the Finance diagnosis
-      // reads overall financial survival (margin, debt and runway), never "cash" alone.
-      const subject = cashFinanceResolution.supersededSource === "cash"
-        ? "Financial survival (Finance diagnosis)"
-        : cashFinanceResolution.supersededSource === "finance"
-          ? "Cash survival (cash check)"
-          : "Cash and financial survival";
-      issues.push({
-        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: sev, headline: `${subject} is ${effectiveState}.${supersedeNote}`,
-        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
-      });
+      if (financeProfitDriven && cashFinanceResolution.supersededSource !== "finance") {
+        // Finance's danger is profit-driven: each source is named for what it measures — the cash check's
+        // own state as cash (unless a newer Finance reading superseded it), Finance's as a profit problem.
+        if (cashFinanceResolution.supersededSource !== "cash" && !SAFE_STATES.has(cashState)) {
+          const cashSev = cashSeverity(cashState);
+          issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+            severity: cashSev, headline: `Cash survival (cash check) is ${cashState}.`, requiresOwnerAction: cashSev === "CRITICAL" || cashSev === "HIGH" });
+        }
+        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, cashFinanceResolution.supersededSource === "cash" ? supersedeNote : "");
+      } else {
+        // Name the reading it comes from: the cash check reads the cash position; the Finance diagnosis
+        // reads overall financial survival (margin, debt and runway), never "cash" alone.
+        const subject = cashFinanceResolution.supersededSource === "cash"
+          ? "Financial survival (Finance diagnosis)"
+          : cashFinanceResolution.supersededSource === "finance"
+            ? "Cash survival (cash check)"
+            : "Cash and financial survival";
+        issues.push({
+          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+          severity: sev, headline: `${subject} is ${effectiveState}.${supersedeNote}`,
+          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
+        });
+      }
     }
-  } else if (!cashSafe && (cashState || finState)) {
-    // Exactly one of the two signals exists — unchanged from prior behavior.
-    const sev = cashSeverity(cashState && !SAFE_STATES.has(cashState) ? cashState : finState);
-    const headline = cashState
-      ? `Cash survival (cash check) is ${cashState}; there is no current Finance diagnosis.`
-      : `Financial survival (Finance diagnosis) is ${finState}; there is no cash check yet.`;
-    issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-      severity: sev, headline,
-      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
+  } else if (cashState || finState) {
+    // Exactly one of the two signals exists. A single SAFE/WATCH reading is not a danger (the missing other
+    // reading is asked for under missing data) — an issue is raised only when that one reading is unsafe.
+    if (cashState && !SAFE_STATES.has(cashState)) {
+      const sev = cashSeverity(cashState);
+      issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+        severity: sev, headline: `Cash survival (cash check) is ${cashState}; there is no current Finance diagnosis.`,
+        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
+    } else if (finState && !SAFE_STATES.has(finState)) {
+      if (financeProfitDriven) {
+        pushFinanceProfitIssue(finState, " There is no cash check yet.");
+      } else {
+        const sev = cashSeverity(finState);
+        issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+          severity: sev, headline: `Financial survival (Finance diagnosis) is ${finState}; there is no cash check yet.`,
+          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
+      }
+    }
   }
   if (finAmendedLastKnown && !SAFE_STATES.has(finAmendedLastKnown)) {
     // Fail safe until the amended figures are diagnosed: the last Finance reading still counts as a
     // warning, stated as last known — never as current, never silently dropped.
     const sev = cashSeverity(finAmendedLastKnown);
-    issues.push({ id: "finance_amended", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+    issues.push({ id: "finance_amended", category: financeProfitDriven ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
+      businessFunction: [financeProfitDriven ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
       severity: sev,
-      headline: `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}, but its figures have since been amended and not analysed — re-run the Finance diagnosis.`,
+      headline: `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed — re-run the Finance diagnosis.`,
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
   }
-  if (finState && !SAFE_STATES.has(finState)) {
+  if (finState && !SAFE_STATES.has(finState) && !profitIssueRaised) {
     issues.push({ id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
       severity: finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM",
       headline: "Profit/margin is below a safe level", requiresOwnerAction: false });
@@ -1103,7 +1136,7 @@ export async function assembleGuidanceContext(
   const ctx: GuidanceContext = {
     workspaceId, businessId: businessId ?? "", archetype: ag.archetype,
     dataConfidence, missingCriticalData, issues, changes: [],
-    growthGatePassed, cashSafe, staffOverloaded, ownerOverloaded, unsafeToGuide: false,
+    growthGatePassed, cashSafe, cashHalfMeasured, staffOverloaded, ownerOverloaded, unsafeToGuide: false,
   };
 
   const state: BusinessStateSnapshot = {
@@ -2674,14 +2707,18 @@ export async function getOwnerNowView(
   // Do-Not-Repeat Annotation — check whether the owner's MAIN TARGET is blocked by a DNR rule. With a
   // canonical decision the area comes from its primary target's class (never Now View's own #1);
   // without one, Now View's top operating signal is checked.
+  // With a canonical decision the area is the main target's OWN domain (the same scope the action gate
+  // reads, do-not-repeat-scope.ts) and its intent decides whether an area memory holds it back; a data
+  // refresh or a recorded control item repeats no earlier decision. Without one, Now View's top signal.
   const canonicalPrimary = options?.ownerDecision ? options.ownerDecision.primaryTarget : undefined;
   const topActionCategory = view.topOwnerActions[0]?.category;
   const topActionImpactArea = canonicalPrimary !== undefined
-    ? (canonicalPrimary ? (canonicalPrimary.source === "evidence_refresh" ? "governance" : IMPACT_AREA_BY_OWNER_CLASS[canonicalPrimary.priorityClass]) : null)
+    ? (canonicalPrimary && (canonicalPrimary.source === "domain_action" || canonicalPrimary.source === "survival_reading") ? canonicalPrimary.domain : null)
     : topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
+  const topActionIntent = canonicalPrimary ? ownerTargetIntent(canonicalPrimary) : null;
   const [doNotRepeatAnnotation, executionLifecycle, businessOperatingSystem] = await Promise.all([
     topActionImpactArea
-      ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db, businessId).catch(() => null)
+      ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db, businessId, topActionIntent).catch(() => null)
       : Promise.resolve(null),
     buildExecutionLifecycle(workspaceId, deps.db, businessId, executionAttributionAmbiguous),
     buildBusinessOperatingSystem(workspaceId, businessId, deps.db, deps.objectiveGoalAlignmentFn),

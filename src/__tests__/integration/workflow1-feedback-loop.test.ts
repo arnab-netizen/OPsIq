@@ -43,9 +43,16 @@ vi.mock("@/services/owner-strategy/diagnosis.service", () => ({
 }));
 
 // Mock the owner-action-gate so it doesn't block transitions in tests
+// (the real contract: an allowed transition returns its assessment; the caller records it after its write).
+const mockEnforceOwnerActionGates = vi.fn();
+const mockRecordOwnerGateAssessment = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/services/owner-mode/owner-action-gate.service", () => ({
-  enforceOwnerActionGates: vi.fn().mockResolvedValue(undefined),
+  enforceOwnerActionGates: (...a: unknown[]) => mockEnforceOwnerActionGates(...a),
+  recordOwnerGateAssessment: (...a: unknown[]) => mockRecordOwnerGateAssessment(...a),
 }));
+function allowedAssessment(input: { workspaceId: string; businessId: string | null; actionId: string; domain: string; toStatus: string }) {
+  return { workspaceId: input.workspaceId, businessId: input.businessId, actionId: input.actionId, domain: input.domain, toStatus: input.toStatus, marginAbstention: null };
+}
 
 // ---------------------------------------------------------------------------
 // DB mock factory
@@ -163,6 +170,7 @@ describe("Workflow 1 — Action completion triggers re-diagnosis (Class A)", () 
   beforeEach(() => {
     db = makeDbMock();
     vi.clearAllMocks();
+    mockEnforceOwnerActionGates.mockImplementation(async (input: Parameters<typeof allowedAssessment>[0]) => allowedAssessment(input));
     mockRunFinanceDiagnosis.mockResolvedValue({ id: "new-finance-cycle-id" });
     mockRunOperationsDiagnosis.mockResolvedValue({ id: "new-operations-cycle-id" });
     mockRunSalesDiagnosis.mockResolvedValue({ id: "new-sales-cycle-id" });
@@ -237,6 +245,11 @@ describe("Workflow 1 — Action completion triggers re-diagnosis (Class A)", () 
     );
     const auditNames = mockEmitAuditEvent.mock.calls.map((c) => c[0].eventName);
     expect(auditNames).toContain("owner.strategy_action_completed");
+    // The gate saw the step with an explicit intent (no current evaluation here → the code's own class),
+    // and its assessment was recorded after the update was written.
+    expect(mockEnforceOwnerActionGates).toHaveBeenCalledWith(expect.objectContaining({ domain: "strategy", toStatus: "completed", intent: expect.any(String) }));
+    expect(mockRecordOwnerGateAssessment).toHaveBeenCalledTimes(1);
+    expect(db.ownerStrategyAction.update.mock.invocationCallOrder[0]).toBeLessThan(mockRecordOwnerGateAssessment.mock.invocationCallOrder[0]);
     expect(mockCurrentStrategyScenarioId).toHaveBeenCalledWith("biz-1", "ws-1");
     expect(mockRunStrategyDiagnosis).toHaveBeenCalledWith("biz-1", "snap-1", "actor-1", "ws-1");
     expect(auditNames).toContain("owner.strategy_reassessment_triggered");
@@ -276,6 +289,7 @@ describe("Workflow 1 — Verification success triggers re-diagnosis (Class B)", 
   beforeEach(() => {
     db = makeDbMock();
     vi.clearAllMocks();
+    mockEnforceOwnerActionGates.mockImplementation(async (input: Parameters<typeof allowedAssessment>[0]) => allowedAssessment(input));
     mockRunFinanceDiagnosis.mockResolvedValue({ id: "new-finance-cycle-id" });
     mockRunOperationsDiagnosis.mockResolvedValue({ id: "new-operations-cycle-id" });
     mockRunSalesDiagnosis.mockResolvedValue({ id: "new-sales-cycle-id" });
@@ -417,6 +431,7 @@ describe("Workflow 1 — Workspace isolation enforced throughout", () => {
   beforeEach(() => {
     db = makeDbMock();
     vi.clearAllMocks();
+    mockEnforceOwnerActionGates.mockImplementation(async (input: Parameters<typeof allowedAssessment>[0]) => allowedAssessment(input));
   });
 
   it("action update: findFirst uses workspaceId, preventing cross-tenant access", async () => {

@@ -14,6 +14,7 @@ import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domai
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
 const querySchema = z.object({
   includeKPIs: z.enum(["true", "false"]).optional().default("true"),
@@ -50,14 +51,21 @@ interface DashboardRecommendationRow {
   priority: string;
 }
 
-/** The one Finance-cycle read this route makes (the `db` proxy is untyped). */
-interface FinanceCycleStateReader {
+/** The two survival-cycle reads this route makes (the `db` proxy is untyped). */
+interface SurvivalCycleReader {
   ownerFinanceCycle: {
     findFirst(args: {
       where: { businessId: string; workspaceId: string };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { survivalState: true };
-    }): Promise<{ survivalState: string | null } | null>;
+      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
+    }): Promise<{ survivalState: string | null; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
+  };
+  ownerCashflowCycle: {
+    findFirst(args: {
+      where: { businessId: string; workspaceId: string };
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
+    }): Promise<{ cashflowState: string | null; snapshot?: { periodEnd: Date } | null } | null>;
   };
 }
 
@@ -118,23 +126,35 @@ export async function buildOwnerDashboardPayload(
   const businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }> =
     await listBusinesses(workspaceId);
 
-  // QUERY 2: Per-business — health status from latest finance cycle + cross-domain action counts
+  // QUERY 2: Per-business — health status from the shared cash/finance survival reading + cross-domain action counts
   const businessSnapshots = await Promise.all(
     businesses.map(async (biz, idx) => {
-      const [progress, latestCycle] = await Promise.all([
+      const reader = db as unknown as SurvivalCycleReader;
+      const [progress, financeCycle, cashCycle] = await Promise.all([
         getOwnerBusinessProgress(biz.id, workspaceId, db as never),
-        (db as unknown as FinanceCycleStateReader).ownerFinanceCycle.findFirst({
+        reader.ownerFinanceCycle.findFirst({
           where: { businessId: biz.id, workspaceId },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { survivalState: true },
+          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } },
+        }),
+        reader.ownerCashflowCycle.findFirst({
+          where: { businessId: biz.id, workspaceId },
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
         }),
       ]);
 
-      const survivalState: string | null = latestCycle?.survivalState ?? null;
-      // Finance survival states as persisted (SAFE | WATCH | AT_RISK | CRITICAL | INSOLVENT_RISK).
+      // The ONE current cash/finance survival reading (the same one Owner Home, Now View and the action
+      // gate use): a critical Cash flow reading is never hidden behind a SAFE Finance diagnosis, a genuine
+      // disagreement counts as the worse reading, and amended Finance figures fail safe.
+      const survival = currentCashFinanceReading(
+        cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
+        financeCycle ? { state: financeCycle.survivalState, snapshot: financeCycle.snapshot } : null,
+        Date.now()
+      ).gateState;
       const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
-        survivalState === "CRITICAL" || survivalState === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
-        : survivalState === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
+        survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
+        : survival === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
         : "healthy";
 
       return { bizId: biz.id, bizIdx: idx, healthStatus, progress };

@@ -22,9 +22,9 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome } from "@/domain/owner-budget";
+import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome, budgetActionIntent } from "@/domain/owner-budget";
 import type { UpdatedOwnerPlan } from "@/domain/owner-budget";
-import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
 
 export interface SyncBudgetActionsInput {
   plan: UpdatedOwnerPlan;
@@ -153,6 +153,7 @@ export async function updateBudgetAction(
   const data: Record<string, unknown> = {};
   const now = new Date();
   let completedNow = false;
+  let gateAssessment: OwnerGateAssessment | null = null;
 
   if (input.status !== undefined) {
     if (!isValidRecoveryStatus(input.status)) throw new ValidationError(`Invalid budget action status: ${input.status}`);
@@ -166,12 +167,15 @@ export async function updateBudgetAction(
     // do-not-repeat. Without this a budget action could be completed while the Jarvis gate
     // would 409-block the same transition on the owner-finance service. Registered in
     // material-gate-registry.ts so dropping this call fails CI.
-    await enforceOwnerActionGates({
+    // Its intent comes from its plan decision type (budgetActionIntent): protecting cash (freeze, defer,
+    // reduce) and collecting evidence are never held back by the cash danger they respond to.
+    gateAssessment = await enforceOwnerActionGates({
       workspaceId,
       businessId: action.businessId,
       actionId,
       domain: "finance",
       toStatus: to,
+      intent: budgetActionIntent(action.decisionType),
     });
 
     if (requiresCompletionEvidence(to)) {
@@ -190,6 +194,8 @@ export async function updateBudgetAction(
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
   let updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data });
+  // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
+  if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
 
   // Feed the budget OUTCOME LEARNING LOOP on completion: compare expected vs actual,
   // classify outcome + cause + disposition + confidence impact (pure), persist a

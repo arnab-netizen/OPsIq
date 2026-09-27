@@ -15,7 +15,8 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { recoveryActionFindingCode } from "@/services/owner-home/owner-decision-candidates";
 
 export interface UpdateRecoveryActionInput {
   status?: string;
@@ -33,6 +34,8 @@ export async function updateRecoveryAction(
 ) {
   const action = await db.recoveryAction.findFirst({
     where: { id: actionId, workspaceId },
+    // Its finding's code decides the action's intent at the gate (the same code the owner decision uses).
+    include: { finding: { select: { code: true } } },
   });
   if (!action) throw new NotFoundError("RecoveryAction", actionId);
 
@@ -44,6 +47,7 @@ export async function updateRecoveryAction(
 
   const data: Record<string, unknown> = {};
   const now = new Date();
+  let gateAssessment: OwnerGateAssessment | null = null;
 
   if (input.status !== undefined) {
     if (!isValidRecoveryStatus(input.status)) {
@@ -63,7 +67,10 @@ export async function updateRecoveryAction(
     // (finance/cashflow/sales/marketing/operations/sop/strategy/budget).
     // Recovery predates that gate rollout and was never wired to it -- this
     // closes that gap without changing any other behavior.
-    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "recovery", toStatus: to });
+    gateAssessment = await enforceOwnerActionGates({
+      workspaceId, businessId: action.businessId, actionId, domain: "recovery", toStatus: to,
+      findingCode: recoveryActionFindingCode(action), findingId: action.findingId,
+    });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
@@ -99,6 +106,8 @@ export async function updateRecoveryAction(
     entityId: actionId,
     payload: { status: updated.status, assignedToUserId: updated.assignedToUserId },
   });
+  // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
+  if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
 
   // Mandatory adaptive re-evaluation (CLAUDE.md): a completed recovery
   // action is exactly the "failed implementation" / "resolved critical

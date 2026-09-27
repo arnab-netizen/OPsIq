@@ -90,9 +90,12 @@ describe("Home cash/finance supersession never trusts an out-of-date reading (co
     const { currentEvidenceTime } = await import("@/services/owner-home/owner-candidate-builder");
     const cutoff = Date.parse("2026-08-13T00:00:00Z");
     const fresh = new Date("2026-09-20T00:00:00Z");
-    expect(currentEvidenceTime({ periodEnd: fresh }, cutoff)).toEqual(fresh);
-    expect(currentEvidenceTime({ periodEnd: fresh, supersededById: "newer-version" }, cutoff)).toBeNull();
-    expect(currentEvidenceTime({ periodEnd: new Date("2026-07-01T00:00:00Z") }, cutoff)).toBeNull();
-    expect(currentEvidenceTime(null, cutoff)).toBeNull();
+    const now = Date.parse("2026-09-27T00:00:00Z");
+    expect(currentEvidenceTime({ periodEnd: fresh }, cutoff, now)).toEqual(fresh);
+    expect(currentEvidenceTime({ periodEnd: fresh, supersededById: "newer-version" }, cutoff, now)).toBeNull();
+    expect(currentEvidenceTime({ periodEnd: new Date("2026-07-01T00:00:00Z") }, cutoff, now)).toBeNull();
+    expect(currentEvidenceTime(null, cutoff, now)).toBeNull();
+    // A period that has not ended yet is never current evidence (it cannot win arbitration by sorting latest).
+    expect(currentEvidenceTime({ periodEnd: new Date("2026-10-31T00:00:00Z") }, cutoff, now)).toBeNull();
   });
 });

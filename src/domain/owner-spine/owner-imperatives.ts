@@ -72,6 +72,11 @@ const INTENT_BY_CODE: Readonly<Record<string, OwnerTargetIntent>> = Object.freez
   FIN_NOTABLE_OUTSTANDING_DEBT: "EVIDENCE",
   // "Use spare capacity to take more orders … absorb more demand" (operations opportunity-rules.ts).
   OPS_OPP_USE_CAPACITY_HEADROOM: "GROW",
+  // The decision's own gate-blocker target: review the do-not-repeat memory (record what has changed) —
+  // establishing context, not executing the held work.
+  GATE_DO_NOT_REPEAT_REVIEW: "EVIDENCE",
+  // A business-less compliance item in a multi-business workspace: assign it to the business it affects.
+  COMPLIANCE_UNATTRIBUTED: "EVIDENCE",
 });
 
 /** What a target does. A refresh target is epistemic work (confirm old figures), never an action. */
@@ -299,20 +304,81 @@ const humanizeCodes = (x: string) => x.replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (m) 
  * a canonical decision on the page the plan output is returned unchanged.
  */
 /**
- * The plan model's imperative wording restated as description: "Do not: X" / "Stop: X" / "Don't X" become
- * "the plan analysis holds back X", and whole-business ordering words ("first", "before anything else")
- * are dropped. Beside a canonical decision the plan describes; it never instructs.
+ * Plan-analysis statements, classified STRUCTURALLY (one sentence at a time, by its leading clause) —
+ * never a blind rewrite of the prose:
+ *   - a PROHIBITION ("Do not …", "Don't …", "Stop …", "Never …", "Avoid …", "Hold off on …") becomes
+ *     "the plan analysis holds back …";
+ *   - a whole-business ORDERING imperative ("First: …", "Start with …", "Before anything else, …", "Highest
+ *     priority: …", "Immediately …", "First thing, …", "Must …", "Now: …") keeps its content and loses its
+ *     claim to be the owner's first/overriding move — ordering words and inline ordering phrases ("before
+ *     any action/commitment", "as a first step", "immediately", a trailing "first") are removed;
+ *   - any other sentence is description and is left exactly as written (a factual "payroll must be paid
+ *     by Friday" is not an order about the owner's priorities).
+ * Only CurrentOwnerDecision owns the overall imperative; beside it the plan describes, it never instructs.
  */
+/** Leading clauses that are an ordering claim whatever follows ("Start with …", "Before anything else, …"). */
+const PLAN_ORDER_LEAD_ALWAYS = /^(?:start\s+(?:with|by)|begin\s+(?:with|by)|before\s+anything\s+else|first\s+thing|immediately|right\s+now|above\s+all|must(?!\s+not\b|n['’]?t\b))\b\s*[:,—–-]?\s*/i;
+/** Leading labels that are an ordering claim only as a label ("First: …", "Top priority — …"), never "The first cohort …". */
+const PLAN_ORDER_LEAD_LABEL = /^(?:the\s+)?(?:first\s+priority|first\s+step|highest\s+priority|top\s+priority|priority\s+one|number\s+one|urgent(?:ly)?|first|now)\s*[:,—–-]\s*/i;
+const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?|no\s+more)\b\s*:?\s*/i;
+/** A prohibition introduced inside the sentence after a dash ("Protect cash — do not add growth spend."). */
+const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid)\b\s*:?\s*/gi;
+/** Inline ordering phrases; "before any action/commitment/…" takes the rest of its clause with it. */
+const PLAN_ORDER_INLINE = /\s*,?\s*\b(?:before\s+anything\s+else|before\s+any\s+(?:(?:other|new|further)\s+)?(?:action|commitment|spend|spending|decision|step|move|investment)s?\b[^,.;!?]*|as\s+(?:a|the|your)\s+first\s+(?:step|move|priority)|first\s+thing|right\s+away|immediately|at\s+once|as\s+(?:the|a|your)\s+(?:highest|top)\s+priority)\b/gi;
+/** An ordering "first" closing a clause ("Stabilise first, then …", "Collect receivables first."). */
+const PLAN_TRAILING_FIRST = /\s+first(?=\s*(?:[,;!]|\.|$))/i;
+
+function capitalize(x: string): string {
+  return x ? x[0].toUpperCase() + x.slice(1) : x;
+}
+
+function stripOrderLeads(body: string): { body: string; ordered: boolean } {
+  let ordered = false;
+  for (;;) {
+    const m = PLAN_ORDER_LEAD_ALWAYS.exec(body) ?? PLAN_ORDER_LEAD_LABEL.exec(body);
+    if (!m || m[0].length === 0) return { body, ordered };
+    body = body.slice(m[0].length);
+    ordered = true;
+  }
+}
+
+/** One plan sentence restated (see above). */
+function neutralizePlanSentence(sentence: string): { text: string; heldBack: boolean } {
+  const lead = /^\s*/.exec(sentence)![0];
+  const { body, ordered } = stripOrderLeads(sentence.slice(lead.length));
+  const prohibition = PLAN_PROHIBITION_LEAD.exec(body);
+  if (prohibition) {
+    return { text: `${lead}the plan analysis holds back ${body.slice(prohibition[0].length).replace(PLAN_ORDER_INLINE, "")}`, heldBack: true };
+  }
+  let heldBack = false;
+  const asides = body.replace(PLAN_PROHIBITION_ASIDE, (_m, dash: string) => {
+    heldBack = true;
+    return `${dash}the plan analysis holds back `;
+  });
+  const inline = new RegExp(PLAN_ORDER_INLINE.source, "i").test(asides);
+  const imperative = ordered || inline || PLAN_TRAILING_FIRST.test(asides);
+  if (!imperative) return { text: heldBack ? `${lead}${asides}` : sentence, heldBack };
+  const cleaned = asides.replace(PLAN_ORDER_INLINE, "").replace(PLAN_TRAILING_FIRST, "");
+  return { text: `${lead}${capitalize(cleaned.trimStart())}`, heldBack };
+}
+
 export function neutralizePlanImperatives(text: string): { text: string; heldBack: boolean } {
   let heldBack = false;
+  // Each sentence is classified on its own leading clause.
   const out = text
-    .replace(/(^|[.;:]\s+|—\s+)(?:Do not:?|Don't|Stop:?)\s+/gi, (_m, lead: string) => {
-      heldBack = true;
-      return `${lead}the plan analysis holds back `;
+    .split(/(?<=[.;!?])(?=\s)/)
+    .map((p) => {
+      const n = neutralizePlanSentence(p);
+      if (n.heldBack) heldBack = true;
+      return n.text;
     })
-    .replace(/\s+before anything else\b/gi, "")
-    .replace(/\s+first(?=[,.;]|$)/gi, "");
+    .join("");
   return { text: humanizeCodes(out), heldBack };
+}
+
+/** The plan model's next-best-action line beside the canonical decision (unchanged without one). */
+export function planNextActionText(text: string, ctx: OwnerImperativeContext): string {
+  return ctx.decisionPresent && text ? neutralizePlanImperatives(text).text : text;
 }
 
 /** The permitted scope of the canonical GROW steps a held-back plan move may touch (empty when none). */
@@ -345,6 +411,8 @@ export interface PlanPriorityLike { severity: string; whatIsWrong: string; doNex
 export interface PlanSummaryLike {
   /** Set by reconcilePlanSummary: `doNotDo` now holds constraints on the canonical target, not orders. */
   stopItemsAreConstraints?: boolean;
+  /** The plan's own "do now" line (shown as "Plan analysis suggests: …"). */
+  doNow?: string;
   doNotDo: string[];
   topPriorities: PlanPriorityLike[];
   cadence: { now: string; thisWeek: string; stopLoss: string };
@@ -365,6 +433,7 @@ export function reconcilePlanSummary<T extends PlanSummaryLike>(summary: T, ctx:
   return {
     ...summary,
     stopItemsAreConstraints: true,
+    ...(typeof summary.doNow === "string" ? { doNow: neutralizePlanImperatives(summary.doNow).text } : {}),
     doNotDo: summary.doNotDo.map((d) => planConstraintAsCondition(d, ctx)),
     topPriorities: summary.topPriorities.map((p) =>
       STOP_PREFIX.test(p.whatIsWrong)

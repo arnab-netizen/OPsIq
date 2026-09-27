@@ -6,7 +6,9 @@
  * Inputs are each source's CURRENT diagnosis cycle (current-diagnosis-cycle.ts): Cash flow's
  * `cashflowState` and Finance's `survivalState`, with the snapshot each ran on.
  *   - Freshness is the evidence PERIOD a reading describes (its snapshot's periodEnd), never when the
- *     cycle row was written; a reading older than the freshness window cannot be shown to be current.
+ *     cycle row was written; a reading older than the freshness window cannot be shown to be current, and
+ *     neither can one whose period ends AFTER `now` (future-dated figures are not trusted current
+ *     evidence: they never supersede the other source and never win arbitration by sorting latest).
  *   - A Finance diagnosis whose snapshot the owner has since AMENDED (supersededById) rests on
  *     corrected-away figures: it is not a current reading. Its state is kept only as the last known
  *     Finance state until the amended figures are diagnosed.
@@ -47,12 +49,17 @@ function asState(v: unknown): SurvivalLikeState | null {
 
 /**
  * The evidence period a reading's snapshot describes, or null when that evidence cannot be shown to be
- * current (older than the freshness window, or an amended Finance snapshot).
+ * current: older than the freshness window, dated after `now` (a future period), or an amended Finance
+ * snapshot.
  */
-export function currentEvidenceTime(snapshot: { periodEnd?: unknown; supersededById?: unknown } | null | undefined, staleCutoffMs: number): Date | null {
+export function currentEvidenceTime(
+  snapshot: { periodEnd?: unknown; supersededById?: unknown } | null | undefined,
+  staleCutoffMs: number,
+  nowMs: number
+): Date | null {
   if (!snapshot?.periodEnd || snapshot.supersededById) return null;
   const periodEnd = asDate(snapshot.periodEnd);
-  return periodEnd && periodEnd.getTime() >= staleCutoffMs ? periodEnd : null;
+  return periodEnd && periodEnd.getTime() >= staleCutoffMs && periodEnd.getTime() <= nowMs ? periodEnd : null;
 }
 
 function worst(...states: Array<SurvivalLikeState | null>): SurvivalLikeState | null {
@@ -73,8 +80,8 @@ export function currentCashFinanceReading(
   const financeState = amended ? null : financeRaw;
   const financeAmendedLastKnown = amended ? financeRaw : null;
   const resolution = resolveCashFinanceSignal(
-    { state: cashState, generatedAt: currentEvidenceTime(cash?.snapshot, staleCutoffMs) },
-    { state: financeState, generatedAt: currentEvidenceTime(finance?.snapshot, staleCutoffMs) }
+    { state: cashState, generatedAt: currentEvidenceTime(cash?.snapshot, staleCutoffMs, nowMs) },
+    { state: financeState, generatedAt: currentEvidenceTime(finance?.snapshot, staleCutoffMs, nowMs) }
   );
   const arbitrated = resolution.conflicting ? worst(cashState, financeState) : resolution.effectiveState;
   const amendedUnsafe = financeAmendedLastKnown && !SAFE.has(financeAmendedLastKnown) ? financeAmendedLastKnown : null;

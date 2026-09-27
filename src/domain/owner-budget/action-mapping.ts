@@ -6,7 +6,8 @@
  * never creates duplicate open tasks for the same budget risk.
  */
 
-import type { BudgetGeneratedAction } from "@/domain/owner-budget/types";
+import type { BudgetGeneratedAction, PlanDecisionType } from "@/domain/owner-budget/types";
+import type { OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
 
 /**
  * Stable key per (decisionType, title). Reassessing the same condition yields the
@@ -53,3 +54,33 @@ export function mapPlanActionToRow(a: BudgetGeneratedAction): MappedBudgetAction
 export const OPEN_BUDGET_ACTION_STATUSES: ReadonlySet<string> = new Set([
   "proposed", "assigned", "in_progress", "blocked",
 ]);
+
+/**
+ * What a budget action does, as the owner action gate's intent (owner-imperatives.ts). Fixed per plan
+ * decision type — the budget model's own vocabulary (types.ts PlanDecisionType):
+ *   - BLOCK / PAUSE / DEFER / REDUCE withhold or cut spend ("Protect cash: freeze discretionary spend…"):
+ *     STABILISE — the response to a cash danger, never held back by it;
+ *   - INVESTIGATE / COLLECT_EVIDENCE / ESCALATE find out or refer for review and commit no spend: EVIDENCE;
+ *   - APPROVE / INCREASE / REALLOCATE release or move money into spend: GROW — held back while cash,
+ *     capacity or margin is unsafe.
+ * A decision type outside that vocabulary (a legacy row) returns null: the gate's documented fallback
+ * (the finance domain's spend sensitivity) applies.
+ */
+const BUDGET_INTENT_BY_DECISION: Readonly<Record<PlanDecisionType, OwnerTargetIntent>> = Object.freeze({
+  BLOCK: "STABILISE",
+  PAUSE: "STABILISE",
+  DEFER: "STABILISE",
+  REDUCE: "STABILISE",
+  INVESTIGATE: "EVIDENCE",
+  COLLECT_EVIDENCE: "EVIDENCE",
+  ESCALATE: "EVIDENCE",
+  APPROVE: "GROW",
+  INCREASE: "GROW",
+  REALLOCATE: "GROW",
+});
+
+export function budgetActionIntent(decisionType: string | null | undefined): OwnerTargetIntent | null {
+  return decisionType && Object.prototype.hasOwnProperty.call(BUDGET_INTENT_BY_DECISION, decisionType)
+    ? BUDGET_INTENT_BY_DECISION[decisionType as PlanDecisionType]
+    : null;
+}

@@ -497,7 +497,7 @@ export default function OwnerExecutionPage() {
             </form>
           )}
 
-          <DomainMainTargetContext domain="sop" businessId={dashboard?.selectedBusinessId} />
+          <DomainMainTargetContext domain="sop" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">

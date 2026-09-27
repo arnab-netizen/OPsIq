@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { ConflictError, NotFoundError } from "@/infra/errors";
 import type { BusinessCreateInput, BusinessUpdateInput } from "@/domain/founder-recovery/validation";
 
 export async function createBusiness(
@@ -138,8 +138,11 @@ export async function updateBusiness(
   // Ensure ownership before update (workspace-scoped).
   const before = await getBusiness(businessId, workspaceId);
 
-  const updated = await db.ownerBusiness.update({
-    where: { id: businessId },
+  // Compare-and-set on the version read above: the audit records `before` values (the archetype and
+  // isActive transitions that attribution and "what changed" rely on), so a concurrent update in between
+  // must not be recorded as a transition from a state that no longer existed. A lost race is a 409.
+  const guarded = await db.ownerBusiness.updateMany({
+    where: { id: businessId, workspaceId, version: before.version },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.businessType !== undefined ? { businessType: input.businessType } : {}),
@@ -151,6 +154,10 @@ export async function updateBusiness(
       version: { increment: 1 },
     },
   });
+  if (guarded.count !== 1) {
+    throw new ConflictError("This business was changed by another request. Reload and retry.");
+  }
+  const updated = await getBusiness(businessId, workspaceId);
 
   // Changing the SMB archetype changes owner-pilot input requirements, readiness, and guidance
   // downstream (see smb-archetype.ts) — recording before/after values on this one field, not just

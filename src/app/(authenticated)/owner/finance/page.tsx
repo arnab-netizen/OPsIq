@@ -695,7 +695,7 @@ export default function OwnerFinancePage() {
             </form>
           )}
 
-          <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} />
+          <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
@@ -792,6 +792,7 @@ function FinanceCycleView({
         // Consistent with the canonical decision (shared reconciler): when Finance owns the main target or
         // a supporting step, the issue needs attention now and only the score is provisional.
         <DomainDataGapNotice
+          revision={cycle}
           domain="finance"
           domainLabel="Finance"
           businessId={businessId}

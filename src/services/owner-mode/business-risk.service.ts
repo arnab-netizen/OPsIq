@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
@@ -160,8 +160,11 @@ export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
   const severity = computeSeverity(likelihood, impact);
 
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const updated = await tx.businessRiskEntry.update({
-      where: { id: input.riskId },
+    // Compare-and-set on the fields the audit records as "previous": a concurrent change between the read
+    // above and this write would otherwise record a transition that never happened (the owner decision's
+    // "what changed" reads these audit payloads). A lost race is a 409 — reload and retry.
+    const guarded = await tx.businessRiskEntry.updateMany({
+      where: { id: input.riskId, workspaceId: input.workspaceId, status: existing.status, residualRisk: existing.residualRisk ?? null },
       data: {
         ...(input.title !== undefined ? { title: input.title.trim() } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
@@ -176,6 +179,10 @@ export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
         ...(input.reviewedAt !== undefined ? { reviewedAt: input.reviewedAt } : {}),
       },
     });
+    if (guarded.count !== 1) {
+      throw new ConflictError("This risk was changed by another request. Reload and retry.");
+    }
+    const updated = await tx.businessRiskEntry.findFirstOrThrow({ where: { id: input.riskId, workspaceId: input.workspaceId } });
 
     let eventName: AuditEventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_STATUS_CHANGED;
     if (input.status === "RESOLVED" || input.status === "CLOSED") {

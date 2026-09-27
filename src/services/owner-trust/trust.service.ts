@@ -9,6 +9,7 @@
  * underlying domain reads and the audit query is workspace-scoped.
  */
 import { buildExplanations, TRUST_DOMAINS, type ExplanationCard } from "@/domain/owner-trust";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 import type { TrustDomain } from "@/domain/owner-trust";
 import { rankOwnerFindingsBySeverity, type OwnerAction, type OwnerFinding, type OwnerDomain } from "@/domain/owner-spine/contracts";
 import { db } from "@/lib/db";
@@ -130,8 +131,8 @@ export interface BusinessTrustOverview {
 }
 
 /**
- * Read-only: for a business, the latest diagnosis cycle in every trust domain
- * that has one. Lets the owner pick a real cycle to explain without typing UUIDs.
+ * Read-only: for a business, the current diagnosis cycle (shared current-cycle order) in every trust
+ * domain that has one. Lets the owner pick a real cycle to explain without typing UUIDs.
  */
 export async function getBusinessTrustOverview(
   workspaceId: string,
@@ -157,9 +158,10 @@ export async function getBusinessTrustOverview(
   const cycles: TrustCycleRef[] = [];
   for (const domain of TRUST_DOMAINS) {
     const delegate = (db as any)[CYCLE_DELEGATES[domain]];
+    // The CURRENT cycle (current-diagnosis-cycle.ts): latest evidence period, never merely the latest run.
     const row = await delegate.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: domain === "strategy" ? CURRENT_STRATEGY_CYCLE_ORDER : CURRENT_DIAGNOSIS_CYCLE_ORDER,
       select: { id: true, sequenceNumber: true, generatedAt: true },
     });
     if (row) {

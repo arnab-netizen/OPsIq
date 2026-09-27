@@ -11,7 +11,11 @@
  *   - GET /api/owner/now-view → zero decision-history writes (no decision audit event, no advisory lock);
  *   - Portfolio (every business resolved at once) → zero decision-memory writes;
  *   - concurrent reads → zero audit events from the projection;
- *   - the workspace audit hash chain stays intact.
+ *   - the workspace audit hash chain stays intact;
+ *   - EVERY owner read surface — the seven domain dashboards, the Control Center, Priorities' feeds (risks,
+ *     alerts, priorities), the Portfolio dashboard, Now View and Home — sends zero write statements (Now View's
+ *     own pre-existing guidance-history row is its only, named, exception) and leaves AuditEvent, cycles,
+ *     actions, snapshots, do-not-repeat memory and compliance/risk records exactly as they were.
  *
  * `[db]`-gated. Run: TEST_WITH_DB=true npx vitest run src/__tests__/owner-decision/owner-decision-read-only.db.test.ts
  */
@@ -38,6 +42,21 @@ import { getOwnerHome } from "@/services/owner-home/home.service";
 import { getPortfolio } from "@/services/owner-portfolio/portfolio.service";
 import { GET as homeGET } from "@/app/api/owner/home/route";
 import { GET as nowViewGET } from "@/app/api/owner/now-view/route";
+import { GET as controlCenterGET } from "@/app/api/owner/control-center/route";
+import { GET as portfolioGET } from "@/app/api/owner/portfolio/dashboard/route";
+import { GET as prioritiesGET } from "@/app/api/owner/priorities/route";
+import { GET as risksGET } from "@/app/api/owner/risks/route";
+import { GET as alertsGET } from "@/app/api/owner/alerts/route";
+import { getFinanceDashboard } from "@/services/owner-finance/dashboard.service";
+import { getCashflowDashboard } from "@/services/owner-cashflow/dashboard.service";
+import { getSalesDashboard } from "@/services/owner-sales/dashboard.service";
+import { getOperationsDashboard } from "@/services/owner-operations/dashboard.service";
+import { getSopDashboard } from "@/services/owner-sop/dashboard.service";
+import { getMarketingDashboard } from "@/services/owner-marketing/dashboard.service";
+import { getStrategyDashboard } from "@/services/owner-strategy/dashboard.service";
+import { recordComplianceItem } from "@/services/owner-mode/compliance.service";
+import { createBusinessRisk } from "@/services/owner-mode/business-risk.service";
+import { recordDoNotRepeat } from "@/services/owner-mode/do-not-repeat.service";
 
 const actor = randomUUID();
 
@@ -178,6 +197,74 @@ describe("[db] P1 — owner-decision reads perform zero persistence", () => {
     const chain = await verifyAuditChainIntegrity(workspaceId);
     expect(chain.isValid).toBe(true);
     expect(chain.eventsChecked).toBe(Math.max(0, auditBefore - 1));
+    await teardownOwnerBusiness(businessId);
+  });
+});
+
+/** Row counts and last-update times of everything a read must never touch, for one workspace. */
+async function fingerprint(workspaceId: string) {
+  const models = [
+    "auditEvent", "ownerFinanceCycle", "ownerCashflowCycle", "ownerSalesCycle", "ownerOperationsCycle", "ownerSopCycle", "ownerMarketingCycle", "ownerStrategyCycle", "recoveryCycle",
+    "ownerFinanceAction", "ownerCashflowAction", "ownerSalesAction", "ownerOperationsAction", "ownerSopAction", "ownerMarketingAction", "ownerStrategyAction", "recoveryAction", "ownerBudgetAction",
+    "ownerFinancialSnapshot", "ownerCashflowSnapshot", "ownerSalesSnapshot", "ownerOperationsSnapshot", "ownerSopSnapshot", "ownerMarketingSnapshot", "ownerStrategySnapshot",
+    "ownerDoNotRepeatRule", "ownerComplianceItem", "businessRiskEntry", "ownerBusiness",
+  ];
+  const out: Record<string, unknown> = {};
+  for (const m of models) {
+    const d = (db as any)[m];
+    const rows = await d.findMany({ where: { workspaceId } });
+    out[m] = rows.map((r: any) => `${r.id}|${r.updatedAt instanceof Date ? r.updatedAt.toISOString() : ""}|${r.status ?? ""}|${r.version ?? ""}`).sort();
+  }
+  return out;
+}
+
+describe("[db] P2 — every owner read surface is write-free", () => {
+  it("[db] 7 domain dashboards, Control Center, Priorities feeds, Portfolio, Now View and Home: no writes; nothing governed changes", async () => {
+    const workspaceId = randomUUID();
+    await db.workspace.create({ data: { id: workspaceId, name: "Read-only surfaces", slug: `ro-${workspaceId}`, isActive: true, updatedAt: new Date() } });
+    const businessId = await seed(workspaceId, "QA Read-only Surfaces");
+    // Governed records every surface reads: an expired obligation, a critical risk, a do-not-repeat memory.
+    await recordComplianceItem({ workspaceId, businessId, kind: "licence", name: "Trade licence", expiresAt: new Date(Date.now() - 5 * 86_400_000), actorId: actor });
+    await createBusinessRisk({ workspaceId, actorId: actor, riskCode: "RO_RISK", title: "Key supplier failure", category: "OPERATIONAL" as any, likelihood: 95, impact: 95 });
+    await recordDoNotRepeat({ workspaceId, businessId, memoryKey: "scope:cashflow", summary: "Deferred rent failed", reason: "landlord refused", actorId: actor });
+    const before = await fingerprint(workspaceId);
+
+    const reads: Array<[string, () => Promise<unknown>]> = [
+      ["finance dashboard", () => getFinanceDashboard(workspaceId, businessId)],
+      ["cashflow dashboard", () => getCashflowDashboard(workspaceId, businessId)],
+      ["sales dashboard", () => getSalesDashboard(workspaceId, businessId)],
+      ["operations dashboard", () => getOperationsDashboard(workspaceId, businessId)],
+      ["execution (SOP) dashboard", () => getSopDashboard(workspaceId, businessId)],
+      ["marketing dashboard", () => getMarketingDashboard(workspaceId, businessId)],
+      ["strategy dashboard", () => getStrategyDashboard(workspaceId, businessId)],
+      ["GET /api/owner/control-center", () => controlCenterGET(ctx(workspaceId, `/api/owner/control-center?businessId=${businessId}`), {})],
+      ["GET /api/owner/priorities", () => prioritiesGET(ctx(workspaceId, `/api/owner/priorities?businessId=${businessId}`), {})],
+      ["GET /api/owner/risks", () => risksGET(ctx(workspaceId, "/api/owner/risks"), {})],
+      ["GET /api/owner/alerts", () => alertsGET(ctx(workspaceId, "/api/owner/alerts?unreadOnly=true&limit=20"), {})],
+      ["GET /api/owner/portfolio/dashboard", () => portfolioGET(ctx(workspaceId, "/api/owner/portfolio/dashboard"), {})],
+      ["GET /api/owner/home", () => homeGET(ctx(workspaceId, `/api/owner/home?businessId=${businessId}`), {})],
+    ];
+    for (const [name, read] of reads) {
+      startCapture();
+      await read();
+      const sql = stopCapture();
+      expect(sql.length, `${name} really read`).toBeGreaterThan(0);
+      expect(writesOf(sql), name).toEqual([]);
+    }
+    // Now View: its own guidance-history row is the single named exception; nothing else is written.
+    startCapture();
+    await nowViewGET(ctx(workspaceId, `/api/owner/now-view?businessId=${businessId}`), {});
+    const nowSql = stopCapture();
+    expect(writesOf(nowSql).map((w) => w.replace(/\s+/g, " ").match(/^\s*insert into "?(?:public"?\.)?"?(\w+)"?/i)?.[1] ?? w.slice(0, 60))).toEqual(["owner_guidance_snapshots"]);
+
+    // AuditEvent, cycles, actions, snapshots, do-not-repeat memory, compliance and risk records: unchanged.
+    expect(await fingerprint(workspaceId)).toEqual(before);
+    expect((before.ownerComplianceItem as string[]).length).toBe(1);
+    expect((before.businessRiskEntry as string[]).length).toBe(1);
+    expect((before.ownerDoNotRepeatRule as string[]).length).toBe(1);
+    await db.businessRiskEntry.deleteMany({ where: { workspaceId } });
+    await db.ownerComplianceItem.deleteMany({ where: { workspaceId } });
+    await db.ownerDoNotRepeatRule.deleteMany({ where: { workspaceId } });
     await teardownOwnerBusiness(businessId);
   });
 });

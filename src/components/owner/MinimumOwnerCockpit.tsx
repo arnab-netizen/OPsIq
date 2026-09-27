@@ -1605,7 +1605,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
               shared strip. */}
           {doNotRepeatAnnotation?.blocked && (
             <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.areaOnly ? "Earlier result in this area" : "Do not repeat"}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.holdsBackTarget ? "Do not repeat" : "Earlier result in this area"}</span>
               {doNotRepeatAnnotation.areaOnly && (
                 <p data-testid="cockpit-dnr-area-history" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
                   This is history from the same area, not a verdict on your main target. Do not repeat the approach that failed.

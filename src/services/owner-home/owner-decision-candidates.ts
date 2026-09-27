@@ -169,8 +169,18 @@ export function domainActionToCandidate(action: any, ctx: DomainCandidateContext
 const RECOVERY_PRIORITY_SCORE: Record<string, number> = { critical: 90, high: 70, medium: 45, low: 20 };
 const RECOVERY_EFFORT_SCORE: Record<string, number> = { high: 75, medium: 50, low: 25 };
 
+/**
+ * A Recovery action's finding code: its linked finding's code (every Recovery diagnosis code is explicitly
+ * classified), else its metric, else "RECOVERY_ACTION" — the documented legacy fallback (unknown code →
+ * GROW, the most conservative intent). Shared by the owner decision and the action gate's caller, so both
+ * classify the action the same way.
+ */
+export function recoveryActionFindingCode(action: { finding?: { code?: unknown } | null; metricToMove?: unknown }): string {
+  return String(action.finding?.code ?? action.metricToMove ?? "RECOVERY_ACTION");
+}
+
 export function recoveryActionToCandidate(action: any, ctx: DomainCandidateContext): OwnerDecisionCandidate {
-  const findingCode = String(action.finding?.code ?? action.metricToMove ?? "RECOVERY_ACTION");
+  const findingCode = recoveryActionFindingCode(action);
   const severity = toOwnerSeverity(action.finding?.severity) ?? toOwnerSeverity(action.priority);
   return {
     candidateId: `domain_action:recovery:${action.id}`,
@@ -282,6 +292,32 @@ export function complianceItemToCandidate(
     stale: false,
     exclusion: null,
     targetRoute: OWNER_DOMAIN_ROUTE.compliance,
+  };
+}
+
+/**
+ * An expired or breached obligation recorded with NO business while the workspace holds several real
+ * businesses. A null business does not prove the obligation applies to every business, so it restricts no
+ * business's actions (owner-action-gate-policy.ts expiredComplianceFor) — but it is never hidden and never
+ * treated as resolved: each business's decision surfaces it as safety work, asking the owner to assign it
+ * to the business it affects. Null when the item raises nothing (not expired/breached, or terminal).
+ */
+export function unattributedComplianceItemToCandidate(
+  item: any,
+  ctx: { businessId: string; workspaceId: string; now: Date }
+): OwnerDecisionCandidate | null {
+  const base = complianceItemToCandidate({ ...item, businessId: ctx.businessId }, ctx);
+  if (!base || !base.blocking) return null;
+  const name = String(item.name ?? "compliance obligation");
+  return {
+    ...base,
+    findingCode: "COMPLIANCE_UNATTRIBUTED",
+    title: `Assign "${name}" to the business it affects`,
+    explanation:
+      `This ${item.status === "breached" ? "breached" : "expired"} compliance item has not been assigned to an affected business, so OpsIQ cannot safely determine which business actions it restricts. It is not resolved: assign it to the business it applies to, then renew or resolve it.`,
+    // Not a recorded block on THIS business (its applicability is unknown): no "recorded block" precedence.
+    blocking: false,
+    evidence: [...base.evidence, "Recorded with no business, and this workspace has more than one business."],
   };
 }
 

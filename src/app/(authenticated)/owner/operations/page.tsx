@@ -614,7 +614,7 @@ export default function OwnerOperationsPage() {
           )}
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
-          <DomainMainTargetContext domain="operations" businessId={dashboard?.selectedBusinessId} />
+          <DomainMainTargetContext domain="operations" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
@@ -711,6 +711,7 @@ function OperationsCycleView({
         // Consistent with the canonical decision (shared reconciler): when Operations owns the main target
         // or a supporting step, the issue needs attention now and only the score is provisional.
         <DomainDataGapNotice
+          revision={cycle}
           domain="operations"
           domainLabel="Operations"
           businessId={businessId}

@@ -6,8 +6,11 @@
  *   (a GROW action), and the recommendation cash gate (a growth recommendation).
  * Each consumer may differ only by its documented POLICY response to the same reading:
  *   - the owner action gate enforces nothing without any reading (never blocks on absent data);
- *   - the recommendation gate treats a missing reading/half as AT_RISK (its unchanged base semantics);
+ *   - the recommendation gate is FORMAL CONSULTING MODE: it keeps its pre-consolidation semantics — the
+ *     WORSE of the two persisted states, a missing half AT_RISK — so it is never looser than the shared
+ *     reading (a newer SAFE Finance reading never wipes out a CRITICAL cash reading there);
  *   - Now View's growth gate needs both readings current.
+ *   /api/owner/dashboard health reads the shared reading too: CRITICAL cash is never "healthy".
  *
  * Also:
  *   - current-diagnosis-cycle ordering is SEMANTIC: the logical current diagnosis (latest evidence period,
@@ -44,6 +47,7 @@ import { enforceCashSafetyForPromotion } from "@/services/owner-finance/recommen
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 import { GET as controlCenterGET } from "@/app/api/owner/control-center/route";
+import { buildOwnerDashboardPayload } from "@/app/api/owner/dashboard/route";
 
 const actor = randomUUID();
 
@@ -124,7 +128,9 @@ describe("[db] the ONE cash/finance reading — parity across Home, Now View, th
     expect(r.cashCard).toMatchObject({ status: "last_known", drivenBy: "Superseded by newer Finance figures" });
     expect(r.nowCash).toBe("OK");
     expect(r.gate).toBe("allowed");
-    expect(r.rec).toBe("allowed");
+    // Formal Consulting Mode keeps the base worst-of semantics: the CRITICAL cash reading still holds a
+    // growth recommendation (the consulting gate is never looser than before consolidation).
+    expect(r.rec).toBe("blocked");
     await teardownOwnerBusiness(b);
   });
 
@@ -241,6 +247,29 @@ describe("[db] the ONE cash/finance reading — parity across Home, Now View, th
     expect((await consumers(ws, bb, "cash flow")).rec).toBe("allowed");
     await teardownOwnerBusiness(a);
     await teardownOwnerBusiness(bb);
+  });
+});
+
+describe("[db] /api/owner/dashboard health reads the ONE shared survival reading", () => {
+  const dashboardHealth = async (ws: string) => {
+    const payload: any = await buildOwnerDashboardPayload({ request: new Request("http://localhost/api/owner/dashboard") } as any, ws, actor);
+    return { critical: payload.criticalEngagements as number, atRisk: payload.atRiskEngagements as number };
+  };
+  it("[db] CRITICAL Cash flow with no Finance diagnosis is critical, never healthy (Finance alone never decides)", async () => {
+    const ws = randomUUID();
+    const b = await business(ws, "QA Dash 1");
+    await cash(ws, b, 3, "CRITICAL");
+    expect((await dashboardHealth(ws)).critical).toBe(1);
+    await teardownOwnerBusiness(b);
+  });
+  it("[db] CRITICAL cash vs SAFE Finance on the same period (incomparable): the worse reading — critical", async () => {
+    const ws = randomUUID();
+    const b = await business(ws, "QA Dash 2");
+    await cash(ws, b, 3, "CRITICAL");
+    await finance(ws, b, 3, "SAFE");
+    expect((await sharedReading(ws, b)).gateState).toBe("CRITICAL");
+    expect((await dashboardHealth(ws)).critical).toBe(1);
+    await teardownOwnerBusiness(b);
   });
 });
 

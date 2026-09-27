@@ -84,13 +84,22 @@ describe("[module4/5] cash-safety enforcement service (DI)", () => {
     await expect(enforceCashSafetyForPromotion("rec-2", "ws", deps({ flag: true, businesses: [], impactArea: "revenue" }))).resolves.toBeUndefined();
   });
 
-  it("a Finance reading on an AMENDED (not yet re-diagnosed) snapshot never clears anything, and an unsafe one still blocks until re-diagnosed", async () => {
-    // INSOLVENT on figures amended since, SAFE cash: fail safe — the last Finance reading still blocks spend.
-    const err = await enforceCashSafetyForPromotion("rec-1", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: "INSOLVENT_RISK", financeSuperseded: true, impactArea: "cash flow" })).catch((e) => e);
+  it("Consulting keeps the base worst-of semantics: a SAFE Finance reading never wipes out a CRITICAL cash reading (whichever is newer)", async () => {
+    // The pre-consolidation gate took the worse of the two persisted states — no freshness arbitration.
+    const cashCritical = deps({ flag: true, cashflowState: "CRITICAL", survivalState: "SAFE", impactArea: "cash flow" });
+    const err = await enforceCashSafetyForPromotion("rec-1", "ws", cashCritical).catch((e) => e);
     expect(err).toBeInstanceOf(CashSafetyGateError);
-    expect(err.message).toMatch(/INSOLVENT_RISK/);
-    // A SAFE amended Finance reading is not a current reading: the missing half is AT_RISK, so growth is held.
-    await expect(enforceCashSafetyForPromotion("rec-2", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: "SAFE", financeSuperseded: true, impactArea: "growth" }))).rejects.toBeInstanceOf(CashSafetyGateError);
+    expect(err.effectiveState).toBe("CRITICAL");
+    await expect(enforceCashSafetyForPromotion("rec-2", "ws", deps({ flag: true, cashflowState: "CRITICAL", survivalState: "SAFE", impactArea: "growth" }))).rejects.toBeInstanceOf(CashSafetyGateError);
+    // The persisted state is used as recorded (amendment is an Owner-Mode reading concept, not the consulting gate's).
+    const amended = await enforceCashSafetyForPromotion("rec-3", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: "INSOLVENT_RISK", financeSuperseded: true, impactArea: "cash flow" })).catch((e) => e);
+    expect(amended).toBeInstanceOf(CashSafetyGateError);
+    expect(amended.message).toMatch(/INSOLVENT_RISK/);
+  });
+
+  it("Consulting: a missing half is AT_RISK (base): growth held, non-growth allowed", async () => {
+    await expect(enforceCashSafetyForPromotion("rec-1", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: null, impactArea: "growth" }))).rejects.toBeInstanceOf(CashSafetyGateError);
+    await expect(enforceCashSafetyForPromotion("rec-2", "ws", deps({ flag: true, cashflowState: null, survivalState: "SAFE", impactArea: "cash flow" }))).resolves.toBeUndefined();
   });
 
   it("opted-in: growth rec passes when cash + survival are SAFE", async () => {

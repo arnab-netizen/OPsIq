@@ -10,6 +10,9 @@
  *   C — known margin above the floor → promotion semantics unchanged.
  *   Cash — no owner business, no readings: unknown cash is AT_RISK exactly as before (growth blocked with
  *       the same outcome/code, spend and general work proceed) — never broadened.
+ *   Cash worst-of — one owner business with BOTH readings: the gate takes the WORSE of the two persisted
+ *       states exactly as before, whichever reading is newer (a newer SAFE Finance reading never wipes out a
+ *       CRITICAL cash reading); a missing half is AT_RISK.
  *   F — two owner businesses: business A's margin can never gate a recommendation; the unattributable
  *       margin is unknown (deferred), not a known-safe reading. (Differs from base BY DESIGN: the base read
  *       whichever business's snapshot was newest workspace-wide.)
@@ -20,7 +23,14 @@ import { enforceCashSafetyForPromotion } from "@/services/owner-finance/recommen
 import { MarginSafetyGateError } from "@/domain/owner-finance/margin-safety-gate";
 import { CashSafetyGateError } from "@/domain/owner-finance/cash-safety-gate";
 
-function world(opts: { impactArea: string; businesses: string[]; margin?: { revenue: number; costOfGoods: number } | null }) {
+function world(opts: {
+  impactArea: string;
+  businesses: string[];
+  margin?: { revenue: number; costOfGoods: number } | null;
+  /** Persisted readings (with the periods they describe; the base gate never looked at periods). */
+  cash?: { state: string; periodEnd: Date } | null;
+  finance?: { state: string; periodEnd: Date } | null;
+}) {
   const snapshotReads: any[] = [];
   const db: any = {
     clientAccount: { findUnique: vi.fn(async () => ({ requireBusinessImpactAssessment: true })) },
@@ -28,8 +38,8 @@ function world(opts: { impactArea: string; businesses: string[]; margin?: { reve
     finding: { findFirst: vi.fn(async () => ({ impactArea: opts.impactArea })) },
     ownerBusiness: { findMany: vi.fn(async () => opts.businesses.map((id) => ({ id }))) },
     ownerFinancialSnapshot: { findFirst: vi.fn(async (args: any) => { snapshotReads.push(args); return opts.margin ?? null; }) },
-    ownerCashflowCycle: { findFirst: vi.fn(async () => null) },
-    ownerFinanceCycle: { findFirst: vi.fn(async () => null) },
+    ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cash ? { cashflowState: opts.cash.state, snapshot: { periodEnd: opts.cash.periodEnd } } : null)) },
+    ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.finance ? { survivalState: opts.finance.state, snapshot: { periodEnd: opts.finance.periodEnd, supersededById: null } } : null)) },
   };
   return { deps: { db, marginFloorPct: 15 } as any, snapshotReads };
 }
@@ -68,6 +78,29 @@ describe("Consulting Mode compatibility — cash promotion gate (unknown cash is
     for (const impactArea of ["cash flow", "revenue", "pricing discount policy", "hiring", "customer experience"]) {
       expect((await outcome(enforceCashSafetyForPromotion("rec-s", "ws", world({ impactArea, businesses: [] }).deps))).allowed, impactArea).toBe(true);
     }
+  });
+});
+
+describe("Consulting Mode compatibility — cash worst-of (base semantics, whichever reading is newer)", () => {
+  const older = new Date(Date.now() - 25 * 86_400_000);
+  const newer = new Date(Date.now() - 2 * 86_400_000);
+  const run = (impactArea: string, cash: { state: string; periodEnd: Date } | null, finance: { state: string; periodEnd: Date } | null) =>
+    outcome(enforceCashSafetyForPromotion("rec-w", "ws", world({ impactArea, businesses: ["biz-1"], cash, finance }).deps));
+  it.each([
+    // cash, finance, growth allowed?, spend allowed?, general allowed?, effective state
+    ["CRITICAL cash (older) vs SAFE Finance (newer)", { state: "CRITICAL", periodEnd: older }, { state: "SAFE", periodEnd: newer }, false, false, true, "CRITICAL"],
+    ["SAFE cash (newer) vs CRITICAL Finance (older)", { state: "SAFE", periodEnd: newer }, { state: "CRITICAL", periodEnd: older }, false, false, true, "CRITICAL"],
+    ["AT_RISK cash (older) vs SAFE Finance (newer)", { state: "AT_RISK", periodEnd: older }, { state: "SAFE", periodEnd: newer }, false, true, true, "AT_RISK"],
+    ["INSOLVENT_RISK Finance (older) vs SAFE cash (newer)", { state: "SAFE", periodEnd: newer }, { state: "INSOLVENT_RISK", periodEnd: older }, false, false, false, "INSOLVENT_RISK"],
+    ["both SAFE", { state: "SAFE", periodEnd: older }, { state: "SAFE", periodEnd: newer }, true, true, true, null],
+    ["SAFE Finance, no cash reading (missing half → AT_RISK)", null, { state: "SAFE", periodEnd: newer }, false, true, true, "AT_RISK"],
+    ["SAFE cash, no Finance reading (missing half → AT_RISK)", { state: "SAFE", periodEnd: newer }, null, false, true, true, "AT_RISK"],
+  ] as const)("%s", async (_label, cash, finance, growthOk, spendOk, generalOk, blockedState) => {
+    const g = await run("growth", cash, finance);
+    expect(g.allowed).toBe(growthOk);
+    if (!g.allowed) expect((g as any).error.effectiveState).toBe(blockedState);
+    expect((await run("cash flow", cash, finance)).allowed).toBe(spendOk);
+    expect((await run("customer experience", cash, finance)).allowed).toBe(generalOk);
   });
 });
 

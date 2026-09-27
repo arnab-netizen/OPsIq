@@ -494,7 +494,7 @@ export default function OwnerSalesPage() {
             </form>
           )}
 
-          <DomainMainTargetContext domain="sales" businessId={dashboard?.selectedBusinessId} />
+          <DomainMainTargetContext domain="sales" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
