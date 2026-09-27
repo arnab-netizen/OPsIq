@@ -83,10 +83,12 @@ describe("[db] Strategy — the owner's chosen scenario drives the decision", ()
       // Missing inputs are the evaluated scenario's, not the latest period's.
       const olderRow = await db.ownerStrategySnapshot.findUniqueOrThrow({ where: { id: older.id } });
       expect(d1.missingCriticalData).toEqual(olderRow.missingCriticalData);
-      const home1 = await getOwnerHome(workspaceId, businessId);
-      expect((home1.summary?.requiredActions ?? []).filter((a) => a.domain === "strategy").map((a) => a.title)).toEqual(["Close the ₹50,000 funding gap"]);
+      // As of a day inside the evaluated (July 2026) scenario's evidence-freshness window.
+      const home1 = await getOwnerHome(workspaceId, businessId, { now: new Date("2026-08-10T00:00:00.000Z") });
+      expect((home1.currentOwnerDecision?.attention ?? []).filter((a) => a.domain === "strategy").map((a) => a.title)).toEqual(["Close the ₹50,000 funding gap"]);
+      expect(home1.currentOwnerDecision?.primaryTarget?.title).not.toMatch(/pursue|size up|go ahead/i);
       const cond1 = await getBusinessCondition(workspaceId, businessId);
-      expect(cond1.profile?.recommendedNextAction?.title).not.toMatch(/pursue|size up|go ahead/i);
+      expect(cond1.profile).not.toHaveProperty("recommendedNextAction");
 
       // Now the NEWER scenario explicitly.
       const c2 = await runStrategyDiagnosis(businessId, newer.id, actor, workspaceId);

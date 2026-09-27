@@ -120,8 +120,12 @@ describe("[db] Owner Home service", () => {
     // a leaky finance snapshot produces at least one risk + at least one required action.
     expect(s.top3Risks.length).toBeGreaterThan(0);
     expect(s.top3Risks.length).toBeLessThanOrEqual(3);
-    expect(s.requiredActions.length).toBeGreaterThan(0);
-    expect(s.requiredActions.length).toBeLessThanOrEqual(5);
+    // Today's open work is the canonical decision's attention order (open work only, main target first).
+    const d = home.currentOwnerDecision!;
+    expect(d.attention.length).toBeGreaterThan(0);
+    expect(d.attention[0].candidateId).toBe(d.primaryCandidateId);
+    expect(d.attention.every((a) => ["proposed", "assigned", "in_progress", "blocked"].includes(a.status))).toBe(true);
+    expect(s).not.toHaveProperty("requiredActions");
     expect(s.lastVerifiedImprovement).toBeNull();
 
     await teardownOwnerBusiness(businessId);

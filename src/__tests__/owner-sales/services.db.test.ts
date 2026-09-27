@@ -342,8 +342,11 @@ describe("[db] Owner Sales services", () => {
     expect(dash.recommendedNextAction).not.toBeNull();
     // Every surface reading the latest cycle agrees: Home sees the in-flight action too.
     const { getOwnerHome } = await import("@/services/owner-home/home.service");
-    const home = await getOwnerHome(workspaceId, businessId);
-    expect(home.summary!.requiredActions.some((a) => a.status === "in_progress" && a.findingCode === inFlight.findingCode)).toBe(true);
+    // Read Home as of a day inside the evidence-freshness window of this fixture's period (May 2026):
+    // this test is about carry-forward, not staleness (stale evidence becomes a refresh target).
+    const home = await getOwnerHome(workspaceId, businessId, { now: new Date("2026-06-10T00:00:00.000Z") });
+    expect(home.currentOwnerDecision!.primaryTarget?.source).toBe("domain_action");
+    expect(home.currentOwnerDecision!.attention.some((a) => a.status === "in_progress" && a.findingCode === inFlight.findingCode)).toBe(true);
     // The re-attachment is audited.
     const audit = await db.auditEvent.findFirst({ where: { entityId: inFlight.id, eventName: "owner.sales_action_updated", workspaceId }, orderBy: { occurredAt: "desc" } });
     expect((audit!.payload as { reason?: string }).reason).toBe("carried_forward_by_diagnosis");
@@ -374,8 +377,10 @@ describe("[db] Owner Sales services", () => {
     expect(listed?.stillFlaggedByLatestDiagnosis).toBe(false);
 
     const { getOwnerHome } = await import("@/services/owner-home/home.service");
-    const home = await getOwnerHome(workspaceId, businessId);
-    expect(home.summary!.requiredActions.some((a) => a.title === discount!.title && a.findingCode === discount!.findingCode)).toBe(false);
+    // As of a day inside the June 2026 period's freshness window (so the absence is not merely staleness).
+    const home = await getOwnerHome(workspaceId, businessId, { now: new Date("2026-07-10T00:00:00.000Z") });
+    expect(home.currentOwnerDecision!.primaryTarget?.source).toBe("domain_action");
+    expect(home.currentOwnerDecision!.attention.some((a) => a.title === discount!.title && a.findingCode === discount!.findingCode)).toBe(false);
 
     await teardownOwnerBusiness(businessId);
   });
