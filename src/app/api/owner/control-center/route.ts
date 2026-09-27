@@ -38,6 +38,13 @@ export const GET = withCanonicalEnforcement(
       ownerApprovalsRequired: 0,
       approvalsAvoided: blocks.approvalsAvoided,
       nextBestAction: home.currentOwnerDecision?.primaryTarget?.title ?? null,
+      mainTarget: home.currentOwnerDecision?.primaryTarget
+        ? {
+            title: home.currentOwnerDecision.primaryTarget.title,
+            priorityClass: home.currentOwnerDecision.primaryTarget.priorityClass,
+            source: home.currentOwnerDecision.primaryTarget.source,
+          }
+        : null,
     });
     return canonicalJson(panel, { status: 200 });
   },

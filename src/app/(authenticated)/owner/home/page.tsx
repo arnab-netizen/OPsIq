@@ -218,7 +218,7 @@ export default function OwnerHomePage() {
                       return (
                         <li key={a.id} className="text-xs text-muted-foreground" data-testid="home-notification">
                           · {a.message}
-                          {i >= 0 && <span data-testid="home-notification-linked"> — {i === 0 ? "this is your main target" : `item ${i + 1} in the order below`}</span>}
+                          {(i === 0 || (i > 0 && data?.summary)) && <span data-testid="home-notification-linked"> — {i === 0 ? "this is your main target" : `item ${i + 1} in the order below`}</span>}
                         </li>
                       );
                     })}
@@ -288,7 +288,7 @@ export default function OwnerHomePage() {
               <div className="md:grid md:grid-cols-2 md:gap-4 space-y-5 md:space-y-0">
               {/* Top 3 risks */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground mb-2">Top risks</div>
+                <div className="text-xs uppercase text-muted-foreground mb-2">Top risks <span className="normal-case">(what was found — not an action order)</span></div>
                 {s.top3Risks.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No risks from diagnosed domains — run a domain diagnosis to surface risks.</p>
                 ) : (

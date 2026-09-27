@@ -370,7 +370,8 @@ export async function updateSpendReconciliation(
 export async function getBudgetForecast(workspaceId: string, businessId: string): Promise<ForecastResult & { hasData: boolean }> {
   await getBusiness(businessId, workspaceId);
   const period = await db.budgetPeriod.findFirst({ where: { workspaceId, businessId, status: "active" }, orderBy: { createdAt: "desc" } });
-  const snap = await db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } });
+  // Current (never amended/superseded) version only, deterministic order.
+  const snap = await db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId, supersededById: null }, orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }] });
   const committed = await db.spendEntry.findMany({
     where: { workspaceId, businessId, voidedAt: null, state: { in: [...CASH_OBLIGATION_STATES] }, dueInDays: { not: null } },
   });
@@ -421,8 +422,9 @@ async function assembleAssessment(
     finance = financeOverride;
   } else {
     const snap = await db.ownerFinancialSnapshot.findFirst({
-      where: { workspaceId, businessId },
-      orderBy: { periodEnd: "desc" },
+      // Current (never amended/superseded) version only, deterministic order.
+      where: { workspaceId, businessId, supersededById: null },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     });
     if (snap) {
       finance = rowToFinanceInput(snap);

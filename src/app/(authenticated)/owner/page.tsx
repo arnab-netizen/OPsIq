@@ -522,7 +522,7 @@ export default function OwnerCommandCenterPage() {
                 <div className="text-xs uppercase text-muted-foreground">Plan analysis focus (supporting context — your main target is shown above)</div>
                 <div className="text-lg font-semibold">{wbp.topPriority.label}</div>
                 <div className="text-xs text-muted-foreground">
-                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{String(wbp.dominantConstraint).replace(/_/g, " ")}</span>
+                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{String(wbp.dominantConstraint).replace(/_/g, " ").toLowerCase()}</span>
                 </div>
               </div>
 
@@ -564,7 +564,7 @@ export default function OwnerCommandCenterPage() {
                   {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.map((c: string) => c.replace(/_/g, " ")).join(", ")}</span>}
                 </div>
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-arbitration">
-                  <strong>Plan analysis constraint:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ")}; {wbp.arbitration.rejectedCount} conflicting plan move(s) set aside.
+                  <strong>Plan analysis constraint:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ").toLowerCase()}; {wbp.arbitration.rejectedCount} conflicting plan move(s) set aside.
                   {wbp.arbitration.ownerApprovalNeeded && " Owner approval needed."}
                 </div>
               </div>

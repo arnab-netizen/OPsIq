@@ -1172,6 +1172,8 @@ const GROWTH_VETO_PRECONDITION: Record<string, (title: string) => string> = {
   avoid_growth_before_gates: (t) => `Do not scale "${t}" beyond a small trial until cash, profit, capacity, workload and quality gates pass`,
   avoid_growth_on_cash_danger: (t) => `Keep "${t}" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week`,
   avoid_marketing_on_service_failure: (t) => `Do not scale "${t}" beyond a small trial until service quality is fixed`,
+  avoid_volume_on_capacity: (t) => `Keep "${t}" within what current capacity can deliver`,
+  avoid_growth_on_supplier_risk: (t) => `Keep "${t}" to what current supply can support until supplier risk is resolved`,
 };
 
 export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {

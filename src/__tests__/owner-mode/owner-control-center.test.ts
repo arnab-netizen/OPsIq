@@ -121,3 +121,45 @@ describe("getOwnerControlCenter (DI)", () => {
     expect(cc.ownerActionsToday).toBeGreaterThanOrEqual(1 + 2 + 3); // decision + sop + process
   });
 });
+
+describe("control-center guardrails never veto the canonical main target (final review P1)", () => {
+  it("growth main target + capacity bottleneck: the veto becomes a condition on executing the target", () => {
+    const cc = buildOwnerControlCenter(inputs({
+      equipmentBottlenecks: ["Oven 2"],
+      mainTarget: { title: "Use spare capacity to take more orders", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action" },
+    }));
+    const text = cc.whatNotToDo.join(" ");
+    expect(text).not.toMatch(/Do not pursue growth\/marketing/);
+    expect(cc.whatNotToDo).toContain('Keep "Use spare capacity to take more orders" within current capacity until the bottleneck is cleared.');
+    // The reason stays visible as an alert.
+    expect(cc.criticalAlerts.join(" ")).toMatch(/Capacity bottleneck: Oven 2/);
+  });
+
+  it("compliance main target + insufficient data: the guardrail applies to OTHER decisions, never the target", () => {
+    const cc = buildOwnerControlCenter(inputs({
+      dataSufficiencyStatus: "insufficient",
+      lowConfidenceDomains: ["finance"],
+      mainTarget: { title: 'Resolve the breach of "Fire certificate"', priorityClass: "SAFETY_COMPLIANCE", source: "compliance_item" },
+    }));
+    expect(cc.whatNotToDo.join(" ")).not.toMatch(/^Do not make material decisions/);
+    expect(cc.whatNotToDo).toContain('Apart from "Resolve the breach of "Fire certificate"", do not make material decisions until the missing/stale data is provided.');
+  });
+
+  it("growth main target + blocked cash/margin recommendations: spend guardrail becomes a condition", () => {
+    const cc = buildOwnerControlCenter(inputs({
+      financeBlocked: 2,
+      mainTarget: { title: "Add a referral ask", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action" },
+    }));
+    expect(cc.whatNotToDo).toEqual(['Keep "Add a referral ask" to steps that need no new spend or discounts while cash/margin guardrails are blocking.']);
+  });
+
+  it("guardrails unrelated to the target are unchanged, and without a decision the original wording stands", () => {
+    const survival = buildOwnerControlCenter(inputs({
+      equipmentBottlenecks: ["Oven 2"],
+      mainTarget: { title: "Protect your cash runway", priorityClass: "SURVIVAL_CASH", source: "domain_action" },
+    }));
+    expect(survival.whatNotToDo).toEqual(["Do not pursue growth/marketing until the capacity bottleneck is cleared."]);
+    const none = buildOwnerControlCenter(inputs({ dataSufficiencyStatus: "insufficient" }));
+    expect(none.whatNotToDo).toEqual(["Do not make material decisions until the missing/stale data is provided."]);
+  });
+});

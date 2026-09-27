@@ -21,18 +21,19 @@ function cand(p: Partial<OwnerDecisionCandidate> & { findingCode: string; title:
     source: p.source ?? "domain_action", domain: p.domain ?? "finance", sourceId: p.findingCode,
     priorityClass: p.priorityClass ?? classifyOwnerFindingCode(p.findingCode), findingCode: p.findingCode, findingId: null,
     title: p.title, explanation: "", severity: p.severity === undefined ? "medium" : p.severity, priorityScore: p.priorityScore ?? 50,
-    expectedImpactScore: 50, confidence: 0.9, effortScore: 30, status: "proposed", ownerActionRequired: true, blocking: false,
+    expectedImpactScore: p.expectedImpactScore ?? 50, confidence: p.confidence ?? 0.9, effortScore: p.effortScore ?? 30, status: "proposed", ownerActionRequired: true, blocking: false,
     evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: p.stale ?? false, exclusion: null,
     targetRoute: `/owner/${p.domain ?? "finance"}`,
   };
 }
 
-function input(candidates: OwnerDecisionCandidate[]): ResolveOwnerDecisionInput {
+function input(candidates: OwnerDecisionCandidate[], over: Partial<ResolveOwnerDecisionInput> = {}): ResolveOwnerDecisionInput {
   return {
     businessId: BIZ, workspaceId: WS, candidates, diagnosedDomains: ["cashflow", "finance"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 14, reason: "r" }, previous: null, events: [], domainsDiagnosedSince: [],
+    staleDomains: [], strategy: null, reassessment: { days: 14, reason: "r" }, previous: null, events: [],
     now: new Date("2026-09-27T10:00:00.000Z"),
+    ...over,
   };
 }
 
@@ -55,6 +56,31 @@ describe("item 1 — a stale diagnosis is never an authoritative 'do this now'",
     expect(refresh.severity).toBe("critical");
     expect(refresh.explanation).toMatch(/Protect runway/);
     expect(d.attention[1].title).toBe("Tighten discounting");
+  });
+
+  it("P1 (final review C): a FRESH danger beats a stale refresh target of the SAME class and severity", () => {
+    // Exact reviewer case: Finance is 46+ days old with FIN_LOW_RUNWAY (critical, priority 100,
+    // impact 90); Cash flow is fresh with CF_LOW_RUNWAY (critical, priority 100, impact 85, confidence 0.8).
+    const d = resolveOwnerDecision(input([
+      cand({ findingCode: "FIN_LOW_RUNWAY", title: "Extend your runway", severity: "critical", priorityScore: 100, expectedImpactScore: 90, confidence: 0.9, stale: true }),
+      cand({ findingCode: "CF_LOW_RUNWAY", title: "Protect this month's cash", domain: "cashflow", severity: "critical", priorityScore: 100, expectedImpactScore: 85, confidence: 0.8 }),
+    ], { staleDomains: ["finance"] }));
+    expect(d.primaryTarget?.title).toBe("Protect this month's cash");
+    expect(d.primaryTarget?.source).toBe("domain_action");
+    const refresh = d.attention.find((t) => t.source === "evidence_refresh")!;
+    expect(refresh.priorityClass).toBe("SURVIVAL_CASH");
+    expect(d.attention.indexOf(refresh)).toBe(1);
+    // Decided by freshness, stated truthfully — never "bigger difference" / "stronger evidence".
+    expect(d.whyThisWins.join(" ")).toMatch(/based on current figures, so it comes before "Update the figures in Finance before acting on them" in Finance, which rests on out-of-date figures/);
+    expect(d.whyThisWins.join(" ")).not.toMatch(/bigger difference|evidence behind it is stronger/);
+  });
+
+  it("a refresh target inherits the stood-in item's confidence and effort (never invents certainty or ease)", () => {
+    const d = resolveOwnerDecision(input([
+      cand({ findingCode: "FIN_LOW_RUNWAY", title: "Extend your runway", severity: "critical", confidence: 0.55, effortScore: 70, stale: true }),
+    ], { staleDomains: ["finance"] }));
+    expect(d.primaryTarget?.source).toBe("evidence_refresh");
+    expect(d.confidence.score).toBe(55);
   });
 
   it("a stale LOWER-class item never jumps ahead of fresh higher-class work", () => {

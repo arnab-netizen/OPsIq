@@ -23,7 +23,7 @@ import {
   type OwnerDecisionCandidate,
   type OwnerPriorityClass,
 } from "@/domain/owner-spine/owner-decision";
-import { clampConfidence, clampScore, OWNER_SEVERITIES, type OwnerDomain, type OwnerSeverity } from "@/domain/owner-spine/contracts";
+import { clampConfidence, clampScore, OWNER_SEVERITIES, ownerSeverityRank, type OwnerDomain, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 
 /** Statuses that still need the owner (the single open-status definition for the arbiter). */
 export const OPEN_OWNER_ACTION_STATUSES: readonly string[] = ["proposed", "assigned", "in_progress", "blocked"];
@@ -338,5 +338,73 @@ export function businessRiskToCandidate(
     stale: false,
     exclusion: null,
     targetRoute: `${OWNER_DOMAIN_ROUTE.risk}/${risk.id}`,
+  };
+}
+
+/** A cash/finance survival reading on CURRENT evidence (not stale, not superseded by the other source). */
+export interface CurrentSurvivalReading {
+  domain: "cashflow" | "finance";
+  state: string;
+  periodEnd: Date;
+  /** The diagnosis's own data-confidence score (0-100). */
+  dataConfidenceScore: number;
+}
+
+const UNSAFE_SURVIVAL_SEVERITY: Record<string, OwnerSeverity> = {
+  INSOLVENT_RISK: "critical",
+  CRITICAL: "critical",
+  AT_RISK: "high",
+};
+
+/**
+ * An unsafe survival reading on current evidence that NO eligible survival-cash action covers (its
+ * actions were completed, verified or cancelled while the reading — from the same snapshot — still
+ * says unsafe). The canonical decision must not elect lower-class work beside that signal, so this
+ * makes the state explicit: confirm the cash position with current figures. Class and severity come
+ * from the reading; nothing is invented — priority and impact are unrated, effort is neutral, and
+ * confidence is the diagnosis's own data confidence. It is an evidence refresh, so any current
+ * survival-cash danger of the same severity still precedes it.
+ */
+export function survivalConfirmationCandidate(
+  readings: readonly CurrentSurvivalReading[],
+  candidates: readonly OwnerDecisionCandidate[],
+  ctx: { businessId: string; workspaceId: string }
+): OwnerDecisionCandidate | null {
+  const covered = candidates.some((c) => c.priorityClass === "SURVIVAL_CASH" && c.exclusion === null && !c.stale);
+  if (covered) return null;
+  const unsafe = readings
+    .filter((r) => r.state in UNSAFE_SURVIVAL_SEVERITY)
+    .sort((a, b) => ownerSeverityRank(UNSAFE_SURVIVAL_SEVERITY[b.state]) - ownerSeverityRank(UNSAFE_SURVIVAL_SEVERITY[a.state]) || (a.domain < b.domain ? -1 : 1));
+  const r = unsafe[0];
+  if (!r) return null;
+  const label = r.domain === "cashflow" ? "Cash flow" : "Finance";
+  const stateLabel = r.state.toLowerCase().replace(/_/g, " ");
+  return {
+    candidateId: `evidence_refresh:survival-confirm:${r.domain}`,
+    businessId: ctx.businessId,
+    workspaceId: ctx.workspaceId,
+    source: "evidence_refresh",
+    domain: r.domain,
+    sourceId: r.domain,
+    priorityClass: "SURVIVAL_CASH",
+    findingCode: "SURVIVAL_READING_UNCONFIRMED",
+    findingId: null,
+    title: "Confirm your cash position with current figures",
+    explanation: `Your latest ${label} reading (period ending ${r.periodEnd.toISOString().slice(0, 10)}) shows ${stateLabel}. No open action covers it — its actions are done, verified or cancelled — so add current figures to confirm whether the danger has passed.`,
+    severity: UNSAFE_SURVIVAL_SEVERITY[r.state],
+    priorityScore: 0,
+    expectedImpactScore: 0,
+    confidence: clampConfidence(r.dataConfidenceScore / 100),
+    effortScore: 50,
+    status: "proposed",
+    ownerActionRequired: true,
+    blocking: false,
+    evidence: [`${label} reading: ${stateLabel} (period ending ${r.periodEnd.toISOString().slice(0, 10)})`],
+    missingData: [],
+    verificationMetric: null,
+    evidenceAsOf: r.periodEnd,
+    stale: false,
+    exclusion: null,
+    targetRoute: OWNER_DOMAIN_ROUTE[r.domain] ?? "/owner",
   };
 }

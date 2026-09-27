@@ -64,7 +64,7 @@ function input(candidates: OwnerDecisionCandidate[], over: Partial<ResolveOwnerD
     reassessment: { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." },
     previous: null,
     events: [],
-    domainsDiagnosedSince: [],
+    
     now: NOW,
     ...over,
   };
@@ -259,7 +259,7 @@ describe("what changed", () => {
   it("reports a main-target change, a new critical issue, completions and confidence moves since the last check", () => {
     const first = resolveOwnerDecision(input(
       [cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 })],
-      { strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: 50000, currency: "INR" } }
+      { strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: 50000, currency: "INR" }, evidenceIds: { finance: "fin-snap-1" } }
     ));
     const memory = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
     expect(memory).not.toBeNull();
@@ -273,7 +273,8 @@ describe("what changed", () => {
         now: new Date("2026-09-28T10:00:00.000Z"),
         events: [{ kind: "ACTION_COMPLETED", title: "Tighten discounting", at: new Date("2026-09-27T12:00:00.000Z") }],
         strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: 20000, currency: "INR" },
-        domainsDiagnosedSince: ["cashflow"],
+        // Cash flow now has evidence (a snapshot it did not have before): that is NEW data.
+        evidenceIds: { finance: "fin-snap-1", cashflow: "cf-snap-1" },
       }
     ));
     const kinds = later.whatChanged.map((c) => c.kind);
@@ -300,7 +301,60 @@ describe("what changed", () => {
     expect(d.primaryTarget?.source).toBe("evidence_refresh");
     expect(d.whyThisWins[0]).toMatch(/^Your Finance figures are out of date, and they last showed a cash-survival danger \(critical\); confirming them comes before acting/);
     expect(d.whyThisWins[0]).not.toMatch(/^This is/);
-    expect(d.confidence.reasons).toContain("OpsIQ is certain these figures are out of date; confirm them before acting on what they showed.");
+    expect(d.confidence.reasons).toContain("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
+    // Missing information and evidence say the figures are out of date — never that the danger is current.
+    expect(d.missingInformation).toContain("Current figures for Finance — the latest ones are out of date, so what they showed cannot be relied on yet.");
+    expect(d.evidence.join(" ")).toMatch(/^Out-of-date finding: /);
+  });
+
+  it("a re-diagnosis of the SAME snapshot is a new calculation, not new data (no EVIDENCE_UPDATED)", () => {
+    const c = cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 });
+    const first = resolveOwnerDecision(input([c], { evidenceIds: { finance: "fin-snap-1" } }));
+    const prev = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
+    const sameSnapshot = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: prev, evidenceIds: { finance: "fin-snap-1" }, now: new Date("2026-09-28T10:00:00.000Z") }));
+    expect(sameSnapshot.whatChanged.map((x) => x.kind)).not.toContain("EVIDENCE_UPDATED");
+    const newSnapshot = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: prev, evidenceIds: { finance: "fin-snap-2" }, now: new Date("2026-09-28T10:00:00.000Z") }));
+    expect(newSnapshot.whatChanged.find((x) => x.kind === "EVIDENCE_UPDATED")?.message).toBe("New data in Finance was analysed since your last check.");
+  });
+
+  it("an older memory without evidence identity never claims new data", () => {
+    const c = cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 });
+    const first = resolveOwnerDecision(input([c]));
+    const legacy = JSON.parse(JSON.stringify(first.memory));
+    delete legacy.evidenceIds;
+    delete legacy.issueSeverities;
+    const later = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: parseOwnerDecisionMemory(legacy), evidenceIds: { finance: "fin-snap-9" }, now: new Date("2026-09-28T10:00:00.000Z") }));
+    expect(later.whatChanged.map((x) => x.kind)).not.toContain("EVIDENCE_UPDATED");
+  });
+
+  describe("severity transitions use stable issue identity", () => {
+    const at = (severity: "critical" | "high" | "medium") => cand({ findingCode: "FIN_LOW_RUNWAY", title: "Protect your runway", severity });
+    const other = cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", severity: "medium" });
+    const after = (prevCands: ReturnType<typeof cand>[], nowCands: ReturnType<typeof cand>[]) => {
+      const first = resolveOwnerDecision(input(prevCands));
+      return resolveOwnerDecision(input(nowCands, { previous: parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory))), now: new Date("2026-09-28T10:00:00.000Z") })).whatChanged;
+    };
+    it("critical → high is an improvement, NOT a resolution", () => {
+      const ch = after([at("critical"), other], [at("high"), other]);
+      expect(ch.map((c) => c.kind)).toContain("SEVERITY_DECREASED");
+      expect(ch.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
+      expect(ch.find((c) => c.kind === "SEVERITY_DECREASED")?.message).toBe('"Protect your runway" in Finance improved from critical to high; it is still open.');
+    });
+    it("high → critical is an escalation", () => {
+      const ch = after([at("high"), other], [at("critical"), other]);
+      expect(ch.find((c) => c.kind === "SEVERITY_INCREASED")?.message).toBe('"Protect your runway" in Finance became more serious: high → critical.');
+      expect(ch.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_APPEARED");
+    });
+    it("critical → absent/terminal is resolved", () => {
+      const done = { ...at("critical"), status: "completed", exclusion: "completed" as const };
+      const ch = after([at("critical"), other], [done, other]);
+      expect(ch.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
+      expect(ch.map((c) => c.kind)).not.toContain("SEVERITY_DECREASED");
+    });
+    it("a brand-new critical issue appears", () => {
+      const ch = after([other], [at("critical"), other]);
+      expect(ch.map((c) => c.kind)).toContain("CRITICAL_ISSUE_APPEARED");
+    });
   });
 
   it("two 'covered' funding gaps are not reported as a change", () => {

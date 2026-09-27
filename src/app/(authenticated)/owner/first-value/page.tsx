@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { FirstValueDTO } from "@/lib/first-value/first-value.dto";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 import { CardDashboardSkeleton, PageContainer } from "@/ui/primitives";
+import Link from "next/link";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 // Verified against src/lib/first-value/first-value.dto.ts -- every FirstValueDTO field below is a
 // closed SCREAMING_SNAKE_CASE union with no plain-language map anywhere on this page before now.
@@ -31,24 +34,6 @@ const HEALTH_STATUS_LABEL: Record<string, string> = {
   STABLE: "Stable",
   THRIVING: "Thriving",
 };
-const EFFORT_LABEL: Record<string, string> = {
-  MINIMAL: "Minimal",
-  SMALL: "Small",
-  MEDIUM: "Medium",
-  LARGE: "Large",
-};
-const RISK_LEVEL_LABEL: Record<string, string> = {
-  NONE: "None",
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-};
-const ACTION_REASON_LABEL: Record<string, string> = {
-  NO_ACTION_EVIDENCE: "No action evidence yet",
-  INSUFFICIENT_EVIDENCE: "Insufficient evidence",
-  MULTIPLE_ACTIONS_AVAILABLE: "Multiple actions available",
-  ACTION_READY_FOR_EXECUTION: "Action ready for execution",
-};
 // businessSnapshot.consultingLifecycleStage/interventionMode/interventionPhase all draw from the
 // same governed intervention-mode/phase enums (src/domain/constants/statuses.ts INTERVENTION_MODES
 // / INTERVENTION_PHASES) -- confirmed via src/services/first-value.service.ts, which sets
@@ -65,6 +50,7 @@ const INTERVENTION_LABEL: Record<string, string> = {
 
 export default function FirstValuePage() {
   const [firstValue, setFirstValue] = useState<FirstValueDTO | null>(null);
+  const [ownerDecision, setOwnerDecision] = useState<CurrentOwnerDecision | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +63,9 @@ export default function FirstValuePage() {
         }
         const data = await response.json();
         setFirstValue(data);
+        // The canonical owner decision (read-only). A failure here only hides the target card.
+        const home = await fetch("/api/owner/home").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+        setOwnerDecision((home?.currentOwnerDecision as CurrentOwnerDecision | null | undefined) ?? null);
       } catch (err) {
         const safeError = toOperatorSafeError(err, "load");
         setError(safeError.error);
@@ -253,70 +242,16 @@ export default function FirstValuePage() {
         </div>
       )}
 
-      {/* Recommended First Action */}
-      {firstValue.recommendedFirstAction ? (
-        <div className="p-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-500 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 text-green-900">
-            ✓ Recommended First Action
-          </h2>
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-600">Action</p>
-              <p className="text-lg font-bold text-gray-900">
-                {firstValue.recommendedFirstAction.action}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Why This Action</p>
-              <p className="text-gray-800">
-                {firstValue.recommendedFirstAction.reason}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-              <div>
-                <p className="text-xs text-gray-600">Expected Impact</p>
-                <p className="font-semibold">
-                  {firstValue.recommendedFirstAction.expectedImpact}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600">Effort Required</p>
-                <p className="font-semibold">
-                  {EFFORT_LABEL[firstValue.recommendedFirstAction.effort] ?? firstValue.recommendedFirstAction.effort}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600">Risk Level</p>
-                <p className="font-semibold">
-                  {RISK_LEVEL_LABEL[firstValue.recommendedFirstAction.risk] ?? firstValue.recommendedFirstAction.risk}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600">Confidence</p>
-                <p className="font-semibold">
-                  {CONFIDENCE_LABEL[firstValue.recommendedFirstAction.confidenceState] ?? firstValue.recommendedFirstAction.confidenceState}
-                </p>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-gray-300">
-              <p className="text-sm text-gray-600">First Step</p>
-              <p className="font-semibold text-gray-900">
-                {firstValue.recommendedFirstAction.firstStep}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Stop Condition</p>
-              <p className="font-semibold text-gray-900">
-                {firstValue.recommendedFirstAction.stopCondition}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* The ONE canonical owner decision — this page never elects its own "first action". The
+          first-value data above (engagement findings) is context; what to do first comes only from
+          the canonical owner decision, the same answer Home, Cockpit and Priorities show. */}
+      {ownerDecision ? (
+        <OwnerDecisionCard decision={ownerDecision} detail="compact" />
       ) : (
-        <div className="p-6 bg-gray-50 border border-gray-300 rounded-lg">
-          <p className="text-gray-700">
-            <span className="font-bold">No action recommended yet.</span> Reason:{" "}
-            {(firstValue.recommendedFirstActionReason && ACTION_REASON_LABEL[firstValue.recommendedFirstActionReason]) ?? firstValue.recommendedFirstActionReason}
+        <div className="p-6 rounded-lg border border-border bg-card" data-testid="first-value-no-decision">
+          <p className="text-muted-foreground">
+            <span className="font-bold text-foreground">No main target yet.</span> OpsIQ picks one main target from your business numbers.{" "}
+            <Link href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</Link>
           </p>
         </div>
       )}

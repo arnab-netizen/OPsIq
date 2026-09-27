@@ -20,7 +20,21 @@ export const GET = withCanonicalEnforcement(
       getBusinessCondition(ctx.verifiedWorkspaceId, businessId),
       getOwnerHome(ctx.verifiedWorkspaceId, businessId),
     ]);
-    return { ...condition, currentOwnerDecision: home.currentOwnerDecision };
+    // ONE review cadence on the page: the one the canonical decision was resolved with (Home counts
+    // every stale domain and only diagnosed evidence), never a second Finance-only computation.
+    const cadence = home.reassessment ?? null;
+    const lastDiagnosedMs = condition.lastDiagnosedAt ? Date.parse(condition.lastDiagnosedAt) : null;
+    return {
+      ...condition,
+      ...(cadence && home.selectedBusinessId === condition.selectedBusinessId
+        ? {
+            reassessmentCadenceDays: cadence.days,
+            reassessmentReason: cadence.reason,
+            nextReassessmentDue: lastDiagnosedMs !== null ? new Date(lastDiagnosedMs + cadence.days * 86_400_000).toISOString() : condition.nextReassessmentDue,
+          }
+        : {}),
+      currentOwnerDecision: home.currentOwnerDecision,
+    };
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }
 );

@@ -35,7 +35,7 @@ function decisionWith(priorityClass: OwnerPriorityClass, title: string) {
   return resolveOwnerDecision({
     businessId: "b", workspaceId: "w", candidates: [c], diagnosedDomains: ["sales"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [],
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
     now: new Date("2026-09-27T00:00:00Z"),
   });
 }

@@ -310,10 +310,7 @@ export default function OwnerCockpitPage() {
           growthReadinessStatus: view.growthReadinessStatus,
           topOwnerActions: view.topOwnerActions,
           urgentRisks: view.urgentRisks,
-          // A refresh target's concern is out-of-date information, never the old problem it stands in for.
-          canonicalPrimaryClass: decision?.primaryTarget
-            ? decision.primaryTarget.source === "evidence_refresh" ? "MISSING_CRITICAL_EVIDENCE" : decision.primaryTarget.priorityClass
-            : null,
+          canonicalPrimaryClass: decision?.primaryConcernClass ?? null,
           conditionDimensions: (data.derivedBusinessCondition as DerivedBusinessConditionSignals) ?? null,
         });
         setAssessmentNarrative(composeOwnerAssessment(canonicalAssessment));
@@ -508,7 +505,6 @@ export default function OwnerCockpitPage() {
         }
       />
       {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
-      {assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
       {loading ? (
         <CardDashboardSkeleton label="Loading your business" sections={2} />
       ) : error ? (
@@ -548,6 +544,9 @@ export default function OwnerCockpitPage() {
           />
         </>
       )}
+      {/* The condition summary is context for the canonical main target (rendered inside the cockpit
+          above), so it follows it and never reads as the first headline. */}
+      {!loading && !error && assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
       {/* Setup continuation is secondary to the canonical main target, so it renders after it. */}
       <StartHereContinuationCard businessId={activeBusinessId} />
     </PageContainer>

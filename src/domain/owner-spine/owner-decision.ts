@@ -84,6 +84,8 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
   CUSTOMER_SERVICE_FAILURE: [
     "OPS_DELIVERY_FAILURE", "OPS_HIGH_COMPLAINT_RATE", "OPS_HIGH_REWORK", "OPS_HIGH_DELAY", "OPS_LOW_COMPLETION",
     "SALES_HIGH_COMPLAINT_RATIO", "SALES_HIGH_REFUND_RATE",
+    // "Stockouts are interrupting fulfilment" (its own rule text): customers are not being served.
+    "OPS_INVENTORY_SHORTAGE",
     // Customers not coming back is a retention/service failure (Now View classifies churn the same way).
     "SALES_WEAK_REPEAT",
     "QUALITY_FAILURE", "SLOW_TURNAROUND", "WEAK_REPEAT_RATE",
@@ -101,16 +103,16 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "CF_OPP_COLLECT_OVERDUE", "CF_OPP_DEFER_PAYABLES", "CF_OPP_REDUCE_OWNER_WITHDRAWAL",
     // The current revenue engine failing (sales lost now), not optional upside.
     "SALES_LOST_CUSTOMER_LEAKAGE", "SALES_DISCOUNT_DEPENDENCE", "SALES_LOW_CONVERSION", "SALES_POOR_FOLLOW_UP",
-    "SALES_WEAK_B2B_PIPELINE",
+
     "MKT_WASTED_SPEND", "MKT_POOR_CONVERSION", "MKT_NO_FOLLOWUP", "MKT_WEAK_OFFER",
     // Discount capping and idle paid hours "recover margin" (their own rule text): the same loss as
     // SALES_DISCOUNT_DEPENDENCE / LOW_STAFF_PRODUCTIVITY, never optional growth or process polish.
     "SALES_OPP_TIGHTEN_DISCOUNT", "OPS_HIGH_IDLE",
     "HIGH_COST_RATIO", "DISCOUNT_LEAKAGE", "DELIVERY_COST_LEAKAGE", "RECEIVABLES_PRESSURE", "LOW_REVENUE",
-    "LOW_STAFF_PRODUCTIVITY", "POOR_CAMPAIGN_CONVERSION", "LOW_AOV", "B2B_CONCENTRATION",
+    "LOW_STAFF_PRODUCTIVITY", "POOR_CAMPAIGN_CONVERSION", "LOW_AOV",
   ],
   BLOCKED_EXECUTION: [
-    "OPS_INVENTORY_SHORTAGE", "OPS_SOP_NONCOMPLIANCE",
+    "OPS_SOP_NONCOMPLIANCE",
     "SOP_HIGH_OVERDUE", "SOP_LOW_COMPLETION", "SOP_HIGH_DISPUTE", "SOP_LOW_PROOF_COMPLIANCE", "SOP_LOW_VERIFICATION",
     "SOP_HIGH_REASSIGNMENT", "SOP_LOW_COVERAGE",
     // Internal actions failing repeatedly ("needs an SOP, not another reminder") — execution, not customers.
@@ -132,6 +134,9 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     // A composite revenue-quality score below target (low severity, "diversify and de-discount"):
     // resilience upside, not a measured loss — the actual discount loss is FIN_DISCOUNT_LEAKAGE.
     "FIN_OPP_REVENUE_QUALITY",
+    // Revenue-resilience risks, not measured losses: B2B dependence ("losing one contract can collapse
+    // revenue") and a thin B2B pipeline ("future B2B sales stall") — same reasoning as revenue quality.
+    "B2B_CONCENTRATION", "SALES_WEAK_B2B_PIPELINE",
     // Their own rule text calls these growth ("growth is not rented", "the cheapest growth is being
     // left on the table") — the same condition as MKT_OPP_ACTIVATE_REFERRALS / MKT_OPP_BUILD_ORGANIC.
     "MKT_LOW_REFERRAL", "MKT_WRONG_CHANNEL_MIX",
@@ -289,6 +294,7 @@ export type OwnerPrecedenceFactor =
   | "class"
   | "recorded_block"
   | "severity"
+  | "current_evidence"
   | "priority"
   | "impact"
   | "confidence"
@@ -316,6 +322,10 @@ export function compareOwnerCandidatesWithFactor(
   if (rb !== 0) return [rb, "recorded_block"];
   const sev = severityRankOrUnknown(b.severity) - severityRankOrUnknown(a.severity);
   if (sev !== 0) return [sev, "severity"];
+  // At equal class and severity, a CURRENT finding precedes a refresh of out-of-date figures: the
+  // refresh keeps the urgency of what it stands in for, but never outranks equally urgent current work.
+  const ce = Number(b.source !== "evidence_refresh") - Number(a.source !== "evidence_refresh");
+  if (ce !== 0) return [ce, "current_evidence"];
   const pr = clampScore(b.priorityScore) - clampScore(a.priorityScore);
   if (pr !== 0) return [pr, "priority"];
   const im = clampScore(b.expectedImpactScore) - clampScore(a.expectedImpactScore);
@@ -374,6 +384,8 @@ export type OwnerDecisionChangeKind =
   | "ACTION_VERIFIED"
   | "EVIDENCE_UPDATED"
   | "EVIDENCE_OUT_OF_DATE"
+  | "SEVERITY_INCREASED"
+  | "SEVERITY_DECREASED"
   | "FUNDING_GAP_CHANGED"
   | "CONFIDENCE_CHANGED";
 
@@ -383,6 +395,12 @@ export interface OwnerDecisionChange {
 }
 
 export interface CurrentOwnerDecision {
+  /**
+   * The business concern the main target represents, for narrative copy: its class — except for an
+   * evidence refresh, whose concern is out-of-date information (never the old problem it stands in
+   * for). Resolved here so no page re-derives it.
+   */
+  primaryConcernClass: OwnerPriorityClass | null;
   contractVersion: typeof OWNER_DECISION_CONTRACT_VERSION;
   businessId: string;
   workspaceId: string;
@@ -411,17 +429,21 @@ export interface CurrentOwnerDecision {
   attention: OwnerDecisionTarget[];
   /** Candidates removed from the election and why (for audit/transparency). */
   excluded: Array<{ candidateId: string; title: string; reason: OwnerCandidateExclusion }>;
-  /** Condensed state persisted (with the Now View snapshot) so the next read can say what changed. */
+  /** Condensed state persisted (as the owner.decision_changed audit event) so the next read can say what changed. */
   memory: OwnerDecisionMemory;
 }
 
-/** Minimal previous-decision state persisted with the Now View snapshot (for "what changed"). */
+/** Minimal previous-decision state persisted as the owner.decision_changed audit event (for "what changed"). */
 export interface OwnerDecisionMemory {
   generatedAt: string;
   primaryKey: string | null;
   primaryTitle: string | null;
   /** Critical issues still open — including ones awaiting an evidence refresh (never "resolved" by ageing). */
   criticalKeys: string[];
+  /** Severity of every open, rated issue by stable issue key (domain + finding code / record id). */
+  issueSeverities: Record<string, OwnerSeverity>;
+  /** Evidence identity (snapshot id) per diagnosed domain; null in memories recorded before this existed. */
+  evidenceIds: Record<string, string> | null;
   /** Domains whose evidence was out of date at this decision. */
   staleDomains: string[];
   confidenceScore: number;
@@ -463,8 +485,12 @@ export interface ResolveOwnerDecisionInput {
   reassessment: { days: number; reason: string };
   previous: OwnerDecisionMemory | null;
   events: readonly OwnerDecisionEvent[];
-  /** Domains with a diagnosis generated after `previous.generatedAt`. */
-  domainsDiagnosedSince: readonly string[];
+  /**
+   * Evidence identity (the snapshot each domain's current diagnosis ran on). "New data" is reported
+   * only when this identity changes — a re-diagnosis of the SAME snapshot (e.g. after an action is
+   * completed or verified) is a new calculation, not new evidence.
+   */
+  evidenceIds?: Readonly<Record<string, string>>;
   now: Date;
 }
 
@@ -521,16 +547,28 @@ function factorSentence(
   runnerUp: OwnerDecisionCandidate
 ): string {
   const other = `"${runnerUp.title}" in ${ownerDomainLabel(runnerUp.domain)}`;
+  // A refresh target is out-of-date figures, never a current problem: its class/severity are what
+  // those figures LAST showed.
+  const is = (c: OwnerDecisionCandidate) => (c.source === "evidence_refresh" ? "It confirms out-of-date figures that last showed" : "It is");
+  const kind = (c: OwnerDecisionCandidate) =>
+    c.source === "evidence_refresh" ? `out-of-date figures that last showed ${OWNER_PRIORITY_CLASS_LABEL[c.priorityClass]}` : OWNER_PRIORITY_CLASS_LABEL[c.priorityClass];
   const rating = (c: OwnerDecisionCandidate) => (clampScore(c.priorityScore) > 0 ? String(Math.round(clampScore(c.priorityScore))) : "not rated");
+  if (winner.source === "evidence_refresh" && runnerUp.source === "evidence_refresh" && factor !== "class" && factor !== "severity") {
+    return `Both rest on out-of-date figures; these last showed a more pressing problem than ${other}, so confirm them first.`;
+  }
   switch (factor) {
     case "recorded_block":
       return `It is a recorded compliance problem, not an estimate, so it comes before ${other}.`;
     case "class":
-      return `It is ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}, and OpsIQ always deals with that before ${OWNER_PRIORITY_CLASS_LABEL[runnerUp.priorityClass]} such as ${other}.`;
-    case "severity":
+      return `${is(winner)} ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}, and OpsIQ always deals with that before ${kind(runnerUp)} such as ${other}.`;
+    case "current_evidence":
+      return `It is based on current figures, so it comes before ${other}, which rests on out-of-date figures.`;
+    case "severity": {
+      const rated = winner.source === "evidence_refresh" ? `Its out-of-date figures were last rated ${winner.severity}` : `It is rated ${winner.severity}`;
       return runnerUp.severity === null
-        ? `It is rated ${winner.severity}; ${other} has no severity rating.`
-        : `It is rated ${winner.severity}, more serious than ${other} (rated ${runnerUp.severity}).`;
+        ? `${rated}; ${other} has no severity rating.`
+        : `${rated}, more serious than ${other} (rated ${runnerUp.severity}).`;
+    }
     case "priority": {
       const sameSeverity = winner.severity !== null ? ` rated ${winner.severity}` : "";
       // Only Spine domain actions carry the combined urgency/impact/pressure score; Recovery and
@@ -573,10 +611,10 @@ function formatMoney(value: number, currency: string): string {
  * not themselves, issues) plus critical items whose evidence merely went stale — ageing never
  * resolves a problem.
  */
-function openCriticalIssues(ranked: readonly OwnerDecisionCandidate[], staleExcluded: readonly OwnerDecisionCandidate[]): Map<string, OwnerDecisionCandidate> {
+function openIssues(ranked: readonly OwnerDecisionCandidate[], staleExcluded: readonly OwnerDecisionCandidate[]): Map<string, OwnerDecisionCandidate> {
   const open = new Map<string, OwnerDecisionCandidate>();
   for (const c of [...ranked, ...staleExcluded]) {
-    if (c.severity === "critical" && c.source !== "evidence_refresh") open.set(ownerCandidateIssueKey(c), c);
+    if (c.source !== "evidence_refresh") open.set(ownerCandidateIssueKey(c), c);
   }
   return open;
 }
@@ -584,17 +622,25 @@ function openCriticalIssues(ranked: readonly OwnerDecisionCandidate[], staleExcl
 function buildMemory(
   generatedAt: string,
   primary: OwnerDecisionTarget | null,
-  openCritical: Map<string, OwnerDecisionCandidate>,
+  open: Map<string, OwnerDecisionCandidate>,
   staleDomains: string[],
   confidenceScore: number,
   confidenceLevel: OwnerDecisionConfidenceLevel,
-  fundingGap: number | null
+  fundingGap: number | null,
+  evidenceIds: Readonly<Record<string, string>>
 ): OwnerDecisionMemory {
+  const issueSeverities: Record<string, OwnerSeverity> = {};
+  for (const key of [...open.keys()].sort()) {
+    const sev = open.get(key)!.severity;
+    if (sev !== null) issueSeverities[key] = sev;
+  }
   return {
     generatedAt,
     primaryKey: primary ? ownerCandidateIssueKey(primary) : null,
     primaryTitle: primary ? primary.title : null,
-    criticalKeys: [...openCritical.keys()].sort(),
+    criticalKeys: Object.keys(issueSeverities).filter((k) => issueSeverities[k] === "critical"),
+    issueSeverities,
+    evidenceIds: Object.fromEntries(Object.entries(evidenceIds).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
     staleDomains: [...staleDomains].sort(),
     confidenceScore,
     confidenceLevel,
@@ -605,11 +651,35 @@ function buildMemory(
 /** True when two decision memories describe the same decision (no material change between them). */
 export function sameOwnerDecisionMemory(a: OwnerDecisionMemory, b: OwnerDecisionMemory): boolean {
   const key = (m: OwnerDecisionMemory) =>
-    JSON.stringify([m.primaryKey, [...m.criticalKeys].sort(), [...m.staleDomains].sort(), m.confidenceLevel, m.confidenceScore, m.fundingGap === null ? null : Math.round(m.fundingGap)]);
+    JSON.stringify([
+      m.primaryKey,
+      Object.entries(m.issueSeverities).sort(),
+      [...m.staleDomains].sort(),
+      m.evidenceIds === null ? null : Object.entries(m.evidenceIds).sort(),
+      m.confidenceLevel,
+      m.confidenceScore,
+      m.fundingGap === null ? null : Math.round(m.fundingGap),
+    ]);
   return key(a) === key(b);
 }
 
-/** Parse a persisted memory defensively (it lives in a Json snapshot payload). */
+function parseSeverityMap(value: unknown): Record<string, OwnerSeverity> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const out: Record<string, OwnerSeverity> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (v === "critical" || v === "high" || v === "medium" || v === "low") out[k] = v;
+  }
+  return out;
+}
+
+function parseStringMap(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) if (typeof v === "string") out[k] = v;
+  return out;
+}
+
+/** Parse a persisted memory defensively (it lives in the owner.decision_changed audit event payload). */
 export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
@@ -617,11 +687,15 @@ export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | 
   // A memory without its confidence would fabricate a confidence change on the next read.
   if (typeof v.confidenceScore !== "number" || !Number.isFinite(v.confidenceScore)) return null;
   const level = v.confidenceLevel;
+  const criticalKeys = Array.isArray(v.criticalKeys) ? v.criticalKeys.filter((k): k is string => typeof k === "string") : [];
   return {
     generatedAt: v.generatedAt,
     primaryKey: typeof v.primaryKey === "string" ? v.primaryKey : null,
     primaryTitle: typeof v.primaryTitle === "string" ? v.primaryTitle : null,
-    criticalKeys: Array.isArray(v.criticalKeys) ? v.criticalKeys.filter((k): k is string => typeof k === "string") : [],
+    criticalKeys,
+    // Older memories only recorded critical keys: those are known to have been critical, nothing more.
+    issueSeverities: parseSeverityMap(v.issueSeverities) ?? Object.fromEntries(criticalKeys.map((k) => [k, "critical" as const])),
+    evidenceIds: parseStringMap(v.evidenceIds),
     staleDomains: Array.isArray(v.staleDomains) ? v.staleDomains.filter((k): k is string => typeof k === "string") : [],
     confidenceScore: clampScore(v.confidenceScore),
     confidenceLevel:
@@ -632,7 +706,7 @@ export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | 
 
 function detectChanges(
   input: ResolveOwnerDecisionInput,
-  openCritical: Map<string, OwnerDecisionCandidate>,
+  open: Map<string, OwnerDecisionCandidate>,
   staleDomains: string[],
   primary: OwnerDecisionCandidate | null,
   confidenceScore: number,
@@ -654,11 +728,21 @@ function detectChanges(
     }
   }
 
-  const prevCritical = new Set(prev.criticalKeys);
-  for (const [key, c] of openCritical) {
-    if (!prevCritical.has(key)) changes.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue in ${ownerDomainLabel(c.domain)}: "${c.title}".` });
+  // Stable issue identity (domain + finding code / record id): appeared, escalated, improved, resolved
+  // are distinct — an issue that is still open but less severe has improved, it has NOT resolved.
+  for (const [key, c] of open) {
+    if (c.severity === null) continue;
+    const before = prev.issueSeverities[key];
+    const where = `"${c.title}" in ${ownerDomainLabel(c.domain)}`;
+    if (before === undefined) {
+      if (c.severity === "critical") changes.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue: ${where}.` });
+    } else if (ownerSeverityRank(c.severity) > ownerSeverityRank(before) && (c.severity === "critical" || c.severity === "high")) {
+      changes.push({ kind: "SEVERITY_INCREASED", message: `${where} became more serious: ${before} → ${c.severity}.` });
+    } else if (ownerSeverityRank(c.severity) < ownerSeverityRank(before) && (before === "critical" || before === "high")) {
+      changes.push({ kind: "SEVERITY_DECREASED", message: `${where} improved from ${before} to ${c.severity}; it is still open.` });
+    }
   }
-  const resolvedCount = prev.criticalKeys.filter((k) => !openCritical.has(k)).length;
+  const resolvedCount = Object.entries(prev.issueSeverities).filter(([k, sev]) => sev === "critical" && !open.has(k)).length;
   if (resolvedCount > 0) {
     changes.push({
       kind: "CRITICAL_ISSUE_RESOLVED",
@@ -682,8 +766,12 @@ function detectChanges(
     }
   }
 
-  for (const d of input.domainsDiagnosedSince) {
-    changes.push({ kind: "EVIDENCE_UPDATED", message: `New data in ${ownerDomainLabel(d)} was analysed since your last check.` });
+  // New EVIDENCE (a different snapshot), never a new calculation on the same snapshot. A memory
+  // recorded before evidence identity existed cannot prove anything changed, so nothing is claimed.
+  if (prev.evidenceIds !== null) {
+    for (const [d, id] of Object.entries(input.evidenceIds ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+      if (prev.evidenceIds[d] !== id) changes.push({ kind: "EVIDENCE_UPDATED", message: `New data in ${ownerDomainLabel(d)} was analysed since your last check.` });
+    }
   }
 
   const gap = input.strategy?.fundingGap ?? null;
@@ -692,14 +780,17 @@ function detectChanges(
   const currency = input.strategy?.currency ?? "INR";
   const fmt = (v: number | null) => (v === null ? "unknown" : v <= 0 ? "covered" : formatMoney(v, currency));
   // Compared as the owner reads it: two "covered" gaps (e.g. -100 and -500) are not a change.
-  if (roundedGap !== roundedPrevGap && fmt(prev.fundingGap) !== fmt(gap)) {
+  // Only a change between two KNOWN gaps is reported (a plan appearing or leaving is not a "change
+  // from unknown"); two "covered" gaps (e.g. -100 and -500) are not a change either.
+  if (gap !== null && prev.fundingGap !== null && roundedGap !== roundedPrevGap && fmt(prev.fundingGap) !== fmt(gap)) {
     changes.push({ kind: "FUNDING_GAP_CHANGED", message: `Funding gap changed from ${fmt(prev.fundingGap)} to ${fmt(gap)}.` });
   }
 
   // Confidence is only comparable for the SAME advice (a new target is reported as a target change).
   if (primary && prev.primaryKey !== null && primaryKey === prev.primaryKey) {
     if (confidenceLevel !== prev.confidenceLevel) {
-      changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice changed from ${prev.confidenceLevel} to ${confidenceLevel}.` });
+      const word = (l: OwnerDecisionConfidenceLevel) => (l === "insufficient" ? "very low" : l);
+      changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice changed from ${word(prev.confidenceLevel)} to ${word(confidenceLevel)}.` });
     } else if (Math.abs(confidenceScore - prev.confidenceScore) >= 15) {
       changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice moved from ${Math.round(prev.confidenceScore)} to ${Math.round(confidenceScore)} out of 100 (still ${confidenceLevel}).` });
     }
@@ -739,8 +830,9 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: R
       severity: worstSeverity,
       priorityScore: Math.max(...ordered.map((c) => clampScore(c.priorityScore))),
       expectedImpactScore: Math.max(...ordered.map((c) => clampScore(c.expectedImpactScore))),
-      confidence: 1,
-      effortScore: 20,
+      // Inherited, never invented: a refresh is no more certain or easier than what it stands in for.
+      confidence: clampConfidence(top.confidence),
+      effortScore: clampScore(top.effortScore),
       status: "proposed",
       ownerActionRequired: true,
       blocking: false,
@@ -786,7 +878,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (!hasEvidence) pushMissing("Add your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
   for (const m of input.dataSufficiency.missingCriticalData) pushMissing(m);
   if (primary) for (const m of primary.missingData) pushMissing(m);
-  for (const d of input.staleDomains) pushMissing(`Update your ${ownerDomainLabel(d)} data — the latest figures are out of date.`);
+  for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`);
 
   // Confidence: the primary's own evidence confidence, capped by business-wide data sufficiency.
   const reasons: string[] = [];
@@ -807,8 +899,8 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       reasons.push("Some data is incomplete, so treat this advice with some caution.");
     }
   }
-  if (primaryIsRefresh) reasons.push("OpsIQ is certain these figures are out of date; confirm them before acting on what they showed.");
-  else if (primaryIsDataRequest) reasons.push("OpsIQ is certain this information is missing; advice on everything else waits for it.");
+  if (primaryIsRefresh) reasons.push("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
+  else if (primaryIsDataRequest) reasons.push("This is a request for missing information; advice on everything else waits for it.");
   const level: OwnerDecisionConfidenceLevel = primary ? confidenceLevelFor(score) : "insufficient";
   if (!primary && !hasEvidence) reasons.push("There is no business data yet.");
 
@@ -820,7 +912,9 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       primaryIsRefresh
         // Never claims the old problem is current — only that it was last flagged and needs confirming.
         ? `Your ${ownerDomainLabel(primary.domain)} figures are out of date, and they last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming them comes before acting on anything they showed.`
-        : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""} from your ${ownerDomainLabel(primary.domain)} evidence.`
+        : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}, ${
+            primary.source === "domain_action" ? `from your ${ownerDomainLabel(primary.domain)} diagnosis` : `from what is recorded in ${ownerDomainLabel(primary.domain)}`
+          }.`
     );
     const runnerUp = ranked[1] ?? null;
     if (runnerUp) {
@@ -889,13 +983,14 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       : "Check again as soon as you add your business numbers.";
 
   const staleExcluded = processed.filter((c) => c.exclusion === "stale_evidence");
-  const openCritical = openCriticalIssues(ranked, staleExcluded);
+  const open = openIssues(ranked, staleExcluded);
   const staleDomainsNow = [...new Set(refreshTargets.map((t) => t.domain))];
   const generatedAt = input.now.toISOString();
   const primaryTarget = primary ? toTarget(primary) : null;
   const attention = ranked.map(toTarget);
   return {
     contractVersion: OWNER_DECISION_CONTRACT_VERSION,
+    primaryConcernClass: primary ? (primary.source === "evidence_refresh" ? "MISSING_CRITICAL_EVIDENCE" : primary.priorityClass) : null,
     businessId: input.businessId,
     workspaceId: input.workspaceId,
     generatedAt,
@@ -911,10 +1006,10 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whatCanWait: canWait.map(toTarget),
     whatNotToDo,
     missingInformation,
-    whatChanged: detectChanges(input, openCritical, staleDomainsNow, primary, score, level),
+    whatChanged: detectChanges(input, open, staleDomainsNow, primary, score, level),
     reassessmentTrigger,
     attention,
     excluded,
-    memory: buildMemory(generatedAt, primaryTarget, openCritical, staleDomainsNow, score, level, input.strategy?.fundingGap ?? null),
+    memory: buildMemory(generatedAt, primaryTarget, open, staleDomainsNow, score, level, input.strategy?.fundingGap ?? null, input.evidenceIds ?? {}),
   };
 }

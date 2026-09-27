@@ -39,6 +39,7 @@ import { createStrategySnapshot } from "@/services/owner-strategy/snapshot.servi
 import { runStrategyDiagnosis } from "@/services/owner-strategy/diagnosis.service";
 import { createCashflowSnapshot } from "@/services/owner-cashflow/snapshot.service";
 import { runCashflowDiagnosis } from "@/services/owner-cashflow/diagnosis.service";
+import { updateCashflowAction } from "@/services/owner-cashflow/action.service";
 import { createSalesSnapshot } from "@/services/owner-sales/snapshot.service";
 import { runSalesDiagnosis } from "@/services/owner-sales/diagnosis.service";
 import { updateSalesAction } from "@/services/owner-sales/action.service";
@@ -151,6 +152,10 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(priorities.ownerDecision.primaryCandidateId).toBe(primary);
     expect(priorities.ownerDecision.attention[0].candidateId).toBe(primary);
     expect(commandCenter.currentOwnerDecision.primaryCandidateId).toBe(primary);
+    // One review cadence on the Command Center: the one the canonical decision states.
+    expect(commandCenter.reassessmentCadenceDays).toBe(homeBody.reassessment.days);
+    expect(commandCenter.reassessmentReason).toBe(homeBody.reassessment.reason);
+    expect(commandCenter.currentOwnerDecision.reassessmentTrigger).toContain(`within ${homeBody.reassessment.days} days`);
     // /owner/now's plain-language block names the SAME target first — never Now View's own #1.
     const { toPlainLanguage } = await import("@/domain/owner-guidance/beginner-mode");
     const title = homeBody.currentOwnerDecision.primaryTarget.title;
@@ -345,6 +350,36 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(events[0]).toMatchObject({ entityType: "OwnerDecision", entityId: businessId });
     // Never recorded against the owner-business entity (keeps its governed audit trail clean).
     expect(await db.auditEvent.count({ where: { workspaceId, eventName: "owner.decision_changed", entityType: "OwnerBusiness" } })).toBe(0);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] reproduction: a CURRENT unsafe cash reading whose actions all await new evidence never lets a lower class win silently", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Cash Confirm");
+    const cf = await createCashflowSnapshot(businessId, {
+      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
+    }, actor, workspaceId);
+    const cycle = await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
+    expect(["AT_RISK", "CRITICAL", "INSOLVENT_RISK"]).toContain(cycle.cashflowState);
+    // The owner cancels every survival action (always allowed — the action gate only blocks ADVANCING
+    // finance-sensitive work while cash is unsafe). The cycle's cash reading is unchanged and unsafe.
+    const home0 = await getOwnerHome(workspaceId, businessId);
+    const survival = home0.currentOwnerDecision!.attention.filter((a) => a.domain === "cashflow" && a.priorityClass === "SURVIVAL_CASH");
+    expect(survival.length).toBeGreaterThan(0);
+    for (const t of survival) {
+      await updateCashflowAction(t.candidateId.split(":").pop()!, { status: "cancelled" }, actor, workspaceId);
+    }
+    const latest = await db.ownerCashflowCycle.findFirst({ where: { businessId }, orderBy: { sequenceNumber: "desc" } });
+    expect(["AT_RISK", "CRITICAL", "INSOLVENT_RISK"]).toContain(latest!.cashflowState);
+    const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    // No open survival action remains, yet the current reading is unsafe: the canonical decision
+    // makes that explicit — confirm the cash position with current figures — instead of electing
+    // lower-class work beside a cash-danger signal.
+    expect(d.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
+    expect(d.primaryTarget?.title).toBe("Confirm your cash position with current figures");
+    expect(d.primaryTarget?.source).toBe("evidence_refresh");
 
     await teardownOwnerBusiness(businessId);
   });

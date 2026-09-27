@@ -289,7 +289,7 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
         ) : (
           <>
             {signals.topPublicSignalAction && (
-              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Next step:</strong> {signals.topPublicSignalAction}</p>
+              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Signal follow-up:</strong> {signals.topPublicSignalAction}</p>
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-why">{signals.whyThisMatters}</p>
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-quality">
@@ -1038,7 +1038,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
               <span data-testid="cockpit-recovery-thrive">Growth gate: {recovery.thriveGate}</span>
             </div>
             {recovery.topRecoveryBottleneck && (
-              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Next step:</strong> {recovery.topRecoveryBottleneck}</p>
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Recovery follow-up:</strong> {recovery.topRecoveryBottleneck}</p>
             )}
             {recovery.requiredEvidence.length > 0 && (
               <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>

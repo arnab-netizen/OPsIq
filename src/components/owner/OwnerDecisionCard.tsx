@@ -58,7 +58,12 @@ export function OwnerDecisionCard({
     >
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="m-0 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>{heading}</h2>
-        {p?.severity && <Badge variant={SEVERITY_VARIANT(p.severity)}>{SEVERITY_LABEL[p.severity] ?? p.severity}</Badge>}
+        {p?.severity && (
+          // A refresh target's severity is what OUT-OF-DATE figures last showed, never a current rating.
+          <Badge variant={p.source === "evidence_refresh" ? "muted-accessible" : SEVERITY_VARIANT(p.severity)}>
+            {p.source === "evidence_refresh" ? `Last flagged: ${SEVERITY_LABEL[p.severity] ?? p.severity}` : SEVERITY_LABEL[p.severity] ?? p.severity}
+          </Badge>
+        )}
         {(p || decision.state === "NO_EVIDENCE") && (
           <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
             <span data-testid="owner-decision-confidence">
@@ -111,11 +116,11 @@ export function OwnerDecisionCard({
         </p>
       )}
 
-      {detail === "full" && decision.missingInformation.length > 0 && (
+      {detail === "full" && decision.missingInformation.some((m) => m !== decision.whatToDoFirst) && (
         <div data-testid="owner-decision-missing">
           <span className="text-sm font-medium text-foreground">Information OpsIQ still needs</span>
           <ul className="mt-1 list-disc space-y-1 pl-[18px] text-sm text-muted-foreground">
-            {decision.missingInformation.slice(0, 4).map((m, i) => <li key={i}>{m}</li>)}
+            {decision.missingInformation.filter((m) => m !== decision.whatToDoFirst).slice(0, 4).map((m, i) => <li key={i}>{m}</li>)}
           </ul>
         </div>
       )}

@@ -86,7 +86,10 @@ const MOCK_PROFILE = {
 };
 
 // The ONE canonical owner decision (owner-home service) supplies the next best action.
-const MOCK_HOME = { selectedBusinessId: null, currentOwnerDecision: { primaryTarget: { title: "Fix cash flow" } } };
+const MOCK_HOME = {
+  selectedBusinessId: null,
+  currentOwnerDecision: { primaryTarget: { title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action" } },
+};
 
 const MOCK_BLOCKS = {
   blockedRecommendations: 2,
@@ -288,6 +291,8 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.nextBestAction).toBe("Fix cash flow");
+      // The panel receives the canonical main target so its guardrails can never veto it.
+      expect(ccCtx.mainTarget).toEqual({ title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action" });
       expect(mockGetOwnerHome).toHaveBeenCalledWith(WS_A, BIZ_ID);
     });
   });

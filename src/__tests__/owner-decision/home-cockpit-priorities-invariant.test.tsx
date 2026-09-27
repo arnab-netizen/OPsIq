@@ -50,7 +50,7 @@ const DECISION = JSON.parse(JSON.stringify(resolveOwnerDecision({
   reassessment: { days: 7, reason: "weekly" },
   previous: null,
   events: [],
-  domainsDiagnosedSince: [],
+  
   now: new Date("2026-09-27T10:00:00.000Z"),
 })));
 const PRIMARY = "Protect your cash runway";

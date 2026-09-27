@@ -7,6 +7,14 @@
  */
 
 import type { AttentionSummary } from "@/domain/owner-mode/owner-load";
+import type { OwnerCandidateSource, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+
+/** The canonical owner decision's main target, as far as the panel's guardrails need it. */
+export interface ControlCenterMainTarget {
+  title: string;
+  priorityClass: OwnerPriorityClass;
+  source: OwnerCandidateSource;
+}
 
 export interface ControlCenterInputs {
   dataSufficiencyStatus: "sufficient" | "caution" | "insufficient";
@@ -25,6 +33,12 @@ export interface ControlCenterInputs {
   /** Approvals OpsIQ auto-handled in the window (EH-16 workload reduction). */
   approvalsAvoided: number;
   nextBestAction?: string | null;
+  /**
+   * The ONE canonical owner decision's main target. The panel never vetoes it: every guardrail that
+   * would forbid it becomes a condition on HOW to execute it (same pattern as Now View's
+   * reconcileAvoidsWithOwnerDecision). Guardrails unrelated to the target are unchanged.
+   */
+  mainTarget?: ControlCenterMainTarget | null;
 }
 
 export interface OwnerControlCenter {
@@ -54,17 +68,33 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   const criticalAlerts: string[] = [];
   const whatNotToDo: string[] = [];
 
+  const t = i.mainTarget ?? null;
+  const growthTarget = t !== null && t.priorityClass === "GROWTH_OPPORTUNITY";
   if (i.dataSufficiencyStatus === "insufficient") {
     criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).`);
-    whatNotToDo.push("Do not make material decisions until the missing/stale data is provided.");
+    whatNotToDo.push(
+      t
+        // The canonical arbiter already accounted for missing data (confidence caps, data-request
+        // targets); the guardrail applies to OTHER material decisions, never to the main target.
+        ? `Apart from "${t.title}", do not make material decisions until the missing/stale data is provided.`
+        : "Do not make material decisions until the missing/stale data is provided."
+    );
   }
   if (i.financeBlocked > 0) {
     criticalAlerts.push(`${i.financeBlocked} finance/margin/cash-unsafe recommendation(s) were blocked.`);
-    whatNotToDo.push("Do not spend or discount while cash/margin guardrails are blocking.");
+    whatNotToDo.push(
+      growthTarget
+        ? `Keep "${t!.title}" to steps that need no new spend or discounts while cash/margin guardrails are blocking.`
+        : "Do not spend or discount while cash/margin guardrails are blocking."
+    );
   }
   if (i.equipmentBottlenecks.length > 0) {
     criticalAlerts.push(`Capacity bottleneck: ${i.equipmentBottlenecks.join(", ")}.`);
-    whatNotToDo.push("Do not pursue growth/marketing until the capacity bottleneck is cleared.");
+    whatNotToDo.push(
+      growthTarget
+        ? `Keep "${t!.title}" within current capacity until the bottleneck is cleared.`
+        : "Do not pursue growth/marketing until the capacity bottleneck is cleared."
+    );
   }
   if (i.proofBlocked > 0) {
     criticalAlerts.push(`${i.proofBlocked} task(s) cannot complete: required proof is not cleared.`);

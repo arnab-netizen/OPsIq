@@ -54,8 +54,10 @@ import {
   domainActionToCandidate,
   OWNER_DECISION_STALE_EVIDENCE_DAYS,
   recoveryActionToCandidate,
+  survivalConfirmationCandidate,
   verificationReachedTarget,
   verificationTime,
+  type CurrentSurvivalReading,
 } from "@/services/owner-home/owner-decision-candidates";
 import {
   computeReassessmentCadence,
@@ -100,7 +102,7 @@ const spineCycleInclude = {
   // buildOwnerHomeSummary and by the *CycleToDomainScore adapters.
   findings: true,
   // Evidence time (snapshot capture) decides whether a verified fix predates this cycle's evidence.
-  snapshot: { select: { createdAt: true, periodEnd: true } },
+  snapshot: { select: { id: true, createdAt: true, periodEnd: true } },
   actions: {
     // Deterministic total order: priorityScore is clamped to [0,100], so
     // ties at the ceiling are a real, expected occurrence -- a single-key
@@ -132,6 +134,8 @@ export interface OwnerHomeResult {
    * selected). Every owner surface renders this; none elects its own "#1".
    */
   currentOwnerDecision: CurrentOwnerDecision | null;
+  /** The review cadence the canonical decision was resolved with; null when there is no business. */
+  reassessment?: { days: number; reason: string } | null;
 }
 
 /**
@@ -185,7 +189,7 @@ export async function getOwnerHome(
   if (!selectedBusinessId && businesses.length === 1) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null };
+    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null };
   }
   const businessId = selectedBusinessId;
 
@@ -207,7 +211,7 @@ export async function getOwnerHome(
     db.ownerFinanceCycle.findFirst({
       where,
       orderBy: { sequenceNumber: "desc" },
-      include: { ...spineCycleInclude, snapshot: { select: { createdAt: true, periodEnd: true, supersededById: true, missingCriticalData: true } } },
+      include: { ...spineCycleInclude, snapshot: { select: { id: true, createdAt: true, periodEnd: true, supersededById: true, missingCriticalData: true } } },
     }),
     db.recoveryCycle.findFirst({
       where,
@@ -263,6 +267,7 @@ export async function getOwnerHome(
   const candidates: OwnerDecisionCandidate[] = [];
   const events: OwnerDecisionEvent[] = [];
   const staleDomains: string[] = [];
+  const evidenceIds: Record<string, string> = {};
   const staleCutoff = now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000;
 
   const pushVerification = (domain: OwnerDomain, v: any, actionTitle: string) => {
@@ -299,6 +304,7 @@ export async function getOwnerHome(
     findingRows: any[]
   ) => {
     domainScores.push(score);
+    if (cycle.snapshot?.id) evidenceIds[domain] = String(cycle.snapshot.id);
     for (const f of findingRows) findings.push(rowToFinding(f, domain));
     const evidenceAsOf = cycle.snapshot?.createdAt ? asDate(cycle.snapshot.createdAt) : null;
     const periodEnd = cycle.snapshot?.periodEnd ? asDate(cycle.snapshot.periodEnd) : null;
@@ -327,6 +333,7 @@ export async function getOwnerHome(
   if (finance) addDomain("finance", finance, financeCycleToDomainScore(finance), finance.actions, allFinanceVers, finance.findings);
   if (recovery) {
     domainScores.push(recoveryCycleToDomainScore(recovery, recovery.snapshot));
+    if (recovery.snapshot?.id) evidenceIds.recovery = String(recovery.snapshot.id);
     // Recovery findings do not carry the spine findingType/impact shape → excluded from
     // the risk/opportunity lists (honest: nothing inferred). Recovery scores still count.
     const evidenceAsOf = recovery.snapshot?.createdAt ? asDate(recovery.snapshot.createdAt) : null;
@@ -355,24 +362,35 @@ export async function getOwnerHome(
   // Now View applies (resolveCashFinanceSignal) decides which survival reading is current: a
   // survival-class action from a reading superseded by a NEWER, disagreeing reading of the other
   // source must not win the election. Incomparable freshness fails safe (nothing is excluded).
+  // Survival readings on CURRENT evidence (a stale or amended reading is never trusted here).
+  const cashAt = cashflow ? currentEvidenceTime(cashflow.snapshot, staleCutoff) : null;
+  const financeAt = finance ? currentEvidenceTime(finance.snapshot, staleCutoff) : null;
+  let supersededSurvivalDomain: "cashflow" | "finance" | null = null;
   if (cashflow && finance) {
     const cashFinance = resolveCashFinanceSignal(
       // The period each reading describes — not the cycle's createdAt (a re-diagnosis from an old
-      // snapshot after an action is completed/verified would otherwise look newer). Same as Now View.
-      // A reading that is itself out of date (old period, or an amended Finance snapshot) cannot be
-      // shown to be current, so it never supersedes the other source (→ incomparable, nothing excluded).
-      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: currentEvidenceTime(cashflow.snapshot, staleCutoff) },
-      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: currentEvidenceTime(finance.snapshot, staleCutoff) }
+      // snapshot after an action is completed/verified would otherwise look newer). A reading that is
+      // itself out of date (old period, or an amended Finance snapshot) cannot be shown to be current,
+      // so it never supersedes the other source (→ incomparable, nothing excluded). Same as Now View.
+      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: cashAt },
+      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: financeAt }
     );
-    const supersededDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
-    if (supersededDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
+    supersededSurvivalDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
+    if (supersededSurvivalDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
       for (let i = 0; i < candidates.length; i++) {
         const c = candidates[i];
-        if (c.domain === supersededDomain && c.priorityClass === "SURVIVAL_CASH" && !c.exclusion) {
+        if (c.domain === supersededSurvivalDomain && c.priorityClass === "SURVIVAL_CASH" && !c.exclusion) {
           candidates[i] = { ...c, exclusion: "superseded" };
         }
       }
     }
+  }
+  const currentSurvivalReadings: CurrentSurvivalReading[] = [];
+  if (cashflow && cashAt && supersededSurvivalDomain !== "cashflow") {
+    currentSurvivalReadings.push({ domain: "cashflow", state: String(cashflow.cashflowState), periodEnd: cashAt, dataConfidenceScore: Number(cashflow.dataConfidenceScore ?? 0) });
+  }
+  if (finance && financeAt && supersededSurvivalDomain !== "finance") {
+    currentSurvivalReadings.push({ domain: "finance", state: String(finance.survivalState), periodEnd: financeAt, dataConfidenceScore: Number(finance.dataConfidenceScore ?? 0) });
   }
   if (sales) addDomain("sales", sales, salesCycleToDomainScore(sales), sales.actions, allSalesVers, sales.findings);
   if (operations) addDomain("operations", operations, operationsCycleToDomainScore(operations), operations.actions, allOperationsVers, operations.findings);
@@ -436,6 +454,11 @@ export async function getOwnerHome(
     }
   }
 
+  // A current unsafe survival reading that no eligible survival action covers becomes an explicit
+  // "confirm your cash position" target (see survivalConfirmationCandidate).
+  const survivalConfirmation = survivalConfirmationCandidate(currentSurvivalReadings, candidates, { businessId, workspaceId });
+  if (survivalConfirmation) candidates.push(survivalConfirmation);
+
   // Missing-critical-data comes from the EXACT snapshot the latest Finance diagnosis ran on — never
   // inferred from whichever snapshot has the latest period (a later, undiagnosed snapshot does not
   // describe the diagnosis being arbitrated). No Finance diagnosis ⇒ nothing is claimed.
@@ -466,6 +489,8 @@ export async function getOwnerHome(
     strategy: strategyContext,
     reassessment,
     events,
+    // The snapshot each domain's CURRENT diagnosis ran on: "new data" means this identity changed.
+    evidenceIds,
     now,
   };
   // "What changed" compares against the previous DISTINCT decision recorded for this business, so the
@@ -473,13 +498,9 @@ export async function getOwnerHome(
   const memories = decisionHistory
     .map((e: any) => parseOwnerDecisionMemory(e?.payload?.memory))
     .filter((m: ReturnType<typeof parseOwnerDecisionMemory>): m is NonNullable<typeof m> => m !== null);
-  const currentMemory = resolveOwnerDecision({ ...decisionInput, previous: null, domainsDiagnosedSince: [] }).memory;
+  const currentMemory = resolveOwnerDecision({ ...decisionInput, previous: null }).memory;
   const previous = memories.find((m: NonNullable<ReturnType<typeof parseOwnerDecisionMemory>>) => !sameOwnerDecisionMemory(m, currentMemory)) ?? null;
-  const since = previous ? Date.parse(previous.generatedAt) : null;
-  const domainsDiagnosedSince = since === null
-    ? []
-    : domainScores.filter((d) => asDate(d.generatedAt).getTime() > since).map((d) => d.domain);
-  const currentOwnerDecision = resolveOwnerDecision({ ...decisionInput, previous, domainsDiagnosedSince });
+  const currentOwnerDecision = resolveOwnerDecision({ ...decisionInput, previous });
 
   // Record the decision when it materially changed (or is the first one): an auditable trail of what
   // OpsIQ told the owner, and the memory above. This write happens on read paths that can run
@@ -537,5 +558,7 @@ export async function getOwnerHome(
     domainsWired: domainScores.map((d) => d.domain),
     summary,
     currentOwnerDecision,
+    // The review cadence the canonical decision was resolved with (the single cadence surfaces show).
+    reassessment,
   };
 }

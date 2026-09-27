@@ -222,7 +222,7 @@ describe("buildOwnerHomeSummary", () => {
     const decision = resolveOwnerDecision({
       businessId: "b", workspaceId: "w", candidates: rows.map((r) => domainActionToCandidate(r, ctx)),
       diagnosedDomains: ["finance"], dataSufficiency: summary.dataSufficiency, staleDomains: [], strategy: null,
-      reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [], now: NOW,
+      reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], now: NOW,
     });
     expect(decision.attention.map((a) => a.findingCode)).toEqual(["A2", "A6", "A4", "A3", "A5", "A1"]);
     expect(decision.attention.every((a) => OPEN_OWNER_ACTION_STATUSES.includes(a.status))).toBe(true);

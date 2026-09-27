@@ -201,7 +201,7 @@ export default function OwnerNowViewPage() {
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (
         <section style={{ background: "#fffbeb", padding: 16, borderRadius: 8 }}>
-          <h2 style={{ marginTop: 0 }}>Data needed first</h2>
+          <h2 style={{ marginTop: 0 }}>Data OpsIQ still needs</h2>
           <ul>{view.missingDataRequests.map((m: string, i: number) => <li key={i}>{m}</li>)}</ul>
         </section>
       )}

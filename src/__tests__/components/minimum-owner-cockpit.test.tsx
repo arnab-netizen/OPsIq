@@ -209,7 +209,7 @@ describe("MinimumOwnerCockpit", () => {
     }],
     diagnosedDomains: ["finance"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], domainsDiagnosedSince: [],
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
     now: new Date("2026-06-30T00:00:00Z"),
   });
 
