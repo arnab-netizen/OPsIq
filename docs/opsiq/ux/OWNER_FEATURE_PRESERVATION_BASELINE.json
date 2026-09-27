@@ -478,6 +478,7 @@
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/onboarding/page.tsx",
         "src/app/(authenticated)/owner/page.tsx",
+        "src/domain/owner-spine/owner-decision.ts",
         "src/services/owner-home/owner-decision-candidates.ts"
       ],
       "componentTreeFileCount": 3
@@ -2358,6 +2359,7 @@
         "src/__tests__/owner-activation/navigation-activation.test.tsx",
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
         "src/__tests__/owner-condition/owner-home-page.test.ts",
+        "src/__tests__/owner-decision/canonical-gate-compatibility.test.ts",
         "src/__tests__/owner-decision/home-cockpit-priorities-invariant.test.tsx",
         "src/__tests__/owner-decision/owner-imperatives.test.ts",
         "src/__tests__/owner-decision/survival-reading-candidate.test.ts",
@@ -2382,6 +2384,7 @@
         "src/app/(authenticated)/owner/tasks/page.tsx",
         "src/app/(authenticated)/owner/wealth/page.tsx",
         "src/domain/owner-mode/owner-data-hub.ts",
+        "src/domain/owner-spine/owner-decision.ts",
         "src/services/owner-home/owner-decision-candidates.ts",
         "src/services/workspace/employee-lifecycle.service.ts"
       ],
