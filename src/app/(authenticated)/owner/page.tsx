@@ -496,9 +496,9 @@ export default function OwnerCommandCenterPage() {
           {(wbp?.supervisor?.found || priorities?.found || wbp?.found) && (
           <Disclosure summary={decision ? "Supporting plan analysis (context for your main target above)" : "Supporting plan analysis"} className="mb-6" data-testid="command-center-plan-analysis">
           <div className="p-3">
-          {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} />}
+          {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} hideStopInstructions={decision !== null} />}
 
-          {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
+          {priorities?.found && <PriorityCommandStrip cards={priorities.cards} hideStopInstructions={decision !== null} />}
 
           {wbp?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-whole-business-plan">
@@ -530,7 +530,8 @@ export default function OwnerCommandCenterPage() {
                 <span className="font-medium">The plan analysis suggests:</span> {wbp.nextBestAction}
               </div>
 
-              {wbp.doNotDo.length > 0 && (
+              {/* With a canonical decision, its reconciled guardrails are the only "do not" list. */}
+              {decision === null && wbp.doNotDo.length > 0 && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm mb-3" data-testid="wbp-do-not-do">
                   <strong>What NOT to do / stop:</strong>
                   <ul className="list-disc ml-5">{wbp.doNotDo.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>

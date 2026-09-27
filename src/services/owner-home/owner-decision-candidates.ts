@@ -342,56 +342,88 @@ export function businessRiskToCandidate(
 }
 
 /** A cash/finance survival reading on CURRENT evidence (not stale, not superseded by the other source). */
+/**
+ * The most severe SURVIVAL_CASH-class finding in a diagnosis cycle, or null. A survival state on
+ * its own (e.g. driven by profit findings that already have open actions) is not a cash-survival
+ * issue; only a survival-class finding proves one.
+ */
+export function worstSurvivalFinding(
+  findings: ReadonlyArray<{ code?: unknown; title?: unknown; severity?: unknown }> | null | undefined
+): CurrentSurvivalReading["survivalFinding"] {
+  let best: CurrentSurvivalReading["survivalFinding"] = null;
+  for (const f of findings ?? []) {
+    const code = typeof f.code === "string" ? f.code : "";
+    if (!code || classifyOwnerFindingCode(code) !== "SURVIVAL_CASH") continue;
+    const severity = toOwnerSeverity(f.severity);
+    if (best === null || ownerSeverityRank(severity ?? "") > ownerSeverityRank(best.severity ?? "") || (ownerSeverityRank(severity ?? "") === ownerSeverityRank(best.severity ?? "") && code < best.code)) {
+      best = { code, title: typeof f.title === "string" && f.title ? f.title : code, severity };
+    }
+  }
+  return best;
+}
+
 export interface CurrentSurvivalReading {
   domain: "cashflow" | "finance";
   state: string;
   periodEnd: Date;
   /** The diagnosis's own data-confidence score (0-100). */
   dataConfidenceScore: number;
+  /**
+   * The most serious SURVIVAL_CASH-class finding of this reading's own diagnosis, or null. The
+   * survival state can also be driven by profit-loss findings (e.g. below break-even) whose open
+   * actions already address it — those never produce a survival target.
+   */
+  survivalFinding: { code: string; title: string; severity: OwnerSeverity | null } | null;
 }
 
-const UNSAFE_SURVIVAL_SEVERITY: Record<string, OwnerSeverity> = {
-  INSOLVENT_RISK: "critical",
-  CRITICAL: "critical",
-  AT_RISK: "high",
+const SURVIVAL_STATE_LABEL: Record<string, string> = {
+  INSOLVENT_RISK: "a risk of running out of cash",
+  CRITICAL: "a critical cash position",
+  AT_RISK: "cash at risk",
 };
 
 /**
- * An unsafe survival reading on current evidence that NO eligible survival-cash action covers (its
- * actions were completed, verified or cancelled while the reading — from the same snapshot — still
- * says unsafe). The canonical decision must not elect lower-class work beside that signal, so this
- * makes the state explicit: confirm the cash position with current figures. Class and severity come
- * from the reading; nothing is invented — priority and impact are unrated, effort is neutral, and
- * confidence is the diagnosis's own data confidence. It is an evidence refresh, so any current
- * survival-cash danger of the same severity still precedes it.
+ * A CURRENT unsafe survival reading whose own diagnosis found a cash-survival danger that NO eligible
+ * survival action currently addresses (its action was completed, verified or cancelled — or none
+ * was proposed — while the same evidence still reads unsafe). The canonical decision must not elect
+ * lower-class work beside that signal, so the danger stays explicit as a current target. It carries
+ * the finding's own identity and severity (so closing the action without new figures never reads as
+ * "resolved"); priority and impact are unrated, effort is neutral, confidence is the diagnosis's own.
  */
 export function survivalConfirmationCandidate(
   readings: readonly CurrentSurvivalReading[],
   candidates: readonly OwnerDecisionCandidate[],
   ctx: { businessId: string; workspaceId: string }
 ): OwnerDecisionCandidate | null {
-  const covered = candidates.some((c) => c.priorityClass === "SURVIVAL_CASH" && c.exclusion === null && !c.stale);
+  // Only a real, current, eligible survival ACTION covers the danger (an owner-recorded risk or a
+  // stale/refresh item does not).
+  const covered = candidates.some(
+    (c) => c.source === "domain_action" && c.priorityClass === "SURVIVAL_CASH" && c.exclusion === null && !c.stale
+  );
   if (covered) return null;
-  const unsafe = readings
-    .filter((r) => r.state in UNSAFE_SURVIVAL_SEVERITY)
-    .sort((a, b) => ownerSeverityRank(UNSAFE_SURVIVAL_SEVERITY[b.state]) - ownerSeverityRank(UNSAFE_SURVIVAL_SEVERITY[a.state]) || (a.domain < b.domain ? -1 : 1));
-  const r = unsafe[0];
+  const eligible = readings
+    .filter((r) => r.state in SURVIVAL_STATE_LABEL && r.survivalFinding !== null)
+    .sort((a, b) =>
+      ownerSeverityRank(b.survivalFinding!.severity ?? "") - ownerSeverityRank(a.survivalFinding!.severity ?? "") || (a.domain < b.domain ? -1 : 1)
+    );
+  const r = eligible[0];
   if (!r) return null;
+  const f = r.survivalFinding!;
   const label = r.domain === "cashflow" ? "Cash flow" : "Finance";
-  const stateLabel = r.state.toLowerCase().replace(/_/g, " ");
+  const period = r.periodEnd.toISOString().slice(0, 10);
   return {
-    candidateId: `evidence_refresh:survival-confirm:${r.domain}`,
+    candidateId: `survival_reading:${r.domain}:${f.code}`,
     businessId: ctx.businessId,
     workspaceId: ctx.workspaceId,
-    source: "evidence_refresh",
+    source: "survival_reading",
     domain: r.domain,
     sourceId: r.domain,
     priorityClass: "SURVIVAL_CASH",
-    findingCode: "SURVIVAL_READING_UNCONFIRMED",
+    findingCode: f.code,
     findingId: null,
     title: "Confirm your cash position with current figures",
-    explanation: `Your latest ${label} reading (period ending ${r.periodEnd.toISOString().slice(0, 10)}) shows ${stateLabel}. No open action covers it — its actions are done, verified or cancelled — so add current figures to confirm whether the danger has passed.`,
-    severity: UNSAFE_SURVIVAL_SEVERITY[r.state],
+    explanation: `Your current ${label} figures (period ending ${period}) show ${SURVIVAL_STATE_LABEL[r.state]}: "${f.title}". No open action addresses it right now, so confirm your cash position with this week's figures and act on what they show.`,
+    severity: f.severity,
     priorityScore: 0,
     expectedImpactScore: 0,
     confidence: clampConfidence(r.dataConfidenceScore / 100),
@@ -399,7 +431,7 @@ export function survivalConfirmationCandidate(
     status: "proposed",
     ownerActionRequired: true,
     blocking: false,
-    evidence: [`${label} reading: ${stateLabel} (period ending ${r.periodEnd.toISOString().slice(0, 10)})`],
+    evidence: [`${label} figures for the period ending ${period} show ${SURVIVAL_STATE_LABEL[r.state]}.`],
     missingData: [],
     verificationMetric: null,
     evidenceAsOf: r.periodEnd,

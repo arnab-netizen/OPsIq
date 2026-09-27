@@ -7,6 +7,7 @@ import { CardDashboardSkeleton, PageContainer } from "@/ui/primitives";
 import Link from "next/link";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 // Verified against src/lib/first-value/first-value.dto.ts -- every FirstValueDTO field below is a
 // closed SCREAMING_SNAKE_CASE union with no plain-language map anywhere on this page before now.
@@ -49,33 +50,50 @@ const INTERVENTION_LABEL: Record<string, string> = {
 };
 
 export default function FirstValuePage() {
+  const { activeBusinessId } = useActiveBusiness();
   const [firstValue, setFirstValue] = useState<FirstValueDTO | null>(null);
   const [ownerDecision, setOwnerDecision] = useState<CurrentOwnerDecision | null>(null);
+  const [decisionFailed, setDecisionFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchFirstValue() {
+      setLoading(true);
+      setError(null);
+      // The canonical owner decision (read-only) for the SAME business the rest of the Owner surfaces
+      // show. Loaded independently: a failure is shown as such, never as "no main target".
+      const decisionQs = activeBusinessId ? `?businessId=${encodeURIComponent(activeBusinessId)}` : "";
+      const decisionLoad = fetch(`/api/owner/home${decisionQs}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`owner home ${r.status}`))))
+        .then((home) => ({ ok: true as const, decision: (home?.currentOwnerDecision as CurrentOwnerDecision | null | undefined) ?? null }))
+        .catch(() => ({ ok: false as const, decision: null }));
       try {
         const response = await fetch("/api/owner/first-value");
         if (!response.ok) {
           throw new Error(`Failed to load first-value: ${response.status}`);
         }
         const data = await response.json();
+        const decision = await decisionLoad;
+        if (cancelled) return;
         setFirstValue(data);
-        // The canonical owner decision (read-only). A failure here only hides the target card.
-        const home = await fetch("/api/owner/home").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-        setOwnerDecision((home?.currentOwnerDecision as CurrentOwnerDecision | null | undefined) ?? null);
+        setOwnerDecision(decision.decision);
+        setDecisionFailed(!decision.ok);
       } catch (err) {
+        if (cancelled) return;
         const safeError = toOperatorSafeError(err, "load");
         setError(safeError.error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchFirstValue();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBusinessId]);
 
   if (loading) {
     return <CardDashboardSkeleton sections={4} label="Loading first-value visibility" />;
@@ -133,6 +151,27 @@ export default function FirstValuePage() {
           📥 Export Proof Packet
         </button>
       </div>
+
+      {/* The ONE canonical owner decision — first on the page. This page never elects its own "first
+          action": the engagement data below is context only; what to do first comes from the
+          canonical owner decision, the same answer Home, Cockpit and Priorities show. */}
+      {ownerDecision ? (
+        <OwnerDecisionCard decision={ownerDecision} detail="compact" />
+      ) : decisionFailed ? (
+        <div className="p-6 rounded-lg border border-border bg-card" data-testid="first-value-decision-error" role="alert">
+          <p className="text-muted-foreground">
+            <span className="font-bold text-foreground">Couldn&apos;t load your main target.</span> Refresh the page, or open{" "}
+            <Link href="/owner/cockpit" className="text-[var(--primary-text)] underline">your cockpit</Link>.
+          </p>
+        </div>
+      ) : (
+        <div className="p-6 rounded-lg border border-border bg-card" data-testid="first-value-no-decision">
+          <p className="text-muted-foreground">
+            <span className="font-bold text-foreground">No main target yet.</span> OpsIQ picks one main target from your business numbers.{" "}
+            <Link href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</Link>
+          </p>
+        </div>
+      )}
 
       {/* State and Confidence */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -196,7 +235,7 @@ export default function FirstValuePage() {
       {/* Top Risks */}
       {firstValue.topRisks.length > 0 && (
         <div className="p-6 bg-card border border-gray-200 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">Top Risks</h2>
+          <h2 className="text-xl font-bold mb-4">Engagement risks <span className="text-sm font-normal text-muted-foreground">(context — not an action order)</span></h2>
           <div className="space-y-3">
             {firstValue.topRisks.map((risk) => (
               <div
@@ -223,7 +262,7 @@ export default function FirstValuePage() {
       {/* Top Opportunities */}
       {firstValue.topOpportunities.length > 0 && (
         <div className="p-6 bg-card border border-gray-200 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">Top Opportunities</h2>
+          <h2 className="text-xl font-bold mb-4">Engagement opportunities <span className="text-sm font-normal text-muted-foreground">(context — not an action order)</span></h2>
           <div className="space-y-3">
             {firstValue.topOpportunities.map((opp) => (
               <div key={opp.id} className="p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
@@ -239,20 +278,6 @@ export default function FirstValuePage() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* The ONE canonical owner decision — this page never elects its own "first action". The
-          first-value data above (engagement findings) is context; what to do first comes only from
-          the canonical owner decision, the same answer Home, Cockpit and Priorities show. */}
-      {ownerDecision ? (
-        <OwnerDecisionCard decision={ownerDecision} detail="compact" />
-      ) : (
-        <div className="p-6 rounded-lg border border-border bg-card" data-testid="first-value-no-decision">
-          <p className="text-muted-foreground">
-            <span className="font-bold text-foreground">No main target yet.</span> OpsIQ picks one main target from your business numbers.{" "}
-            <Link href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</Link>
-          </p>
         </div>
       )}
 

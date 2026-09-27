@@ -276,7 +276,8 @@ export default function OwnerHomePage() {
                         <div className="font-semibold text-sm">{i + 1}. {a.title}{i === 0 ? " — main target" : ""}</div>
                         <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
                           <Badge variant="muted-accessible">{a.domainLabel}</Badge>
-                          {a.severity && <span>{a.severity}</span>}
+                          {/* A refresh item's severity is what the out-of-date figures last showed, not a current reading. */}
+                          {a.severity && <span>{a.source === "evidence_refresh" ? `last flagged: ${a.severity}` : a.severity}</span>}
                         </div>
                       </Link>
                     ))}

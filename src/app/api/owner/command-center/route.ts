@@ -33,7 +33,8 @@ export const GET = withCanonicalEnforcement(
             nextReassessmentDue: lastDiagnosedMs !== null ? new Date(lastDiagnosedMs + cadence.days * 86_400_000).toISOString() : condition.nextReassessmentDue,
           }
         : {}),
-      currentOwnerDecision: home.currentOwnerDecision,
+      // Shown beside this condition profile only when both describe the SAME business.
+      currentOwnerDecision: home.selectedBusinessId === condition.selectedBusinessId ? home.currentOwnerDecision : null,
     };
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }

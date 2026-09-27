@@ -52,7 +52,12 @@ const CONFIDENCE_VARIANT: Record<string, "success" | "warning" | "destructive" |
   high: "success", medium: "warning", low: "destructive", none: "muted",
 };
 
-export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView | null }) {
+/**
+ * `hideStopInstructions`: when the page shows the ONE canonical owner decision, that decision (and
+ * the guardrails reconciled with it) is the only "do not" list — the plan analysis's own stop
+ * instruction could veto the main target, so it is not shown.
+ */
+export function SupervisorSummary({ summary, hideStopInstructions = false }: { summary: SupervisorSummaryView | null; hideStopInstructions?: boolean }) {
   if (!summary || !summary.found) return null;
   const relevantImpact = summary.impact.filter((i) => i.relevant);
   const supportingFigures = summary.supportingFigures ?? [];
@@ -79,7 +84,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-do-now">
           <strong>Plan analysis suggests:</strong> {summary.doNow}
         </div>
-        {summary.doNotDo.length > 0 && (
+        {!hideStopInstructions && summary.doNotDo.length > 0 && (
           <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-sm" data-testid="supervisor-do-not-do">
             <strong>Do not:</strong> {summary.doNotDo[0]}
           </div>

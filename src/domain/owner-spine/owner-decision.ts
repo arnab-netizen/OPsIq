@@ -219,7 +219,13 @@ export function strategyCandidatePriorityClass(decisionCode: StrategyDecisionCod
 
 // --- Candidate contract --------------------------------------------------------------------------
 
-export type OwnerCandidateSource = "domain_action" | "compliance_item" | "business_risk" | "evidence_refresh";
+export type OwnerCandidateSource =
+  | "domain_action"
+  | "compliance_item"
+  | "business_risk"
+  | "evidence_refresh"
+  /** A CURRENT unsafe cash/finance survival reading that no open survival action covers. */
+  | "survival_reading";
 
 /** Why a candidate is not eligible to be the owner's target (null = eligible). */
 export type OwnerCandidateExclusion =
@@ -509,6 +515,17 @@ const DOMAIN_LABEL: Record<string, string> = {
   risk: "Risks",
 };
 
+/**
+ * Whether a main target is itself a demand step (growth, or marketing/sales work), so guardrails
+ * that forbid growth, marketing, volume or discounting would veto it. Every presentation surface
+ * uses this ONE rule to turn such guardrails into conditions on HOW to execute the target instead
+ * of a veto. A refresh target is a data request, never a demand step: guardrails stay as they are.
+ */
+export function isDemandTarget(target: Pick<OwnerDecisionTarget, "priorityClass" | "source" | "domain">): boolean {
+  if (target.source === "evidence_refresh") return false;
+  return target.priorityClass === "GROWTH_OPPORTUNITY" || target.domain === "marketing" || target.domain === "sales";
+}
+
 export function ownerDomainLabel(domain: string): string {
   return DOMAIN_LABEL[domain] ?? domain;
 }
@@ -538,7 +555,11 @@ function toTarget(c: OwnerDecisionCandidate): OwnerDecisionTarget {
  * so their identity also includes the record id (two different breaches are two different issues).
  */
 export function ownerCandidateIssueKey(c: Pick<OwnerDecisionCandidate, "domain" | "findingCode" | "candidateId" | "source">): string {
-  return c.source === "domain_action" ? `${c.domain}:${c.findingCode}` : `${c.domain}:${c.findingCode}:${c.candidateId}`;
+  // A survival reading shares the identity of the survival finding it carries, so an issue whose
+  // action was closed while the same evidence still reads unsafe stays the SAME open issue.
+  return c.source === "domain_action" || c.source === "survival_reading"
+    ? `${c.domain}:${c.findingCode}`
+    : `${c.domain}:${c.findingCode}:${c.candidateId}`;
 }
 
 function factorSentence(
@@ -567,7 +588,9 @@ function factorSentence(
       const rated = winner.source === "evidence_refresh" ? `Its out-of-date figures were last rated ${winner.severity}` : `It is rated ${winner.severity}`;
       return runnerUp.severity === null
         ? `${rated}; ${other} has no severity rating.`
-        : `${rated}, more serious than ${other} (rated ${runnerUp.severity}).`;
+        : runnerUp.source === "evidence_refresh"
+          ? `${rated}, more serious than what the out-of-date figures behind ${other} last showed (${runnerUp.severity}).`
+          : `${rated}, more serious than ${other} (rated ${runnerUp.severity}).`;
     }
     case "priority": {
       const sameSeverity = winner.severity !== null ? ` rated ${winner.severity}` : "";
@@ -742,11 +765,27 @@ function detectChanges(
       changes.push({ kind: "SEVERITY_DECREASED", message: `${where} improved from ${before} to ${c.severity}; it is still open.` });
     }
   }
-  const resolvedCount = Object.entries(prev.issueSeverities).filter(([k, sev]) => sev === "critical" && !open.has(k)).length;
+  // Resolved: a critical issue reached a terminal state (completed / verified), or left the open list
+  // on NEW evidence. An issue whose action was merely cancelled (or otherwise dropped) while its
+  // domain's figures are provably the same snapshot is not resolved — those figures still show it.
+  const terminalKeys = new Set(
+    input.candidates
+      .filter((c) => c.exclusion === "completed" || c.exclusion === "verified_complete" || c.exclusion === "verified_fix_awaiting_new_evidence")
+      .map((c) => ownerCandidateIssueKey(c))
+  );
+  const sameEvidence = (key: string): boolean => {
+    const domain = key.split(":", 1)[0];
+    const before = prev.evidenceIds?.[domain];
+    const now = input.evidenceIds?.[domain];
+    return before !== undefined && now !== undefined && before === now;
+  };
+  const resolvedCount = Object.entries(prev.issueSeverities).filter(
+    ([k, sev]) => sev === "critical" && !open.has(k) && (terminalKeys.has(k) || !sameEvidence(k))
+  ).length;
   if (resolvedCount > 0) {
     changes.push({
       kind: "CRITICAL_ISSUE_RESOLVED",
-      message: resolvedCount === 1 ? "A critical issue from your last check is no longer open." : `${resolvedCount} critical issues from your last check are no longer open.`,
+      message: resolvedCount === 1 ? "A critical issue from OpsIQ's previous advice is no longer open." : `${resolvedCount} critical issues from OpsIQ's previous advice are no longer open.`,
     });
   }
 
@@ -770,7 +809,7 @@ function detectChanges(
   // recorded before evidence identity existed cannot prove anything changed, so nothing is claimed.
   if (prev.evidenceIds !== null) {
     for (const [d, id] of Object.entries(input.evidenceIds ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-      if (prev.evidenceIds[d] !== id) changes.push({ kind: "EVIDENCE_UPDATED", message: `New data in ${ownerDomainLabel(d)} was analysed since your last check.` });
+      if (prev.evidenceIds[d] !== id) changes.push({ kind: "EVIDENCE_UPDATED", message: `New data in ${ownerDomainLabel(d)} was analysed since OpsIQ's previous advice.` });
     }
   }
 
@@ -799,6 +838,9 @@ function detectChanges(
 }
 
 /** One explicit refresh-evidence target per domain whose eligible actions rest on stale evidence. */
+/** Out-of-date figures never carry more than "low" confidence (below the "moderate" threshold). */
+const REFRESH_CONFIDENCE_CAP = 0.4;
+
 function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: ResolveOwnerDecisionInput): OwnerDecisionCandidate[] {
   const byDomain = new Map<string, OwnerDecisionCandidate[]>();
   for (const c of staleCandidates) byDomain.set(c.domain, [...(byDomain.get(c.domain) ?? []), c]);
@@ -808,10 +850,6 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: R
     const top = ordered[0];
     const label = ownerDomainLabel(domain);
     const more = ordered.length > 1 ? ` and ${ordered.length - 1} other item${ordered.length === 2 ? "" : "s"}` : "";
-    const worstSeverity = ordered.reduce<OwnerSeverity | null>(
-      (w, c) => (c.severity !== null && (w === null || ownerSeverityRank(c.severity) > ownerSeverityRank(w)) ? c.severity : w),
-      null
-    );
     const asOf = ordered.reduce<Date | null>((d, c) => (c.evidenceAsOf && (!d || c.evidenceAsOf < d) ? c.evidenceAsOf : d), null);
     out.push({
       candidateId: `evidence_refresh:${domain}`,
@@ -827,11 +865,12 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: R
       findingId: null,
       title: `Update the figures in ${label} before acting on them`,
       explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
-      severity: worstSeverity,
-      priorityScore: Math.max(...ordered.map((c) => clampScore(c.priorityScore))),
-      expectedImpactScore: Math.max(...ordered.map((c) => clampScore(c.expectedImpactScore))),
-      // Inherited, never invented: a refresh is no more certain or easier than what it stands in for.
-      confidence: clampConfidence(top.confidence),
+      // Every ranking attribute comes from the SAME most-serious item (never mixed across items or
+      // classes); confidence is also capped at "low" — the figures are out of date.
+      severity: top.severity,
+      priorityScore: clampScore(top.priorityScore),
+      expectedImpactScore: clampScore(top.expectedImpactScore),
+      confidence: Math.min(clampConfidence(top.confidence), REFRESH_CONFIDENCE_CAP),
       effortScore: clampScore(top.effortScore),
       status: "proposed",
       ownerActionRequired: true,
@@ -913,7 +952,11 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
         // Never claims the old problem is current — only that it was last flagged and needs confirming.
         ? `Your ${ownerDomainLabel(primary.domain)} figures are out of date, and they last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming them comes before acting on anything they showed.`
         : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}, ${
-            primary.source === "domain_action" ? `from your ${ownerDomainLabel(primary.domain)} diagnosis` : `from what is recorded in ${ownerDomainLabel(primary.domain)}`
+            primary.source === "domain_action"
+              ? `from your ${ownerDomainLabel(primary.domain)} diagnosis`
+              : primary.source === "survival_reading"
+                ? `shown by your current ${ownerDomainLabel(primary.domain)} figures, and no open action addresses it`
+                : `from what is recorded in ${ownerDomainLabel(primary.domain)}`
           }.`
     );
     const runnerUp = ranked[1] ?? null;
@@ -950,7 +993,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (primary) {
     const primaryRank = ownerPriorityClassRank(primary.priorityClass);
     // Never name a step the owner is being told to do next (supporting) as something not to do.
-    const growth = rest.find((c) => c.priorityClass === "GROWTH_OPPORTUNITY" && !supportingIds.has(c.candidateId));
+    const growth = rest.find((c) => c.priorityClass === "GROWTH_OPPORTUNITY" && c.source !== "evidence_refresh" && !supportingIds.has(c.candidateId));
     if (growth && primaryRank < ownerPriorityClassRank("GROWTH_OPPORTUNITY")) {
       whatNotToDo.push(`Don't start growth or investment work such as "${growth.title}" until "${primary.title}" is handled.`);
     }

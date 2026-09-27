@@ -76,7 +76,8 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
   let marginPct = input.marginPct ?? null;
   if (marginPct == null) {
     const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-      where: { workspaceId: input.workspaceId, businessId: input.businessId },
+      // Current (never amended/superseded) version only.
+      where: { workspaceId: input.workspaceId, businessId: input.businessId, supersededById: null },
       orderBy: { createdAt: "desc" },
       select: { revenue: true, costOfGoods: true },
     });

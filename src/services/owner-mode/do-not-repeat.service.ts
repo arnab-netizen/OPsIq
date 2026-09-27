@@ -103,6 +103,12 @@ export interface DoNotRepeatAnnotation {
   blocked: boolean;
   /** true when only a legacy-format key matched (scope:area vs scope:area:finding:id) */
   legacyMatch: boolean;
+  /**
+   * true when the rule matched only the coarse area scope (scope:area), not the specific finding.
+   * Such a match is history from the area — it does not prove the current target repeats the
+   * failed approach, so surfaces present it as a caution about the approach, never as a veto.
+   */
+  areaOnly: boolean;
   priorActionSummary: string;
   blockedReason: string;
   changedContextCondition: string | null;
@@ -159,6 +165,7 @@ export async function checkDoNotRepeatForGuidance(
   return {
     blocked: true,
     legacyMatch,
+    areaOnly: rule.memoryKey === scopeKey,
     priorActionSummary: rule.summary,
     blockedReason: rule.reason,
     changedContextCondition: rule.changedContextExplanation,

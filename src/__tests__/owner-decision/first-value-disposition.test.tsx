@@ -8,6 +8,9 @@ import { render, cleanup, screen, waitFor } from "@testing-library/react";
 import FirstValuePage from "@/app/(authenticated)/owner/first-value/page";
 import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
+const activeBusiness = { activeBusinessId: "biz-2" as string | null };
+vi.mock("@/context/active-business-context", () => ({ useActiveBusiness: () => activeBusiness }));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -29,7 +32,8 @@ const DECISION = JSON.parse(JSON.stringify(resolveOwnerDecision({
 
 const FIRST_VALUE = {
   workspaceId: "w", isDemo: false, state: "READY", confidence: "MEDIUM_CONFIDENCE", businessSnapshot: null,
-  topRisks: [], topOpportunities: [],
+  topRisks: [{ id: "r1", description: "Engagement risk", impact: "i", severity: "HIGH", confidenceState: "MEDIUM_CONFIDENCE" }],
+  topOpportunities: [],
   recommendedFirstAction: {
     id: "x", action: "Consultant engagement action", reason: "from the engagement", expectedImpact: "", effort: "MEDIUM", risk: "MEDIUM",
     evidenceRefs: [], firstStep: "s", stopCondition: "c", confidenceState: "HIGH_CONFIDENCE", recommendedPriority: "HIGH", createdAt: "2026-09-01T00:00:00Z",
@@ -40,11 +44,15 @@ const FIRST_VALUE = {
   generatedAt: "2026-09-27T00:00:00Z",
 };
 
-function stub(home: unknown) {
+const calls: string[] = [];
+function stub(home: unknown, homeOk = true) {
+  calls.length = 0;
   vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    const body = url.includes("/api/owner/first-value") ? FIRST_VALUE : home;
-    return Promise.resolve({ ok: true, status: 200, json: async () => body });
+    calls.push(url);
+    const isFirstValue = url.includes("/api/owner/first-value");
+    const ok = isFirstValue || homeOk;
+    return Promise.resolve({ ok, status: ok ? 200 : 500, json: async () => (isFirstValue ? FIRST_VALUE : home) });
   }));
 }
 
@@ -62,5 +70,23 @@ describe("/owner/first-value never elects its own first action", () => {
     render(<FirstValuePage />);
     await waitFor(() => expect(screen.getByTestId("first-value-no-decision")).toBeTruthy());
     expect(screen.queryByText("Consultant engagement action")).toBeNull();
+  });
+
+  it("reads the decision for the ACTIVE business and renders it before the engagement context", async () => {
+    activeBusiness.activeBusinessId = "biz-2";
+    stub({ currentOwnerDecision: DECISION });
+    const { container } = render(<FirstValuePage />);
+    await waitFor(() => expect(screen.getByTestId("owner-decision-title")).toBeTruthy());
+    expect(calls).toContain("/api/owner/home?businessId=biz-2");
+    const html = container.innerHTML;
+    expect(html.indexOf("owner-decision-title")).toBeLessThan(html.indexOf("Engagement risk"));
+    expect(screen.getByText(/Engagement risks/).textContent).toMatch(/not an action order/);
+  });
+
+  it("a failed decision load is shown as a failure, never as 'no main target'", async () => {
+    stub(null, false);
+    render(<FirstValuePage />);
+    await waitFor(() => expect(screen.getByTestId("first-value-decision-error")).toBeTruthy());
+    expect(screen.queryByTestId("first-value-no-decision")).toBeNull();
   });
 });

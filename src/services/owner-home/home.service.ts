@@ -57,6 +57,7 @@ import {
   survivalConfirmationCandidate,
   verificationReachedTarget,
   verificationTime,
+  worstSurvivalFinding,
   type CurrentSurvivalReading,
 } from "@/services/owner-home/owner-decision-candidates";
 import {
@@ -387,10 +388,10 @@ export async function getOwnerHome(
   }
   const currentSurvivalReadings: CurrentSurvivalReading[] = [];
   if (cashflow && cashAt && supersededSurvivalDomain !== "cashflow") {
-    currentSurvivalReadings.push({ domain: "cashflow", state: String(cashflow.cashflowState), periodEnd: cashAt, dataConfidenceScore: Number(cashflow.dataConfidenceScore ?? 0) });
+    currentSurvivalReadings.push({ domain: "cashflow", state: String(cashflow.cashflowState), periodEnd: cashAt, dataConfidenceScore: Number(cashflow.dataConfidenceScore ?? 0), survivalFinding: worstSurvivalFinding(cashflow.findings) });
   }
   if (finance && financeAt && supersededSurvivalDomain !== "finance") {
-    currentSurvivalReadings.push({ domain: "finance", state: String(finance.survivalState), periodEnd: financeAt, dataConfidenceScore: Number(finance.dataConfidenceScore ?? 0) });
+    currentSurvivalReadings.push({ domain: "finance", state: String(finance.survivalState), periodEnd: financeAt, dataConfidenceScore: Number(finance.dataConfidenceScore ?? 0), survivalFinding: worstSurvivalFinding(finance.findings) });
   }
   if (sales) addDomain("sales", sales, salesCycleToDomainScore(sales), sales.actions, allSalesVers, sales.findings);
   if (operations) addDomain("operations", operations, operationsCycleToDomainScore(operations), operations.actions, allOperationsVers, operations.findings);
@@ -507,9 +508,9 @@ export async function getOwnerHome(
   // concurrently (two tabs, Portfolio resolving every business at once), so it is serialized per
   // workspace with a Postgres advisory transaction lock — the same pattern as platform-settings —
   // and the latest memory is RE-READ inside the lock: a concurrent reader that already recorded the
-  // same decision makes this a no-op (no duplicate events), and the workspace audit hash chain is
-  // never forked by two decision writes reading the same previous event. Best-effort — a failed
-  // write never breaks the read.
+  // same decision makes this a no-op (no duplicate decision events). The lock only serializes
+  // owner-decision writes with each other; ordering against other audit writers is the audit helper's
+  // concern, not this lock's. Best-effort — a failed write is logged and never breaks the read.
   const latestMemory = memories[0] ?? null;
   if (!latestMemory || !sameOwnerDecisionMemory(latestMemory, currentOwnerDecision.memory)) {
     try {

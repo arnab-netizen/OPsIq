@@ -314,7 +314,7 @@ describe("what changed", () => {
     const sameSnapshot = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: prev, evidenceIds: { finance: "fin-snap-1" }, now: new Date("2026-09-28T10:00:00.000Z") }));
     expect(sameSnapshot.whatChanged.map((x) => x.kind)).not.toContain("EVIDENCE_UPDATED");
     const newSnapshot = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: prev, evidenceIds: { finance: "fin-snap-2" }, now: new Date("2026-09-28T10:00:00.000Z") }));
-    expect(newSnapshot.whatChanged.find((x) => x.kind === "EVIDENCE_UPDATED")?.message).toBe("New data in Finance was analysed since your last check.");
+    expect(newSnapshot.whatChanged.find((x) => x.kind === "EVIDENCE_UPDATED")?.message).toBe("New data in Finance was analysed since OpsIQ's previous advice.");
   });
 
   it("an older memory without evidence identity never claims new data", () => {
@@ -350,6 +350,18 @@ describe("what changed", () => {
       const ch = after([at("critical"), other], [done, other]);
       expect(ch.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
       expect(ch.map((c) => c.kind)).not.toContain("SEVERITY_DECREASED");
+    });
+    it("a critical issue whose action was CANCELLED on the same figures is not resolved; on new figures it is", () => {
+      const cancelled = { ...at("critical"), status: "cancelled", exclusion: "cancelled" as const };
+      const first = resolveOwnerDecision(input([at("critical"), other], { evidenceIds: { finance: "snap-1" } }));
+      const prev = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
+      const later = new Date("2026-09-28T10:00:00.000Z");
+      const same = resolveOwnerDecision(input([cancelled, other], { previous: prev, evidenceIds: { finance: "snap-1" }, now: later })).whatChanged;
+      expect(same.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
+      const fresh = resolveOwnerDecision(input([other], { previous: prev, evidenceIds: { finance: "snap-2" }, now: later })).whatChanged;
+      expect(fresh.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
+      const completedSame = resolveOwnerDecision(input([{ ...at("critical"), status: "completed", exclusion: "completed" as const }, other], { previous: prev, evidenceIds: { finance: "snap-1" }, now: later })).whatChanged;
+      expect(completedSame.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
     });
     it("a brand-new critical issue appears", () => {
       const ch = after([other], [at("critical"), other]);

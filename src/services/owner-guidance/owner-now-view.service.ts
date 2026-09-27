@@ -74,7 +74,7 @@ import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
-import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { isDemandTarget, type CurrentOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
 import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 export type { DoNotRepeatAnnotation };
@@ -1164,24 +1164,32 @@ function currentReadingTime(snapshot: { periodEnd: Date; supersededById?: string
 
 /**
  * Reconcile Now View's "do not" list with the ONE canonical owner decision so the two never
- * contradict: when the main target is itself a growth step, every avoid rule that would veto growth
- * or marketing becomes a precondition on HOW to do it (a small, low-cost trial) that keeps its
- * reason, instead of a veto on the main target. Every other avoid is unrelated and kept as-is.
+ * contradict: an avoid rule never vetoes the main target — every rule that would forbid it becomes a
+ * condition on HOW to carry it out, keeping its reason. Demand rules (growth, marketing, volume,
+ * discounting, supply-dependent growth) apply only when the target is itself a demand step
+ * (isDemandTarget); the workload and hiring rules apply to any target. A refresh target is a data
+ * request, never vetoed, so every avoid is kept as-is. Unrelated avoids are unchanged.
  */
-const GROWTH_VETO_PRECONDITION: Record<string, (title: string) => string> = {
+const DEMAND_VETO_CONDITION: Record<string, (title: string) => string> = {
   avoid_growth_before_gates: (t) => `Do not scale "${t}" beyond a small trial until cash, profit, capacity, workload and quality gates pass`,
   avoid_growth_on_cash_danger: (t) => `Keep "${t}" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week`,
+  avoid_discount_on_cash_danger: (t) => `Carry out "${t}" without discounts or low-margin volume while cash is at risk`,
   avoid_marketing_on_service_failure: (t) => `Do not scale "${t}" beyond a small trial until service quality is fixed`,
   avoid_volume_on_capacity: (t) => `Keep "${t}" within what current capacity can deliver`,
   avoid_growth_on_supplier_risk: (t) => `Keep "${t}" to what current supply can support until supplier risk is resolved`,
 };
+const ANY_TARGET_VETO_CONDITION: Record<string, (title: string) => string> = {
+  avoid_new_tasks_on_overload: (t) => `Apart from "${t}", do not assign new non-critical tasks to staff or the owner`,
+  avoid_hire_on_cash_danger: (t) => `Carry out "${t}" without new hires until payroll affordability is proven`,
+};
 
 export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {
   const primary = decision.primaryTarget;
-  if (!primary || primary.priorityClass !== "GROWTH_OPPORTUNITY") return avoids;
+  if (!primary || primary.source === "evidence_refresh") return avoids;
+  const demand = isDemandTarget(primary);
   return avoids.map((a) => {
-    const precondition = GROWTH_VETO_PRECONDITION[a.id];
-    return precondition ? { ...a, avoid: precondition(primary.title) } : a;
+    const condition = ANY_TARGET_VETO_CONDITION[a.id] ?? (demand ? DEMAND_VETO_CONDITION[a.id] : undefined);
+    return condition ? { ...a, avoid: condition(primary.title) } : a;
   });
 }
 
@@ -1195,7 +1203,8 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?
   if (ownerDecision) {
     const primary = ownerDecision.primaryTarget;
     const whatToDoFirst = primary
-      ? [primary.title, ...ownerDecision.supportingSteps.map((t) => t.title)]
+      // The main target is the ONE first step; supporting steps follow it and never read as equals.
+      ? [primary.title, ...ownerDecision.supportingSteps.map((t) => `Then: ${t.title}`)]
       : ownerDecision.whatToDoFirst
         ? [...new Set([ownerDecision.whatToDoFirst, ...ownerDecision.missingInformation])]
         : ownerDecision.missingInformation.length > 0

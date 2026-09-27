@@ -25,15 +25,15 @@ const overload: ActionToAvoid = {
   triggeredBy: [IssueCategory.OVERLOAD],
 };
 
-function decisionWith(priorityClass: OwnerPriorityClass, title: string) {
+function decisionWith(priorityClass: OwnerPriorityClass, title: string, domain: OwnerDecisionCandidate["domain"] = "sales") {
   const c: OwnerDecisionCandidate = {
-    candidateId: "domain_action:sales:a1", businessId: "b", workspaceId: "w", source: "domain_action", domain: "sales", sourceId: "a1",
+    candidateId: `domain_action:${domain}:a1`, businessId: "b", workspaceId: "w", source: "domain_action", domain, sourceId: "a1",
     priorityClass, findingCode: "SALES_OPP_WINBACK", findingId: null, title, explanation: "", severity: "medium", priorityScore: 50,
     expectedImpactScore: 50, confidence: 0.8, effortScore: 30, status: "proposed", ownerActionRequired: true, blocking: false,
     evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: false, exclusion: null, targetRoute: "/owner/sales",
   };
   return resolveOwnerDecision({
-    businessId: "b", workspaceId: "w", candidates: [c], diagnosedDomains: ["sales"],
+    businessId: "b", workspaceId: "w", candidates: [c], diagnosedDomains: [domain as never],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
     staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
     now: new Date("2026-09-27T00:00:00Z"),
@@ -45,7 +45,8 @@ describe("Now View avoid list vs the canonical main target", () => {
     const out = reconcileAvoidsWithOwnerDecision([growthGate, overload], decisionWith("GROWTH_OPPORTUNITY", "Launch referral offer"));
     expect(out.map((a) => a.avoid).join(" ")).not.toMatch(/Do not pursue growth/);
     expect(out[0].avoid).toBe('Do not scale "Launch referral offer" beyond a small trial until cash, profit, capacity, workload and quality gates pass');
-    expect(out[1]).toEqual(overload);
+    // Workload rule: the main target is never "new non-critical work" — it applies to everything else.
+    expect(out[1]).toEqual({ ...overload, avoid: 'Apart from "Launch referral offer", do not assign new non-critical tasks to staff or the owner' });
   });
 
   it("every growth/marketing veto (cash danger, service failure) becomes a precondition that keeps its reason", () => {
@@ -59,8 +60,37 @@ describe("Now View avoid list vs the canonical main target", () => {
     expect(out.map((a) => a.reason)).toEqual(["cash", "service"]);
   });
 
-  it("with a non-growth main target, the growth gate is unchanged", () => {
-    const out = reconcileAvoidsWithOwnerDecision([growthGate], decisionWith("PROFIT_LOSS", "Stop the discount leak"));
+  it("with a main target that is not a demand step (operations, profit class), demand rules are unchanged", () => {
+    const out = reconcileAvoidsWithOwnerDecision([growthGate], decisionWith("PROFIT_LOSS", "Cut rework on large orders", "operations"));
     expect(out).toEqual([growthGate]);
+  });
+
+  it("a NON-growth marketing/sales target (profit class) is never vetoed by growth, volume or discount rules", () => {
+    const capacity: ActionToAvoid = { id: "avoid_volume_on_capacity", avoid: "Do not accept more volume than current capacity can deliver", reason: "capacity", businessFunction: [BusinessFunction.CAPACITY], triggeredBy: [IssueCategory.CAPACITY_BOTTLENECK] };
+    const discount: ActionToAvoid = { id: "avoid_discount_on_cash_danger", avoid: "Do not offer discounts or take on low-margin work to chase volume", reason: "discount", businessFunction: [BusinessFunction.PRICING], triggeredBy: [IssueCategory.CASH_DANGER] };
+    const out = reconcileAvoidsWithOwnerDecision([growthGate, capacity, discount], decisionWith("PROFIT_LOSS", "Follow up every enquiry within a day", "marketing"));
+    expect(out.map((a) => a.avoid)).toEqual([
+      'Do not scale "Follow up every enquiry within a day" beyond a small trial until cash, profit, capacity, workload and quality gates pass',
+      'Keep "Follow up every enquiry within a day" within what current capacity can deliver',
+      'Carry out "Follow up every enquiry within a day" without discounts or low-margin volume while cash is at risk',
+    ]);
+    expect(out.map((a) => a.reason)).toEqual([growthGate.reason, "capacity", "discount"]);
+  });
+
+  it("a refresh (data-request) main target leaves every avoid unchanged, even when it stands in for a growth item", () => {
+    const refresh = resolveOwnerDecision({
+      businessId: "b", workspaceId: "w", diagnosedDomains: ["marketing"],
+      candidates: [{
+        candidateId: "domain_action:marketing:a1", businessId: "b", workspaceId: "w", source: "domain_action", domain: "marketing", sourceId: "a1",
+        priorityClass: "GROWTH_OPPORTUNITY", findingCode: "MKT_LOW_REFERRAL", findingId: null, title: "Add a referral ask", explanation: "", severity: "medium",
+        priorityScore: 50, expectedImpactScore: 50, confidence: 0.8, effortScore: 30, status: "proposed", ownerActionRequired: true, blocking: false,
+        evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: true, exclusion: null, targetRoute: "/owner/marketing",
+      }],
+      dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
+      staleDomains: ["marketing"], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
+      now: new Date("2026-09-27T00:00:00Z"),
+    });
+    expect(refresh.primaryTarget?.source).toBe("evidence_refresh");
+    expect(reconcileAvoidsWithOwnerDecision([growthGate, overload], refresh)).toEqual([growthGate, overload]);
   });
 });

@@ -7,14 +7,10 @@
  */
 
 import type { AttentionSummary } from "@/domain/owner-mode/owner-load";
-import type { OwnerCandidateSource, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { isDemandTarget, type OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
 /** The canonical owner decision's main target, as far as the panel's guardrails need it. */
-export interface ControlCenterMainTarget {
-  title: string;
-  priorityClass: OwnerPriorityClass;
-  source: OwnerCandidateSource;
-}
+export type ControlCenterMainTarget = Pick<OwnerDecisionTarget, "title" | "priorityClass" | "source" | "domain">;
 
 export interface ControlCenterInputs {
   dataSufficiencyStatus: "sufficient" | "caution" | "insufficient";
@@ -69,7 +65,9 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   const whatNotToDo: string[] = [];
 
   const t = i.mainTarget ?? null;
-  const growthTarget = t !== null && t.priorityClass === "GROWTH_OPPORTUNITY";
+  // A refresh target is a data request: it is never vetoed by these guardrails, so they stay as-is.
+  const actionTarget = t !== null && t.source !== "evidence_refresh" ? t : null;
+  const demandTarget = actionTarget !== null && isDemandTarget(actionTarget) ? actionTarget : null;
   if (i.dataSufficiencyStatus === "insufficient") {
     criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).`);
     whatNotToDo.push(
@@ -83,16 +81,16 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   if (i.financeBlocked > 0) {
     criticalAlerts.push(`${i.financeBlocked} finance/margin/cash-unsafe recommendation(s) were blocked.`);
     whatNotToDo.push(
-      growthTarget
-        ? `Keep "${t!.title}" to steps that need no new spend or discounts while cash/margin guardrails are blocking.`
+      actionTarget
+        ? `Do not spend or discount while cash/margin guardrails are blocking — carry out "${actionTarget.title}" only in ways that need neither.`
         : "Do not spend or discount while cash/margin guardrails are blocking."
     );
   }
   if (i.equipmentBottlenecks.length > 0) {
     criticalAlerts.push(`Capacity bottleneck: ${i.equipmentBottlenecks.join(", ")}.`);
     whatNotToDo.push(
-      growthTarget
-        ? `Keep "${t!.title}" within current capacity until the bottleneck is cleared.`
+      demandTarget
+        ? `Keep "${demandTarget.title}" within current capacity until the bottleneck is cleared.`
         : "Do not pursue growth/marketing until the capacity bottleneck is cleared."
     );
   }

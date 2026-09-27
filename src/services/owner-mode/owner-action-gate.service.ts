@@ -189,7 +189,8 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
     //    (no false block; deferred to the input-quality path), reusing evaluateMarginSafety.
     if (MARGIN_SENSITIVE_DOMAINS.has(input.domain)) {
       const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-        where: { workspaceId: input.workspaceId, businessId: input.businessId },
+        // Current (never amended/superseded) version only.
+        where: { workspaceId: input.workspaceId, businessId: input.businessId, supersededById: null },
         orderBy: { createdAt: "desc" },
         select: { revenue: true, costOfGoods: true },
       });

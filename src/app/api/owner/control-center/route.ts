@@ -43,6 +43,7 @@ export const GET = withCanonicalEnforcement(
             title: home.currentOwnerDecision.primaryTarget.title,
             priorityClass: home.currentOwnerDecision.primaryTarget.priorityClass,
             source: home.currentOwnerDecision.primaryTarget.source,
+            domain: home.currentOwnerDecision.primaryTarget.domain,
           }
         : null,
     });

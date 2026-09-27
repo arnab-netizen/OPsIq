@@ -130,8 +130,10 @@ async function triggerFinanceReDiagnosis(params: {
   const { businessId, workspaceId, actorId, reassessmentId, triggeringSignals } = params;
   try {
     const latestSnapshot = await db.ownerFinancialSnapshot.findFirst({
-      where: { businessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
+      // Current (never amended/superseded) version only: an amendment shares its original's period,
+      // so a period-only order could re-diagnose the superseded figures.
+      where: { businessId, workspaceId, supersededById: null },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       select: { id: true },
     });
     if (!latestSnapshot) return false; // no finance snapshot → gap-safe, signal already audited

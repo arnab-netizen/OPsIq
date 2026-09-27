@@ -75,12 +75,31 @@ describe("item 1 — a stale diagnosis is never an authoritative 'do this now'",
     expect(d.whyThisWins.join(" ")).not.toMatch(/bigger difference|evidence behind it is stronger/);
   });
 
-  it("a refresh target inherits the stood-in item's confidence and effort (never invents certainty or ease)", () => {
-    const d = resolveOwnerDecision(input([
+  it("a refresh target never claims more confidence than out-of-date figures allow (capped at 40), and never invents certainty", () => {
+    const high = resolveOwnerDecision(input([
       cand({ findingCode: "FIN_LOW_RUNWAY", title: "Extend your runway", severity: "critical", confidence: 0.55, effortScore: 70, stale: true }),
     ], { staleDomains: ["finance"] }));
-    expect(d.primaryTarget?.source).toBe("evidence_refresh");
-    expect(d.confidence.score).toBe(55);
+    expect(high.primaryTarget?.source).toBe("evidence_refresh");
+    expect(high.confidence.score).toBe(40);
+    const low = resolveOwnerDecision(input([
+      cand({ findingCode: "FIN_LOW_RUNWAY", title: "Extend your runway", severity: "critical", confidence: 0.25, stale: true }),
+    ], { staleDomains: ["finance"] }));
+    expect(low.confidence.score).toBe(25);
+  });
+
+  it("a refresh target takes class AND severity from the SAME stood-in item (never a worse severity from another class)", () => {
+    // Stale Finance: a medium survival item (the refresh's class) and a critical PROFIT item. The refresh
+    // must read survival/medium — borrowing "critical" from the profit item would let it outrank a fresh
+    // high survival danger it has no right to beat.
+    const d = resolveOwnerDecision(input([
+      cand({ findingCode: "FIN_HIGH_PAYABLES", title: "Pay down overdue suppliers", severity: "medium", stale: true }),
+      cand({ findingCode: "FIN_BELOW_BREAK_EVEN", title: "Get back above break-even", severity: "critical", stale: true }),
+      cand({ findingCode: "CF_LOW_RUNWAY", title: "Protect runway", domain: "cashflow", severity: "high" }),
+    ], { staleDomains: ["finance"] }));
+    expect(d.primaryTarget?.title).toBe("Protect runway");
+    const refresh = d.attention.find((t) => t.source === "evidence_refresh");
+    expect(refresh?.priorityClass).toBe("SURVIVAL_CASH");
+    expect(refresh?.severity).toBe("medium");
   });
 
   it("a stale LOWER-class item never jumps ahead of fresh higher-class work", () => {

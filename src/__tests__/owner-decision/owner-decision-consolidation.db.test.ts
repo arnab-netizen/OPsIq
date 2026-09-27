@@ -379,7 +379,13 @@ describe("[db] canonical owner decision — consolidation", () => {
     // lower-class work beside a cash-danger signal.
     expect(d.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
     expect(d.primaryTarget?.title).toBe("Confirm your cash position with current figures");
-    expect(d.primaryTarget?.source).toBe("evidence_refresh");
+    // A CURRENT reading: never presented as out-of-date figures, and it carries the diagnosed
+    // survival finding's own identity (one of the cancelled actions' findings).
+    expect(d.primaryTarget?.source).toBe("survival_reading");
+    expect(survival.map((t) => t.findingCode)).toContain(d.primaryTarget?.findingCode);
+    // Cancelling the actions without new figures did not resolve the danger: never reported as resolved.
+    expect(d.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
+    expect(d.memory.staleDomains).not.toContain("cashflow");
 
     await teardownOwnerBusiness(businessId);
   });

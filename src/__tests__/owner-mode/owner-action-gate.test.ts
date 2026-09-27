@@ -164,7 +164,7 @@ describe("enforceOwnerActionGates", () => {
     expect(captured.compliance).toEqual({ workspaceId: "ws1", OR: [{ businessId: "bizA" }, { businessId: null }], status: "active" });
     expect(captured.dnr.OR).toEqual([{ businessId: "bizA" }, { businessId: null }]);
     // snapshot business is required → scoped directly to the business
-    expect(captured.snapshot).toEqual({ workspaceId: "ws1", businessId: "bizA" });
+    expect(captured.snapshot).toEqual({ workspaceId: "ws1", businessId: "bizA", supersededById: null });
   });
 
   it("blocks any material action when a compliance item is expired (professional review)", async () => {

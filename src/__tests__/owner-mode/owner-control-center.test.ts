@@ -126,7 +126,7 @@ describe("control-center guardrails never veto the canonical main target (final 
   it("growth main target + capacity bottleneck: the veto becomes a condition on executing the target", () => {
     const cc = buildOwnerControlCenter(inputs({
       equipmentBottlenecks: ["Oven 2"],
-      mainTarget: { title: "Use spare capacity to take more orders", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action" },
+      mainTarget: { title: "Use spare capacity to take more orders", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action", domain: "sales" },
     }));
     const text = cc.whatNotToDo.join(" ");
     expect(text).not.toMatch(/Do not pursue growth\/marketing/);
@@ -139,7 +139,7 @@ describe("control-center guardrails never veto the canonical main target (final 
     const cc = buildOwnerControlCenter(inputs({
       dataSufficiencyStatus: "insufficient",
       lowConfidenceDomains: ["finance"],
-      mainTarget: { title: 'Resolve the breach of "Fire certificate"', priorityClass: "SAFETY_COMPLIANCE", source: "compliance_item" },
+      mainTarget: { title: 'Resolve the breach of "Fire certificate"', priorityClass: "SAFETY_COMPLIANCE", source: "compliance_item", domain: "compliance" },
     }));
     expect(cc.whatNotToDo.join(" ")).not.toMatch(/^Do not make material decisions/);
     expect(cc.whatNotToDo).toContain('Apart from "Resolve the breach of "Fire certificate"", do not make material decisions until the missing/stale data is provided.');
@@ -148,15 +148,40 @@ describe("control-center guardrails never veto the canonical main target (final 
   it("growth main target + blocked cash/margin recommendations: spend guardrail becomes a condition", () => {
     const cc = buildOwnerControlCenter(inputs({
       financeBlocked: 2,
-      mainTarget: { title: "Add a referral ask", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action" },
+      mainTarget: { title: "Add a referral ask", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action", domain: "sales" },
     }));
-    expect(cc.whatNotToDo).toEqual(['Keep "Add a referral ask" to steps that need no new spend or discounts while cash/margin guardrails are blocking.']);
+    expect(cc.whatNotToDo).toEqual(['Do not spend or discount while cash/margin guardrails are blocking — carry out "Add a referral ask" only in ways that need neither.']);
+  });
+
+  it("a NON-growth marketing target (profit class) + capacity bottleneck: still a condition, never 'do not pursue marketing'", () => {
+    const cc = buildOwnerControlCenter(inputs({
+      equipmentBottlenecks: ["Oven 2"],
+      financeBlocked: 1,
+      mainTarget: { title: "Follow up every enquiry within a day", priorityClass: "PROFIT_LOSS", source: "domain_action", domain: "marketing" },
+    }));
+    expect(cc.whatNotToDo.join(" ")).not.toMatch(/Do not pursue growth\/marketing/);
+    expect(cc.whatNotToDo).toEqual([
+      'Do not spend or discount while cash/margin guardrails are blocking — carry out "Follow up every enquiry within a day" only in ways that need neither.',
+      'Keep "Follow up every enquiry within a day" within current capacity until the bottleneck is cleared.',
+    ]);
+  });
+
+  it("a refresh (data-request) target never rewrites the guardrails, even when it stands in for a growth item", () => {
+    const cc = buildOwnerControlCenter(inputs({
+      equipmentBottlenecks: ["Oven 2"],
+      financeBlocked: 1,
+      mainTarget: { title: "Update your Marketing figures", priorityClass: "GROWTH_OPPORTUNITY", source: "evidence_refresh", domain: "marketing" },
+    }));
+    expect(cc.whatNotToDo).toEqual([
+      "Do not spend or discount while cash/margin guardrails are blocking.",
+      "Do not pursue growth/marketing until the capacity bottleneck is cleared.",
+    ]);
   });
 
   it("guardrails unrelated to the target are unchanged, and without a decision the original wording stands", () => {
     const survival = buildOwnerControlCenter(inputs({
       equipmentBottlenecks: ["Oven 2"],
-      mainTarget: { title: "Protect your cash runway", priorityClass: "SURVIVAL_CASH", source: "domain_action" },
+      mainTarget: { title: "Protect your cash runway", priorityClass: "SURVIVAL_CASH", source: "domain_action", domain: "cashflow" },
     }));
     expect(survival.whatNotToDo).toEqual(["Do not pursue growth/marketing until the capacity bottleneck is cleared."]);
     const none = buildOwnerControlCenter(inputs({ dataSufficiencyStatus: "insufficient" }));
