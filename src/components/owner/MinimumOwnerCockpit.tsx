@@ -6,7 +6,8 @@
  * bridged action the server already computed (from the process-execution bridge), in the 10-section
  * safety layout defined by docs/audits/2026-07-07-owner-ui-capability-exposure/MINIMUM_OWNER_COCKPIT_SPEC.md:
  *
- *   1. Top Priority Action   2. Why This Is First   3. Required Owner Decision   4. Evidence Required
+ *   0. The canonical owner decision (OwnerDecisionCard) — always first, the ONE main target
+ *   1. Governed work you can start (subordinate)   2. Why this matters   3. Required Owner Decision   4. Evidence Required
  *   5. Safe Actions          6. Blocked / Not Allowed 7. Next Reassessment
  *   8. Secondary Actions (collapsed) 9. Monitor-only (collapsed) 10. Proof / Audit (collapsed drawer)
  *
@@ -1213,16 +1214,24 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       className="flex max-w-2xl flex-col gap-3.5">
       {decisionCard}
 
-      {/* 1. Top Priority Action — an editorial "briefing" treatment (a thin accent rule + open
+      {/* 1. Governed work (subordinate to the decision above) — an editorial "briefing" treatment (a thin accent rule + open
           layout) rather than a boxed admin-panel card, per the premium-redesign visual pass.
           Every value rendered here (top.severity, top.ownerVisibleSummary, whyBullets) is
           unchanged from before; only the surrounding markup/classNames changed. */}
-      <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+      {/* Governed work is SUBORDINATE to the canonical decision above: it is never styled as the
+          main target (smaller title, neutral rule) and, without a canonical decision, it is not
+          presented as the business's overall priority. */}
+      <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 border-border pl-5 py-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>Governed work you can start</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Governed work you can start</span>
           <Badge variant={SEVERITY_VARIANT(top.severity)}>{severityLabel(top.severity)}</Badge>
         </div>
-        <strong data-testid="cockpit-top-action-title" className="font-display text-[1.375rem] font-semibold leading-snug tracking-tight text-foreground">{top.ownerVisibleSummary}</strong>
+        {!ownerDecision && (
+          <p data-testid="cockpit-no-canonical-decision" className="m-0 text-sm text-muted-foreground">
+            OpsIQ has not named a main business target yet, so this is work you can start — not your overall priority.
+          </p>
+        )}
+        <strong data-testid="cockpit-top-action-title" className="text-base font-semibold leading-snug text-foreground">{top.ownerVisibleSummary}</strong>
 
         {/* 2. Why This Is First — stays visible; it's the one thing a lay owner needs up front. */}
         <div data-testid="cockpit-why">
@@ -1242,7 +1251,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <div data-testid="cockpit-safe-actions" className="flex flex-col gap-3">
             {(dominantIsStartWork || dominantPrimaryAction) && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">Recommended next step</span>
+                <span className="text-sm font-medium text-foreground">Next step for this work</span>
                 {dominantIsStartWork ? (
                   <button
                     type="button"

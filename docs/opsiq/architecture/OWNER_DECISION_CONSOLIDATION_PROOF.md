@@ -88,7 +88,12 @@ Domain dashboards' `recommendedNextAction = latestCycle.actions[0]` (e.g. `owner
 8. `GROWTH_OPPORTUNITY`
 9. `PROCESS_OPTIMISATION`
 
-Classification is by finding code, from a total table covering every code the domain rule files emit. An exhaustiveness test enforces it.
+Classification is by finding code, from a total table covering every code the domain rule files emit. An exhaustiveness test enforces it. Codes are classed by the business harm they describe, not by their domain: e.g. `OPS_CAPACITY_BOTTLENECK` is overload, `OPS_HIGH_DELAY`/`SALES_WEAK_REPEAT` are customer failure, loss/cash-leak opportunities are profit loss, `FIN_HIGH_PAYABLES` is survival cash.
+
+**Source-specific classes (never fabricated):**
+- **Strategy** is classed from its RESOLVED five-state decision (`NEED_INFO`/`DONT_AS_PLANNED`/`NOT_YET`/`GO_WITH_CONDITIONS`/`GO`) and the actual blocker (`strategyCandidatePriorityClass`): under `NOT_YET`/`DONT_AS_PLANNED` a money-at-risk blocker (unaffordable, low reserve, negative case/ROI, weak ROI, long payback) is `PROFIT_LOSS` and high execution risk is `BLOCKED_EXECUTION`; every other Strategy step is `GROWTH_OPPORTUNITY`.
+- **Compliance** uses the existing compliance/action-gate semantics only: a hard block (`breached`, or `active` and expired — the gate's hard stop) is `SAFETY_COMPLIANCE`; an expired item already in evidence/review is `BLOCKED_EXECUTION` (`COMPLIANCE_RENEWAL_IN_PROGRESS`). Severity is set only where the compliance service itself raises a critical alert (`breached`); priority score and impact are 0 (none exist in the model); confidence comes from the item's recorded provenance. Upcoming/non-blocking items are not candidates. This reorders compliance relative to the old Now View ladder (which put it below profit leak) — deliberately, per the CRISIS precedence above.
+- **Business risks** (workspace-level) are candidates only when the workspace has exactly one real business, fixture rows and fixture-tainted startup sessions excluded; mitigating risks use residual risk; confidence is the fixed owner-recorded value 0.6.
 
 Within a class the order is:
 1. severity (restored from the linked finding; Recovery from its `priority`)
@@ -105,7 +110,23 @@ A candidate is excluded from the election when any of these holds:
 - its status is `completed` or `cancelled`;
 - its latest verification reached its target (`extractReachedTargetFromVerification`, `owner-finance/outcome-signals.ts:112`);
 - it is not on its domain's latest cycle. Engaged actions whose finding is still raised are re-attached to the new cycle (`owner-finance/dashboard.service.ts:120-125`), so an older-cycle action is one current evidence no longer raises;
-- it is a Strategy action that is incoherent with the live decision (`coherentStrategyActions`).
+- it is a Strategy action that is incoherent with the live decision (`coherentStrategyActions`);
+- it is a survival-class Cash or Finance action whose unsafe reading was superseded by a NEWER, disagreeing reading of the other source (`resolveCashFinanceSignal`, the same arbitration Now View uses; incomparable freshness excludes nothing).
+
+**Stale evidence** (evidence period older than 45 days, or a Finance snapshot amended after diagnosis) never lets an old high-class item win: the stale domain's actions are excluded as `stale_evidence` and replaced by ONE explicit `evidence_refresh` target per stale domain (class `MISSING_CRITICAL_EVIDENCE`, carrying the worst stale severity and naming the stale items). Current hard safety/compliance items are not domain actions and are unaffected.
+
+**Finance missing data** comes from the EXACT snapshot attached to the latest Finance cycle (`finance.snapshot`) — in Home, Business Condition and the Finance dashboard — never from whichever snapshot has the latest period.
+
+## 5a. Decision memory ("what changed")
+
+The resolver persists its memory as the audit event `owner.decision_changed` (entity `OwnerBusiness`/businessId) whenever the decision materially changes, on whichever route resolved it. "What changed" compares against the previous distinct memory, so it no longer depends on the owner visiting Now View. No schema change.
+
+## 5b. Surfaces that are explicitly subordinate or domain-local
+
+- Home, Cockpit, Priorities, Command Center and the `/owner/now` headline/plain-language block all render the one `CurrentOwnerDecision`.
+- Plan analysis (supervisor summary, plan checkpoints, plan action & proof, dominant plan constraint) is labelled as supporting analysis.
+- Domain dashboards' next action is labelled "this area only" and is the top OPEN action of that domain; wealth and budget moves are labelled as area-only.
+- Consultant decisions (`ENGAGEMENT_VIEW`) are not fetched on owner pages; owner alerts are shown below the decision and linked to their canonical position.
 
 ## 6. Legacy `/diagnosis`: dependency proof summary (retired in PR B)
 

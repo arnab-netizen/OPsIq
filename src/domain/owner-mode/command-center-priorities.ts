@@ -83,8 +83,8 @@ export function buildPriorityCommandStrip(input: PriorityStripInput): PriorityCa
   cards.push({
     id: "next_action",
     severity: canProceed ? "high" : "medium",
-    whatIsWrong: `Biggest constraint right now: ${wbp.topPriorityLabel}.`,
-    whyItMatters: `It is the one thing holding the business back (${wbp.dominantConstraint.replace(/_/g, " ")}).`,
+    whatIsWrong: `Plan analysis constraint: ${wbp.topPriorityLabel}.`,
+    whyItMatters: `The plan analysis sees this as its dominant constraint (${wbp.dominantConstraint.replace(/_/g, " ")}); your main business target above decides what comes first.`,
     nextStep: wbp.nextBestAction,
     owner: input.action?.responsibleParty ? cap(input.action.responsibleParty) : wbp.approvalRequired ? "Owner (approval required)" : "Owner",
     proof: input.action?.proofType ? `${input.action.proofType.replace(/_/g, " ")} proof` : wbp.proofRequired[0] ?? "Completion proof",

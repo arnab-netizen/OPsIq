@@ -23,15 +23,17 @@ export const GET = withCanonicalEnforcement(
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
     // Opt-in only (controlled-beta cockpit business-scoping fix, D-cockpit) — see
-    // GetOwnerNowViewOptions' doc comment in owner-now-view.service.ts. Only the Owner Cockpit page
-    // sends this; every other caller of this same route (/owner/priorities, /owner/process-intelligence,
-    // /owner/now) omits it and keeps today's exact, already-documented workspace-wide payload for
-    // processExecution/executionLifecycle.
+    // GetOwnerNowViewOptions' doc comment in owner-now-view.service.ts. The Owner Cockpit and
+    // /owner/priorities send this (both show governed work beside the canonical decision, so it
+    // must belong to the same business); every other caller (/owner/process-intelligence,
+    // /owner/now) omits it and keeps the workspace-wide processExecution/executionLifecycle payload.
     const restrictExecutionToAttributableBusiness = url.searchParams.get("restrictExecutionToBusiness") === "true";
-    // Resolve the canonical decision FIRST: Now View enriches it and persists its memory with the
-    // snapshot it writes (so "what changed" compares against this exact decision next time).
+    // Resolve the canonical decision FIRST: Now View enriches it (its headline names the main target).
     const home = await getOwnerHome(ctx.verifiedWorkspaceId, businessId);
-    const ownerDecision = home.currentOwnerDecision;
+    // Never pair one business's Now View with another business's decision: when a business was
+    // requested but the resolver selected a different one (e.g. an archived/fixture id in a
+    // single-business workspace), there is no decision for the requested business.
+    const ownerDecision = businessId && home.selectedBusinessId !== businessId ? null : home.currentOwnerDecision;
     const payload = await getOwnerNowView(ctx.verifiedWorkspaceId, businessId, undefined, ctx.verifiedActorId, {
       restrictExecutionToAttributableBusiness,
       ownerDecision,

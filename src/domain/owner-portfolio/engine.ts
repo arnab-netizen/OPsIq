@@ -52,7 +52,8 @@ export function toBusinessSummary(input: PortfolioBusinessInput): PortfolioBusin
     operationsScore: domainHealth(input, "operations"),
     cashflowScore: domainHealth(input, "cashflow"),
     executionScore: domainHealth(input, "sop"),
-    mainTarget: input.ownerDecision?.primaryTarget ?? null,
+    // Only this row's own business's decision may fill its main target.
+    mainTarget: input.ownerDecision && input.ownerDecision.businessId === input.businessId ? input.ownerDecision.primaryTarget : null,
   };
 }
 

@@ -373,6 +373,10 @@ export function computeReassessmentCadence(
   if (dataSufficiency === "insufficient") {
     return { days: 7, reason: "Key business data is missing, so OpsIQ cannot confirm the business is stable — review weekly until it is entered." };
   }
+  // Partial or out-of-date data can show low risk without proving stability either.
+  if (dataSufficiency === "caution" && risk < 40) {
+    return { days: 14, reason: "Some data is incomplete or out of date, so stability is not yet confirmed — fortnightly review until it is refreshed." };
+  }
   if (risk >= 40) {
     return { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." };
   }
@@ -423,8 +427,11 @@ export async function getBusinessCondition(
         // ties at the ceiling are a real, expected occurrence. Same fix/
         // rationale as dashboard.service.ts (PR #361).
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        // The exact snapshot the current Finance diagnosis was run on (never "latest period").
+        snapshot: true,
       },
     }),
+    // Only used when there is NO Finance diagnosis yet (pre-diagnosis input guidance).
     db.ownerFinancialSnapshot.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { periodEnd: "desc" },
@@ -525,27 +532,31 @@ export async function getBusinessCondition(
     for (const a of coherentStrategyActions(strategyCycle, strategyCycle.actions)) topActions.push(strategyActionRowToOwnerAction(a));
   }
 
+  // The snapshot behind the CURRENT Finance diagnosis (its cycle's own snapshot). A later-period
+  // snapshot that has not been diagnosed does not describe the diagnosis shown alongside it. Only when
+  // no Finance diagnosis exists yet does the latest snapshot guide what to enter.
+  const financeEvidenceSnapshot: any = financeCycle ? financeCycle.snapshot : latestFinanceSnapshot;
   const missingCriticalData =
-    latestFinanceSnapshot && Array.isArray(latestFinanceSnapshot.missingCriticalData)
-      ? (latestFinanceSnapshot.missingCriticalData as string[])
+    financeEvidenceSnapshot && Array.isArray(financeEvidenceSnapshot.missingCriticalData)
+      ? (financeEvidenceSnapshot.missingCriticalData as string[])
       : [];
 
-  // Compute data staleness from the latest finance snapshot's periodEnd (honest: 0 when no snapshot).
+  // Compute data staleness from the diagnosed finance snapshot's periodEnd (honest: 0 when no snapshot).
   const STALE_DAYS = 45;
   const now = opts.now ?? new Date();
   let isStaleData = false;
   let dataAgeDays: number | null = null;
-  if (latestFinanceSnapshot?.periodEnd) {
-    const periodEnd = latestFinanceSnapshot.periodEnd instanceof Date
-      ? latestFinanceSnapshot.periodEnd
-      : new Date(latestFinanceSnapshot.periodEnd as string);
+  if (financeEvidenceSnapshot?.periodEnd) {
+    const periodEnd = financeEvidenceSnapshot.periodEnd instanceof Date
+      ? financeEvidenceSnapshot.periodEnd
+      : new Date(financeEvidenceSnapshot.periodEnd as string);
     const ageDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
     dataAgeDays = ageDays;
     isStaleData = ageDays > STALE_DAYS;
   }
 
-  const missingInputsWithPriority = latestFinanceSnapshot
-    ? computeMissingInputsWithPriority(latestFinanceSnapshot as Record<string, unknown>)
+  const missingInputsWithPriority = financeEvidenceSnapshot
+    ? computeMissingInputsWithPriority(financeEvidenceSnapshot as Record<string, unknown>)
     : [];
 
   // Most-recent domain diagnosis date (cadence is applied below, once the profile risk is known).
@@ -588,7 +599,11 @@ export async function getBusinessCondition(
   });
 
   // Adaptive review cadence driven by the diagnosed condition (not a fixed 30 days).
-  const cadence = computeReassessmentCadence(profile.survivalRiskScore, profile.executionRiskScore, profile.dataSufficiencyStatus);
+  const cadence = computeReassessmentCadence(
+    profile.survivalRiskScore,
+    profile.executionRiskScore,
+    profile.dataSufficiencyStatus === "sufficient" && isStaleData ? "caution" : profile.dataSufficiencyStatus
+  );
   const nextReassessmentDue = lastDate
     ? new Date(lastDate.getTime() + cadence.days * 86_400_000).toISOString()
     : null;

@@ -16,9 +16,13 @@
  * proven Business Condition domain-score mappers — no domain scoring is duplicated here.
  */
 import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { coherentStrategyActions, currentStrategyDecision } from "@/services/owner-strategy/decision-view";
 import { presentStoredStrategyFinding } from "@/domain/owner-strategy/action-arbitration";
 import { getBusiness, hasExactlyOneRealBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
+import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 import {
   buildOwnerHomeSummary,
   type OwnerHomeSummary,
@@ -35,6 +39,8 @@ import {
 import {
   parseOwnerDecisionMemory,
   resolveOwnerDecision,
+  sameOwnerDecisionMemory,
+  strategyCandidatePriorityClass,
   type CurrentOwnerDecision,
   type OwnerDecisionCandidate,
   type OwnerDecisionEvent,
@@ -126,6 +132,8 @@ export interface OwnerHomeResult {
   currentOwnerDecision: CurrentOwnerDecision | null;
 }
 
+const SAFE_SURVIVAL_STATES = new Set<SurvivalLikeState>(["SAFE", "WATCH"]);
+
 type DomainKey = "finance" | "cashflow" | "sales" | "operations" | "sop" | "marketing" | "strategy";
 
 /**
@@ -163,15 +171,22 @@ export async function getOwnerHome(
   const where = { businessId, workspaceId };
   const latest = { orderBy: { sequenceNumber: "desc" as const }, include: spineCycleInclude };
 
-  // For domains where verification success triggers re-diagnosis (creating a new cycle),
-  // verifications must be queried directly across ALL cycles — not through the newest
-  // cycle's action chain — because the old cycle's actions hold the actual verification
-  // records and are invisible from the newest cycle. Affected domains: finance, sales,
-  // operations, sop, strategy (cashflow and marketing do not trigger re-diagnosis).
+  // Every domain re-diagnoses when a verification reaches its target (creating a new cycle from the
+  // same snapshot), so verifications are queried directly across ALL cycles — not through the
+  // newest cycle's action chain — because the old cycle's actions hold the actual verification
+  // records and are invisible from the newest cycle. (Finance, sales, operations, sop, strategy,
+  // cashflow, marketing and recovery all re-diagnose on a target-reached verification.)
   const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
     allFinanceVers, allSalesVers, allOperationsVers, allSopVers, allStrategyVers,
-    financeSnapshot, complianceItems, singleRealBusiness, previousSnapshots] = await Promise.all([
-    db.ownerFinanceCycle.findFirst({ where, ...latest }),
+    complianceItems, singleRealBusiness, decisionHistory,
+    allCashflowVers, allMarketingVers, allRecoveryVers] = await Promise.all([
+    // Finance also needs its snapshot's amendment state: an amended (superseded) snapshot means the
+    // latest diagnosis is based on figures the owner has since corrected.
+    db.ownerFinanceCycle.findFirst({
+      where,
+      orderBy: { sequenceNumber: "desc" },
+      include: { ...spineCycleInclude, snapshot: { select: { createdAt: true, periodEnd: true, supersededById: true, missingCriticalData: true } } },
+    }),
     db.recoveryCycle.findFirst({
       where,
       orderBy: { cycleNumber: "desc" },
@@ -196,18 +211,28 @@ export async function getOwnerHome(
     db.ownerOperationsVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
     db.ownerSopVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
     db.ownerStrategyVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
-    // Missing-critical-data is carried from the finance snapshot the latest cycle diagnosed (never invented).
-    db.ownerFinancialSnapshot.findFirst({ where, orderBy: { periodEnd: "desc" }, select: { missingCriticalData: true } }),
     // Business-attributable compliance obligations (a null businessId is attributable only when the
     // workspace holds exactly one real business — filtered below).
     db.ownerComplianceItem.findMany({
       where: { workspaceId, OR: [{ businessId }, { businessId: null }], status: { notIn: ["compliant", "waived"] } },
     }),
     hasExactlyOneRealBusiness(workspaceId),
-    // The previous decision (persisted with the Now View snapshot) for "what changed". Some snapshot
-    // writers (e.g. the process-execution POST's server-side re-derivation) carry no decision memory,
-    // so the most recent snapshot that DOES carry one is used.
-    db.ownerGuidanceSnapshot.findMany({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" }, take: 20, select: { payload: true } }),
+    // Decision memory for "what changed": the resolver's own OWNER_DECISION_CHANGED audit trail for
+    // this business (written below whenever the decision materially changes, on ANY route).
+    db.auditEvent.findMany({
+      where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED, entityType: "OwnerBusiness", entityId: businessId },
+      orderBy: { occurredAt: "desc" },
+      take: 5,
+      select: { payload: true },
+    }),
+    db.ownerCashflowVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
+    db.ownerMarketingVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
+    // RecoveryVerification has no businessId column: scope through its action's business.
+    db.recoveryVerification.findMany({
+      where: { workspaceId, action: { businessId, workspaceId } },
+      include: { action: { select: { title: true, targetValue: true, metricToMove: true, finding: { select: { code: true } } } } },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const domainScores: DomainScore[] = [];
@@ -248,19 +273,19 @@ export async function getOwnerHome(
     cycle: any,
     score: DomainScore,
     actionRows: any[],
-    allVers: any[] | null,
+    allVers: any[],
     findingRows: any[]
   ) => {
     domainScores.push(score);
     for (const f of findingRows) findings.push(rowToFinding(f, domain));
     const evidenceAsOf = cycle.snapshot?.createdAt ? asDate(cycle.snapshot.createdAt) : null;
     const periodEnd = cycle.snapshot?.periodEnd ? asDate(cycle.snapshot.periodEnd) : null;
-    const stale = periodEnd !== null && periodEnd.getTime() < staleCutoff;
+    // Stale: the evidence period is old, or (Finance) the diagnosed snapshot has since been amended.
+    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || Boolean(cycle.snapshot?.supersededById);
     if (stale) staleDomains.push(domain);
-    // Verifications: across all cycles where the domain re-diagnoses on success; else the latest cycle's.
-    const verRows: Array<{ v: any; findingCode: string; title: string }> = allVers
-      ? allVers.map((v: any) => ({ v, findingCode: v.action?.findingCode ?? "", title: v.action?.title ?? "" }))
-      : actionRows.flatMap((a: any) => (a.verifications ?? []).map((v: any) => ({ v, findingCode: a.findingCode, title: a.title })));
+    const verRows: Array<{ v: any; findingCode: string; title: string }> = allVers.map((v: any) => ({
+      v, findingCode: v.action?.findingCode ?? "", title: v.action?.title ?? "",
+    }));
     for (const r of verRows) pushVerification(domain, r.v, r.title);
     const ctx = {
       businessId,
@@ -286,20 +311,47 @@ export async function getOwnerHome(
     const periodEnd = recovery.snapshot?.periodEnd ? asDate(recovery.snapshot.periodEnd) : null;
     const stale = periodEnd !== null && periodEnd.getTime() < staleCutoff;
     if (stale) staleDomains.push("recovery");
-    const ctx = { businessId, workspaceId, domain: "recovery" as const, findingsById: new Map(), evidenceAsOf, stale, verifiedFixes: new Map<string, Date>() };
+    // Recovery persists targetValue 0 when its action had no target: "reached target" is judged
+    // against the ACTION's own target (null ⇒ never reached), not the placeholder.
+    const recoveryVerRows = allRecoveryVers.map((v: any) => ({
+      v: { ...v, targetValue: typeof v.action?.targetValue === "number" ? v.action.targetValue : null },
+      findingCode: String(v.action?.finding?.code ?? v.action?.metricToMove ?? "RECOVERY_ACTION"),
+      title: String(v.action?.title ?? ""),
+    }));
+    for (const r of recoveryVerRows) {
+      if (verificationReachedTarget(r.v)) events.push({ kind: "ACTION_VERIFIED", title: r.title, at: verificationTime(r.v) });
+    }
+    const ctx = { businessId, workspaceId, domain: "recovery" as const, findingsById: new Map(), evidenceAsOf, stale, verifiedFixes: fixesFrom(recoveryVerRows) };
     for (const a of recovery.actions) {
-      candidates.push(recoveryActionToCandidate(a, ctx));
+      const targetValue = typeof a.targetValue === "number" ? a.targetValue : null;
+      candidates.push(recoveryActionToCandidate({ ...a, verifications: (a.verifications ?? []).map((v: any) => ({ ...v, targetValue })) }, ctx));
       if (a.status === "completed" && a.completedAt) events.push({ kind: "ACTION_COMPLETED", title: a.title, at: asDate(a.completedAt) });
-      for (const v of a.verifications ?? []) {
-        if (verificationReachedTarget(v)) events.push({ kind: "ACTION_VERIFIED", title: a.title, at: verificationTime(v) });
+    }
+  }
+  if (cashflow) addDomain("cashflow", cashflow, cashflowCycleToDomainScore(cashflow), cashflow.actions, allCashflowVers, cashflow.findings);
+  // Cash triage and Finance diagnosis can go stale relative to each other. The SAME arbitration
+  // Now View applies (resolveCashFinanceSignal) decides which survival reading is current: a
+  // survival-class action from a reading superseded by a NEWER, disagreeing reading of the other
+  // source must not win the election. Incomparable freshness fails safe (nothing is excluded).
+  if (cashflow && finance) {
+    const cashFinance = resolveCashFinanceSignal(
+      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: asDate(cashflow.createdAt) },
+      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: asDate(finance.createdAt) }
+    );
+    const supersededDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
+    if (supersededDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
+      for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i];
+        if (c.domain === supersededDomain && c.priorityClass === "SURVIVAL_CASH" && !c.exclusion) {
+          candidates[i] = { ...c, exclusion: "superseded" };
+        }
       }
     }
   }
-  if (cashflow) addDomain("cashflow", cashflow, cashflowCycleToDomainScore(cashflow), cashflow.actions, null, cashflow.findings);
   if (sales) addDomain("sales", sales, salesCycleToDomainScore(sales), sales.actions, allSalesVers, sales.findings);
   if (operations) addDomain("operations", operations, operationsCycleToDomainScore(operations), operations.actions, allOperationsVers, operations.findings);
   if (sop) addDomain("sop", sop, sopCycleToDomainScore(sop), sop.actions, allSopVers, sop.findings);
-  if (marketing) addDomain("marketing", marketing, marketingCycleToDomainScore(marketing), marketing.actions, null, marketing.findings);
+  if (marketing) addDomain("marketing", marketing, marketingCycleToDomainScore(marketing), marketing.actions, allMarketingVers, marketing.findings);
   let strategyContext: OwnerDecisionStrategyContext | null = null;
   if (strategy) {
     // Only the decision's primary step and allowed supporting steps may compete (never a stale
@@ -308,7 +360,13 @@ export async function getOwnerHome(
     const coherentIds = new Set(coherent.map((a: any) => a.id));
     // Retired "data quality" rows are data gaps, not upside (presentStoredStrategyFinding).
     const strategyFindings = strategy.findings.map((f: any) => presentStoredStrategyFinding(f));
+    const strategyStart = candidates.length;
     addDomain("strategy", strategy, strategyCycleToDomainScore(strategy), coherent, allStrategyVers, strategyFindings);
+    // Strategy precedence comes from its RESOLVED five-state decision and blocker, not the code alone.
+    const strategyDecisionCode = currentStrategyDecision(strategy, now)?.code ?? null;
+    for (let i = strategyStart; i < candidates.length; i++) {
+      candidates[i] = { ...candidates[i], priorityClass: strategyCandidatePriorityClass(strategyDecisionCode, candidates[i].findingCode) };
+    }
     for (const a of strategy.actions) {
       if (coherentIds.has(a.id)) continue;
       const c = domainActionToCandidate(a, {
@@ -336,8 +394,15 @@ export async function getOwnerHome(
     if (c) candidates.push(c);
   }
   if (singleRealBusiness) {
+    // Same read-time fixture correction Now View's topRisks and listBusinessRisks apply: a QA
+    // blueprint's risk (including historical rows whose isFixtureRecord was wrongly persisted as
+    // false, linked to a fixture startup session) must never become a real owner's main target.
+    const fixtureTaintedSessionIds = await getFixtureTaintedStartupSessionIds(workspaceId);
+    const fixtureSessionExclusion = fixtureTaintedSessionIds.length > 0
+      ? { OR: [{ linkedStartupSessionId: null }, { linkedStartupSessionId: { notIn: fixtureTaintedSessionIds } }] }
+      : {};
     const risks = await db.businessRiskEntry.findMany({
-      where: { workspaceId, isFixtureRecord: false, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING"] } },
+      where: { workspaceId, isFixtureRecord: false, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING"] }, ...fixtureSessionExclusion },
     });
     for (const r of risks) {
       const c = businessRiskToCandidate(r, { businessId, workspaceId });
@@ -345,8 +410,11 @@ export async function getOwnerHome(
     }
   }
 
-  const missingCriticalData = Array.isArray(financeSnapshot?.missingCriticalData)
-    ? (financeSnapshot!.missingCriticalData as unknown[]).filter((m): m is string => typeof m === "string")
+  // Missing-critical-data comes from the EXACT snapshot the latest Finance diagnosis ran on — never
+  // inferred from whichever snapshot has the latest period (a later, undiagnosed snapshot does not
+  // describe the diagnosis being arbitrated). No Finance diagnosis ⇒ nothing is claimed.
+  const missingCriticalData = Array.isArray(finance?.snapshot?.missingCriticalData)
+    ? (finance!.snapshot!.missingCriticalData as unknown[]).filter((m): m is string => typeof m === "string")
     : [];
 
   const summary = domainScores.length > 0
@@ -356,19 +424,13 @@ export async function getOwnerHome(
     status: "insufficient" as const, lowestDataConfidenceScore: 0, lowConfidenceDomains: [], missingCriticalData,
   };
   const profile = buildBusinessConditionProfile({ businessId, workspaceId, domainScores, missingCriticalData, now });
-  const reassessment = computeReassessmentCadence(profile.survivalRiskScore, profile.executionRiskScore, dataSufficiency.status);
+  const reassessment = computeReassessmentCadence(
+    profile.survivalRiskScore,
+    profile.executionRiskScore,
+    dataSufficiency.status === "sufficient" && staleDomains.length > 0 ? "caution" : dataSufficiency.status
+  );
 
-  let previous = null as ReturnType<typeof parseOwnerDecisionMemory>;
-  for (const snap of previousSnapshots) {
-    previous = parseOwnerDecisionMemory((snap?.payload as any)?.ownerDecision);
-    if (previous) break;
-  }
-  const since = previous ? Date.parse(previous.generatedAt) : null;
-  const domainsDiagnosedSince = since === null
-    ? []
-    : domainScores.filter((d) => asDate(d.generatedAt).getTime() > since).map((d) => d.domain);
-
-  const currentOwnerDecision = resolveOwnerDecision({
+  const decisionInput = {
     businessId,
     workspaceId,
     candidates,
@@ -377,11 +439,45 @@ export async function getOwnerHome(
     staleDomains,
     strategy: strategyContext,
     reassessment,
-    previous,
     events,
-    domainsDiagnosedSince,
     now,
-  });
+  };
+  // "What changed" compares against the previous DISTINCT decision recorded for this business, so the
+  // answer is the same on Home, Cockpit, Priorities or the Command Center and on every re-read.
+  const memories = decisionHistory
+    .map((e: any) => parseOwnerDecisionMemory(e?.payload?.memory))
+    .filter((m: ReturnType<typeof parseOwnerDecisionMemory>): m is NonNullable<typeof m> => m !== null);
+  const currentMemory = resolveOwnerDecision({ ...decisionInput, previous: null, domainsDiagnosedSince: [] }).memory;
+  const previous = memories.find((m: NonNullable<ReturnType<typeof parseOwnerDecisionMemory>>) => !sameOwnerDecisionMemory(m, currentMemory)) ?? null;
+  const since = previous ? Date.parse(previous.generatedAt) : null;
+  const domainsDiagnosedSince = since === null
+    ? []
+    : domainScores.filter((d) => asDate(d.generatedAt).getTime() > since).map((d) => d.domain);
+  const currentOwnerDecision = resolveOwnerDecision({ ...decisionInput, previous, domainsDiagnosedSince });
+
+  // Record the decision when it materially changed (or is the first one): an auditable trail of what
+  // OpsIQ told the owner, and the memory above. Best-effort — a failed write never breaks the read.
+  const latestMemory = memories[0] ?? null;
+  if (!latestMemory || !sameOwnerDecisionMemory(latestMemory, currentOwnerDecision.memory)) {
+    try {
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED,
+        actorType: "system",
+        workspaceId,
+        entityType: "OwnerBusiness",
+        entityId: businessId,
+        payload: {
+          memory: currentOwnerDecision.memory,
+          state: currentOwnerDecision.state,
+          primaryCandidateId: currentOwnerDecision.primaryCandidateId,
+          primaryTitle: currentOwnerDecision.primaryTarget?.title ?? null,
+          priorityClass: currentOwnerDecision.primaryTarget?.priorityClass ?? null,
+        },
+      });
+    } catch {
+      // The decision is still correct and returned; only its change history misses this entry.
+    }
+  }
 
   return {
     businesses: businessList,

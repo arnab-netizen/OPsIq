@@ -27,7 +27,7 @@ const RULE_FILES: Array<[string, RegExp]> = [
   ["owner-marketing/opportunity-rules.ts", /"(MKT_[A-Z0-9_]+)"/g],
   ["owner-strategy/risk-rules.ts", /"(STR_[A-Z0-9_]+)"/g],
   ["owner-strategy/opportunity-rules.ts", /"(STR_[A-Z0-9_]+)"/g],
-  ["founder-recovery/diagnosis.ts", /code: "([A-Z_]+)"/g],
+  ["founder-recovery/diagnosis.ts", /code: "([A-Z0-9_]+)"/g],
 ];
 
 function emittedCodes(): string[] {

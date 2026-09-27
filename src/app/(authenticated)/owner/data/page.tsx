@@ -279,7 +279,7 @@ function NextAction({ state }: { state: OnboardingView }) {
 
       {state.firstAction && (
         <p className="mt-3 text-sm text-foreground">
-          <span className="font-medium">Do this next: </span>
+          <span className="font-medium">Next setup step: </span>
           {state.firstAction}
         </p>
       )}

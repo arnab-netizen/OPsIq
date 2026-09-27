@@ -42,7 +42,7 @@
  *    re-validates that any supplied businessId belongs to the caller's workspace before using it
  *    (`businessInWorkspace` in process-execution-bridge.service.ts) and rejects a foreign one
  *    with `WRONG_WORKSPACE` — this client-side wiring is a convenience, never a trust boundary.
- *  - READ (what this page DISPLAYS as "Top Priority" / "Execution lifecycle"): `processExecution`
+ *  - READ (what this page DISPLAYS as "Governed work you can start" / "Execution lifecycle"): `processExecution`
  *    is built from `processCorrections` + `cashProfitProtection` via `buildProcessExecutionBridge`.
  *    `cashProfitProtection` is genuinely per-business (arbitrated cash/finance state). But
  *    `processCorrections` (and the PASS23 workload/capability/SOP/training/effectiveness expansion
@@ -54,7 +54,7 @@
  *    `restrictExecutionToBusiness=true` to now-view (see now-view/route.ts and
  *    GetOwnerNowViewOptions in owner-now-view.service.ts) so that, whenever the workspace holds
  *    more than one real business, only the genuinely business-attributable content (CASH_PROFIT /
- *    STARTUP_MODE) is shown as this business's own Top Priority / Execution lifecycle — never a
+ *    STARTUP_MODE) is shown as this business's own governed work / Execution lifecycle — never a
  *    workspace-wide finding mislabeled as belonging to whichever business is selected. A
  *    single-business workspace is unaffected (unambiguous by definition).
  *
@@ -248,9 +248,9 @@ export default function OwnerCockpitPage() {
     // flight or if it fails -- it is only re-set below, inside the generation guard, on success.
     setAssessmentNarrative(null);
     try {
-      // restrictExecutionToBusiness=true (only ever sent here — see now-view/route.ts's doc comment)
+      // restrictExecutionToBusiness=true (sent here and by /owner/priorities — see now-view/route.ts's doc comment)
       // closes the cockpit business-scoping bug where switching the active business changed the
-      // finance diagnosis but left Top Priority / Execution lifecycle stuck on whichever business's
+      // finance diagnosis but left the governed work / Execution lifecycle stuck on whichever business's
       // workspace-wide process-intelligence evidence happened to dominate. It has no effect without a
       // businessId, and no effect at all in a single-business workspace (see
       // GetOwnerNowViewOptions' doc comment in owner-now-view.service.ts).

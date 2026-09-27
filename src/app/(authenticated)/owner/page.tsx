@@ -558,7 +558,7 @@ export default function OwnerCommandCenterPage() {
                   {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.map((c: string) => c.replace(/_/g, " ")).join(", ")}</span>}
                 </div>
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-arbitration">
-                  <strong>Cross-domain arbitration:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ")} wins; {wbp.arbitration.rejectedCount} conflicting move(s) rejected.
+                  <strong>Plan analysis constraint:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ")}; {wbp.arbitration.rejectedCount} conflicting plan move(s) set aside.
                   {wbp.arbitration.ownerApprovalNeeded && " Owner approval needed."}
                 </div>
               </div>
@@ -668,7 +668,7 @@ export default function OwnerCommandCenterPage() {
 
           {actionPlan?.found && actionPlan.assignment && (
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-action-plan">
-              <div className="text-xs uppercase text-muted-foreground mb-2">Action &amp; proof</div>
+              <div className="text-xs uppercase text-muted-foreground mb-2">Plan action &amp; proof (supporting analysis)</div>
               <div className="text-sm font-medium mb-2" data-testid="action-title">{actionPlan.assignment.actionTitle}</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-md border p-2 text-sm" data-testid="action-responsible">

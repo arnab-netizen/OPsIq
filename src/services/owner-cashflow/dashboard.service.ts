@@ -166,8 +166,11 @@ export async function getCashflowDashboard(
       }
     : null;
 
+  // DOMAIN-LOCAL next action: the highest-ranked OPEN action of this domain's latest cycle (never a
+  // completed/cancelled one). The owner's overall main target comes only from the canonical owner
+  // decision (owner-home/home.service.ts).
   const recommendedNextAction =
-    latestCycle && latestCycle.actions.length > 0 ? latestCycle.actions[0] : null;
+    latestCycle?.actions.find((a: { status: string }) => a.status !== "completed" && a.status !== "cancelled") ?? null;
 
   return {
     businesses: businessList,

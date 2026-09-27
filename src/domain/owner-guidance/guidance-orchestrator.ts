@@ -265,7 +265,7 @@ function summarize(
   classification: GuidanceClassification
 ): string {
   const top = steps.topIssues[0];
-  const lead = top ? `Most urgent: ${top.headline} (${top.category}).` : "No active issues.";
+  const lead = top ? `Top operating signal: ${top.headline} (${top.category}).` : "No active operating signals.";
   const cash = ctx.cashSafe ? "" : " Cash survival is unsafe — stabilization before growth.";
   const data = ctx.missingCriticalData.length > 0
     ? ` Missing data capping confidence: ${ctx.missingCriticalData.join("; ")}.`

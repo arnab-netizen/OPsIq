@@ -579,7 +579,7 @@ function SopCycleView({
 
       {recommended && (
         <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next execution action</div>
+          <div className="text-xs uppercase text-muted-foreground">Recommended next execution action (this area only)</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           <p className="text-xs text-muted-foreground">

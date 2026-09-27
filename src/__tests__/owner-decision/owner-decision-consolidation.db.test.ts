@@ -108,14 +108,20 @@ describe("[db] canonical owner decision — consolidation", () => {
     // The verified Minor item is not eligible (it was the Cockpit's pre-consolidation primary).
     expect(d.attention.some((t) => t.candidateId.endsWith(minorId))).toBe(false);
     expect(d.excluded).toEqual(expect.arrayContaining([expect.objectContaining({ reason: "verified_complete" })]));
-    // Exactly one primary: missing costs/cash outranks the speculative funding decision.
-    expect(d.primaryTarget?.findingCode).toBe("FIN_MISSING_CRITICAL_DATA");
+    // Exactly one primary. Strategy resolved NOT_YET because the plan is unaffordable: committing would
+    // put money at risk, which OpsIQ handles before the (still reported) missing Finance data.
+    expect(d.primaryTarget?.findingCode).toBe("STR_UNAFFORDABLE");
+    expect(d.primaryTarget?.priorityClass).toBe("PROFIT_LOSS");
     expect(d.attention.filter((t) => t.candidateId === d.primaryCandidateId)).toHaveLength(1);
-    // The conflict is explained and the Strategy item waits (not hidden).
-    expect(d.whyThisWins.join(" ")).toMatch(/funding gap/);
-    expect(d.whatCanWait.map((t) => t.findingCode)).toContain("STR_UNAFFORDABLE");
+    // The Finance-vs-Strategy conflict is explained, and the Finance data request waits (not hidden).
+    expect(d.whyThisWins.join(" ")).toMatch(/would put at risk/);
+    expect(d.whyThisWins.join(" ")).toMatch(/Finance/);
+    expect(d.whatCanWait.map((t) => t.findingCode)).toContain("FIN_MISSING_CRITICAL_DATA");
     expect(d.whatNotToDo.join(" ")).toMatch(/New delivery van/);
+    // Missing costs/cash are carried from the diagnosed snapshot and cap confidence.
     expect(d.missingInformation.length).toBeGreaterThan(0);
+    expect(d.confidence.capped).toBe(true);
+    expect(d.confidence.level).not.toBe("high");
 
     await teardownOwnerBusiness(businessId);
   });
@@ -138,6 +144,13 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(priorities.ownerDecision.primaryCandidateId).toBe(primary);
     expect(priorities.ownerDecision.attention[0].candidateId).toBe(primary);
     expect(commandCenter.currentOwnerDecision.primaryCandidateId).toBe(primary);
+    // /owner/now's plain-language block names the SAME target first — never Now View's own #1.
+    const { toPlainLanguage } = await import("@/domain/owner-guidance/beginner-mode");
+    const title = homeBody.currentOwnerDecision.primaryTarget.title;
+    for (const nv of [cockpit, priorities]) {
+      expect(nv.beginnerExplanation.plainReason).toBe(toPlainLanguage(`Your main target: ${title}`));
+      expect(nv.beginnerExplanation.whatToDoFirst[0]).toBe(toPlainLanguage(title));
+    }
     // The retired bridges are gone from the payload: no second elector can reach the Cockpit.
     expect(cockpit).not.toHaveProperty("financeTopPriority");
     expect(cockpit).not.toHaveProperty("domainTopPriority");
@@ -201,6 +214,106 @@ describe("[db] canonical owner decision — consolidation", () => {
     });
     expect(salesTop).toBeTruthy();
     expect(d.attention.map((t) => t.title)).toContain(salesTop!.title);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] Finance missing data comes from the DIAGNOSED snapshot, not a later-period undiagnosed one", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Snapshot");
+    const p = period();
+    // Snapshot A (diagnosed): revenue only — costs and cash missing.
+    const a = await createFinancialSnapshot(businessId, { ...p, currency: "INR", revenue: 100000 }, actor, workspaceId);
+    await runFinanceDiagnosis(businessId, a.id, actor, workspaceId);
+    // Snapshot B (NOT diagnosed): a later period with complete data.
+    const later = new Date(Date.parse(p.periodEnd) + 31 * 86_400_000).toISOString().slice(0, 10);
+    const bStart = new Date(Date.parse(p.periodEnd) + 86_400_000).toISOString().slice(0, 10);
+    await createFinancialSnapshot(businessId, {
+      periodStart: bStart, periodEnd: later, currency: "INR", revenue: 120000, fixedCosts: 40000, variableCosts: 30000, cashOnHand: 90000,
+    }, actor, workspaceId);
+    const aRow = await db.ownerFinancialSnapshot.findUnique({ where: { id: a.id }, select: { missingCriticalData: true } });
+    const expected = (aRow!.missingCriticalData as string[]);
+    expect(expected.length).toBeGreaterThan(0);
+
+    const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    for (const m of expected) expect(d.missingInformation).toContain(m);
+    // The Business Condition rollup and Finance dashboard read the same diagnosed snapshot.
+    const { getBusinessCondition } = await import("@/services/owner-condition/business-condition.service");
+    const cond = await getBusinessCondition(workspaceId, businessId);
+    expect(cond.profile!.missingCriticalData).toEqual(expected);
+    const dash = await getFinanceDashboard(workspaceId, businessId);
+    expect((dash as any).missingCriticalData).toEqual(expected);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] a superseded unsafe cash reading never wins over a NEWER safe Finance diagnosis", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Cash Supersession");
+    // Older cash triage: critical.
+    const cf = await createCashflowSnapshot(businessId, {
+      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
+    }, actor, workspaceId);
+    const cashCycle = await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
+    expect(["AT_RISK", "CRITICAL", "INSOLVENT_RISK"]).toContain(cashCycle.cashflowState);
+    const cashOnly = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    expect(cashOnly.primaryTarget?.domain).toBe("cashflow");
+    expect(cashOnly.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
+    // Newer Finance diagnosis: healthy and safe.
+    const fSnap = await createFinancialSnapshot(businessId, {
+      ...period(), currency: "INR", revenue: 500000, fixedCosts: 60000, variableCosts: 120000, cashOnHand: 900000,
+    } as any, actor, workspaceId);
+    const finCycle = await runFinanceDiagnosis(businessId, fSnap.id, actor, workspaceId);
+    expect(["SAFE", "WATCH"]).toContain(finCycle.survivalState);
+
+    const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    expect(d.attention.some((t) => t.domain === "cashflow" && t.priorityClass === "SURVIVAL_CASH")).toBe(false);
+    expect(d.excluded).toEqual(expect.arrayContaining([expect.objectContaining({ reason: "superseded" })]));
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] a stale diagnosis becomes an explicit refresh-evidence target, not a 'do this now'", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Stale");
+    const cf = await createCashflowSnapshot(businessId, {
+      periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000,
+      receivablesOverdue: 15000, payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
+    }, actor, workspaceId);
+    await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
+    const d = (await getOwnerHome(workspaceId, businessId, { now: new Date("2026-09-27T10:00:00Z") })).currentOwnerDecision!;
+    expect(d.primaryTarget?.source).toBe("evidence_refresh");
+    expect(d.primaryTarget?.domain).toBe("cashflow");
+    expect(d.attention.every((t) => t.source !== "domain_action" || t.domain !== "cashflow")).toBe(true);
+    expect(d.excluded.some((e) => e.reason === "stale_evidence")).toBe(true);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] 'what changed' does not depend on which route was visited (Home only, no Now View visit)", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Memory");
+    const sSnap = await createSalesSnapshot(businessId, {
+      ...period(), currency: "INR", leads: 200, qualifiedLeads: 100, orders: 5, revenue: 50000, averageOrderValue: 10000,
+      newCustomers: 5, repeatCustomers: 0, lostCustomers: 10, complaints: 20, discountAmount: 30000, refundAmount: 5000, staffCount: 2,
+    } as any, actor, workspaceId);
+    await runSalesDiagnosis(businessId, sSnap.id, actor, workspaceId);
+    // First Home read: no history, nothing invented.
+    const first = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    expect(first.whatChanged).toEqual([]);
+    // A critical cash danger appears; the owner only ever opens Home.
+    const cf = await createCashflowSnapshot(businessId, {
+      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
+    }, actor, workspaceId);
+    await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
+    const second = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    expect(second.primaryDomain).toBe("cashflow");
+    expect(second.whatChanged.map((c) => c.kind)).toContain("MAIN_TARGET_CHANGED");
+    // Re-reading (any route) keeps reporting the same change relative to the previous distinct decision.
+    const again = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    expect(again.whatChanged.map((c) => c.kind)).toContain("MAIN_TARGET_CHANGED");
 
     await teardownOwnerBusiness(businessId);
   });

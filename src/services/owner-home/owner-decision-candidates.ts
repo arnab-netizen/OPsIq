@@ -16,6 +16,7 @@
  * "Reached its target" reuses the single existing definition, `extractReachedTargetFromVerification`.
  */
 import { extractReachedTargetFromVerification } from "@/domain/owner-finance/outcome-signals";
+import { isExpired } from "@/domain/owner-mode/compliance-boundary";
 import {
   classifyOwnerFindingCode,
   type OwnerCandidateExclusion,
@@ -99,7 +100,11 @@ function exclusionFor(action: any, ctx: DomainCandidateContext, findingCode: str
   if (status === "completed") return "completed";
   if (status === "cancelled") return "cancelled";
   if (!OPEN_OWNER_ACTION_STATUSES.includes(status)) return "superseded";
-  const own = Array.isArray(action.verifications) ? action.verifications : [];
+  // The latest CONCLUSIVE own verification decides (an inconclusive/unverified/disputed row recorded
+  // later does not reopen work that was verified as fixed; a later verified_not_improved does).
+  const own = (Array.isArray(action.verifications) ? action.verifications : []).filter(
+    (v: any) => v?.status === "verified_improved" || v?.status === "verified_not_improved"
+  );
   const latestOwn = own.reduce((best: any, v: any) => (best === null || verificationTime(v) > verificationTime(best) ? v : best), null);
   if (latestOwn && verificationReachedTarget(latestOwn)) return "verified_complete";
   const fixedAt = ctx.verifiedFixes.get(findingCode);
@@ -186,9 +191,25 @@ export function recoveryActionToCandidate(action: any, ctx: DomainCandidateConte
 
 const TERMINAL_COMPLIANCE_STATUSES = new Set(["compliant", "waived"]);
 
+/** Evidence strength from the item's recorded provenance (never a constant). */
+const COMPLIANCE_PROVENANCE_CONFIDENCE: Record<string, number> = {
+  authoritative_document: 1,
+  professional_input: 0.85,
+  owner_input: 0.7,
+};
+const UNSTATED_PROVENANCE_CONFIDENCE = 0.6;
+
 /**
- * A compliance obligation that is breached, or expired and not resolved, is a hard safety/legal
- * candidate. Upcoming expiries stay on the compliance page (not an overall-priority emergency).
+ * A compliance obligation competes only on what the existing compliance semantics PROVE:
+ *   - `breached` — a recorded breach; the compliance service itself raises a CRITICAL alert for it
+ *     (compliance.service.ts updateComplianceStatus) → hard safety/legal block, severity critical;
+ *   - `active` and expired — exactly the owner-action gate's professional-review hard stop
+ *     (owner-action-gate.service.ts, COMPLIANCE_BLOCKED, via the same `isExpired` rule) → hard
+ *     block; the model records no severity for it, so none is invented;
+ *   - expired but already in evidence/review (`evidence_pending` / `review_pending`) — the gate does
+ *     not block on it: routine renewal work, never top safety precedence.
+ * No priority, impact or severity is fabricated: the model supplies none, so the within-class
+ * factors are 0 and the recorded provenance decides evidence strength.
  */
 export function complianceItemToCandidate(
   item: any,
@@ -197,33 +218,46 @@ export function complianceItemToCandidate(
   const status = String(item.status ?? "");
   if (TERMINAL_COMPLIANCE_STATUSES.has(status)) return null;
   const expiresAt = asDate(item.expiresAt);
-  const expired = expiresAt !== null && expiresAt.getTime() < ctx.now.getTime();
-  if (status !== "breached" && !expired) return null;
-  const what = status === "breached" ? "is in breach" : "has expired";
+  const expired = isExpired(expiresAt, ctx.now);
+  const breached = status === "breached";
+  const gateHardStop = status === "active" && expired;
+  if (!breached && !expired) return null;
+  const hardBlock = breached || gateHardStop;
+  const name = String(item.name ?? "compliance obligation");
+  const provenance = typeof item.provenanceSource === "string" ? item.provenanceSource : null;
   return {
     candidateId: `compliance_item:${item.id}`,
-    businessId: ctx.businessId,
+    // The row's own business (a null businessId is only passed in when the workspace has exactly one
+    // real business, making it that business's by definition) — so a mis-scoped row is caught by the
+    // arbiter's business filter instead of being silently re-stamped.
+    businessId: typeof item.businessId === "string" ? item.businessId : ctx.businessId,
     workspaceId: ctx.workspaceId,
     source: "compliance_item",
     domain: "compliance",
     sourceId: String(item.id),
-    priorityClass: "SAFETY_COMPLIANCE",
-    findingCode: "COMPLIANCE_BREACH",
+    priorityClass: hardBlock ? "SAFETY_COMPLIANCE" : "BLOCKED_EXECUTION",
+    findingCode: hardBlock ? "COMPLIANCE_BREACH" : "COMPLIANCE_RENEWAL_IN_PROGRESS",
     findingId: null,
-    title: `Resolve "${String(item.name ?? "compliance obligation")}" — it ${what}`,
+    title: breached
+      ? `Resolve the breach of "${name}"`
+      : hardBlock
+        ? `Renew "${name}" (or get professional review) — it has expired`
+        : `Finish renewing "${name}" — it expired and is ${status === "review_pending" ? "awaiting review" : "awaiting evidence"}`,
     explanation: typeof item.penaltyDescription === "string" && item.penaltyDescription
       ? `Consequence if left unresolved: ${item.penaltyDescription}`
-      : "A legal or contractual obligation is not being met.",
-    severity: "critical",
-    priorityScore: 100,
-    expectedImpactScore: 100,
-    confidence: 1,
+      : hardBlock
+        ? "A legal or contractual obligation is not being met; OpsIQ holds material actions until it is resolved."
+        : "The renewal is in progress; finish it so the obligation is met again.",
+    severity: breached ? "critical" : null,
+    priorityScore: 0,
+    expectedImpactScore: 0,
+    confidence: provenance && provenance in COMPLIANCE_PROVENANCE_CONFIDENCE ? COMPLIANCE_PROVENANCE_CONFIDENCE[provenance] : UNSTATED_PROVENANCE_CONFIDENCE,
     effortScore: 50,
     status,
     ownerActionRequired: true,
-    blocking: true,
+    blocking: hardBlock,
     evidence: [
-      status === "breached" ? "Recorded as breached." : `Expired on ${expiresAt!.toISOString().slice(0, 10)}.`,
+      breached ? "Recorded as breached." : `Expired on ${expiresAt!.toISOString().slice(0, 10)}.`,
       ...(typeof item.legalBasis === "string" && item.legalBasis ? [`Legal basis: ${item.legalBasis}`] : []),
     ],
     missingData: [],
@@ -241,10 +275,13 @@ const RISK_CATEGORY_CLASS: Record<string, OwnerPriorityClass> = {
   FINANCIAL: "SURVIVAL_CASH",
   OPERATIONAL: "BLOCKED_EXECUTION",
   EXECUTION: "BLOCKED_EXECUTION",
-  MARKET: "GROWTH_OPPORTUNITY",
-  STRATEGIC: "GROWTH_OPPORTUNITY",
+  // A CRITICAL market/strategic risk is revenue or profit under threat — never a growth option to defer.
+  MARKET: "PROFIT_LOSS",
+  STRATEGIC: "PROFIT_LOSS",
 };
 export const OPEN_RISK_STATUSES = new Set(["IDENTIFIED", "ASSESSED", "MITIGATING"]);
+/** Evidence strength of an owner-recorded (not measured) risk. */
+export const OWNER_RECORDED_RISK_CONFIDENCE = 0.6;
 /** Same critical threshold the risk service uses to raise a critical alert (business-risk.service.ts). */
 export const CRITICAL_RISK_SEVERITY = 75;
 
@@ -258,10 +295,12 @@ export function businessRiskToCandidate(
 ): OwnerDecisionCandidate | null {
   if (risk.isFixtureRecord) return null;
   if (!OPEN_RISK_STATUSES.has(String(risk.status ?? ""))) return null;
-  const severityScore = clampScore(risk.severity);
+  // A risk being mitigated competes at its recorded RESIDUAL level when one has been assessed.
+  const residual = risk.status === "MITIGATING" && typeof risk.residualRisk === "number" ? clampScore(risk.residualRisk) : null;
+  const severityScore = residual ?? clampScore(risk.severity);
   if (severityScore < CRITICAL_RISK_SEVERITY) return null;
   const category = String(risk.category ?? "").toUpperCase();
-  const priorityClass = RISK_CATEGORY_CLASS[category] ?? "GROWTH_OPPORTUNITY";
+  const priorityClass = RISK_CATEGORY_CLASS[category] ?? "PROFIT_LOSS";
   return {
     candidateId: `business_risk:${risk.id}`,
     businessId: ctx.businessId,
@@ -279,7 +318,9 @@ export function businessRiskToCandidate(
     severity: "critical",
     priorityScore: severityScore,
     expectedImpactScore: clampScore(risk.impact),
-    confidence: clampConfidence(clampScore(risk.likelihood) / 100),
+    // Likelihood is the chance the risk happens, not evidence strength: an owner-recorded risk is an
+    // owner assessment, not measured data, so its evidence strength is fixed at "moderate".
+    confidence: OWNER_RECORDED_RISK_CONFIDENCE,
     effortScore: 50,
     status: String(risk.status),
     ownerActionRequired: true,

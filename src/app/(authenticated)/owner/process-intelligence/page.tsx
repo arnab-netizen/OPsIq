@@ -215,7 +215,7 @@ export default function OwnerProcessIntelligencePage() {
       )}
       {!loading && !error && (
         <>
-          {/* PRIMARY FOCUS — the single most important thing, always visible (no owner overload). */}
+          {/* PROCESS FOCUS — this page's domain-local process finding; the overall main target is the canonical owner decision (Home). */}
           <ProcessIntelligencePanel data={pi} />
           <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>What to do about it</h2>

@@ -11,6 +11,7 @@ import {
   parseOwnerDecisionMemory,
   rankOwnerCandidates,
   resolveOwnerDecision,
+  strategyCandidatePriorityClass,
   type OwnerDecisionCandidate,
   type ResolveOwnerDecisionInput,
 } from "@/domain/owner-spine/owner-decision";
@@ -121,7 +122,7 @@ describe("adversarial cases", () => {
     expect(d.attention.map((t) => t.title)).toEqual(["Fire safety certificate expired", "Cash runs out in 20 days", "Convert the pipeline"]);
   });
 
-  it("D — missing critical evidence outranks a speculative high-score recommendation, and caps confidence", () => {
+  it("D — missing critical evidence outranks a speculative high-score recommendation and is reported as missing information", () => {
     const d = resolveOwnerDecision(input(
       [
         cand({ findingCode: "STR_UNAFFORDABLE", title: "Close the ₹50,000 funding gap", domain: "strategy", priorityScore: 100, severity: "critical" }),
@@ -208,7 +209,7 @@ describe("production defect — verified Minor Finance item vs active Strategy f
     const cs = [
       // The verified item still sits open (in_progress, re-attached to the re-diagnosed cycle).
       cand({ findingCode: "FIN_OPP_DATA_QUALITY", title: "Improve data completeness", status: "in_progress", priorityScore: 28, exclusion: "verified_complete" }),
-      cand({ findingCode: "STR_UNAFFORDABLE", title: "Close the ₹50,000 funding gap", domain: "strategy", priorityScore: 70, severity: "high", targetRoute: "/owner/strategy" }),
+      cand({ findingCode: "STR_UNAFFORDABLE", title: "Close the ₹50,000 funding gap", domain: "strategy", priorityScore: 70, severity: "high", targetRoute: "/owner/strategy", priorityClass: strategyCandidatePriorityClass("NOT_YET", "STR_UNAFFORDABLE") }),
       cand({ findingCode: "FIN_OPP_REVENUE_QUALITY", title: "Improve revenue quality", priorityScore: 3, severity: "low" }),
     ];
     const d = resolveOwnerDecision(input(cs, {
@@ -288,5 +289,66 @@ describe("rankOwnerCandidates", () => {
       cand({ findingCode: "FIN_HIGH_PAYABLES", title: "low sev", severity: "low", priorityScore: 10 }),
     ]);
     expect(r[0].title).toBe("low sev");
+  });
+});
+
+describe("hostile-review regressions", () => {
+  it("supporting steps never let a same-domain lower item jump ahead of a more urgent item from another domain", () => {
+    const d = resolveOwnerDecision(input([
+      cand({ findingCode: "FIN_LOW_RUNWAY", title: "Protect runway", severity: "critical" }),
+      cand({ findingCode: "CF_URGENT_PAYMENT_RISK", title: "Urgent payment due", domain: "cashflow", severity: "critical", priorityScore: 40 }),
+      cand({ findingCode: "FIN_OPP_DATA_QUALITY", title: "Improve data completeness", severity: "low" }),
+    ]));
+    expect(d.primaryTarget?.title).toBe("Protect runway");
+    expect(d.supportingSteps).toEqual([]);
+    expect(d.whatCanWait.map((t) => t.title)).toEqual(["Urgent payment due", "Improve data completeness"]);
+  });
+
+  it("a supporting step is never also named in 'what not to do'", () => {
+    const d = resolveOwnerDecision(input([
+      cand({ findingCode: "FIN_LOW_RUNWAY", title: "Protect runway", severity: "critical" }),
+      cand({ findingCode: "FIN_OPP_MARGIN_IMPROVEMENT", title: "Improve margin" }),
+    ]));
+    expect(d.supportingSteps.map((t) => t.title)).toEqual(["Improve margin"]);
+    expect(d.whatNotToDo.join(" ")).not.toMatch(/Improve margin/);
+  });
+
+  it("two different compliance breaches are two issues: switching between them is a main-target change", () => {
+    const breach = (id: string, title: string) =>
+      cand({ findingCode: "COMPLIANCE_BREACH", title, domain: "compliance", source: "compliance_item", candidateId: `compliance_item:${id}`, severity: "critical" });
+    const first = resolveOwnerDecision(input([breach("a", "Fire certificate expired")]));
+    const later = resolveOwnerDecision(input([breach("b", "VAT filing breached")], { previous: first.memory, now: new Date("2026-09-28T10:00:00.000Z") }));
+    const kinds = later.whatChanged.map((c) => c.kind);
+    expect(kinds).toContain("MAIN_TARGET_CHANGED");
+    expect(kinds).toContain("CRITICAL_ISSUE_APPEARED");
+    expect(kinds).toContain("CRITICAL_ISSUE_RESOLVED");
+  });
+
+  it("a confidence move within the same level never reads 'from high to high'", () => {
+    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x", confidence: 1 })]));
+    const later = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x", confidence: 0.8 })], { previous: first.memory }));
+    const c = later.whatChanged.find((w) => w.kind === "CONFIDENCE_CHANGED");
+    expect(c?.message).toMatch(/moved from 100 to 80/);
+    expect(c?.message).not.toMatch(/from high to high/);
+  });
+
+  it("a rounding-only funding gap difference is not reported as a change", () => {
+    const strategy = (gap: number) => ({ code: "NOT_YET" as const, headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: gap, currency: "INR" });
+    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(50000.2) }));
+    const later = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(50000.4), previous: first.memory }));
+    expect(later.whatChanged.map((c) => c.kind)).not.toContain("FUNDING_GAP_CHANGED");
+  });
+
+  it("a recorded compliance breach is not capped by unrelated missing finance data", () => {
+    const d = resolveOwnerDecision(input(
+      [cand({ findingCode: "COMPLIANCE_BREACH", title: "Licence breached", domain: "compliance", source: "compliance_item", severity: "critical", confidence: 1 })],
+      { dataSufficiency: { status: "insufficient", lowestDataConfidenceScore: 0, lowConfidenceDomains: ["finance"], missingCriticalData: ["cashOnHand"] } }
+    ));
+    expect(d.confidence.capped).toBe(false);
+    expect(d.confidence.level).toBe("high");
+  });
+
+  it("a memory without a confidence score is ignored rather than inventing a confidence change", () => {
+    expect(parseOwnerDecisionMemory({ generatedAt: "2026-09-27T10:00:00.000Z", primaryKey: "finance:X" })).toBeNull();
   });
 });

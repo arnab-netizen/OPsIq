@@ -59,9 +59,11 @@ export function OwnerDecisionCard({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>{heading}</span>
         {p?.severity && <Badge variant={SEVERITY_VARIANT(p.severity)}>{SEVERITY_LABEL[p.severity] ?? p.severity}</Badge>}
-        <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
-          <span data-testid="owner-decision-confidence">{CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level}</span>
-        </Badge>
+        {(p || decision.state === "NO_EVIDENCE") && (
+          <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
+            <span data-testid="owner-decision-confidence">{CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level}</span>
+          </Badge>
+        )}
       </div>
 
       {p ? (
@@ -90,7 +92,7 @@ export function OwnerDecisionCard({
           <strong className="text-base font-semibold text-foreground">
             {decision.state === "NO_EVIDENCE"
               ? "OpsIQ needs your business numbers before it can pick a main target."
-              : "No open action needs your attention right now."}
+              : "None of your diagnosed areas has an open action right now."}
           </strong>
           {decision.whatToDoFirst && <p className="mt-1.5 text-sm text-muted-foreground">{decision.whatToDoFirst}</p>}
           {decision.state === "NO_EVIDENCE" && (
@@ -127,7 +129,7 @@ export function OwnerDecisionCard({
 
       {detail === "full" && decision.whatChanged.length > 0 && (
         <div data-testid="owner-decision-changed">
-          <span className="text-sm font-medium text-foreground">What changed since your last check</span>
+          <span className="text-sm font-medium text-foreground">What changed since OpsIQ&rsquo;s previous advice</span>
           <ul className="mt-1 list-disc space-y-1 pl-[18px] text-sm text-muted-foreground">
             {decision.whatChanged.slice(0, 5).map((c, i) => <li key={i}>{c.message}</li>)}
           </ul>
@@ -135,7 +137,7 @@ export function OwnerDecisionCard({
       )}
 
       {detail === "full" && (decision.supportingSteps.length > 0 || decision.whatCanWait.length > 0) && (
-        <Disclosure summary={`What comes next and what can wait (${decision.supportingSteps.length + decision.whatCanWait.length})`} data-testid="owner-decision-queue">
+        <Disclosure summary={`What comes after this (${decision.supportingSteps.length + decision.whatCanWait.length})`} data-testid="owner-decision-queue">
           {decision.supportingSteps.length > 0 && (
             <>
               <p className="m-0 font-medium text-foreground">After this, in {p?.domainLabel}:</p>
@@ -144,7 +146,7 @@ export function OwnerDecisionCard({
           )}
           {decision.whatCanWait.length > 0 && (
             <>
-              <p className="m-0 font-medium text-foreground">Can wait until the main target is handled:</p>
+              <p className="m-0 font-medium text-foreground">{decision.supportingSteps.length > 0 ? "Then, in this order:" : "Next, in this order:"}</p>
               <ul className="mt-1 list-disc space-y-1 pl-[18px]">{decision.whatCanWait.map((t) => <TargetLine key={t.candidateId} t={t} />)}</ul>
             </>
           )}

@@ -8,7 +8,7 @@ import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
-import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { ownerDecisionCandidateIdForEntity, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -17,7 +17,7 @@ import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 // "no data" / "unknown" surfaces are shown honestly.
 
 interface AlertSummary {
-  alerts: Array<{ id: string; message: string; severity: string; type: string }>;
+  alerts: Array<{ id: string; message: string; severity: string; type: string; entityType?: string | null; entityId?: string | null }>;
   unreadCount: number;
 }
 
@@ -117,7 +117,8 @@ export default function OwnerHomePage() {
   useEffect(() => {
     if (contextLoading) return;
     if (needsBusinessRecovery) return;
-    if (!activeBusinessId) { setData(null); setLoading(false); return; }
+    // Invalidate any in-flight load for the previous business so it can never commit afterwards.
+    if (!activeBusinessId) { ++requestSeq.current; setData(null); setLoading(false); return; }
     void load(activeBusinessId);
   }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
 
@@ -166,27 +167,6 @@ export default function OwnerHomePage() {
         </nav>
       </div>
 
-      {/* Alert summary — critical alerts and unread count */}
-      {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <span className="text-sm font-semibold text-destructive">
-              {alertSummary.unreadCount > 0 ? `${alertSummary.unreadCount} unread alert${alertSummary.unreadCount === 1 ? "" : "s"}` : "Critical alerts"}
-            </span>
-            <Link href="/owner/alerts" className="text-xs underline text-destructive">View all →</Link>
-          </div>
-          {alertSummary.alerts.length > 0 && (
-            <ul className="space-y-1">
-              {alertSummary.alerts.map((a) => (
-                <li key={a.id} className="text-xs text-destructive truncate">
-                  · {a.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
@@ -212,6 +192,41 @@ export default function OwnerHomePage() {
               <OwnerDecisionCard decision={data.currentOwnerDecision as CurrentOwnerDecision} />
             </div>
           )}
+
+          {/* Notifications — never a second priority list. Critical alerts are notifications about a
+              risk or compliance breach; when that record is already in the canonical order it is
+              linked to its place there instead of being shown as a competing priority. */}
+          {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (() => {
+            const attention = (data?.currentOwnerDecision as CurrentOwnerDecision | undefined)?.attention ?? [];
+            const position = (a: { entityType?: string | null; entityId?: string | null }) => {
+              const id = ownerDecisionCandidateIdForEntity(a.entityType, a.entityId);
+              const i = id ? attention.findIndex((t) => t.candidateId === id) : -1;
+              return i;
+            };
+            return (
+              <div className="mb-5 rounded-lg border border-border bg-card p-3" data-testid="home-notifications">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    {alertSummary.unreadCount > 0 ? `Notifications · ${alertSummary.unreadCount} unread` : "Notifications"}
+                  </span>
+                  <Link href="/owner/alerts" className="text-xs underline">View all →</Link>
+                </div>
+                {alertSummary.alerts.length > 0 && (
+                  <ul className="space-y-1">
+                    {alertSummary.alerts.map((a) => {
+                      const i = position(a);
+                      return (
+                        <li key={a.id} className="text-xs text-muted-foreground" data-testid="home-notification">
+                          · {a.message}
+                          {i >= 0 && <span data-testid="home-notification-linked"> — {i === 0 ? "this is your main target above" : `item ${i + 1} in the order above`}</span>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
 
           {!data?.hasData || !s ? (
             <div className="border rounded-lg p-6 text-center text-muted-foreground">

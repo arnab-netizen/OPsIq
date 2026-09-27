@@ -109,7 +109,7 @@ export default function OwnerPortfolioPage() {
           <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Cross-business ranking</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-              <div>Most urgent: <strong>{byId(ranking.mostUrgentBusinessId)}</strong></div>
+              <div>Business needing attention first: <strong>{byId(ranking.mostUrgentBusinessId)}</strong></div>
               <div>Highest profit opportunity: <strong>{byId(ranking.highestProfitOpportunityBusinessId)}</strong></div>
               <div>Highest cash risk: <strong>{byId(ranking.highestCashRiskBusinessId)}</strong></div>
               <div>Worst execution problem: <strong>{byId(ranking.worstExecutionProblemBusinessId)}</strong></div>

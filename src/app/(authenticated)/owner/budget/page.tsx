@@ -301,7 +301,7 @@ export default function OwnerBudgetPlanPage() {
       <div className="mb-2">
         <PageHeader
           title="Budget & Profit Plan"
-          description="Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses."
+          description="Governed budget mode, capital allocation, cash/profit forecast, spend control, and the next budget action — evidence-gated, not guesses. Your overall main target is on Home."
           actions={<Link href="/owner"><Button>← Command Center</Button></Link>}
         />
       </div>
@@ -377,7 +377,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 4: Next best action */}
               <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground">Next best action</div>
+                <div className="text-xs uppercase text-muted-foreground">Next budget action (this area only)</div>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="default-accessible">{decisionType ? (DECISION_TYPE_LABEL[decisionType] ?? decisionType) : "—"}</Badge>
                   <span className="font-semibold">{plan?.nextBestAction ?? guidance?.nextBestAction}</span>

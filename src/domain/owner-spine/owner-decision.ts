@@ -52,7 +52,7 @@ export const OWNER_PRIORITY_CLASS_LABEL: Record<OwnerPriorityClass, string> = {
   SURVIVAL_CASH: "a cash-survival danger",
   CUSTOMER_SERVICE_FAILURE: "a customer or service failure",
   OVERLOAD_BLOCKING: "overload that is blocking work",
-  PROFIT_LOSS: "money the business is losing now",
+  PROFIT_LOSS: "money the business is losing, cannot collect, or would put at risk",
   BLOCKED_EXECUTION: "work that cannot move forward",
   MISSING_CRITICAL_EVIDENCE: "missing information OpsIQ needs to advise you safely",
   GROWTH_OPPORTUNITY: "a growth or investment decision",
@@ -64,33 +64,49 @@ export function ownerPriorityClassRank(c: OwnerPriorityClass): number {
   return OWNER_PRIORITY_CLASSES.indexOf(c);
 }
 
+// Placement follows what each rule MEASURES (read from the emitting rule file), not its prefix or
+// its risk/opportunity flag: an "opportunity" that frees trapped cash or stops a leak belongs with the
+// loss it fixes; a data gap about a hypothetical Strategy option is part of that growth decision, not
+// a gap in the evidence about the running business.
 const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
   SAFETY_COMPLIANCE: ["COMPLIANCE_BREACH"],
   SURVIVAL_CASH: [
     "FIN_INSOLVENT_RUNWAY", "FIN_LOW_RUNWAY", "FIN_LOW_ABSOLUTE_CASH", "FIN_HIGH_DEBT_PRESSURE",
+    // Its own rule text: "vendor-cutoff and liquidity risk are elevated" — the same danger as CF_VENDOR_CUTOFF_RISK.
+    "FIN_HIGH_PAYABLES",
     "CF_INSOLVENT_RUNWAY", "CF_LOW_RUNWAY", "CF_URGENT_PAYMENT_RISK", "CF_VENDOR_CUTOFF_RISK", "CF_DEBT_DEFAULT_RISK",
   ],
   CUSTOMER_SERVICE_FAILURE: [
-    "OPS_DELIVERY_FAILURE", "OPS_HIGH_COMPLAINT_RATE", "OPS_HIGH_REWORK",
+    "OPS_DELIVERY_FAILURE", "OPS_HIGH_COMPLAINT_RATE", "OPS_HIGH_REWORK", "OPS_HIGH_DELAY", "OPS_LOW_COMPLETION",
     "SALES_HIGH_COMPLAINT_RATIO", "SALES_HIGH_REFUND_RATE",
-    "SOP_REPEATED_FAILURES",
-    "QUALITY_FAILURE",
+    // Customers not coming back is a retention/service failure (Now View classifies churn the same way).
+    "SALES_WEAK_REPEAT",
+    "QUALITY_FAILURE", "SLOW_TURNAROUND", "WEAK_REPEAT_RATE",
   ],
-  OVERLOAD_BLOCKING: [],
+  // Demand exceeding capacity is overload that blocks the business from serving customers.
+  OVERLOAD_BLOCKING: ["OPS_CAPACITY_BOTTLENECK"],
   PROFIT_LOSS: [
     "FIN_BELOW_BREAK_EVEN", "FIN_NEGATIVE_GROSS_MARGIN", "FIN_NEGATIVE_NET_MARGIN", "FIN_HIGH_FIXED_COST_BURDEN",
-    "FIN_HIGH_PAYROLL_BURDEN", "FIN_HIGH_PAYABLES", "FIN_HIGH_RECEIVABLES", "FIN_NOTABLE_OUTSTANDING_DEBT",
+    "FIN_HIGH_PAYROLL_BURDEN", "FIN_HIGH_RECEIVABLES",
     "FIN_DISCOUNT_LEAKAGE", "FIN_REFUND_REWORK_LEAKAGE",
+    // Loss-reduction / cash-release fixes for the same money problems (never "growth" to defer).
+    "FIN_OPP_BREAK_EVEN_RECOVERY", "FIN_OPP_DEBT_REDUCTION", "FIN_OPP_LEAKAGE_REDUCTION", "FIN_OPP_MARGIN_IMPROVEMENT",
+    "FIN_OPP_RECEIVABLES_COLLECTION", "FIN_OPP_REVENUE_QUALITY",
     "CF_HIGH_OVERDUE_RECEIVABLES", "CF_SLOW_COLLECTIONS", "CF_OWNER_WITHDRAWAL_PRESSURE",
-    "SALES_LOST_CUSTOMER_LEAKAGE", "SALES_DISCOUNT_DEPENDENCE",
-    "MKT_WASTED_SPEND",
+    "CF_OPP_COLLECT_OVERDUE", "CF_OPP_DEFER_PAYABLES", "CF_OPP_REDUCE_OWNER_WITHDRAWAL",
+    // The current revenue engine failing (sales lost now), not optional upside.
+    "SALES_LOST_CUSTOMER_LEAKAGE", "SALES_DISCOUNT_DEPENDENCE", "SALES_LOW_CONVERSION", "SALES_POOR_FOLLOW_UP",
+    "SALES_WEAK_B2B_PIPELINE",
+    "MKT_WASTED_SPEND", "MKT_POOR_CONVERSION", "MKT_NO_FOLLOWUP", "MKT_WEAK_OFFER", "MKT_WRONG_CHANNEL_MIX", "MKT_LOW_REFERRAL",
     "HIGH_COST_RATIO", "DISCOUNT_LEAKAGE", "DELIVERY_COST_LEAKAGE", "RECEIVABLES_PRESSURE", "LOW_REVENUE",
+    "LOW_STAFF_PRODUCTIVITY", "POOR_CAMPAIGN_CONVERSION", "LOW_AOV", "B2B_CONCENTRATION",
   ],
   BLOCKED_EXECUTION: [
-    "OPS_CAPACITY_BOTTLENECK", "OPS_HIGH_DELAY", "OPS_LOW_COMPLETION", "OPS_INVENTORY_SHORTAGE", "OPS_SOP_NONCOMPLIANCE",
+    "OPS_INVENTORY_SHORTAGE", "OPS_SOP_NONCOMPLIANCE",
     "SOP_HIGH_OVERDUE", "SOP_LOW_COMPLETION", "SOP_HIGH_DISPUTE", "SOP_LOW_PROOF_COMPLIANCE", "SOP_LOW_VERIFICATION",
     "SOP_HIGH_REASSIGNMENT", "SOP_LOW_COVERAGE",
-    "SLOW_TURNAROUND", "LOW_STAFF_PRODUCTIVITY",
+    // Internal actions failing repeatedly ("needs an SOP, not another reminder") — execution, not customers.
+    "SOP_REPEATED_FAILURES",
   ],
   MISSING_CRITICAL_EVIDENCE: [
     "FIN_MISSING_CRITICAL_DATA", "FIN_INVALID_CURRENCY",
@@ -99,26 +115,24 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "OPS_MISSING_CRITICAL_DATA", "OPS_INVALID_CURRENCY",
     "SOP_MISSING_CRITICAL_DATA", "SOP_INVALID_CURRENCY",
     "MKT_MISSING_CRITICAL_DATA", "MKT_INVALID_CURRENCY",
-    "STR_MISSING_CRITICAL_DATA", "STR_INVALID_CURRENCY", "STR_MISSING_CASH", "STR_MISSING_RISK_LEVEL",
   ],
   GROWTH_OPPORTUNITY: [
-    "FIN_OPP_BREAK_EVEN_RECOVERY", "FIN_OPP_DEBT_REDUCTION", "FIN_OPP_LEAKAGE_REDUCTION", "FIN_OPP_MARGIN_IMPROVEMENT",
-    "FIN_OPP_RECEIVABLES_COLLECTION", "FIN_OPP_REVENUE_QUALITY",
-    "CF_OPP_COLLECT_OVERDUE", "CF_OPP_DEFER_PAYABLES", "CF_OPP_REDUCE_OWNER_WITHDRAWAL",
-    "SALES_LOW_CONVERSION", "SALES_POOR_FOLLOW_UP", "SALES_WEAK_REPEAT", "SALES_WEAK_B2B_PIPELINE",
     "SALES_OPP_CONVERT_PIPELINE", "SALES_OPP_IMPROVE_RETENTION", "SALES_OPP_RAISE_CONVERSION",
     "SALES_OPP_TIGHTEN_DISCOUNT", "SALES_OPP_WINBACK",
-    "MKT_LOW_REFERRAL", "MKT_NO_FOLLOWUP", "MKT_POOR_CONVERSION", "MKT_WEAK_OFFER", "MKT_WRONG_CHANNEL_MIX",
     "MKT_OPP_ACTIVATE_REFERRALS", "MKT_OPP_ADD_FOLLOWUP", "MKT_OPP_BUILD_ORGANIC", "MKT_OPP_LIFT_CONVERSION",
     "MKT_OPP_SCALE_WINNER",
+    // Strategy evaluates an optional investment: its warnings AND its data gaps are part of that
+    // growth decision (a missing field on a hypothetical option is not a gap about the running business).
     "STR_UNAFFORDABLE", "STR_LOW_CASH_RESERVE", "STR_HIGH_EXECUTION_RISK", "STR_LONG_PAYBACK", "STR_NEGATIVE_BASE_CASE",
     "STR_NEGATIVE_ROI", "STR_NEGATIVE_WORST_CASE", "STR_WEAK_ROI",
     "STR_OPP_FAST_PAYBACK", "STR_OPP_SAFE_UPSIDE", "STR_OPP_STRONG_RETURN",
-    "LOW_AOV", "WEAK_REPEAT_RATE", "POOR_CAMPAIGN_CONVERSION",
+    "STR_MISSING_CRITICAL_DATA", "STR_INVALID_CURRENCY", "STR_MISSING_CASH", "STR_MISSING_RISK_LEVEL",
   ],
   PROCESS_OPTIMISATION: [
     "FIN_OPP_DATA_QUALITY", "CF_OPP_DATA_QUALITY", "SALES_OPP_DATA_QUALITY", "OPS_OPP_DATA_QUALITY",
     "SOP_OPP_DATA_QUALITY", "MKT_OPP_DATA_QUALITY",
+    // A low-severity "enter the EMI for the recorded debt" data request (opportunity-rules.ts).
+    "FIN_NOTABLE_OUTSTANDING_DEBT",
     "OPS_HIGH_IDLE", "OPS_OPP_CLOSE_SOP_GAP", "OPS_OPP_CUT_REWORK", "OPS_OPP_RECLAIM_IDLE", "OPS_OPP_RECOVER_DELAYS",
     "OPS_OPP_USE_CAPACITY_HEADROOM",
     "SOP_OPP_CLEAR_OVERDUE", "SOP_OPP_CLOSE_COVERAGE_GAP", "SOP_OPP_CONVERT_TO_SOP", "SOP_OPP_RAISE_VERIFICATION",
@@ -145,14 +159,46 @@ export const OWNER_PRIORITY_CLASS_BY_CODE: Readonly<Record<string, OwnerPriority
 export function classifyOwnerFindingCode(code: string): OwnerPriorityClass {
   const known = OWNER_PRIORITY_CLASS_BY_CODE[code];
   if (known) return known;
-  if (/_MISSING_CRITICAL_DATA$|_INVALID_CURRENCY$|^STR_MISSING_/.test(code)) return "MISSING_CRITICAL_EVIDENCE";
+  if (/^STR_/.test(code)) return "GROWTH_OPPORTUNITY";
+  if (/_MISSING_CRITICAL_DATA$|_INVALID_CURRENCY$/.test(code)) return "MISSING_CRITICAL_EVIDENCE";
   if (/_OPP_DATA_QUALITY$/.test(code)) return "PROCESS_OPTIMISATION";
+  return "GROWTH_OPPORTUNITY";
+}
+
+// --- Strategy: precedence from the resolved five-state decision -------------------------------------
+
+/** Strategy decision codes (owner-strategy/decision.ts STRATEGY_DECISION_CODES). */
+export type StrategyDecisionCodeForPriority = "NEED_INFO" | "DONT_AS_PLANNED" | "NOT_YET" | "GO_WITH_CONDITIONS" | "GO";
+
+const STRATEGY_MONEY_AT_RISK_CODES = new Set([
+  // cash: the plan cannot be funded without draining the business
+  "STR_UNAFFORDABLE", "STR_LOW_CASH_RESERVE",
+  // economics: going ahead as planned loses money or never pays back
+  "STR_NEGATIVE_BASE_CASE", "STR_NEGATIVE_ROI", "STR_NEGATIVE_WORST_CASE", "STR_WEAK_ROI", "STR_LONG_PAYBACK",
+]);
+const STRATEGY_EXECUTION_CODES = new Set(["STR_HIGH_EXECUTION_RISK"]);
+
+/**
+ * Class of a Strategy step, from Strategy's RESOLVED decision — never from the finding code alone.
+ * Strategy evaluates an optional plan. Under GO / GO_WITH_CONDITIONS / NEED_INFO every step is part of
+ * pursuing (or evaluating) that upside → growth. Under NOT_YET / DONT_AS_PLANNED Strategy is holding
+ * the owner back from a plan, and the step guards the actual blocker: money the plan would put at risk
+ * (unaffordable, or economics that lose money) → PROFIT_LOSS; the business cannot execute it →
+ * BLOCKED_EXECUTION. That risk only materialises if the owner commits, so it never outranks a PRESENT
+ * cash-survival danger or customer failure (reported directly by Finance/Cashflow/Operations), but it
+ * does outrank optional upside, process work and data requests about other areas.
+ */
+export function strategyCandidatePriorityClass(decisionCode: StrategyDecisionCodeForPriority | null, findingCode: string): OwnerPriorityClass {
+  if (decisionCode === "NOT_YET" || decisionCode === "DONT_AS_PLANNED") {
+    if (STRATEGY_MONEY_AT_RISK_CODES.has(findingCode)) return "PROFIT_LOSS";
+    if (STRATEGY_EXECUTION_CODES.has(findingCode)) return "BLOCKED_EXECUTION";
+  }
   return "GROWTH_OPPORTUNITY";
 }
 
 // --- Candidate contract --------------------------------------------------------------------------
 
-export type OwnerCandidateSource = "domain_action" | "compliance_item" | "business_risk";
+export type OwnerCandidateSource = "domain_action" | "compliance_item" | "business_risk" | "evidence_refresh";
 
 /** Why a candidate is not eligible to be the owner's target (null = eligible). */
 export type OwnerCandidateExclusion =
@@ -160,7 +206,9 @@ export type OwnerCandidateExclusion =
   | "cancelled"
   | "verified_complete"
   | "verified_fix_awaiting_new_evidence"
-  | "superseded";
+  | "superseded"
+  /** Its evidence is older than the freshness window: replaced by an explicit refresh target. */
+  | "stale_evidence";
 
 /** One normalized candidate that competes for the owner's overall priority. */
 export interface OwnerDecisionCandidate {
@@ -203,6 +251,19 @@ export interface OwnerDecisionCandidate {
 
 export function isEligibleOwnerCandidate(c: OwnerDecisionCandidate): boolean {
   return c.exclusion === null;
+}
+
+/**
+ * The canonical candidate a persisted record (e.g. the entity an Alert points at) corresponds to.
+ * Every owner-visible CRITICAL alert is a notification about a risk or a compliance breach (the only
+ * owner-facing producers — business-risk.service.ts, compliance.service.ts); surfaces use this to link
+ * such a notification to its place in the canonical order instead of showing it as a second priority.
+ */
+export function ownerDecisionCandidateIdForEntity(entityType: string | null | undefined, entityId: string | null | undefined): string | null {
+  if (!entityId) return null;
+  if (entityType === "BusinessRiskEntry") return `business_risk:${entityId}`;
+  if (entityType === "OwnerComplianceItem") return `compliance_item:${entityId}`;
+  return null;
 }
 
 // --- Canonical comparator --------------------------------------------------------------------------
@@ -416,9 +477,13 @@ function toTarget(c: OwnerDecisionCandidate): OwnerDecisionTarget {
   };
 }
 
-/** Stable identity of an issue across re-diagnoses (action rows are re-created per cycle). */
-export function ownerCandidateIssueKey(c: Pick<OwnerDecisionCandidate, "domain" | "findingCode">): string {
-  return `${c.domain}:${c.findingCode}`;
+/**
+ * Stable identity of an issue across re-diagnoses. Domain actions are re-created per cycle, so their
+ * issue is domain + finding code; control records (compliance items, risks) share one code per kind,
+ * so their identity also includes the record id (two different breaches are two different issues).
+ */
+export function ownerCandidateIssueKey(c: Pick<OwnerDecisionCandidate, "domain" | "findingCode" | "candidateId" | "source">): string {
+  return c.source === "domain_action" ? `${c.domain}:${c.findingCode}` : `${c.domain}:${c.findingCode}:${c.candidateId}`;
 }
 
 function factorSentence(
@@ -432,8 +497,14 @@ function factorSentence(
       return `It is ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}, and OpsIQ always deals with that before ${OWNER_PRIORITY_CLASS_LABEL[runnerUp.priorityClass]} such as ${other}.`;
     case "severity":
       return `It is rated ${winner.severity ?? "unrated"}, more serious than ${other} (${runnerUp.severity ?? "unrated"}).`;
-    case "priority":
-      return `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]} of the same seriousness; this one has the higher combined urgency, impact and pressure score (${Math.round(clampScore(winner.priorityScore))} vs ${Math.round(clampScore(runnerUp.priorityScore))} for ${other}).`;
+    case "priority": {
+      const sameSeverity = winner.severity !== null ? ` rated ${winner.severity}` : "";
+      // Only Spine domain actions carry the combined urgency/impact/pressure score; Recovery and
+      // control records carry a fixed rating on the same 0–100 scale, so the wording stays generic.
+      const bothSpine = winner.source === "domain_action" && runnerUp.source === "domain_action" && winner.domain !== "recovery" && runnerUp.domain !== "recovery";
+      const measure = bothSpine ? "higher combined urgency, impact and pressure score" : "higher priority rating";
+      return `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has the ${measure} (${Math.round(clampScore(winner.priorityScore))} vs ${Math.round(clampScore(runnerUp.priorityScore))} for ${other}).`;
+    }
     case "impact":
       return `It is as urgent as ${other} but is expected to make a bigger difference to the business.`;
     case "confidence":
@@ -471,11 +542,18 @@ function buildMemory(
     generatedAt,
     primaryKey: primary ? ownerCandidateIssueKey(primary) : null,
     primaryTitle: primary ? primary.title : null,
-    criticalKeys: attention.filter((t) => t.severity === "critical").map((t) => ownerCandidateIssueKey(t)),
+    criticalKeys: [...new Set(attention.filter((t) => t.severity === "critical").map((t) => ownerCandidateIssueKey(t)))],
     confidenceScore,
     confidenceLevel,
     fundingGap,
   };
+}
+
+/** True when two decision memories describe the same decision (no material change between them). */
+export function sameOwnerDecisionMemory(a: OwnerDecisionMemory, b: OwnerDecisionMemory): boolean {
+  const key = (m: OwnerDecisionMemory) =>
+    JSON.stringify([m.primaryKey, [...m.criticalKeys].sort(), m.confidenceLevel, m.confidenceScore, m.fundingGap === null ? null : Math.round(m.fundingGap)]);
+  return key(a) === key(b);
 }
 
 /** Parse a persisted memory defensively (it lives in a Json snapshot payload). */
@@ -483,13 +561,15 @@ export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | 
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
   if (typeof v.generatedAt !== "string" || Number.isNaN(Date.parse(v.generatedAt))) return null;
+  // A memory without its confidence would fabricate a confidence change on the next read.
+  if (typeof v.confidenceScore !== "number" || !Number.isFinite(v.confidenceScore)) return null;
   const level = v.confidenceLevel;
   return {
     generatedAt: v.generatedAt,
     primaryKey: typeof v.primaryKey === "string" ? v.primaryKey : null,
     primaryTitle: typeof v.primaryTitle === "string" ? v.primaryTitle : null,
     criticalKeys: Array.isArray(v.criticalKeys) ? v.criticalKeys.filter((k): k is string => typeof k === "string") : [],
-    confidenceScore: typeof v.confidenceScore === "number" ? clampScore(v.confidenceScore) : 0,
+    confidenceScore: clampScore(v.confidenceScore),
     confidenceLevel:
       level === "high" || level === "moderate" || level === "low" || level === "insufficient" ? level : "insufficient",
     fundingGap: typeof v.fundingGap === "number" && Number.isFinite(v.fundingGap) ? v.fundingGap : null,
@@ -546,16 +626,70 @@ function detectChanges(
   }
 
   const gap = input.strategy?.fundingGap ?? null;
-  if (gap !== prev.fundingGap && (gap !== null || prev.fundingGap !== null)) {
+  const roundedGap = gap === null ? null : Math.round(gap);
+  const roundedPrevGap = prev.fundingGap === null ? null : Math.round(prev.fundingGap);
+  if (roundedGap !== roundedPrevGap) {
     const currency = input.strategy?.currency ?? "INR";
     const fmt = (v: number | null) => (v === null ? "unknown" : v <= 0 ? "covered" : formatMoney(v, currency));
     changes.push({ kind: "FUNDING_GAP_CHANGED", message: `Funding gap changed from ${fmt(prev.fundingGap)} to ${fmt(gap)}.` });
   }
 
-  if (confidenceLevel !== prev.confidenceLevel || Math.abs(confidenceScore - prev.confidenceScore) >= 15) {
-    changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice changed from ${prev.confidenceLevel} to ${confidenceLevel}.` });
+  // Confidence only means something while there is a target on both sides of the comparison.
+  if (primary && prev.primaryKey !== null) {
+    if (confidenceLevel !== prev.confidenceLevel) {
+      changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice changed from ${prev.confidenceLevel} to ${confidenceLevel}.` });
+    } else if (Math.abs(confidenceScore - prev.confidenceScore) >= 15) {
+      changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice moved from ${Math.round(prev.confidenceScore)} to ${Math.round(confidenceScore)} out of 100 (still ${confidenceLevel}).` });
+    }
   }
   return changes;
+}
+
+/** One explicit refresh-evidence target per domain whose eligible actions rest on stale evidence. */
+function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: ResolveOwnerDecisionInput): OwnerDecisionCandidate[] {
+  const byDomain = new Map<string, OwnerDecisionCandidate[]>();
+  for (const c of staleCandidates) byDomain.set(c.domain, [...(byDomain.get(c.domain) ?? []), c]);
+  const out: OwnerDecisionCandidate[] = [];
+  for (const [domain, group] of byDomain) {
+    const ordered = [...group].sort(compareOwnerCandidates);
+    const top = ordered[0];
+    const label = ownerDomainLabel(domain);
+    const more = ordered.length > 1 ? ` and ${ordered.length - 1} other item${ordered.length === 2 ? "" : "s"}` : "";
+    const worstSeverity = ordered.reduce<OwnerSeverity | null>(
+      (w, c) => (c.severity !== null && (w === null || ownerSeverityRank(c.severity) > ownerSeverityRank(w)) ? c.severity : w),
+      null
+    );
+    const asOf = ordered.reduce<Date | null>((d, c) => (c.evidenceAsOf && (!d || c.evidenceAsOf < d) ? c.evidenceAsOf : d), null);
+    out.push({
+      candidateId: `evidence_refresh:${domain}`,
+      businessId: input.businessId,
+      workspaceId: input.workspaceId,
+      source: "evidence_refresh",
+      domain: top.domain,
+      sourceId: domain,
+      priorityClass: "MISSING_CRITICAL_EVIDENCE",
+      findingCode: "EVIDENCE_REFRESH",
+      findingId: null,
+      title: `Update your ${label} figures before acting on them`,
+      explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
+      severity: worstSeverity,
+      priorityScore: Math.max(...ordered.map((c) => clampScore(c.priorityScore))),
+      expectedImpactScore: Math.max(...ordered.map((c) => clampScore(c.expectedImpactScore))),
+      confidence: 1,
+      effortScore: 20,
+      status: "proposed",
+      ownerActionRequired: true,
+      blocking: false,
+      evidence: ordered.map((c) => `Out-of-date finding: ${c.title}`),
+      missingData: [],
+      verificationMetric: null,
+      evidenceAsOf: asOf,
+      stale: false,
+      exclusion: null,
+      targetRoute: top.targetRoute,
+    });
+  }
+  return out;
 }
 
 /**
@@ -563,11 +697,17 @@ function detectChanges(
  * target when any eligible candidate exists; otherwise an honest non-target state.
  */
 export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentOwnerDecision {
-  const ranked = rankOwnerCandidates(
-    input.candidates.filter((c) => c.businessId === input.businessId && c.workspaceId === input.workspaceId)
+  const scoped = input.candidates.filter((c) => c.businessId === input.businessId && c.workspaceId === input.workspaceId);
+  // A stale diagnosis is never an authoritative "do this now": its otherwise-eligible actions leave the
+  // election and are replaced, per domain, by an explicit "refresh this evidence" target that carries
+  // what they flagged (nothing is silently dropped). Recorded control facts are never stale.
+  const processed = scoped.map((c) =>
+    c.exclusion === null && c.stale && c.source === "domain_action" ? { ...c, exclusion: "stale_evidence" as const } : c
   );
-  const excluded = input.candidates
-    .filter((c) => c.exclusion !== null && c.businessId === input.businessId && c.workspaceId === input.workspaceId)
+  const refreshTargets = buildRefreshTargets(processed.filter((c) => c.exclusion === "stale_evidence"), input);
+  const ranked = rankOwnerCandidates([...processed, ...refreshTargets]);
+  const excluded = processed
+    .filter((c) => c.exclusion !== null)
     .map((c) => ({ candidateId: c.candidateId, title: c.title, reason: c.exclusion as OwnerCandidateExclusion }));
 
   const primary = ranked[0] ?? null;
@@ -589,7 +729,10 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   let score = primary ? Math.round(clampConfidence(primary.confidence) * 100) : 0;
   let capped = false;
   const primaryIsDataRequest = primary?.priorityClass === "MISSING_CRITICAL_EVIDENCE";
-  if (primary && !primaryIsDataRequest) {
+  // Recorded control facts (a compliance breach, an owner-recorded risk) do not depend on domain
+  // data completeness, so business-wide data sufficiency never caps them.
+  const primaryIsRecordedFact = primary !== null && primary.source !== "domain_action";
+  if (primary && !primaryIsDataRequest && !primaryIsRecordedFact) {
     if (input.dataSufficiency.status === "insufficient" && score > 40) {
       score = 40;
       capped = true;
@@ -598,11 +741,6 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       score = 70;
       capped = true;
       reasons.push("Some data is incomplete, so treat this advice with some caution.");
-    }
-    if (primary.stale && score > 50) {
-      score = 50;
-      capped = true;
-      reasons.push(`The ${ownerDomainLabel(primary.domain)} figures behind this are out of date.`);
     }
   }
   if (primaryIsDataRequest) reasons.push("OpsIQ is certain this information is missing; advice on everything else waits for it.");
@@ -629,8 +767,17 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
 
   // Supporting steps: the next items from the SAME domain (what to do after the first step);
   // what can wait: everything else, in canonical order.
+  // Supporting steps: ONLY the same-domain items that come immediately after the primary in the
+  // canonical order (a same-domain item may never jump ahead of a more urgent item from another
+  // domain). Everything after that stays in canonical order as "next, in order".
   const rest = ranked.slice(1);
-  const supporting = primary ? rest.filter((c) => c.domain === primary.domain).slice(0, MAX_SUPPORTING) : [];
+  const supporting: OwnerDecisionCandidate[] = [];
+  if (primary) {
+    for (const c of rest) {
+      if (c.domain !== primary.domain || supporting.length >= MAX_SUPPORTING) break;
+      supporting.push(c);
+    }
+  }
   const supportingIds = new Set(supporting.map((c) => c.candidateId));
   const canWait = rest.filter((c) => !supportingIds.has(c.candidateId)).slice(0, MAX_CAN_WAIT);
 
@@ -638,7 +785,8 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const whatNotToDo: string[] = [];
   if (primary) {
     const primaryRank = ownerPriorityClassRank(primary.priorityClass);
-    const growth = rest.find((c) => c.priorityClass === "GROWTH_OPPORTUNITY");
+    // Never name a step the owner is being told to do next (supporting) as something not to do.
+    const growth = rest.find((c) => c.priorityClass === "GROWTH_OPPORTUNITY" && !supportingIds.has(c.candidateId));
     if (growth && primaryRank < ownerPriorityClassRank("GROWTH_OPPORTUNITY")) {
       whatNotToDo.push(`Don't start growth or investment work such as "${growth.title}" until "${primary.title}" is handled.`);
     }
@@ -646,7 +794,13 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const s = input.strategy;
   if (s && (s.code === "NOT_YET" || s.code === "DONT_AS_PLANNED" || s.code === "NEED_INFO")) {
     const option = s.optionName ? `"${s.optionName}"` : "the plan you are evaluating";
-    whatNotToDo.push(`Don't commit to ${option} yet — Strategy says "${s.headline}"${s.headlineDetail ? `: ${s.headlineDetail}` : "."}`);
+    const says = `Strategy says "${s.headline}"${s.headlineDetail ? `: ${s.headlineDetail}` : "."}`;
+    // When the main target IS a Strategy step, the gate is its precondition, not a contradiction.
+    whatNotToDo.push(
+      primary && primary.domain === "strategy"
+        ? `Don't commit to ${option} until "${primary.title}" is done — ${says}`
+        : `Don't commit to ${option} yet — ${says}`
+    );
   }
   if (input.dataSufficiency.status === "insufficient" && input.dataSufficiency.lowConfidenceDomains.length > 0) {
     whatNotToDo.push(

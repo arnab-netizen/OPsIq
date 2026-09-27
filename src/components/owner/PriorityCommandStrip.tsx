@@ -38,11 +38,11 @@ export function PriorityCommandStrip({ cards }: { cards: PriorityCardView[] }) {
           <div key={c.id} className="rounded-lg border p-3 bg-card" data-testid={`priority-card-${i}`}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Badge variant={SEVERITY_VARIANT[c.severity] ?? "muted"}>{c.severity}</Badge>
-              <span className="text-[11px] uppercase text-muted-foreground">Priority {i + 1}</span>
+              <span className="text-[11px] uppercase text-muted-foreground">Checkpoint {i + 1}</span>
             </div>
             <div className="text-sm font-medium" data-testid={`priority-what-${i}`}>{c.whatIsWrong}</div>
             <p className="text-xs text-muted-foreground mt-1"><strong>Why:</strong> {c.whyItMatters}</p>
-            <p className="text-xs mt-1" data-testid={`priority-next-${i}`}><strong>Do next:</strong> {c.nextStep}</p>
+            <p className="text-xs mt-1" data-testid={`priority-next-${i}`}><strong>Plan step:</strong> {c.nextStep}</p>
             <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] text-muted-foreground">
               <span><strong>Who:</strong> {c.owner}</span>
               <span><strong>Proof:</strong> {c.proof}</span>

@@ -74,7 +74,7 @@ import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
-import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -466,6 +466,19 @@ const ISSUE_CATEGORY_TO_IMPACT_AREA: Record<string, string> = {
   PROCESS_IMPROVEMENT: "operations",
 };
 
+/** Do-not-repeat impact area of each canonical owner priority class (same vocabulary as above). */
+const IMPACT_AREA_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
+  SAFETY_COMPLIANCE: "compliance",
+  SURVIVAL_CASH: "cash",
+  CUSTOMER_SERVICE_FAILURE: "operations",
+  OVERLOAD_BLOCKING: "management",
+  PROFIT_LOSS: "finance",
+  BLOCKED_EXECUTION: "operations",
+  MISSING_CRITICAL_EVIDENCE: "governance",
+  GROWTH_OPPORTUNITY: "growth",
+  PROCESS_OPTIMISATION: "operations",
+};
+
 export interface GuidanceStep {
   issueId: string;
   businessFunction: BusinessFunction[];
@@ -628,8 +641,9 @@ export interface OwnerNowViewPayload {
    */
   trendAlerts: TrendAlert[] | null;
   /**
-   * Do-Not-Repeat Annotation — whether the top priority guidance action is blocked by an
-   * active do-not-repeat rule. Null when no matching rule exists.
+   * Do-Not-Repeat Annotation — whether the owner's main target (the canonical decision's primary
+   * class when supplied, else Now View's top operating signal) is blocked by an active
+   * do-not-repeat rule. Null when no matching rule exists.
    */
   doNotRepeatAnnotation: DoNotRepeatAnnotation | null;
   /**
@@ -1103,26 +1117,78 @@ export async function assembleGuidanceContext(
   };
 }
 
+/** Business function each canonical priority class speaks to (plain-language "why it matters"). */
+const BUSINESS_FUNCTION_BY_OWNER_CLASS: Record<OwnerPriorityClass, BusinessFunction> = {
+  SAFETY_COMPLIANCE: BusinessFunction.RISK_COMPLIANCE,
+  SURVIVAL_CASH: BusinessFunction.CASH_FLOW,
+  CUSTOMER_SERVICE_FAILURE: BusinessFunction.CUSTOMER_COMPLAINTS,
+  OVERLOAD_BLOCKING: BusinessFunction.CAPACITY,
+  PROFIT_LOSS: BusinessFunction.PROFITABILITY,
+  BLOCKED_EXECUTION: BusinessFunction.SOP_PROCESS,
+  MISSING_CRITICAL_EVIDENCE: BusinessFunction.DATA_QUALITY,
+  GROWTH_OPPORTUNITY: BusinessFunction.GROWTH_READINESS,
+  PROCESS_OPTIMISATION: BusinessFunction.SOP_PROCESS,
+};
+
+/** What happens if the canonical main target is ignored, per business-priority class. */
+const IF_IGNORED_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
+  SAFETY_COMPLIANCE: "a legal or safety requirement stays unmet and can stop the business from operating",
+  SURVIVAL_CASH: "you may run out of cash without warning",
+  CUSTOMER_SERVICE_FAILURE: "customers keep getting let down and some will stop coming back",
+  OVERLOAD_BLOCKING: "the overload keeps blocking work and the backlog grows",
+  PROFIT_LOSS: "the business keeps losing money it could keep",
+  BLOCKED_EXECUTION: "the blocked work stays stuck and the problems behind it get worse",
+  MISSING_CRITICAL_EVIDENCE: "OpsIQ's advice stays based on missing or old numbers and can point you the wrong way",
+  GROWTH_OPPORTUNITY: "the opportunity stays unused",
+  PROCESS_OPTIMISATION: "the process keeps costing more time than it needs to",
+};
+
 function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?: CurrentOwnerDecision | null): BeginnerExplanation {
-  // The overall headline is the canonical owner decision's main target — Now View's own operating
-  // signals (topOwnerActions) are context and may not name a different overall priority.
-  const canonicalHeadline = ownerDecision?.primaryTarget ? `Your main target: ${ownerDecision.primaryTarget.title}` : null;
-  const headline = canonicalHeadline
-    ?? (ownerDecision ? "Your business has no urgent issues right now" : view.topOwnerActions[0]?.headline ?? "Your business has no urgent issues right now");
-  const whatToDoFirst = steps.length > 0 ? steps.map((s) => s.exactStep) : ["Keep tracking cash and complaints"];
-  const whatNotToDo = view.actionsToAvoid.length > 0
-    ? view.actionsToAvoid.map((a) => a.avoid)
-    : ["Do not take on risk you cannot measure yet"];
+  // When the canonical owner decision is available, EVERY overall-priority field (headline, what to
+  // do first, why it matters, what not to do, what happens if ignored) comes from it — Now View's
+  // own operating signals (topOwnerActions / step-by-step) are domain context and may not name a
+  // different overall priority. Without a decision, Now View never elects its own "#1": the
+  // headline stays neutral and the steps are presented as operating signals.
+  const avoidFromView = view.actionsToAvoid.map((a) => a.avoid);
+  if (ownerDecision) {
+    const primary = ownerDecision.primaryTarget;
+    const whatToDoFirst = primary
+      ? [primary.title, ...ownerDecision.supportingSteps.map((t) => t.title)]
+      : ownerDecision.whatToDoFirst
+        ? [ownerDecision.whatToDoFirst, ...ownerDecision.missingInformation]
+        : ownerDecision.missingInformation.length > 0
+          ? ownerDecision.missingInformation
+          : ["Keep your business numbers up to date so OpsIQ can spot problems early"];
+    const whatNotToDo = [...new Set([...ownerDecision.whatNotToDo, ...avoidFromView])];
+    return buildBeginnerExplanation({
+      headline: primary
+        ? `Your main target: ${primary.title}`
+        : ownerDecision.state === "NO_EVIDENCE"
+          ? "OpsIQ needs your business numbers before it can pick a main target"
+          : "Your business has no urgent issues right now",
+      businessFunction: [primary ? BUSINESS_FUNCTION_BY_OWNER_CLASS[primary.priorityClass] : BusinessFunction.DATA_QUALITY],
+      whatToDoFirst,
+      whatNotToDo: whatNotToDo.length > 0 ? whatNotToDo : ["Do not take on risk you cannot measure yet"],
+      proofToCollect: ownerDecision.evidence.slice(0, 4),
+      howToKnowItWorked: primary
+        ? `${primary.title} is marked done and verified on the next check`
+        : "OpsIQ can name a main target from your numbers",
+      ifIgnoredConsequence: primary
+        ? IF_IGNORED_BY_OWNER_CLASS[primary.priorityClass]
+        : "problems can build up unnoticed",
+      dataIsWeak: ownerDecision.confidence.capped || view.confidenceCapped,
+    });
+  }
   return buildBeginnerExplanation({
-    headline,
-    businessFunction: view.topOwnerActions[0]?.businessFunction ?? [BusinessFunction.CASH_FLOW],
-    whatToDoFirst,
-    whatNotToDo,
+    headline: "Your current operating signals",
+    businessFunction: [BusinessFunction.DATA_QUALITY],
+    whatToDoFirst: steps.length > 0 ? steps.map((s) => s.exactStep) : ["Keep tracking cash and complaints"],
+    whatNotToDo: avoidFromView.length > 0 ? avoidFromView : ["Do not take on risk you cannot measure yet"],
     proofToCollect: steps.map((s) => s.proofType),
-    howToKnowItWorked: "the most urgent issue's status improves on the next check",
+    howToKnowItWorked: "the signals improve on the next check",
     ifIgnoredConsequence: view.cashDangerStatus === "CRITICAL"
       ? "you may run out of cash without warning"
-      : "the most urgent problem will get worse and harder to fix",
+      : "problems can build up unnoticed",
     dataIsWeak: view.confidenceCapped,
   });
 }
@@ -1621,7 +1687,7 @@ async function buildBusinessOperatingSystem(
  * identity — it does not (and cannot, from this input) prove the underlying finding is actually about
  * that business. In a workspace with more than one real business this makes a workspace-wide finding
  * indistinguishable, from the owner's side, from a genuine cross-business leak: switching the selected
- * business does not change this content, so a Cockpit "Top Priority" / "Execution lifecycle" widget can
+ * business does not change this content, so a Cockpit "Governed work" / "Execution lifecycle" widget can
  * silently keep showing one business's evidence under every other business's name.
  *
  * `restrictExecutionToAttributableBusiness: true` closes exactly that display gap using the SAME
@@ -1645,8 +1711,8 @@ export interface GetOwnerNowViewOptions {
   /**
    * The ONE canonical owner decision (owner-home service → Spine arbiter). Now View ENRICHES it and
    * never elects a competing overall target: when supplied, the plain-language headline names this
-   * decision's primary target, and its condensed memory is persisted with this snapshot so the next
-   * read can report "what changed" (main target, critical issues, confidence, funding gap).
+   * decision's primary target. (The decision's own change history is recorded by the owner-home
+   * resolver, independent of this route.)
    */
   ownerDecision?: CurrentOwnerDecision | null;
 }
@@ -2522,9 +2588,14 @@ export async function getOwnerNowView(
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep, options?.ownerDecision);
 
-  // Do-Not-Repeat Annotation — check if the top priority guidance action is blocked by a DNR rule.
+  // Do-Not-Repeat Annotation — check whether the owner's MAIN TARGET is blocked by a DNR rule. With a
+  // canonical decision the area comes from its primary target's class (never Now View's own #1);
+  // without one, Now View's top operating signal is checked.
+  const canonicalPrimary = options?.ownerDecision ? options.ownerDecision.primaryTarget : undefined;
   const topActionCategory = view.topOwnerActions[0]?.category;
-  const topActionImpactArea = topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
+  const topActionImpactArea = canonicalPrimary !== undefined
+    ? (canonicalPrimary ? IMPACT_AREA_BY_OWNER_CLASS[canonicalPrimary.priorityClass] : null)
+    : topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
   const [doNotRepeatAnnotation, executionLifecycle, businessOperatingSystem] = await Promise.all([
     topActionImpactArea
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
@@ -2544,11 +2615,7 @@ export async function getOwnerNowView(
       staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
       supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
       outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
-      payload: {
-        view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype,
-        // Canonical owner-decision memory for "what changed" (read back by the owner-home resolver).
-        ...(options?.ownerDecision && options.ownerDecision.businessId === businessId ? { ownerDecision: options.ownerDecision.memory } : {}),
-      } as unknown as Record<string, unknown>,
+      payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
     },
   });
 

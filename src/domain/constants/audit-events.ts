@@ -289,6 +289,11 @@ export const AUDIT_EVENTS = {
   RECOVERY_OUTCOME_VERIFIED: "owner.recovery_outcome_verified",
   RECOVERY_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.recovery_verification_reassessment_triggered",
 
+  // Canonical owner decision (Owner Intelligence Spine) — recorded when the owner's main target,
+  // critical-issue set, confidence or funding gap materially changes; also the decision memory the
+  // resolver compares against for "what changed" (independent of which owner page was visited).
+  OWNER_DECISION_CHANGED: "owner.decision_changed",
+
   // Owner Finance (Module 2)
   OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
   OWNER_FINANCE_SNAPSHOT_AMENDED: "owner.finance_snapshot_amended",

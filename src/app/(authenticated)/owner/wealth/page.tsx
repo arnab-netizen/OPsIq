@@ -151,7 +151,7 @@ export default function OwnerWealthPage() {
       {/* Next Best Move — the headline decision */}
       <section style={{ border: "1px solid var(--border, #e5e7eb)", borderRadius: 10, padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: "#6b7280" }}>Next best move</span>
+          <span style={{ fontSize: 13, color: "#6b7280" }}>Next wealth move (wealth plan only — your overall main target is on Home)</span>
           <Badge variant={MOVE_VARIANT(move.decision ?? "")}>{(move.decision && MOVE_LABEL[move.decision]) ?? move.decision ?? "—"}</Badge>
         </div>
         <p style={{ fontSize: 18, fontWeight: 600 }}>{move.actionLabel ?? "No action proposed"}</p>

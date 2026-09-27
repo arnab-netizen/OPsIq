@@ -173,8 +173,11 @@ export async function getFinanceDashboard(
       }
     : null;
 
+  // DOMAIN-LOCAL next action: the highest-ranked OPEN action of this domain's latest cycle (never a
+  // completed/cancelled one). The owner's overall main target comes only from the canonical owner
+  // decision (owner-home/home.service.ts).
   const recommendedNextAction =
-    latestCycle && latestCycle.actions.length > 0 ? latestCycle.actions[0] : null;
+    latestCycle?.actions.find((a: { status: string }) => a.status !== "completed" && a.status !== "cancelled") ?? null;
 
   return {
     businesses: businessList,
@@ -184,8 +187,10 @@ export async function getFinanceDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
-    missingCriticalData: latestSnapshot
-      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
+    // From the snapshot the CURRENT diagnosis ran on (its cycle's own snapshot) — never inferred from
+    // the latest period; only before any diagnosis does the latest snapshot guide what to enter.
+    missingCriticalData: (latestCycle?.snapshot ?? latestSnapshot)
+      ? (Array.isArray((latestCycle?.snapshot ?? latestSnapshot).missingCriticalData) ? ((latestCycle?.snapshot ?? latestSnapshot).missingCriticalData as string[]) : [])
       : [],
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

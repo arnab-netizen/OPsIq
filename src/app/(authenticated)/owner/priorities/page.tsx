@@ -12,9 +12,13 @@
  * Two further, clearly separated and UNRANKED sections keep nothing hidden:
  *   - Governed work — the process-execution bridge's current governed route (Now View execution
  *     context), with its real status, worked on Home;
- *   - Also on your radar — open risks, unread alerts and blocked decisions, grouped by source in
- *     each source's own order. They inform; they never outrank the main target. (Critical risks
- *     that are unambiguously this business's are already competing inside the canonical decision.)
+ *   - Also on your radar — open risks and unread notifications, grouped by source in each source's
+ *     own order. They inform; they never outrank the main target. Anything already in the canonical
+ *     order (a critical risk attributable to this business, or a notification about a risk/compliance
+ *     breach that is a candidate) is not repeated here.
+ *
+ * The consultant Decision Inbox (OperatorItem, ENGAGEMENT_VIEW) is not an owner surface: owners do
+ * not hold that capability, so this page neither fetches nor presents it.
  */
 
 import { useEffect, useState } from "react";
@@ -22,7 +26,7 @@ import Link from "next/link";
 import { Badge, CardDashboardSkeleton, EmptyState, ErrorState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
-import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { ownerDecisionCandidateIdForEntity, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -82,10 +86,6 @@ const ALERT_TIER: Record<string, PriorityTier> = {
   low: "normal",
 };
 
-function decisionTier(status: string): PriorityTier {
-  return status === "blocked" ? "critical" : "attention";
-}
-
 /** Terminal statuses a completed/rejected bridged task can carry — never a priority once resolved. */
 const BRIDGE_TERMINAL_STATUSES = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
 
@@ -110,7 +110,7 @@ function bridgeStatusVariant(status: string, canStart: boolean): PriorityItem["s
 
 interface RadarItem {
   id: string;
-  source: "risk" | "alert" | "decision";
+  source: "risk" | "alert";
   title: string;
   why: string | null;
   tier: PriorityTier;
@@ -129,8 +129,7 @@ interface GovernedWork {
 
 const RADAR_SOURCE_LABEL: Record<RadarItem["source"], string> = {
   risk: "Open risks",
-  alert: "Unread alerts",
-  decision: "Blocked decisions",
+  alert: "Unread notifications",
 };
 
 export default function OwnerPrioritiesPage() {
@@ -146,22 +145,25 @@ export default function OwnerPrioritiesPage() {
     (async () => {
       setLoading(true);
       setError(null);
-      const nowViewQs = activeBusinessId ? `?businessId=${encodeURIComponent(activeBusinessId)}` : "";
-      const [risksRes, alertsRes, decisionsRes, nowViewRes] = await Promise.all([
+      // Governed work shown beside the canonical decision must belong to the SAME business
+      // (the same opt-in business-scoping the Cockpit uses).
+      const nowViewQs = activeBusinessId ? `?businessId=${encodeURIComponent(activeBusinessId)}&restrictExecutionToBusiness=true` : "";
+      const [risksRes, alertsRes, nowViewRes] = await Promise.all([
         api("/api/owner/risks"),
         api("/api/owner/alerts?unreadOnly=true&limit=20"),
-        api("/api/decisions/list?status=blocked&limit=20"),
         api(`/api/owner/now-view${nowViewQs}`),
       ]);
       if (cancelled) return;
-      if (risksRes === null && alertsRes === null && decisionsRes === null && nowViewRes === null) {
+      if (risksRes === null && alertsRes === null && nowViewRes === null) {
         setError("Couldn't load your priorities. Please try again.");
         setLoading(false);
         return;
       }
 
       // The canonical decision — rendered, never re-ranked.
-      setDecision((nowViewRes?.ownerDecision as CurrentOwnerDecision | null | undefined) ?? null);
+      const decisionRes = (nowViewRes?.ownerDecision as CurrentOwnerDecision | null | undefined) ?? null;
+      setDecision(decisionRes);
+      const inCanonicalOrder = new Set((decisionRes?.attention ?? []).map((t) => t.candidateId));
 
       // Governed execution work (Now View context): shown with its real status, never ranked.
       const topRoute = nowViewRes?.processExecution?.topRoute as
@@ -185,13 +187,13 @@ export default function OwnerPrioritiesPage() {
       const items: RadarItem[] = [];
       for (const r of (risksRes?.risks ?? []) as Array<{ id: string; title: string; description?: string | null; severity: number; status: string }>) {
         if (!OPEN_RISK_STATUSES.has(r.status)) continue;
+        if (inCanonicalOrder.has(`business_risk:${r.id}`)) continue; // already ranked above
         items.push({ id: `risk-${r.id}`, source: "risk", title: r.title, why: r.description ?? null, tier: riskTier(r.severity), actionLabel: "Review this risk", actionHref: `/owner/risks/${r.id}` });
       }
-      for (const a of (alertsRes?.alerts ?? []) as Array<{ id: string; message: string; severity: string }>) {
+      for (const a of (alertsRes?.alerts ?? []) as Array<{ id: string; message: string; severity: string; entityType?: string | null; entityId?: string | null }>) {
+        const linked = ownerDecisionCandidateIdForEntity(a.entityType, a.entityId);
+        if (linked && inCanonicalOrder.has(linked)) continue; // a notification about an item already ranked above
         items.push({ id: `alert-${a.id}`, source: "alert", title: a.message, why: null, tier: ALERT_TIER[a.severity] ?? "attention", actionLabel: "See alert", actionHref: "/owner/alerts" });
-      }
-      for (const d of (decisionsRes?.decisions ?? []) as Array<{ id: string; problem?: string; action?: string; status: string; blockReason?: string | null }>) {
-        items.push({ id: `decision-${d.id}`, source: "decision", title: d.problem ?? d.action ?? "Blocked decision", why: d.blockReason ?? null, tier: decisionTier(d.status), actionLabel: "Open decision", actionHref: "/dashboard/inbox" });
       }
       setRadar(items);
       setLoading(false);
@@ -205,7 +207,7 @@ export default function OwnerPrioritiesPage() {
   if (error) return <PageContainer narrow><ErrorState message={error} onRetry={() => window.location.reload()} /></PageContainer>;
 
   const attention = decision?.attention ?? [];
-  const radarGroups = (["risk", "alert", "decision"] as const)
+  const radarGroups = (["risk", "alert"] as const)
     .map((source) => ({ source, items: radar.filter((r) => r.source === source) }))
     .filter((g) => g.items.length > 0);
 
