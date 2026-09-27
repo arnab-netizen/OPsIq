@@ -245,6 +245,8 @@ export const AUDIT_EVENTS = {
   OWNER_GATE_OPT_OUT_RECORDED: "owner.gate_opt_out_recorded",
   OWNER_GATE_OPT_OUT_CLEARED: "owner.gate_opt_out_cleared",
   OWNER_GATE_PROMOTION_BLOCKED: "owner.gate_promotion_blocked",
+  /** A gate could not assess an owner action (e.g. unknown margin) and did not block it: recorded, never silent. */
+  OWNER_GATE_ASSESSMENT_ABSTAINED: "owner.gate_assessment_abstained",
   // Jarvis 360 Slice 4 — owner load reduction / approval memory
   OWNER_APPROVAL_MEMORY_RECORDED: "owner.approval_memory_recorded",
   OWNER_APPROVAL_MEMORY_REUSED: "owner.approval_memory_reused",

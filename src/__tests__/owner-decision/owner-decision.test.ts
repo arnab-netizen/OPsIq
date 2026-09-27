@@ -8,13 +8,16 @@
 import { describe, it, expect } from "vitest";
 import {
   classifyOwnerFindingCode,
-  parseOwnerDecisionMemory,
+  describeOwnerChanges,
   rankOwnerCandidates,
   resolveOwnerDecision,
   strategyCandidatePriorityClass,
+  type OwnerChangeFacts,
   type OwnerDecisionCandidate,
+  type OwnerEvidenceTransition,
   type ResolveOwnerDecisionInput,
 } from "@/domain/owner-spine/owner-decision";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const WS = "ws-1";
 const BIZ = "biz-1";
@@ -62,9 +65,7 @@ function input(candidates: OwnerDecisionCandidate[], over: Partial<ResolveOwnerD
     staleDomains: [],
     strategy: null,
     reassessment: { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." },
-    previous: null,
-    events: [],
-    
+    changeFacts: NO_CHANGE_FACTS,
     now: NOW,
     ...over,
   };
@@ -143,7 +144,10 @@ describe("adversarial cases", () => {
     expect(d.confidence.capped).toBe(true);
     expect(d.confidence.score).toBeLessThanOrEqual(40);
     expect(d.confidence.level).not.toBe("high");
-    expect(d.whatNotToDo.join(" ")).toMatch(/Finance scores/);
+    // The main target's own domain is never told "don't rely on it": the issue needs attention, only its
+    // numerical score is provisional (a condition, not a prohibition).
+    expect(d.whatNotToDo.join(" ")).not.toMatch(/Finance/);
+    expect(d.conditions).toEqual(["The Finance issue needs attention now, but its Finance score is provisional until cash on hand is supplied."]);
   });
 
   it("E — two actions saturated at 100 are ordered by business class, not by code or title", () => {
@@ -255,45 +259,125 @@ describe("domain-local steps cannot override the canonical primary", () => {
   });
 });
 
-describe("what changed", () => {
-  it("reports a main-target change, a new critical issue, completions and confidence moves since the last check", () => {
-    const first = resolveOwnerDecision(input(
-      [cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 })],
-      { strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: 50000, currency: "INR" }, evidenceIds: { finance: "fin-snap-1" } }
-    ));
-    const memory = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
-    expect(memory).not.toBeNull();
-    const later = resolveOwnerDecision(input(
-      [
-        cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", status: "completed", exclusion: "completed" }),
-        cand({ findingCode: "CF_INSOLVENT_RUNWAY", title: "Cash runs out in 20 days", domain: "cashflow", severity: "critical", confidence: 0.5 }),
-      ],
-      {
-        previous: memory,
-        now: new Date("2026-09-28T10:00:00.000Z"),
-        events: [{ kind: "ACTION_COMPLETED", title: "Tighten discounting", at: new Date("2026-09-27T12:00:00.000Z") }],
-        strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: 20000, currency: "INR" },
-        // Cash flow now has evidence (a snapshot it did not have before): that is NEW data.
-        evidenceIds: { finance: "fin-snap-1", cashflow: "cf-snap-1" },
-      }
-    ));
-    const kinds = later.whatChanged.map((c) => c.kind);
-    expect(kinds).toEqual(expect.arrayContaining([
-      "MAIN_TARGET_CHANGED", "CRITICAL_ISSUE_APPEARED", "ACTION_COMPLETED", "EVIDENCE_UPDATED", "FUNDING_GAP_CHANGED",
-    ]));
-    // The main target changed, so confidence in the OLD advice is not compared with the new advice.
-    expect(kinds).not.toContain("CONFIDENCE_CHANGED");
-    expect(later.whatChanged.find((c) => c.kind === "FUNDING_GAP_CHANGED")?.message).toMatch(/₹50,000 to ₹20,000/);
+const SINCE = new Date("2026-09-13T10:00:00.000Z");
+const facts = (over: Partial<OwnerChangeFacts> = {}): OwnerChangeFacts => ({ ...NO_CHANGE_FACTS, since: SINCE, ...over });
+const issue = (title: string, severity: "critical" | "high" | "medium" | "low") => ({ severity, title });
+const transition = (over: Partial<OwnerEvidenceTransition> = {}): OwnerEvidenceTransition => ({
+  domain: "finance", previousEvidenceId: "snap-1", currentEvidenceId: "snap-2", newerEvidence: true, at: new Date("2026-09-26T10:00:00.000Z"),
+  previousIssues: {}, currentIssues: {}, ...over,
+});
+
+describe("what changed — only persisted mutation facts, never read-time memory", () => {
+  it("first check / nothing persisted in the window: reports nothing rather than inventing changes", () => {
+    expect(resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })])).whatChanged).toEqual([]);
+    expect(describeOwnerChanges(facts())).toEqual([]);
   });
 
-  it("reports a confidence move only for the SAME main target", () => {
-    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 })]));
-    const memory = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
-    const later = resolveOwnerDecision(input(
-      [cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.3 })],
-      { previous: memory, now: new Date("2026-09-28T10:00:00.000Z") }
-    ));
-    expect(later.whatChanged.map((c) => c.kind)).toEqual(["CONFIDENCE_CHANGED"]);
+  it("never reports 'main target changed', a confidence move or a funding-gap move (not reconstructible from persisted facts)", () => {
+    const d = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], {
+      strategy: { code: "NOT_YET", headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: 20000, currency: "INR" },
+      changeFacts: facts({ events: [{ kind: "ACTION_COMPLETED", title: "Tighten discounting", at: new Date("2026-09-20T12:00:00.000Z") }] }),
+    }));
+    expect(d.whatChanged).toEqual([{ kind: "ACTION_COMPLETED", message: 'Completed: "Tighten discounting".' }]);
+    expect(d.whatChangedWindowDays).toBe(14);
+  });
+
+  it("completions and verifications are reported only inside the window", () => {
+    const ch = describeOwnerChanges(facts({ events: [
+      { kind: "ACTION_COMPLETED", title: "Old", at: new Date("2026-08-01T00:00:00.000Z") },
+      { kind: "ACTION_VERIFIED", title: "Chase invoices", at: new Date("2026-09-20T00:00:00.000Z") },
+    ] }));
+    expect(ch).toEqual([{ kind: "ACTION_VERIFIED", message: 'Verified: "Chase invoices" reached its target.' }]);
+  });
+
+  it("a re-diagnosis of the SAME snapshot is a new calculation, not new data (no EVIDENCE_UPDATED, no transitions)", () => {
+    const same = transition({ currentEvidenceId: "snap-1", newerEvidence: false, previousIssues: { "finance:FIN_LOW_RUNWAY": issue("Protect runway", "critical") } });
+    expect(describeOwnerChanges(facts({ transitions: [same] }))).toEqual([]);
+  });
+
+  it("new figures are reported as new evidence", () => {
+    expect(describeOwnerChanges(facts({ transitions: [transition()] }))).toEqual([{ kind: "EVIDENCE_UPDATED", message: "New Finance figures were analysed." }]);
+  });
+
+  it("P2 — same issue + NEW evidence + still raised → EVIDENCE_UPDATED, never 'resolved'", () => {
+    const t = transition({
+      previousIssues: { "finance:FIN_LOW_RUNWAY": issue("Protect runway", "critical") },
+      currentIssues: { "finance:FIN_LOW_RUNWAY": issue("Protect runway", "critical") },
+    });
+    const kinds = describeOwnerChanges(facts({ transitions: [t] })).map((c) => c.kind);
+    expect(kinds).toEqual(["EVIDENCE_UPDATED"]);
+  });
+
+  describe("severity transitions use stable issue identity on newer evidence", () => {
+    const key = "finance:FIN_LOW_RUNWAY";
+    it("critical → high is an improvement, NOT a resolution", () => {
+      const ch = describeOwnerChanges(facts({ transitions: [transition({ previousIssues: { [key]: issue("Protect your runway", "critical") }, currentIssues: { [key]: issue("Protect your runway", "high") } })] }));
+      // Issue lines come before the generic "new figures" line.
+      expect(ch.map((c) => c.kind)).toEqual(["SEVERITY_DECREASED", "EVIDENCE_UPDATED"]);
+      expect(ch[0].message).toBe('"Protect your runway" in Finance improved in the new figures from critical to high; it is still open.');
+    });
+    it("high → critical is an escalation", () => {
+      const ch = describeOwnerChanges(facts({ transitions: [transition({ previousIssues: { [key]: issue("Protect your runway", "high") }, currentIssues: { [key]: issue("Protect your runway", "critical") } })] }));
+      expect(ch[0]).toEqual({ kind: "SEVERITY_INCREASED", message: '"Protect your runway" in Finance became more serious in the new figures: high → critical.' });
+    });
+    it("critical → absent on NEWER evidence is resolved", () => {
+      const ch = describeOwnerChanges(facts({ transitions: [transition({ previousIssues: { [key]: issue("Protect your runway", "critical") } })] }));
+      expect(ch.map((c) => c.kind)).toEqual(["CRITICAL_ISSUE_RESOLVED", "EVIDENCE_UPDATED"]);
+    });
+    it("a brand-new critical issue appears only on newer evidence", () => {
+      const ch = describeOwnerChanges(facts({ transitions: [transition({ currentIssues: { [key]: issue("Protect your runway", "critical") } })] }));
+      expect(ch.map((c) => c.kind)).toEqual(["CRITICAL_ISSUE_APPEARED", "EVIDENCE_UPDATED"]);
+      // A first diagnosis (no previous evidence) claims nothing about what "appeared".
+      expect(describeOwnerChanges(facts({ transitions: [transition({ previousEvidenceId: null, currentIssues: { [key]: issue("x", "critical") } })] })).map((c) => c.kind)).toEqual(["EVIDENCE_UPDATED"]);
+    });
+    it("transitions older than the window are not reported", () => {
+      expect(describeOwnerChanges(facts({ transitions: [transition({ at: new Date("2026-08-01T00:00:00.000Z"), previousIssues: { [key]: issue("x", "critical") } })] }))).toEqual([]);
+    });
+  });
+
+  it("record lifecycle facts: appeared / closed / no longer critical — from the record's own trail", () => {
+    const at = new Date("2026-09-20T00:00:00.000Z");
+    const ch = describeOwnerChanges(facts({ recordIssues: [
+      { key: "compliance:COMPLIANCE_BREACH:compliance_item:b", title: "VAT filing", change: "appeared", at },
+      { key: "compliance:COMPLIANCE_BREACH:compliance_item:a", title: "Fire certificate", change: "closed", at },
+      { key: "risk:RISK:business_risk:r1", title: "Main customer may leave", change: "no_longer_critical", at },
+    ] }));
+    expect(ch).toEqual([
+      { kind: "CRITICAL_ISSUE_APPEARED", message: 'New critical issue recorded: "VAT filing".' },
+      { kind: "CRITICAL_ISSUE_RESOLVED", message: '"Fire certificate" was closed in its record.' },
+      { kind: "SEVERITY_DECREASED", message: '"Main customer may leave" is no longer rated critical; its record is still open.' },
+    ]);
+  });
+
+  it("P2 — attribution loss: a second business makes workspace risks unattributable — ATTRIBUTION_CHANGED, never resolved/open", () => {
+    const ch = describeOwnerChanges(facts({ attribution: { change: "lost", at: new Date("2026-09-20T00:00:00.000Z"), openCriticalCount: 1 } }));
+    expect(ch).toHaveLength(1);
+    expect(ch[0].kind).toBe("ATTRIBUTION_CHANGED");
+    expect(ch[0].message).toMatch(/can no longer attribute workspace-wide risks and compliance items specifically to this business/);
+    expect(ch.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
+    // Nothing critical was affected: nothing to say.
+    expect(describeOwnerChanges(facts({ attribution: { change: "lost", at: new Date("2026-09-20T00:00:00.000Z"), openCriticalCount: 0 } }))).toEqual([]);
+  });
+
+  it("P2 — re-attribution: back to one business → ATTRIBUTION_CHANGED, never a 'new critical issue'", () => {
+    const ch = describeOwnerChanges(facts({ attribution: { change: "regained", at: new Date("2026-09-20T00:00:00.000Z"), openCriticalCount: 2 } }));
+    expect(ch.map((c) => c.kind)).toEqual(["ATTRIBUTION_CHANGED"]);
+    expect(ch.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_APPEARED");
+  });
+
+  it("a critical issue that merely went STALE is not reported as resolved; the owner is told the figures are out of date", () => {
+    const insolvent = { findingCode: "FIN_INSOLVENT_RUNWAY", title: "Cash runs out in 20 days", severity: "critical" as const };
+    const later = resolveOwnerDecision(input([cand({ ...insolvent, stale: true })], {
+      staleDomains: ["finance"],
+      changeFacts: facts({ newlyStaleDomains: ["finance"] }),
+      now: new Date("2026-11-20T10:00:00.000Z"),
+    }));
+    const kinds = later.whatChanged.map((c) => c.kind);
+    expect(kinds).toEqual(["EVIDENCE_OUT_OF_DATE"]);
+    expect(later.whatChanged[0].message).toMatch(/figures in Finance are now out of date/);
+    // The refresh target keeps the survival urgency of what it stands in for.
+    expect(later.primaryTarget?.source).toBe("evidence_refresh");
+    expect(later.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
   });
 
   it("a refresh target never claims the old problem is current; confidence explains it is out-of-date information", () => {
@@ -302,107 +386,25 @@ describe("what changed", () => {
     expect(d.whyThisWins[0]).toMatch(/^Your Finance figures are out of date, and they last showed a cash-survival danger \(critical\); confirming them comes before acting/);
     expect(d.whyThisWins[0]).not.toMatch(/^This is/);
     expect(d.confidence.reasons).toContain("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
-    // Missing information and evidence say the figures are out of date — never that the danger is current.
     expect(d.missingInformation).toContain("Current figures for Finance — the latest ones are out of date, so what they showed cannot be relied on yet.");
     expect(d.evidence.join(" ")).toMatch(/^Out-of-date finding: /);
+    expect(d.reassessmentTrigger).toMatch(/^Check again after you update the Finance figures and re-run its diagnosis/);
   });
+});
 
-  it("a re-diagnosis of the SAME snapshot is a new calculation, not new data (no EVIDENCE_UPDATED)", () => {
-    const c = cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 });
-    const first = resolveOwnerDecision(input([c], { evidenceIds: { finance: "fin-snap-1" } }));
-    const prev = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
-    const sameSnapshot = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: prev, evidenceIds: { finance: "fin-snap-1" }, now: new Date("2026-09-28T10:00:00.000Z") }));
-    expect(sameSnapshot.whatChanged.map((x) => x.kind)).not.toContain("EVIDENCE_UPDATED");
-    const newSnapshot = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: prev, evidenceIds: { finance: "fin-snap-2" }, now: new Date("2026-09-28T10:00:00.000Z") }));
-    expect(newSnapshot.whatChanged.find((x) => x.kind === "EVIDENCE_UPDATED")?.message).toBe("New data in Finance was analysed since OpsIQ's previous advice.");
+describe("P2 — the reassessment trigger refers to the CURRENT step, never a dead action", () => {
+  it("a live action: completion wording", () => {
+    const d = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", verificationMetric: "discountRate" })]));
+    expect(d.reassessmentTrigger).toMatch(/^Check again when "Tighten discounting" is done or your .* changes/);
   });
-
-  it("an older memory without evidence identity never claims new data", () => {
-    const c = cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", confidence: 0.9 });
-    const first = resolveOwnerDecision(input([c]));
-    const legacy = JSON.parse(JSON.stringify(first.memory));
-    delete legacy.evidenceIds;
-    delete legacy.issueSeverities;
-    const later = resolveOwnerDecision(input([{ ...c, confidence: 0.3 }], { previous: parseOwnerDecisionMemory(legacy), evidenceIds: { finance: "fin-snap-9" }, now: new Date("2026-09-28T10:00:00.000Z") }));
-    expect(later.whatChanged.map((x) => x.kind)).not.toContain("EVIDENCE_UPDATED");
+  it("an open issue whose action is closed: only new figures can change it", () => {
+    const d = resolveOwnerDecision(input([cand({ findingCode: "FIN_INSOLVENT_RUNWAY", title: "Preserve cash immediately", source: "survival_reading", candidateId: "survival_reading:finance:FIN_INSOLVENT_RUNWAY", severity: "critical", status: "cancelled" })]));
+    expect(d.reassessmentTrigger).toMatch(/^Check again when new Finance figures are added \(only new figures can show this has gone\)/);
+    expect(d.reassessmentTrigger).not.toMatch(/"Preserve cash immediately" is done/);
   });
-
-  describe("severity transitions use stable issue identity", () => {
-    const at = (severity: "critical" | "high" | "medium") => cand({ findingCode: "FIN_LOW_RUNWAY", title: "Protect your runway", severity });
-    const other = cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "Tighten discounting", severity: "medium" });
-    const after = (prevCands: ReturnType<typeof cand>[], nowCands: ReturnType<typeof cand>[]) => {
-      const first = resolveOwnerDecision(input(prevCands));
-      return resolveOwnerDecision(input(nowCands, { previous: parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory))), now: new Date("2026-09-28T10:00:00.000Z") })).whatChanged;
-    };
-    it("critical → high is an improvement, NOT a resolution", () => {
-      const ch = after([at("critical"), other], [at("high"), other]);
-      expect(ch.map((c) => c.kind)).toContain("SEVERITY_DECREASED");
-      expect(ch.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
-      expect(ch.find((c) => c.kind === "SEVERITY_DECREASED")?.message).toBe('"Protect your runway" in Finance improved from critical to high; it is still open.');
-    });
-    it("high → critical is an escalation", () => {
-      const ch = after([at("high"), other], [at("critical"), other]);
-      expect(ch.find((c) => c.kind === "SEVERITY_INCREASED")?.message).toBe('"Protect your runway" in Finance became more serious: high → critical.');
-      expect(ch.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_APPEARED");
-    });
-    it("critical → absent/terminal is resolved", () => {
-      const done = { ...at("critical"), status: "completed", exclusion: "completed" as const };
-      const ch = after([at("critical"), other], [done, other]);
-      expect(ch.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
-      expect(ch.map((c) => c.kind)).not.toContain("SEVERITY_DECREASED");
-    });
-    it("a critical issue whose action was CANCELLED on the same figures is not resolved; on new figures it is", () => {
-      const cancelled = { ...at("critical"), status: "cancelled", exclusion: "cancelled" as const };
-      const first = resolveOwnerDecision(input([at("critical"), other], { evidenceIds: { finance: "snap-1" } }));
-      const prev = parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory)));
-      const later = new Date("2026-09-28T10:00:00.000Z");
-      const same = resolveOwnerDecision(input([cancelled, other], { previous: prev, evidenceIds: { finance: "snap-1" }, now: later })).whatChanged;
-      expect(same.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
-      const fresh = resolveOwnerDecision(input([other], { previous: prev, evidenceIds: { finance: "snap-2" }, now: later })).whatChanged;
-      expect(fresh.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
-      const completedSame = resolveOwnerDecision(input([{ ...at("critical"), status: "completed", exclusion: "completed" as const }, other], { previous: prev, evidenceIds: { finance: "snap-1" }, now: later })).whatChanged;
-      expect(completedSame.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
-    });
-    it("a brand-new critical issue appears", () => {
-      const ch = after([other], [at("critical"), other]);
-      expect(ch.map((c) => c.kind)).toContain("CRITICAL_ISSUE_APPEARED");
-    });
-  });
-
-  it("two 'covered' funding gaps are not reported as a change", () => {
-    const strategy = (fundingGap: number) => ({ code: "GO" as const, headline: "Go", headlineDetail: null, optionName: null, fundingGap, currency: "INR" });
-    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(-100) }));
-    const later = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], {
-      strategy: strategy(-500), previous: parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory))), now: new Date("2026-09-28T10:00:00.000Z"),
-    }));
-    expect(later.whatChanged.map((c) => c.kind)).not.toContain("FUNDING_GAP_CHANGED");
-  });
-
-  it("a critical issue that merely went STALE is not reported as resolved; the owner is told the figures are out of date", () => {
-    const insolvent = { findingCode: "FIN_INSOLVENT_RUNWAY", title: "Cash runs out in 20 days", severity: "critical" as const };
-    const first = resolveOwnerDecision(input([cand(insolvent)]));
-    const later = resolveOwnerDecision(input([cand({ ...insolvent, stale: true })], {
-      previous: parseOwnerDecisionMemory(JSON.parse(JSON.stringify(first.memory))),
-      staleDomains: ["finance"],
-      now: new Date("2026-11-20T10:00:00.000Z"),
-    }));
-    const kinds = later.whatChanged.map((c) => c.kind);
-    expect(kinds).not.toContain("CRITICAL_ISSUE_RESOLVED");
-    expect(kinds).not.toContain("CRITICAL_ISSUE_APPEARED");
-    expect(later.whatChanged.find((c) => c.kind === "EVIDENCE_OUT_OF_DATE")?.message).toMatch(/figures in Finance are now out of date/);
-    // The refresh target keeps the survival urgency of what it stands in for.
-    expect(later.primaryTarget?.source).toBe("evidence_refresh");
-    expect(later.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
-    expect(later.memory.criticalKeys).toEqual(first.memory.criticalKeys);
-  });
-
-  it("first check (no memory) reports nothing rather than inventing changes", () => {
-    expect(resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })])).whatChanged).toEqual([]);
-  });
-
-  it("ignores a malformed persisted memory", () => {
-    expect(parseOwnerDecisionMemory({ generatedAt: "not a date" })).toBeNull();
-    expect(parseOwnerDecisionMemory(null)).toBeNull();
+  it("a recorded control fact: when its record is updated", () => {
+    const d = resolveOwnerDecision(input([cand({ findingCode: "COMPLIANCE_BREACH", title: "Licence breached", domain: "compliance", source: "compliance_item", severity: "critical" })]));
+    expect(d.reassessmentTrigger).toMatch(/^Check again when the Compliance record for this is updated/);
   });
 });
 
@@ -437,65 +439,6 @@ describe("hostile-review regressions", () => {
     expect(d.whatNotToDo.join(" ")).not.toMatch(/Improve margin/);
   });
 
-  it("two different compliance breaches are two issues: switching between them is a main-target change", () => {
-    const breach = (id: string, title: string) =>
-      cand({ findingCode: "COMPLIANCE_BREACH", title, domain: "compliance", source: "compliance_item", candidateId: `compliance_item:${id}`, severity: "critical" });
-    const first = resolveOwnerDecision(input([breach("a", "Fire certificate expired")]));
-    // Breach "a" is resolved only because its own record now says so (compliant) — never from absence.
-    const aClosed = { "compliance:COMPLIANCE_BREACH:compliance_item:a": { lifecycle: "terminal" as const, title: '"Fire certificate"' } };
-    const later = resolveOwnerDecision(input([breach("b", "VAT filing breached")], { previous: first.memory, issueStates: aClosed, workspaceIssuesAttributable: true, now: new Date("2026-09-28T10:00:00.000Z") }));
-    const kinds = later.whatChanged.map((c) => c.kind);
-    expect(kinds).toContain("MAIN_TARGET_CHANGED");
-    expect(kinds).toContain("CRITICAL_ISSUE_APPEARED");
-    expect(kinds).toContain("CRITICAL_ISSUE_RESOLVED");
-    // Without that record, the absence alone proves nothing: no resolution is claimed.
-    const unproven = resolveOwnerDecision(input([breach("b", "VAT filing breached")], { previous: first.memory, workspaceIssuesAttributable: true, now: new Date("2026-09-28T10:00:00.000Z") }));
-    expect(unproven.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
-  });
-
-  describe("change detection needs evidence (lifecycle / attribution / new snapshot)", () => {
-    const risk = (status: string) =>
-      cand({ findingCode: "RISK_FINANCIAL", title: "Main customer may leave", domain: "risk", source: "business_risk", candidateId: "business_risk:r1", severity: "critical", status });
-    const riskKey = "risk:RISK_FINANCIAL:business_risk:r1";
-    const later = new Date("2026-09-28T10:00:00.000Z");
-
-    it("an open critical risk moved to MITIGATING below the critical threshold is still open, not resolved", () => {
-      const first = resolveOwnerDecision(input([risk("ASSESSED")], { workspaceIssuesAttributable: true }));
-      const next = resolveOwnerDecision(input([], {
-        previous: first.memory, workspaceIssuesAttributable: true, now: later,
-        issueStates: { [riskKey]: { lifecycle: "open", title: "Main customer may leave" } },
-      }));
-      const kinds = next.whatChanged.map((c) => c.kind);
-      expect(kinds).not.toContain("CRITICAL_ISSUE_RESOLVED");
-      expect(next.whatChanged.find((c) => c.kind === "SEVERITY_DECREASED")?.message).toBe('"Main customer may leave" is no longer rated critical; it is still open.');
-    });
-
-    it("a workspace gaining a second business makes a workspace risk NOT ATTRIBUTABLE — not resolved", () => {
-      const first = resolveOwnerDecision(input([risk("ASSESSED")], { workspaceIssuesAttributable: true }));
-      const next = resolveOwnerDecision(input([], { previous: first.memory, workspaceIssuesAttributable: false, now: later }));
-      const kinds = next.whatChanged.map((c) => c.kind);
-      expect(kinds).not.toContain("CRITICAL_ISSUE_RESOLVED");
-      expect(kinds).toContain("ISSUE_NOT_ATTRIBUTABLE");
-      expect(next.memory.workspaceIssuesAttributable).toBe(false);
-    });
-
-    it("a risk closed by its own record is resolved", () => {
-      const first = resolveOwnerDecision(input([risk("ASSESSED")], { workspaceIssuesAttributable: true }));
-      const next = resolveOwnerDecision(input([], {
-        previous: first.memory, workspaceIssuesAttributable: true, now: later,
-        issueStates: { [riskKey]: { lifecycle: "terminal", title: "Main customer may leave" } },
-      }));
-      expect(next.whatChanged.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
-    });
-
-    it("an old memory without evidence identity never lets absence claim resolution", () => {
-      const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_LOW_RUNWAY", title: "Extend runway", severity: "critical" })]));
-      const legacy = parseOwnerDecisionMemory({ ...JSON.parse(JSON.stringify(first.memory)), evidenceIds: undefined });
-      const next = resolveOwnerDecision(input([], { previous: legacy, evidenceIds: { finance: "snap-9" }, now: later }));
-      expect(next.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
-    });
-  });
-
   it("refresh vs refresh tied on every business factor is said to be equivalent — never 'a more pressing problem'", () => {
     const stale = (domain: "finance" | "cashflow", code: string) => cand({ findingCode: code, title: `${domain} runway`, domain, severity: "critical", priorityScore: 100, stale: true });
     const d = resolveOwnerDecision(input([stale("finance", "FIN_LOW_RUNWAY"), stale("cashflow", "CF_LOW_RUNWAY")], { staleDomains: ["finance", "cashflow"] }));
@@ -504,21 +447,6 @@ describe("hostile-review regressions", () => {
     expect(sentence).not.toMatch(/more pressing/);
     expect(sentence).toMatch(/equivalent on every known business factor/);
     expect(sentence).toMatch(/only so the order stays the same every time/);
-  });
-
-  it("a confidence move within the same level never reads 'from high to high'", () => {
-    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x", confidence: 1 })]));
-    const later = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x", confidence: 0.8 })], { previous: first.memory }));
-    const c = later.whatChanged.find((w) => w.kind === "CONFIDENCE_CHANGED");
-    expect(c?.message).toMatch(/moved from 100 to 80/);
-    expect(c?.message).not.toMatch(/from high to high/);
-  });
-
-  it("a rounding-only funding gap difference is not reported as a change", () => {
-    const strategy = (gap: number) => ({ code: "NOT_YET" as const, headline: "Not yet", headlineDetail: null, optionName: null, fundingGap: gap, currency: "INR" });
-    const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(50000.2) }));
-    const later = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(50000.4), previous: first.memory }));
-    expect(later.whatChanged.map((c) => c.kind)).not.toContain("FUNDING_GAP_CHANGED");
   });
 
   it("a recorded compliance breach is not capped by unrelated missing finance data", () => {
@@ -530,7 +458,4 @@ describe("hostile-review regressions", () => {
     expect(d.confidence.level).toBe("high");
   });
 
-  it("a memory without a confidence score is ignored rather than inventing a confidence change", () => {
-    expect(parseOwnerDecisionMemory({ generatedAt: "2026-09-27T10:00:00.000Z", primaryKey: "finance:X" })).toBeNull();
-  });
 });

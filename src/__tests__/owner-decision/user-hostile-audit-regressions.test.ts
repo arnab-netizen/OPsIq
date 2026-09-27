@@ -11,6 +11,7 @@ import {
   type ResolveOwnerDecisionInput,
 } from "@/domain/owner-spine/owner-decision";
 import { complianceItemToCandidate } from "@/services/owner-home/owner-decision-candidates";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const BIZ = "biz-1";
 const WS = "ws-1";
@@ -31,7 +32,7 @@ function input(candidates: OwnerDecisionCandidate[], over: Partial<ResolveOwnerD
   return {
     businessId: BIZ, workspaceId: WS, candidates, diagnosedDomains: ["cashflow", "finance"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 14, reason: "r" }, previous: null, events: [],
+    staleDomains: [], strategy: null, reassessment: { days: 14, reason: "r" }, changeFacts: NO_CHANGE_FACTS,
     now: new Date("2026-09-27T10:00:00.000Z"),
     ...over,
   };

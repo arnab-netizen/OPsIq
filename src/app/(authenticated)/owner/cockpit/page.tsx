@@ -179,12 +179,13 @@ function describeThrownFailure(e: unknown, fallback: string): string {
   return governed.operatorMessage === GENERIC_ACTION_DEFAULT ? fallback : governed.operatorMessage;
 }
 
-interface AvoidItem { avoid?: string }
+interface AvoidItem { avoid?: string; conditionOn?: string[] }
 
 export default function OwnerCockpitPage() {
   const { activeBusinessId, needsBusinessRecovery, businesses, loading: contextLoading } = useActiveBusiness();
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
+  const [stepConditions, setStepConditions] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
   const [publicSignals, setPublicSignals] = useState<OwnerPublicSignalsResponse | null>(null);
   const [businessCondition, setBusinessCondition] = useState<DerivedBusinessConditionSignals | null>(null);
@@ -271,7 +272,10 @@ export default function OwnerCockpitPage() {
       if (loadGenerationRef.current !== generation) return;
       setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
       const avoidList = (data?.view?.actionsToAvoid as AvoidItem[] | undefined) ?? [];
-      setAvoid(avoidList.map((a) => a.avoid ?? "").filter(Boolean));
+      // A rule the shared reconciler turned into a condition on a canonical step is guidance on how to
+      // carry that step out — never listed under "Blocked / not allowed".
+      setAvoid(avoidList.filter((a) => !a.conditionOn).map((a) => a.avoid ?? "").filter(Boolean));
+      setStepConditions(avoidList.filter((a) => a.conditionOn).map((a) => a.avoid ?? "").filter(Boolean));
       setBusinessCondition((data.derivedBusinessCondition as DerivedBusinessConditionSignals) ?? null);
       setDataFreshnessWeak((data?.view as { confidenceCapped?: boolean } | undefined)?.confidenceCapped ?? false);
       setGoalAttentionSignal((data.goalAttentionSignal as GoalAttentionSignal) ?? null);
@@ -521,6 +525,7 @@ export default function OwnerCockpitPage() {
           <MinimumOwnerCockpit
             bridge={bridge}
             actionsToAvoid={avoid}
+            stepConditions={stepConditions}
             recovery={recovery}
             publicSignals={publicSignals}
             businessCondition={businessCondition}

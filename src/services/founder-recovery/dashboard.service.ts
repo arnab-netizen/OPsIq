@@ -11,6 +11,7 @@ import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-contin
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "./business.service";
+import { CURRENT_RECOVERY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface RecoveryDashboardPayload {
   businesses: Array<{
@@ -86,7 +87,7 @@ export async function getRecoveryDashboard(
     }),
     db.recoveryCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { cycleNumber: "desc" },
+      orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
       include: {
         snapshot: true,
         // Ranked after read: severity is a plain string, so a DB orderBy sorts it

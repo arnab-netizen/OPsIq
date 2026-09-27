@@ -17,6 +17,7 @@ import { BusinessFunction } from "@/domain/owner-guidance/business-function";
 import type { OwnerNowView, AreaStatus } from "@/domain/owner-guidance/guidance-orchestrator";
 import { resolveOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const BIZ_A = { id: "11111111-1111-4111-8111-111111111111", name: "ZZ-TEST-FIELD-SERVICE" };
 const BIZ_B = { id: "22222222-2222-4222-8222-222222222222", name: "Trinity Services" };
@@ -124,7 +125,7 @@ function decisionWithClass(businessId: string, priorityClass: OwnerPriorityClass
     }],
     diagnosedDomains: ["finance"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS,
     now: new Date("2026-06-30T00:00:00Z"),
   })));
 }

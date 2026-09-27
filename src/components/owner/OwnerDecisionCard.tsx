@@ -9,7 +9,7 @@
  */
 import Link from "next/link";
 import { Badge, Disclosure } from "@/ui/primitives";
-import type { CurrentOwnerDecision, OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
+import { OWNER_WHAT_CHANGED_WINDOW_DAYS, ownerTargetHref, type CurrentOwnerDecision, type OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
 type Detail = "full" | "compact";
 
@@ -37,6 +37,7 @@ function TargetLine({ t }: { t: OwnerDecisionTarget }) {
     </li>
   );
 }
+
 
 export function OwnerDecisionCard({
   decision,
@@ -90,7 +91,7 @@ export function OwnerDecisionCard({
               </ul>
             </div>
           )}
-          <Link data-testid="owner-decision-go" href={p.targetRoute} className="inline-flex self-start items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Link data-testid="owner-decision-go" href={ownerTargetHref(p)} className="inline-flex self-start items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             Work on this in {p.domainLabel} →
           </Link>
         </>
@@ -125,6 +126,15 @@ export function OwnerDecisionCard({
         </div>
       )}
 
+      {(decision.conditions ?? []).length > 0 && (
+        <div data-testid="owner-decision-conditions">
+          <span className="text-sm font-medium text-foreground">How to carry this out</span>
+          <ul className="mt-1 list-disc space-y-1 pl-[18px] text-sm text-muted-foreground">
+            {(decision.conditions ?? []).slice(0, 3).map((m, i) => <li key={i}>{m}</li>)}
+          </ul>
+        </div>
+      )}
+
       {detail === "full" && decision.whatNotToDo.length > 0 && (
         <div data-testid="owner-decision-avoid">
           <span className="text-sm font-medium text-foreground">Don&rsquo;t do this yet</span>
@@ -136,7 +146,7 @@ export function OwnerDecisionCard({
 
       {detail === "full" && decision.whatChanged.length > 0 && (
         <div data-testid="owner-decision-changed">
-          <span className="text-sm font-medium text-foreground">What changed since OpsIQ&rsquo;s previous advice</span>
+          <span className="text-sm font-medium text-foreground">Recent changes (last {decision.whatChangedWindowDays ?? OWNER_WHAT_CHANGED_WINDOW_DAYS} days)</span>
           <ul className="mt-1 list-disc space-y-1 pl-[18px] text-sm text-muted-foreground">
             {decision.whatChanged.slice(0, 5).map((c, i) => <li key={i}>{c.message}</li>)}
           </ul>

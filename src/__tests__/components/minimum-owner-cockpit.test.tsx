@@ -13,6 +13,7 @@ import { render, cleanup, fireEvent } from "@testing-library/react";
 import { MinimumOwnerCockpit } from "@/components/owner/MinimumOwnerCockpit";
 import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 afterEach(() => cleanup());
 
@@ -209,7 +210,7 @@ describe("MinimumOwnerCockpit", () => {
     }],
     diagnosedDomains: ["finance"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS,
     now: new Date("2026-06-30T00:00:00Z"),
   });
 

@@ -91,7 +91,9 @@ describe("buildOwnerControlCenter", () => {
     const cc = buildOwnerControlCenter(inputs({ dataSufficiencyStatus: "insufficient", lowConfidenceDomains: ["cashflow"], financeBlocked: 2, equipmentBottlenecks: ["dryer"] }));
     expect(cc.needsOwnerAttention).toBe(true);
     expect(cc.criticalAlerts.length).toBeGreaterThanOrEqual(3);
-    expect(cc.whatNotToDo.join(" ")).toMatch(/growth\/marketing/);
+    // Guardrails name the intent/lever they stop, never a domain.
+    expect(cc.whatNotToDo.join(" ")).toMatch(/Do not scale demand \(new acquisition spend, campaign expansion or extra volume\)/);
+    expect(cc.whatNotToDo.join(" ")).not.toMatch(/growth\/marketing/);
   });
   it("counts owner actions today across approvals, decisions, SOP reviews, process reviews", () => {
     const cc = buildOwnerControlCenter(inputs({ ownerApprovalsRequired: 2, sopsNeedingReview: 1, processReviewsDue: 3 }));
@@ -128,9 +130,9 @@ describe("control-center guardrails never veto the canonical main target (final 
       equipmentBottlenecks: ["Oven 2"],
       mainTarget: { title: "Use spare capacity to take more orders", priorityClass: "PROCESS_OPTIMISATION", source: "domain_action", findingCode: "OPS_OPP_USE_CAPACITY_HEADROOM" },
     }));
-    const text = cc.whatNotToDo.join(" ");
-    expect(text).not.toMatch(/Do not pursue growth\/marketing/);
-    expect(cc.whatNotToDo).toContain('Keep "Use spare capacity to take more orders" within current capacity until the bottleneck is cleared.');
+    // A reconciled guardrail is the PERMITTED SCOPE of the target, listed as a condition — not under "do not".
+    expect(cc.whatNotToDo).toEqual([]);
+    expect(cc.conditions).toEqual(['Run "Use spare capacity to take more orders" only up to what current capacity can deliver until the bottleneck is cleared.']);
     // The reason stays visible as an alert.
     expect(cc.criticalAlerts.join(" ")).toMatch(/Capacity bottleneck: Oven 2/);
   });
@@ -141,8 +143,8 @@ describe("control-center guardrails never veto the canonical main target (final 
       lowConfidenceDomains: ["finance"],
       mainTarget: { title: 'Resolve the breach of "Fire certificate"', priorityClass: "SAFETY_COMPLIANCE", source: "compliance_item", findingCode: "COMPLIANCE_BREACH" },
     }));
-    expect(cc.whatNotToDo.join(" ")).not.toMatch(/^Do not make material decisions/);
-    expect(cc.whatNotToDo).toContain('Apart from "Resolve the breach of "Fire certificate"", do not make material decisions until the missing data is provided.');
+    expect(cc.whatNotToDo).toEqual([]);
+    expect(cc.conditions).toEqual(['Go ahead with "Resolve the breach of "Fire certificate""; hold other material decisions until the missing data is provided.']);
   });
 
   it("growth main target + blocked cash/margin recommendations: spend guardrail becomes a condition", () => {
@@ -150,7 +152,8 @@ describe("control-center guardrails never veto the canonical main target (final 
       financeBlocked: 2,
       mainTarget: { title: "Add a referral ask", priorityClass: "GROWTH_OPPORTUNITY", source: "domain_action", findingCode: "MKT_OPP_ACTIVATE_REFERRALS" },
     }));
-    expect(cc.whatNotToDo).toEqual(['Carry out "Add a referral ask" without new spend or discounts while cash/margin guardrails are blocking.']);
+    expect(cc.whatNotToDo).toEqual([]);
+    expect(cc.conditions).toEqual(['Run "Add a referral ask" only within its existing budget and at normal prices while cash/margin guardrails are blocking.']);
   });
 
   it("a Marketing REPAIR target (profit class) is not growth demand: growth/spend guardrails stand and do not touch it", () => {
@@ -160,9 +163,10 @@ describe("control-center guardrails never veto the canonical main target (final 
       mainTarget: { title: "Follow up every enquiry within a day", priorityClass: "PROFIT_LOSS", source: "domain_action", findingCode: "MKT_NO_FOLLOWUP" },
     }));
     expect(cc.whatNotToDo).toEqual([
-      "Do not spend or discount while cash/margin guardrails are blocking.",
-      "Do not pursue growth/marketing until the capacity bottleneck is cleared.",
+      "Do not add discretionary spend or discounts while cash/margin guardrails are blocking.",
+      "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until the capacity bottleneck is cleared.",
     ]);
+    expect(cc.conditions).toEqual([]);
   });
 
   it("a refresh (data-request) target never rewrites the guardrails, even when it stands in for a growth item", () => {
@@ -172,9 +176,10 @@ describe("control-center guardrails never veto the canonical main target (final 
       mainTarget: { title: "Update your Marketing figures", priorityClass: "GROWTH_OPPORTUNITY", source: "evidence_refresh", findingCode: "EVIDENCE_REFRESH" },
     }));
     expect(cc.whatNotToDo).toEqual([
-      "Do not spend or discount while cash/margin guardrails are blocking.",
-      "Do not pursue growth/marketing until the capacity bottleneck is cleared.",
+      "Do not add discretionary spend or discounts while cash/margin guardrails are blocking.",
+      "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until the capacity bottleneck is cleared.",
     ]);
+    expect(cc.conditions).toEqual([]);
   });
 
   it("guardrails unrelated to the target are unchanged, and without a decision the original wording stands", () => {
@@ -182,7 +187,7 @@ describe("control-center guardrails never veto the canonical main target (final 
       equipmentBottlenecks: ["Oven 2"],
       mainTarget: { title: "Protect your cash runway", priorityClass: "SURVIVAL_CASH", source: "domain_action", findingCode: "CF_LOW_RUNWAY" },
     }));
-    expect(survival.whatNotToDo).toEqual(["Do not pursue growth/marketing until the capacity bottleneck is cleared."]);
+    expect(survival.whatNotToDo).toEqual(["Do not scale demand (new acquisition spend, campaign expansion or extra volume) until the capacity bottleneck is cleared."]);
     const none = buildOwnerControlCenter(inputs({ dataSufficiencyStatus: "insufficient" }));
     expect(none.whatNotToDo).toEqual(["Do not make material decisions until the missing data is provided."]);
   });

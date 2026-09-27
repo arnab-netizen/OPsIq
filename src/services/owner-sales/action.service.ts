@@ -44,7 +44,7 @@ export async function updateSalesAction(
     const to = input.status;
 
     // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
-    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "sales", toStatus: to });
+    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "sales", toStatus: to, findingCode: action.findingCode });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;

@@ -37,6 +37,7 @@ import { buildOwnerControlCenter } from "@/domain/owner-mode/owner-control-cente
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
 import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
 import { BusinessFunction } from "@/domain/owner-guidance/business-function";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const CTX = { businessId: "b", workspaceId: "w" };
 
@@ -54,14 +55,15 @@ function input(candidates: OwnerDecisionCandidate[], over: Partial<ResolveOwnerD
   return {
     ...CTX, candidates, diagnosedDomains: ["finance", "sales", "marketing", "operations"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "r" }, previous: null, events: [], now: new Date("2026-09-27T00:00:00Z"), ...over,
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "r" }, changeFacts: NO_CHANGE_FACTS, now: new Date("2026-09-27T00:00:00Z"), ...over,
   };
 }
 
 const avoid = (id: string, text: string): ActionToAvoid => ({ id, avoid: text, reason: `${id} reason`, businessFunction: [BusinessFunction.GROWTH_READINESS], triggeredBy: [IssueCategory.GROWTH_OPPORTUNITY] });
-const GROWTH_GATE = avoid("avoid_growth_before_gates", "Do not pursue growth/expansion until cash, profit, capacity, workload and quality gates pass");
-const SERVICE = avoid("avoid_marketing_on_service_failure", "Do not scale marketing or acquisition before fixing service quality");
-const CASH = avoid("avoid_growth_on_cash_danger", "Do not start a new marketing/ad campaign or expand this week");
+// The producers' current wording (guidance-orchestrator.ts / next-best-step.ts): intent/lever, never a domain.
+const GROWTH_GATE = avoid("avoid_growth_before_gates", "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until cash, profit, capacity, workload and quality gates pass");
+const SERVICE = avoid("avoid_marketing_on_service_failure", "Do not scale acquisition or campaign volume before fixing service quality");
+const CASH = avoid("avoid_growth_on_cash_danger", "Do not start a new paid campaign or expand this week");
 const HIRE = avoid("avoid_hire_on_cash_danger", "Do not hire until payroll affordability is proven");
 
 describe("target intent — from canonical class/finding semantics, never the domain", () => {
@@ -137,8 +139,12 @@ describe("P1 — a Sales/Marketing REPAIR target is not treated as growth demand
   it("Now View: a genuine GROW target turns growth vetoes into conditions that keep their reason", () => {
     const d = resolveOwnerDecision(input([cand({ findingCode: "MKT_OPP_SCALE_WINNER", title: "Scale the winning campaign", domain: "marketing" })]));
     const out = reconcileAvoidsWithOwnerDecision([CASH, SERVICE, HIRE], d);
-    expect(out[0].avoid).toBe('Keep "Scale the winning campaign" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week');
-    expect(out[1].avoid).toBe('Do not scale "Scale the winning campaign" beyond a small trial until service quality is fixed');
+    // A condition states the PERMITTED SCOPE of the target — never a "do not" that would forbid it.
+    expect(out[0].avoid).toBe('Run "Scale the winning campaign" as a small, low-cost trial within its existing budget while cash or financial survival is at risk.');
+    expect(out[1].avoid).toBe('Run "Scale the winning campaign" only at a volume your service can handle well until service quality is fixed.');
+    expect(out[0].conditionOn).toEqual(["Scale the winning campaign"]);
+    expect(out[1].conditionOn).toEqual(["Scale the winning campaign"]);
+    for (const a of out.slice(0, 2)) expect(a.avoid).not.toMatch(/^Do not|don't/i);
     expect(out[2]).toEqual(HIRE); // the hiring rule names no target work
     expect(out.map((a) => a.reason)).toEqual([CASH.reason, SERVICE.reason, HIRE.reason]);
   });
@@ -151,10 +157,14 @@ describe("P1 — a Sales/Marketing REPAIR target is not treated as growth demand
       attention: { criticalUnresolved: 0, ownerDecisionsRequired: 0, handledByOpsIQ: 0 } as never,
       mainTarget: { title: "Stop the loss-making spend", priorityClass: "PROFIT_LOSS", source: "domain_action", findingCode: "MKT_WASTED_SPEND" },
     });
+    // Guardrails name the intent/lever they stop (discretionary spend, scaling demand) — never a domain
+    // ("growth/marketing") that would read as forbidding a Marketing repair target.
     expect(cc.whatNotToDo).toEqual([
-      "Do not spend or discount while cash/margin guardrails are blocking.",
-      "Do not pursue growth/marketing until the capacity bottleneck is cleared.",
+      "Do not add discretionary spend or discounts while cash/margin guardrails are blocking.",
+      "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until the capacity bottleneck is cleared.",
     ]);
+    expect(cc.whatNotToDo.join(" ")).not.toMatch(/marketing|growth/i);
+    expect(cc.conditions).toEqual([]);
   });
 });
 
@@ -166,9 +176,9 @@ describe("P1 — a same-lever target and prohibition never contradict each other
       cand({ findingCode: "MKT_OPP_ADD_FOLLOWUP", title: "Capture demand with follow-up", domain: "marketing", severity: "low" }),
     ]));
     expect(d.primaryTarget?.findingCode).toBe("MKT_NO_FOLLOWUP");
-    const text = d.whatNotToDo.join(" ");
-    expect(text).not.toMatch(/Don't start growth or investment work such as "Capture demand with follow-up"/);
-    expect(text).toMatch(/"Capture demand with follow-up" moves the same lever as "Add follow-up to every campaign"/);
+    // Same-lever guidance is positive: it moves to `conditions`, never under "what not to do".
+    expect(d.whatNotToDo.join(" ")).not.toMatch(/Capture demand with follow-up/);
+    expect(d.conditions.join(" ")).toMatch(/"Capture demand with follow-up" moves the same lever as "Add follow-up to every campaign"/);
   });
 
   it("a DIFFERENT-lever growth item is still held back behind the target", () => {
@@ -177,13 +187,13 @@ describe("P1 — a same-lever target and prohibition never contradict each other
       cand({ findingCode: "FIN_HIGH_RECEIVABLES", title: "Collect overdue invoices", domain: "finance", severity: "medium" }),
       cand({ findingCode: "MKT_OPP_SCALE_WINNER", title: "Scale the winning campaign", domain: "marketing", severity: "low" }),
     ]));
-    expect(d.whatNotToDo).toContain('Don\'t start growth or investment work such as "Scale the winning campaign" until "Add follow-up to every campaign" is handled.');
+    expect(d.whatNotToDo).toContain('Hold "Scale the winning campaign" (it adds investment or scales demand) until "Add follow-up to every campaign" is handled.');
   });
 
   it("the shared reconciler converts a lever-matching prohibition into a condition on the matching target", () => {
     const ctx = ownerImperativeContext({ primaryTarget: { title: "Add follow-up", source: "domain_action", priorityClass: "PROFIT_LOSS", findingCode: "MKT_NO_FOLLOWUP" }, supportingSteps: [] });
     const r = reconcileOwnerProhibition({ text: "Don't add follow-up", vetoes: "NONE", levers: ["marketing_followup"], asCondition: (t) => `Do "${t}" with a controlled rollout` }, ctx);
-    expect(r).toEqual({ text: 'Do "Add follow-up" with a controlled rollout', conditionOn: "Add follow-up" });
+    expect(r).toEqual({ kind: "condition", text: 'Do "Add follow-up" with a controlled rollout', conditionOn: ["Add follow-up"] });
   });
 });
 
@@ -196,7 +206,8 @@ describe("P1 — Command Center plan analysis cannot veto the canonical target",
       { severity: "high", whatIsWrong: "Biggest constraint: cash runway.", doNext: "Cut costs" },
       { severity: "high", whatIsWrong: "Stop: Pause marketing spend", doNext: "Hold this until the constraint above clears." },
     ],
-    cadence: { now: "Cut costs", thisWeek: "Stabilise", stopLoss: "Do not act — this is blocked until the gate clears." },
+    // The producer's current stop-loss wording (supervisor-summary.ts buildCadence) — no "Do not act".
+    cadence: { now: "Cut costs", thisWeek: "Stabilise", stopLoss: "The plan's suggested action is gated until its gate clears." },
   };
 
   it("stop / do-not / now are restated as constraints and suggestions, never whole-business orders", () => {
@@ -206,16 +217,16 @@ describe("P1 — Command Center plan analysis cannot veto the canonical target",
     expect(all).not.toMatch(/Do not act/);
     expect(all).not.toMatch(/Hold this until/);
     expect(r.stopItemsAreConstraints).toBe(true);
-    expect(r.doNotDo[0]).toBe('Plan constraint: Pause marketing spend — if "Scale the winning campaign" involves this, keep it within that limit.');
+    expect(r.doNotDo[0]).toBe('Plan constraint (context, not an instruction): the plan analysis holds back: Pause marketing spend. Where "Scale the winning campaign" touches it, run only the next validated step within the existing budget.');
     expect(r.topPriorities[0].whatIsWrong).toBe("Plan analysis constraint: cash runway.");
     expect(r.cadence.now).toBe("Plan analysis suggestion: Cut costs");
   });
 
   it("the stop card and the growth gate become conditions on a GROW target", () => {
     const cards = reconcilePlanCards([{ id: "do_not_do", whatIsWrong: "Stop: Pause marketing spend", whyItMatters: "x", nextStep: "Hold this action until the constraint above is cleared." }], ctx);
-    expect(cards[0].whatIsWrong).toMatch(/^Plan constraint: Pause marketing spend/);
+    expect(cards[0].whatIsWrong).toMatch(/^Plan constraint \(context, not an instruction\): the plan analysis holds back: Pause marketing spend/);
     expect(cards[0].nextStep).not.toMatch(/Hold this/);
-    expect(reconcilePlanGrowthGate({ scaleAllowed: false, blockedBy: ["cash_runway"] }, ctx)).toBe('keep "Scale the winning campaign" to a controlled first step — scaling is gated by: cash runway');
+    expect(reconcilePlanGrowthGate({ scaleAllowed: false, blockedBy: ["cash_runway"] }, ctx)).toBe('"Scale the winning campaign" runs only as a validated next step within its existing budget — scaling is gated by: cash runway');
   });
 
   it("without a canonical decision on the page the plan output is unchanged", () => {
@@ -232,18 +243,18 @@ describe("P2 — Recovery, Finance confidence warning, missing-data guardrail", 
     const grow = ownerImperativeContext(resolveOwnerDecision(input([cand({ findingCode: "MKT_OPP_SCALE_WINNER", title: "Scale the winning campaign", domain: "marketing" })])));
     const repair = ownerImperativeContext(resolveOwnerDecision(input([cand({ findingCode: "FIN_HIGH_RECEIVABLES", title: "Collect overdue invoices", domain: "finance" })])));
     const g = reconcileRecoveryBlocks(BLOCKS, grow);
-    expect(g[0]).toBe('taking "Scale the winning campaign" beyond a small, controlled first step until stabilisation is proven (scale / growth / expansion before stabilization is proven)');
-    expect(g[1]).toBe(BLOCKS[1]);
-    expect(reconcileRecoveryBlocks(BLOCKS, repair)).toEqual(BLOCKS);
+    // The growth block constrains GROW only and becomes the permitted scope of the growth target.
+    expect(g.conditions).toEqual(['Run only the next validated step of "Scale the winning campaign", within its existing budget, until stabilisation is proven.']);
+    expect(g.blocked).toEqual([BLOCKS[1]]);
+    expect(reconcileRecoveryBlocks(BLOCKS, repair)).toEqual({ blocked: BLOCKS, conditions: [] });
   });
 
   it("a Finance main target is never told not to rely on Finance: the score is provisional, the issue is real", () => {
     const d = resolveOwnerDecision(input([cand({ findingCode: "FIN_HIGH_RECEIVABLES", title: "Collect overdue invoices", domain: "finance" })], {
       dataSufficiency: { status: "insufficient", lowestDataConfidenceScore: 20, lowConfidenceDomains: ["finance", "sales"], missingCriticalData: ["cashOnHand"] },
     }));
-    const text = d.whatNotToDo.join(" ");
-    expect(text).not.toMatch(/Don't rely on the Finance/);
-    expect(text).toMatch(/The Finance issue in "Collect overdue invoices" is real enough to address, but its Finance score is provisional/);
+    expect(d.whatNotToDo.join(" ")).not.toMatch(/Finance/);
+    expect(d.conditions).toContain("The Finance issue needs attention now, but its Finance score is provisional until cash on hand is supplied.");
     expect(d.whatNotToDo).toContain("Don't rely on the Sales scores yet — they are based on incomplete data.");
   });
 

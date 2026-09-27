@@ -69,8 +69,11 @@ export async function enforceMarginSafetyForPromotion(
   // Cheap exit: only pricing recs are gated, so skip the snapshot read otherwise.
   if (sensitivity !== RecommendationSensitivity.PRICING_SENSITIVE) return;
   // A recommendation belongs to an engagement, which carries no owner business: its margin is
-  // attributable only when the workspace has exactly one real business. Otherwise the margin is
-  // unknown (the gate defers to the input-quality path) — another business's figures are never used.
+  // attributable only when the workspace has exactly one real business (its CURRENT EFFECTIVE figures).
+  // Otherwise the margin is UNKNOWN — never another business's or workspace-wide figures — and, exactly as
+  // the gate's base contract says, an unknown margin does not block here: it is deferred to the
+  // input-quality gate (Consulting Mode semantics unchanged; Owner-mode abstention lives only in the
+  // owner action gate).
   const businesses = await deps.db.ownerBusiness.findMany({
     where: { workspaceId, isActive: true, isFixtureBusiness: false },
     select: { id: true },

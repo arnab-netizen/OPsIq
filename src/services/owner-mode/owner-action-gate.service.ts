@@ -14,7 +14,14 @@
  * A block throws ConflictError (409, governed) and audits OWNER_GATE_PROMOTION_BLOCKED.
  *
  * Reuses resolveOwnerGateMode + assessFleetCapacity + the do-not-repeat rule table
- * (no new gate engine). Cash/margin owner-mode enforcement is a documented follow-on.
+ * (no new gate engine).
+ *
+ * The capacity, cash and margin limits protect against SCALING into danger, so they apply by the
+ * action's INTENT (ownerFindingIntent — the same intent the canonical owner decision uses), not by its
+ * domain: a GROW step is held back while capacity, cash or margin is unsafe; a SAFETY / STABILISE /
+ * REPAIR / EVIDENCE step is the response to that danger and is never blocked by it (the canonical main
+ * target is never refused by the gate that exists because of it). An action whose intent is unknown
+ * (no finding code) or EXECUTE keeps its domain's sensitivity (fail safe).
  */
 
 import { ConflictError } from "@/infra/errors";
@@ -26,10 +33,25 @@ import {
   evaluateCashSafetyGate,
   type FinancialHealthState,
 } from "@/domain/owner-finance/cash-safety-gate";
-import { evaluateMarginSafety, grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
+import { evaluateMarginSafety, grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT, MarginSafetyOutcome } from "@/domain/owner-finance/margin-safety-gate";
+
+/**
+ * Owner-mode only: the code recorded when an owner's own GROW (or unknown-intent) action advances while
+ * its business's margin cannot be assessed. The shared margin gate's contract is unchanged (unknown margin
+ * does not block; deferred to the input-quality path) — Consulting Mode never sees this.
+ */
+export const OWNER_MARGIN_ABSTENTION_CODE = "CANNOT_ASSESS_MARGIN_SAFETY";
+/** What an owner business must supply for its margin to be assessed. */
+export const OWNER_MARGIN_REQUIRED_DATA: readonly string[] = [
+  "current revenue for this business (latest financial snapshot)",
+  "current cost of goods sold for this business (latest financial snapshot)",
+];
 import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { isExpired } from "@/domain/owner-mode/compliance-boundary";
 import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { ownerFindingIntent, type OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
 /** Material owner-action transitions that must pass the gate. */
 export const MATERIAL_ACTION_STATUSES: ReadonlySet<string> = new Set(["in_progress", "completed"]);
@@ -54,10 +76,18 @@ interface ActionGateDb {
     findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>>;
   };
   ownerFinanceCycle: {
-    findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { survivalState: true } }): Promise<{ survivalState: string } | null>;
+    findFirst(args: {
+      where: { workspaceId: string; businessId: string };
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
+    }): Promise<{ survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
   };
   ownerCashflowCycle: {
-    findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { cashflowState: true } }): Promise<{ cashflowState: string } | null>;
+    findFirst(args: {
+      where: { workspaceId: string; businessId: string };
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
+    }): Promise<{ cashflowState: string; snapshot?: { periodEnd: Date } | null } | null>;
   };
   ownerFinancialSnapshot: {
     findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true }>): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
@@ -93,10 +123,8 @@ const DOMAIN_SENSITIVITY: Record<string, RecommendationSensitivity> = {
   sop: RecommendationSensitivity.GENERAL,
 };
 
-const VALID_STATES: ReadonlySet<string> = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
-function asState(v: string | null | undefined): FinancialHealthState {
-  return v && VALID_STATES.has(v) ? (v as FinancialHealthState) : "SAFE";
-}
+/** Intents that respond to a danger: never held back by the growth limits (capacity, cash, margin). */
+const PROTECTIVE_INTENTS: ReadonlySet<OwnerTargetIntent> = new Set(["SAFETY", "STABILISE", "REPAIR", "EVIDENCE"]);
 
 export interface OwnerActionGateDeps {
   db: ActionGateDb;
@@ -116,6 +144,13 @@ export interface OwnerActionGateInput {
   domain: string;
   /** Target status of the transition being applied. */
   toStatus: string;
+  /** The action's finding code — decides its intent (null when the action carries none). */
+  findingCode?: string | null;
+  /**
+   * The action's intent when the caller resolves it from more than the code (Strategy: its step's class
+   * under the live decision, ownerStrategyStepIntent — the same class the canonical decision uses).
+   */
+  intent?: OwnerTargetIntent | null;
 }
 
 async function block(input: OwnerActionGateInput, reason: string, code: string): Promise<never> {
@@ -125,7 +160,7 @@ async function block(input: OwnerActionGateInput, reason: string, code: string):
     actorType: "system",
     entityType: "owner_action",
     entityId: input.actionId,
-    payload: { domain: input.domain, toStatus: input.toStatus, code, errorName: "OwnerActionGateError" },
+    payload: { domain: input.domain, businessId: input.businessId, toStatus: input.toStatus, code, errorName: "OwnerActionGateError" },
   });
   throw new ConflictError(reason);
 }
@@ -152,8 +187,15 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
     await block(input, `This ${input.domain} action repeats a decision marked do-not-repeat. Provide a changed-context reason to override.`, "DO_NOT_REPEAT_BLOCKED");
   }
 
+  // The growth limits below apply by intent: a protective step (the response to the danger) is never
+  // held back by them; unknown intent keeps the domain's sensitivity.
+  // No intent and no finding code (e.g. a legacy or budget action): the domain's sensitivity applies.
+  const intent: OwnerTargetIntent | null = input.intent ?? (input.findingCode ? ownerFindingIntent(input.findingCode) : null);
+  const protective = intent !== null && PROTECTIVE_INTENTS.has(intent);
+  const growth = intent === "GROW";
+
   // 2. Capacity for growth-sensitive domains (don't act on growth while capacity is unsafe).
-  if (CAPACITY_SENSITIVE_DOMAINS.has(input.domain)) {
+  if (!protective && CAPACITY_SENSITIVE_DOMAINS.has(input.domain)) {
     const fleet = await deps.db.ownerEquipment.findMany({
       where: bizScope(input.workspaceId, input.businessId),
       select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
@@ -168,35 +210,54 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
     }
   }
 
-  // 3. Cash safety — block growth while cash is at-risk, and finance/spend actions while
-  //    cash is critical (reuses the proven evaluateCashSafetyGate on the owner's latest
-  //    finance survival + cashflow state for this business).
-  if (input.businessId) {
-    const sensitivity = DOMAIN_SENSITIVITY[input.domain] ?? RecommendationSensitivity.GENERAL;
+  // 3. Cash safety — block growth while cash is at-risk, and finance/spend actions while cash is
+  //    critical, on the ONE current cash/finance reading (current-cash-finance-reading.ts: the current
+  //    diagnosis cycles, arbitrated by evidence period; an amended-but-undiagnosed unsafe Finance
+  //    reading still counts until it is re-diagnosed). No reading at all → nothing to enforce.
+  let marginAbstention: string[] | null = null;
+  if (input.businessId && !protective) {
+    const sensitivity = growth ? RecommendationSensitivity.GROWTH_SENSITIVE : DOMAIN_SENSITIVITY[input.domain] ?? RecommendationSensitivity.GENERAL;
+    const scope = { workspaceId: input.workspaceId, businessId: input.businessId };
     const [finCycle, cashCycle] = await Promise.all([
-      deps.db.ownerFinanceCycle.findFirst({ where: { workspaceId: input.workspaceId, businessId: input.businessId }, orderBy: { createdAt: "desc" }, select: { survivalState: true } }),
-      deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId: input.workspaceId, businessId: input.businessId }, orderBy: { createdAt: "desc" }, select: { cashflowState: true } }),
+      deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } } }),
+      deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, snapshot: { select: { periodEnd: true } } } }),
     ]);
-    // Only enforce when we actually have a measured state (avoid blocking on absent data).
-    if (finCycle || cashCycle) {
-      const result = evaluateCashSafetyGate(asState(cashCycle?.cashflowState), asState(finCycle?.survivalState), sensitivity);
+    const reading = currentCashFinanceReading(
+      cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
+      finCycle ? { state: finCycle.survivalState, snapshot: finCycle.snapshot } : null,
+      now.getTime()
+    );
+    if (reading.gateState) {
+      const state = reading.gateState as FinancialHealthState;
+      const result = evaluateCashSafetyGate(state, state, sensitivity);
       if (!result.allowed) {
-        await block(input, `${result.reason} Resolve cash/finance survival before advancing this ${input.domain} action.`, "CASH_SAFETY_BLOCKED");
+        const basis = reading.conflicting
+          ? " (Cash flow and Finance disagree and neither is more current; the worse reading applies until they are reconciled)"
+          : reading.financeAmendedLastKnown && !reading.financeState
+            ? " (the last Finance diagnosis, whose figures were amended since; re-run the Finance diagnosis)"
+            : "";
+        await block(input, `${result.reason}${basis} Resolve cash/finance survival before advancing this ${input.domain} action.`, "CASH_SAFETY_BLOCKED");
       }
     }
 
     // 4. Margin safety — for pricing/growth-relevant domains, block when KNOWN gross margin
-    //    is below the floor (scaling a money-losing operation). Unknown margin is allowed
-    //    (no false block; deferred to the input-quality path), reusing evaluateMarginSafety.
+    //    is below the floor (scaling a money-losing operation), reusing evaluateMarginSafety.
+    //    This gate stops advancing an owner's own action on a PROVEN loss. An unknown margin is
+    //    not claimed as a loss (the shared gate's contract: unknown → not blocked, deferred to the
+    //    input-quality path) — it would otherwise freeze every sales/marketing action of a business
+    //    without cost-of-goods figures — but for an owner GROW (or unknown-intent) action the
+    //    Owner-mode abstention is RECORDED with the data it needs (OWNER_MARGIN_ABSTENTION_CODE),
+    //    never a silent pass, once the transition passes every check.
     if (MARGIN_SENSITIVE_DOMAINS.has(input.domain)) {
       const snap = await deps.db.ownerFinancialSnapshot.findFirst(
         currentEffectiveFinancialSnapshotQuery({ workspaceId: input.workspaceId, businessId: input.businessId }, { revenue: true, costOfGoods: true })
       );
       const grossMargin = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
       const margin = evaluateMarginSafety(grossMargin, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
-      if (!margin.allowed) {
+      if (margin.outcome === MarginSafetyOutcome.BLOCKED_BELOW_FLOOR) {
         await block(input, `${margin.reason} Restore margin above the floor before advancing this ${input.domain} action.`, "MARGIN_SAFETY_BLOCKED");
       }
+      if (grossMargin === null) marginAbstention = [...OWNER_MARGIN_REQUIRED_DATA];
     }
   }
 
@@ -214,5 +275,23 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
       `Professional-review required: "${expired.name}" (${expired.kind}) is expired. Renew it (or seek professional review) before advancing this ${input.domain} action.`,
       "COMPLIANCE_BLOCKED"
     );
+  }
+
+  // Every check passed: record the margin abstention for this (allowed) transition.
+  if (marginAbstention) {
+    await emitAuditEvent({
+      workspaceId: input.workspaceId,
+      eventName: AUDIT_EVENTS.OWNER_GATE_ASSESSMENT_ABSTAINED,
+      actorType: "system",
+      entityType: "owner_action",
+      entityId: input.actionId,
+      payload: {
+        domain: input.domain,
+        businessId: input.businessId,
+        toStatus: input.toStatus,
+        code: OWNER_MARGIN_ABSTENTION_CODE,
+        requiredData: marginAbstention,
+      },
+    });
   }
 }

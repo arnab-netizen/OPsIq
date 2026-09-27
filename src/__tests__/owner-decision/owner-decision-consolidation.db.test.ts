@@ -313,9 +313,9 @@ describe("[db] canonical owner decision — consolidation", () => {
       newCustomers: 5, repeatCustomers: 0, lostCustomers: 10, complaints: 20, discountAmount: 30000, refundAmount: 5000, staffCount: 2,
     } as any, actor, workspaceId);
     await runSalesDiagnosis(businessId, sSnap.id, actor, workspaceId);
-    // First Home read: no history, nothing invented.
+    // First Home read: only what was persisted — the first Sales figures were analysed; nothing invented.
     const first = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
-    expect(first.whatChanged).toEqual([]);
+    expect(first.whatChanged).toEqual([{ kind: "EVIDENCE_UPDATED", message: "New Sales figures were analysed." }]);
     // A critical cash danger appears; the owner only ever opens Home.
     const cf = await createCashflowSnapshot(businessId, {
       ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
@@ -324,15 +324,20 @@ describe("[db] canonical owner decision — consolidation", () => {
     await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
     const second = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
     expect(second.primaryDomain).toBe("cashflow");
-    expect(second.whatChanged.map((c) => c.kind)).toContain("MAIN_TARGET_CHANGED");
-    // Re-reading (any route) keeps reporting the same change relative to the previous distinct decision.
+    // Built from persisted facts (the new Cash flow diagnosis), never from a read-time memory: no
+    // "main target changed" claim (not reconstructible truthfully), and the same answer on every route.
+    expect(second.whatChanged).toEqual(expect.arrayContaining([{ kind: "EVIDENCE_UPDATED", message: "New Cash flow figures were analysed." }]));
+    expect(second.whatChanged.map((c) => c.kind)).not.toContain("MAIN_TARGET_CHANGED");
     const again = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
-    expect(again.whatChanged.map((c) => c.kind)).toContain("MAIN_TARGET_CHANGED");
+    expect(again.whatChanged).toEqual(second.whatChanged);
+    const viaNowView: any = await nowViewGET(ctx(workspaceId, `/api/owner/now-view?businessId=${businessId}`), {});
+    expect(viaNowView.ownerDecision.whatChanged).toEqual(second.whatChanged);
+    expect(await db.auditEvent.count({ where: { workspaceId, eventName: "owner.decision_changed" } })).toBe(0);
 
     await teardownOwnerBusiness(businessId);
   });
 
-  it("[db] concurrent reads record ONE decision event (advisory lock), under its own entity type, with an unforked hash chain", async () => {
+  it("[db] concurrent reads record NO decision event: the read path persists nothing", async () => {
     const workspaceId = randomUUID();
     const businessId = await newBusiness(workspaceId, "QA Decision Concurrency");
     const sSnap = await createSalesSnapshot(businessId, {
@@ -342,14 +347,8 @@ describe("[db] canonical owner decision — consolidation", () => {
     await runSalesDiagnosis(businessId, sSnap.id, actor, workspaceId);
     // Five simultaneous reads of a decision nobody has recorded yet (two tabs, Portfolio fan-out, ...).
     await Promise.all(Array.from({ length: 5 }, () => getOwnerHome(workspaceId, businessId)));
-    const events = await db.auditEvent.findMany({
-      where: { workspaceId, eventName: "owner.decision_changed" },
-      select: { entityType: true, entityId: true, previousHash: true },
-    });
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ entityType: "OwnerDecision", entityId: businessId });
-    // Never recorded against the owner-business entity (keeps its governed audit trail clean).
-    expect(await db.auditEvent.count({ where: { workspaceId, eventName: "owner.decision_changed", entityType: "OwnerBusiness" } })).toBe(0);
+    expect(await db.auditEvent.count({ where: { workspaceId, eventName: "owner.decision_changed" } })).toBe(0);
+    expect(await db.auditEvent.count({ where: { workspaceId, entityType: "OwnerDecision" } })).toBe(0);
 
     await teardownOwnerBusiness(businessId);
   });
@@ -387,7 +386,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(survival.map((t) => t.findingCode)).toContain(d.primaryTarget?.findingCode);
     // Cancelling the actions without new figures did not resolve the danger: never reported as resolved.
     expect(d.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
-    expect(d.memory.staleDomains).not.toContain("cashflow");
+    expect(d.whatChanged.map((c) => c.kind)).not.toContain("EVIDENCE_OUT_OF_DATE");
 
     await teardownOwnerBusiness(businessId);
   });

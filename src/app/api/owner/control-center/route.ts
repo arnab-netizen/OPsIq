@@ -24,12 +24,16 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
-    const [condition, home, blocks] = await Promise.all([
+    const [condition, home] = await Promise.all([
       getBusinessCondition(ctx.verifiedWorkspaceId, businessId),
       getOwnerHome(ctx.verifiedWorkspaceId, businessId),
-      // Live block counts derived from the audit log (gate/do-not-repeat/completion blocks).
-      getOwnerBlockMetrics(ctx.verifiedWorkspaceId),
     ]);
+    // Live block counts derived from the audit log (gate/do-not-repeat/completion blocks). Finance
+    // blocks constrain THIS business's advice only when they are this business's blocks.
+    const blocks = await getOwnerBlockMetrics(ctx.verifiedWorkspaceId, undefined, {
+      businessId: home.selectedBusinessId,
+      unscopedAttributable: home.businesses.length === 1,
+    });
     const { profile } = condition;
     // The canonical decision is used beside this condition profile only when both describe the SAME business.
     const decision = home.selectedBusinessId === condition.selectedBusinessId ? home.currentOwnerDecision : null;

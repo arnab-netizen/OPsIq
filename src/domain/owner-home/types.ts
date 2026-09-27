@@ -13,14 +13,35 @@ import type { OwnerDomain, OwnerSeverity } from "@/domain/owner-spine/contracts"
 /** Danger banding for a single domain's risk (or "unknown" when there is no data). */
 export type DangerLevel = "unknown" | "none" | "low" | "elevated" | "high" | "critical";
 
-/** A named danger surface on the owner home (cash / sales / operations / execution). */
+/**
+ * A named danger surface on the owner home (cash / financial / sales / operations / execution). One
+ * contract for every card: which domain's evidence drives it, when that evidence was captured, and
+ * whether the reading is current. A score is shown only for a CURRENT reading; out-of-date evidence
+ * shows only its last-known level ("Last flagged: High — update … data").
+ */
 export interface DomainDanger {
-  /** The domain key, or "execution" for the operations+sop execution rollup. */
-  key: OwnerDomain | "execution";
-  riskScore: number | null; // null = no diagnosis for this surface (never invented)
+  /** The card: a domain key, "execution" (operations + sop rollup) or "financial" (Finance). */
+  key: OwnerDomain | "execution" | "financial";
+  /** The domain(s) whose evidence produced this reading (empty when unknown). */
+  sourceDomains: OwnerDomain[];
+  /** What drives the reading, shown as provenance (e.g. "Driven by: Gross margin below target"); null when not stated. */
+  drivenBy: string | null;
+  /** When the evidence behind the reading was captured (the oldest, for a rollup); null when unknown. */
+  evidenceAsOf: Date | null;
+  /**
+   * current = evidence in date; last_known = out of date (or superseded) — shown as last flagged;
+   * conflicting = two current readings disagree and neither is more current (shown as a conflict, never
+   * resolved by picking one); unknown = no diagnosis.
+   */
+  status: "current" | "last_known" | "conflicting" | "unknown";
+  /** 0..100, ONLY for a current reading from a scored domain; null otherwise (never invented, never stale). */
+  riskScore: number | null;
+  /** The current level, or the last-known level when status is last_known. */
   level: DangerLevel;
-  /** true when the reading comes from out-of-date evidence: shown as last flagged, never current. */
-  lastFlagged?: boolean;
+  /** true exactly when status is last_known. */
+  lastFlagged: boolean;
+  /** Owner-facing name of the data to update when the reading is last-known (e.g. "Execution"). */
+  updateDataLabel: string | null;
 }
 
 /** A top risk surfaced on the home screen (a real risk finding). */
@@ -73,7 +94,10 @@ export interface OwnerHomeDataSufficiency {
 /** The complete §19 owner-home summary (deterministic; nothing invented). */
 export interface OwnerHomeSummary {
   businessHealthScore: number; // 0..100
+  /** Cash position only (Cash flow, or Finance's own cash-survival findings) — never margin or profit risk. */
   cashDanger: DomainDanger;
+  /** Finance's overall risk, with what drives it (margin, debt, cash …) stated as provenance. */
+  financialDanger: DomainDanger;
   salesDanger: DomainDanger;
   operationsDanger: DomainDanger;
   executionDanger: DomainDanger;

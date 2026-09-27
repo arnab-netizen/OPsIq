@@ -27,6 +27,7 @@ import {
 } from "@/domain/owner-spine/contracts";
 import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 
 /**
  * Deterministic total order for a domain's per-cycle actions. priorityScore
@@ -420,7 +421,7 @@ export async function getBusinessCondition(
   const [financeCycle, latestFinanceSnapshot, recoveryCycle, cashflowCycle, salesCycle, operationsCycle, sopCycle, marketingCycle, strategyCycle] = await Promise.all([
     db.ownerFinanceCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         // Ranked after read (see *CycleToDomainScore): severity is a plain string, so
         // a DB orderBy sorts it alphabetically (critical, high, low, medium).
@@ -438,7 +439,7 @@ export async function getBusinessCondition(
     // Read-only read of the proven Module 1 recovery cycle (no recovery mutation).
     db.recoveryCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { cycleNumber: "desc" },
+      orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
       include: {
         snapshot: true,
         findings: { select: { code: true, severity: true, confidence: true } },
@@ -447,7 +448,7 @@ export async function getBusinessCondition(
     }),
     db.ownerCashflowCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
@@ -455,7 +456,7 @@ export async function getBusinessCondition(
     }),
     db.ownerSalesCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
@@ -463,7 +464,7 @@ export async function getBusinessCondition(
     }),
     db.ownerOperationsCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
@@ -471,7 +472,7 @@ export async function getBusinessCondition(
     }),
     db.ownerSopCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
@@ -479,7 +480,7 @@ export async function getBusinessCondition(
     }),
     db.ownerMarketingCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
@@ -487,7 +488,7 @@ export async function getBusinessCondition(
     }),
     db.ownerStrategyCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },

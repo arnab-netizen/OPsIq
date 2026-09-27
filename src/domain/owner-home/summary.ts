@@ -24,6 +24,7 @@ import {
   type DomainScore,
   type OwnerDomain,
   type OwnerFinding,
+  type OwnerSeverity,
 } from "@/domain/owner-spine/contracts";
 import type {
   DangerLevel,
@@ -53,12 +54,26 @@ export interface OwnerHomeSummaryInput {
   missingCriticalData?: string[];
   /** Domains whose latest evidence is out of date: their findings are shown as last flagged, never current. */
   staleDomains?: readonly string[];
+  /** When each diagnosed domain's evidence was captured (its diagnosed snapshot's createdAt). */
+  evidenceAsOf?: Partial<Record<OwnerDomain, Date | null>>;
   /**
-   * The survival source the canonical arbitration governs cash danger with ("cashflow" or "finance"):
-   * Cash flow and Finance are two evidence sources for the same survival question, so the cash-danger
-   * card reads the SAME source the resolver trusts (default: cashflow).
+   * Cash flow's reading was superseded by a NEWER, disagreeing Finance reading (the same arbitration the
+   * owner decision applies): the cash card then never shows the superseded score as current.
    */
-  survivalSource?: "cashflow" | "finance";
+  cashflowSuperseded?: boolean;
+  /** Finance's reading was superseded by a NEWER, disagreeing Cash flow reading (same arbitration). */
+  financeSuperseded?: boolean;
+  /**
+   * Finance's own CASH-survival findings (the most severe) from an un-superseded Finance diagnosis, used
+   * for the cash card only when Cash flow has no current reading. Severity only — no score is borrowed
+   * from Finance. `current` is false when those Finance figures are out of date (then last-known).
+   */
+  financeCashSignal?: { severity: OwnerSeverity; title: string; current: boolean } | null;
+  /**
+   * Cash flow and Finance currently disagree (one safe, one not) and neither can be shown to be more
+   * current (the ONE current cash/finance reading's `conflicting`): the cash card states the conflict.
+   */
+  cashFinanceConflict?: { cashState: string; financeState: string } | null;
   /** Injectable clock for deterministic output; defaults to now. */
   now?: Date;
 }
@@ -83,23 +98,132 @@ function maxOf(values: number[]): number {
   return values.reduce((m, v) => (v > m ? v : m), values[0]);
 }
 
-/** Danger for a single domain (null risk when that domain has no diagnosis). */
-function dangerForDomain(scores: Map<OwnerDomain, DomainScore>, domain: OwnerDomain): DomainDanger {
-  const s = scores.get(domain);
-  const riskScore = s ? clampScore(s.riskScore) : null;
-  return { key: domain, riskScore, level: dangerLevel(riskScore) };
+const DANGER_DATA_LABEL: Partial<Record<OwnerDomain, string>> = {
+  cashflow: "Cash flow",
+  finance: "Finance",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+};
+
+const UNKNOWN_DANGER = (key: DomainDanger["key"]): DomainDanger => ({
+  key, sourceDomains: [], drivenBy: null, evidenceAsOf: null, status: "unknown", riskScore: null, level: "unknown", lastFlagged: false, updateDataLabel: null,
+});
+
+/** Severity-only level (a finding's severity, when no score applies). */
+const SEVERITY_LEVEL: Record<OwnerSeverity, DangerLevel> = { critical: "critical", high: "high", medium: "elevated", low: "low" };
+
+interface DangerContext {
+  scores: Map<OwnerDomain, DomainScore>;
+  stale: ReadonlySet<string>;
+  evidenceAsOf: Partial<Record<OwnerDomain, Date | null>>;
 }
 
-function withFreshness(d: DomainDanger, stale: ReadonlySet<string>): DomainDanger {
-  return d.riskScore !== null && d.key !== "execution" && stale.has(d.key) ? { ...d, lastFlagged: true } : d;
+/** Danger for one scored domain: current ⇒ score; out of date ⇒ last-known level, no score. */
+function dangerForDomain(ctx: DangerContext, key: DomainDanger["key"], domain: OwnerDomain, drivenBy: string | null, forceLastKnown = false): DomainDanger {
+  const s = ctx.scores.get(domain);
+  if (!s) return UNKNOWN_DANGER(key);
+  const score = clampScore(s.riskScore);
+  const lastKnown = forceLastKnown || ctx.stale.has(domain);
+  return {
+    key,
+    sourceDomains: [domain],
+    drivenBy,
+    evidenceAsOf: ctx.evidenceAsOf[domain] ?? null,
+    status: lastKnown ? "last_known" : "current",
+    riskScore: lastKnown ? null : score,
+    level: dangerLevel(score),
+    lastFlagged: lastKnown,
+    updateDataLabel: lastKnown ? DANGER_DATA_LABEL[domain] ?? null : null,
+  };
 }
 
-/** Execution danger = max risk across the execution domains present (operations, sop). */
-function executionDanger(scores: Map<OwnerDomain, DomainScore>): DomainDanger {
-  const present = EXECUTION_DOMAINS.map((d) => scores.get(d)).filter((s): s is DomainScore => Boolean(s));
-  if (present.length === 0) return { key: "execution", riskScore: null, level: "unknown" };
-  const riskScore = clampScore(maxOf(present.map((s) => clampScore(s.riskScore))));
-  return { key: "execution", riskScore, level: dangerLevel(riskScore) };
+/**
+ * Execution danger = the worst of the execution domains present (operations, sop). Its status, source and
+ * evidence date follow the domain(s) that DRIVE the level: a current reading at least as bad as every
+ * out-of-date one is shown as current (with its score); an out-of-date reading that is worse than every
+ * current one is shown only as last known ("update … data").
+ */
+function executionDanger(ctx: DangerContext): DomainDanger {
+  const present = EXECUTION_DOMAINS.filter((d) => ctx.scores.has(d));
+  if (present.length === 0) return UNKNOWN_DANGER("execution");
+  const scoreOf = (d: OwnerDomain) => clampScore(ctx.scores.get(d)!.riskScore);
+  const current = present.filter((d) => !ctx.stale.has(d));
+  const stale = present.filter((d) => ctx.stale.has(d));
+  const currentMax = current.length > 0 ? maxOf(current.map(scoreOf)) : -1;
+  const staleMax = stale.length > 0 ? maxOf(stale.map(scoreOf)) : -1;
+  const lastKnown = staleMax > currentMax;
+  const drivers = lastKnown ? stale.filter((d) => scoreOf(d) === staleMax) : current.filter((d) => scoreOf(d) === currentMax);
+  const score = lastKnown ? staleMax : currentMax;
+  const dates = drivers.map((d) => ctx.evidenceAsOf[d] ?? null).filter((d): d is Date => d !== null);
+  return {
+    key: "execution",
+    sourceDomains: drivers,
+    drivenBy: null,
+    evidenceAsOf: dates.length > 0 ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null,
+    status: lastKnown ? "last_known" : "current",
+    riskScore: lastKnown ? null : score,
+    level: dangerLevel(score),
+    lastFlagged: lastKnown,
+    updateDataLabel: lastKnown ? drivers.map((d) => DANGER_DATA_LABEL[d] ?? d).join(" and ") : null,
+  };
+}
+
+/**
+ * Cash danger is the CASH POSITION only: Cash flow's current reading; when Cash flow has no current
+ * reading, Finance's own cash-survival findings (severity only, no score); otherwise Cash flow's
+ * last-known reading. Finance's overall (margin/profit-driven) risk is never presented as cash danger.
+ */
+function cashDanger(ctx: DangerContext, input: OwnerHomeSummaryInput): DomainDanger {
+  const conflict = input.cashFinanceConflict ?? null;
+  if (conflict) {
+    // Two current readings disagree and neither supersedes the other: say so — no side is picked, and no
+    // combined level or score is fabricated.
+    return {
+      key: "cashflow",
+      sourceDomains: ["cashflow", "finance"],
+      drivenBy: `Cash and Finance signals currently disagree (Cash flow: ${conflict.cashState}, Finance: ${conflict.financeState}). Confirm the latest figures before relying on the survival assessment.`,
+      evidenceAsOf: ctx.evidenceAsOf.cashflow ?? null,
+      status: "conflicting",
+      riskScore: null,
+      level: "unknown",
+      lastFlagged: false,
+      updateDataLabel: null,
+    };
+  }
+  const hasCash = ctx.scores.has("cashflow");
+  const cashCurrent = hasCash && !ctx.stale.has("cashflow") && !input.cashflowSuperseded;
+  if (cashCurrent) return dangerForDomain(ctx, "cashflow", "cashflow", null);
+  const fin = input.financeCashSignal ?? null;
+  const finCurrent = fin !== null && fin.current && ctx.scores.has("finance") && !ctx.stale.has("finance");
+  if (fin && (finCurrent || !hasCash)) {
+    // Finance's own cash-survival finding: current, or (with no Cash flow reading at all) last known —
+    // never "no data" beside a Finance cash-survival reading.
+    return {
+      key: "cashflow",
+      sourceDomains: ["finance"],
+      drivenBy: `From your Finance figures: ${fin.title}`,
+      evidenceAsOf: ctx.evidenceAsOf.finance ?? null,
+      status: finCurrent ? "current" : "last_known",
+      riskScore: null,
+      level: SEVERITY_LEVEL[fin.severity],
+      lastFlagged: !finCurrent,
+      updateDataLabel: finCurrent ? null : "Finance",
+    };
+  }
+  if (!hasCash) return UNKNOWN_DANGER("cashflow");
+  return {
+    ...dangerForDomain(ctx, "cashflow", "cashflow", input.cashflowSuperseded ? "Superseded by newer Finance figures" : null, true),
+  };
+}
+
+/** The most severe current Finance risk finding, stated as what drives the Financial danger reading. */
+function financialDrivenBy(findings: readonly OwnerFinding[]): string | null {
+  const top = findings
+    .filter((f) => f.domain === "finance" && f.findingType === "risk")
+    .slice()
+    .sort((a, b) => ownerSeverityRank(b.severity) - ownerSeverityRank(a.severity) || clampScore(b.impactScore) - clampScore(a.impactScore) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0))[0];
+  return top ? `Driven by: ${top.title}` : null;
 }
 
 /** Build the deterministic §19 owner-home summary. Pure; never invents values. */
@@ -109,6 +233,7 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
 
   const businessHealthScore = clampScore(average(input.domainScores.map((s) => clampScore(s.healthScore))));
   const stale = new Set<string>(input.staleDomains ?? []);
+  const dangerCtx: DangerContext = { scores: scoreByDomain, stale, evidenceAsOf: input.evidenceAsOf ?? {} };
 
   // Top 3 risks: real risk findings, worst first, in the canonical spine order
   // (severity → impact → urgency → confidence → domain → code); an unknown stored
@@ -207,10 +332,12 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
 
   return {
     businessHealthScore,
-    cashDanger: withFreshness(dangerForDomain(scoreByDomain, input.survivalSource ?? "cashflow"), stale),
-    salesDanger: withFreshness(dangerForDomain(scoreByDomain, "sales"), stale),
-    operationsDanger: withFreshness(dangerForDomain(scoreByDomain, "operations"), stale),
-    executionDanger: executionDanger(scoreByDomain),
+    cashDanger: cashDanger(dangerCtx, input),
+    // A Finance reading superseded by a newer, disagreeing Cash flow reading is never shown as current.
+    financialDanger: dangerForDomain(dangerCtx, "financial", "finance", input.financeSuperseded ? "Superseded by newer Cash flow figures" : financialDrivenBy(input.findings), Boolean(input.financeSuperseded)),
+    salesDanger: dangerForDomain(dangerCtx, "sales", "sales", null),
+    operationsDanger: dangerForDomain(dangerCtx, "operations", "operations", null),
+    executionDanger: executionDanger(dangerCtx),
     top3Risks,
     top3Opportunities,
     lastVerifiedImprovement,

@@ -222,10 +222,17 @@ export default function OwnerNowViewPage() {
         ))}
       </section>
 
-      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.length > 0 && (
+      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.some((a: any) => a.conditionOn) && (
+        <section style={{ padding: 16, borderRadius: 8, border: "1px solid var(--border)" }} data-testid="now-step-conditions">
+          <h2 style={{ marginTop: 0 }}>How to carry out your next steps</h2>
+          <ul>{view.actionsToAvoid.filter((a: any) => a.conditionOn).map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
+        </section>
+      )}
+
+      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.some((a: any) => !a.conditionOn) && (
         <section style={{ background: "#fef2f2", padding: 16, borderRadius: 8 }}>
           <h2 style={{ marginTop: 0 }}>Do NOT do now</h2>
-          <ul>{view.actionsToAvoid.map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
+          <ul>{view.actionsToAvoid.filter((a: any) => !a.conditionOn).map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
         </section>
       )}
 

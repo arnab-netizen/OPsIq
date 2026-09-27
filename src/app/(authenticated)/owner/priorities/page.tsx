@@ -27,7 +27,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { Badge, CardDashboardSkeleton, EmptyState, ErrorState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
-import { ownerDecisionCandidateIdForEntity, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { ownerDecisionCandidateIdForEntity, ownerTargetHref, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -257,7 +257,7 @@ export default function OwnerPrioritiesPage() {
                   {i === 0 ? <Badge variant="default-accessible">Main target</Badge> : <Badge variant="muted-accessible">{t.domainLabel}</Badge>}
                 </div>
                 <strong className="mt-1 block font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground">{t.title}</strong>
-                <Link href={t.targetRoute} className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
+                <Link href={i === 0 ? ownerTargetHref(t) : t.targetRoute} className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
                   Open {t.domainLabel} →
                 </Link>
               </li>

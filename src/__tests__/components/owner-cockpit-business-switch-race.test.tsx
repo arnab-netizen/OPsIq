@@ -36,6 +36,7 @@ import { ActiveBusinessProvider, useActiveBusiness } from "@/context/active-busi
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerExecutionLifecycleView, ExecutionLifecycleItem } from "@/services/owner-guidance/owner-now-view.service";
 import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const BIZ_A = { id: "11111111-1111-4111-8111-111111111111", name: "ZZ-TEST-FIELD-SERVICE" };
 const BIZ_B = { id: "22222222-2222-4222-8222-222222222222", name: "Trinity Services" };
@@ -91,7 +92,7 @@ function decisionFor(label: string, businessId: string) {
     }],
     diagnosedDomains: ["finance"],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS,
     now: new Date("2026-06-30T00:00:00Z"),
   })));
 }

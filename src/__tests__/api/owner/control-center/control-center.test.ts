@@ -88,6 +88,7 @@ const MOCK_PROFILE = {
 // The ONE canonical owner decision (owner-home service) supplies the next best action.
 const MOCK_HOME = {
   selectedBusinessId: null,
+  businesses: [],
   currentOwnerDecision: { primaryTarget: { title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action", findingCode: "CF_LOW_RUNWAY" }, supportingSteps: [] },
 };
 
@@ -219,7 +220,13 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
 
     it("passes verifiedWorkspaceId to getOwnerBlockMetrics", async () => {
       await controlCenterGet(makeCtx());
-      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_A);
+      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_A, undefined, { businessId: null, unscopedAttributable: false });
+    });
+
+    it("D-P2-3 — finance blocks are scoped to the SELECTED business (a business-less block counts only when it is the only business)", async () => {
+      mockGetOwnerHome.mockResolvedValue({ ...MOCK_HOME, selectedBusinessId: "biz-1", businesses: [{ id: "biz-1" }] });
+      await controlCenterGet(makeCtx());
+      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_A, undefined, { businessId: "biz-1", unscopedAttributable: true });
     });
 
     it("passes verifiedWorkspaceId to getOwnerControlCenter as first arg", async () => {
@@ -281,7 +288,7 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
     });
 
     it("uses null nextBestAction when the canonical decision has no target", async () => {
-      mockGetOwnerHome.mockResolvedValue({ selectedBusinessId: null, currentOwnerDecision: { primaryTarget: null } });
+      mockGetOwnerHome.mockResolvedValue({ selectedBusinessId: null, businesses: [], currentOwnerDecision: { primaryTarget: null } });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.nextBestAction).toBeNull();
@@ -345,7 +352,7 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
     it("uses verifiedWorkspaceId not a body/query workspace param for block metrics", async () => {
       const ctx = makeCtx({ verifiedWorkspaceId: WS_B });
       await controlCenterGet(ctx);
-      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_B);
+      expect(mockGetOwnerBlockMetrics.mock.calls[0][0]).toBe(WS_B);
     });
 
     it("uses verifiedWorkspaceId not a body/query workspace param for control center service", async () => {

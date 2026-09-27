@@ -13,15 +13,57 @@ import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView
 import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domain/owner-mode/owner-dashboard";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 
 const querySchema = z.object({
   includeKPIs: z.enum(["true", "false"]).optional().default("true"),
   daysOfHistory: z.string().optional().default("30"),
 });
 
-function toOwnerDashboardDTO(data: any, realRecommendations?: any[]) {
+/** The dashboard view fields this DTO reads (structural: every field optional, defaulted below). */
+interface OwnerDashboardDtoSource {
+  workspaceId: string;
+  config?: { createdAt?: string };
+  health?: {
+    recommendedActions?: unknown[];
+    overallStatus?: HealthStatus;
+    engagementCount?: number;
+    healthyEngagements?: number;
+    atRiskEngagements?: number;
+    criticalEngagements?: number;
+    topRisks?: unknown[];
+  };
+  actionQueue?: {
+    totalCount?: number;
+    overdueCount?: number;
+    byStatus?: Record<string, unknown>;
+    byPriority?: Record<string, unknown>;
+    criticalActions?: unknown[];
+    dueThisWeek?: unknown[];
+  };
+}
+
+interface DashboardRecommendationRow {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+}
+
+/** The one Finance-cycle read this route makes (the `db` proxy is untyped). */
+interface FinanceCycleStateReader {
+  ownerFinanceCycle: {
+    findFirst(args: {
+      where: { businessId: string; workspaceId: string };
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: { survivalState: true };
+    }): Promise<{ survivalState: string | null } | null>;
+  };
+}
+
+function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?: DashboardRecommendationRow[]) {
   const recommendedActions = realRecommendations && realRecommendations.length > 0
-    ? realRecommendations.map((rec: any) => ({
+    ? realRecommendations.map((rec) => ({
         id: rec.id,
         title: rec.title,
         description: rec.description,
@@ -81,18 +123,18 @@ export async function buildOwnerDashboardPayload(
     businesses.map(async (biz, idx) => {
       const [progress, latestCycle] = await Promise.all([
         getOwnerBusinessProgress(biz.id, workspaceId, db as never),
-        (db as any).ownerFinanceCycle.findFirst({
+        (db as unknown as FinanceCycleStateReader).ownerFinanceCycle.findFirst({
           where: { businessId: biz.id, workspaceId },
-          orderBy: { createdAt: "desc" },
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
           select: { survivalState: true },
         }),
       ]);
 
-      const survivalState: string | null = (latestCycle as any)?.survivalState ?? null;
+      const survivalState: string | null = latestCycle?.survivalState ?? null;
+      // Finance survival states as persisted (SAFE | WATCH | AT_RISK | CRITICAL | INSOLVENT_RISK).
       const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
-        survivalState === "critical" || progress.summary === "blocked" ? "critical"
-        : survivalState === "at_risk" || progress.summary === "at_risk" ? "at_risk"
-        : survivalState === "recovering" ? "improving"
+        survivalState === "CRITICAL" || survivalState === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
+        : survivalState === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
         : "healthy";
 
       return { bizId: biz.id, bizIdx: idx, healthStatus, progress };

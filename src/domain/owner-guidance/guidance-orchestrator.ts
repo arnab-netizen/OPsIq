@@ -154,8 +154,8 @@ export function buildOwnerNowView(ctx: GuidanceContext): OwnerNowView {
   if (!ctx.growthGatePassed) {
     actionsToAvoid.push({
       id: "avoid_growth_before_gates",
-      avoid: "Do not pursue growth/expansion until cash, profit, capacity, workload and quality gates pass",
-      reason: "stabilization gates are not yet satisfied; growth now compounds risk",
+      avoid: "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until cash, profit, capacity, workload and quality gates pass",
+      reason: "stabilization gates are not yet satisfied; scaling now compounds risk",
       businessFunction: [BusinessFunction.GROWTH_READINESS],
       triggeredBy: [IssueCategory.GROWTH_OPPORTUNITY],
     });

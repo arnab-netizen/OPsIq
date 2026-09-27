@@ -45,8 +45,11 @@ describe("evaluateMarginSafety", () => {
     expect(evaluateMarginSafety(2, RecommendationSensitivity.GROWTH_SENSITIVE, 15).allowed).toBe(true);
   });
 
-  it("defers unknown margin to the input-quality gate (does not block here)", () => {
-    expect(evaluateMarginSafety(null, RecommendationSensitivity.PRICING_SENSITIVE, 15).allowed).toBe(true);
+  it("defers unknown margin to the input-quality gate (does not block here) — the base contract, unchanged", () => {
+    const r = evaluateMarginSafety(null, RecommendationSensitivity.PRICING_SENSITIVE, 15);
+    expect(r.allowed).toBe(true);
+    expect(r.outcome).toBe(MarginSafetyOutcome.ALLOWED);
+    expect(r.reason).toBe("Gross margin unknown; deferred to the input-quality gate.");
   });
 
   it("assert throws MarginSafetyGateError when below floor", () => {
@@ -93,10 +96,24 @@ describe("enforceMarginSafetyForPromotion", () => {
     expect(args.orderBy[0]).toEqual({ periodEnd: "desc" });
   });
 
-  it("with more than one business the margin is not attributable: another business's figures are never used", async () => {
-    const deps = depsFor("pricing discount policy", 100, 92, ["biz-1", "biz-2"]);
+  it("one business known SAFE: proceeds; UNSAFE: blocked below the floor", async () => {
+    await expect(enforceMarginSafetyForPromotion("rec1", "ws1", depsFor("pricing discount policy", 100, 60))).resolves.toBeUndefined();
+    const err = await enforceMarginSafetyForPromotion("rec1", "ws1", depsFor("pricing discount policy", 100, 95)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(MarginSafetyGateError);
+    expect((err as MarginSafetyGateError).code).toBe("MARGIN_SAFETY_GATE_BLOCKED");
+  });
+
+  it("multi-business: margin is not attributable — another business's figures are never read; unknown margin is deferred, never treated as a known-safe reading", async () => {
+    const deps = depsFor("pricing discount policy", 100, 95, ["biz-1", "biz-2"]); // one business's figures are below the floor
     await expect(enforceMarginSafetyForPromotion("rec1", "ws1", deps)).resolves.toBeUndefined();
     expect(deps.db.ownerFinancialSnapshot.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("the single business has no figures: the query is scoped to it, nothing else is read, and the unknown margin is deferred", async () => {
+    const deps = depsFor("pricing discount policy", null, null, ["biz-1"]);
+    await expect(enforceMarginSafetyForPromotion("rec1", "ws1", deps)).resolves.toBeUndefined();
+    const args = (deps.db.ownerFinancialSnapshot.findFirst as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz-1", supersededById: null });
   });
 
   it("skips entirely for non-pricing recommendations (no snapshot read)", async () => {

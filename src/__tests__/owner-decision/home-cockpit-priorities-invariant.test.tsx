@@ -14,6 +14,7 @@ import OwnerHomePage from "@/app/(authenticated)/owner/home/page";
 import { MinimumOwnerCockpit } from "@/components/owner/MinimumOwnerCockpit";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
 import { classifyOwnerFindingCode, resolveOwnerDecision, type OwnerDecisionCandidate } from "@/domain/owner-spine/owner-decision";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 afterEach(() => {
   cleanup();
@@ -48,8 +49,7 @@ const DECISION = JSON.parse(JSON.stringify(resolveOwnerDecision({
   staleDomains: [],
   strategy: null,
   reassessment: { days: 7, reason: "weekly" },
-  previous: null,
-  events: [],
+  changeFacts: NO_CHANGE_FACTS,
   
   now: new Date("2026-09-27T10:00:00.000Z"),
 })));

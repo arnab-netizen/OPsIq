@@ -8,7 +8,7 @@
 
 import type { AttentionSummary } from "@/domain/owner-mode/owner-load";
 import type { OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
-import { ownerImperativeContext, reconcileOwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
+import { ownerImperativeContext, partitionReconciled, quoteTitles, reconcileOwnerProhibition, type ReconciledProhibition } from "@/domain/owner-spine/owner-imperatives";
 
 /** A canonical decision target, as far as the panel's guardrails need it. */
 export type ControlCenterMainTarget = Pick<OwnerDecisionTarget, "title" | "priorityClass" | "source" | "findingCode">;
@@ -44,6 +44,8 @@ export interface OwnerControlCenter {
   attention: AttentionSummary;
   criticalAlerts: string[];
   whatNotToDo: string[];
+  /** Guardrails reconciled into the permitted scope of canonical steps (how to carry them out). */
+  conditions: string[];
   ownerActionsToday: number;
   handledByOpsIQ: number;
   /** Approvals OpsIQ auto-handled (workload reduction, EH-16). */
@@ -65,7 +67,7 @@ export interface OwnerControlCenter {
 /** Compose the owner control center from the aggregated control signals. */
 export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCenter {
   const criticalAlerts: string[] = [];
-  const whatNotToDo: string[] = [];
+  const guardrails: ReconciledProhibition[] = [];
 
   // Every guardrail passes through the ONE shared reconciler (owner-imperatives.ts): it never vetoes the
   // canonical main target or a supporting step; a refresh (data-request) target rewrites nothing.
@@ -74,41 +76,41 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
     criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).`);
     // The canonical arbiter already accounted for missing data (confidence caps, data-request
     // targets); the guardrail applies to OTHER material decisions, never to an action main target.
-    whatNotToDo.push(
+    guardrails.push(
       reconcileOwnerProhibition(
         {
           text: "Do not make material decisions until the missing data is provided.",
           vetoes: "ANY_ACTION",
-          asCondition: (t) => `Apart from "${t}", do not make material decisions until the missing data is provided.`,
+          asCondition: (t) => `Go ahead with ${quoteTitles(t)}; hold other material decisions until the missing data is provided.`,
         },
         ctx
-      ).text
+      )
     );
   }
   if (i.financeBlocked > 0) {
     criticalAlerts.push(`${i.financeBlocked} finance/margin/cash-unsafe recommendation(s) were blocked.`);
-    whatNotToDo.push(
+    guardrails.push(
       reconcileOwnerProhibition(
         {
-          text: "Do not spend or discount while cash/margin guardrails are blocking.",
+          text: "Do not add discretionary spend or discounts while cash/margin guardrails are blocking.",
           vetoes: "GROW",
-          asCondition: (t) => `Carry out "${t}" without new spend or discounts while cash/margin guardrails are blocking.`,
+          asCondition: (t) => `Run ${quoteTitles(t)} only within its existing budget and at normal prices while cash/margin guardrails are blocking.`,
         },
         ctx
-      ).text
+      )
     );
   }
   if (i.equipmentBottlenecks.length > 0) {
     criticalAlerts.push(`Capacity bottleneck: ${i.equipmentBottlenecks.join(", ")}.`);
-    whatNotToDo.push(
+    guardrails.push(
       reconcileOwnerProhibition(
         {
-          text: "Do not pursue growth/marketing until the capacity bottleneck is cleared.",
+          text: "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until the capacity bottleneck is cleared.",
           vetoes: "GROW",
-          asCondition: (t) => `Keep "${t}" within current capacity until the bottleneck is cleared.`,
+          asCondition: (t) => `Run ${quoteTitles(t)} only up to what current capacity can deliver until the bottleneck is cleared.`,
         },
         ctx
-      ).text
+      )
     );
   }
   if (i.proofBlocked > 0) {
@@ -119,9 +121,10 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   }
   if (i.reassessmentsDue > 0) {
     criticalAlerts.push(`${i.reassessmentsDue} failed outcome(s) are due for reassessment.`);
-    whatNotToDo.push("Do not re-run a failed approach until its reassessment is complete.");
+    guardrails.push({ kind: "prohibition", text: "Do not re-run a failed approach until its reassessment is complete.", conditionOn: [] });
   }
 
+  const { prohibitions: whatNotToDo, conditions } = partitionReconciled(guardrails);
   const ownerActionsToday = i.ownerApprovalsRequired + i.attention.ownerDecisionsRequired + i.sopsNeedingReview + i.processReviewsDue + i.reassessmentsDue;
   const needsOwnerAttention = ownerActionsToday > 0 || criticalAlerts.length > 0;
 
@@ -129,6 +132,7 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
     attention: i.attention,
     criticalAlerts,
     whatNotToDo,
+    conditions,
     ownerActionsToday,
     handledByOpsIQ: i.attention.handledByOpsIQ,
     approvalsAvoided: i.approvalsAvoided,

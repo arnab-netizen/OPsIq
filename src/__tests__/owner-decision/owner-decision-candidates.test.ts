@@ -87,7 +87,7 @@ describe("control records", () => {
 
 describe("Home cash/finance supersession never trusts an out-of-date reading (confirmation review P2-a)", () => {
   it("returns the evidence period only for current, un-amended evidence", async () => {
-    const { currentEvidenceTime } = await import("@/services/owner-home/home.service");
+    const { currentEvidenceTime } = await import("@/services/owner-home/owner-candidate-builder");
     const cutoff = Date.parse("2026-08-13T00:00:00Z");
     const fresh = new Date("2026-09-20T00:00:00Z");
     expect(currentEvidenceTime({ periodEnd: fresh }, cutoff)).toEqual(fresh);

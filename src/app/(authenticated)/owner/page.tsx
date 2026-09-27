@@ -17,6 +17,7 @@ import {
   planConstraintAsCondition,
   reconcilePlanCards,
   reconcilePlanGrowthGate,
+  reconcilePlanProse,
   reconcilePlanSummary,
 } from "@/domain/owner-spine/owner-imperatives";
 import { formatHumanDate } from "@/lib/format-human-date";
@@ -597,9 +598,9 @@ export default function OwnerCommandCenterPage() {
 
               <Disclosure summary="Whole-business plan summary" data-testid="wbp-plan-detail">
                 <p className="text-sm mt-1 text-foreground">{wbp.plan.businessHealthSummary}</p>
-                <p className="text-xs mt-1"><strong>7-day:</strong> {wbp.plan.plan7Day}</p>
-                <p className="text-xs"><strong>30-day:</strong> {wbp.plan.plan30Day}</p>
-                <p className="text-xs"><strong>90-day:</strong> {wbp.plan.plan90Day}</p>
+                <p className="text-xs mt-1"><strong>7-day:</strong> {reconcilePlanProse(wbp.plan.plan7Day, imperativeCtx)}</p>
+                <p className="text-xs"><strong>30-day:</strong> {reconcilePlanProse(wbp.plan.plan30Day, imperativeCtx)}</p>
+                <p className="text-xs"><strong>90-day:</strong> {reconcilePlanProse(wbp.plan.plan90Day, imperativeCtx)}</p>
               </Disclosure>
             </section>
           )}
@@ -763,6 +764,15 @@ export default function OwnerCommandCenterPage() {
                       <strong className="text-destructive">Critical:</strong>
                       <ul className="list-disc ml-5">
                         {control.criticalAlerts.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {control.conditions?.length > 0 && (
+                    <div className="rounded-md border border-border bg-card p-3 text-sm space-y-1 mb-3" data-testid="control-conditions">
+                      <strong>How to carry out your next steps:</strong>
+                      <ul className="list-disc ml-5">
+                        {control.conditions.map((a: string, i: number) => <li key={i}>{a}</li>)}
                       </ul>
                     </div>
                   )}

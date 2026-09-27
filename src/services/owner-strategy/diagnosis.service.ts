@@ -22,6 +22,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { diagnoseStrategySnapshot } from "@/domain/owner-strategy/diagnosis";
 import { planStrategyActionsFromDiagnosis } from "@/domain/owner-strategy/actions";
 import { getStrategySnapshot, rowToStrategyInput } from "./snapshot.service";
+import { CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 
 /** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
 interface EngagedPriorAction {
@@ -42,7 +43,7 @@ interface EngagedPriorAction {
 export async function currentStrategyScenarioId(businessId: string, workspaceId: string): Promise<string | null> {
   const latest = await db.ownerStrategyCycle.findFirst({
     where: { businessId, workspaceId },
-    orderBy: { sequenceNumber: "desc" },
+    orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
     select: { snapshotId: true },
   });
   return latest?.snapshotId ?? null;

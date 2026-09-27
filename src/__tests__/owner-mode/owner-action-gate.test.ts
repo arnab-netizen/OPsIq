@@ -19,6 +19,8 @@ function deps(opts: {
   dnrRule?: { changedContextExplanation: string | null } | null;
   equipment?: Array<{ name: string; utilization: number | null; downtimeState: string; maintenanceDueAt: Date | null; status: string }>;
   survivalState?: string | null;
+  /** The Finance diagnosis's snapshot was amended since (not a current reading). */
+  financeSuperseded?: boolean;
   cashflowState?: string | null;
   snapshot?: { revenue: number | null; costOfGoods: number | null } | null;
   compliance?: Array<{ kind: string; name: string; expiresAt: Date | null }>;
@@ -36,7 +38,7 @@ function deps(opts: {
       },
       ownerDoNotRepeatRule: { findFirst: vi.fn(async () => opts.dnrRule ?? null) },
       ownerEquipment: { findMany: vi.fn(async () => opts.equipment ?? []) },
-      ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState !== undefined ? (opts.survivalState ? { survivalState: opts.survivalState } : null) : null)) },
+      ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState ? { survivalState: opts.survivalState, snapshot: { supersededById: opts.financeSuperseded ? "newer" : null } } : null)) },
       ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cashflowState !== undefined ? (opts.cashflowState ? { cashflowState: opts.cashflowState } : null) : null)) },
       ownerFinancialSnapshot: { findFirst: vi.fn(async () => opts.snapshot ?? null) },
       ownerComplianceItem: { findMany: vi.fn(async () => opts.compliance ?? []) },
@@ -133,9 +135,86 @@ describe("enforceOwnerActionGates", () => {
     await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
   });
 
-  it("does not block on unknown margin (no snapshot) — deferred, not a false block", async () => {
+  it("unknown margin (no snapshot): not a false block, but the abstention is RECORDED with the data it needs — never silent", async () => {
     const d = deps({ snapshot: null });
     await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+    expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "owner.gate_assessment_abstained",
+      entityId: "act1",
+      payload: expect.objectContaining({ code: "CANNOT_ASSESS_MARGIN_SAFETY", requiredData: expect.arrayContaining([expect.stringMatching(/revenue/)]) }),
+    }));
+    expect(emitAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_promotion_blocked" }));
+  });
+
+  it("A-P1-2 — amending an unsafe Finance snapshot never lifts the block before the amended figures are diagnosed (fail safe)", async () => {
+    const amended = deps({ survivalState: "INSOLVENT_RISK", financeSuperseded: true, cashflowState: "SAFE" });
+    const err = await enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress" }, amended as never).catch((e) => e);
+    expect(err).toBeInstanceOf(ConflictError);
+    expect(err.message).toMatch(/amended since; re-run the Finance diagnosis/);
+    // With cash absent too, the amended unsafe reading still applies (it is never dropped to "no data").
+    const onlyAmended = deps({ survivalState: "INSOLVENT_RISK", financeSuperseded: true, cashflowState: null });
+    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress" }, onlyAmended as never)).rejects.toBeInstanceOf(ConflictError);
+    // A SAFE amended reading blocks nothing.
+    const safeAmended = deps({ survivalState: "SAFE", financeSuperseded: true, cashflowState: "SAFE" });
+    await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "in_progress" }, safeAmended as never)).resolves.toBeUndefined();
+  });
+
+  describe("C-P1-1 — the growth limits apply by the action's INTENT, never to the step that responds to the danger", () => {
+    const down = [{ name: "Washer", utilization: 0.5, downtimeState: "down", maintenanceDueAt: null, status: "operational" }];
+    it("a cash-survival step (STABILISE) is never refused because cash is critical", async () => {
+      const d = deps({ cashflowState: "CRITICAL", survivalState: "CRITICAL" });
+      await expect(enforceOwnerActionGates({ ...base, domain: "cashflow", toStatus: "in_progress", findingCode: "CF_INSOLVENT_RUNWAY" }, d as never)).resolves.toBeUndefined();
+      // The same domain's action with no finding code keeps the domain's (spend) sensitivity: blocked.
+      await expect(enforceOwnerActionGates({ ...base, domain: "cashflow", toStatus: "in_progress" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    });
+    it("a repair step (e.g. Operations delivery failure) is not refused for AT_RISK cash, a GROW step is", async () => {
+      const d = deps({ survivalState: "AT_RISK", cashflowState: "AT_RISK" });
+      await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "in_progress", findingCode: "OPS_HIGH_DELAY" }, d as never)).resolves.toBeUndefined();
+      await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "in_progress", findingCode: "MKT_OPP_SCALE_WINNER" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    });
+    it("clearing a capacity bottleneck is never refused because capacity is unsafe; a GROW step is", async () => {
+      const d = deps({ equipment: down });
+      await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed", findingCode: "OPS_CAPACITY_BOTTLENECK" }, d as never)).resolves.toBeUndefined();
+      await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed", findingCode: "SALES_OPP_WINBACK" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    });
+    it("controlling discounting (a margin repair) is never refused because margin is low; scaling a campaign is", async () => {
+      const d = deps({ snapshot: { revenue: 100, costOfGoods: 95 } });
+      await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed", findingCode: "SALES_DISCOUNT_DEPENDENCE" }, d as never)).resolves.toBeUndefined();
+      await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed", findingCode: "MKT_OPP_SCALE_WINNER" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    });
+    it("Owner matrix D — a GROW action with unknown margin: not falsely blocked (the shared margin contract), the Owner-mode abstention is recorded for its business", async () => {
+      await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "in_progress", findingCode: "MKT_OPP_SCALE_WINNER" }, deps({ snapshot: null }) as never)).resolves.toBeUndefined();
+      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained", payload: expect.objectContaining({ code: "CANNOT_ASSESS_MARGIN_SAFETY", businessId: "biz1" }) }));
+    });
+    it("Owner matrix E — REPAIR / STABILISE / EVIDENCE actions in Finance, Sales or Marketing with unknown margin and unknown cash: never blocked by domain, nothing abstained", async () => {
+      for (const [domain, findingCode] of [["sales", "SALES_DISCOUNT_DEPENDENCE"], ["finance", "FIN_INSOLVENT_RUNWAY"], ["marketing", "MKT_OPP_DATA_QUALITY"], ["cashflow", "CF_LOW_RUNWAY"]] as const) {
+        emitAuditEvent.mockClear();
+        await expect(enforceOwnerActionGates({ ...base, domain, toStatus: "in_progress", findingCode }, deps({ snapshot: null, cashflowState: null, survivalState: null }) as never), `${domain}/${findingCode}`).resolves.toBeUndefined();
+        expect(emitAuditEvent).not.toHaveBeenCalled();
+      }
+    });
+    it("an EVIDENCE step (collect the figures) stays executable while cash is critical — cash danger never blocks establishing the cash position", async () => {
+      await expect(enforceOwnerActionGates({ ...base, domain: "cashflow", toStatus: "completed", findingCode: "CF_OPP_DATA_QUALITY" }, deps({ cashflowState: "INSOLVENT_RISK", survivalState: "INSOLVENT_RISK" }) as never)).resolves.toBeUndefined();
+    });
+    it("Strategy: the caller's live-decision intent overrides the code's own classification", async () => {
+      const d = deps({ survivalState: "AT_RISK", cashflowState: "AT_RISK" });
+      await expect(enforceOwnerActionGates({ ...base, domain: "strategy", toStatus: "in_progress", findingCode: "STR_UNAFFORDABLE", intent: "STABILISE" }, d as never)).resolves.toBeUndefined();
+      await expect(enforceOwnerActionGates({ ...base, domain: "strategy", toStatus: "in_progress", findingCode: "STR_UNAFFORDABLE", intent: "GROW" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    });
+    it("a block's audit names the action's business (block metrics are business-scoped)", async () => {
+      const d = deps({ survivalState: "AT_RISK" });
+      await enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "in_progress", findingCode: "SALES_OPP_WINBACK" }, d as never).catch(() => undefined);
+      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_promotion_blocked", payload: expect.objectContaining({ businessId: "biz1", code: "CASH_SAFETY_BLOCKED" }) }));
+    });
+    it("the margin abstention is recorded only for a transition that passes every check, with its business", async () => {
+      const expiredCompliance = [{ kind: "licence", name: "Trade licence", expiresAt: new Date("2026-01-01") }];
+      const d = deps({ snapshot: null, compliance: expiredCompliance });
+      await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+      expect(emitAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained" }));
+      emitAuditEvent.mockClear();
+      await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, deps({ snapshot: null }) as never)).resolves.toBeUndefined();
+      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained", payload: expect.objectContaining({ businessId: "biz1" }) }));
+    });
   });
 
   it("does not apply the margin gate to non-margin domains (operations)", async () => {

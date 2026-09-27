@@ -24,7 +24,15 @@
  * diagnosed domain gets honest "add data" guidance instead of a fabricated target.
  */
 import { humanizeMetricKey } from "@/lib/metric-label";
-import { ownerImperativeContext, reconcileOwnerProhibition, ownerLeverKey } from "./owner-imperatives";
+import {
+  ownerImperativeContext,
+  ownerLeverKey,
+  ownerTargetIntent,
+  partitionReconciled,
+  quoteTitles,
+  reconcileOwnerProhibition,
+  type ReconciledProhibition,
+} from "./owner-imperatives";
 import {
   clampConfidence,
   clampScore,
@@ -388,19 +396,18 @@ export interface OwnerDecisionTarget {
 }
 
 export type OwnerDecisionChangeKind =
-  | "MAIN_TARGET_CHANGED"
   | "CRITICAL_ISSUE_APPEARED"
   | "CRITICAL_ISSUE_RESOLVED"
-  /** A workspace-level issue (risk / business-less compliance item) can no longer be attributed to this business. */
-  | "ISSUE_NOT_ATTRIBUTABLE"
+  /** Workspace-level issues (risks / business-less compliance items) stopped — or started again — being attributable to this business. */
+  | "ATTRIBUTION_CHANGED"
   | "ACTION_COMPLETED"
   | "ACTION_VERIFIED"
   | "EVIDENCE_UPDATED"
   | "EVIDENCE_OUT_OF_DATE"
   | "SEVERITY_INCREASED"
   | "SEVERITY_DECREASED"
-  | "FUNDING_GAP_CHANGED"
-  | "CONFIDENCE_CHANGED";
+  /** A critical recorded risk was accepted in its record (a deliberate decision, not a resolution). */
+  | "RISK_ACCEPTED";
 
 export interface OwnerDecisionChange {
   kind: OwnerDecisionChangeKind;
@@ -434,39 +441,27 @@ export interface CurrentOwnerDecision {
   whatToDoFirst: string | null;
   supportingSteps: OwnerDecisionTarget[];
   whatCanWait: OwnerDecisionTarget[];
+  /** Prohibitions that still stand (never on the main target or a supporting step). */
   whatNotToDo: string[];
+  /**
+   * Positive guidance on HOW to carry out the main target / supporting steps — prohibitions reconciled
+   * into conditions (same lever, or a guardrail that would otherwise forbid a canonical step) and scope
+   * notes (e.g. a provisional score). Never shown under a "don't" heading.
+   */
+  conditions: string[];
   missingInformation: string[];
+  /**
+   * What changed, derived ONLY from persisted mutation facts inside the recent window (new diagnoses,
+   * action completions/verifications, risk/compliance transitions, attribution changes). Reading the
+   * decision never writes anything; transitions that cannot be proven from those facts are omitted.
+   */
   whatChanged: OwnerDecisionChange[];
+  whatChangedWindowDays: number;
   reassessmentTrigger: string;
   /** Full canonical order of eligible candidates (primary first) — the ONLY ranked owner-attention list. */
   attention: OwnerDecisionTarget[];
   /** Candidates removed from the election and why (for audit/transparency). */
   excluded: Array<{ candidateId: string; title: string; reason: OwnerCandidateExclusion }>;
-  /** Condensed state persisted (as the owner.decision_changed audit event) so the next read can say what changed. */
-  memory: OwnerDecisionMemory;
-}
-
-/** Minimal previous-decision state persisted as the owner.decision_changed audit event (for "what changed"). */
-export interface OwnerDecisionMemory {
-  generatedAt: string;
-  primaryKey: string | null;
-  primaryTitle: string | null;
-  /** Critical issues still open — including ones awaiting an evidence refresh (never "resolved" by ageing). */
-  criticalKeys: string[];
-  /** Severity of every open, rated issue by stable issue key (domain + finding code / record id). */
-  issueSeverities: Record<string, OwnerSeverity>;
-  /** Evidence identity (snapshot id) per diagnosed domain; null in memories recorded before this existed. */
-  evidenceIds: Record<string, string> | null;
-  /** Domains whose evidence was out of date at this decision. */
-  staleDomains: string[];
-  /**
-   * Whether workspace-level issues (owner-recorded risks, business-less compliance items) were
-   * attributable to this business at this decision; null in memories recorded before this existed.
-   */
-  workspaceIssuesAttributable: boolean | null;
-  confidenceScore: number;
-  confidenceLevel: OwnerDecisionConfidenceLevel;
-  fundingGap: number | null;
 }
 
 /** Strategy's live decision, as far as the arbiter needs it (for "what not to do"). */
@@ -501,34 +496,49 @@ export interface ResolveOwnerDecisionInput {
   staleDomains: readonly string[];
   strategy: OwnerDecisionStrategyContext | null;
   reassessment: { days: number; reason: string };
-  previous: OwnerDecisionMemory | null;
-  events: readonly OwnerDecisionEvent[];
-  /**
-   * Evidence identity (the snapshot each domain's current diagnosis ran on). "New data" is reported
-   * only when this identity changes — a re-diagnosis of the SAME snapshot (e.g. after an action is
-   * completed or verified) is a new calculation, not new evidence.
-   */
-  evidenceIds?: Readonly<Record<string, string>>;
-  /**
-   * Lifecycle of known issues that are NOT competing now, by stable issue key: "open" (still open but
-   * below the competing threshold, e.g. a critical risk now being mitigated) or "terminal" (the record
-   * says it is closed: a resolved/closed risk, a compliant/waived obligation, a breach no longer
-   * recorded). Absence from the candidates alone never proves resolution.
-   */
-  issueStates?: Readonly<Record<string, OwnerIssueState>>;
-  /** Whether workspace-level issues can be attributed to this business (exactly one real business). */
-  workspaceIssuesAttributable?: boolean;
+  /** Persisted mutation facts for "what changed" (gathered read-only by the caller). */
+  changeFacts: OwnerChangeFacts;
   now: Date;
 }
 
-export interface OwnerIssueState {
-  lifecycle: "open" | "terminal";
-  title: string;
+/** Recent-change window for "what changed" (days). */
+export const OWNER_WHAT_CHANGED_WINDOW_DAYS = 14;
+
+/**
+ * One domain's evidence transition: its CURRENT diagnosis against the PREVIOUS one (both persisted).
+ * Issue keys use ownerCandidateIssueKey (domain + finding code); severities are the findings' own.
+ */
+export interface OwnerEvidenceTransition {
+  domain: string;
+  /** The snapshot the previous diagnosis ran on (null ⇒ first diagnosis). */
+  previousEvidenceId: string | null;
+  currentEvidenceId: string;
+  /** True only when the current evidence is causally newer (a different, later snapshot) — a re-diagnosis of the same figures is not. */
+  newerEvidence: boolean;
+  /** When the current diagnosis ran (the window test: new figures analysed recently). */
+  at: Date;
+  previousIssues: Readonly<Record<string, { severity: OwnerSeverity | null; title: string }>>;
+  currentIssues: Readonly<Record<string, { severity: OwnerSeverity | null; title: string }>>;
 }
 
-/** Issue keys of workspace-level records (risk, compliance) — attribution applies to these only. */
-function isWorkspaceLevelIssueKey(key: string): boolean {
-  return key.startsWith("risk:") || key.startsWith("compliance:");
+/** A workspace-level record's lifecycle transition proven by its own record/audit trail. */
+export interface OwnerRecordIssueFact {
+  key: string;
+  title: string;
+  change: "appeared" | "closed" | "no_longer_critical" | "accepted";
+  at: Date;
+}
+
+export interface OwnerChangeFacts {
+  /** Start of the recent-change window. */
+  since: Date;
+  transitions: readonly OwnerEvidenceTransition[];
+  events: readonly OwnerDecisionEvent[];
+  recordIssues: readonly OwnerRecordIssueFact[];
+  /** Attribution of workspace-level issues changed inside the window (a business added or archived). */
+  attribution: { change: "lost" | "regained"; at: Date; openCriticalCount: number } | null;
+  /** Domains whose evidence went out of date inside the window. */
+  newlyStaleDomains: readonly string[];
 }
 
 const DOMAIN_LABEL: Record<string, string> = {
@@ -656,253 +666,82 @@ function confidenceLevelFor(score: number): OwnerDecisionConfidenceLevel {
   return "insufficient";
 }
 
-function formatMoney(value: number, currency: string): string {
-  const symbol = currency === "INR" ? "₹" : currency === "GBP" ? "£" : currency === "EUR" ? "€" : currency === "USD" ? "$" : "";
-  const rounded = Math.round(value);
-  const locale = currency === "INR" ? "en-IN" : "en-GB";
-  return symbol ? `${symbol}${rounded.toLocaleString(locale)}` : `${rounded.toLocaleString(locale)} ${currency}`;
-}
-
 /**
- * Critical issues that are still OPEN: eligible critical items (refresh targets stand in for, and are
- * not themselves, issues) plus critical items whose evidence merely went stale — ageing never
- * resolves a problem.
+ * "What changed", from persisted mutation facts only. Resolution needs evidence: an issue raised by the
+ * previous diagnosis and absent from a causally NEWER one is resolved; present in both is still open
+ * (its severity may change); a re-diagnosis of the same figures claims nothing. Records (risks,
+ * compliance) resolve only through their own lifecycle. Loss or return of attribution is reported as
+ * such, never as "resolved" or "new".
  */
-function openIssues(ranked: readonly OwnerDecisionCandidate[], staleExcluded: readonly OwnerDecisionCandidate[]): Map<string, OwnerDecisionCandidate> {
-  const open = new Map<string, OwnerDecisionCandidate>();
-  for (const c of [...ranked, ...staleExcluded]) {
-    if (c.source !== "evidence_refresh") open.set(ownerCandidateIssueKey(c), c);
-  }
-  return open;
-}
-
-function buildMemory(
-  generatedAt: string,
-  primary: OwnerDecisionTarget | null,
-  open: Map<string, OwnerDecisionCandidate>,
-  staleDomains: string[],
-  confidenceScore: number,
-  confidenceLevel: OwnerDecisionConfidenceLevel,
-  fundingGap: number | null,
-  evidenceIds: Readonly<Record<string, string>>,
-  workspaceIssuesAttributable: boolean | null
-): OwnerDecisionMemory {
-  const issueSeverities: Record<string, OwnerSeverity> = {};
-  for (const key of [...open.keys()].sort()) {
-    const sev = open.get(key)!.severity;
-    if (sev !== null) issueSeverities[key] = sev;
-  }
-  return {
-    generatedAt,
-    primaryKey: primary ? ownerCandidateIssueKey(primary) : null,
-    primaryTitle: primary ? primary.title : null,
-    criticalKeys: Object.keys(issueSeverities).filter((k) => issueSeverities[k] === "critical"),
-    issueSeverities,
-    evidenceIds: Object.fromEntries(Object.entries(evidenceIds).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
-    staleDomains: [...staleDomains].sort(),
-    workspaceIssuesAttributable,
-    confidenceScore,
-    confidenceLevel,
-    fundingGap,
-  };
-}
-
-/** True when two decision memories describe the same decision (no material change between them). */
-export function sameOwnerDecisionMemory(a: OwnerDecisionMemory, b: OwnerDecisionMemory): boolean {
-  const key = (m: OwnerDecisionMemory) =>
-    JSON.stringify([
-      m.primaryKey,
-      Object.entries(m.issueSeverities).sort(),
-      [...m.staleDomains].sort(),
-      m.evidenceIds === null ? null : Object.entries(m.evidenceIds).sort(),
-      m.workspaceIssuesAttributable,
-      m.confidenceLevel,
-      m.confidenceScore,
-      m.fundingGap === null ? null : Math.round(m.fundingGap),
-    ]);
-  return key(a) === key(b);
-}
-
-function parseSeverityMap(value: unknown): Record<string, OwnerSeverity> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const out: Record<string, OwnerSeverity> = {};
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (v === "critical" || v === "high" || v === "medium" || v === "low") out[k] = v;
-  }
-  return out;
-}
-
-function parseStringMap(value: unknown): Record<string, string> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) if (typeof v === "string") out[k] = v;
-  return out;
-}
-
-/** Parse a persisted memory defensively (it lives in the owner.decision_changed audit event payload). */
-export function parseOwnerDecisionMemory(value: unknown): OwnerDecisionMemory | null {
-  if (!value || typeof value !== "object") return null;
-  const v = value as Record<string, unknown>;
-  if (typeof v.generatedAt !== "string" || Number.isNaN(Date.parse(v.generatedAt))) return null;
-  // A memory without its confidence would fabricate a confidence change on the next read.
-  if (typeof v.confidenceScore !== "number" || !Number.isFinite(v.confidenceScore)) return null;
-  const level = v.confidenceLevel;
-  const criticalKeys = Array.isArray(v.criticalKeys) ? v.criticalKeys.filter((k): k is string => typeof k === "string") : [];
-  return {
-    generatedAt: v.generatedAt,
-    primaryKey: typeof v.primaryKey === "string" ? v.primaryKey : null,
-    primaryTitle: typeof v.primaryTitle === "string" ? v.primaryTitle : null,
-    criticalKeys,
-    // Older memories only recorded critical keys: those are known to have been critical, nothing more.
-    issueSeverities: parseSeverityMap(v.issueSeverities) ?? Object.fromEntries(criticalKeys.map((k) => [k, "critical" as const])),
-    evidenceIds: parseStringMap(v.evidenceIds),
-    staleDomains: Array.isArray(v.staleDomains) ? v.staleDomains.filter((k): k is string => typeof k === "string") : [],
-    workspaceIssuesAttributable: typeof v.workspaceIssuesAttributable === "boolean" ? v.workspaceIssuesAttributable : null,
-    confidenceScore: clampScore(v.confidenceScore),
-    confidenceLevel:
-      level === "high" || level === "moderate" || level === "low" || level === "insufficient" ? level : "insufficient",
-    fundingGap: typeof v.fundingGap === "number" && Number.isFinite(v.fundingGap) ? v.fundingGap : null,
-  };
-}
-
-function detectChanges(
-  input: ResolveOwnerDecisionInput,
-  open: Map<string, OwnerDecisionCandidate>,
-  staleDomains: string[],
-  primary: OwnerDecisionCandidate | null,
-  confidenceScore: number,
-  confidenceLevel: OwnerDecisionConfidenceLevel
-): OwnerDecisionChange[] {
-  const prev = input.previous;
-  if (!prev) return [];
-  const since = Date.parse(prev.generatedAt);
-  const changes: OwnerDecisionChange[] = [];
-
-  const primaryKey = primary ? ownerCandidateIssueKey(primary) : null;
-  if (primaryKey !== prev.primaryKey) {
-    if (primary && prev.primaryTitle) {
-      changes.push({ kind: "MAIN_TARGET_CHANGED", message: `Your main target changed from "${prev.primaryTitle}" to "${primary.title}".` });
-    } else if (primary) {
-      changes.push({ kind: "MAIN_TARGET_CHANGED", message: `You now have a main target: "${primary.title}".` });
-    } else if (prev.primaryTitle) {
-      changes.push({ kind: "MAIN_TARGET_CHANGED", message: `"${prev.primaryTitle}" is no longer your main target, and nothing else needs your attention right now.` });
+export function describeOwnerChanges(facts: OwnerChangeFacts): OwnerDecisionChange[] {
+  const since = facts.since.getTime();
+  // Most important first — so a short list never hides a record lifecycle or attribution change behind
+  // generic "new figures" lines: record facts, attribution, issue changes in new evidence, completions and
+  // verifications, out-of-date evidence, then which domains got new figures. Identical lines appear once.
+  const records: OwnerDecisionChange[] = [];
+  const attribution: OwnerDecisionChange[] = [];
+  const issues: OwnerDecisionChange[] = [];
+  const work: OwnerDecisionChange[] = [];
+  const stale: OwnerDecisionChange[] = [];
+  const evidence: OwnerDecisionChange[] = [];
+  for (const t of [...facts.transitions].sort((a, b) => (a.domain < b.domain ? -1 : a.domain > b.domain ? 1 : 0))) {
+    if (t.at.getTime() < since || !t.newerEvidence) continue;
+    const label = ownerDomainLabel(t.domain);
+    evidence.push({ kind: "EVIDENCE_UPDATED", message: `New ${label} figures were analysed.` });
+    if (t.previousEvidenceId === null) continue;
+    for (const [key, cur] of Object.entries(t.currentIssues)) {
+      const before = t.previousIssues[key];
+      const where = `"${cur.title}" in ${label}`;
+      if (!before) {
+        if (cur.severity === "critical") issues.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue in the new ${label} figures: ${where}.` });
+      } else if (cur.severity && before.severity) {
+        if (ownerSeverityRank(cur.severity) > ownerSeverityRank(before.severity) && (cur.severity === "critical" || cur.severity === "high")) {
+          issues.push({ kind: "SEVERITY_INCREASED", message: `${where} became more serious in the new figures: ${before.severity} → ${cur.severity}.` });
+        } else if (ownerSeverityRank(cur.severity) < ownerSeverityRank(before.severity) && (before.severity === "critical" || before.severity === "high")) {
+          issues.push({ kind: "SEVERITY_DECREASED", message: `${where} improved in the new figures from ${before.severity} to ${cur.severity}; it is still open.` });
+        }
+      }
+    }
+    for (const [key, before] of Object.entries(t.previousIssues)) {
+      if (before.severity === "critical" && !(key in t.currentIssues)) {
+        issues.push({ kind: "CRITICAL_ISSUE_RESOLVED", message: `"${before.title}" in ${label} is no longer shown by the new figures.` });
+      }
     }
   }
-
-  // Stable issue identity (domain + finding code / record id): appeared, escalated, improved, resolved
-  // are distinct — an issue that is still open but less severe has improved, it has NOT resolved.
-  for (const [key, c] of open) {
-    if (c.severity === null) continue;
-    const before = prev.issueSeverities[key];
-    const where = `"${c.title}" in ${ownerDomainLabel(c.domain)}`;
-    if (before === undefined) {
-      if (c.severity === "critical") changes.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue: ${where}.` });
-    } else if (ownerSeverityRank(c.severity) > ownerSeverityRank(before) && (c.severity === "critical" || c.severity === "high")) {
-      changes.push({ kind: "SEVERITY_INCREASED", message: `${where} became more serious: ${before} → ${c.severity}.` });
-    } else if (ownerSeverityRank(c.severity) < ownerSeverityRank(before) && (before === "critical" || before === "high")) {
-      changes.push({ kind: "SEVERITY_DECREASED", message: `${where} improved from ${before} to ${c.severity}; it is still open.` });
-    }
+  for (const r of facts.recordIssues) {
+    if (r.at.getTime() < since) continue;
+    if (r.change === "appeared") records.push({ kind: "CRITICAL_ISSUE_APPEARED", message: `New critical issue recorded: "${r.title}".` });
+    else if (r.change === "closed") records.push({ kind: "CRITICAL_ISSUE_RESOLVED", message: `"${r.title}" was closed in its record.` });
+    else if (r.change === "accepted") records.push({ kind: "RISK_ACCEPTED", message: `"${r.title}" was accepted as a known risk in its record; it is not resolved.` });
+    else records.push({ kind: "SEVERITY_DECREASED", message: `"${r.title}" is no longer rated critical; its record is still open.` });
   }
-  // A previously critical issue that is no longer competing is classified from EVIDENCE, never from
-  // its absence alone:
-  //   - still open by its own lifecycle (e.g. a risk now being mitigated below critical) → improved,
-  //     still open;
-  //   - a workspace-level issue that can no longer be attributed to this business → not attributable;
-  //   - terminal by its own lifecycle (completed / verified action, closed risk, compliant obligation)
-  //     → resolved;
-  //   - left the open list on NEW evidence for its domain (a different snapshot) → resolved;
-  //   - anything else (same snapshot, unknown evidence identity, a cancelled action) → nothing is
-  //     claimed: resolution needs evidence.
-  const terminalKeys = new Set(
-    input.candidates
-      .filter((c) => c.exclusion === "completed" || c.exclusion === "verified_complete" || c.exclusion === "verified_fix_awaiting_new_evidence")
-      .map((c) => ownerCandidateIssueKey(c))
-  );
-  const newEvidence = (key: string): boolean => {
-    const domain = key.split(":", 1)[0];
-    const before = prev.evidenceIds?.[domain];
-    const now = input.evidenceIds?.[domain];
-    return before !== undefined && now !== undefined && before !== now;
-  };
-  let resolvedCount = 0;
-  let unattributableCount = 0;
-  for (const [k, sev] of Object.entries(prev.issueSeverities)) {
-    if (sev !== "critical" || open.has(k)) continue;
-    const state = input.issueStates?.[k];
-    if (state?.lifecycle === "open") {
-      changes.push({ kind: "SEVERITY_DECREASED", message: `"${state.title}" is no longer rated critical; it is still open.` });
-    } else if (isWorkspaceLevelIssueKey(k) && input.workspaceIssuesAttributable === false && state?.lifecycle !== "terminal") {
-      unattributableCount++;
-    } else if (terminalKeys.has(k) || state?.lifecycle === "terminal" || newEvidence(k)) {
-      resolvedCount++;
-    }
-  }
-  if (resolvedCount > 0) {
-    changes.push({
-      kind: "CRITICAL_ISSUE_RESOLVED",
-      message: resolvedCount === 1 ? "A critical issue from OpsIQ's previous advice has been closed or cleared by new figures." : `${resolvedCount} critical issues from OpsIQ's previous advice have been closed or cleared by new figures.`,
-    });
-  }
-  if (unattributableCount > 0) {
-    changes.push({
-      kind: "ISSUE_NOT_ATTRIBUTABLE",
-      message: `${unattributableCount === 1 ? "A critical workspace-wide risk or compliance item" : `${unattributableCount} critical workspace-wide risks or compliance items`} can no longer be tied to this business because the workspace now has more than one business. ${unattributableCount === 1 ? "It is" : "They are"} still open — see Risks and Compliance.`,
-    });
-  }
-
-  for (const e of [...input.events].sort((a, b) => a.at.getTime() - b.at.getTime())) {
-    if (e.at.getTime() <= since) continue;
-    changes.push(
-      e.kind === "ACTION_COMPLETED"
-        ? { kind: "ACTION_COMPLETED", message: `Completed: "${e.title}".` }
-        : { kind: "ACTION_VERIFIED", message: `Verified as fixed: "${e.title}" reached its target.` }
+  if (facts.attribution && facts.attribution.at.getTime() >= since && facts.attribution.openCriticalCount > 0) {
+    attribution.push(
+      facts.attribution.change === "lost"
+        ? { kind: "ATTRIBUTION_CHANGED", message: "A business was added to this workspace, so OpsIQ can no longer attribute workspace-wide risks and compliance items specifically to this business." }
+        : { kind: "ATTRIBUTION_CHANGED", message: "This is again the workspace's only business, so OpsIQ attributes workspace-wide risks and compliance items to it again." }
     );
   }
-
-  const prevStale = new Set(prev.staleDomains);
-  for (const d of staleDomains) {
-    if (!prevStale.has(d)) {
-      changes.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The figures in ${ownerDomainLabel(d)} are now out of date — update them before acting on what they flagged.` });
-    }
+  for (const e of [...facts.events].sort((a, b) => a.at.getTime() - b.at.getTime())) {
+    if (e.at.getTime() < since) continue;
+    work.push(
+      e.kind === "ACTION_COMPLETED"
+        ? { kind: "ACTION_COMPLETED", message: `Completed: "${e.title}".` }
+        : { kind: "ACTION_VERIFIED", message: `Verified: "${e.title}" reached its target.` }
+    );
   }
-
-  // New EVIDENCE (a different snapshot), never a new calculation on the same snapshot. A memory
-  // recorded before evidence identity existed cannot prove anything changed, so nothing is claimed.
-  if (prev.evidenceIds !== null) {
-    for (const [d, id] of Object.entries(input.evidenceIds ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-      if (prev.evidenceIds[d] !== id) changes.push({ kind: "EVIDENCE_UPDATED", message: `New data in ${ownerDomainLabel(d)} was analysed since OpsIQ's previous advice.` });
-    }
+  for (const d of [...facts.newlyStaleDomains].sort()) {
+    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The figures in ${ownerDomainLabel(d)} are now out of date — update them before acting on what they flagged.` });
   }
-
-  const gap = input.strategy?.fundingGap ?? null;
-  const roundedGap = gap === null ? null : Math.round(gap);
-  const roundedPrevGap = prev.fundingGap === null ? null : Math.round(prev.fundingGap);
-  const currency = input.strategy?.currency ?? "INR";
-  const fmt = (v: number | null) => (v === null ? "unknown" : v <= 0 ? "covered" : formatMoney(v, currency));
-  // Compared as the owner reads it: two "covered" gaps (e.g. -100 and -500) are not a change.
-  // Only a change between two KNOWN gaps is reported (a plan appearing or leaving is not a "change
-  // from unknown"); two "covered" gaps (e.g. -100 and -500) are not a change either.
-  if (gap !== null && prev.fundingGap !== null && roundedGap !== roundedPrevGap && fmt(prev.fundingGap) !== fmt(gap)) {
-    changes.push({ kind: "FUNDING_GAP_CHANGED", message: `Funding gap changed from ${fmt(prev.fundingGap)} to ${fmt(gap)}.` });
-  }
-
-  // Confidence is only comparable for the SAME advice (a new target is reported as a target change).
-  if (primary && prev.primaryKey !== null && primaryKey === prev.primaryKey) {
-    if (confidenceLevel !== prev.confidenceLevel) {
-      const word = (l: OwnerDecisionConfidenceLevel) => (l === "insufficient" ? "very low" : l);
-      changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice changed from ${word(prev.confidenceLevel)} to ${word(confidenceLevel)}.` });
-    } else if (Math.abs(confidenceScore - prev.confidenceScore) >= 15) {
-      changes.push({ kind: "CONFIDENCE_CHANGED", message: `OpsIQ's confidence in this advice moved from ${Math.round(prev.confidenceScore)} to ${Math.round(confidenceScore)} out of 100 (still ${confidenceLevel}).` });
-    }
-  }
-  return changes;
+  const seen = new Set<string>();
+  return [...records, ...attribution, ...issues, ...work, ...stale, ...evidence].filter((c) => (seen.has(c.message) ? false : (seen.add(c.message), true)));
 }
 
 /** One explicit refresh-evidence target per domain whose eligible actions rest on stale evidence. */
 /** Out-of-date figures never carry more than "low" confidence (below the "moderate" threshold). */
 const REFRESH_CONFIDENCE_CAP = 0.4;
 
-function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: ResolveOwnerDecisionInput): OwnerDecisionCandidate[] {
+function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: { businessId: string; workspaceId: string }): OwnerDecisionCandidate[] {
   const byDomain = new Map<string, OwnerDecisionCandidate[]>();
   for (const c of staleCandidates) byDomain.set(c.domain, [...(byDomain.get(c.domain) ?? []), c]);
   const out: OwnerDecisionCandidate[] = [];
@@ -949,21 +788,45 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: R
 }
 
 /**
+ * The canonical eligibility contract, shared by the owner decision and by every domain page's local
+ * "next step" (which is this list filtered to its domain — never raw action rows): candidates outside
+ * the scope are dropped; stale domain actions and survival issues leave the election and are replaced,
+ * per domain, by ONE explicit refresh-evidence target; lifecycle exclusions are kept for transparency.
+ */
+export function canonicalEligibility(
+  candidates: readonly OwnerDecisionCandidate[],
+  scope: { businessId: string; workspaceId: string }
+): { processed: OwnerDecisionCandidate[]; ranked: OwnerDecisionCandidate[] } {
+  const scoped = candidates.filter((c) => c.businessId === scope.businessId && c.workspaceId === scope.workspaceId);
+  // A stale diagnosis is never an authoritative "do this now": its otherwise-eligible actions leave the
+  // election and are replaced by an explicit "refresh this evidence" target that carries what they
+  // flagged (nothing is silently dropped). Survival issues on stale evidence are replaced the same way.
+  // Recorded control facts are never stale.
+  const processed = scoped.map((c) =>
+    c.exclusion === null && c.stale && (c.source === "domain_action" || c.source === "survival_reading") ? { ...c, exclusion: "stale_evidence" as const } : c
+  );
+  const refreshTargets = buildRefreshTargets(processed.filter((c) => c.exclusion === "stale_evidence"), scope);
+  return { processed, ranked: rankOwnerCandidates([...processed, ...refreshTargets]) };
+}
+
+/**
+ * The first canonically eligible candidate of one domain (domain pages' local next step), or null. It
+ * may be a refresh target synthesized by the eligibility contract (source "evidence_refresh").
+ */
+export function domainLocalCanonicalStep(
+  candidates: readonly OwnerDecisionCandidate[],
+  scope: { businessId: string; workspaceId: string },
+  domain: OwnerDecisionCandidate["domain"]
+): OwnerDecisionCandidate | null {
+  return canonicalEligibility(candidates, scope).ranked.find((c) => c.domain === domain) ?? null;
+}
+
+/**
  * Resolve the ONE current owner decision. Deterministic for identical input. Exactly one primary
  * target when any eligible candidate exists; otherwise an honest non-target state.
  */
 export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentOwnerDecision {
-  const scoped = input.candidates.filter((c) => c.businessId === input.businessId && c.workspaceId === input.workspaceId);
-  // A stale diagnosis is never an authoritative "do this now": its otherwise-eligible actions leave the
-  // election and are replaced, per domain, by an explicit "refresh this evidence" target that carries
-  // what they flagged (nothing is silently dropped). Recorded control facts are never stale.
-  // Survival issues on stale evidence are replaced the same way: a last-known danger becomes an explicit
-  // "confirm it" target, never silently dropped and never presented as current.
-  const processed = scoped.map((c) =>
-    c.exclusion === null && c.stale && (c.source === "domain_action" || c.source === "survival_reading") ? { ...c, exclusion: "stale_evidence" as const } : c
-  );
-  const refreshTargets = buildRefreshTargets(processed.filter((c) => c.exclusion === "stale_evidence"), input);
-  const ranked = rankOwnerCandidates([...processed, ...refreshTargets]);
+  const { processed, ranked } = canonicalEligibility(input.candidates, input);
   const excluded = processed
     .filter((c) => c.exclusion !== null)
     .map((c) => ({ candidateId: c.candidateId, title: c.title, reason: c.exclusion as OwnerCandidateExclusion }));
@@ -1051,28 +914,28 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const supportingIds = new Set(supporting.map((c) => c.candidateId));
   const canWait = rest.filter((c) => !supportingIds.has(c.candidateId)).slice(0, MAX_CAN_WAIT);
 
-  // What NOT to do: never start lower-class work ahead of the primary; honour Strategy's live decision.
-  // Every prohibition passes through the shared reconciler, so it can never veto the main target or a
-  // supporting step (same intent or same business lever ⇒ a condition on executing it instead).
-  const whatNotToDo: string[] = [];
+  // What NOT to do vs how to do it: every prohibition passes through the shared reconciler, so it never
+  // vetoes the main target or a supporting step. A reconciled item is positive guidance on a canonical
+  // step and goes to `conditions`, never under a "don't" heading.
   const imperativeCtx = ownerImperativeContext(primary ? { primaryTarget: primary, supportingSteps: supporting } : null);
+  const reconciled: ReconciledProhibition[] = [];
   if (primary) {
     const primaryRank = ownerPriorityClassRank(primary.priorityClass);
-    // Never name a step the owner is being told to do next (supporting) as something not to do.
-    const growth = rest.find((c) => c.priorityClass === "GROWTH_OPPORTUNITY" && c.source !== "evidence_refresh" && !supportingIds.has(c.candidateId));
+    // Genuine growth work (by intent, not class) that is not already a next step.
+    const growth = rest.find((c) => ownerTargetIntent(c) === "GROW" && !supportingIds.has(c.candidateId));
     if (growth && primaryRank < ownerPriorityClassRank("GROWTH_OPPORTUNITY")) {
       const lever = ownerLeverKey(growth.findingCode);
-      whatNotToDo.push(
+      reconciled.push(
         reconcileOwnerProhibition(
           {
-            text: `Don't start growth or investment work such as "${growth.title}" until "${primary.title}" is handled.`,
+            text: `Hold "${growth.title}" (it adds investment or scales demand) until "${primary.title}" is handled.`,
             vetoes: "NONE",
             levers: lever ? [lever] : [],
-            // Same business lever as the target: it is part of that work, done in a controlled way.
-            asCondition: (t) => `"${growth.title}" moves the same lever as "${t}": do it as part of that work, and keep the first rollout controlled until "${primary.title}" is verified.`,
+            // Same business lever as a canonical step: it is part of that work, done in a controlled way.
+            asCondition: (t) => `"${growth.title}" moves the same lever as ${quoteTitles(t)}: do it as part of that work, with a controlled first rollout until "${primary.title}" is verified.`,
           },
           imperativeCtx
-        ).text
+        )
       );
     }
   }
@@ -1081,44 +944,49 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     const option = s.optionName ? `"${s.optionName}"` : "the plan you are evaluating";
     const says = `Strategy says "${s.headline}"${s.headlineDetail ? `: ${s.headlineDetail}` : "."}`;
     // When the main target IS a Strategy step, the gate is its precondition, not a contradiction.
-    whatNotToDo.push(
-      primary && primary.domain === "strategy"
-        ? `Don't commit to ${option} until "${primary.title}" is done — ${says}`
-        : `Don't commit to ${option} yet — ${says}`
-    );
+    reconciled.push({
+      kind: "prohibition",
+      text: primary && primary.domain === "strategy" ? `Don't commit to ${option} until "${primary.title}" is done — ${says}` : `Don't commit to ${option} yet — ${says}`,
+      conditionOn: [],
+    });
   }
   if (input.dataSufficiency.status === "insufficient" && input.dataSufficiency.lowConfidenceDomains.length > 0) {
-    // The main target's own domain is never vetoed: its issue is real enough to address, only its
-    // numerical score is provisional. Other low-confidence domains keep the plain caution.
-    const primaryDomain = primary && primary.source !== "evidence_refresh" ? primary.domain : null;
-    const others = input.dataSufficiency.lowConfidenceDomains.filter((d) => d !== primaryDomain);
-    if (primaryDomain && input.dataSufficiency.lowConfidenceDomains.includes(primaryDomain)) {
-      const label = ownerDomainLabel(primaryDomain);
-      const missing = input.dataSufficiency.missingCriticalData.length > 0 && primaryDomain === "finance"
-        ? ` (${input.dataSufficiency.missingCriticalData.slice(0, 3).map(humanizeMetricKey).join(", ")} missing)`
-        : "";
-      whatNotToDo.push(
-        `The ${label} issue in "${primary!.title}" is real enough to address, but its ${label} score is provisional because some ${label} data is incomplete${missing}; don't base other decisions on the ${label} scores yet.`
-      );
+    // A domain that owns a canonical step is never told "don't rely on it": its issue needs attention and
+    // only its numerical score is provisional (a condition). Other low-confidence domains keep the caution.
+    const stepDomains = new Set([primary, ...supporting].filter((c): c is OwnerDecisionCandidate => c !== null && c.source !== "evidence_refresh").map((c) => c.domain));
+    for (const d of input.dataSufficiency.lowConfidenceDomains.filter((x) => stepDomains.has(x as OwnerDecisionCandidate["domain"]))) {
+      const label = ownerDomainLabel(d);
+      const missing = input.dataSufficiency.missingCriticalData.length > 0 && d === "finance"
+        ? ` until ${input.dataSufficiency.missingCriticalData.slice(0, 3).map(humanizeMetricKey).join(", ")} ${input.dataSufficiency.missingCriticalData.length === 1 ? "is" : "are"} supplied`
+        : ` until the missing ${label} data is supplied`;
+      reconciled.push({ kind: "condition", text: `The ${label} issue needs attention now, but its ${label} score is provisional${missing}.`, conditionOn: [] });
     }
+    const others = input.dataSufficiency.lowConfidenceDomains.filter((x) => !stepDomains.has(x as OwnerDecisionCandidate["domain"]));
     if (others.length > 0) {
-      whatNotToDo.push(`Don't rely on the ${others.map(ownerDomainLabel).join(", ")} scores yet — they are based on incomplete data.`);
+      reconciled.push({ kind: "prohibition", text: `Don't rely on the ${others.map(ownerDomainLabel).join(", ")} scores yet — they are based on incomplete data.`, conditionOn: [] });
     }
   }
+  const { prohibitions: whatNotToDo, conditions } = partitionReconciled(reconciled);
 
   const evidence = primary ? [...primary.evidence] : [];
 
   const whatToDoFirst = primary ? primary.title : !hasEvidence ? missingInformation[0] ?? null : null;
 
+  // Built from the CURRENT step's semantics — never from a dead action: a live action can be done; an
+  // open issue with no live action changes only with new figures; a refresh needs the update itself.
+  const cadence = `or within ${input.reassessment.days} days (${input.reassessment.reason})`;
   const reassessmentTrigger = primary
-    ? `Check again when "${primary.title}" is done${primary.verificationMetric ? ` or your ${humanizeMetricKey(primary.verificationMetric)} changes` : ""}, when new ${ownerDomainLabel(primary.domain)} data is added, or within ${input.reassessment.days} days (${input.reassessment.reason}).`
+    ? primary.source === "evidence_refresh"
+      ? `Check again after you update the ${ownerDomainLabel(primary.domain)} figures and re-run its diagnosis, ${cadence}.`
+      : primary.source === "survival_reading"
+        ? `Check again when new ${ownerDomainLabel(primary.domain)} figures are added (only new figures can show this has gone), ${cadence}.`
+        : primary.source === "domain_action"
+          ? `Check again when "${primary.title}" is done${primary.verificationMetric ? ` or your ${humanizeMetricKey(primary.verificationMetric)} changes` : ""}, when new ${ownerDomainLabel(primary.domain)} data is added, ${cadence}.`
+          : `Check again when the ${ownerDomainLabel(primary.domain)} record for this is updated, ${cadence}.`
     : hasEvidence
-      ? `Check again when new data is added, or within ${input.reassessment.days} days (${input.reassessment.reason}).`
+      ? `Check again when new data is added, ${cadence}.`
       : "Check again as soon as you add your business numbers.";
 
-  const staleExcluded = processed.filter((c) => c.exclusion === "stale_evidence");
-  const open = openIssues(ranked, staleExcluded);
-  const staleDomainsNow = [...new Set(refreshTargets.map((t) => t.domain))];
   const generatedAt = input.now.toISOString();
   const primaryTarget = primary ? toTarget(primary) : null;
   const attention = ranked.map(toTarget);
@@ -1139,11 +1007,32 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     supportingSteps: supporting.map(toTarget),
     whatCanWait: canWait.map(toTarget),
     whatNotToDo,
+    conditions,
     missingInformation,
-    whatChanged: detectChanges(input, open, staleDomainsNow, primary, score, level),
+    whatChanged: describeOwnerChanges(input.changeFacts),
+    whatChangedWindowDays: OWNER_WHAT_CHANGED_WINDOW_DAYS,
     reassessmentTrigger,
     attention,
     excluded,
-    memory: buildMemory(generatedAt, primaryTarget, open, staleDomainsNow, score, level, input.strategy?.fundingGap ?? null, input.evidenceIds ?? {}, input.workspaceIssuesAttributable ?? null),
   };
+}
+
+/** Domain pages that show the canonical main target at the `main-target` anchor (DomainMainTargetContext). */
+const DOMAIN_PAGES_WITH_MAIN_TARGET_ANCHOR = new Set(["finance", "cashflow", "sales", "operations", "sop", "marketing", "strategy"]);
+
+/** Where a link to a canonical target lands: the domain page's main-target block when it has one. */
+export function ownerTargetHref(t: Pick<OwnerDecisionTarget, "domain" | "targetRoute">): string {
+  return DOMAIN_PAGES_WITH_MAIN_TARGET_ANCHOR.has(t.domain) && !t.targetRoute.includes("#") ? `${t.targetRoute}#main-target` : t.targetRoute;
+}
+
+/**
+ * Whether the canonical decision's main target or a supporting step (an actionable one — a refresh
+ * target is a data request) lives in this domain. Domain pages use it to frame their own data gaps.
+ */
+export function decisionHasActionableStepIn(
+  decision: Pick<CurrentOwnerDecision, "primaryTarget" | "supportingSteps"> | null,
+  domain: string
+): boolean {
+  if (!decision?.primaryTarget) return false;
+  return [decision.primaryTarget, ...decision.supportingSteps].some((t) => t.domain === domain && t.source !== "evidence_refresh");
 }

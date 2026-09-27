@@ -189,7 +189,7 @@ export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
         actorId: input.actorId,
         entityType: "BusinessRiskEntry",
         entityId: input.riskId,
-        payload: { status: updated.status, severity },
+        payload: { status: updated.status, severity, previousStatus: existing.status, previousResidualRisk: existing.residualRisk ?? null, residualRisk: updated.residualRisk ?? null },
       },
       tx,
     );

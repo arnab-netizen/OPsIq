@@ -71,13 +71,14 @@ import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } 
 import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type MetricDataPoint } from "@/domain/owner-mode/business-state-timeline";
 import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
-import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
+import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
+import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
-import { ownerImperativeContext, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
+import { ownerImperativeContext, quoteTitles, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
-import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -892,8 +893,8 @@ export async function assembleGuidanceContext(
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } } } }),
+    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
+    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } } } }),
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -942,27 +943,21 @@ export async function assembleGuidanceContext(
     : null;
 
   const ag = archetypeGuidance(business?.businessType);
-  const cashState = cash?.cashflowState;
-  const finState = fin?.survivalState;
-  // Cash-survival-triage and finance diagnosis are two separate signals for the same business
-  // that can go stale relative to each other (an owner can re-run one without the other). A real
-  // human usability test reproduced the exact failure this closes: an older AT_RISK cash reading
-  // presented as current truth alongside a newer SAFE finance diagnosis for the same business.
-  // See src/domain/owner-guidance/cash-finance-conflict.ts for the full arbitration rule.
-  const cashFinanceResolution = resolveCashFinanceSignal(
-    // Freshness is the period each reading DESCRIBES (its snapshot's periodEnd), never when the cycle
-    // row was written: completing/verifying an action re-diagnoses from the SAME old snapshot, which
-    // would otherwise make old evidence look "newer" than a current reading of the other source.
-    // A reading whose own evidence is out of date (older than the freshness window, or an amended
-    // Finance snapshot) cannot be shown to be current, so it never supersedes the other — the same
-    // rule as the canonical owner decision (owner-home service).
-    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: currentReadingTime(cash?.snapshot, deps.now()) },
-    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: currentReadingTime(fin?.snapshot, deps.now()) }
+  // Cash-survival-triage and finance diagnosis are two separate signals for the same business that
+  // can go stale relative to each other, and a Finance diagnosis whose figures the owner has since
+  // amended is not a current reading. The ONE current cash/finance reading (the same one Home and the
+  // safety gates use) arbitrates them — see current-cash-finance-reading.ts / cash-finance-conflict.ts.
+  const cashFinanceResolution = currentCashFinanceReading(
+    cash ? { state: cash.cashflowState, snapshot: cash.snapshot } : null,
+    fin ? { state: fin.survivalState, snapshot: fin.snapshot } : null,
+    deps.now()
   );
-  // Growth/high-impact gating stays conservative exactly as before when either signal is
-  // entirely missing (fail closed on missing critical data, tracked separately below via
-  // missingCriticalData) — the conflict resolution only changes behavior for the specific bug
-  // being fixed: both signals present AND disagreeing.
+  const cashState: string | undefined = cashFinanceResolution.cashState ?? undefined;
+  // Finance's CURRENT state: null once its figures were amended (their last state is kept separately).
+  const finState: string | undefined = cashFinanceResolution.financeState ?? undefined;
+  const finAmendedLastKnown = cashFinanceResolution.financeAmendedLastKnown;
+  // Growth/high-impact gating stays conservative when either current signal is missing (fail closed on
+  // missing critical data, tracked separately below via missingCriticalData).
   const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
@@ -1000,6 +995,7 @@ export async function assembleGuidanceContext(
   const missingCriticalData: string[] = [];
   if (!cash) missingCriticalData.push("latest cash position (cash on hand + obligations)");
   if (!fin) missingCriticalData.push("latest profit/margin figures");
+  else if (finAmendedLastKnown) missingCriticalData.push("a Finance diagnosis of your amended figures (re-run the Finance diagnosis)");
   if (!metric) missingCriticalData.push("latest customer + complaint counts");
   if (!supplier) missingCriticalData.push("supplier reliability + stock levels");
 
@@ -1022,17 +1018,36 @@ export async function assembleGuidanceContext(
       const supersedeNote = cashFinanceResolution.supersededSource
         ? ` An earlier ${cashFinanceResolution.supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${cashFinanceResolution.supersededState}; that reading is now out of date.`
         : "";
+      // Name the reading it comes from: the cash check reads the cash position; the Finance diagnosis
+      // reads overall financial survival (margin, debt and runway), never "cash" alone.
+      const subject = cashFinanceResolution.supersededSource === "cash"
+        ? "Financial survival (Finance diagnosis)"
+        : cashFinanceResolution.supersededSource === "finance"
+          ? "Cash survival (cash check)"
+          : "Cash and financial survival";
       issues.push({
         id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: sev, headline: `Cash survival is ${effectiveState}.${supersedeNote}`,
+        severity: sev, headline: `${subject} is ${effectiveState}.${supersedeNote}`,
         requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
       });
     }
   } else if (!cashSafe && (cashState || finState)) {
     // Exactly one of the two signals exists — unchanged from prior behavior.
     const sev = cashSeverity(cashState && !SAFE_STATES.has(cashState) ? cashState : finState);
+    const headline = cashState
+      ? `Cash survival (cash check) is ${cashState}; there is no current Finance diagnosis.`
+      : `Financial survival (Finance diagnosis) is ${finState}; there is no cash check yet.`;
     issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-      severity: sev, headline: `Cash survival is ${cashState ?? "unknown"} / finance ${finState ?? "unknown"}`,
+      severity: sev, headline,
+      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
+  }
+  if (finAmendedLastKnown && !SAFE_STATES.has(finAmendedLastKnown)) {
+    // Fail safe until the amended figures are diagnosed: the last Finance reading still counts as a
+    // warning, stated as last known — never as current, never silently dropped.
+    const sev = cashSeverity(finAmendedLastKnown);
+    issues.push({ id: "finance_amended", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+      severity: sev,
+      headline: `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}, but its figures have since been amended and not analysed — re-run the Finance diagnosis.`,
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
   }
   if (finState && !SAFE_STATES.has(finState)) {
@@ -1114,7 +1129,7 @@ export async function assembleGuidanceContext(
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
     },
-    // The arbitrated cash/finance reading (see resolveCashFinanceSignal above) — callers that
+    // The arbitrated cash/finance reading (currentCashFinanceReading above) — callers that
     // build an owner-facing cash-risk signal from a state must use THIS, never raw.cashState
     // directly. Using the raw, un-arbitrated cashflow-cycle state is exactly the bug a real human
     // usability test reproduced: Home presented a superseded AT_RISK/INSOLVENT_RISK cash reading
@@ -1156,11 +1171,6 @@ const IF_IGNORED_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
 };
 
 /** The evidence period a cash/finance reading describes, or null when that evidence is out of date. */
-function currentReadingTime(snapshot: { periodEnd: Date; supersededById?: string | null } | null | undefined, nowMs: number): Date | null {
-  if (!snapshot?.periodEnd || snapshot.supersededById) return null;
-  const periodEnd = snapshot.periodEnd instanceof Date ? snapshot.periodEnd : new Date(snapshot.periodEnd);
-  return periodEnd.getTime() >= nowMs - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000 ? periodEnd : null;
-}
 
 
 /**
@@ -1171,22 +1181,29 @@ function currentReadingTime(snapshot: { periodEnd: Date; supersededById?: string
  * main target is a data request, so every avoid is kept as-is.
  */
 const AVOID_PROHIBITION: Record<string, Pick<OwnerProhibition, "vetoes" | "levers" | "asCondition">> = {
-  avoid_growth_before_gates: { vetoes: "GROW", asCondition: (t) => `Do not scale "${t}" beyond a small trial until cash, profit, capacity, workload and quality gates pass` },
-  avoid_growth_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Keep "${t}" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week` },
-  avoid_discount_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Carry out "${t}" without discounts or low-margin volume while cash is at risk` },
-  avoid_marketing_on_service_failure: { vetoes: "GROW", asCondition: (t) => `Do not scale "${t}" beyond a small trial until service quality is fixed` },
-  avoid_volume_on_capacity: { vetoes: "GROW", asCondition: (t) => `Keep "${t}" within what current capacity can deliver` },
-  avoid_growth_on_supplier_risk: { vetoes: "GROW", asCondition: (t) => `Keep "${t}" to what current supply can support until supplier risk is resolved` },
-  avoid_new_tasks_on_overload: { vetoes: "ANY_ACTION", asCondition: (t) => `Apart from "${t}", do not assign new non-critical tasks to staff or the owner` },
+  // Each condition states the PERMITTED SCOPE of the canonical steps it touches — never a "do not" that
+  // would forbid them.
+  avoid_growth_before_gates: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} as a capped trial within its existing budget until the cash, profit, capacity, workload and quality gates pass.` },
+  avoid_growth_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} as a small, low-cost trial within its existing budget while cash or financial survival is at risk.` },
+  avoid_discount_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Carry out ${quoteTitles(t)} at your normal prices and margins while cash or financial survival is at risk.` },
+  avoid_marketing_on_service_failure: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} only at a volume your service can handle well until service quality is fixed.` },
+  avoid_volume_on_capacity: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} only up to what current capacity can deliver.` },
+  avoid_growth_on_supplier_risk: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} only up to what current supply can support until supplier risk is resolved.` },
+  avoid_new_tasks_on_overload: { vetoes: "ANY_ACTION", asCondition: (t) => `Go ahead with ${quoteTitles(t)}; hold other new non-critical tasks for staff and the owner until the workload eases.` },
 };
 
+/**
+ * Now View's avoid list reconciled with the canonical decision (main target AND supporting steps). A
+ * rule that would forbid a canonical step becomes a condition on it (`conditionOn` set, `avoid` = the
+ * permitted scope); surfaces show conditions as how to carry out the steps, never under "do not".
+ */
 export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {
   const ctx = ownerImperativeContext(decision);
   return avoids.map((a) => {
     const spec = AVOID_PROHIBITION[a.id];
     if (!spec) return a;
     const r = reconcileOwnerProhibition({ text: a.avoid, ...spec }, ctx);
-    return r.conditionOn === null ? a : { ...a, avoid: r.text };
+    return r.kind === "condition" ? { ...a, avoid: r.text, conditionOn: r.conditionOn } : a;
   });
 }
 
@@ -2558,8 +2575,9 @@ export async function getOwnerNowView(
   // Null when fewer than 2 snapshots are available or period timestamps are identical.
   let trendAlerts: TrendAlert[] | null = null;
   if (deps.db.ownerMetricSnapshot.findMany) {
+    // One business's periods only: comparing business A's period with business B's is not a trend.
     const snapshots = await deps.db.ownerMetricSnapshot.findMany({
-      where: { workspaceId },
+      where: businessId ? { workspaceId, businessId } : { workspaceId },
       select: {
         periodEnd: true, revenue: true, grossProfit: true, netProfit: true,
         newCustomers: true, averageOrderValue: true, refundAmount: true, rewashCount: true,

@@ -92,6 +92,7 @@ type DbMock = {
   ownerSopSnapshot: { findFirst: TableMock };
   ownerSopVerification: { create: TableMock };
   ownerStrategyAction: { findFirst: TableMock; update: TableMock };
+  ownerStrategyCycle: { findFirst: TableMock };
   ownerStrategySnapshot: { findFirst: TableMock };
   ownerStrategyVerification: { create: TableMock };
 };
@@ -121,6 +122,8 @@ function makeDbMock(): DbMock {
     ownerSopVerification: { create: vi.fn().mockResolvedValue(BASE_VERIFICATION) },
 
     ownerStrategyAction: makeTable(BASE_ACTION, { ...BASE_ACTION, status: "completed" }),
+    // The step's live-decision intent for the action gate reads the current evaluation (none here).
+    ownerStrategyCycle: { findFirst: vi.fn().mockResolvedValue(null) },
     ownerStrategySnapshot: { findFirst: vi.fn().mockResolvedValue(BASE_SNAPSHOT) },
     ownerStrategyVerification: { create: vi.fn().mockResolvedValue(BASE_VERIFICATION) },
   } as unknown as DbMock;

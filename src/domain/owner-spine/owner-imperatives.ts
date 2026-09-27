@@ -19,7 +19,14 @@
  *
  * Pure: no I/O.
  */
-import { classifyOwnerFindingCode, type OwnerCandidateSource, type OwnerPriorityClass } from "./owner-decision";
+import {
+  classifyOwnerFindingCode,
+  OWNER_PRIORITY_CLASS_BY_CODE,
+  strategyCandidatePriorityClass,
+  type OwnerCandidateSource,
+  type OwnerPriorityClass,
+  type StrategyDecisionCodeForPriority,
+} from "./owner-decision";
 
 // --- Intent ----------------------------------------------------------------------------------------
 
@@ -50,6 +57,10 @@ const INTENT_BY_CODE: Readonly<Record<string, OwnerTargetIntent>> = Object.freez
   STR_INVALID_CURRENCY: "EVIDENCE",
   STR_MISSING_CASH: "EVIDENCE",
   STR_MISSING_RISK_LEVEL: "EVIDENCE",
+  // Strategy decision steps (owner-strategy/decision.ts): correcting an invalid input is a data request;
+  // "go ahead as planned" is the plan's growth step.
+  STR_DECISION_INVALID_INPUT: "EVIDENCE",
+  STR_DECISION_GO: "GROW",
   // "*_OPP_DATA_QUALITY": raise data confidence (their sourceMetric is dataConfidenceScore).
   FIN_OPP_DATA_QUALITY: "EVIDENCE",
   CF_OPP_DATA_QUALITY: "EVIDENCE",
@@ -69,9 +80,27 @@ export function ownerTargetIntent(t: { source: OwnerCandidateSource; priorityCla
   return INTENT_BY_CODE[t.findingCode] ?? INTENT_BY_CLASS[t.priorityClass];
 }
 
-/** Intent of a finding code on its own (e.g. a rule-produced item not yet a candidate). */
+/**
+ * Intent of a finding code on its own (e.g. a rule-produced item not yet a candidate, or an owner action
+ * at the action gate). A code with no explicit classification falls back to classifyOwnerFindingCode's
+ * documented default (growth) — the most conservative intent for the growth limits; every code the
+ * domains emit is explicitly classified (src/__tests__/governance/owner-action-intent-exhaustiveness.test.ts).
+ */
 export function ownerFindingIntent(findingCode: string): OwnerTargetIntent {
   return INTENT_BY_CODE[findingCode] ?? INTENT_BY_CLASS[classifyOwnerFindingCode(findingCode)];
+}
+
+/** Whether a finding code has an explicit intent classification (by code, or by its known class). */
+export function hasExplicitOwnerIntent(findingCode: string): boolean {
+  return Object.prototype.hasOwnProperty.call(INTENT_BY_CODE, findingCode) || Object.prototype.hasOwnProperty.call(OWNER_PRIORITY_CLASS_BY_CODE, findingCode);
+}
+
+/**
+ * Intent of a Strategy step under Strategy's RESOLVED decision — the same class the canonical decision
+ * gives it (strategyCandidatePriorityClass), so the action gate and the owner decision agree.
+ */
+export function ownerStrategyStepIntent(decisionCode: StrategyDecisionCodeForPriority | null, findingCode: string): OwnerTargetIntent {
+  return ownerTargetIntent({ source: "domain_action", priorityClass: strategyCandidatePriorityClass(decisionCode, findingCode), findingCode });
 }
 
 // --- Business lever ----------------------------------------------------------------------------------
@@ -154,84 +183,160 @@ export function ownerImperativeContext(
   return { decisionPresent: true, primary: toOwnerImperativeTarget(decision.primaryTarget), supporting: decision.supportingSteps.map(toOwnerImperativeTarget) };
 }
 
+/** `"A"`, `"A" and "B"`, `"A", "B" and "C"` — the protected steps a condition talks about. */
+export function quoteTitles(titles: readonly string[]): string {
+  const q = titles.map((t) => `"${t}"`);
+  return q.length <= 1 ? (q[0] ?? "") : `${q.slice(0, -1).join(", ")} and ${q[q.length - 1]}`;
+}
+
 /**
  * A prohibition from any owner-facing system, described by what it would forbid.
- *   - `vetoes`: "GROW" — forbids growth/demand work (only a genuine GROW target is touched);
- *     "ANY_ACTION" — forbids taking on new work of any kind (every action target is touched);
- *     "NONE" — touches a target only through a shared lever.
+ *   - `vetoes`: "GROW" — forbids growth/demand work (only a genuine GROW step is touched);
+ *     "ANY_ACTION" — forbids taking on new work of any kind (every actionable step is touched);
+ *     "NONE" — touches a step only through a shared lever.
  *   - `levers`: business levers the prohibition names directly.
+ *   - `asCondition`: the PERMITTED SCOPE for the protected steps it touches (never a restatement of the
+ *     prohibition that would forbid them).
  */
 export interface OwnerProhibition {
   text: string;
   vetoes: "GROW" | "ANY_ACTION" | "NONE";
   levers?: readonly string[];
-  /** How the prohibition reads as a condition on executing `targetTitle`. */
-  asCondition: (targetTitle: string) => string;
+  asCondition: (protectedTitles: readonly string[]) => string;
 }
 
 export interface ReconciledProhibition {
+  /** "prohibition": unchanged, still a "do not"; "condition": positive guidance on executing canonical steps. */
+  kind: "prohibition" | "condition";
   text: string;
-  /** The canonical target the prohibition became a condition on (null ⇒ unchanged). */
-  conditionOn: string | null;
+  /** Titles of the canonical steps the prohibition became a condition on (empty ⇒ unchanged). */
+  conditionOn: string[];
+}
+
+/** Every actionable canonical step: the main target and the supporting steps (refresh targets are data requests). */
+function protectedSteps(ctx: OwnerImperativeContext): OwnerImperativeTarget[] {
+  return [ctx.primary, ...ctx.supporting].filter((t): t is OwnerImperativeTarget => t !== null && t.source !== "evidence_refresh");
 }
 
 /**
- * The ONE reconciliation of a prohibition against the canonical decision. A prohibition never vetoes
- * the main target or a supporting step: when it would (by intent or shared lever) it becomes a
- * condition on executing that target. A refresh (evidence) main target is a data request, never vetoed,
- * so nothing is rewritten around it. Otherwise the prohibition is returned unchanged.
+ * The ONE reconciliation of a prohibition against the canonical decision. It never vetoes the main
+ * target or a supporting step: every protected step it would forbid (by intent or shared lever) is
+ * named in a condition that defines how that step may be carried out. Unrelated prohibitions are
+ * returned unchanged.
  */
 export function reconcileOwnerProhibition(p: OwnerProhibition, ctx: OwnerImperativeContext): ReconciledProhibition {
-  const primary = ctx.primary;
-  if (!primary || primary.source === "evidence_refresh") return { text: p.text, conditionOn: null };
-  for (const t of [primary, ...ctx.supporting]) {
-    if (t.source === "evidence_refresh") continue;
+  const touched = protectedSteps(ctx).filter((t) => {
     const byLever = t.lever !== null && (p.levers ?? []).includes(t.lever);
-    const byIntent = (p.vetoes === "GROW" && t.intent === "GROW") || (p.vetoes === "ANY_ACTION" && t === primary && t.intent !== "EVIDENCE");
-    if (byLever || byIntent) return { text: p.asCondition(t.title), conditionOn: t.title };
-  }
-  return { text: p.text, conditionOn: null };
+    const byIntent = (p.vetoes === "GROW" && t.intent === "GROW") || (p.vetoes === "ANY_ACTION" && t.intent !== "EVIDENCE");
+    return byLever || byIntent;
+  });
+  if (touched.length === 0) return { kind: "prohibition", text: p.text, conditionOn: [] };
+  const titles = [...new Set(touched.map((t) => t.title))];
+  return { kind: "condition", text: p.asCondition(titles), conditionOn: titles };
+}
+
+/** Split reconciled items into what still forbids and what now qualifies canonical steps. */
+export function partitionReconciled(items: readonly ReconciledProhibition[]): { prohibitions: string[]; conditions: string[] } {
+  return {
+    prohibitions: items.filter((i) => i.kind === "prohibition").map((i) => i.text),
+    conditions: items.filter((i) => i.kind === "condition").map((i) => i.text),
+  };
 }
 
 // --- Secondary-system constraints (plan analysis, Recovery) ----------------------------------------------
 
 /**
- * Recovery's fixed "blocked before stabilisation" growth entries (business-survival-recovery.ts). These
- * forbid growth; with a canonical GROW target they become a condition on that target.
+ * Recovery's fixed "blocked before stabilisation" growth entries (business-survival-recovery.ts and the
+ * owner-recovery-status fallback). They constrain GROW work only; beside a genuine growth step they
+ * become a condition on it. A repair or stabilising step (whatever its domain) is untouched by them.
  */
 const RECOVERY_GROWTH_BLOCKS = new Set([
   "scale / growth / expansion before stabilization is proven",
-  "marketing before stabilization + validation",
-  "growth before stabilization + validation",
-  "launch before stabilization + validation",
-  "discount before margin/cash impact is known",
+  "Scaling (acquisition spend, campaign expansion, new launches) stays blocked until stabilization is proven.",
+  "scaling acquisition spend before stabilization + validation",
+  "growth expansion before stabilization + validation",
+  "new launches before stabilization + validation",
 ]);
+// "discount before margin/cash impact is known" is deliberately NOT here: it is a pricing-safety block,
+// not a scale block, so it stays a prohibition whatever the canonical steps are (never folded into the
+// scale condition and lost).
 
-/** Recovery's blocked list, reconciled with the canonical decision (other entries are automation safety). */
-export function reconcileRecoveryBlocks(blocked: readonly string[], ctx: OwnerImperativeContext): string[] {
-  return blocked.map((b) =>
+/** Recovery's blocked list reconciled with the canonical decision (automation-safety entries are unchanged). */
+export function reconcileRecoveryBlocks(blocked: readonly string[], ctx: OwnerImperativeContext): { blocked: string[]; conditions: string[] } {
+  const items = blocked.map((b) =>
     RECOVERY_GROWTH_BLOCKS.has(b)
       ? reconcileOwnerProhibition(
-          { text: b, vetoes: "GROW", asCondition: (t) => `taking "${t}" beyond a small, controlled first step until stabilisation is proven (${b})` },
+          {
+            text: b,
+            vetoes: "GROW",
+            asCondition: (t) => `Run only the next validated step of ${quoteTitles(t)}, within its existing budget, until stabilisation is proven.`,
+          },
           ctx
-        ).text
-      : b
+        )
+      : { kind: "prohibition" as const, text: b, conditionOn: [] }
   );
+  const { prohibitions, conditions } = partitionReconciled(items);
+  return { blocked: prohibitions, conditions: [...new Set(conditions)] };
 }
+
+/**
+ * Recovery's growth-gate label (e.g. "Growth blocked until stabilization") beside a genuine growth step.
+ * Only a BLOCKED gate constrains anything; an open gate is returned unchanged.
+ */
+export function reconcileRecoveryGrowthGate(label: string, ctx: OwnerImperativeContext, gateBlocked = true): string {
+  const grow = protectedSteps(ctx).filter((t) => t.intent === "GROW");
+  return !gateBlocked || grow.length === 0 ? label : `${label} — ${quoteTitles(grow.map((t) => t.title))} runs only as a validated next step until then`;
+}
+
+const stripEnd = (x: string) => x.trim().replace(/[.\s]+$/, "");
+/** Plan output uses constraint codes (cash_survival); owners read words. */
+const humanizeCodes = (x: string) => x.replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (m) => m.replace(/_/g, " "));
 
 /**
  * Plan analysis (the whole-business plan model) is a secondary system: beside a canonical decision it
  * may describe constraints and suggestions, never issue whole-business "stop / do not / now / next"
- * instructions. These functions restate its imperatives as context for the canonical target. Without a
- * canonical decision on the page the plan output is returned unchanged.
+ * instructions. These functions restate its imperatives as context for the canonical decision. Without
+ * a canonical decision on the page the plan output is returned unchanged.
  */
+/**
+ * The plan model's imperative wording restated as description: "Do not: X" / "Stop: X" / "Don't X" become
+ * "the plan analysis holds back X", and whole-business ordering words ("first", "before anything else")
+ * are dropped. Beside a canonical decision the plan describes; it never instructs.
+ */
+export function neutralizePlanImperatives(text: string): { text: string; heldBack: boolean } {
+  let heldBack = false;
+  const out = text
+    .replace(/(^|[.;:]\s+|—\s+)(?:Do not:?|Don't|Stop:?)\s+/gi, (_m, lead: string) => {
+      heldBack = true;
+      return `${lead}the plan analysis holds back `;
+    })
+    .replace(/\s+before anything else\b/gi, "")
+    .replace(/\s+first(?=[,.;]|$)/gi, "");
+  return { text: humanizeCodes(out), heldBack };
+}
+
+/** The permitted scope of the canonical GROW steps a held-back plan move may touch (empty when none). */
+function growScope(ctx: OwnerImperativeContext): string {
+  const grow = protectedSteps(ctx).filter((t) => t.intent === "GROW");
+  return grow.length === 0 ? "" : ` Where ${quoteTitles(grow.map((t) => t.title))} touches it, run only the next validated step within the existing budget.`;
+}
+
 export function planConstraintAsCondition(planStop: string, ctx: OwnerImperativeContext): string {
   if (!ctx.decisionPresent) return planStop;
-  const primary = ctx.primary;
-  if (!primary) return `Plan constraint: ${planStop}.`;
-  return primary.source === "evidence_refresh"
-    ? `Plan constraint: ${planStop} — noted for when current figures confirm what to do.`
-    : `Plan constraint: ${planStop} — if "${primary.title}" involves this, keep it within that limit.`;
+  const n = neutralizePlanImperatives(stripEnd(planStop));
+  const body = n.heldBack ? n.text : `the plan analysis holds back: ${n.text}`;
+  return `Plan constraint (context, not an instruction): ${body}.${growScope(ctx)}`;
+}
+
+/**
+ * Plan prose (7/30/90-day plan, summaries) beside a canonical decision: its imperatives restated as
+ * description and reconciled against the main target and supporting steps (a held-back move that a
+ * canonical GROW step touches gets that step's permitted scope).
+ */
+export function reconcilePlanProse(text: string, ctx: OwnerImperativeContext): string {
+  if (!ctx.decisionPresent || !text) return text;
+  const n = neutralizePlanImperatives(text);
+  return `Plan analysis (context): ${n.text}${n.heldBack ? growScope(ctx) : ""}`;
 }
 
 const STOP_PREFIX = /^Stop:\s*/;
@@ -245,29 +350,37 @@ export interface PlanSummaryLike {
   cadence: { now: string; thisWeek: string; stopLoss: string };
 }
 
+function contextNote(ctx: OwnerImperativeContext): string {
+  return ctx.primary ? "Context for your main target, not a separate instruction." : "Plan analysis context, not an instruction.";
+}
+
+function planSuggestion(x: string): string {
+  return x && x !== "—" ? `Plan analysis suggestion: ${neutralizePlanImperatives(x).text}` : x;
+}
+
 /** The supervisor summary with its imperatives restated as context for the canonical decision. */
 export function reconcilePlanSummary<T extends PlanSummaryLike>(summary: T, ctx: OwnerImperativeContext): T {
   if (!ctx.decisionPresent) return summary;
-  const suggestion = (x: string) => (x && x !== "—" ? `Plan analysis suggestion: ${x}` : x);
-  const stopLoss = summary.cadence.stopLoss.startsWith("Do not act")
-    ? "The plan analysis's own suggestion is gated until its gate clears; this does not change your main target."
-    : summary.cadence.stopLoss.replace(/^Stop and reassess/, "Reassess the plan");
+  const stopLoss = summary.cadence.stopLoss.replace(/^Stop and reassess/, "Reassess the plan");
   return {
     ...summary,
     stopItemsAreConstraints: true,
     doNotDo: summary.doNotDo.map((d) => planConstraintAsCondition(d, ctx)),
     topPriorities: summary.topPriorities.map((p) =>
       STOP_PREFIX.test(p.whatIsWrong)
-        ? { ...p, whatIsWrong: planConstraintAsCondition(p.whatIsWrong.replace(STOP_PREFIX, ""), ctx), doNext: "Context for your main target, not a separate instruction." }
-        : { ...p, whatIsWrong: p.whatIsWrong.replace(/^Biggest constraint:/, "Plan analysis constraint:"), doNext: suggestion(p.doNext) }
+        ? { ...p, whatIsWrong: planConstraintAsCondition(p.whatIsWrong.replace(STOP_PREFIX, ""), ctx), doNext: contextNote(ctx) }
+        : { ...p, whatIsWrong: humanizeCodes(p.whatIsWrong.replace(/^Biggest constraint:/, "Plan analysis constraint:")), doNext: planSuggestion(p.doNext) }
     ),
-    cadence: { ...summary.cadence, now: suggestion(summary.cadence.now), thisWeek: suggestion(summary.cadence.thisWeek), stopLoss },
+    cadence: { ...summary.cadence, now: planSuggestion(summary.cadence.now), thisWeek: planSuggestion(summary.cadence.thisWeek), stopLoss },
   };
 }
 
-export interface PlanCardLike { id: string; whatIsWrong: string; whyItMatters: string; nextStep: string }
+export interface PlanCardLike { id: string; whatIsWrong: string; whyItMatters: string; nextStep: string; proof?: string }
 
-/** Plan checkpoint cards with the stop card restated as a constraint on the canonical target. */
+/**
+ * Plan checkpoint cards beside a canonical decision: the stop card becomes a constraint, and every
+ * card's step reads as the plan analysis's suggestion (the canonical decision alone says what is next).
+ */
 export function reconcilePlanCards<T extends PlanCardLike>(cards: readonly T[], ctx: OwnerImperativeContext): T[] {
   if (!ctx.decisionPresent) return [...cards];
   return cards.map((c) =>
@@ -276,20 +389,35 @@ export function reconcilePlanCards<T extends PlanCardLike>(cards: readonly T[], 
           ...c,
           whatIsWrong: planConstraintAsCondition(c.whatIsWrong.replace(STOP_PREFIX, ""), ctx),
           whyItMatters: "The plan analysis sees this as making its dominant constraint worse.",
-          nextStep: "Context for your main target, not a separate instruction.",
+          nextStep: contextNote(ctx),
+          proof: "Not an action — context for your canonical steps.",
         }
-      : c
+      : c.id === "cash_margin"
+        // A financial-risk constraint: context for the canonical steps, never a second "do this first".
+        ? { ...c, whatIsWrong: humanizeCodes(c.whatIsWrong), nextStep: contextNote(ctx) }
+        : { ...c, whatIsWrong: humanizeCodes(c.whatIsWrong), nextStep: planSuggestion(c.nextStep) }
   );
 }
 
-/** The plan's growth/scale gate, as a condition on a genuine growth target or as plain context. */
+/** The plan's growth/scale gate, as a condition on a genuine growth step or as plain context. */
 export function reconcilePlanGrowthGate(gate: { scaleAllowed: boolean; blockedBy: readonly string[] }, ctx: OwnerImperativeContext): string {
   const blockers = gate.blockedBy.map((b) => b.replace(/_/g, " ")).join(", ");
   if (gate.scaleAllowed) return "scale allowed (capped pilot)";
   const gated = blockers ? `scaling is gated by: ${blockers}` : "scaling is gated";
   if (!ctx.decisionPresent) return blockers ? `scale gated — blocked by: ${blockers}` : "scale gated";
-  const primary = ctx.primary;
-  return primary && primary.intent === "GROW" && primary.source !== "evidence_refresh"
-    ? `keep "${primary.title}" to a controlled first step — ${gated}`
-    : `${gated} (context; it does not change your main target)`;
+  const grow = protectedSteps(ctx).filter((t) => t.intent === "GROW");
+  return grow.length > 0
+    ? `${quoteTitles(grow.map((t) => t.title))} runs only as a validated next step within its existing budget — ${gated}`
+    : `${gated} (context${ctx.primary ? "; it does not change your main target" : ""})`;
+}
+
+/**
+ * A domain page's data-gap notice. When the page's domain owns a canonical step, the notice says the
+ * issue needs attention and only the numerical score is provisional — it never says "don't act" on work
+ * the canonical decision selected. Otherwise the domain's own caution stands.
+ */
+export function domainDataGapNotice(domainLabel: string, missing: readonly string[], ownsCanonicalStep: boolean, fallback: string): string {
+  if (!ownsCanonicalStep) return fallback;
+  const what = missing.length > 0 ? missing.join(", ") : `the missing ${domainLabel} data`;
+  return `The ${domainLabel} issue needs attention now, but its numerical score is provisional until ${what} ${missing.length > 1 ? "are" : "is"} supplied.`;
 }

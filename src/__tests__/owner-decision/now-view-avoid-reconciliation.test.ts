@@ -9,6 +9,7 @@ import { resolveOwnerDecision, type OwnerDecisionCandidate, type OwnerPriorityCl
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
 import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
 import { BusinessFunction } from "@/domain/owner-guidance/business-function";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const growthGate: ActionToAvoid = {
   id: "avoid_growth_before_gates",
@@ -35,7 +36,7 @@ function decisionWith(priorityClass: OwnerPriorityClass, title: string, domain: 
   return resolveOwnerDecision({
     businessId: "b", workspaceId: "w", candidates: [c], diagnosedDomains: [domain as never],
     dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS,
     now: new Date("2026-09-27T00:00:00Z"),
   });
 }
@@ -44,18 +45,20 @@ describe("Now View avoid list vs the canonical main target", () => {
   it("a growth main target is never told 'do not pursue growth' — the gate becomes a precondition on how to do it", () => {
     const out = reconcileAvoidsWithOwnerDecision([growthGate, overload], decisionWith("GROWTH_OPPORTUNITY", "Launch referral offer"));
     expect(out.map((a) => a.avoid).join(" ")).not.toMatch(/Do not pursue growth/);
-    expect(out[0].avoid).toBe('Do not scale "Launch referral offer" beyond a small trial until cash, profit, capacity, workload and quality gates pass');
+    // The permitted scope of the target (a condition), never a "do not" that forbids it.
+    expect(out[0].avoid).toBe('Run "Launch referral offer" as a capped trial within its existing budget until the cash, profit, capacity, workload and quality gates pass.');
+    expect(out[0].conditionOn).toEqual(["Launch referral offer"]);
     // Workload rule: the main target is never "new non-critical work" — it applies to everything else.
-    expect(out[1]).toEqual({ ...overload, avoid: 'Apart from "Launch referral offer", do not assign new non-critical tasks to staff or the owner' });
+    expect(out[1]).toEqual({ ...overload, avoid: 'Go ahead with "Launch referral offer"; hold other new non-critical tasks for staff and the owner until the workload eases.', conditionOn: ["Launch referral offer"] });
   });
 
   it("every growth/marketing veto (cash danger, service failure) becomes a precondition that keeps its reason", () => {
-    const cash: ActionToAvoid = { id: "avoid_growth_on_cash_danger", avoid: "Do not start a new marketing/ad campaign or expand this week", reason: "cash", businessFunction: [BusinessFunction.CASH_FLOW], triggeredBy: [IssueCategory.CASH_DANGER] };
-    const service: ActionToAvoid = { id: "avoid_marketing_on_service_failure", avoid: "Do not scale marketing or acquisition before fixing service quality", reason: "service", businessFunction: [BusinessFunction.MARKETING], triggeredBy: [IssueCategory.CUSTOMER_SERVICE_FAILURE] };
+    const cash: ActionToAvoid = { id: "avoid_growth_on_cash_danger", avoid: "Do not start a new paid campaign or expand this week", reason: "cash", businessFunction: [BusinessFunction.CASH_FLOW], triggeredBy: [IssueCategory.CASH_DANGER] };
+    const service: ActionToAvoid = { id: "avoid_marketing_on_service_failure", avoid: "Do not scale acquisition or campaign volume before fixing service quality", reason: "service", businessFunction: [BusinessFunction.MARKETING], triggeredBy: [IssueCategory.CUSTOMER_SERVICE_FAILURE] };
     const out = reconcileAvoidsWithOwnerDecision([cash, service], decisionWith("GROWTH_OPPORTUNITY", "Add a referral ask"));
     expect(out.map((a) => a.avoid)).toEqual([
-      'Keep "Add a referral ask" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week',
-      'Do not scale "Add a referral ask" beyond a small trial until service quality is fixed',
+      'Run "Add a referral ask" as a small, low-cost trial within its existing budget while cash or financial survival is at risk.',
+      'Run "Add a referral ask" only at a volume your service can handle well until service quality is fixed.',
     ]);
     expect(out.map((a) => a.reason)).toEqual(["cash", "service"]);
   });
@@ -82,7 +85,7 @@ describe("Now View avoid list vs the canonical main target", () => {
         evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: true, exclusion: null, targetRoute: "/owner/marketing",
       }],
       dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-      staleDomains: ["marketing"], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [],
+      staleDomains: ["marketing"], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS,
       now: new Date("2026-09-27T00:00:00Z"),
     });
     expect(refresh.primaryTarget?.source).toBe("evidence_refresh");

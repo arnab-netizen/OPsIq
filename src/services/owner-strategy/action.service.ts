@@ -25,6 +25,8 @@ import {
 } from "@/domain/owner-strategy/action-arbitration";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { currentStrategyDecision } from "./decision-view";
+import { CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { ownerStrategyStepIntent } from "@/domain/owner-spine/owner-imperatives";
 
 export async function updateStrategyAction(
   actionId: string,
@@ -57,7 +59,7 @@ export async function updateStrategyAction(
     if (from === "proposed" && to === "assigned") {
       const latest = await db.ownerStrategyCycle.findFirst({
         where: { businessId: action.businessId, workspaceId },
-        orderBy: { sequenceNumber: "desc" },
+        orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
         include: { snapshot: true },
       });
       const decision = currentStrategyDecision(latest);
@@ -88,8 +90,23 @@ export async function updateStrategyAction(
       }
     }
 
-    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
-    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "strategy", toStatus: to });
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition,
+    // with the step's intent under the live decision (the class the canonical owner decision gives it).
+    const current = await db.ownerStrategyCycle.findFirst({
+      where: { businessId: action.businessId, workspaceId },
+      orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
+      include: { snapshot: true },
+    });
+    const liveDecision = currentStrategyDecision(current);
+    await enforceOwnerActionGates({
+      workspaceId,
+      businessId: action.businessId,
+      actionId,
+      domain: "strategy",
+      toStatus: to,
+      findingCode: action.findingCode,
+      intent: ownerStrategyStepIntent(liveDecision?.code ?? null, action.findingCode),
+    });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;

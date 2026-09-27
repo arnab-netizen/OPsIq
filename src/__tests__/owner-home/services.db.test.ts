@@ -114,10 +114,16 @@ describe("[db] Owner Home service", () => {
     expect(home.domainsWired).toContain("finance");
     const s = home.summary!;
     expect(typeof s.businessHealthScore).toBe("number");
-    // Only Finance is diagnosed: it is the survival evidence the resolver trusts, so the cash-danger
-    // card reads Finance (never "no data" beside a Finance survival reading); sales stays unknown.
-    expect(s.cashDanger.key).toBe("finance");
-    expect(s.cashDanger.level).not.toBe("unknown");
+    // Only Finance is diagnosed: its overall (margin/profit-driven) risk is the Financial danger card with
+    // provenance; the cash card never borrows Finance's score — it shows Finance's own cash-survival
+    // findings by severity when there are any, otherwise it is unknown.
+    // The fixture's period (May) is outside the freshness window: the reading is last-known — its level
+    // is shown, its score is not, and the card names the data to update.
+    expect(s.financialDanger).toMatchObject({ key: "financial", sourceDomains: ["finance"], status: "last_known", riskScore: null, updateDataLabel: "Finance" });
+    expect(s.financialDanger.level).not.toBe("unknown");
+    // The cash card never borrows Finance's score: this fixture has no Cash flow diagnosis and no Finance
+    // cash-survival finding, so it is unknown.
+    expect(s.cashDanger).toMatchObject({ status: "unknown", riskScore: null, sourceDomains: [] });
     expect(s.salesDanger.level).toBe("unknown");
     // a leaky finance snapshot produces at least one risk + at least one required action.
     expect(s.top3Risks.length).toBeGreaterThan(0);

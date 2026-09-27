@@ -17,10 +17,13 @@ vi.mock("@/services/founder-recovery/business.service", () => ({
   getBusiness: (...a: unknown[]) => getBusinessMock(...a),
 }));
 
-const listFinancialSnapshotsMock = vi.fn();
+// Finance re-diagnoses the CURRENT EFFECTIVE snapshot (financial-snapshot-selection.ts), never the first
+// row of the history list.
+const currentFinancialSnapshotMock = vi.fn();
 const runFinanceDiagnosisMock = vi.fn(async () => ({ id: "cycle-finance" }));
-vi.mock("@/services/owner-finance/snapshot.service", () => ({
-  listFinancialSnapshots: (...a: unknown[]) => listFinancialSnapshotsMock(...a),
+vi.mock("@/lib/db", () => ({
+  db: { ownerFinancialSnapshot: { findFirst: (...a: unknown[]) => currentFinancialSnapshotMock(...a) } },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("@/services/owner-finance/diagnosis.service", () => ({
   runFinanceDiagnosis: (...a: unknown[]) => runFinanceDiagnosisMock(...a),
@@ -66,8 +69,19 @@ beforeEach(() => {
 });
 
 describe("analyzeBusiness", () => {
+  it("P2 — Finance re-diagnoses the current effective snapshot: business-scoped, unsuperseded, latest period with a deterministic tie-break", async () => {
+    currentFinancialSnapshotMock.mockResolvedValue({ id: "snap-current" });
+    listSalesSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
+    listOperationsSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
+    await analyzeBusiness("biz1", "ws1", "actor1");
+    const args = currentFinancialSnapshotMock.mock.calls[0][0] as { where: unknown; orderBy: unknown[] };
+    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz1", supersededById: null });
+    expect(args.orderBy).toEqual([{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }]);
+    expect(runFinanceDiagnosisMock).toHaveBeenCalledWith("biz1", "snap-current", "actor1", "ws1");
+  });
+
   it("analyzes all three domains when each has a snapshot", async () => {
-    listFinancialSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
+    currentFinancialSnapshotMock.mockResolvedValue(ONE_SNAPSHOT[0]);
     listSalesSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
     listOperationsSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
 
@@ -83,7 +97,7 @@ describe("analyzeBusiness", () => {
   });
 
   it("skips a domain with no snapshot -- not an error, others still run", async () => {
-    listFinancialSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
+    currentFinancialSnapshotMock.mockResolvedValue(ONE_SNAPSHOT[0]);
     listSalesSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
     listOperationsSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
 
@@ -95,7 +109,7 @@ describe("analyzeBusiness", () => {
   });
 
   it("all three domains with no data -> all skipped, no domain calls made, no error", async () => {
-    listFinancialSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
+    currentFinancialSnapshotMock.mockResolvedValue(null);
     listSalesSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
     listOperationsSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
 
@@ -109,7 +123,7 @@ describe("analyzeBusiness", () => {
   });
 
   it("Finance refused by the in-memory rate limit -> rateLimited, Sales/Operations unaffected", async () => {
-    listFinancialSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
+    currentFinancialSnapshotMock.mockResolvedValue(ONE_SNAPSHOT[0]);
     listSalesSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
     listOperationsSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
     checkDiagnosisRateLimitMock.mockReturnValue({ allowed: false, remaining: 0, retryAfterMs: 60000 });
@@ -122,7 +136,7 @@ describe("analyzeBusiness", () => {
   });
 
   it("Finance refused by the PG-backed rate limit (in-memory allowed) -> rateLimited", async () => {
-    listFinancialSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
+    currentFinancialSnapshotMock.mockResolvedValue(ONE_SNAPSHOT[0]);
     listSalesSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
     listOperationsSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
     checkPgRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 60 });
@@ -134,7 +148,7 @@ describe("analyzeBusiness", () => {
   });
 
   it("one domain's diagnosis throws -> reported in failed with a safe reason, other domains still run", async () => {
-    listFinancialSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
+    currentFinancialSnapshotMock.mockResolvedValue(ONE_SNAPSHOT[0]);
     listSalesSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
     listOperationsSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
     runSalesDiagnosisMock.mockRejectedValueOnce(new Error("some internal detail that must never leak"));
@@ -148,9 +162,9 @@ describe("analyzeBusiness", () => {
 
   it("verifies business ownership before touching any domain", async () => {
     getBusinessMock.mockRejectedValueOnce(new Error("NotFoundError"));
-    listFinancialSnapshotsMock.mockResolvedValue(ONE_SNAPSHOT);
+    currentFinancialSnapshotMock.mockResolvedValue(ONE_SNAPSHOT[0]);
 
     await expect(analyzeBusiness("biz1", "ws1", "actor1")).rejects.toThrow();
-    expect(listFinancialSnapshotsMock).not.toHaveBeenCalled();
+    expect(currentFinancialSnapshotMock).not.toHaveBeenCalled();
   });
 });

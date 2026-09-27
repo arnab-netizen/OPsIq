@@ -42,14 +42,24 @@ const FINANCE_GATE_CODES = new Set(["CASH_SAFETY_BLOCKED", "MARGIN_SAFETY_BLOCKE
 
 const DEFAULT_WINDOW_DAYS = 30;
 
+/** The business whose advice the metrics feed (finance blocks are business-scoped). */
+export interface BlockMetricsBusinessScope {
+  businessId: string | null;
+  /** Whether events carrying no business (e.g. a consulting recommendation's promotion) belong to this business: exactly one real business. */
+  unscopedAttributable: boolean;
+}
+
 /**
  * Aggregate recent block events for a workspace. `blockedRecommendations` counts every
  * gate/do-not-repeat block; `financeBlocked` is the cash/margin subset; `proofBlocked`
- * counts task-completion blocks (proof not cleared).
+ * counts task-completion blocks (proof not cleared). With a business scope, `financeBlocked` counts
+ * only that business's blocks (an event naming another business never constrains this one's advice;
+ * one naming no business counts only when it is attributable to this business).
  */
 export async function getOwnerBlockMetrics(
   workspaceId: string,
-  injected?: BlockMetricsDeps & { windowDays?: number }
+  injected?: BlockMetricsDeps & { windowDays?: number },
+  business?: BlockMetricsBusinessScope
 ): Promise<OwnerBlockMetrics> {
   const deps = injected ?? (await resolveDefaultDeps());
   const now = (deps.now ?? (() => new Date()))();
@@ -91,9 +101,13 @@ export async function getOwnerBlockMetrics(
       const payload = (e.payload && typeof e.payload === "object" ? e.payload : {}) as Record<string, unknown>;
       const errorName = payload.errorName;
       const code = payload.code;
+      const eventBusiness = typeof payload.businessId === "string" ? payload.businessId : null;
+      const ofThisBusiness = !business
+        || (eventBusiness !== null ? eventBusiness === business.businessId : business.unscopedAttributable);
       if (
-        (typeof errorName === "string" && FINANCE_GATE_ERRORS.has(errorName)) ||
-        (typeof code === "string" && FINANCE_GATE_CODES.has(code))
+        ofThisBusiness &&
+        ((typeof errorName === "string" && FINANCE_GATE_ERRORS.has(errorName)) ||
+          (typeof code === "string" && FINANCE_GATE_CODES.has(code)))
       ) {
         financeBlocked += 1;
       }

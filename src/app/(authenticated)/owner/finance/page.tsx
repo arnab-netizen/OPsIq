@@ -1,5 +1,6 @@
 "use client";
 
+import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -694,6 +695,8 @@ export default function OwnerFinancePage() {
             </form>
           )}
 
+          <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} />
+
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="financial"
@@ -707,6 +710,7 @@ export default function OwnerFinancePage() {
               score={score}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
+              businessId={dashboard.selectedBusinessId}
               history={dashboard.cycleHistory}
               busy={busy}
               editingAction={editingAction}
@@ -727,6 +731,7 @@ function FinanceCycleView({
   score,
   missing,
   recommended,
+  businessId,
   history,
   busy,
   editingAction,
@@ -739,6 +744,7 @@ function FinanceCycleView({
   score: any;
   missing: string[];
   recommended: any;
+  businessId: string | null;
   history: any[];
   busy: boolean;
   editingAction: { actionId: string; mode: "complete" | "verify" } | null;
@@ -783,9 +789,15 @@ function FinanceCycleView({
       </div>
 
       {(score?.dataConfidenceScore ?? cycle.dataConfidenceScore) < 30 && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
-          ⚠ Data confidence is critically low ({Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.
-        </div>
+        // Consistent with the canonical decision (shared reconciler): when Finance owns the main target or
+        // a supporting step, the issue needs attention now and only the score is provisional.
+        <DomainDataGapNotice
+          domain="finance"
+          domainLabel="Finance"
+          businessId={businessId}
+          missing={missing.map(humanizeMetricKey)}
+          fallback={`⚠ Data confidence is critically low (${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.`}
+        />
       )}
 
       {missing.length > 0 && (
@@ -805,9 +817,11 @@ function FinanceCycleView({
           {Array.isArray(recommended.evidence) && recommended.evidence.length > 0 && (
             <p className="text-xs text-muted-foreground">Based on: {recommended.evidence.join(" · ")}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 

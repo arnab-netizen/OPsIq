@@ -12,6 +12,7 @@ import { SupervisorSummary, type SupervisorSummaryView } from "@/components/owne
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { ownerImperativeContext, reconcilePlanCards, reconcilePlanSummary } from "@/domain/owner-spine/owner-imperatives";
 import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 afterEach(() => cleanup());
 
@@ -24,7 +25,7 @@ const DECISION = resolveOwnerDecision({
     blocking: false, evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: false, exclusion: null, targetRoute: "/owner/marketing",
   }],
   dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
-  staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, previous: null, events: [], now: new Date("2026-09-27T00:00:00Z"),
+  staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS, now: new Date("2026-09-27T00:00:00Z"),
 });
 
 const SUPERVISOR: SupervisorSummaryView = {
@@ -32,7 +33,7 @@ const SUPERVISOR: SupervisorSummaryView = {
   ownerDecisionRequired: null, delegateToStaff: [], opsiqPreparedWork: [], proofNeeded: [], confidence: "medium", actionStatus: "blocked", canProceed: false,
   ledger: { knownFacts: [], assumptions: [], missingData: [], confidenceReason: "", whatWouldChange: "" },
   impact: [], supportingFigures: [], missingForQuantification: [],
-  cadence: { now: "Cut costs", today: "—", thisWeek: "Stabilise", reassessmentTrigger: "weekly", kpiWatch: "runway", stopLoss: "Do not act — this is blocked until the gate clears.", nextReview: "weekly" },
+  cadence: { now: "Cut costs", today: "—", thisWeek: "Stabilise", reassessmentTrigger: "weekly", kpiWatch: "runway", stopLoss: "The plan's suggested action is gated until its gate clears.", nextReview: "weekly" },
   topPriorities: [
     { severity: "high", whatIsWrong: "Biggest constraint: cash runway.", doNext: "Cut costs" },
     { severity: "high", whatIsWrong: "Stop: Pause marketing spend", doNext: "Hold this until the constraint above clears." },
@@ -54,7 +55,8 @@ describe("Command Center plan analysis beside the canonical decision", () => {
     expect(text).not.toMatch(/Do not act/);
     expect(text).not.toMatch(/Hold this/);
     expect(text).not.toMatch(/Do not:/);
-    expect(text).toMatch(/Plan constraint: Pause marketing spend — if "Scale the winning campaign" involves this, keep it within that limit\./);
+    expect(text).toMatch(/Plan constraint \(context, not an instruction\): the plan analysis holds back: Pause marketing spend\. Where "Scale the winning campaign" touches it, run only the next validated step within the existing budget\./);
+    expect(text).not.toMatch(/stop instruction/);
   });
 
   it("the Command Center page passes the plan analysis through the shared reconciler (never raw)", () => {

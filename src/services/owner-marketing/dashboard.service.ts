@@ -13,7 +13,8 @@ import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
-import { domainLocalNextAction } from "@/services/owner-home/owner-decision-candidates";
+import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface MarketingDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -80,7 +81,7 @@ export async function getMarketingDashboard(
     }),
     db.ownerMarketingCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,
         // Ranked after read: severity is a plain string, so a DB orderBy sorts it
@@ -167,11 +168,13 @@ export async function getMarketingDashboard(
       }
     : null;
 
-  // DOMAIN-LOCAL next action: this domain's eligible actions ranked by the canonical comparator
-  // (domainLocalNextAction — never a completed, cancelled, superseded or verified one). The owner's
-  // overall main target comes only from the canonical owner decision (owner-home/home.service.ts).
-  const recommendedNextAction =
-    latestCycle ? domainLocalNextAction(latestCycle.actions, latestCycle, "marketing") : null;
+  // DOMAIN-LOCAL next step: the canonical eligible candidates (the SAME builder and eligibility contract
+  // the owner decision uses — verification timing, stale → refresh, supersession, survival issues)
+  // filtered to this domain. Never a completed, cancelled, verified, stale-replaced or superseded item,
+  // and never a second election: the owner's overall main target is the canonical owner decision.
+  const recommendedNextAction = latestCycle
+    ? presentDomainLocalStep(await getDomainLocalOwnerStep(workspaceId, selectedBusinessId, "marketing"), latestCycleView?.actions ?? [])
+    : null;
 
   return {
     businesses: businessList,

@@ -1,5 +1,6 @@
 "use client";
 
+import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -613,6 +614,8 @@ export default function OwnerOperationsPage() {
           )}
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
+          <DomainMainTargetContext domain="operations" businessId={dashboard?.selectedBusinessId} />
+
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="operations"
@@ -624,6 +627,7 @@ export default function OwnerOperationsPage() {
             <OperationsCycleView
               cycle={cycle}
               score={score}
+              businessId={dashboard?.selectedBusinessId}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
               history={dashboard.cycleHistory}
@@ -644,6 +648,7 @@ export default function OwnerOperationsPage() {
 function OperationsCycleView({
   cycle,
   score,
+  businessId,
   missing,
   recommended,
   history,
@@ -656,6 +661,7 @@ function OperationsCycleView({
 }: {
   cycle: any;
   score: any;
+  businessId: string | null | undefined;
   missing: string[];
   recommended: any;
   history: any[];
@@ -702,9 +708,15 @@ function OperationsCycleView({
       </div>
 
       {dataConfidence < 30 && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
-          ⚠ Data confidence is critically low ({dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.
-        </div>
+        // Consistent with the canonical decision (shared reconciler): when Operations owns the main target
+        // or a supporting step, the issue needs attention now and only the score is provisional.
+        <DomainDataGapNotice
+          domain="operations"
+          domainLabel="Operations"
+          businessId={businessId}
+          missing={missing.map(humanizeMetricKey)}
+          fallback={`⚠ Data confidence is critically low (${dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.`}
+        />
       )}
 
       {missing.length > 0 && (
@@ -718,9 +730,11 @@ function OperationsCycleView({
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Next step within Operations (local to this area — your overall main target is on Home)</div>
           <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 

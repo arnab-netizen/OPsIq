@@ -28,7 +28,7 @@ import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
-import { ownerImperativeContext, reconcileRecoveryBlocks } from "@/domain/owner-spine/owner-imperatives";
+import { ownerImperativeContext, reconcileRecoveryBlocks, reconcileRecoveryGrowthGate } from "@/domain/owner-spine/owner-imperatives";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -184,6 +184,8 @@ export interface MinimumOwnerCockpitProps {
   bridge: ProcessExecutionBridgeView | null;
   /** The governed "do NOT do now" list from the now-view (each {avoid}), for the Blocked / Not Allowed section. */
   actionsToAvoid?: string[];
+  /** Avoid rules reconciled into the permitted scope of canonical steps (how to carry them out). */
+  stepConditions?: string[];
   /** Read-only recovery status projection (PASS 37). Rendered as a collapsed low-load section. */
   recovery?: OwnerRecoveryStatusResponse | null;
   /** Read-only public-signal ("Outside signals") projection (PASS 39). Rendered as a collapsed low-load section. */
@@ -1022,11 +1024,17 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
 /** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
 function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryStatusResponse; ownerDecision: CurrentOwnerDecision | null }) {
   const inProgress = recovery.recoveryStatus !== "NONE";
+  // Recovery's growth constraints pass through the shared reconciler: they constrain GROW work only and
+  // become conditions on a canonical growth step, never a veto of the main target or a supporting step.
+  const imperativeCtx = ownerImperativeContext(ownerDecision);
+  const recoveryBlocks = reconcileRecoveryBlocks(recovery.blockedUnsafeActions, imperativeCtx);
+  const statusLabel = RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus;
+  const recoveryStatusLabel = recovery.recoveryStatus === "THRIVE_GATE_BLOCKED" ? reconcileRecoveryGrowthGate(statusLabel, imperativeCtx) : statusLabel;
   return (
     <details data-testid="cockpit-recovery-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
       <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Recovery status
-        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {recoveryStatusLabel}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!inProgress ? (
@@ -1034,9 +1042,9 @@ function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryS
         ) : (
           <>
             <div data-testid="cockpit-recovery-state" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <Badge variant="muted-accessible">{RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</Badge>
+              <Badge variant="muted-accessible">{recoveryStatusLabel}</Badge>
               <span data-testid="cockpit-recovery-stabilization">Stabilization: {recovery.stabilizationGate}</span>
-              <span data-testid="cockpit-recovery-thrive">Growth gate: {recovery.thriveGate}</span>
+              <span data-testid="cockpit-recovery-thrive">Growth gate: {reconcileRecoveryGrowthGate(recovery.thriveGate, imperativeCtx, recovery.thriveGate === "BLOCKED")}</span>
             </div>
             {recovery.topRecoveryBottleneck && (
               <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Recovery follow-up:</strong> {recovery.topRecoveryBottleneck}</p>
@@ -1045,8 +1053,11 @@ function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryS
               <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
-            {recovery.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {reconcileRecoveryBlocks(recovery.blockedUnsafeActions, ownerImperativeContext(ownerDecision)).slice(0, 2).join("; ")}</p>
+            {recoveryBlocks.blocked.length > 0 && (
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recoveryBlocks.blocked.slice(0, 2).join("; ")}</p>
+            )}
+            {recoveryBlocks.conditions.length > 0 && (
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-conditions">How to run your next steps: {recoveryBlocks.conditions.join(" ")}</p>
             )}
             {recovery.ownerApprovalRequired && (
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
@@ -1093,7 +1104,7 @@ function GoalAttentionSection({ signal }: { signal: GoalAttentionSignal }) {
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, ownerDecision = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepConditions = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, ownerDecision = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -1412,6 +1423,17 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             </div>
           </div>
         </Disclosure>
+
+        {stepConditions.length > 0 && (
+          <div data-testid="cockpit-step-conditions" className="border-t border-border pt-2.5">
+            <span className="text-sm font-medium text-foreground">How to carry out your next steps</span>
+            <ul className="mt-1 list-disc space-y-0.5 pl-[18px]">
+              {stepConditions.slice(0, 3).map((c, i) => (
+                <li key={i} style={{ fontSize: 13 }}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* 6. Blocked / Not Allowed */}
         <div data-testid="cockpit-blocked" className="border-t border-border pt-2.5">

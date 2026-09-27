@@ -125,4 +125,21 @@ describe("getOwnerBlockMetrics", () => {
     expect(m.blockedRecommendations).toBe(1);
     expect(m.financeBlocked).toBe(1); // matched by owner-action gate code
   });
+
+  it("D-P2-3 — with a business scope, finance blocks are that business's only (another business's never constrain its advice)", async () => {
+    const events = [
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { code: "CASH_SAFETY_BLOCKED", businessId: "A" } },
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { code: "MARGIN_SAFETY_BLOCKED", businessId: "B" } },
+      // a consulting recommendation's promotion block: no business on the event
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { errorName: "CashSafetyGateError" } },
+    ];
+    const forB = await getOwnerBlockMetrics("ws1", depsWith(events), { businessId: "B", unscopedAttributable: false });
+    expect(forB.financeBlocked).toBe(1);
+    expect(forB.blockedRecommendations).toBe(3); // the workspace-wide count is unchanged
+    // The business-less event counts only when attributable to the business (the workspace's only one).
+    const onlyA = await getOwnerBlockMetrics("ws1", depsWith(events), { businessId: "A", unscopedAttributable: true });
+    expect(onlyA.financeBlocked).toBe(2);
+    // Without a scope: the workspace-wide aggregate (unchanged contract).
+    expect((await getOwnerBlockMetrics("ws1", depsWith(events))).financeBlocked).toBe(3);
+  });
 });

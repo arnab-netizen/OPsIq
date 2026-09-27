@@ -159,6 +159,9 @@ export async function updateBusiness(
   // derived fresh every time); this update never triggers diagnosis/reassessment.
   const businessTypeChanged =
     input.businessType !== undefined && input.businessType !== before.businessType;
+  // Archiving/restoring changes which businesses workspace-level records can be attributed to: record
+  // the actual transition (before/after), so a repeated no-op request is never read as an archival.
+  const isActiveChanged = input.isActive !== undefined && input.isActive !== before.isActive;
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_BUSINESS_UPDATED,
@@ -171,6 +174,7 @@ export async function updateBusiness(
       ...(businessTypeChanged
         ? { businessTypeChange: { field: "businessType", from: before.businessType, to: input.businessType } }
         : {}),
+      ...(isActiveChanged ? { isActiveChange: { field: "isActive", from: before.isActive, to: input.isActive } } : {}),
     },
   });
 

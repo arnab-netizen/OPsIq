@@ -8,10 +8,14 @@
  * supplies severity, evidence and missing-data; lifecycle state decides eligibility:
  *
  *   - completed / cancelled                      → excluded (terminal)
- *   - own latest verification reached its target → excluded ("verified_complete")
+ *   - own latest verification reached its target, recorded AT OR AFTER the evidence this action's
+ *     cycle rests on → excluded ("verified_complete"); a verification carried forward from before
+ *     that evidence never closes the action against the newer evidence
  *   - a fix for the same issue was verified AFTER the evidence this action was planned from
  *     (re-diagnosis re-proposes from the unchanged snapshot) → excluded until new evidence arrives
  *   - any status outside the open set            → excluded ("superseded")
+ * These are ACTION lifecycle states. They never close a survival ISSUE: survivalIssueCandidates keeps
+ * the issue open while the evidence still raises it (see verificationResolvesIssue).
  *
  * "Reached its target" reuses the single existing definition, `extractReachedTargetFromVerification`.
  */
@@ -19,9 +23,6 @@ import { extractReachedTargetFromVerification } from "@/domain/owner-finance/out
 import { isExpired } from "@/domain/owner-mode/compliance-boundary";
 import {
   classifyOwnerFindingCode,
-  ownerCandidateIssueKey,
-  rankOwnerCandidates,
-  type OwnerIssueState,
   type OwnerCandidateExclusion,
   type OwnerDecisionCandidate,
   type OwnerPriorityClass,
@@ -51,7 +52,8 @@ export function toOwnerSeverity(value: unknown): OwnerSeverity | null {
   return typeof value === "string" && (OWNER_SEVERITIES as readonly string[]).includes(value) ? (value as OwnerSeverity) : null;
 }
 
-function asDate(v: unknown): Date | null {
+/** A persisted date column (Date, ISO string or epoch ms) as a Date; null when absent or invalid. */
+export function asDate(v: unknown): Date | null {
   if (v instanceof Date) return v;
   if (typeof v === "string" || typeof v === "number") {
     const d = new Date(v);
@@ -112,7 +114,12 @@ function exclusionFor(action: any, ctx: DomainCandidateContext, findingCode: str
     (v: any) => v?.status === "verified_improved" || v?.status === "verified_not_improved"
   );
   const latestOwn = own.reduce((best: any, v: any) => (best === null || verificationTime(v) > verificationTime(best) ? v : best), null);
-  if (latestOwn && verificationReachedTarget(latestOwn)) return "verified_complete";
+  // Causal: only a verification recorded at or after the evidence this cycle rests on can close the
+  // action; an older one (the action carried forward onto newer evidence) proves nothing about it, and
+  // with no known evidence time nothing can be shown to be causal (fail safe: the action stays open).
+  if (latestOwn && verificationReachedTarget(latestOwn) && ctx.evidenceAsOf && verificationTime(latestOwn).getTime() >= ctx.evidenceAsOf.getTime()) {
+    return "verified_complete";
+  }
   const fixedAt = ctx.verifiedFixes.get(findingCode);
   if (fixedAt && ctx.evidenceAsOf && fixedAt.getTime() >= ctx.evidenceAsOf.getTime()) return "verified_fix_awaiting_new_evidence";
   return null;
@@ -154,30 +161,6 @@ export function domainActionToCandidate(action: any, ctx: DomainCandidateContext
     exclusion: exclusionFor(action, ctx, findingCode),
     targetRoute: OWNER_DOMAIN_ROUTE[ctx.domain] ?? "/owner",
   };
-}
-
-/**
- * The next step WITHIN one domain (domain pages), chosen by the SAME canonical comparator restricted to
- * that domain's own eligible actions — never a second cross-domain election, never a completed,
- * cancelled, superseded or verified action. The owner's overall main target stays the canonical
- * decision; pages label this item as local work.
- */
-export function domainLocalNextAction<T extends { id: string }>(
-  actions: readonly T[],
-  cycle: { findings?: readonly any[] | null } | null,
-  domain: OwnerDomain
-): T | null {
-  const ctx: DomainCandidateContext = {
-    businessId: "local",
-    workspaceId: "local",
-    domain,
-    findingsById: new Map<string, any>((cycle?.findings ?? []).map((f: any) => [String(f.id), f])),
-    evidenceAsOf: null,
-    stale: false,
-    verifiedFixes: new Map(),
-  };
-  const top = rankOwnerCandidates(actions.map((a) => domainActionToCandidate(a, ctx)))[0];
-  return top ? actions.find((a) => String(a.id) === top.sourceId) ?? null : null;
 }
 
 // Recovery predates the Spine: its action `priority` IS the linked finding's severity
@@ -302,33 +285,6 @@ export function complianceItemToCandidate(
   };
 }
 
-/**
- * Lifecycle of a compliance obligation's possible issues (breach / hard stop, renewal in progress) that
- * are NOT competing now: the issue the item currently raises is a candidate; every other issue the item
- * could raise no longer holds by its own record → terminal. Lets "what changed" call a breach resolved
- * only when the record says so.
- */
-export function complianceIssueStates(item: any, current: OwnerDecisionCandidate | null): Record<string, OwnerIssueState> {
-  const out: Record<string, OwnerIssueState> = {};
-  const name = String(item.name ?? "compliance obligation");
-  for (const code of ["COMPLIANCE_BREACH", "COMPLIANCE_RENEWAL_IN_PROGRESS"]) {
-    const key = ownerCandidateIssueKey({ domain: "compliance", findingCode: code, candidateId: `compliance_item:${item.id}`, source: "compliance_item" });
-    if (current && ownerCandidateIssueKey(current) === key) continue;
-    out[key] = { lifecycle: "terminal", title: `"${name}"` };
-  }
-  return out;
-}
-
-/**
- * Lifecycle of an owner-recorded risk that is NOT competing now: still open (e.g. being mitigated below
- * the critical threshold) or closed by its own status.
- */
-export function businessRiskIssueState(risk: any): { key: string; state: OwnerIssueState } {
-  const category = String(risk.category ?? "").toUpperCase();
-  const key = ownerCandidateIssueKey({ domain: "risk", findingCode: `RISK_${category || "UNCATEGORISED"}`, candidateId: `business_risk:${risk.id}`, source: "business_risk" });
-  return { key, state: { lifecycle: OPEN_RISK_STATUSES.has(String(risk.status ?? "")) ? "open" : "terminal", title: String(risk.title ?? "Recorded risk") } };
-}
-
 /** Owner-entered risk categories → business class (critical-severity risks only reach the arbiter). */
 const RISK_CATEGORY_CLASS: Record<string, OwnerPriorityClass> = {
   COMPLIANCE: "SAFETY_COMPLIANCE",
@@ -404,16 +360,71 @@ export function businessRiskToCandidate(
 export interface SurvivalEvidenceReading {
   domain: "cashflow" | "finance";
   periodEnd: Date | null;
+  /** When the evidence was captured (the diagnosed snapshot's createdAt); null if unknown. */
+  evidenceAt: Date | null;
   stale: boolean;
   superseded: boolean;
   /** The diagnosis's own data-confidence score (0-100), used when a finding carries none. */
   dataConfidenceScore: number;
-  /** The cycle's persisted findings (code, title, summary, severity, confidence, evidence, missingData). */
+  /** The cycle's persisted findings (code, title, summary, severity, confidence, sourceMetric, evidence, missingData). */
   findings: ReadonlyArray<any>;
+  /** Every recorded verification in this domain (any cycle), as issue-resolution facts. */
+  verifications: readonly IssueVerificationFact[];
 }
 
-/** Closed lifecycle states that say how the owner RESPONDED, never whether the issue is gone. */
-const RESPONSE_ONLY_EXCLUSIONS = new Set<OwnerCandidateExclusion>(["completed", "cancelled", "superseded"]);
+/**
+ * A recorded verification, reduced to what issue resolution needs. `afterValueSource` is where the
+ * "after" value came from: every domain's verification service records the value the OWNER entered
+ * (`afterValue: input.afterValue` in each owner domain verification.service.ts and founder-recovery), so it is
+ * OWNER_REPORTED — never a measurement of new figures.
+ */
+export interface IssueVerificationFact {
+  findingCode: string;
+  metric: string | null;
+  reachedTarget: boolean;
+  at: Date;
+  afterValueSource: "MEASURED" | "OWNER_REPORTED";
+}
+
+export function issueVerificationFact(v: any, findingCode: string): IssueVerificationFact {
+  return {
+    findingCode,
+    metric: typeof v?.verificationMetric === "string" ? v.verificationMetric : null,
+    reachedTarget: verificationReachedTarget(v),
+    at: verificationTime(v),
+    afterValueSource: "OWNER_REPORTED",
+  };
+}
+
+/**
+ * Whether a verification CLOSES an issue (not just its action). Only when it directly MEASURED the same
+ * canonical metric the issue was raised on (the finding's sourceMetric), reached the target, and was
+ * recorded AFTER the evidence that raised the issue. An owner-reported after value is a claim about
+ * the response, not new figures: it never resolves the issue — only newer trusted evidence that no
+ * longer raises it does.
+ */
+export function verificationResolvesIssue(
+  v: IssueVerificationFact,
+  issue: { findingCode: string; sourceMetric: string | null; evidenceAt: Date | null }
+): boolean {
+  return (
+    v.reachedTarget &&
+    v.afterValueSource === "MEASURED" &&
+    v.findingCode === issue.findingCode &&
+    v.metric !== null &&
+    v.metric === issue.sourceMetric &&
+    issue.evidenceAt !== null &&
+    v.at.getTime() > issue.evidenceAt.getTime()
+  );
+}
+
+/**
+ * Closed ACTION lifecycle states. Each says how the owner responded — none says the issue is gone
+ * (a verification can close an action; only newer evidence, or a direct measurement per
+ * verificationResolvesIssue, closes the issue).
+ */
+const CLOSED_ACTION_EXCLUSIONS = new Set<OwnerCandidateExclusion>(["completed", "cancelled", "superseded", "verified_complete", "verified_fix_awaiting_new_evidence"]);
+const RESPONSE_ORDER: readonly OwnerCandidateExclusion[] = ["verified_complete", "completed", "cancelled", "superseded", "verified_fix_awaiting_new_evidence"];
 
 /**
  * Survival ISSUES, separated from their action lifecycle.
@@ -422,10 +433,11 @@ const RESPONSE_ONLY_EXCLUSIONS = new Set<OwnerCandidateExclusion>(["completed", 
  * the evidence that raised it is the evidence OpsIQ holds. An action is only how the owner responds:
  *   - an ELIGIBLE action for the SAME issue (same domain + finding code) already represents it →
  *     no second candidate (never a duplicate issue + action);
- *   - a completed, cancelled or superseded action for it (or none at all) does NOT make the issue go
- *     away → the issue stays an explicit candidate, carrying that action's title and status;
- *   - a verification that measured the target as reached AFTER the evidence (verified_complete /
- *     verified_fix_awaiting_new_evidence) is newer trusted evidence → the issue is not re-raised;
+ *   - a completed, cancelled, superseded or VERIFIED action for it (or none at all) does NOT make the
+ *     issue go away → the issue stays an explicit candidate, carrying that action's title and status;
+ *     the action closes, the issue stays, and only refreshed figures can clear it;
+ *   - a verification clears the issue only when it directly measured the issue's own metric after the
+ *     evidence that raised it (verificationResolvesIssue) — never a carried-forward or owner-reported one;
  *   - a reading superseded by a newer disagreeing reading of the other source → not raised;
  *   - stale evidence → raised with `stale: true`, so the arbiter turns it into an explicit
  *     refresh-evidence target (never silently dropped, never current).
@@ -453,16 +465,26 @@ export function survivalIssueCandidates(
     for (const [code, f] of [...byCode.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
       const sameIssue = candidates.filter((c) => c.source === "domain_action" && c.domain === r.domain && c.findingCode === code);
       if (sameIssue.some((c) => c.exclusion === null)) continue;
-      if (sameIssue.some((c) => c.exclusion !== null && !RESPONSE_ONLY_EXCLUSIONS.has(c.exclusion))) continue;
-      const response = [...sameIssue].sort((a, b) => (a.candidateId < b.candidateId ? -1 : 1))[0] ?? null;
+      const issue = { findingCode: code, sourceMetric: typeof f.sourceMetric === "string" ? f.sourceMetric : null, evidenceAt: r.evidenceAt };
+      if (r.verifications.some((v) => verificationResolvesIssue(v, issue))) continue;
+      const closed = sameIssue.filter((c) => c.exclusion !== null && CLOSED_ACTION_EXCLUSIONS.has(c.exclusion));
+      // The response the owner most recently acted on decides the wording: a verification before a
+      // completion before a cancellation before a re-proposal waiting on new evidence (ties by id).
+      const response = [...closed].sort((a, b) =>
+        RESPONSE_ORDER.indexOf(a.exclusion!) - RESPONSE_ORDER.indexOf(b.exclusion!) || (a.candidateId < b.candidateId ? -1 : 1)
+      )[0] ?? null;
       const findingTitle = typeof f.title === "string" && f.title ? f.title : code;
       const summary = typeof f.summary === "string" && f.summary ? ` ${f.summary}` : "";
       const responded = response
-        ? response.status === "completed"
-          ? `"${response.title}" was marked done, but `
-          : response.status === "cancelled"
-            ? `"${response.title}" was cancelled, but `
-            : `"${response.title}" is no longer open, but `
+        ? response.exclusion === "verified_complete"
+          ? `"${response.title}" was verified as reaching its target, but `
+          : response.exclusion === "verified_fix_awaiting_new_evidence"
+            ? `A fix for this was verified as reaching its target, but `
+            : response.status === "completed"
+            ? `"${response.title}" was marked done, but `
+            : response.status === "cancelled"
+              ? `"${response.title}" was cancelled, but `
+              : `"${response.title}" is no longer open, but `
         : "";
       const findingConfidence = typeof f.confidence === "number" ? f.confidence : r.dataConfidenceScore / 100;
       out.push({
@@ -476,7 +498,7 @@ export function survivalIssueCandidates(
         findingCode: code,
         findingId: typeof f.id === "string" ? f.id : null,
         title: response ? response.title : `Deal with: ${findingTitle}`,
-        explanation: `${responded}${responded ? "your" : "Your"} ${label} figures${period ? ` for the period ending ${period}` : ""} still show "${findingTitle}".${summary} Only new figures can show it has gone.`,
+        explanation: `${responded}${responded ? "your" : "Your"} ${label} figures${period ? ` for the period ending ${period}` : ""} still show "${findingTitle}".${summary} Only new figures can show it has gone — add refreshed ${label} figures.`,
         severity: toOwnerSeverity(f.severity),
         // The domain's own ratings for this issue, from its (closed) action when there is one; never invented.
         priorityScore: response ? clampScore(response.priorityScore) : 0,

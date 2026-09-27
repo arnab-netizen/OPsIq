@@ -8,7 +8,7 @@ import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
-import { ownerDecisionCandidateIdForEntity, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { ownerDecisionCandidateIdForEntity, ownerTargetHref, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -73,19 +73,26 @@ async function api(path: string) {
 
 function DangerCard({ label, danger, testId }: { label: string; danger: any; testId?: string }) {
   const level = danger?.level ?? "unknown";
-  // The server marks a reading from out-of-date figures (lastFlagged) and which evidence source it
-  // comes from (key); the card only renders those facts.
-  const source = label === "Cash danger" && danger?.key === "finance" ? " (from your Finance figures)" : "";
+  const levelLabel = DANGER_LABEL[level] ?? level;
+  // The server's danger contract decides everything shown: which evidence drives the reading, when it
+  // was captured, and whether it is current. A score is shown only for a current reading; an
+  // out-of-date one shows only its last-known level and which data to update.
+  const lastKnown = danger?.status === "last_known";
+  const conflicting = danger?.status === "conflicting";
+  const asOf = danger?.evidenceAsOf ? new Date(danger.evidenceAsOf).toISOString().slice(0, 10) : null;
   return (
     <div className="border rounded-lg p-3 bg-card" data-testid={testId}>
-      <div className="text-xs uppercase text-muted-foreground">{label}{source}</div>
-      <div className="mt-1 flex items-center gap-2">
-        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>{danger?.lastFlagged ? `Last flagged: ${DANGER_LABEL[level] ?? level}` : (DANGER_LABEL[level] ?? level)}</Badge>
-        <span className="text-sm text-muted-foreground">
-          {danger?.riskScore === null || danger?.riskScore === undefined ? "—" : `${Math.round(danger.riskScore)}/100`}
-          {danger?.lastFlagged ? " — figures need updating" : ""}
-        </span>
+      <div className="text-xs uppercase text-muted-foreground">{label}</div>
+      <div className="mt-1 flex items-center gap-2 flex-wrap">
+        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>
+          {conflicting ? "Signals disagree" : lastKnown ? `Last flagged: ${levelLabel}${danger?.updateDataLabel ? ` — update ${danger.updateDataLabel} data` : ""}` : levelLabel}
+        </Badge>
+        {!lastKnown && !conflicting && typeof danger?.riskScore === "number" && (
+          <span className="text-sm text-muted-foreground">{Math.round(danger.riskScore)}/100</span>
+        )}
       </div>
+      {danger?.drivenBy && <p className="mt-1 text-xs text-muted-foreground" data-testid={testId ? `${testId}-driven-by` : undefined}>{danger.drivenBy}</p>}
+      {asOf && danger?.status !== "unknown" && <p className="mt-0.5 text-xs text-muted-foreground">Figures as of {asOf}</p>}
     </div>
   );
 }
@@ -255,11 +262,12 @@ export default function OwnerHomePage() {
               </section>
 
               {/* Danger surfaces (money first, then execution) */}
-              <section className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <section className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <DangerCard label="Cash danger" danger={s.cashDanger} testId="home-cash-danger" />
-                <DangerCard label="Sales danger" danger={s.salesDanger} />
-                <DangerCard label="Operations danger" danger={s.operationsDanger} />
-                <DangerCard label="Execution danger" danger={s.executionDanger} />
+                <DangerCard label="Financial danger" danger={s.financialDanger} testId="home-financial-danger" />
+                <DangerCard label="Sales danger" danger={s.salesDanger} testId="home-sales-danger" />
+                <DangerCard label="Operations danger" danger={s.operationsDanger} testId="home-operations-danger" />
+                <DangerCard label="Execution danger" danger={s.executionDanger} testId="home-execution-danger" />
               </section>
 
               {/* Today's open work — the canonical owner-attention order, rendered exactly as the server
@@ -273,7 +281,7 @@ export default function OwnerHomePage() {
                     {(data.currentOwnerDecision as CurrentOwnerDecision).attention.map((a, i) => (
                       <Link
                         key={a.candidateId}
-                        href={a.targetRoute}
+                        href={i === 0 ? ownerTargetHref(a) : a.targetRoute}
                         data-testid="home-attention-item"
                         className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
                       >
