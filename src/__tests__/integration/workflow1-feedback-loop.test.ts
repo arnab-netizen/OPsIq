@@ -21,6 +21,8 @@ const mockRunOperationsDiagnosis = vi.fn().mockResolvedValue({ id: "new-operatio
 const mockRunSalesDiagnosis = vi.fn().mockResolvedValue({ id: "new-sales-cycle-id" });
 const mockRunSopDiagnosis = vi.fn().mockResolvedValue({ id: "new-sop-cycle-id" });
 const mockRunStrategyDiagnosis = vi.fn().mockResolvedValue({ id: "new-strategy-cycle-id" });
+// Strategy re-evaluates the scenario behind the current decision (latest cycle's snapshot).
+const mockCurrentStrategyScenarioId = vi.fn().mockResolvedValue("snap-1");
 
 // Mock dynamic imports used inside the services
 vi.mock("@/services/owner-finance/diagnosis.service", () => ({
@@ -37,6 +39,7 @@ vi.mock("@/services/owner-sop/diagnosis.service", () => ({
 }));
 vi.mock("@/services/owner-strategy/diagnosis.service", () => ({
   runStrategyDiagnosis: mockRunStrategyDiagnosis,
+  currentStrategyScenarioId: mockCurrentStrategyScenarioId,
 }));
 
 // Mock the owner-action-gate so it doesn't block transitions in tests
@@ -71,27 +74,30 @@ const BASE_VERIFICATION = {
   verificationMetric: "revenue",
 };
 
+/** A mocked Prisma delegate method (the table shape is all this file relies on). */
+type TableMock = MockedFunction<(...args: unknown[]) => Promise<unknown>>;
+
 type DbMock = {
-  ownerFinanceAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
-  ownerFinanceCycle: { findFirst: MockedFunction<any> };
-  ownerFinancialSnapshot: { findFirst: MockedFunction<any> };
-  ownerFinanceVerification: { create: MockedFunction<any> };
-  ownerOperationsAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
-  ownerOperationsSnapshot: { findFirst: MockedFunction<any> };
-  ownerOperationsVerification: { create: MockedFunction<any> };
-  ownerSalesAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
-  ownerSalesSnapshot: { findFirst: MockedFunction<any> };
-  ownerSalesVerification: { create: MockedFunction<any> };
-  ownerSopAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
-  ownerSopSnapshot: { findFirst: MockedFunction<any> };
-  ownerSopVerification: { create: MockedFunction<any> };
-  ownerStrategyAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
-  ownerStrategySnapshot: { findFirst: MockedFunction<any> };
-  ownerStrategyVerification: { create: MockedFunction<any> };
+  ownerFinanceAction: { findFirst: TableMock; update: TableMock };
+  ownerFinanceCycle: { findFirst: TableMock };
+  ownerFinancialSnapshot: { findFirst: TableMock };
+  ownerFinanceVerification: { create: TableMock };
+  ownerOperationsAction: { findFirst: TableMock; update: TableMock };
+  ownerOperationsSnapshot: { findFirst: TableMock };
+  ownerOperationsVerification: { create: TableMock };
+  ownerSalesAction: { findFirst: TableMock; update: TableMock };
+  ownerSalesSnapshot: { findFirst: TableMock };
+  ownerSalesVerification: { create: TableMock };
+  ownerSopAction: { findFirst: TableMock; update: TableMock };
+  ownerSopSnapshot: { findFirst: TableMock };
+  ownerSopVerification: { create: TableMock };
+  ownerStrategyAction: { findFirst: TableMock; update: TableMock };
+  ownerStrategySnapshot: { findFirst: TableMock };
+  ownerStrategyVerification: { create: TableMock };
 };
 
 function makeDbMock(): DbMock {
-  const makeTable = (findFirstResult: any, updateResult?: any) => ({
+  const makeTable = (findFirstResult: unknown, updateResult?: unknown) => ({
     findFirst: vi.fn().mockResolvedValue(findFirstResult),
     update: vi.fn().mockResolvedValue(updateResult ?? findFirstResult),
     create: vi.fn().mockResolvedValue(BASE_VERIFICATION),
@@ -159,6 +165,7 @@ describe("Workflow 1 — Action completion triggers re-diagnosis (Class A)", () 
     mockRunSalesDiagnosis.mockResolvedValue({ id: "new-sales-cycle-id" });
     mockRunSopDiagnosis.mockResolvedValue({ id: "new-sop-cycle-id" });
     mockRunStrategyDiagnosis.mockResolvedValue({ id: "new-strategy-cycle-id" });
+    mockCurrentStrategyScenarioId.mockResolvedValue("snap-1");
   });
 
   it("finance: action completion emits ACTION_COMPLETED and triggers re-diagnosis", async () => {
@@ -227,6 +234,7 @@ describe("Workflow 1 — Action completion triggers re-diagnosis (Class A)", () 
     );
     const auditNames = mockEmitAuditEvent.mock.calls.map((c) => c[0].eventName);
     expect(auditNames).toContain("owner.strategy_action_completed");
+    expect(mockCurrentStrategyScenarioId).toHaveBeenCalledWith("biz-1", "ws-1");
     expect(mockRunStrategyDiagnosis).toHaveBeenCalledWith("biz-1", "snap-1", "actor-1", "ws-1");
     expect(auditNames).toContain("owner.strategy_reassessment_triggered");
   });
@@ -270,6 +278,7 @@ describe("Workflow 1 — Verification success triggers re-diagnosis (Class B)", 
     mockRunSalesDiagnosis.mockResolvedValue({ id: "new-sales-cycle-id" });
     mockRunSopDiagnosis.mockResolvedValue({ id: "new-sop-cycle-id" });
     mockRunStrategyDiagnosis.mockResolvedValue({ id: "new-strategy-cycle-id" });
+    mockCurrentStrategyScenarioId.mockResolvedValue("snap-1");
   });
 
   const TARGET_REACHED_INPUT = {
@@ -338,6 +347,7 @@ describe("Workflow 1 — Verification success triggers re-diagnosis (Class B)", 
     await recordStrategyVerification("action-1", TARGET_REACHED_INPUT, "actor-1", "ws-1");
     const auditNames = mockEmitAuditEvent.mock.calls.map((c) => c[0].eventName);
     expect(auditNames).toContain("owner.strategy_outcome_verified");
+    expect(mockCurrentStrategyScenarioId).toHaveBeenCalledWith("biz-1", "ws-1");
     expect(mockRunStrategyDiagnosis).toHaveBeenCalledWith("biz-1", "snap-1", "actor-1", "ws-1");
     expect(auditNames).toContain("owner.strategy_verification_reassessment_triggered");
   });

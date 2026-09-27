@@ -2,12 +2,14 @@
  * Owner Strategy — the decision, as the owner reads it (presentational only).
  *
  * Renders a server-derived StrategyDecision (src/domain/owner-strategy/decision.ts) in the
- * hierarchy: headline decision → why → Profit / Cash / Downside / Evidence → required
- * conditions → one next step. Every sentence comes from the decision; this component only maps
- * states to labels/styles. No business logic here.
+ * hierarchy: headline decision → reasons (why, then the supporting points under a heading that
+ * fits the decision) → Profit / Cash / Downside / Evidence → required conditions → one next step.
+ * Every sentence comes from the decision; this component only maps states to labels/styles. No
+ * business logic here.
  */
 import { Badge } from "@/ui/primitives";
 import type { StrategyDecision, StrategyDimensionState } from "@/domain/owner-strategy/decision";
+import { STRATEGY_SUPPORTING_POINTS_HEADING } from "@/domain/owner-strategy/presentation";
 
 type Variant = "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible";
 
@@ -72,11 +74,22 @@ export function StrategyDecisionCard({
       </div>
 
       {why.length > 0 && (
-        <div>
+        <div data-testid="strategy-decision-why">
           <h3 className="text-sm font-semibold">Why</h3>
           <ul className="list-disc pl-5 text-sm space-y-1">
             {why.map((r) => (
               <li key={r.code}>{r.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {decision.promising.length > 0 && (
+        <div data-testid="strategy-supporting-points">
+          <h3 className="text-sm font-semibold">{STRATEGY_SUPPORTING_POINTS_HEADING[decision.code]}</h3>
+          <ul className="list-disc pl-5 text-sm space-y-1">
+            {decision.promising.map((p) => (
+              <li key={p.code}>{p.text}</li>
             ))}
           </ul>
         </div>
@@ -106,24 +119,13 @@ export function StrategyDecisionCard({
       </dl>
 
       {decision.conditions.length > 0 && (
-        <div>
+        <div data-testid="strategy-decision-conditions">
           <h3 className="text-sm font-semibold">Before you go ahead</h3>
           <ol className="list-decimal pl-5 text-sm space-y-1">
             {decision.conditions.map((c) => (
               <li key={c.code}>{c.message}</li>
             ))}
           </ol>
-        </div>
-      )}
-
-      {decision.promising.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold">Why this looks promising</h3>
-          <ul className="list-disc pl-5 text-sm space-y-1">
-            {decision.promising.map((p) => (
-              <li key={p.code}>{p.text}</li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -141,7 +143,7 @@ export function StrategyDecisionCard({
         <p className="text-xs text-muted-foreground mt-2">
           {nextStepRow
             ? `In your action list below — ${nextStepRow.statusLabel.toLowerCase()}.`
-            : "Click “Evaluate scenario” to add this step to your action list."}
+            : "Evaluate this scenario again (under “Saved scenarios” below) to add this step to your action list."}
         </p>
       </div>
     </section>

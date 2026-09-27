@@ -186,46 +186,46 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 401,
+      "line": 415,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
+      "reason": "route-wrapper internal error classification (ClassifiedApiError construction) (line-shifted 401->415 by the expected-client-rejection logging change: isExpectedClientRejection() helper above and the WARN/ERROR log split in the catch block; code unchanged)"
     },
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 741,
+      "line": 755,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
+      "reason": "route-wrapper internal error classification (ClassifiedApiError construction) (line-shifted 741->755 by the expected-client-rejection logging change: isExpectedClientRejection() helper above and the WARN/ERROR log split in the catch block; code unchanged)"
     },
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 759,
+      "line": 773,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error),",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
+      "reason": "route-wrapper internal error classification (ClassifiedApiError construction) (line-shifted 759->773 by the expected-client-rejection logging change: isExpectedClientRejection() helper above and the WARN/ERROR log split in the catch block; code unchanged)"
     },
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 825,
+      "line": 846,
       "severity": "error",
       "code": "errorMessage: error instanceof Error ? error.message : String(error),",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
+      "reason": "route-wrapper internal error classification (ClassifiedApiError construction) (line-shifted 825->846 by the expected-client-rejection logging change: isExpectedClientRejection() helper above and the WARN/ERROR log split in the catch block; code unchanged)"
     },
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 850,
+      "line": 881,
       "severity": "error",
       "code": "error: isKnownSafeClientError ? classifiedError.message : \"Something went wrong on our side. Nothing was saved. Please try again.\",",
-      "reason": "deliberate, gated client-facing exposure (PR #362, line/fallback-text updated by 1d563ebd, predates this PR series): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic operator-safe fallback text"
+      "reason": "deliberate, gated client-facing exposure (PR #362, line/fallback-text updated by 1d563ebd, predates this PR series): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic operator-safe fallback text (line-shifted 850->881 by the expected-client-rejection logging change: isExpectedClientRejection() helper above and the WARN/ERROR log split in the catch block; code unchanged)"
     },
     {
       "type": "raw-error-message",

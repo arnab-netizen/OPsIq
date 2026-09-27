@@ -15,6 +15,7 @@ import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evi
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import type { StrategyDecision } from "@/domain/owner-strategy/decision";
 import { arbitrateStrategyActionRows, orderByDecisionFit, presentStoredStrategyFinding, withoutRetiredStrategyActions } from "@/domain/owner-strategy/action-arbitration";
+import type { StrategyScenarioSummary } from "@/domain/owner-strategy/presentation";
 import { currentStrategyDecision } from "./decision-view";
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
@@ -37,6 +38,12 @@ export interface StrategyDashboardPayload {
   /** The current decision for the latest evaluation (derived on read, not persisted). */
   decision: StrategyDecision | null;
   missingCriticalData: string[];
+  /**
+   * Every saved scenario of the selected business (newest assessment period first). The owner
+   * evaluates one explicitly by its id — the page never infers which one from the period.
+   * `isCurrentDecision` marks the scenario the current decision was derived from.
+   */
+  scenarios: StrategyScenarioSummary[];
   cycleHistory: Array<{
     id: string;
     sequenceNumber: number;
@@ -46,7 +53,13 @@ export interface StrategyDashboardPayload {
     findingCount: number;
     actionCount: number;
     createdAt: string;
+    /** The scenario that evaluation used (null when that scenario row no longer exists). */
+    scenario: { id: string; optionName: string | null; periodStart: string; periodEnd: string } | null;
   }>;
+}
+
+function isoOf(value: unknown): string {
+  return value instanceof Date ? value.toISOString() : String(value);
 }
 
 export async function getStrategyDashboard(
@@ -74,16 +87,17 @@ export async function getStrategyDashboard(
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
       latestCycle: null, domainScore: null, recommendedNextAction: null, decision: null, missingCriticalData: [],
-      cycleHistory: [],
+      scenarios: [], cycleHistory: [],
     };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
-  const [latestSnapshot, latestCycle, cycles] = await Promise.all([
-    db.ownerStrategySnapshot.findFirst({
+  const [snapshots, latestCycle, cycles] = await Promise.all([
+    db.ownerStrategySnapshot.findMany({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
+      // Newest assessment period first; createdAt/id make the order total.
+      orderBy: [{ periodEnd: "desc" }, { periodStart: "desc" }, { createdAt: "desc" }, { id: "asc" }],
     }),
     db.ownerStrategyCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
@@ -121,9 +135,14 @@ export async function getStrategyDashboard(
     db.ownerStrategyCycle.findMany({
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
-      include: { findings: { select: { id: true } }, actions: { select: { id: true } } },
+      include: {
+        findings: { select: { id: true } },
+        actions: { select: { id: true } },
+        snapshot: { select: { id: true, optionName: true, periodStart: true, periodEnd: true } },
+      },
     }),
   ]);
+  const latestSnapshot = snapshots[0] ?? null;
 
   // Each action carries the value the diagnosis measured for its verification
   // metric (null when not measured) — the baseline an outcome is compared to.
@@ -200,9 +219,24 @@ export async function getStrategyDashboard(
     domainScore,
     recommendedNextAction,
     decision,
-    missingCriticalData: latestSnapshot
-      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
+    // Missing inputs of the scenario the current evaluation used — not of whichever saved
+    // scenario happens to have the latest assessment period.
+    missingCriticalData: Array.isArray(latestCycle?.snapshot?.missingCriticalData)
+      ? (latestCycle.snapshot.missingCriticalData as string[])
       : [],
+    scenarios: snapshots.map((sn: any) => {
+      const evaluations = cycles.filter((c: any) => c.snapshotId === sn.id);
+      return {
+        id: sn.id,
+        optionName: sn.optionName ?? null,
+        periodStart: isoOf(sn.periodStart),
+        periodEnd: isoOf(sn.periodEnd),
+        createdAt: isoOf(sn.createdAt),
+        // cycles are ordered newest first, so the first match is the latest evaluation.
+        lastEvaluationSequence: evaluations[0]?.sequenceNumber ?? null,
+        isCurrentDecision: latestCycle !== null && latestCycle.snapshotId === sn.id,
+      };
+    }),
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,
       sequenceNumber: c.sequenceNumber,
@@ -213,6 +247,9 @@ export async function getStrategyDashboard(
       findingCount: c.findings.length,
       actionCount: c.actions.length,
       createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+      scenario: c.snapshot
+        ? { id: c.snapshot.id, optionName: c.snapshot.optionName ?? null, periodStart: isoOf(c.snapshot.periodStart), periodEnd: isoOf(c.snapshot.periodEnd) }
+        : null,
     })),
   };
 }

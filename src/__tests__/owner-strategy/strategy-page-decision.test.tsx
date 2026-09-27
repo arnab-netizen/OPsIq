@@ -2,9 +2,9 @@
  * Owner Strategy page — decision-first presentation (Decision Overhaul, owner-facing UI).
  *
  * Drives the real page (fetch mocked at the network boundary) with decisions produced by the
- * real pure engine. Pins the hierarchy (decision → why → Profit/Cash/Downside/Evidence →
+ * real pure engine. Pins the hierarchy (decision → reasons → Profit/Cash/Downside/Evidence →
  * conditions → one next step), demoted /100 scores, on-hold carried actions, history labelled
- * as the previous model, unit-explicit input labels, and no NaN/undefined/null text.
+ * with legacy ratings, unit-explicit input labels, and no NaN/undefined/null text.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, screen, within, fireEvent } from "@testing-library/react";
@@ -131,8 +131,9 @@ describe("Strategy page — decision first", () => {
     expect(within(next).getByText("Close the ₹50,000 funding gap")).toBeTruthy();
     expect(within(next).getByText("Secure ₹50,000 of funding before committing")).toBeTruthy();
     expect(within(next).getByText("In your action list below — proposed.")).toBeTruthy();
-    // Positive facts are reasons, not commands.
-    expect(within(card).getByText("Why this looks promising")).toBeTruthy();
+    // Positive facts are reasons, not commands — and under "Not yet" they are not called promising.
+    expect(within(card).getByText("What the numbers say")).toBeTruthy();
+    expect(within(card).queryByText("Why this looks promising")).toBeNull();
     // The gap is stated once as the detail — not repeated as a "why" line.
     expect(within(card).queryByText("Why")).toBeNull();
     // The three /100 scores are not the headline: they sit in a collapsed "Detailed scores".
@@ -180,8 +181,16 @@ describe("Strategy page — decision first", () => {
     installFetch(dashboard(KNOWN_CASE));
     renderPage();
     await screen.findByTestId("strategy-decision");
-    expect(screen.getByText(/Current decision: Not yet/)).toBeTruthy();
-    expect(screen.getByText(/Stored rating \(previous scoring model\): Strong go/)).toBeTruthy();
+    const rows = screen.getAllByTestId("strategy-history-row");
+    expect(rows[0].getAttribute("data-current")).toBe("true");
+    expect(within(rows[0]).getByText("Current decision: Not yet")).toBeTruthy();
+    expect(rows[0].textContent).not.toMatch(/Legacy rating/);
+    // An earlier cycle keeps its stored rating, labelled as legacy — never shown as a current decision.
+    expect(rows[1].getAttribute("data-current")).toBe("false");
+    expect(within(rows[1]).getByText("Legacy rating: Strong go")).toBeTruthy();
+    expect(within(rows[1]).getByText("Calculated using the previous Strategy model")).toBeTruthy();
+    expect(rows[1].textContent).not.toMatch(/Current decision|Go ahead/);
+    expect(screen.queryByText(/Stored rating/)).toBeNull();
   });
 
   it("NEED_INFO: 'Can't say yet', profit unknown (never scored as poor), missing values read 'not entered'", async () => {

@@ -6,6 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer, Disclosure } from "@/ui/primitives";
 import { StrategyDecisionCard } from "@/components/owner/StrategyDecisionCard";
 import type { StrategyDecision } from "@/domain/owner-strategy/decision";
+import {
+  LEGACY_STRATEGY_RATING_NOTE,
+  formatStrategyPeriod,
+  legacyStrategyRatingText,
+  strategyScenarioName,
+  type StrategyScenarioSummary,
+} from "@/domain/owner-strategy/presentation";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -85,20 +92,6 @@ const ACTION_FIT_LABEL: Record<string, string> = {
   resolved: "No longer needed",
 };
 
-const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
-  STRONG_GO: "success-accessible",
-  GO: "default-accessible",
-  MARGINAL: "warning-accessible",
-  RISKY: "destructive-accessible",
-  AVOID: "destructive-accessible",
-};
-const STATE_LABEL: Record<string, string> = {
-  STRONG_GO: "Strong go",
-  GO: "Go",
-  MARGINAL: "Marginal",
-  RISKY: "Risky",
-  AVOID: "Avoid",
-};
 /** Server-derived fits whose proposed actions are not to be taken on (only cancelled). */
 const FIT_WITHOUT_FORWARD_STEPS = new Set(["on_hold", "superseded", "resolved"]);
 
@@ -133,7 +126,16 @@ export default function OwnerStrategyPage() {
   const [busy, setBusy] = useState(false);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  // The saved scenario whose evaluation is in flight (its button shows progress).
+  const [evaluatingScenarioId, setEvaluatingScenarioId] = useState<string | null>(null);
   const requestSeq = useRef(0);
+  // The business selected right now. A mutation's follow-up reload targets it, not the business
+  // captured when the mutation started: if the owner switched business meanwhile, reloading the
+  // old one would win the requestSeq race and show its scenarios under the new selection.
+  const selectedBusinessRef = useRef<string | null>(activeBusinessId);
+  useEffect(() => {
+    selectedBusinessRef.current = activeBusinessId;
+  }, [activeBusinessId]);
 
   const load = useCallback(async (businessId: string) => {
     const seq = ++requestSeq.current;
@@ -150,6 +152,11 @@ export default function OwnerStrategyPage() {
       if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
+
+  const reloadSelected = useCallback(async () => {
+    const id = selectedBusinessRef.current;
+    if (id) await load(id);
+  }, [load]);
 
   useEffect(() => {
     if (contextLoading) return;
@@ -218,7 +225,7 @@ export default function OwnerStrategyPage() {
         body: JSON.stringify(body),
       });
       setShowSnapshotForm(false);
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "save"));
     } finally {
@@ -226,19 +233,22 @@ export default function OwnerStrategyPage() {
     }
   }
 
-  async function runDiagnosis() {
-    if (!activeBusinessId || !dashboard?.latestSnapshot) return;
+  // Evaluates exactly the scenario the owner chose (never inferred from the assessment period).
+  async function evaluateScenario(scenarioId: string) {
+    if (!activeBusinessId) return;
     setBusy(true);
+    setEvaluatingScenarioId(scenarioId);
     setError(null);
     try {
       await api(`/api/owner/strategy/businesses/${activeBusinessId}/diagnoses`, {
         method: "POST",
-        body: JSON.stringify({ snapshotId: dashboard.latestSnapshot.id }),
+        body: JSON.stringify({ snapshotId: scenarioId }),
       });
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "action"));
     } finally {
+      setEvaluatingScenarioId(null);
       setBusy(false);
     }
   }
@@ -258,7 +268,7 @@ export default function OwnerStrategyPage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "action"));
     } finally {
@@ -298,7 +308,7 @@ export default function OwnerStrategyPage() {
           targetDirection: dir === "down" ? "down" : "up",
         }),
       });
-      await load(activeBusinessId);
+      await reloadSelected();
     } catch (e) {
       setError(presentDomainError(e, "action"));
     } finally {
@@ -318,6 +328,17 @@ export default function OwnerStrategyPage() {
   const cycle = dashboard?.latestCycle ?? null;
   const score = dashboard?.domainScore ?? null;
   const missing: string[] = dashboard?.missingCriticalData ?? [];
+  const scenarios: StrategyScenarioSummary[] = Array.isArray(dashboard?.scenarios) ? dashboard.scenarios : [];
+  // Shown after the decision once one exists (the decision stays first on the page), and above the
+  // empty state before any evaluation.
+  const scenarioList = scenarios.length > 0 ? (
+    <StrategyScenarioList
+      scenarios={scenarios}
+      busy={busy}
+      evaluatingScenarioId={evaluatingScenarioId}
+      onEvaluate={evaluateScenario}
+    />
+  ) : null;
 
   return (
     <PageContainer>
@@ -374,9 +395,6 @@ export default function OwnerStrategyPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add scenario
             </Button>
-            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
-              Evaluate scenario
-            </Button>
           </div>
 
           {showSnapshotForm && (
@@ -428,10 +446,13 @@ export default function OwnerStrategyPage() {
               would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
           {dashboard === null ? null : !dashboard.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard.latestSnapshot
-                ? "Scenario recorded. Click “Evaluate scenario” to get a decision and your next step."
-                : "No scenario yet. Add a strategic option, then evaluate it."}
+            <div className="space-y-6">
+              {scenarioList}
+              <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                {scenarios.length > 0
+                  ? "Scenario recorded. Choose a saved scenario above and click “Evaluate this scenario” to get a decision and your next step."
+                  : "No scenario yet. Add a strategic option, then evaluate it."}
+              </div>
             </div>
           ) : (
             <StrategyCycleView
@@ -441,6 +462,7 @@ export default function OwnerStrategyPage() {
               recommended={dashboard.recommendedNextAction}
               decision={dashboard.decision ?? null}
               history={dashboard.cycleHistory}
+              scenarioList={scenarioList}
               busy={busy}
               onUpdateAction={updateAction}
               onVerifyAction={verifyAction}
@@ -452,6 +474,71 @@ export default function OwnerStrategyPage() {
   );
 }
 
+function StrategyScenarioList({
+  scenarios,
+  busy,
+  evaluatingScenarioId,
+  onEvaluate,
+}: {
+  scenarios: StrategyScenarioSummary[];
+  busy: boolean;
+  evaluatingScenarioId: string | null;
+  onEvaluate: (scenarioId: string) => void;
+}) {
+  return (
+    <section className="border rounded-lg p-4 bg-card" aria-labelledby="strategy-scenarios-heading" data-testid="strategy-scenarios">
+      <h2 id="strategy-scenarios-heading" className="font-bold">Saved scenarios ({scenarios.length})</h2>
+      <p className="text-xs text-muted-foreground mb-3">Pick the scenario to evaluate — the decision on this page always comes from the one marked “Current decision”.</p>
+      <ul className="space-y-2">
+        {scenarios.map((sc) => {
+          const name = strategyScenarioName(sc.optionName);
+          const period = formatStrategyPeriod(sc.periodStart, sc.periodEnd);
+          return (
+            <li
+              key={sc.id}
+              data-testid="strategy-scenario"
+              data-scenario-id={sc.id}
+              data-current={sc.isCurrentDecision ? "true" : "false"}
+              className={`rounded-md border p-3 flex flex-wrap items-center justify-between gap-2 ${sc.isCurrentDecision ? "border-primary/50 bg-primary/5" : ""}`}
+            >
+              <div className="min-w-0">
+                <div className="font-semibold break-words">{name}</div>
+                <div className="text-xs text-muted-foreground">Assessed {period}</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {sc.isCurrentDecision ? (
+                    <Badge variant="default-accessible">Current decision</Badge>
+                  ) : sc.lastEvaluationSequence == null ? (
+                    <Badge variant="muted-accessible">Not evaluated yet</Badge>
+                  ) : (
+                    <Badge variant="muted-accessible">Last evaluated in #{sc.lastEvaluationSequence}</Badge>
+                  )}
+                </div>
+              </div>
+              <Button
+                onClick={() => onEvaluate(sc.id)}
+                disabled={busy}
+                aria-label={`Evaluate this scenario: ${name}, ${period}`}
+              >
+                {evaluatingScenarioId === sc.id ? "Evaluating…" : "Evaluate this scenario"}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function scenarioCaption(cycle: any): string {
+  const snap = cycle.snapshot;
+  const parts = [`Current decision · evaluation #${cycle.sequenceNumber}`];
+  if (snap) {
+    parts.push(strategyScenarioName(snap.optionName));
+    if (snap.periodStart && snap.periodEnd) parts.push(formatStrategyPeriod(snap.periodStart, snap.periodEnd));
+  }
+  return parts.join(" · ");
+}
+
 function StrategyCycleView({
   cycle,
   score,
@@ -459,10 +546,12 @@ function StrategyCycleView({
   recommended,
   decision,
   history,
+  scenarioList,
   busy,
   onUpdateAction,
   onVerifyAction,
 }: {
+  scenarioList: React.ReactNode;
   cycle: any;
   score: any;
   missing: string[];
@@ -474,7 +563,7 @@ function StrategyCycleView({
   onVerifyAction: (a: any) => void;
 }) {
   const state = score?.strategyState ?? cycle.strategyState;
-  const caption = `Latest evaluation · #${cycle.sequenceNumber}${cycle.snapshot?.optionName ? ` · ${cycle.snapshot.optionName}` : ""}`;
+  const caption = scenarioCaption(cycle);
   const scoresLine = `Attractiveness ${Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk ${Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Upside ${Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100`;
   const confidenceLine = `data confidence ${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100`;
   return (
@@ -492,7 +581,9 @@ function StrategyCycleView({
             ) : (
               <p className="tabular-nums">{scoresLine} · {confidenceLine}</p>
             )}
-            <p className="mt-1">Stored rating (previous scoring model): {STATE_LABEL[state] ?? state} — kept for reference; the decision above replaces it.</p>
+            <p className="mt-1" data-testid="strategy-legacy-rating">
+              {legacyStrategyRatingText(state)} <span className="text-muted-foreground">— {LEGACY_STRATEGY_RATING_NOTE}; kept for reference only. The decision above replaces it.</span>
+            </p>
           </Disclosure>
         </>
       ) : (
@@ -503,7 +594,8 @@ function StrategyCycleView({
               <div className="text-lg font-semibold tabular-nums">{scoresLine}</div>
             </div>
             <div className="sm:text-right">
-              <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
+              <Badge variant="muted-accessible">{legacyStrategyRatingText(state)}</Badge>
+              <div className="text-xs text-muted-foreground mt-1">{LEGACY_STRATEGY_RATING_NOTE}</div>
               <div className="text-xs text-muted-foreground mt-1">{confidenceLine}</div>
             </div>
           </div>
@@ -526,6 +618,8 @@ function StrategyCycleView({
           )}
         </>
       )}
+
+      {scenarioList}
 
       <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">What the evaluation found ({cycle.findings.length})</h2>
@@ -616,21 +710,41 @@ function StrategyCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Evaluation history</h2>
-        <div className="space-y-1 text-sm">
-          {history.map((c: any) => (
-            <div key={c.id} className="flex flex-wrap justify-between gap-x-3 border-b py-1">
-              <span>#{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
-              <span className="text-muted-foreground">
-                {decision && c.id === cycle.id
-                  ? `Current decision: ${decision.headline}`
-                  : `Stored rating (previous scoring model): ${STATE_LABEL[c.strategyState] ?? c.strategyState}`}{" "}
-                · {c.findingCount} findings · {c.actionCount} actions
-              </span>
-            </div>
-          ))}
-        </div>
+      <section className="border rounded-lg p-4 bg-card" data-testid="strategy-history">
+        <h2 className="font-bold mb-1">Evaluation history</h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Earlier evaluations keep the rating they were given at the time. Those legacy ratings come from the previous Strategy model and are not comparable with the current decision.
+        </p>
+        <ul className="space-y-2 text-sm">
+          {history.map((c: any) => {
+            const isCurrent = decision !== null && c.id === cycle.id;
+            return (
+              <li key={c.id} className="border-b pb-2" data-testid="strategy-history-row" data-current={isCurrent ? "true" : "false"}>
+                <div className="flex flex-wrap justify-between gap-x-3">
+                  <span>#{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
+                  <span className="text-muted-foreground">{c.findingCount} findings · {c.actionCount} actions</span>
+                </div>
+                {c.scenario && (
+                  <div className="text-xs text-muted-foreground break-words">
+                    {strategyScenarioName(c.scenario.optionName)} · {formatStrategyPeriod(c.scenario.periodStart, c.scenario.periodEnd)}
+                  </div>
+                )}
+                {isCurrent ? (
+                  <div className="mt-1">
+                    <Badge variant="default-accessible">Current decision: {decision.headline}</Badge>
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <span className="inline-block rounded border border-dashed px-1.5 py-0.5 text-xs text-muted-foreground">
+                      {legacyStrategyRatingText(c.strategyState)}
+                    </span>
+                    <div className="text-xs text-muted-foreground">{LEGACY_STRATEGY_RATING_NOTE}</div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </section>
     </div>
   );

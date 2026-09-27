@@ -173,6 +173,20 @@ export interface ServiceAuthEnvelope {
  */
 export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
 
+/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
+const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+
+/**
+ * True when a handler rejected the request on purpose with an owner-safe domain AppError
+ * (validation 400, not-found 404, conflict 409, invalid transition 422) that is not flagged
+ * security-relevant. Such rejections are expected outcomes and are logged below ERROR.
+ */
+export function isExpectedClientRejection(error: unknown, isKnownSafeClientError: boolean, statusCode: number): boolean {
+  if (!isKnownSafeClientError || !EXPECTED_CLIENT_REJECTION_STATUSES.has(statusCode)) return false;
+  const telemetry = (error as { telemetry?: { securityRelevant?: unknown } } | null)?.telemetry;
+  return telemetry?.securityRelevant !== true;
+}
+
 /**
  * CANONICAL ROUTE WRAPPER
  *
@@ -810,21 +824,38 @@ export function withCanonicalEnforcement(
         logger.error("Trace finalization error", traceError as Error, { correlationId });
       }
 
+      // An expected domain rejection (e.g. a duplicate-period 409 ConflictError, a 400 validation
+      // error, a 404) is the request being answered correctly, not a server failure: it is logged
+      // at WARN. Security-relevant rejections, auth/permission/rate-limit 4xx and every 5xx or
+      // unclassified error keep ERROR.
+      const expectedClientRejection = isExpectedClientRejection(error, isKnownSafeClientError, classifiedError.statusCode);
+
       const telemetryCtx = telemetry?.getContext();
-      telemetry?.emitHandlerFailed(error as Error);
+      telemetry?.emitHandlerFailed(error as Error, { expected: expectedClientRejection });
       telemetry?.emitRequestCompleted();
 
       const finalCorrelationId = telemetryCtx?.correlationId || correlationId || "unknown";
       const safErrorName = error instanceof Error ? error.name : typeof error === "object" ? error?.constructor?.name : "unknown";
 
-      logger.error("[WRAPPER_FAILED]", {
+      const wrapperLogContext = {
         correlationId: finalCorrelationId,
         stage: classifiedError.stage,
         classification: classifiedError.classification,
+        statusCode: classifiedError.statusCode,
         errorName: safErrorName,
         errorMessage: error instanceof Error ? error.message : String(error),
         operation: operationName,
-      });
+      };
+      if (expectedClientRejection) {
+        logger.warn("[WRAPPER_CLIENT_REJECTION]", wrapperLogContext);
+        // WARN lines are buffered; write them now so a serverless instance frozen after the
+        // response cannot drop them (ERROR lines are already written immediately).
+        logger.flush();
+      } else {
+        // The error goes in the error slot (the context was previously passed there and logged
+        // as "[object Object]").
+        logger.error("[WRAPPER_FAILED]", error, wrapperLogContext);
+      }
 
       const responseBody: Record<string, unknown> = {
         // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes

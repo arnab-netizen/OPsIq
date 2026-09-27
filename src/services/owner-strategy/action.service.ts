@@ -124,7 +124,7 @@ export async function updateStrategyAction(
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
 
-  // On action completion, emit a dedicated event and trigger re-diagnosis from latest snapshot.
+  // On action completion, emit a dedicated event and trigger re-diagnosis of the current scenario.
   if (updated.status === "completed") {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_STRATEGY_ACTION_COMPLETED,
@@ -136,14 +136,11 @@ export async function updateStrategyAction(
     });
 
     try {
-      const latestSnapshot = await db.ownerStrategySnapshot.findFirst({
-        where: { businessId: updated.businessId, workspaceId },
-        orderBy: { periodEnd: "desc" },
-        select: { id: true },
-      });
-      if (latestSnapshot) {
-        const { runStrategyDiagnosis } = await import("./diagnosis.service");
-        const newCycle = await runStrategyDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+      // Re-evaluate the scenario behind the current decision, not the latest assessment period.
+      const { currentStrategyScenarioId, runStrategyDiagnosis } = await import("./diagnosis.service");
+      const scenarioId = await currentStrategyScenarioId(updated.businessId, workspaceId);
+      if (scenarioId) {
+        const newCycle = await runStrategyDiagnosis(updated.businessId, scenarioId, actorId, workspaceId);
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.OWNER_STRATEGY_REASSESSMENT_TRIGGERED,
           actorId,
