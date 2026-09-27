@@ -441,11 +441,69 @@ describe("hostile-review regressions", () => {
     const breach = (id: string, title: string) =>
       cand({ findingCode: "COMPLIANCE_BREACH", title, domain: "compliance", source: "compliance_item", candidateId: `compliance_item:${id}`, severity: "critical" });
     const first = resolveOwnerDecision(input([breach("a", "Fire certificate expired")]));
-    const later = resolveOwnerDecision(input([breach("b", "VAT filing breached")], { previous: first.memory, now: new Date("2026-09-28T10:00:00.000Z") }));
+    // Breach "a" is resolved only because its own record now says so (compliant) — never from absence.
+    const aClosed = { "compliance:COMPLIANCE_BREACH:compliance_item:a": { lifecycle: "terminal" as const, title: '"Fire certificate"' } };
+    const later = resolveOwnerDecision(input([breach("b", "VAT filing breached")], { previous: first.memory, issueStates: aClosed, workspaceIssuesAttributable: true, now: new Date("2026-09-28T10:00:00.000Z") }));
     const kinds = later.whatChanged.map((c) => c.kind);
     expect(kinds).toContain("MAIN_TARGET_CHANGED");
     expect(kinds).toContain("CRITICAL_ISSUE_APPEARED");
     expect(kinds).toContain("CRITICAL_ISSUE_RESOLVED");
+    // Without that record, the absence alone proves nothing: no resolution is claimed.
+    const unproven = resolveOwnerDecision(input([breach("b", "VAT filing breached")], { previous: first.memory, workspaceIssuesAttributable: true, now: new Date("2026-09-28T10:00:00.000Z") }));
+    expect(unproven.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
+  });
+
+  describe("change detection needs evidence (lifecycle / attribution / new snapshot)", () => {
+    const risk = (status: string) =>
+      cand({ findingCode: "RISK_FINANCIAL", title: "Main customer may leave", domain: "risk", source: "business_risk", candidateId: "business_risk:r1", severity: "critical", status });
+    const riskKey = "risk:RISK_FINANCIAL:business_risk:r1";
+    const later = new Date("2026-09-28T10:00:00.000Z");
+
+    it("an open critical risk moved to MITIGATING below the critical threshold is still open, not resolved", () => {
+      const first = resolveOwnerDecision(input([risk("ASSESSED")], { workspaceIssuesAttributable: true }));
+      const next = resolveOwnerDecision(input([], {
+        previous: first.memory, workspaceIssuesAttributable: true, now: later,
+        issueStates: { [riskKey]: { lifecycle: "open", title: "Main customer may leave" } },
+      }));
+      const kinds = next.whatChanged.map((c) => c.kind);
+      expect(kinds).not.toContain("CRITICAL_ISSUE_RESOLVED");
+      expect(next.whatChanged.find((c) => c.kind === "SEVERITY_DECREASED")?.message).toBe('"Main customer may leave" is no longer rated critical; it is still open.');
+    });
+
+    it("a workspace gaining a second business makes a workspace risk NOT ATTRIBUTABLE — not resolved", () => {
+      const first = resolveOwnerDecision(input([risk("ASSESSED")], { workspaceIssuesAttributable: true }));
+      const next = resolveOwnerDecision(input([], { previous: first.memory, workspaceIssuesAttributable: false, now: later }));
+      const kinds = next.whatChanged.map((c) => c.kind);
+      expect(kinds).not.toContain("CRITICAL_ISSUE_RESOLVED");
+      expect(kinds).toContain("ISSUE_NOT_ATTRIBUTABLE");
+      expect(next.memory.workspaceIssuesAttributable).toBe(false);
+    });
+
+    it("a risk closed by its own record is resolved", () => {
+      const first = resolveOwnerDecision(input([risk("ASSESSED")], { workspaceIssuesAttributable: true }));
+      const next = resolveOwnerDecision(input([], {
+        previous: first.memory, workspaceIssuesAttributable: true, now: later,
+        issueStates: { [riskKey]: { lifecycle: "terminal", title: "Main customer may leave" } },
+      }));
+      expect(next.whatChanged.map((c) => c.kind)).toContain("CRITICAL_ISSUE_RESOLVED");
+    });
+
+    it("an old memory without evidence identity never lets absence claim resolution", () => {
+      const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_LOW_RUNWAY", title: "Extend runway", severity: "critical" })]));
+      const legacy = parseOwnerDecisionMemory({ ...JSON.parse(JSON.stringify(first.memory)), evidenceIds: undefined });
+      const next = resolveOwnerDecision(input([], { previous: legacy, evidenceIds: { finance: "snap-9" }, now: later }));
+      expect(next.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
+    });
+  });
+
+  it("refresh vs refresh tied on every business factor is said to be equivalent — never 'a more pressing problem'", () => {
+    const stale = (domain: "finance" | "cashflow", code: string) => cand({ findingCode: code, title: `${domain} runway`, domain, severity: "critical", priorityScore: 100, stale: true });
+    const d = resolveOwnerDecision(input([stale("finance", "FIN_LOW_RUNWAY"), stale("cashflow", "CF_LOW_RUNWAY")], { staleDomains: ["finance", "cashflow"] }));
+    expect(d.primaryTarget?.source).toBe("evidence_refresh");
+    const sentence = d.whyThisWins[1];
+    expect(sentence).not.toMatch(/more pressing/);
+    expect(sentence).toMatch(/equivalent on every known business factor/);
+    expect(sentence).toMatch(/only so the order stays the same every time/);
   });
 
   it("a confidence move within the same level never reads 'from high to high'", () => {

@@ -378,7 +378,9 @@ describe("[db] canonical owner decision — consolidation", () => {
     // makes that explicit — confirm the cash position with current figures — instead of electing
     // lower-class work beside a cash-danger signal.
     expect(d.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
-    expect(d.primaryTarget?.title).toBe("Confirm your cash position with current figures");
+    // The issue stays open and carries the cancelled action's own title (the owner's response to it).
+    expect(survival.map((t) => t.title)).toContain(d.primaryTarget?.title);
+    expect(d.primaryTarget?.explanation).toMatch(/was cancelled, but your Cash flow figures .* still show/);
     // A CURRENT reading: never presented as out-of-date figures, and it carries the diagnosed
     // survival finding's own identity (one of the cancelled actions' findings).
     expect(d.primaryTarget?.source).toBe("survival_reading");
@@ -386,6 +388,68 @@ describe("[db] canonical owner decision — consolidation", () => {
     // Cancelling the actions without new figures did not resolve the danger: never reported as resolved.
     expect(d.whatChanged.map((c) => c.kind)).not.toContain("CRITICAL_ISSUE_RESOLVED");
     expect(d.memory.staleDomains).not.toContain("cashflow");
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] P1: an open LOWER survival action never hides a more severe survival issue whose action was cancelled", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Issue vs Action");
+    const cf = await createCashflowSnapshot(businessId, {
+      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
+    }, actor, workspaceId);
+    await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
+    const home0 = await getOwnerHome(workspaceId, businessId);
+    const survival = home0.currentOwnerDecision!.attention.filter((a) => a.domain === "cashflow" && a.priorityClass === "SURVIVAL_CASH");
+    // Needs two survival issues of different severity from the same evidence.
+    const sevRank = (s: string | null) => ["low", "medium", "high", "critical"].indexOf(s ?? "");
+    const ordered = [...survival].sort((a, b) => sevRank(b.severity) - sevRank(a.severity));
+    expect(ordered.length).toBeGreaterThan(1);
+    const worst = ordered[0];
+    expect(sevRank(worst.severity)).toBeGreaterThan(sevRank(ordered[ordered.length - 1].severity));
+    // Cancel ONLY the most severe issue's action; a less severe survival action stays open.
+    await updateCashflowAction(worst.candidateId.split(":").pop()!, { status: "cancelled" }, actor, workspaceId);
+    const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    expect(d.primaryTarget?.findingCode).toBe(worst.findingCode);
+    expect(d.primaryTarget?.severity).toBe(worst.severity);
+    expect(d.primaryTarget?.source).toBe("survival_reading");
+    // One issue, never a duplicate of its (closed) action or of the open lower action.
+    expect(d.attention.filter((t) => t.findingCode === worst.findingCode)).toHaveLength(1);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] P1: stale unsafe cash evidence whose action was cancelled becomes a refresh target — lower-class work never wins", async () => {
+    const workspaceId = randomUUID();
+    const businessId = await newBusiness(workspaceId, "QA Decision Stale Survival");
+    // Cash flow figures for a period ~100 days ago: out of date (45-day window), still unsafe.
+    const end = new Date(Date.now() - 100 * 86_400_000);
+    const start = new Date(end.getTime() - 29 * 86_400_000);
+    const cf = await createCashflowSnapshot(businessId, {
+      periodStart: start.toISOString().slice(0, 10), periodEnd: end.toISOString().slice(0, 10), currency: "INR",
+      cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
+    }, actor, workspaceId);
+    await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
+    // Current Sales figures with open (lower-class) work.
+    const sSnap = await createSalesSnapshot(businessId, {
+      ...period(), currency: "INR", leads: 200, qualifiedLeads: 100, orders: 5, revenue: 50000, averageOrderValue: 10000,
+      newCustomers: 5, repeatCustomers: 0, lostCustomers: 10, complaints: 20, discountAmount: 30000, refundAmount: 5000, staffCount: 2,
+    } as any, actor, workspaceId);
+    await runSalesDiagnosis(businessId, sSnap.id, actor, workspaceId);
+    // The owner cancels every cash action while the (old) figures still read unsafe.
+    const cfCycle = await db.ownerCashflowCycle.findFirst({ where: { businessId }, orderBy: { sequenceNumber: "desc" }, include: { actions: true } });
+    for (const a of cfCycle!.actions.filter((x: { status: string }) => x.status !== "completed" && x.status !== "cancelled")) {
+      await updateCashflowAction(a.id, { status: "cancelled" }, actor, workspaceId);
+    }
+    const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
+    // The last-known cash danger is an explicit "confirm it" target — never silently dropped, never current.
+    expect(d.primaryTarget?.source).toBe("evidence_refresh");
+    expect(d.primaryTarget?.domain).toBe("cashflow");
+    expect(d.primaryTarget?.priorityClass).toBe("SURVIVAL_CASH");
+    expect(d.primaryTarget?.domain).not.toBe("sales");
+    expect(d.confidence.level).not.toBe("high");
 
     await teardownOwnerBusiness(businessId);
   });

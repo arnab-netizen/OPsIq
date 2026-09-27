@@ -12,6 +12,13 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import {
+  ownerImperativeContext,
+  planConstraintAsCondition,
+  reconcilePlanCards,
+  reconcilePlanGrowthGate,
+  reconcilePlanSummary,
+} from "@/domain/owner-spine/owner-imperatives";
 import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -409,6 +416,9 @@ export default function OwnerCommandCenterPage() {
   // The ONE canonical owner decision (owner-home service → Spine arbiter) — the same main target
   // Home, Cockpit and Priorities show. Nothing on this page elects a different one.
   const decision = (data?.currentOwnerDecision ?? null) as CurrentOwnerDecision | null;
+  // Plan analysis is a secondary system: beside the canonical decision its imperatives are restated
+  // as constraints on the main target (owner-imperatives.ts), never shown as separate orders.
+  const imperativeCtx = ownerImperativeContext(decision);
   const missing: string[] = profile?.missingCriticalData ?? [];
   const missingWithPriority: Array<{ field: string; priority: string }> = data?.missingInputsWithPriority ?? [];
 
@@ -496,9 +506,9 @@ export default function OwnerCommandCenterPage() {
           {(wbp?.supervisor?.found || priorities?.found || wbp?.found) && (
           <Disclosure summary={decision ? "Supporting plan analysis (context for your main target above)" : "Supporting plan analysis"} className="mb-6" data-testid="command-center-plan-analysis">
           <div className="p-3">
-          {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} hideStopInstructions={decision !== null} />}
+          {wbp?.supervisor?.found && <SupervisorSummary summary={reconcilePlanSummary(wbp.supervisor, imperativeCtx)} />}
 
-          {priorities?.found && <PriorityCommandStrip cards={priorities.cards} hideStopInstructions={decision !== null} />}
+          {priorities?.found && <PriorityCommandStrip cards={reconcilePlanCards(priorities.cards, imperativeCtx)} />}
 
           {wbp?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-whole-business-plan">
@@ -530,11 +540,11 @@ export default function OwnerCommandCenterPage() {
                 <span className="font-medium">The plan analysis suggests:</span> {wbp.nextBestAction}
               </div>
 
-              {/* With a canonical decision, its reconciled guardrails are the only "do not" list. */}
-              {decision === null && wbp.doNotDo.length > 0 && (
+              {/* Beside a canonical decision the plan's stop list is restated as constraints on the main target. */}
+              {wbp.doNotDo.length > 0 && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm mb-3" data-testid="wbp-do-not-do">
-                  <strong>What NOT to do / stop:</strong>
-                  <ul className="list-disc ml-5">{wbp.doNotDo.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                  <strong>{imperativeCtx.decisionPresent ? "Plan constraints:" : "What NOT to do / stop:"}</strong>
+                  <ul className="list-disc ml-5">{wbp.doNotDo.map((x: string, i: number) => <li key={i}>{planConstraintAsCondition(x, imperativeCtx)}</li>)}</ul>
                 </div>
               )}
 
@@ -561,8 +571,7 @@ export default function OwnerCommandCenterPage() {
 
               <div className="grid gap-3 sm:grid-cols-2 mb-3">
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-growth-gate">
-                  <strong>Growth / scale gate:</strong> {wbp.growth.scaleAllowed ? "scale allowed (capped pilot)" : "scale gated"}
-                  {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.map((c: string) => c.replace(/_/g, " ")).join(", ")}</span>}
+                  <strong>Growth / scale gate:</strong> {reconcilePlanGrowthGate(wbp.growth, imperativeCtx)}
                 </div>
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-arbitration">
                   <strong>Plan analysis constraint:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ").toLowerCase()}; {wbp.arbitration.rejectedCount} conflicting plan move(s) set aside.

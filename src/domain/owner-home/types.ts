@@ -19,6 +19,8 @@ export interface DomainDanger {
   key: OwnerDomain | "execution";
   riskScore: number | null; // null = no diagnosis for this surface (never invented)
   level: DangerLevel;
+  /** true when the reading comes from out-of-date evidence: shown as last flagged, never current. */
+  lastFlagged?: boolean;
 }
 
 /** A top risk surfaced on the home screen (a real risk finding). */
@@ -30,6 +32,8 @@ export interface OwnerHomeRisk {
   severity: OwnerSeverity;
   impactScore: number; // 0..100
   confidence: number; // 0..1
+  /** true when the finding's evidence is out of date: its severity is what it last showed. */
+  lastFlagged: boolean;
 }
 
 /** A top opportunity surfaced on the home screen (a real opportunity finding). */
@@ -40,6 +44,8 @@ export interface OwnerHomeOpportunity {
   summary: string;
   impactScore: number; // 0..100
   confidence: number; // 0..1
+  /** true when the finding's evidence is out of date. */
+  lastFlagged: boolean;
 }
 
 /** A real, recorded before/after improvement that was verified as an improvement. */

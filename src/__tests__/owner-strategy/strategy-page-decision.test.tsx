@@ -141,7 +141,7 @@ describe("Strategy page — decision first", () => {
     expect(details.open).toBe(false);
     expect(within(details).getByText(/Attractiveness 30\/100/)).toBeTruthy();
     expect(card.textContent).not.toMatch(/\/100/);
-    expect(screen.queryByText("Recommended next strategy action")).toBeNull();
+    expect(screen.queryByText(/Next step within Strategy/)).toBeNull();
   });
 
   it("a carried Pursue is shown on hold with no Assign button; no Pursue/Size up command is recommended", async () => {

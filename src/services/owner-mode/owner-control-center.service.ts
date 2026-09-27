@@ -39,6 +39,7 @@ export interface ControlCenterContext {
   nextBestAction?: string | null;
   /** The canonical owner decision's main target (never vetoed by the panel; see buildOwnerControlCenter). */
   mainTarget?: ControlCenterMainTarget | null;
+  supportingSteps?: ControlCenterMainTarget[];
 }
 
 /**
@@ -83,5 +84,6 @@ export async function getOwnerControlCenter(
     approvalsAvoided: ctx.approvalsAvoided ?? 0,
     nextBestAction: ctx.nextBestAction ?? null,
     mainTarget: ctx.mainTarget ?? null,
+    supportingSteps: ctx.supportingSteps ?? [],
   });
 }

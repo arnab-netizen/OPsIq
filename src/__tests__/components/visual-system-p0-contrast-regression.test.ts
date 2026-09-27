@@ -62,7 +62,7 @@ describe("previously-broken card surfaces use the theme-aware bg-card class, not
   const targets = [
     "src/app/(authenticated)/owner/finance/page.tsx",
     "src/app/(authenticated)/owner/onboarding/page.tsx",
-    "src/app/(authenticated)/owner/first-value/page.tsx",
+    // owner/first-value was retired to a redirect (owner-decision consolidation): it renders no card.
   ];
 
   for (const relPath of targets) {
@@ -224,7 +224,6 @@ describe("the 22 (+2) page-level loading states migrated to the skeleton family"
   const migrated: Array<{ relPath: string; variant: string }> = [
     { relPath: "src/app/(authenticated)/owner/now/page.tsx", variant: "CardDashboardSkeleton" },
     { relPath: "src/app/(authenticated)/owner/wealth/page.tsx", variant: "CardDashboardSkeleton" },
-    { relPath: "src/app/(authenticated)/owner/first-value/page.tsx", variant: "CardDashboardSkeleton" },
     { relPath: "src/app/(authenticated)/owner/adjudication/page.tsx", variant: "TableListSkeleton" },
     { relPath: "src/app/(authenticated)/owner/process-intelligence/page.tsx", variant: "CardDashboardSkeleton" },
     { relPath: "src/app/(authenticated)/owner/compliance/page.tsx", variant: "TableListSkeleton" },
@@ -248,8 +247,8 @@ describe("the 22 (+2) page-level loading states migrated to the skeleton family"
     { relPath: "src/app/(authenticated)/dashboard/inbox/inbox-client.tsx", variant: "TableListSkeleton" },
   ];
 
-  it("covers exactly the 24 files enumerated by the residual audit (22 page-level + 2 decision-inbox overlap)", () => {
-    expect(migrated.length).toBe(24);
+  it("covers exactly the 23 files still rendering a page: the residual audit's 24 minus owner/first-value (retired to a redirect)", () => {
+    expect(migrated.length).toBe(23);
   });
 
   for (const { relPath, variant } of migrated) {

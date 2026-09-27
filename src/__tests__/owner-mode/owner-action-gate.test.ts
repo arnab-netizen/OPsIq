@@ -145,6 +145,7 @@ describe("enforceOwnerActionGates", () => {
 
   it("H1 — scopes capacity/compliance/do-not-repeat/margin reads to the action's business (or workspace-wide)", async () => {
     const captured: Record<string, Record<string, unknown>> = {};
+    let snapshotOrder: unknown = null;
     const cap = (k: string) => async (args: { where: unknown }) => { captured[k] = args.where as Record<string, unknown>; return []; };
     const d = {
       db: {
@@ -153,7 +154,7 @@ describe("enforceOwnerActionGates", () => {
         ownerEquipment: { findMany: vi.fn(cap("equipment")) },
         ownerFinanceCycle: { findFirst: vi.fn(async () => null) },
         ownerCashflowCycle: { findFirst: vi.fn(async () => null) },
-        ownerFinancialSnapshot: { findFirst: vi.fn(async (a: { where: unknown }) => { captured.snapshot = a.where; return null; }) },
+        ownerFinancialSnapshot: { findFirst: vi.fn(async (a: { where: unknown; orderBy: unknown }) => { captured.snapshot = a.where as Record<string, unknown>; snapshotOrder = a.orderBy; return null; }) },
         ownerComplianceItem: { findMany: vi.fn(cap("compliance")) },
       },
       now: () => new Date("2026-06-28T00:00:00.000Z"),
@@ -165,6 +166,8 @@ describe("enforceOwnerActionGates", () => {
     expect(captured.dnr.OR).toEqual([{ businessId: "bizA" }, { businessId: null }]);
     // snapshot business is required → scoped directly to the business
     expect(captured.snapshot).toEqual({ workspaceId: "ws1", businessId: "bizA", supersededById: null });
+    // "Current" is the latest evidence PERIOD, never insertion time (an amendment of an older period is inserted later).
+    expect(snapshotOrder).toEqual([{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }]);
   });
 
   it("blocks any material action when a compliance item is expired (professional review)", async () => {

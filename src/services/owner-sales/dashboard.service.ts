@@ -13,6 +13,7 @@ import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { domainLocalNextAction } from "@/services/owner-home/owner-decision-candidates";
 
 export interface SalesDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -170,11 +171,11 @@ export async function getSalesDashboard(
       }
     : null;
 
-  // DOMAIN-LOCAL next action: the highest-ranked OPEN action of this domain's latest cycle (never a
-  // completed/cancelled one). The owner's overall main target comes only from the canonical owner
-  // decision (owner-home/home.service.ts).
+  // DOMAIN-LOCAL next action: this domain's eligible actions ranked by the canonical comparator
+  // (domainLocalNextAction — never a completed, cancelled, superseded or verified one). The owner's
+  // overall main target comes only from the canonical owner decision (owner-home/home.service.ts).
   const recommendedNextAction =
-    latestCycle?.actions.find((a: { status: string }) => a.status !== "completed" && a.status !== "cancelled") ?? null;
+    latestCycle ? domainLocalNextAction(latestCycle.actions, latestCycle, "sales") : null;
 
   return {
     businesses: businessList,

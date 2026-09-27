@@ -13,6 +13,8 @@ import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { domainLocalNextAction } from "@/services/owner-home/owner-decision-candidates";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -73,11 +75,8 @@ export async function getFinanceDashboard(
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
   const [latestSnapshot, latestCycle, cycles] = await Promise.all([
-    db.ownerFinancialSnapshot.findFirst({
-      // Current (never amended/superseded) versions only, in a deterministic order.
-      where: { businessId: selectedBusinessId, workspaceId, supersededById: null },
-      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-    }),
+    // Current effective snapshot (financial-snapshot-selection.ts); the diagnosis-bound one is latestCycle.snapshot.
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId })),
     db.ownerFinanceCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
@@ -174,11 +173,11 @@ export async function getFinanceDashboard(
       }
     : null;
 
-  // DOMAIN-LOCAL next action: the highest-ranked OPEN action of this domain's latest cycle (never a
-  // completed/cancelled one). The owner's overall main target comes only from the canonical owner
-  // decision (owner-home/home.service.ts).
+  // DOMAIN-LOCAL next action: this domain's eligible actions ranked by the canonical comparator
+  // (domainLocalNextAction — never a completed, cancelled, superseded or verified one). The owner's
+  // overall main target comes only from the canonical owner decision (owner-home/home.service.ts).
   const recommendedNextAction =
-    latestCycle?.actions.find((a: { status: string }) => a.status !== "completed" && a.status !== "cancelled") ?? null;
+    latestCycle ? domainLocalNextAction(latestCycle.actions, latestCycle, "finance") : null;
 
   return {
     businesses: businessList,

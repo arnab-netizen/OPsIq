@@ -28,6 +28,7 @@ import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import { ownerImperativeContext, reconcileRecoveryBlocks } from "@/domain/owner-spine/owner-imperatives";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -1019,7 +1020,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
 }
 
 /** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
-function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
+function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryStatusResponse; ownerDecision: CurrentOwnerDecision | null }) {
   const inProgress = recovery.recoveryStatus !== "NONE";
   return (
     <details data-testid="cockpit-recovery-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
@@ -1045,7 +1046,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
             {recovery.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {reconcileRecoveryBlocks(recovery.blockedUnsafeActions, ownerImperativeContext(ownerDecision)).slice(0, 2).join("; ")}</p>
             )}
             {recovery.ownerApprovalRequired && (
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
@@ -1148,7 +1149,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
         {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
-        {recovery && <RecoverySection recovery={recovery} />}
+        {recovery && <RecoverySection recovery={recovery} ownerDecision={ownerDecision} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
     );
@@ -1636,7 +1637,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       </div>
 
       {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
-      {recovery && <RecoverySection recovery={recovery} />}
+      {recovery && <RecoverySection recovery={recovery} ownerDecision={ownerDecision} />}
 
       {/* Outside signals — read-only, collapsed low-load public-signal summary (PASS 39). */}
       {publicSignals && <OutsideSignalsSection signals={publicSignals} />}

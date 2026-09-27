@@ -19,6 +19,7 @@ import {
 import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
 import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceActionUpdateInput } from "@/domain/owner-finance/validation";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 export async function updateFinanceAction(
   actionId: string,
@@ -110,11 +111,9 @@ export async function updateFinanceAction(
       }
       // Fallback: current (non-superseded) snapshot for the business sorted by period
       if (!targetSnapshotId) {
-        const snap = await db.ownerFinancialSnapshot.findFirst({
-          where: { businessId: updated.businessId, workspaceId, supersededById: null },
-          orderBy: { periodEnd: "desc" },
-          select: { id: true },
-        });
+        const snap = await db.ownerFinancialSnapshot.findFirst(
+          currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: updated.businessId }, { id: true })
+        );
         targetSnapshotId = snap?.id;
       }
       if (targetSnapshotId) {

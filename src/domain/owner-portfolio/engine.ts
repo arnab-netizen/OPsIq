@@ -100,6 +100,9 @@ export function buildPortfolioView(
     if (cls !== 0) return cls;
     const sev = ownerSeverityRank(b.mainTarget?.severity ?? "") - ownerSeverityRank(a.mainTarget?.severity ?? "");
     if (sev !== 0) return sev;
+    // Same tie-break as the arbiter: a target on CURRENT figures precedes a refresh of out-of-date ones.
+    const cur = Number(b.mainTarget !== null && b.mainTarget.source !== "evidence_refresh") - Number(a.mainTarget !== null && a.mainTarget.source !== "evidence_refresh");
+    if (cur !== 0) return cur;
     if (b.survivalRiskScore !== a.survivalRiskScore) return b.survivalRiskScore - a.survivalRiskScore;
     if (a.overallHealthScore !== b.overallHealthScore) return a.overallHealthScore - b.overallHealthScore;
     if (a.name !== b.name) return a.name < b.name ? -1 : 1;

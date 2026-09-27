@@ -277,3 +277,32 @@ describe("buildOwnerHomeSummary", () => {
     expect(empty.cashDanger.level).toBe("unknown");
   });
 });
+
+describe("Home presentation provenance (stale severity, reconciled cash danger)", () => {
+  const base = { verifications: [] as OwnerHomeVerificationInput[], now: NOW };
+
+  it("a finding from out-of-date figures is marked last flagged, never shown as a current severity", () => {
+    const s = buildOwnerHomeSummary({
+      ...base,
+      domainScores: [score("finance"), score("sales")],
+      findings: [finding({ domain: "finance", code: "FIN_LOW_RUNWAY", severity: "high" }), finding({ domain: "sales", code: "S", severity: "medium" })],
+      staleDomains: ["finance"],
+    });
+    expect(s.top3Risks.find((r) => r.domain === "finance")?.lastFlagged).toBe(true);
+    expect(s.top3Risks.find((r) => r.domain === "sales")?.lastFlagged).toBe(false);
+  });
+
+  it("the cash-danger card reads the survival source the resolver trusts (Finance when it governs) — never 'no data'", () => {
+    const s = buildOwnerHomeSummary({ ...base, domainScores: [score("finance", { riskScore: 85 })], findings: [], survivalSource: "finance" });
+    expect(s.cashDanger.key).toBe("finance");
+    expect(s.cashDanger.riskScore).toBe(85);
+    expect(s.cashDanger.level).toBe("critical");
+    const legacy = buildOwnerHomeSummary({ ...base, domainScores: [score("finance", { riskScore: 85 })], findings: [] });
+    expect(legacy.cashDanger.riskScore).toBeNull(); // cash flow only: the pre-fix "No data" the brief reports
+  });
+
+  it("a cash-danger reading from stale evidence is marked last flagged", () => {
+    const s = buildOwnerHomeSummary({ ...base, domainScores: [score("cashflow", { riskScore: 70 })], findings: [], staleDomains: ["cashflow"], survivalSource: "cashflow" });
+    expect(s.cashDanger.lastFlagged).toBe(true);
+  });
+});

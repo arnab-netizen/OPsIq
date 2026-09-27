@@ -134,7 +134,7 @@ const RADAR_SOURCE_LABEL: Record<RadarItem["source"], string> = {
 };
 
 export default function OwnerPrioritiesPage() {
-  const { activeBusinessId } = useActiveBusiness();
+  const { activeBusinessId, needsBusinessRecovery, businesses } = useActiveBusiness();
   const [decision, setDecision] = useState<CurrentOwnerDecision | null>(null);
   const [governed, setGoverned] = useState<GovernedWork | null>(null);
   const [radar, setRadar] = useState<RadarItem[]>([]);
@@ -225,10 +225,24 @@ export default function OwnerPrioritiesPage() {
           title="Couldn't load your main target"
           description="The rest of this page may still be useful. Refresh to try again."
         />
+      ) : needsBusinessRecovery ? (
+        // The selected business is unavailable (archived, removed, or never chosen among several): that is
+        // not "no main target" — the owner must choose the business first.
+        <div data-testid="priorities-business-recovery">
+          <EmptyState
+            title="Choose which business to look at"
+            description="The business selected before is no longer available. Pick a business from the business selector, and its main target will show here."
+          />
+        </div>
+      ) : (businesses ?? []).length === 0 ? (
+        <EmptyState
+          title="Add your business first"
+          description="OpsIQ picks one main target per business. Add your business and its numbers to get one."
+        />
       ) : (
         <EmptyState
-          title="No main target for this business yet"
-          description="OpsIQ picks one main target per business from its numbers. Add or update your business information to get one."
+          title="Couldn't match your main target to this business"
+          description="Refresh the page; if this keeps happening, re-select your business from the business selector."
         />
       )}
 

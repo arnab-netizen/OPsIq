@@ -65,16 +65,11 @@ describe("Now View avoid list vs the canonical main target", () => {
     expect(out).toEqual([growthGate]);
   });
 
-  it("a NON-growth marketing/sales target (profit class) is never vetoed by growth, volume or discount rules", () => {
+  it("a Marketing/Sales REPAIR target (profit class) is not growth demand: growth, volume and discount rules stand unchanged", () => {
     const capacity: ActionToAvoid = { id: "avoid_volume_on_capacity", avoid: "Do not accept more volume than current capacity can deliver", reason: "capacity", businessFunction: [BusinessFunction.CAPACITY], triggeredBy: [IssueCategory.CAPACITY_BOTTLENECK] };
     const discount: ActionToAvoid = { id: "avoid_discount_on_cash_danger", avoid: "Do not offer discounts or take on low-margin work to chase volume", reason: "discount", businessFunction: [BusinessFunction.PRICING], triggeredBy: [IssueCategory.CASH_DANGER] };
     const out = reconcileAvoidsWithOwnerDecision([growthGate, capacity, discount], decisionWith("PROFIT_LOSS", "Follow up every enquiry within a day", "marketing"));
-    expect(out.map((a) => a.avoid)).toEqual([
-      'Do not scale "Follow up every enquiry within a day" beyond a small trial until cash, profit, capacity, workload and quality gates pass',
-      'Keep "Follow up every enquiry within a day" within what current capacity can deliver',
-      'Carry out "Follow up every enquiry within a day" without discounts or low-margin volume while cash is at risk',
-    ]);
-    expect(out.map((a) => a.reason)).toEqual([growthGate.reason, "capacity", "discount"]);
+    expect(out).toEqual([growthGate, capacity, discount]);
   });
 
   it("a refresh (data-request) main target leaves every avoid unchanged, even when it stands in for a growth item", () => {

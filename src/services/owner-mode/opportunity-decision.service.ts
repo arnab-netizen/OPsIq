@@ -16,10 +16,11 @@ import { assessFleetCapacity, type EquipmentRecord } from "@/domain/owner-mode/e
 import { grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
 import { screenOpportunity, type ScreenVerdict } from "@/domain/owner-mode/opportunity-contract-guardrails";
 import { buildOpportunityEnvelope, type OpportunityDecisionEnvelope } from "@/domain/owner-mode/opportunity-decision-envelope";
+import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 interface OppDb {
   ownerEquipment: { findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>> };
-  ownerFinancialSnapshot: { findFirst(args: { where: Record<string, unknown>; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null> };
+  ownerFinancialSnapshot: { findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true }>): Promise<{ revenue: number | null; costOfGoods: number | null } | null> };
 }
 
 export interface OpportunityDecisionDeps {
@@ -75,12 +76,9 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
 
   let marginPct = input.marginPct ?? null;
   if (marginPct == null) {
-    const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-      // Current (never amended/superseded) version only.
-      where: { workspaceId: input.workspaceId, businessId: input.businessId, supersededById: null },
-      orderBy: { createdAt: "desc" },
-      select: { revenue: true, costOfGoods: true },
-    });
+    const snap = await deps.db.ownerFinancialSnapshot.findFirst(
+      currentEffectiveFinancialSnapshotQuery({ workspaceId: input.workspaceId, businessId: input.businessId }, { revenue: true, costOfGoods: true })
+    );
     const gm = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
     marginPct = gm == null ? null : gm / 100; // screenOpportunity wants 0..1
   }

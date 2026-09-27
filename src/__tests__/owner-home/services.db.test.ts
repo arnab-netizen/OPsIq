@@ -114,8 +114,10 @@ describe("[db] Owner Home service", () => {
     expect(home.domainsWired).toContain("finance");
     const s = home.summary!;
     expect(typeof s.businessHealthScore).toBe("number");
-    // finance has no cashflow/sales/operations diagnosis → those dangers are unknown.
-    expect(s.cashDanger.level).toBe("unknown");
+    // Only Finance is diagnosed: it is the survival evidence the resolver trusts, so the cash-danger
+    // card reads Finance (never "no data" beside a Finance survival reading); sales stays unknown.
+    expect(s.cashDanger.key).toBe("finance");
+    expect(s.cashDanger.level).not.toBe("unknown");
     expect(s.salesDanger.level).toBe("unknown");
     // a leaky finance snapshot produces at least one risk + at least one required action.
     expect(s.top3Risks.length).toBeGreaterThan(0);

@@ -62,12 +62,13 @@ describe("grossMarginPctFrom", () => {
   });
 });
 
-function depsFor(impactArea: string | null, revenue: number | null, costOfGoods: number | null): MarginDeps {
+function depsFor(impactArea: string | null, revenue: number | null, costOfGoods: number | null, businessIds: string[] = ["biz-1"]): MarginDeps {
   return {
     marginFloorPct: 15,
     db: {
       recommendation: { findUnique: vi.fn(async () => ({ findingId: "f1" })) },
       finding: { findFirst: vi.fn(async () => ({ impactArea })) },
+      ownerBusiness: { findMany: vi.fn(async () => businessIds.map((id) => ({ id }))) },
       ownerFinancialSnapshot: { findFirst: vi.fn(async () => (revenue === null && costOfGoods === null ? null : { revenue, costOfGoods })) },
     },
   };
@@ -82,6 +83,20 @@ describe("enforceMarginSafetyForPromotion", () => {
   it("allows a discount rec when margin clears the floor", async () => {
     const deps = depsFor("pricing discount policy", 100, 70); // 30% margin
     await expect(enforceMarginSafetyForPromotion("rec1", "ws1", deps)).resolves.toBeUndefined();
+  });
+
+  it("reads the business's CURRENT EFFECTIVE snapshot: business-scoped, unsuperseded, ordered by evidence period", async () => {
+    const deps = depsFor("pricing discount policy", 100, 70);
+    await enforceMarginSafetyForPromotion("rec1", "ws1", deps);
+    const args = (deps.db.ownerFinancialSnapshot.findFirst as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz-1", supersededById: null });
+    expect(args.orderBy[0]).toEqual({ periodEnd: "desc" });
+  });
+
+  it("with more than one business the margin is not attributable: another business's figures are never used", async () => {
+    const deps = depsFor("pricing discount policy", 100, 92, ["biz-1", "biz-2"]);
+    await expect(enforceMarginSafetyForPromotion("rec1", "ws1", deps)).resolves.toBeUndefined();
+    expect(deps.db.ownerFinancialSnapshot.findFirst).not.toHaveBeenCalled();
   });
 
   it("skips entirely for non-pricing recommendations (no snapshot read)", async () => {

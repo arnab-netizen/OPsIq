@@ -53,6 +53,7 @@ import { deriveArchetypeSignalsForReassessment } from "@/services/owner-budget/a
  */
 const CASH_OBLIGATION_STATES = ["committed", "approved", "requested", "pending_owner_approval"] as const;
 import { routeReassessmentSignals } from "@/services/owner-budget/signal-router.service";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
   "statutory_payroll_tax", "cash_survival", "critical_fixed_obligations",
@@ -371,7 +372,7 @@ export async function getBudgetForecast(workspaceId: string, businessId: string)
   await getBusiness(businessId, workspaceId);
   const period = await db.budgetPeriod.findFirst({ where: { workspaceId, businessId, status: "active" }, orderBy: { createdAt: "desc" } });
   // Current (never amended/superseded) version only, deterministic order.
-  const snap = await db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId, supersededById: null }, orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }] });
+  const snap = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }));
   const committed = await db.spendEntry.findMany({
     where: { workspaceId, businessId, voidedAt: null, state: { in: [...CASH_OBLIGATION_STATES] }, dueInDays: { not: null } },
   });
@@ -421,11 +422,7 @@ async function assembleAssessment(
   if (financeOverride) {
     finance = financeOverride;
   } else {
-    const snap = await db.ownerFinancialSnapshot.findFirst({
-      // Current (never amended/superseded) version only, deterministic order.
-      where: { workspaceId, businessId, supersededById: null },
-      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-    });
+    const snap = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }));
     if (snap) {
       finance = rowToFinanceInput(snap);
     } else {

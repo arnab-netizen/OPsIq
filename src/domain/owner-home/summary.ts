@@ -51,6 +51,14 @@ export interface OwnerHomeSummaryInput {
   verifications: OwnerHomeVerificationInput[];
   /** Slice 1 — missing-critical-data carried from the diagnosis layer (never invented). */
   missingCriticalData?: string[];
+  /** Domains whose latest evidence is out of date: their findings are shown as last flagged, never current. */
+  staleDomains?: readonly string[];
+  /**
+   * The survival source the canonical arbitration governs cash danger with ("cashflow" or "finance"):
+   * Cash flow and Finance are two evidence sources for the same survival question, so the cash-danger
+   * card reads the SAME source the resolver trusts (default: cashflow).
+   */
+  survivalSource?: "cashflow" | "finance";
   /** Injectable clock for deterministic output; defaults to now. */
   now?: Date;
 }
@@ -82,6 +90,10 @@ function dangerForDomain(scores: Map<OwnerDomain, DomainScore>, domain: OwnerDom
   return { key: domain, riskScore, level: dangerLevel(riskScore) };
 }
 
+function withFreshness(d: DomainDanger, stale: ReadonlySet<string>): DomainDanger {
+  return d.riskScore !== null && d.key !== "execution" && stale.has(d.key) ? { ...d, lastFlagged: true } : d;
+}
+
 /** Execution danger = max risk across the execution domains present (operations, sop). */
 function executionDanger(scores: Map<OwnerDomain, DomainScore>): DomainDanger {
   const present = EXECUTION_DOMAINS.map((d) => scores.get(d)).filter((s): s is DomainScore => Boolean(s));
@@ -96,6 +108,7 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
   for (const s of input.domainScores) scoreByDomain.set(s.domain, s);
 
   const businessHealthScore = clampScore(average(input.domainScores.map((s) => clampScore(s.healthScore))));
+  const stale = new Set<string>(input.staleDomains ?? []);
 
   // Top 3 risks: real risk findings, worst first, in the canonical spine order
   // (severity → impact → urgency → confidence → domain → code); an unknown stored
@@ -127,6 +140,7 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
       severity: f.severity,
       impactScore: clampScore(f.impactScore),
       confidence: clampConfidence(f.confidence),
+      lastFlagged: stale.has(f.domain),
     }));
 
   // Top 3 opportunities: real opportunity findings, best first (impact → confidence → domain → code).
@@ -151,6 +165,7 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
       summary: f.summary,
       impactScore: clampScore(f.impactScore),
       confidence: clampConfidence(f.confidence),
+      lastFlagged: stale.has(f.domain),
     }));
 
   // Last verified improvement: the most recent verification recorded as an improvement.
@@ -192,9 +207,9 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
 
   return {
     businessHealthScore,
-    cashDanger: dangerForDomain(scoreByDomain, "cashflow"),
-    salesDanger: dangerForDomain(scoreByDomain, "sales"),
-    operationsDanger: dangerForDomain(scoreByDomain, "operations"),
+    cashDanger: withFreshness(dangerForDomain(scoreByDomain, input.survivalSource ?? "cashflow"), stale),
+    salesDanger: withFreshness(dangerForDomain(scoreByDomain, "sales"), stale),
+    operationsDanger: withFreshness(dangerForDomain(scoreByDomain, "operations"), stale),
     executionDanger: executionDanger(scoreByDomain),
     top3Risks,
     top3Opportunities,

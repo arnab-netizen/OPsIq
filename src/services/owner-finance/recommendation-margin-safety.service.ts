@@ -1,7 +1,8 @@
 /**
  * Jarvis 360 Slice 2 — margin-safety enforcement at recommendation promotion.
  *
- * Loads the latest persisted OwnerFinancialSnapshot (revenue + COGS), derives the
+ * Loads the business's CURRENT EFFECTIVE OwnerFinancialSnapshot (revenue + COGS —
+ * financial-snapshot-selection.ts), derives the
  * recommendation's sensitivity from its linked finding, and runs the pure
  * margin-safety gate. Reuses the proven sensitivity mapping + the snapshot the
  * owner-finance module already persists (no new finance engine). DI for testing.
@@ -12,6 +13,10 @@ import {
   grossMarginPctFrom,
   DEFAULT_MARGIN_FLOOR_PCT,
 } from "@/domain/owner-finance/margin-safety-gate";
+import {
+  currentEffectiveFinancialSnapshotQuery,
+  type CurrentEffectiveSnapshotQuery,
+} from "@/services/owner-finance/financial-snapshot-selection";
 import {
   mapImpactAreaToSensitivity,
   RecommendationSensitivity,
@@ -24,12 +29,15 @@ interface MarginDb {
   finding: {
     findFirst(args: { where: { id: string; engagement: { workspaceId: string } }; select: { impactArea: true } }): Promise<{ impactArea: string | null } | null>;
   };
+  ownerBusiness: {
+    findMany(args: {
+      where: { workspaceId: string; isActive: true; isFixtureBusiness: false };
+      select: { id: true };
+      take: 2;
+    }): Promise<Array<{ id: string }>>;
+  };
   ownerFinancialSnapshot: {
-    findFirst(args: {
-      where: { workspaceId: string };
-      orderBy: { createdAt: "desc" };
-      select: { revenue: true; costOfGoods: true };
-    }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true }>): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
   };
 }
 
@@ -60,11 +68,19 @@ export async function enforceMarginSafetyForPromotion(
   const sensitivity = await resolveSensitivity(recommendationId, workspaceId, deps);
   // Cheap exit: only pricing recs are gated, so skip the snapshot read otherwise.
   if (sensitivity !== RecommendationSensitivity.PRICING_SENSITIVE) return;
-  const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-    where: { workspaceId },
-    orderBy: { createdAt: "desc" },
-    select: { revenue: true, costOfGoods: true },
+  // A recommendation belongs to an engagement, which carries no owner business: its margin is
+  // attributable only when the workspace has exactly one real business. Otherwise the margin is
+  // unknown (the gate defers to the input-quality path) — another business's figures are never used.
+  const businesses = await deps.db.ownerBusiness.findMany({
+    where: { workspaceId, isActive: true, isFixtureBusiness: false },
+    select: { id: true },
+    take: 2,
   });
+  const snap = businesses.length === 1
+    ? await deps.db.ownerFinancialSnapshot.findFirst(
+        currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: businesses[0].id }, { revenue: true, costOfGoods: true })
+      )
+    : null;
   const grossMargin = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
   assertMarginSafetyForPromotion(grossMargin, sensitivity, recommendationId, deps.marginFloorPct ?? DEFAULT_MARGIN_FLOOR_PCT);
 }

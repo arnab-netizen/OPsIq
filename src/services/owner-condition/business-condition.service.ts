@@ -26,6 +26,7 @@ import {
   type BusinessConditionProfile,
 } from "@/domain/owner-spine/contracts";
 import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 /**
  * Deterministic total order for a domain's per-cycle actions. priorityScore
@@ -433,11 +434,7 @@ export async function getBusinessCondition(
       },
     }),
     // Only used when there is NO Finance diagnosis yet (pre-diagnosis input guidance).
-    db.ownerFinancialSnapshot.findFirst({
-      // Current (never amended/superseded) versions only, in a deterministic order.
-      where: { businessId: selectedBusinessId, workspaceId, supersededById: null },
-      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-    }),
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId })),
     // Read-only read of the proven Module 1 recovery cycle (no recovery mutation).
     db.recoveryCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },

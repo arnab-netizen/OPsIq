@@ -74,7 +74,8 @@ import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
-import { isDemandTarget, type CurrentOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { ownerImperativeContext, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
 import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 export type { DoNotRepeatAnnotation };
@@ -1163,33 +1164,29 @@ function currentReadingTime(snapshot: { periodEnd: Date; supersededById?: string
 
 
 /**
- * Reconcile Now View's "do not" list with the ONE canonical owner decision so the two never
- * contradict: an avoid rule never vetoes the main target — every rule that would forbid it becomes a
- * condition on HOW to carry it out, keeping its reason. Demand rules (growth, marketing, volume,
- * discounting, supply-dependent growth) apply only when the target is itself a demand step
- * (isDemandTarget); the workload and hiring rules apply to any target. A refresh target is a data
- * request, never vetoed, so every avoid is kept as-is. Unrelated avoids are unchanged.
+ * Now View's avoid rules, described by what each would forbid (see owner-imperatives.ts). They pass
+ * through the ONE shared reconciler, so an avoid rule never vetoes the canonical main target or a
+ * supporting step: growth/volume/discount rules touch only a genuine GROW target; the workload rule
+ * touches any action target; the hiring rule names no target work and is always kept as-is. A refresh
+ * main target is a data request, so every avoid is kept as-is.
  */
-const DEMAND_VETO_CONDITION: Record<string, (title: string) => string> = {
-  avoid_growth_before_gates: (t) => `Do not scale "${t}" beyond a small trial until cash, profit, capacity, workload and quality gates pass`,
-  avoid_growth_on_cash_danger: (t) => `Keep "${t}" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week`,
-  avoid_discount_on_cash_danger: (t) => `Carry out "${t}" without discounts or low-margin volume while cash is at risk`,
-  avoid_marketing_on_service_failure: (t) => `Do not scale "${t}" beyond a small trial until service quality is fixed`,
-  avoid_volume_on_capacity: (t) => `Keep "${t}" within what current capacity can deliver`,
-  avoid_growth_on_supplier_risk: (t) => `Keep "${t}" to what current supply can support until supplier risk is resolved`,
-};
-const ANY_TARGET_VETO_CONDITION: Record<string, (title: string) => string> = {
-  avoid_new_tasks_on_overload: (t) => `Apart from "${t}", do not assign new non-critical tasks to staff or the owner`,
-  avoid_hire_on_cash_danger: (t) => `Carry out "${t}" without new hires until payroll affordability is proven`,
+const AVOID_PROHIBITION: Record<string, Pick<OwnerProhibition, "vetoes" | "levers" | "asCondition">> = {
+  avoid_growth_before_gates: { vetoes: "GROW", asCondition: (t) => `Do not scale "${t}" beyond a small trial until cash, profit, capacity, workload and quality gates pass` },
+  avoid_growth_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Keep "${t}" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week` },
+  avoid_discount_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Carry out "${t}" without discounts or low-margin volume while cash is at risk` },
+  avoid_marketing_on_service_failure: { vetoes: "GROW", asCondition: (t) => `Do not scale "${t}" beyond a small trial until service quality is fixed` },
+  avoid_volume_on_capacity: { vetoes: "GROW", asCondition: (t) => `Keep "${t}" within what current capacity can deliver` },
+  avoid_growth_on_supplier_risk: { vetoes: "GROW", asCondition: (t) => `Keep "${t}" to what current supply can support until supplier risk is resolved` },
+  avoid_new_tasks_on_overload: { vetoes: "ANY_ACTION", asCondition: (t) => `Apart from "${t}", do not assign new non-critical tasks to staff or the owner` },
 };
 
 export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {
-  const primary = decision.primaryTarget;
-  if (!primary || primary.source === "evidence_refresh") return avoids;
-  const demand = isDemandTarget(primary);
+  const ctx = ownerImperativeContext(decision);
   return avoids.map((a) => {
-    const condition = ANY_TARGET_VETO_CONDITION[a.id] ?? (demand ? DEMAND_VETO_CONDITION[a.id] : undefined);
-    return condition ? { ...a, avoid: condition(primary.title) } : a;
+    const spec = AVOID_PROHIBITION[a.id];
+    if (!spec) return a;
+    const r = reconcileOwnerProhibition({ text: a.avoid, ...spec }, ctx);
+    return r.conditionOn === null ? a : { ...a, avoid: r.text };
   });
 }
 

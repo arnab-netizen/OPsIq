@@ -88,7 +88,7 @@ const MOCK_PROFILE = {
 // The ONE canonical owner decision (owner-home service) supplies the next best action.
 const MOCK_HOME = {
   selectedBusinessId: null,
-  currentOwnerDecision: { primaryTarget: { title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action" } },
+  currentOwnerDecision: { primaryTarget: { title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action", findingCode: "CF_LOW_RUNWAY" }, supportingSteps: [] },
 };
 
 const MOCK_BLOCKS = {
@@ -149,7 +149,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.resetAllMocks();
   allowAll();
-  mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE });
+  mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE, selectedBusinessId: null });
   mockGetOwnerHome.mockResolvedValue(MOCK_HOME);
   mockGetOwnerBlockMetrics.mockResolvedValue(MOCK_BLOCKS);
   mockGetOwnerControlCenter.mockResolvedValue(MOCK_PANEL);
@@ -267,14 +267,14 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
 
   describe("null-profile fallback", () => {
     it("uses default dataSufficiencyStatus (caution) when profile is null", async () => {
-      mockGetBusinessCondition.mockResolvedValue({ profile: null });
+      mockGetBusinessCondition.mockResolvedValue({ profile: null, selectedBusinessId: null });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.dataSufficiencyStatus).toBe("caution");
     });
 
     it("uses empty lowConfidenceDomains when profile is null", async () => {
-      mockGetBusinessCondition.mockResolvedValue({ profile: null });
+      mockGetBusinessCondition.mockResolvedValue({ profile: null, selectedBusinessId: null });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.lowConfidenceDomains).toEqual([]);
@@ -292,8 +292,16 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.nextBestAction).toBe("Fix cash flow");
       // The panel receives the canonical main target so its guardrails can never veto it.
-      expect(ccCtx.mainTarget).toEqual({ title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action" });
+      expect(ccCtx.mainTarget).toEqual({ title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action", findingCode: "CF_LOW_RUNWAY" });
       expect(mockGetOwnerHome).toHaveBeenCalledWith(WS_A, BIZ_ID);
+    });
+
+    it("never uses a decision for a different business than the condition profile", async () => {
+      mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE, selectedBusinessId: "biz-other" });
+      await controlCenterGet(makeCtx());
+      const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
+      expect(ccCtx.nextBestAction).toBeNull();
+      expect(ccCtx.mainTarget).toBeNull();
     });
   });
 

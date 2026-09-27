@@ -18,6 +18,7 @@ import {
 import { baselineFindingInclude, financeMeasuredBaseline } from "./baseline.service";
 import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceVerifyInput } from "@/domain/owner-finance/validation";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 export async function recordFinanceVerification(
   actionId: string,
@@ -112,11 +113,9 @@ export async function recordFinanceVerification(
         targetSnapshotId = await resolveCurrentSnapshotId(cycle.snapshotId);
       }
       if (!targetSnapshotId) {
-        const snap = await db.ownerFinancialSnapshot.findFirst({
-          where: { businessId: action.businessId, workspaceId, supersededById: null },
-          orderBy: { periodEnd: "desc" },
-          select: { id: true },
-        });
+        const snap = await db.ownerFinancialSnapshot.findFirst(
+          currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: action.businessId }, { id: true })
+        );
         targetSnapshotId = snap?.id;
       }
       if (targetSnapshotId) {

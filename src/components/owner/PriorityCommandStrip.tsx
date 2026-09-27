@@ -25,12 +25,10 @@ const SEVERITY_VARIANT: Record<string, "destructive" | "warning" | "muted"> = {
 };
 
 /**
- * `hideStopInstructions`: when the page shows the ONE canonical owner decision, the plan's own
- * "do_not_do" stop card is not shown — the canonical decision's reconciled guardrails are the only
- * "do not" list, so no plan card can veto the main target.
+ * Beside the canonical owner decision the page passes cards already reconciled with it
+ * (reconcilePlanCards): the plan's stop card reads as a constraint on the main target.
  */
-export function PriorityCommandStrip({ cards: allCards, hideStopInstructions = false }: { cards: PriorityCardView[]; hideStopInstructions?: boolean }) {
-  const cards = hideStopInstructions ? (allCards ?? []).filter((c) => c.id !== "do_not_do") : allCards;
+export function PriorityCommandStrip({ cards }: { cards: PriorityCardView[] }) {
   if (!cards || cards.length === 0) return null;
 
   return (

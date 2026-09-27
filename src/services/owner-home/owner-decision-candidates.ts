@@ -19,6 +19,9 @@ import { extractReachedTargetFromVerification } from "@/domain/owner-finance/out
 import { isExpired } from "@/domain/owner-mode/compliance-boundary";
 import {
   classifyOwnerFindingCode,
+  ownerCandidateIssueKey,
+  rankOwnerCandidates,
+  type OwnerIssueState,
   type OwnerCandidateExclusion,
   type OwnerDecisionCandidate,
   type OwnerPriorityClass,
@@ -153,6 +156,30 @@ export function domainActionToCandidate(action: any, ctx: DomainCandidateContext
   };
 }
 
+/**
+ * The next step WITHIN one domain (domain pages), chosen by the SAME canonical comparator restricted to
+ * that domain's own eligible actions — never a second cross-domain election, never a completed,
+ * cancelled, superseded or verified action. The owner's overall main target stays the canonical
+ * decision; pages label this item as local work.
+ */
+export function domainLocalNextAction<T extends { id: string }>(
+  actions: readonly T[],
+  cycle: { findings?: readonly any[] | null } | null,
+  domain: OwnerDomain
+): T | null {
+  const ctx: DomainCandidateContext = {
+    businessId: "local",
+    workspaceId: "local",
+    domain,
+    findingsById: new Map<string, any>((cycle?.findings ?? []).map((f: any) => [String(f.id), f])),
+    evidenceAsOf: null,
+    stale: false,
+    verifiedFixes: new Map(),
+  };
+  const top = rankOwnerCandidates(actions.map((a) => domainActionToCandidate(a, ctx)))[0];
+  return top ? actions.find((a) => String(a.id) === top.sourceId) ?? null : null;
+}
+
 // Recovery predates the Spine: its action `priority` IS the linked finding's severity
 // (founder-recovery/recovery-actions.ts), and its effort/priority are words, mapped by the same
 // documented tables the Business Condition adapter uses.
@@ -275,6 +302,33 @@ export function complianceItemToCandidate(
   };
 }
 
+/**
+ * Lifecycle of a compliance obligation's possible issues (breach / hard stop, renewal in progress) that
+ * are NOT competing now: the issue the item currently raises is a candidate; every other issue the item
+ * could raise no longer holds by its own record → terminal. Lets "what changed" call a breach resolved
+ * only when the record says so.
+ */
+export function complianceIssueStates(item: any, current: OwnerDecisionCandidate | null): Record<string, OwnerIssueState> {
+  const out: Record<string, OwnerIssueState> = {};
+  const name = String(item.name ?? "compliance obligation");
+  for (const code of ["COMPLIANCE_BREACH", "COMPLIANCE_RENEWAL_IN_PROGRESS"]) {
+    const key = ownerCandidateIssueKey({ domain: "compliance", findingCode: code, candidateId: `compliance_item:${item.id}`, source: "compliance_item" });
+    if (current && ownerCandidateIssueKey(current) === key) continue;
+    out[key] = { lifecycle: "terminal", title: `"${name}"` };
+  }
+  return out;
+}
+
+/**
+ * Lifecycle of an owner-recorded risk that is NOT competing now: still open (e.g. being mitigated below
+ * the critical threshold) or closed by its own status.
+ */
+export function businessRiskIssueState(risk: any): { key: string; state: OwnerIssueState } {
+  const category = String(risk.category ?? "").toUpperCase();
+  const key = ownerCandidateIssueKey({ domain: "risk", findingCode: `RISK_${category || "UNCATEGORISED"}`, candidateId: `business_risk:${risk.id}`, source: "business_risk" });
+  return { key, state: { lifecycle: OPEN_RISK_STATUSES.has(String(risk.status ?? "")) ? "open" : "terminal", title: String(risk.title ?? "Recorded risk") } };
+}
+
 /** Owner-entered risk categories → business class (critical-severity risks only reach the arbiter). */
 const RISK_CATEGORY_CLASS: Record<string, OwnerPriorityClass> = {
   COMPLIANCE: "SAFETY_COMPLIANCE",
@@ -341,102 +395,106 @@ export function businessRiskToCandidate(
   };
 }
 
-/** A cash/finance survival reading on CURRENT evidence (not stale, not superseded by the other source). */
 /**
- * The most severe SURVIVAL_CASH-class finding in a diagnosis cycle, or null. A survival state on
- * its own (e.g. driven by profit findings that already have open actions) is not a cash-survival
- * issue; only a survival-class finding proves one.
+ * One cash/finance diagnosis as survival EVIDENCE: the issues its own rules raised, independent of
+ * what happened to the actions proposed for them. `stale` = the evidence period is out of date or the
+ * diagnosed snapshot was amended; `superseded` = a NEWER, disagreeing reading of the other source
+ * governs (resolveCashFinanceSignal).
  */
-export function worstSurvivalFinding(
-  findings: ReadonlyArray<{ code?: unknown; title?: unknown; severity?: unknown }> | null | undefined
-): CurrentSurvivalReading["survivalFinding"] {
-  let best: CurrentSurvivalReading["survivalFinding"] = null;
-  for (const f of findings ?? []) {
-    const code = typeof f.code === "string" ? f.code : "";
-    if (!code || classifyOwnerFindingCode(code) !== "SURVIVAL_CASH") continue;
-    const severity = toOwnerSeverity(f.severity);
-    if (best === null || ownerSeverityRank(severity ?? "") > ownerSeverityRank(best.severity ?? "") || (ownerSeverityRank(severity ?? "") === ownerSeverityRank(best.severity ?? "") && code < best.code)) {
-      best = { code, title: typeof f.title === "string" && f.title ? f.title : code, severity };
-    }
-  }
-  return best;
-}
-
-export interface CurrentSurvivalReading {
+export interface SurvivalEvidenceReading {
   domain: "cashflow" | "finance";
-  state: string;
-  periodEnd: Date;
-  /** The diagnosis's own data-confidence score (0-100). */
+  periodEnd: Date | null;
+  stale: boolean;
+  superseded: boolean;
+  /** The diagnosis's own data-confidence score (0-100), used when a finding carries none. */
   dataConfidenceScore: number;
-  /**
-   * The most serious SURVIVAL_CASH-class finding of this reading's own diagnosis, or null. The
-   * survival state can also be driven by profit-loss findings (e.g. below break-even) whose open
-   * actions already address it — those never produce a survival target.
-   */
-  survivalFinding: { code: string; title: string; severity: OwnerSeverity | null } | null;
+  /** The cycle's persisted findings (code, title, summary, severity, confidence, evidence, missingData). */
+  findings: ReadonlyArray<any>;
 }
 
-const SURVIVAL_STATE_LABEL: Record<string, string> = {
-  INSOLVENT_RISK: "a risk of running out of cash",
-  CRITICAL: "a critical cash position",
-  AT_RISK: "cash at risk",
-};
+/** Closed lifecycle states that say how the owner RESPONDED, never whether the issue is gone. */
+const RESPONSE_ONLY_EXCLUSIONS = new Set<OwnerCandidateExclusion>(["completed", "cancelled", "superseded"]);
 
 /**
- * A CURRENT unsafe survival reading whose own diagnosis found a cash-survival danger that NO eligible
- * survival action currently addresses (its action was completed, verified or cancelled — or none
- * was proposed — while the same evidence still reads unsafe). The canonical decision must not elect
- * lower-class work beside that signal, so the danger stays explicit as a current target. It carries
- * the finding's own identity and severity (so closing the action without new figures never reads as
- * "resolved"); priority and impact are unrated, effort is neutral, confidence is the diagnosis's own.
+ * Survival ISSUES, separated from their action lifecycle.
+ *
+ * A survival-class finding raised by a cash/finance diagnosis is an open business issue for as long as
+ * the evidence that raised it is the evidence OpsIQ holds. An action is only how the owner responds:
+ *   - an ELIGIBLE action for the SAME issue (same domain + finding code) already represents it →
+ *     no second candidate (never a duplicate issue + action);
+ *   - a completed, cancelled or superseded action for it (or none at all) does NOT make the issue go
+ *     away → the issue stays an explicit candidate, carrying that action's title and status;
+ *   - a verification that measured the target as reached AFTER the evidence (verified_complete /
+ *     verified_fix_awaiting_new_evidence) is newer trusted evidence → the issue is not re-raised;
+ *   - a reading superseded by a newer disagreeing reading of the other source → not raised;
+ *   - stale evidence → raised with `stale: true`, so the arbiter turns it into an explicit
+ *     refresh-evidence target (never silently dropped, never current).
+ * Coverage is per stable issue identity: an open action for a DIFFERENT survival finding (e.g. medium
+ * FIN_HIGH_PAYABLES) never hides this one (e.g. critical FIN_INSOLVENT_RUNWAY).
  */
-export function survivalConfirmationCandidate(
-  readings: readonly CurrentSurvivalReading[],
+export function survivalIssueCandidates(
+  readings: readonly SurvivalEvidenceReading[],
   candidates: readonly OwnerDecisionCandidate[],
   ctx: { businessId: string; workspaceId: string }
-): OwnerDecisionCandidate | null {
-  // Only a real, current, eligible survival ACTION covers the danger (an owner-recorded risk or a
-  // stale/refresh item does not).
-  const covered = candidates.some(
-    (c) => c.source === "domain_action" && c.priorityClass === "SURVIVAL_CASH" && c.exclusion === null && !c.stale
-  );
-  if (covered) return null;
-  const eligible = readings
-    .filter((r) => r.state in SURVIVAL_STATE_LABEL && r.survivalFinding !== null)
-    .sort((a, b) =>
-      ownerSeverityRank(b.survivalFinding!.severity ?? "") - ownerSeverityRank(a.survivalFinding!.severity ?? "") || (a.domain < b.domain ? -1 : 1)
-    );
-  const r = eligible[0];
-  if (!r) return null;
-  const f = r.survivalFinding!;
-  const label = r.domain === "cashflow" ? "Cash flow" : "Finance";
-  const period = r.periodEnd.toISOString().slice(0, 10);
-  return {
-    candidateId: `survival_reading:${r.domain}:${f.code}`,
-    businessId: ctx.businessId,
-    workspaceId: ctx.workspaceId,
-    source: "survival_reading",
-    domain: r.domain,
-    sourceId: r.domain,
-    priorityClass: "SURVIVAL_CASH",
-    findingCode: f.code,
-    findingId: null,
-    title: "Confirm your cash position with current figures",
-    explanation: `Your current ${label} figures (period ending ${period}) show ${SURVIVAL_STATE_LABEL[r.state]}: "${f.title}". No open action addresses it right now, so confirm your cash position with this week's figures and act on what they show.`,
-    severity: f.severity,
-    priorityScore: 0,
-    expectedImpactScore: 0,
-    confidence: clampConfidence(r.dataConfidenceScore / 100),
-    effortScore: 50,
-    status: "proposed",
-    ownerActionRequired: true,
-    blocking: false,
-    evidence: [`${label} figures for the period ending ${period} show ${SURVIVAL_STATE_LABEL[r.state]}.`],
-    missingData: [],
-    verificationMetric: null,
-    evidenceAsOf: r.periodEnd,
-    stale: false,
-    exclusion: null,
-    targetRoute: OWNER_DOMAIN_ROUTE[r.domain] ?? "/owner",
-  };
+): OwnerDecisionCandidate[] {
+  const out: OwnerDecisionCandidate[] = [];
+  for (const r of readings) {
+    if (r.superseded) continue;
+    const label = r.domain === "cashflow" ? "Cash flow" : "Finance";
+    const period = r.periodEnd ? r.periodEnd.toISOString().slice(0, 10) : null;
+    // One issue per finding code (the most severe row if a cycle repeats a code).
+    const byCode = new Map<string, any>();
+    for (const f of r.findings) {
+      const code = typeof f?.code === "string" ? f.code : "";
+      if (!code || classifyOwnerFindingCode(code) !== "SURVIVAL_CASH") continue;
+      const prev = byCode.get(code);
+      if (!prev || ownerSeverityRank(toOwnerSeverity(f.severity) ?? "") > ownerSeverityRank(toOwnerSeverity(prev.severity) ?? "")) byCode.set(code, f);
+    }
+    for (const [code, f] of [...byCode.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+      const sameIssue = candidates.filter((c) => c.source === "domain_action" && c.domain === r.domain && c.findingCode === code);
+      if (sameIssue.some((c) => c.exclusion === null)) continue;
+      if (sameIssue.some((c) => c.exclusion !== null && !RESPONSE_ONLY_EXCLUSIONS.has(c.exclusion))) continue;
+      const response = [...sameIssue].sort((a, b) => (a.candidateId < b.candidateId ? -1 : 1))[0] ?? null;
+      const findingTitle = typeof f.title === "string" && f.title ? f.title : code;
+      const summary = typeof f.summary === "string" && f.summary ? ` ${f.summary}` : "";
+      const responded = response
+        ? response.status === "completed"
+          ? `"${response.title}" was marked done, but `
+          : response.status === "cancelled"
+            ? `"${response.title}" was cancelled, but `
+            : `"${response.title}" is no longer open, but `
+        : "";
+      const findingConfidence = typeof f.confidence === "number" ? f.confidence : r.dataConfidenceScore / 100;
+      out.push({
+        candidateId: `survival_reading:${r.domain}:${code}`,
+        businessId: ctx.businessId,
+        workspaceId: ctx.workspaceId,
+        source: "survival_reading",
+        domain: r.domain,
+        sourceId: String(f.id ?? code),
+        priorityClass: "SURVIVAL_CASH",
+        findingCode: code,
+        findingId: typeof f.id === "string" ? f.id : null,
+        title: response ? response.title : `Deal with: ${findingTitle}`,
+        explanation: `${responded}${responded ? "your" : "Your"} ${label} figures${period ? ` for the period ending ${period}` : ""} still show "${findingTitle}".${summary} Only new figures can show it has gone.`,
+        severity: toOwnerSeverity(f.severity),
+        // The domain's own ratings for this issue, from its (closed) action when there is one; never invented.
+        priorityScore: response ? clampScore(response.priorityScore) : 0,
+        expectedImpactScore: response ? clampScore(response.expectedImpactScore) : 0,
+        confidence: clampConfidence(findingConfidence),
+        effortScore: response ? clampScore(response.effortScore) : 50,
+        status: response ? response.status : "no_action",
+        ownerActionRequired: true,
+        blocking: false,
+        evidence: [...stringArray(f.evidence), ...(response ? [] : [`${label} diagnosis raised "${findingTitle}".`])],
+        missingData: stringArray(f.missingData),
+        verificationMetric: typeof f.verificationMetric === "string" ? f.verificationMetric : response?.verificationMetric ?? null,
+        evidenceAsOf: r.periodEnd,
+        stale: r.stale,
+        exclusion: null,
+        targetRoute: OWNER_DOMAIN_ROUTE[r.domain] ?? "/owner",
+      });
+    }
+  }
+  return out;
 }

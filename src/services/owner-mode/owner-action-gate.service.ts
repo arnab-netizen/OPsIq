@@ -29,6 +29,7 @@ import {
 import { evaluateMarginSafety, grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
 import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { isExpired } from "@/domain/owner-mode/compliance-boundary";
+import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 /** Material owner-action transitions that must pass the gate. */
 export const MATERIAL_ACTION_STATUSES: ReadonlySet<string> = new Set(["in_progress", "completed"]);
@@ -59,7 +60,7 @@ interface ActionGateDb {
     findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { cashflowState: true } }): Promise<{ cashflowState: string } | null>;
   };
   ownerFinancialSnapshot: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true }>): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
   };
   ownerComplianceItem: {
     findMany(args: { where: Record<string, unknown>; select: { kind: true; name: true; expiresAt: true } }): Promise<Array<{ kind: string; name: string; expiresAt: Date | null }>>;
@@ -188,12 +189,9 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
     //    is below the floor (scaling a money-losing operation). Unknown margin is allowed
     //    (no false block; deferred to the input-quality path), reusing evaluateMarginSafety.
     if (MARGIN_SENSITIVE_DOMAINS.has(input.domain)) {
-      const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-        // Current (never amended/superseded) version only.
-        where: { workspaceId: input.workspaceId, businessId: input.businessId, supersededById: null },
-        orderBy: { createdAt: "desc" },
-        select: { revenue: true, costOfGoods: true },
-      });
+      const snap = await deps.db.ownerFinancialSnapshot.findFirst(
+        currentEffectiveFinancialSnapshotQuery({ workspaceId: input.workspaceId, businessId: input.businessId }, { revenue: true, costOfGoods: true })
+      );
       const grossMargin = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
       const margin = evaluateMarginSafety(grossMargin, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
       if (!margin.allowed) {

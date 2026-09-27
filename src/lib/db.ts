@@ -631,7 +631,12 @@ export const db = new Proxy({} as any, {
 
     // Ensure initialization is in progress (auto-start if needed)
     if (!globalForPrisma.prismaPromise) {
-      globalForPrisma.prismaPromise = getDb();
+      const init = getDb();
+      // This auto-start is fire-and-forget: a property access alone (e.g. `db.user`) never awaits it.
+      // If initialization fails and no caller has awaited yet, the rejection must not surface as an
+      // unhandled rejection; every deferred method below still receives it through its own `.then`.
+      init.catch(() => undefined);
+      globalForPrisma.prismaPromise = init;
     }
 
     // Prisma's own top-level client methods ($queryRaw, $queryRawUnsafe,

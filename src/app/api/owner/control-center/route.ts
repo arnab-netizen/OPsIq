@@ -13,6 +13,7 @@ import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getBusinessCondition } from "@/services/owner-condition/business-condition.service";
 import { getOwnerHome } from "@/services/owner-home/home.service";
+import type { OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 import { getOwnerControlCenter } from "@/services/owner-mode/owner-control-center.service";
 import { getOwnerBlockMetrics } from "@/services/owner-mode/owner-block-metrics.service";
 
@@ -23,12 +24,18 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
-    const [{ profile }, home, blocks] = await Promise.all([
+    const [condition, home, blocks] = await Promise.all([
       getBusinessCondition(ctx.verifiedWorkspaceId, businessId),
       getOwnerHome(ctx.verifiedWorkspaceId, businessId),
       // Live block counts derived from the audit log (gate/do-not-repeat/completion blocks).
       getOwnerBlockMetrics(ctx.verifiedWorkspaceId),
     ]);
+    const { profile } = condition;
+    // The canonical decision is used beside this condition profile only when both describe the SAME business.
+    const decision = home.selectedBusinessId === condition.selectedBusinessId ? home.currentOwnerDecision : null;
+    const asTarget = (t: Pick<OwnerDecisionTarget, "title" | "priorityClass" | "source" | "findingCode">) => ({
+      title: t.title, priorityClass: t.priorityClass, source: t.source, findingCode: t.findingCode,
+    });
     const panel = await getOwnerControlCenter(ctx.verifiedWorkspaceId, {
       dataSufficiencyStatus: profile?.dataSufficiencyStatus ?? "caution",
       lowConfidenceDomains: profile?.lowConfidenceDomains ?? [],
@@ -37,15 +44,9 @@ export const GET = withCanonicalEnforcement(
       financeBlocked: blocks.financeBlocked,
       ownerApprovalsRequired: 0,
       approvalsAvoided: blocks.approvalsAvoided,
-      nextBestAction: home.currentOwnerDecision?.primaryTarget?.title ?? null,
-      mainTarget: home.currentOwnerDecision?.primaryTarget
-        ? {
-            title: home.currentOwnerDecision.primaryTarget.title,
-            priorityClass: home.currentOwnerDecision.primaryTarget.priorityClass,
-            source: home.currentOwnerDecision.primaryTarget.source,
-            domain: home.currentOwnerDecision.primaryTarget.domain,
-          }
-        : null,
+      nextBestAction: decision?.primaryTarget?.title ?? null,
+      mainTarget: decision?.primaryTarget ? asTarget(decision.primaryTarget) : null,
+      supportingSteps: (decision?.supportingSteps ?? []).map(asTarget),
     });
     return canonicalJson(panel, { status: 200 });
   },

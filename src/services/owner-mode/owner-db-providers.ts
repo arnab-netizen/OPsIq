@@ -19,6 +19,7 @@ import {
   type IngestionDomain,
   type OwnerDomainProviders,
 } from "./owner-domain-ingestion";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 export interface OwnerDbProviderDeps {
   db: PrismaClient;
@@ -74,9 +75,7 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
   // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
   const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes, reputationRow] = await Promise.all([
     db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
-    // Current (never amended/superseded) version only, deterministic order — an amended snapshot shares
-    // its period with its replacement, so periodEnd alone could return the superseded figures.
-    db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId, supersededById: null }, orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }] }),
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId })),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
     db.ownerCapacitySnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" } }),
     db.ownerComplianceItem.findMany({ where: { workspaceId, businessId } }),

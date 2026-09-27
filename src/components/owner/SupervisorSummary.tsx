@@ -12,6 +12,8 @@ export interface SupervisorSummaryView {
   whyItMatters: string;
   doNow: string;
   doNotDo: string[];
+  /** true when `doNotDo` was reconciled with the canonical decision (constraints, not orders). */
+  stopItemsAreConstraints?: boolean;
   ownerDecisionRequired: string | null;
   delegateToStaff: string[];
   opsiqPreparedWork: string[];
@@ -53,11 +55,10 @@ const CONFIDENCE_VARIANT: Record<string, "success" | "warning" | "destructive" |
 };
 
 /**
- * `hideStopInstructions`: when the page shows the ONE canonical owner decision, that decision (and
- * the guardrails reconciled with it) is the only "do not" list — the plan analysis's own stop
- * instruction could veto the main target, so it is not shown.
+ * Beside the canonical owner decision the page passes a summary already reconciled with it
+ * (reconcilePlanSummary): its stop items read as constraints on the main target, never as orders.
  */
-export function SupervisorSummary({ summary, hideStopInstructions = false }: { summary: SupervisorSummaryView | null; hideStopInstructions?: boolean }) {
+export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView | null }) {
   if (!summary || !summary.found) return null;
   const relevantImpact = summary.impact.filter((i) => i.relevant);
   const supportingFigures = summary.supportingFigures ?? [];
@@ -84,9 +85,9 @@ export function SupervisorSummary({ summary, hideStopInstructions = false }: { s
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-do-now">
           <strong>Plan analysis suggests:</strong> {summary.doNow}
         </div>
-        {!hideStopInstructions && summary.doNotDo.length > 0 && (
+        {summary.doNotDo.length > 0 && (
           <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-sm" data-testid="supervisor-do-not-do">
-            <strong>Do not:</strong> {summary.doNotDo[0]}
+            {summary.stopItemsAreConstraints ? summary.doNotDo[0] : <><strong>Do not:</strong> {summary.doNotDo[0]}</>}
           </div>
         )}
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-owner-delegate">

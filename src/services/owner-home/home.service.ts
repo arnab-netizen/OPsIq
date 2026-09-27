@@ -47,18 +47,20 @@ import {
   type OwnerDecisionCandidate,
   type OwnerDecisionEvent,
   type OwnerDecisionStrategyContext,
+  type OwnerIssueState,
 } from "@/domain/owner-spine/owner-decision";
 import {
   businessRiskToCandidate,
   complianceItemToCandidate,
+  complianceIssueStates,
+  businessRiskIssueState,
   domainActionToCandidate,
   OWNER_DECISION_STALE_EVIDENCE_DAYS,
   recoveryActionToCandidate,
-  survivalConfirmationCandidate,
+  survivalIssueCandidates,
   verificationReachedTarget,
   verificationTime,
-  worstSurvivalFinding,
-  type CurrentSurvivalReading,
+  type SurvivalEvidenceReading,
 } from "@/services/owner-home/owner-decision-candidates";
 import {
   computeReassessmentCadence,
@@ -240,8 +242,9 @@ export async function getOwnerHome(
     db.ownerStrategyVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
     // Business-attributable compliance obligations (a null businessId is attributable only when the
     // workspace holds exactly one real business — filtered below).
+    // Terminal (compliant / waived) items are read too: their record is what proves a breach closed.
     db.ownerComplianceItem.findMany({
-      where: { workspaceId, OR: [{ businessId }, { businessId: null }], status: { notIn: ["compliant", "waived"] } },
+      where: { workspaceId, OR: [{ businessId }, { businessId: null }] },
     }),
     hasExactlyOneRealBusiness(workspaceId),
     // Decision memory for "what changed": the resolver's own OWNER_DECISION_CHANGED audit trail for
@@ -386,12 +389,21 @@ export async function getOwnerHome(
       }
     }
   }
-  const currentSurvivalReadings: CurrentSurvivalReading[] = [];
-  if (cashflow && cashAt && supersededSurvivalDomain !== "cashflow") {
-    currentSurvivalReadings.push({ domain: "cashflow", state: String(cashflow.cashflowState), periodEnd: cashAt, dataConfidenceScore: Number(cashflow.dataConfidenceScore ?? 0), survivalFinding: worstSurvivalFinding(cashflow.findings) });
+  // Survival EVIDENCE per source — issues are derived from it independently of their actions' lifecycle.
+  const survivalReadings: SurvivalEvidenceReading[] = [];
+  if (cashflow) {
+    survivalReadings.push({
+      domain: "cashflow", periodEnd: cashflow.snapshot?.periodEnd ? asDate(cashflow.snapshot.periodEnd) : null,
+      stale: cashAt === null, superseded: supersededSurvivalDomain === "cashflow",
+      dataConfidenceScore: Number(cashflow.dataConfidenceScore ?? 0), findings: cashflow.findings ?? [],
+    });
   }
-  if (finance && financeAt && supersededSurvivalDomain !== "finance") {
-    currentSurvivalReadings.push({ domain: "finance", state: String(finance.survivalState), periodEnd: financeAt, dataConfidenceScore: Number(finance.dataConfidenceScore ?? 0), survivalFinding: worstSurvivalFinding(finance.findings) });
+  if (finance) {
+    survivalReadings.push({
+      domain: "finance", periodEnd: finance.snapshot?.periodEnd ? asDate(finance.snapshot.periodEnd) : null,
+      stale: financeAt === null, superseded: supersededSurvivalDomain === "finance",
+      dataConfidenceScore: Number(finance.dataConfidenceScore ?? 0), findings: finance.findings ?? [],
+    });
   }
   if (sales) addDomain("sales", sales, salesCycleToDomainScore(sales), sales.actions, allSalesVers, sales.findings);
   if (operations) addDomain("operations", operations, operationsCycleToDomainScore(operations), operations.actions, allOperationsVers, operations.findings);
@@ -433,10 +445,13 @@ export async function getOwnerHome(
   }
 
   // Control sources (business-attributable only; see owner-decision-candidates.ts).
+  // Lifecycle of known issues that are not competing now ("what changed" never infers resolution from absence).
+  const issueStates: Record<string, OwnerIssueState> = {};
   for (const item of complianceItems) {
     if (item.businessId === null && !singleRealBusiness) continue;
     const c = complianceItemToCandidate(item, { businessId, workspaceId, now });
     if (c) candidates.push(c);
+    Object.assign(issueStates, complianceIssueStates(item, c));
   }
   if (singleRealBusiness) {
     // Same read-time fixture correction Now View's topRisks and listBusinessRisks apply: a QA
@@ -446,19 +461,24 @@ export async function getOwnerHome(
     const fixtureSessionExclusion = fixtureTaintedSessionIds.length > 0
       ? { OR: [{ linkedStartupSessionId: null }, { linkedStartupSessionId: { notIn: fixtureTaintedSessionIds } }] }
       : {};
+    // Every status is read: a closed risk's own record is what proves it resolved, and an open risk
+    // below the critical threshold (e.g. being mitigated) is still open.
     const risks = await db.businessRiskEntry.findMany({
-      where: { workspaceId, isFixtureRecord: false, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING"] }, ...fixtureSessionExclusion },
+      where: { workspaceId, isFixtureRecord: false, ...fixtureSessionExclusion },
     });
     for (const r of risks) {
       const c = businessRiskToCandidate(r, { businessId, workspaceId });
       if (c) candidates.push(c);
+      else {
+        const { key, state } = businessRiskIssueState(r);
+        issueStates[key] = state;
+      }
     }
   }
 
-  // A current unsafe survival reading that no eligible survival action covers becomes an explicit
-  // "confirm your cash position" target (see survivalConfirmationCandidate).
-  const survivalConfirmation = survivalConfirmationCandidate(currentSurvivalReadings, candidates, { businessId, workspaceId });
-  if (survivalConfirmation) candidates.push(survivalConfirmation);
+  // A survival issue stays open while the evidence that raised it is the evidence OpsIQ holds, whatever
+  // happened to its action; only an eligible action for the SAME issue represents it (survivalIssueCandidates).
+  candidates.push(...survivalIssueCandidates(survivalReadings, candidates, { businessId, workspaceId }));
 
   // Missing-critical-data comes from the EXACT snapshot the latest Finance diagnosis ran on — never
   // inferred from whichever snapshot has the latest period (a later, undiagnosed snapshot does not
@@ -467,10 +487,9 @@ export async function getOwnerHome(
     ? (finance!.snapshot!.missingCriticalData as unknown[]).filter((m): m is string => typeof m === "string")
     : [];
 
-  const summary = domainScores.length > 0
-    ? buildOwnerHomeSummary({ domainScores, findings, verifications, missingCriticalData, now })
-    : null;
-  const dataSufficiency = summary?.dataSufficiency ?? {
+  const summaryInput = { domainScores, findings, verifications, missingCriticalData, staleDomains, now };
+  const baseSummary = domainScores.length > 0 ? buildOwnerHomeSummary(summaryInput) : null;
+  const dataSufficiency = baseSummary?.dataSufficiency ?? {
     status: "insufficient" as const, lowestDataConfidenceScore: 0, lowConfidenceDomains: [], missingCriticalData,
   };
   const profile = buildBusinessConditionProfile({ businessId, workspaceId, domainScores, missingCriticalData, now });
@@ -492,6 +511,8 @@ export async function getOwnerHome(
     events,
     // The snapshot each domain's CURRENT diagnosis ran on: "new data" means this identity changed.
     evidenceIds,
+    issueStates,
+    workspaceIssuesAttributable: singleRealBusiness,
     now,
   };
   // "What changed" compares against the previous DISTINCT decision recorded for this business, so the
@@ -502,6 +523,16 @@ export async function getOwnerHome(
   const currentMemory = resolveOwnerDecision({ ...decisionInput, previous: null }).memory;
   const previous = memories.find((m: NonNullable<ReturnType<typeof parseOwnerDecisionMemory>>) => !sameOwnerDecisionMemory(m, currentMemory)) ?? null;
   const currentOwnerDecision = resolveOwnerDecision({ ...decisionInput, previous });
+
+  // The cash-danger card reads the SAME survival source the canonical arbitration trusts: the source of
+  // a survival main target; otherwise the current, un-superseded reading (Cash flow first).
+  const primaryDomain = currentOwnerDecision.primaryTarget?.priorityClass === "SURVIVAL_CASH" ? currentOwnerDecision.primaryTarget.domain : null;
+  const trusted = survivalReadings.filter((r) => !r.stale && !r.superseded).map((r) => r.domain);
+  const survivalSource: "cashflow" | "finance" =
+    primaryDomain === "cashflow" || primaryDomain === "finance"
+      ? primaryDomain
+      : trusted[0] ?? (cashflow ? "cashflow" : finance ? "finance" : "cashflow");
+  const summary = baseSummary ? buildOwnerHomeSummary({ ...summaryInput, survivalSource }) : null;
 
   // Record the decision when it materially changed (or is the first one): an auditable trail of what
   // OpsIQ told the owner, and the memory above. This write happens on read paths that can run

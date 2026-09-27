@@ -796,7 +796,7 @@ function FinanceCycleView({
 
       {recommended && (
         <div className="border-t border-border pt-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Recommended next financial action (this area only)</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Next step within Finance (local to this area — your overall main target is on Home)</div>
           <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           {recommended.evidenceRationale && (

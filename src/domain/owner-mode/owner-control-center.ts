@@ -7,10 +7,11 @@
  */
 
 import type { AttentionSummary } from "@/domain/owner-mode/owner-load";
-import { isDemandTarget, type OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
+import type { OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
+import { ownerImperativeContext, reconcileOwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
 
-/** The canonical owner decision's main target, as far as the panel's guardrails need it. */
-export type ControlCenterMainTarget = Pick<OwnerDecisionTarget, "title" | "priorityClass" | "source" | "domain">;
+/** A canonical decision target, as far as the panel's guardrails need it. */
+export type ControlCenterMainTarget = Pick<OwnerDecisionTarget, "title" | "priorityClass" | "source" | "findingCode">;
 
 export interface ControlCenterInputs {
   dataSufficiencyStatus: "sufficient" | "caution" | "insufficient";
@@ -35,6 +36,8 @@ export interface ControlCenterInputs {
    * reconcileAvoidsWithOwnerDecision). Guardrails unrelated to the target are unchanged.
    */
   mainTarget?: ControlCenterMainTarget | null;
+  /** The canonical decision's supporting steps (never vetoed either). */
+  supportingSteps?: ControlCenterMainTarget[];
 }
 
 export interface OwnerControlCenter {
@@ -64,34 +67,48 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   const criticalAlerts: string[] = [];
   const whatNotToDo: string[] = [];
 
-  const t = i.mainTarget ?? null;
-  // A refresh target is a data request: it is never vetoed by these guardrails, so they stay as-is.
-  const actionTarget = t !== null && t.source !== "evidence_refresh" ? t : null;
-  const demandTarget = actionTarget !== null && isDemandTarget(actionTarget) ? actionTarget : null;
+  // Every guardrail passes through the ONE shared reconciler (owner-imperatives.ts): it never vetoes the
+  // canonical main target or a supporting step; a refresh (data-request) target rewrites nothing.
+  const ctx = ownerImperativeContext(i.mainTarget ? { primaryTarget: i.mainTarget, supportingSteps: i.supportingSteps ?? [] } : null);
   if (i.dataSufficiencyStatus === "insufficient") {
     criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).`);
+    // The canonical arbiter already accounted for missing data (confidence caps, data-request
+    // targets); the guardrail applies to OTHER material decisions, never to an action main target.
     whatNotToDo.push(
-      t
-        // The canonical arbiter already accounted for missing data (confidence caps, data-request
-        // targets); the guardrail applies to OTHER material decisions, never to the main target.
-        ? `Apart from "${t.title}", do not make material decisions until the missing/stale data is provided.`
-        : "Do not make material decisions until the missing/stale data is provided."
+      reconcileOwnerProhibition(
+        {
+          text: "Do not make material decisions until the missing data is provided.",
+          vetoes: "ANY_ACTION",
+          asCondition: (t) => `Apart from "${t}", do not make material decisions until the missing data is provided.`,
+        },
+        ctx
+      ).text
     );
   }
   if (i.financeBlocked > 0) {
     criticalAlerts.push(`${i.financeBlocked} finance/margin/cash-unsafe recommendation(s) were blocked.`);
     whatNotToDo.push(
-      actionTarget
-        ? `Do not spend or discount while cash/margin guardrails are blocking — carry out "${actionTarget.title}" only in ways that need neither.`
-        : "Do not spend or discount while cash/margin guardrails are blocking."
+      reconcileOwnerProhibition(
+        {
+          text: "Do not spend or discount while cash/margin guardrails are blocking.",
+          vetoes: "GROW",
+          asCondition: (t) => `Carry out "${t}" without new spend or discounts while cash/margin guardrails are blocking.`,
+        },
+        ctx
+      ).text
     );
   }
   if (i.equipmentBottlenecks.length > 0) {
     criticalAlerts.push(`Capacity bottleneck: ${i.equipmentBottlenecks.join(", ")}.`);
     whatNotToDo.push(
-      demandTarget
-        ? `Keep "${demandTarget.title}" within current capacity until the bottleneck is cleared.`
-        : "Do not pursue growth/marketing until the capacity bottleneck is cleared."
+      reconcileOwnerProhibition(
+        {
+          text: "Do not pursue growth/marketing until the capacity bottleneck is cleared.",
+          vetoes: "GROW",
+          asCondition: (t) => `Keep "${t}" within current capacity until the bottleneck is cleared.`,
+        },
+        ctx
+      ).text
     );
   }
   if (i.proofBlocked > 0) {

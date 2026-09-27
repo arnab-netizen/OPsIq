@@ -71,15 +71,19 @@ async function api(path: string) {
   return data;
 }
 
-function DangerCard({ label, danger }: { label: string; danger: any }) {
+function DangerCard({ label, danger, testId }: { label: string; danger: any; testId?: string }) {
   const level = danger?.level ?? "unknown";
+  // The server marks a reading from out-of-date figures (lastFlagged) and which evidence source it
+  // comes from (key); the card only renders those facts.
+  const source = label === "Cash danger" && danger?.key === "finance" ? " (from your Finance figures)" : "";
   return (
-    <div className="border rounded-lg p-3 bg-card">
-      <div className="text-xs uppercase text-muted-foreground">{label}</div>
+    <div className="border rounded-lg p-3 bg-card" data-testid={testId}>
+      <div className="text-xs uppercase text-muted-foreground">{label}{source}</div>
       <div className="mt-1 flex items-center gap-2">
-        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>{DANGER_LABEL[level] ?? level}</Badge>
+        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>{danger?.lastFlagged ? `Last flagged: ${DANGER_LABEL[level] ?? level}` : (DANGER_LABEL[level] ?? level)}</Badge>
         <span className="text-sm text-muted-foreground">
           {danger?.riskScore === null || danger?.riskScore === undefined ? "—" : `${Math.round(danger.riskScore)}/100`}
+          {danger?.lastFlagged ? " — figures need updating" : ""}
         </span>
       </div>
     </div>
@@ -252,7 +256,7 @@ export default function OwnerHomePage() {
 
               {/* Danger surfaces (money first, then execution) */}
               <section className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <DangerCard label="Cash danger" danger={s.cashDanger} />
+                <DangerCard label="Cash danger" danger={s.cashDanger} testId="home-cash-danger" />
                 <DangerCard label="Sales danger" danger={s.salesDanger} />
                 <DangerCard label="Operations danger" danger={s.operationsDanger} />
                 <DangerCard label="Execution danger" danger={s.executionDanger} />
@@ -300,7 +304,9 @@ export default function OwnerHomePage() {
                           <div className="text-sm font-medium">{r.title}</div>
                           <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[r.domain] ?? r.domain} · impact {Math.round(r.impactScore)}</div>
                         </div>
-                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default-accessible"}>{SEVERITY_LABEL[r.severity] ?? r.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default-accessible"} data-testid="home-top-risk-severity">
+                          {r.lastFlagged ? `Last flagged: ${SEVERITY_LABEL[r.severity] ?? r.severity} — figures need updating` : (SEVERITY_LABEL[r.severity] ?? r.severity)}
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -309,7 +315,7 @@ export default function OwnerHomePage() {
 
               {/* Top 3 opportunities */}
               <section className="border rounded-lg p-4 bg-card md:mt-0">
-                <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities</div>
+                <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities <span className="normal-case">(what was found — your main target decides what comes first)</span></div>
                 {s.top3Opportunities.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No opportunities from diagnosed domains — run a domain diagnosis to surface opportunities.</p>
                 ) : (
@@ -318,7 +324,7 @@ export default function OwnerHomePage() {
                       <div key={`${o.domain}-${o.code}`} className="flex justify-between items-start gap-2 border-b pb-2">
                         <div>
                           <div className="text-sm font-medium">{o.title}</div>
-                          <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[o.domain] ?? o.domain}</div>
+                          <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[o.domain] ?? o.domain}{o.lastFlagged ? " · last flagged — figures need updating" : ""}</div>
                         </div>
                         <Badge variant="success-accessible">impact {Math.round(o.impactScore)}</Badge>
                       </div>
