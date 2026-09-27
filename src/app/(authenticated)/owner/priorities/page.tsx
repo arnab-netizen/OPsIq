@@ -23,6 +23,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { Badge, CardDashboardSkeleton, EmptyState, ErrorState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
@@ -204,7 +205,7 @@ export default function OwnerPrioritiesPage() {
   }, [activeBusinessId]);
 
   if (loading) return <PageContainer narrow><CardDashboardSkeleton label="Loading your priorities" sections={2} /></PageContainer>;
-  if (error) return <PageContainer narrow><ErrorState message={error} onRetry={() => window.location.reload()} /></PageContainer>;
+  if (error) return <PageContainer narrow><ErrorState message={classifyOperatorError(new Error(error), { context: "load" }).operatorMessage} onRetry={() => window.location.reload()} /></PageContainer>;
 
   const attention = decision?.attention ?? [];
   const radarGroups = (["risk", "alert"] as const)
