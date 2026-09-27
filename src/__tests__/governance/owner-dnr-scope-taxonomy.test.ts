@@ -43,7 +43,11 @@ describe("one do-not-repeat scope taxonomy", () => {
   it("no producer or reader builds a `scope:` key by hand", () => {
     const offenders = sourceFiles(join(ROOT, "src"))
       .filter((f) => rel(f) !== HELPER && !NOT_DNR.has(rel(f)))
-      .filter((f) => /["'`]scope:/.test(stripComments(readFileSync(f, "utf8"))))
+      // A hand-built key in any form: a literal "scope:…", or a template/concatenation of the helper's prefix.
+      .filter((f) => {
+        const src = stripComments(readFileSync(f, "utf8"));
+        return /["'`]scope:/.test(src) || /\$\{\s*DNR_SCOPE_PREFIX\s*\}|\bDNR_SCOPE_PREFIX\s*\+/.test(src);
+      })
       .map(rel);
     expect(offenders).toEqual([]);
   });

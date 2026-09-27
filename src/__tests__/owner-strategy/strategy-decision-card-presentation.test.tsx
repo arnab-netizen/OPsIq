@@ -132,3 +132,16 @@ describe("presentation helpers", () => {
     expect(strategyScenarioName(" Second van ")).toBe("Second van");
   });
 });
+
+describe("a step the owner action gate holds back is shown as HELD, with what holds it and what clears it", () => {
+  it("held: the plan's step is named with the hold text — never 'already verified', never 'add it to your action list'", () => {
+    const held = "This step is currently held by the cash safety limit. Stabilise cash before proceeding.";
+    render(<StrategyDecisionCard decision={CASES.GO} caption="Current decision · evaluation #1" nextStepRow={null} replacedStep={{ replacedBecause: held, held: true, step: null }} />);
+    const line = screen.getByTestId("strategy-decision-step-held");
+    expect(line.textContent).toContain(CASES.GO.primaryStep.title);
+    expect(line.textContent).toContain(held);
+    expect(screen.queryByTestId("strategy-decision-step-replaced")).toBeNull();
+    const card = screen.getByTestId("strategy-decision");
+    expect(card.textContent ?? "").not.toMatch(/already verified|to add this step to your action list/);
+  });
+});

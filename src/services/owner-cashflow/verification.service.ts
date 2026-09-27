@@ -100,7 +100,7 @@ export async function recordCashflowVerification(
   if (result.reachedTarget) {
     try {
       const latestSnapshot = await db.ownerCashflowSnapshot.findFirst({
-        where: { businessId: action.businessId, workspaceId },
+        where: { businessId: action.businessId, workspaceId, periodEnd: { lte: new Date() } },
         orderBy: { periodEnd: "desc" },
         select: { id: true },
       });

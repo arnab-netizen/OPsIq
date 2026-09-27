@@ -16,6 +16,7 @@ import {
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
 import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
 import { recoveryActionFindingCode } from "@/services/owner-home/owner-decision-candidates";
 
 export interface UpdateRecoveryActionInput {
@@ -62,16 +63,6 @@ export async function updateRecoveryAction(
     }
     const to = input.status;
 
-    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a
-    // material transition, same as every other owner-domain action service
-    // (finance/cashflow/sales/marketing/operations/sop/strategy/budget).
-    // Recovery predates that gate rollout and was never wired to it -- this
-    // closes that gap without changing any other behavior.
-    gateAssessment = await enforceOwnerActionGates({
-      workspaceId, businessId: action.businessId, actionId, domain: "recovery", toStatus: to,
-      findingCode: recoveryActionFindingCode(action), findingId: action.findingId,
-    });
-
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
       const outcome = input.actualOutcome ?? action.actualOutcome;
@@ -85,6 +76,14 @@ export async function updateRecoveryAction(
     if (to === "in_progress" && !action.startedAt) {
       data.startedAt = now;
     }
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition,
+    // same as every other owner-domain action service, after the request's own validation (a request
+    // that fails it never records a block).
+    gateAssessment = await enforceOwnerActionGates({
+      workspaceId, businessId: action.businessId, actionId, domain: "recovery", toStatus: to,
+      findingCode: recoveryActionFindingCode(action), findingId: action.findingId,
+    });
     data.status = to;
   }
 
@@ -93,10 +92,13 @@ export async function updateRecoveryAction(
   if (input.actualOutcome !== undefined) data.actualOutcome = input.actualOutcome;
   data.version = { increment: 1 };
 
-  const updated = await db.recoveryAction.update({
-    where: { id: actionId },
-    data,
+  // Compare-and-set on the version AND status the update was validated against: a concurrent change or a
+  // double submission never applies a stale transition twice.
+  const { row: updated, transitioned } = await applyGuardedActionUpdate<typeof action>(db.recoveryAction, {
+    entity: "RecoveryAction", actionId, workspaceId, expectedStatus: action.status, expectedVersion: action.version, toStatus: input.status, data,
   });
+  // An identical concurrent request already applied this transition: nothing more to record or trigger.
+  if (!transitioned) return updated;
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
@@ -127,7 +129,7 @@ export async function updateRecoveryAction(
     });
     try {
       const latestSnapshot = await db.ownerMetricSnapshot.findFirst({
-        where: { businessId: updated.businessId, workspaceId },
+        where: { businessId: updated.businessId, workspaceId, periodEnd: { lte: new Date() } },
         orderBy: { periodEnd: "desc" },
         select: { id: true },
       });

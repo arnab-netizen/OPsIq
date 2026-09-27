@@ -14,7 +14,8 @@
  *   - the workspace audit hash chain stays intact;
  *   - EVERY owner read surface — the seven domain dashboards, the Control Center, Priorities' feeds (risks,
  *     alerts, priorities), the Portfolio dashboard, Now View and Home — sends zero write statements (Now View's
- *     own pre-existing guidance-history row is its only, named, exception) and leaves AuditEvent, cycles,
+ *     own guidance-history row, appended only when the observed state CHANGED since the last one, is its
+ *     only, named, exception: a repeat read of an unchanged business writes nothing) and leaves AuditEvent, cycles,
  *     actions, snapshots, do-not-repeat memory and compliance/risk records exactly as they were.
  *
  * `[db]`-gated. Run: TEST_WITH_DB=true npx vitest run src/__tests__/owner-decision/owner-decision-read-only.db.test.ts
@@ -164,6 +165,12 @@ describe("[db] P1 — owner-decision reads perform zero persistence", () => {
     // since last check" history) — no decision memory, no audit event, nothing else.
     const writes = writesOf(sql);
     expect(writes.map((w) => w.replace(/\s+/g, " ").match(/^\s*insert into "?(?:public"?\.)?"?(\w+)"?/i)?.[1] ?? w.slice(0, 60))).toEqual(["owner_guidance_snapshots"]);
+    // A repeat read of the unchanged business writes nothing at all (and raises no alert).
+    const alertsBefore = await db.alert.count({ where: { workspaceId } });
+    startCapture();
+    await nowViewGET(ctx(workspaceId, `/api/owner/now-view?businessId=${businessId}`), {});
+    expect(writesOf(stopCapture())).toEqual([]);
+    expect(await db.alert.count({ where: { workspaceId } })).toBe(alertsBefore);
     expect(await db.auditEvent.count({ where: { workspaceId } })).toBe(auditBefore);
     expect(await db.auditEvent.count({ where: { workspaceId, eventName: "owner.decision_changed" } })).toBe(0);
     expect(await db.auditEvent.count({ where: { workspaceId, entityType: "OwnerDecision" } })).toBe(0);

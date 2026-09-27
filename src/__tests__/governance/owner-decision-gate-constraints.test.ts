@@ -46,7 +46,8 @@ describe("the canonical decision always models the action gate's constraints", (
         const args = callArgs(src, m.index + m[0].length - 1);
         const where = `${rel(f)}:${src.slice(0, m.index).split("\n").length} ${m[1]}`;
         calls.push(where);
-        if (!/\bgate\b/.test(args)) missing.push(where);
+        // A real constraints value: `gate` named (shorthand or `gate: <expr>`), never `gate: null|undefined`.
+        if (!/\bgate\b/.test(args) || /\bgate\s*:\s*(?:null|undefined)\b/.test(args)) missing.push(where);
       }
     }
     expect(calls.length).toBeGreaterThanOrEqual(3);

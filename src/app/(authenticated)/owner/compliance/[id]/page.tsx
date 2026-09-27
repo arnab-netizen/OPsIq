@@ -27,6 +27,7 @@ interface TaskLink {
 interface ComplianceDetail {
   id: string;
   workspaceId: string;
+  businessId: string | null;
   kind: string;
   name: string;
   reference: string | null;
@@ -272,6 +273,8 @@ export default function ComplianceDetailPage() {
         </div>
       </div>
 
+      <AffectedBusiness item={item} onAssigned={load} />
+
       {/* Linked tasks */}
       <h2 className="text-lg font-semibold mb-3">Linked tasks</h2>
       {item.taskLinks.length === 0 ? (
@@ -363,6 +366,74 @@ export default function ComplianceDetailPage() {
         </div>
       </Modal>
     </PageContainer>
+  );
+}
+
+interface BusinessOption { id: string; name: string }
+
+/**
+ * Which business the obligation applies to. An obligation recorded with no business in a workspace with
+ * several businesses restricts none of them until it is assigned (the server decides that; this only shows
+ * it and offers the assignment). Assignment is null → business only (server-enforced).
+ */
+function AffectedBusiness({ item, onAssigned }: { item: ComplianceDetail; onAssigned: () => Promise<void> }) {
+  const [businesses, setBusinesses] = useState<BusinessOption[] | null>(null);
+  const [choice, setChoice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/api/owner/businesses")
+      .then((data) => { if (!cancelled) setBusinesses(Array.isArray(data.businesses) ? data.businesses : []); })
+      .catch(() => { if (!cancelled) setBusinesses([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function assign() {
+    if (!choice) { setAssignError("Choose the business this obligation affects."); return; }
+    setSubmitting(true);
+    setAssignError(null);
+    try {
+      await apiFetch(`/api/owner/compliance/${item.id}/business`, { method: "POST", body: JSON.stringify({ businessId: choice }) });
+      await onAssigned();
+    } catch (err) {
+      setAssignError(classifyOperatorError(err, { context: "save" }).operatorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const assigned = item.businessId ? businesses?.find((b) => b.id === item.businessId) ?? null : null;
+  return (
+    <section id="assign-business" className="rounded-lg border border-border p-5 mb-6 scroll-mt-20">
+      <h2 className="text-sm font-semibold mb-2">Affected business</h2>
+      {item.businessId ? (
+        <p className="text-sm">{assigned ? assigned.name : "Assigned to a business"}</p>
+      ) : businesses === null ? (
+        <p className="text-sm text-muted-foreground">Loading businesses…</p>
+      ) : businesses.length <= 1 ? (
+        <p className="text-sm">{businesses.length === 1 ? `Applies to ${businesses[0].name} (your only business).` : "No active business."}</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            This obligation was recorded without a business. Until it is assigned, OpsIQ cannot tell which business it restricts, so it holds none of them back — assign it to the business it affects.
+          </p>
+          {assignError && <p className="text-destructive text-sm">{assignError}</p>}
+          <div className="flex gap-2 flex-wrap items-center">
+            <label htmlFor="compliance-assign-business" className="sr-only">Affected business</label>
+            <Select
+              id="compliance-assign-business"
+              value={choice}
+              onChange={(e) => setChoice(e.target.value)}
+              options={businesses.map((b) => ({ value: b.id, label: b.name }))}
+              placeholder="Choose a business"
+            />
+            <Button size="sm" onClick={assign} disabled={submitting}>{submitting ? "Assigning…" : "Assign affected business"}</Button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

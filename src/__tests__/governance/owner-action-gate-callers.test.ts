@@ -15,7 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
-import { budgetActionIntent } from "@/domain/owner-budget";
+import { budgetActionIntent, BUDGET_MARGIN_REPAIR_TITLES } from "@/domain/owner-budget";
 import { recoveryActionFindingCode } from "@/services/owner-home/owner-decision-candidates";
 import { hasExplicitOwnerIntent } from "@/domain/owner-spine/owner-imperatives";
 import { PROTECTIVE_INTENTS } from "@/domain/owner-mode/owner-action-gate-policy";
@@ -90,26 +90,48 @@ describe("every owner action-gate caller carries the action's intent", () => {
     }
   });
 
-  it("each caller records the gate's assessment only after its update is written", () => {
-    for (const f of callers) {
+  it("the gate is never reached through an alias or a renamed import (every call is visible to these checks)", () => {
+    for (const f of files) {
       const src = stripComments(readFileSync(f, "utf8"));
-      const gate = src.search(/\benforceOwnerActionGates\s*\(/);
-      const write = src.slice(gate).search(/\.\s*update\s*\(/);
-      const record = src.slice(gate).search(/\brecordOwnerGateAssessment\s*\(/);
-      expect(write, `${rel(f)} writes after the gate`).toBeGreaterThan(0);
-      expect(record, `${rel(f)} records the assessment`).toBeGreaterThan(write);
+      expect(/\benforceOwnerActionGates\s+as\s+\w|=\s*enforceOwnerActionGates\b(?!\s*\()|\[\s*["'`]enforceOwnerActionGates["'`]\s*\]/.test(src), rel(f)).toBe(false);
     }
   });
 
-  it("Budget: every plan decision type has an intent; withholding and evidence work is protective", () => {
-    const all: PlanDecisionType[] = ["APPROVE", "BLOCK", "PAUSE", "REDUCE", "INCREASE", "REALLOCATE", "INVESTIGATE", "DEFER", "ESCALATE", "COLLECT_EVIDENCE"];
-    for (const d of all) expect(budgetActionIntent(d), d).not.toBeNull();
-    for (const d of ["BLOCK", "PAUSE", "DEFER", "REDUCE", "INVESTIGATE", "COLLECT_EVIDENCE", "ESCALATE"] as const) {
-      expect(PROTECTIVE_INTENTS.has(budgetActionIntent(d)!), d).toBe(true);
+  it("at EVERY call, the caller records the gate's assessment only after its (compare-and-set) update is written", () => {
+    const WRITE = /\.\s*update(?:Many)?\s*\(|\bapplyGuardedActionUpdate\s*(?:<[^>]*>)?\s*\(/;
+    for (const f of callers) {
+      const src = stripComments(readFileSync(f, "utf8"));
+      CALL.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      let calls = 0;
+      while ((m = CALL.exec(src))) {
+        calls++;
+        const after = src.slice(m.index);
+        const write = after.search(WRITE);
+        const record = after.search(/\brecordOwnerGateAssessment\s*\(/);
+        expect(write, `${rel(f)} writes after the gate (call ${calls})`).toBeGreaterThan(0);
+        expect(record, `${rel(f)} records the assessment after the write (call ${calls})`).toBeGreaterThan(write);
+      }
+      expect(calls, rel(f)).toBeGreaterThan(0);
     }
-    for (const d of ["APPROVE", "INCREASE", "REALLOCATE"] as const) expect(budgetActionIntent(d)).toBe("GROW");
+  });
+
+  it("Budget: every plan decision type has an intent by PURPOSE; withholding and evidence work is protective; a margin repair is REPAIR", () => {
+    const all: PlanDecisionType[] = ["APPROVE", "BLOCK", "PAUSE", "REDUCE", "INCREASE", "REALLOCATE", "INVESTIGATE", "DEFER", "ESCALATE", "COLLECT_EVIDENCE"];
+    for (const d of all) expect(budgetActionIntent({ decisionType: d }), d).not.toBeNull();
+    for (const d of ["BLOCK", "PAUSE", "DEFER", "REDUCE", "INVESTIGATE", "COLLECT_EVIDENCE", "ESCALATE"] as const) {
+      expect(PROTECTIVE_INTENTS.has(budgetActionIntent({ decisionType: d })!), d).toBe(true);
+    }
+    for (const d of ["APPROVE", "INCREASE", "REALLOCATE"] as const) expect(budgetActionIntent({ decisionType: d })).toBe("GROW");
+    // Repricing an underpriced contract is an INCREASE whose purpose is repairing margin — never growth.
+    for (const title of Object.values(BUDGET_MARGIN_REPAIR_TITLES)) expect(budgetActionIntent({ decisionType: "INCREASE", title }), title).toBe("REPAIR");
     // The documented legacy fallback: an unknown decision type → no intent (the domain's sensitivity applies).
-    expect(budgetActionIntent("LEGACY_TYPE")).toBeNull();
+    expect(budgetActionIntent({ decisionType: "LEGACY_TYPE" })).toBeNull();
+  });
+
+  it("Budget: the action-link caller passes the action's own title with its decision type (purpose, not type alone)", () => {
+    const src = stripComments(readFileSync(join(ROOT, "src/services/owner-budget/action-link.service.ts"), "utf8"));
+    expect(src).toMatch(/budgetActionIntent\(\s*\{\s*decisionType:\s*action\.decisionType,\s*title:\s*action\.title\s*\}\s*\)/);
   });
 
   it("Recovery: a linked finding's code is used, and every Recovery diagnosis code is explicitly classified", () => {

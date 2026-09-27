@@ -17,10 +17,11 @@ import {
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
 import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
 import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceActionUpdateInput } from "@/domain/owner-finance/validation";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export async function updateFinanceAction(
   actionId: string,
@@ -47,9 +48,6 @@ export async function updateFinanceAction(
     }
     const to = input.status;
 
-    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
-    gateAssessment = await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "finance", toStatus: to, findingCode: action.findingCode, findingId: action.findingId });
-
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
       const evidence =
@@ -62,6 +60,10 @@ export async function updateFinanceAction(
       }
       data.completedAt = now;
     }
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition, after
+    // the request's own validation (a request that fails it never records a block).
+    gateAssessment = await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "finance", toStatus: to, findingCode: action.findingCode, findingId: action.findingId });
     data.status = to;
   }
 
@@ -69,11 +71,13 @@ export async function updateFinanceAction(
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
-  const updated = await db.ownerFinanceAction.update({
-    where: { id: actionId },
-    data,
-    select: { id: true, status: true, assignedTo: true, businessId: true, cycleId: true },
+  // Compare-and-set on the status the transition was validated against (a double submission or a
+  // concurrent change never applies a stale transition twice).
+  const { row: updated, transitioned } = await applyGuardedActionUpdate<typeof action>(db.ownerFinanceAction, {
+    entity: "OwnerFinanceAction", actionId, workspaceId, expectedStatus: action.status, toStatus: input.status, data,
   });
+  // An identical concurrent request already applied this transition: nothing more to record or trigger.
+  if (!transitioned) return updated;
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_FINANCE_ACTION_UPDATED,
@@ -106,7 +110,7 @@ export async function updateFinanceAction(
       // diagnosis no longer raises stays on an older cycle, and re-diagnosing that cycle's
       // snapshot would roll every finance surface back to stale data. Amendments still followed.
       const cycle = await db.ownerFinanceCycle.findFirst({
-        where: { businessId: updated.businessId, workspaceId },
+        where: { businessId: updated.businessId, workspaceId, ...currentEvidenceWhere(new Date()) },
         orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
         select: { snapshotId: true },
       });

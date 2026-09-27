@@ -14,6 +14,7 @@ import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
+import { SCHEDULER_SYSTEM_ACTOR, toAuditActor } from "@/domain/owner-budget/system-actor";
 
 export type RiskCategory =
   | "OPERATIONAL"
@@ -154,17 +155,26 @@ export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
     where: { id: input.riskId, workspaceId: input.workspaceId },
   });
   if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
+  // A status change follows the same lifecycle as a review (VALID_REVIEW_TRANSITIONS): a closed risk is
+  // never silently reopened or re-labelled by a generic edit.
+  if (input.status !== undefined && input.status !== existing.status) {
+    const allowed = VALID_REVIEW_TRANSITIONS[existing.status] ?? [];
+    if (!allowed.includes(input.status)) {
+      throw new ValidationError(`Illegal risk transition: ${existing.status} → ${input.status}. Allowed: ${allowed.join(", ") || "none"}`);
+    }
+  }
 
   const likelihood = input.likelihood !== undefined ? clamp100(input.likelihood) : existing.likelihood;
   const impact = input.impact !== undefined ? clamp100(input.impact) : existing.impact;
   const severity = computeSeverity(likelihood, impact);
 
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Compare-and-set on the fields the audit records as "previous": a concurrent change between the read
-    // above and this write would otherwise record a transition that never happened (the owner decision's
-    // "what changed" reads these audit payloads). A lost race is a 409 — reload and retry.
+    // Compare-and-set on the row version as read (updatedAt changes on every write): a concurrent change to
+    // ANY field between the read above and this write — status, residual risk, likelihood or impact the
+    // severity is recomputed from — is never overwritten, nor audited as a transition that never happened
+    // (the owner decision's "what changed" reads these audit payloads). A lost race is a 409.
     const guarded = await tx.businessRiskEntry.updateMany({
-      where: { id: input.riskId, workspaceId: input.workspaceId, status: existing.status, residualRisk: existing.residualRisk ?? null },
+      where: { id: input.riskId, workspaceId: input.workspaceId, updatedAt: existing.updatedAt },
       data: {
         ...(input.title !== undefined ? { title: input.title.trim() } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
@@ -335,7 +345,7 @@ const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
 export async function reviewRisk(input: ReviewRiskInput) {
   const existing = await db.businessRiskEntry.findFirst({
     where: { id: input.riskId, workspaceId: input.workspaceId },
-    select: { id: true, status: true, riskCode: true, severity: true, reviewDueDate: true },
+    select: { id: true, status: true, riskCode: true, severity: true, reviewDueDate: true, updatedAt: true },
   });
   if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
 
@@ -348,8 +358,10 @@ export async function reviewRisk(input: ReviewRiskInput) {
 
   const now = new Date();
   const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const updated = await tx.businessRiskEntry.update({
-      where: { id: input.riskId },
+    // Compare-and-set on the status the transition was validated against and the row version as read: a
+    // concurrent review is never overwritten nor audited from a status that no longer existed (409).
+    const guarded = await tx.businessRiskEntry.updateMany({
+      where: { id: input.riskId, workspaceId: input.workspaceId, status: existing.status, updatedAt: existing.updatedAt },
       data: {
         status: input.newStatus,
         reviewedAt: now,
@@ -358,6 +370,10 @@ export async function reviewRisk(input: ReviewRiskInput) {
         ...(input.reviewDueDate !== undefined ? { reviewDueDate: input.reviewDueDate } : {}),
       },
     });
+    if (guarded.count !== 1) {
+      throw new ConflictError("This risk was changed by another request. Reload and retry.");
+    }
+    const updated = await tx.businessRiskEntry.findFirstOrThrow({ where: { id: input.riskId, workspaceId: input.workspaceId } });
 
     let eventName: AuditEventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_REVIEW_COMPLETED;
     if (input.newStatus === "ACCEPTED") eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_ACCEPTED;
@@ -447,14 +463,22 @@ export async function reviewRisk(input: ReviewRiskInput) {
 
 // ─── Overdue risk alert evaluation ───────────────────────────────────────────
 //
-// Called best-effort from the owner now-view on every load (and from any other
-// evaluation seam that has a valid actorId). Frequency: per owner now-view request.
-// Limitation: no background scheduler — alerts surface only when the view is loaded.
+// A risk becomes overdue by time passing, not by a mutation, so this runs as an explicit process: the
+// scheduler's risk-review scan (scanOverdueRiskAlertsForWorkspace below, enqueued daily per workspace by
+// enqueueDueRiskReviewScanTasks) and the risk review mutation itself (reviewRisk raises or resolves the
+// alerts of the risk it changes). It is never run from a read: the owner Now View GET is
+// read-only.
 
+/**
+ * Raise a "Risk review overdue" alert (idempotent per risk) for each open, overdue, non-fixture risk, and
+ * resolve those alerts for risks since resolved/closed. `recipientUserId` receives the alerts; the
+ * resolution is audited as `auditActorId` (a human actor, or SCHEDULER_SYSTEM_ACTOR → a system event).
+ */
 export async function evaluateOverdueRiskAlerts(
   workspaceId: string,
-  actorId: string,
+  recipientUserId: string,
   now: Date = new Date(),
+  auditActorId: string = recipientUserId,
 ): Promise<void> {
   // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
   // isFixtureRecord: false — a QA blueprint's risk must never generate a real owner-visible
@@ -486,7 +510,7 @@ export async function evaluateOverdueRiskAlerts(
     for (const risk of overdueRisks) {
       await createAlert({
         workspaceId,
-        userId: actorId,
+        userId: recipientUserId,
         type: "blocked",
         channel: "in_app",
         severity: "high",
@@ -515,11 +539,41 @@ export async function evaluateOverdueRiskAlerts(
       select: { id: true },
     }).catch(() => [] as Array<{ id: string }>);
 
-    if (staleAlerts.length > 0) {
-      const { resolveAlert } = await import("@/services/alerts/alert-service");
-      for (const a of staleAlerts) {
-        await resolveAlert(a.id, workspaceId, actorId).catch(() => {});
-      }
+    for (const a of staleAlerts) {
+      // Compare-and-set on "still unresolved": a concurrent scan never resolves (or audits) it twice.
+      const res = await db.alert.updateMany({
+        where: { id: a.id, workspaceId, resolvedAt: null },
+        data: { resolvedAt: now, isRead: true },
+      }).catch(() => ({ count: 0 }));
+      if (res.count !== 1) continue;
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.ALERT_UPDATED,
+        ...toAuditActor(auditActorId),
+        entityType: "alert",
+        entityId: a.id,
+        workspaceId,
+        payload: { resolvedAt: now.toISOString(), reason: "risk_resolved" },
+        visibility: "internal",
+      }).catch(() => {});
     }
   }
+}
+
+/**
+ * The scheduler's risk-review scan for one workspace: alerts go to the workspace's active owner (the
+ * earliest-added active owner membership); resolutions are audited as a system event. Returns what it
+ * did so the task reports honestly (no owner ⇒ nothing can be addressed).
+ */
+export async function scanOverdueRiskAlertsForWorkspace(
+  workspaceId: string,
+  now: Date = new Date(),
+): Promise<{ recipientFound: boolean }> {
+  const owner = await db.workspaceMembership.findFirst({
+    where: { workspaceId, role: "owner", isActive: true, removedAt: null },
+    orderBy: { addedAt: "asc" },
+    select: { userId: true },
+  });
+  if (!owner) return { recipientFound: false };
+  await evaluateOverdueRiskAlerts(workspaceId, owner.userId, now, SCHEDULER_SYSTEM_ACTOR);
+  return { recipientFound: true };
 }

@@ -14,7 +14,7 @@ import { listBusinesses, getBusiness } from "@/services/founder-recovery/busines
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface CashflowDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -80,7 +80,7 @@ export async function getCashflowDashboard(
       orderBy: { periodEnd: "desc" },
     }),
     db.ownerCashflowCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(new Date()) },
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,

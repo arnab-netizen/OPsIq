@@ -76,7 +76,7 @@ export interface DecisionMemoryResult {
 
 const MIN_SUMMARY_LENGTH = 10;
 const MIN_CONTEXT_LENGTH = 10;
-const MIN_CHANGED_CONTEXT_LENGTH = 20;
+export const MIN_CHANGED_CONTEXT_LENGTH = 20;
 
 // MEM-RULE-1: summary must be non-trivial
 // MEM-RULE-2: contextSnapshot must be non-trivial

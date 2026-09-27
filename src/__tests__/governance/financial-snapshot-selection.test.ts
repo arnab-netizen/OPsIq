@@ -200,8 +200,10 @@ describe("financial snapshot selection is centralised", () => {
 
   it("the selector orders by evidence period and excludes superseded snapshots", async () => {
     const { currentEffectiveFinancialSnapshotQuery } = await import("@/services/owner-finance/financial-snapshot-selection");
-    const q = currentEffectiveFinancialSnapshotQuery({ workspaceId: "w", businessId: "b" }, { id: true });
-    expect(q.where).toEqual({ workspaceId: "w", businessId: "b", supersededById: null });
+    const now = new Date("2026-06-30T00:00:00.000Z");
+    const q = currentEffectiveFinancialSnapshotQuery({ workspaceId: "w", businessId: "b" }, { id: true }, now);
+    // Current = unsuperseded AND its period has ended (a future-dated period is not current evidence).
+    expect(q.where).toEqual({ workspaceId: "w", businessId: "b", supersededById: null, periodEnd: { lte: now } });
     expect(q.orderBy[0]).toEqual({ periodEnd: "desc" });
     expect(q.select).toEqual({ id: true });
   });

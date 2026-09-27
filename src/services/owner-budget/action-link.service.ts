@@ -25,6 +25,7 @@ import {
 import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome, budgetActionIntent } from "@/domain/owner-budget";
 import type { UpdatedOwnerPlan } from "@/domain/owner-budget";
 import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
 
 export interface SyncBudgetActionsInput {
   plan: UpdatedOwnerPlan;
@@ -161,23 +162,6 @@ export async function updateBudgetAction(
     const to = input.status as RecoveryActionStatus;
     if (!canTransition(from, to)) throw new ValidationError(`Invalid budget action transition: ${from} → ${to}`);
 
-    // GAP-BUDGET-01 — a budget action is a material owner-domain (finance/spend) decision.
-    // It MUST pass the centralized owner-action safety gate before a material transition
-    // (in_progress/completed): cash safety, cashflow, compliance/professional-review and
-    // do-not-repeat. Without this a budget action could be completed while the Jarvis gate
-    // would 409-block the same transition on the owner-finance service. Registered in
-    // material-gate-registry.ts so dropping this call fails CI.
-    // Its intent comes from its plan decision type (budgetActionIntent): protecting cash (freeze, defer,
-    // reduce) and collecting evidence are never held back by the cash danger they respond to.
-    gateAssessment = await enforceOwnerActionGates({
-      workspaceId,
-      businessId: action.businessId,
-      actionId,
-      domain: "finance",
-      toStatus: to,
-      intent: budgetActionIntent(action.decisionType),
-    });
-
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
       const evidence = input.completionEvidence ?? (Array.isArray(action.completionEvidence) ? action.completionEvidence : null);
@@ -187,13 +171,38 @@ export async function updateBudgetAction(
       data.completedAt = now;
       completedNow = true;
     }
+
+    // GAP-BUDGET-01 — a budget action is a material owner-domain (finance/spend) decision.
+    // It MUST pass the centralized owner-action safety gate before a material transition
+    // (in_progress/completed): cash safety, cashflow, compliance/professional-review and
+    // do-not-repeat. Without this a budget action could be completed while the Jarvis gate
+    // would 409-block the same transition on the owner-finance service. Registered in
+    // material-gate-registry.ts so dropping this call fails CI.
+    // Its intent comes from its business purpose, then its plan decision type (budgetActionIntent):
+    // repricing a loss-making contract, protecting cash (freeze, defer, reduce) and collecting evidence are
+    // never held back by the danger they respond to.
+    gateAssessment = await enforceOwnerActionGates({
+      workspaceId,
+      businessId: action.businessId,
+      actionId,
+      domain: "finance",
+      toStatus: to,
+      intent: budgetActionIntent({ decisionType: action.decisionType, title: action.title }),
+    });
     data.status = to;
   }
   if (input.assignedTo !== undefined) data.assignedTo = input.assignedTo;
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
-  let updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data });
+  // Compare-and-set on the status the transition was validated against: a double-submitted completion
+  // never records a second outcome (which would skew priorFailures) or a second audit.
+  const guarded = await applyGuardedActionUpdate<typeof action>(db.ownerBudgetAction, {
+    entity: "OwnerBudgetAction", actionId, workspaceId, expectedStatus: action.status, toStatus: input.status, data,
+  });
+  let updated = guarded.row;
+  // An identical concurrent request already applied this transition: nothing more to record.
+  if (!guarded.transitioned) return updated;
   // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
   if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
 

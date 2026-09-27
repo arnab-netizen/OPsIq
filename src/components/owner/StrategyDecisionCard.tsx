@@ -46,6 +46,8 @@ export interface StrategyNextStepRow {
  */
 export interface StrategyReplacedStep {
   replacedBecause: string;
+  /** The owner action gate holds the plan's step back (replacedBecause then says by what and what clears it). */
+  held?: boolean;
   step: { title: string; description: string } | null;
 }
 
@@ -157,9 +159,15 @@ export function StrategyDecisionCard({
           ) : (
             <div className="font-semibold">Nothing in Strategy is open right now.</div>
           )}
-          <p className="text-xs text-muted-foreground mt-2" data-testid="strategy-decision-step-replaced">
-            The plan&rsquo;s own step, &ldquo;{decision.primaryStep.title}&rdquo;, is not your next step: {replacedStep.replacedBecause}
-          </p>
+          {replacedStep.held ? (
+            <p className="text-xs text-muted-foreground mt-2" data-testid="strategy-decision-step-held">
+              The plan&rsquo;s own step, &ldquo;{decision.primaryStep.title}&rdquo;: {replacedStep.replacedBecause}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2" data-testid="strategy-decision-step-replaced">
+              The plan&rsquo;s own step, &ldquo;{decision.primaryStep.title}&rdquo;, is not your next step: {replacedStep.replacedBecause}
+            </p>
+          )}
         </div>
       ) : (
       <div className="rounded-md bg-muted/40 p-3" data-testid="strategy-next-step">

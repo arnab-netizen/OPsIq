@@ -13,7 +13,7 @@ import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView
 import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domain/owner-mode/owner-dashboard";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
 const querySchema = z.object({
@@ -55,14 +55,14 @@ interface DashboardRecommendationRow {
 interface SurvivalCycleReader {
   ownerFinanceCycle: {
     findFirst(args: {
-      where: { businessId: string; workspaceId: string };
+      where: { businessId: string; workspaceId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
       select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
     }): Promise<{ survivalState: string | null; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
   };
   ownerCashflowCycle: {
     findFirst(args: {
-      where: { businessId: string; workspaceId: string };
+      where: { businessId: string; workspaceId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
       select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
     }): Promise<{ cashflowState: string | null; snapshot?: { periodEnd: Date } | null } | null>;
@@ -126,6 +126,9 @@ export async function buildOwnerDashboardPayload(
   const businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }> =
     await listBusinesses(workspaceId);
 
+  // Current evidence is judged relative to one `now` for every business (future periods excluded).
+  const evidenceNow = new Date();
+
   // QUERY 2: Per-business — health status from the shared cash/finance survival reading + cross-domain action counts
   const businessSnapshots = await Promise.all(
     businesses.map(async (biz, idx) => {
@@ -133,12 +136,12 @@ export async function buildOwnerDashboardPayload(
       const [progress, financeCycle, cashCycle] = await Promise.all([
         getOwnerBusinessProgress(biz.id, workspaceId, db as never),
         reader.ownerFinanceCycle.findFirst({
-          where: { businessId: biz.id, workspaceId },
+          where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
           select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } },
         }),
         reader.ownerCashflowCycle.findFirst({
-          where: { businessId: biz.id, workspaceId },
+          where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
           select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
         }),
@@ -150,7 +153,7 @@ export async function buildOwnerDashboardPayload(
       const survival = currentCashFinanceReading(
         cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
         financeCycle ? { state: financeCycle.survivalState, snapshot: financeCycle.snapshot } : null,
-        Date.now()
+        evidenceNow.getTime()
       ).gateState;
       const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
         survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"

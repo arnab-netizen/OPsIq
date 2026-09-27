@@ -17,8 +17,11 @@
  *     order (a critical risk attributable to this business, or a notification about a risk/compliance
  *     breach that is a candidate) is not repeated here.
  *
- * The consultant Decision Inbox (OperatorItem, ENGAGEMENT_VIEW) is not an owner surface: owners do
- * not hold that capability, so this page neither fetches nor presents it.
+ * Consulting decisions requiring attention — ONLY for a user with engagement/consulting access
+ * (ENGAGEMENT_VIEW, canViewConsultingDecisions): the consultant Decision Inbox's blocked decisions
+ * (/api/decisions/list), in their own separately labelled, unnumbered section after the canonical
+ * decision, linking to the Decision Inbox. They are never merged into the canonical order. A self-serve
+ * owner does not hold that capability, so for them this page never requests them.
  */
 
 import { useEffect, useState } from "react";
@@ -26,6 +29,8 @@ import Link from "next/link";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { Badge, CardDashboardSkeleton, EmptyState, ErrorState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { useCapabilities } from "@/context/capabilities-context";
+import { canViewConsultingDecisions } from "@/policies/presentation-visibility";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
 import { ownerDecisionCandidateIdForEntity, ownerTargetHref, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
@@ -128,6 +133,12 @@ interface GovernedWork {
   actionLabel: string;
 }
 
+interface ConsultingDecision {
+  id: string;
+  title: string;
+  blockReason: string | null;
+}
+
 const RADAR_SOURCE_LABEL: Record<RadarItem["source"], string> = {
   risk: "Open risks",
   alert: "Unread notifications",
@@ -135,6 +146,8 @@ const RADAR_SOURCE_LABEL: Record<RadarItem["source"], string> = {
 
 export default function OwnerPrioritiesPage() {
   const { activeBusinessId, needsBusinessRecovery, businesses } = useActiveBusiness();
+  const showConsultingDecisions = canViewConsultingDecisions(useCapabilities());
+  const [consultingDecisions, setConsultingDecisions] = useState<ConsultingDecision[]>([]);
   const [decision, setDecision] = useState<CurrentOwnerDecision | null>(null);
   const [governed, setGoverned] = useState<GovernedWork | null>(null);
   const [radar, setRadar] = useState<RadarItem[]>([]);
@@ -150,10 +163,12 @@ export default function OwnerPrioritiesPage() {
       // Governed work shown beside the canonical decision must belong to the SAME business
       // (the same opt-in business-scoping the Cockpit uses).
       const nowViewQs = activeBusinessId ? `?businessId=${encodeURIComponent(activeBusinessId)}&restrictExecutionToBusiness=true` : "";
-      const [risksRes, alertsRes, nowViewRes] = await Promise.all([
+      const [risksRes, alertsRes, nowViewRes, decisionsRes] = await Promise.all([
         api("/api/owner/risks"),
         api("/api/owner/alerts?unreadOnly=true&limit=20"),
         api(`/api/owner/now-view${nowViewQs}`),
+        // Consulting access only — never requested for a self-serve owner.
+        showConsultingDecisions ? api("/api/decisions/list?status=blocked&limit=20") : Promise.resolve(null),
       ]);
       if (cancelled) return;
       if (risksRes === null && alertsRes === null && nowViewRes === null) {
@@ -199,12 +214,19 @@ export default function OwnerPrioritiesPage() {
         items.push({ id: `alert-${a.id}`, source: "alert", title: a.message, why: null, tier: ALERT_TIER[a.severity] ?? "attention", actionLabel: "See alert", actionHref: "/owner/alerts" });
       }
       setRadar(items);
+      setConsultingDecisions(
+        ((decisionsRes?.decisions ?? []) as Array<{ id: string; title: string; blockReason: string | null }>).map((d) => ({
+          id: d.id,
+          title: d.title,
+          blockReason: d.blockReason ?? null,
+        })),
+      );
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [activeBusinessId]);
+  }, [activeBusinessId, showConsultingDecisions]);
 
   if (loading) return <PageContainer narrow><CardDashboardSkeleton label="Loading your priorities" sections={2} /></PageContainer>;
   if (error) return <PageContainer narrow><ErrorState message={classifyOperatorError(new Error(error), { context: "load" }).operatorMessage} onRetry={() => window.location.reload()} /></PageContainer>;
@@ -304,7 +326,25 @@ export default function OwnerPrioritiesPage() {
         </section>
       )}
 
-      {attention.length === 0 && !governed && radarGroups.length === 0 && decision && decision.state !== "TARGET" && (
+      {showConsultingDecisions && consultingDecisions.length > 0 && (
+        <section data-testid="priorities-consulting-decisions" className="border-t border-border pt-4">
+          <h2 className="mb-1 text-sm font-semibold text-foreground">Consulting decisions requiring attention</h2>
+          <p className="mb-3 text-xs text-muted-foreground">Blocked decisions from your consulting work. They are handled in the Decision Inbox and are not part of the order above.</p>
+          <ul className="flex flex-col gap-3">
+            {consultingDecisions.map((d) => (
+              <li key={d.id} className="border-l-2 pl-4" style={{ borderColor: "var(--border)" }} data-testid="priority-consulting-decision">
+                <span className="block text-sm font-medium text-foreground">{d.title}</span>
+                {d.blockReason && <span className="mt-0.5 block text-xs text-muted-foreground">{d.blockReason}</span>}
+                <Link href="/dashboard/inbox" className="mt-1 inline-block text-xs font-medium text-[var(--primary-text)] underline hover:no-underline">
+                  Open the Decision Inbox →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {attention.length === 0 && !governed && radarGroups.length === 0 && consultingDecisions.length === 0 && decision && decision.state !== "TARGET" && (
         <p className="border-t border-border pt-4 text-sm text-muted-foreground">
           Nothing else needs your attention right now. OpsIQ re-checks as your data and work change.
         </p>

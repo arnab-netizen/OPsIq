@@ -34,25 +34,57 @@ export function continuityKey(a: ContinuityKeyed): string {
 }
 
 /**
+ * The evidence period behind each side of a continuity decision (back-fill protection). `current` is the
+ * period the NEW cycle's snapshot describes; `of(prior)` the period of the cycle the engaged action is
+ * attached to now. Null ⇒ unknown (treated as not newer).
+ */
+export interface ContinuityPeriods<P> {
+  current: Date | null;
+  of: (prior: P) => Date | null;
+}
+
+/**
  * Split planned actions into those to create and those already covered by
  * engaged prior actions. Every engaged prior action with a matching key is
  * returned (with the planned action it continues) so all of them are re-attached.
+ *
+ * Back-fill: a diagnosis of an OLDER period (entered after a newer one) is historical diagnosis, not the
+ * current issue. An engaged action attached to a cycle of a NEWER period than the new cycle is "held" —
+ * it is neither re-attached to the historical cycle nor duplicated there (its continuity stays with the
+ * current cycle it is on). Without `periods` every match is carried (the pre-existing behaviour).
  */
 export function planWithContinuity<T extends ContinuityKeyed, P extends ContinuityKeyed & { id: string }>(
   planned: readonly T[],
-  engagedPrior: readonly P[]
-): { toCreate: T[]; carried: Array<{ prior: P; planned: T }> } {
+  engagedPrior: readonly P[],
+  periods?: ContinuityPeriods<P>
+): { toCreate: T[]; carried: Array<{ prior: P; planned: T }>; held: Array<{ prior: P; planned: T }> } {
   const byKey = new Map<string, P[]>();
   for (const p of engagedPrior) {
     const key = continuityKey(p);
     byKey.set(key, [...(byKey.get(key) ?? []), p]);
   }
+  const newerThanCurrent = (p: P): boolean => {
+    if (!periods?.current) return false;
+    const at = periods.of(p);
+    return at !== null && at.getTime() > periods.current.getTime();
+  };
   const toCreate: T[] = [];
   const carried: Array<{ prior: P; planned: T }> = [];
+  const held: Array<{ prior: P; planned: T }> = [];
   for (const a of planned) {
     const priors = byKey.get(continuityKey(a));
-    if (priors) for (const prior of priors) carried.push({ prior, planned: a });
+    if (priors) for (const prior of priors) (newerThanCurrent(prior) ? held : carried).push({ prior, planned: a });
     else toCreate.push(a);
   }
-  return { toCreate, carried };
+  return { toCreate, carried, held };
+}
+
+/** A Prisma-style `periodEnd` value (Date or ISO string) as a Date, or null. */
+export function periodEndOf(v: unknown): Date | null {
+  if (v instanceof Date) return v;
+  if (typeof v === "string") {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
 }

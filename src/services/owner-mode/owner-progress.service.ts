@@ -20,7 +20,7 @@
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 // ── Minimal Prisma-compatible interfaces (injectable for tests) ──────────────
 
@@ -189,14 +189,18 @@ export async function generateOwnerBusinessReview(
   db: OwnerProgressDb,
 ): Promise<OwnerBusinessReview> {
   const where = { businessId, workspaceId };
+  // Evidence-period domains: the current cycle is one whose period has ended (a future-dated period is not
+  // current evidence). Strategy evaluates a scenario, not a period.
+  const reviewedAtDate = new Date(reviewedAt);
+  const evidenceWhere = { ...where, ...currentEvidenceWhere(Number.isNaN(reviewedAtDate.getTime()) ? new Date() : reviewedAtDate) };
   const order = CURRENT_DIAGNOSIS_CYCLE_ORDER;
   const select = { status: true };
 
   const [financeCycle, salesCycle, operationsCycle, sopCycle, strategyCycle, progress] = await Promise.all([
-    db.ownerFinanceCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerSalesCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerOperationsCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerSopCycle.findFirst({ where, orderBy: order, select }),
+    db.ownerFinanceCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerSalesCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerOperationsCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerSopCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
     db.ownerStrategyCycle.findFirst({ where, orderBy: CURRENT_STRATEGY_CYCLE_ORDER, select }),
     getOwnerBusinessProgress(businessId, workspaceId, db),
   ]);

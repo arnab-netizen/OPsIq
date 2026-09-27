@@ -479,7 +479,8 @@
         "src/app/(authenticated)/owner/onboarding/page.tsx",
         "src/app/(authenticated)/owner/page.tsx",
         "src/domain/owner-spine/owner-decision.ts",
-        "src/services/owner-home/owner-decision-candidates.ts"
+        "src/services/owner-home/owner-decision-candidates.ts",
+        "src/__tests__/owner-decision/r7-canonical-blockers.test.ts"
       ],
       "componentTreeFileCount": 3
     },
@@ -503,6 +504,20 @@
           "method": "POST",
           "capabilities": [
             "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/do-not-repeat/:param",
+          "method": "PATCH",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/do-not-repeat/rules",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
           ]
         },
         {
@@ -584,6 +599,10 @@
         {
           "method": "GET",
           "path": "/api/owner/recovery-status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/owner/do-not-repeat/rules"
         }
       ],
       "writeApis": [
@@ -594,6 +613,10 @@
         {
           "method": "POST",
           "path": "/api/owner/constraints"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/owner/do-not-repeat/:param"
         },
         {
           "method": "POST",
@@ -620,6 +643,11 @@
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         },
         {
+          "endpoint": "/api/owner/do-not-repeat/:param",
+          "method": "PATCH",
+          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
+        },
+        {
           "endpoint": "/api/owner/goal-arbitration",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
@@ -637,7 +665,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 7
     },
     {
       "route": "/owner/compliance/[id]",
@@ -667,14 +695,32 @@
           "capabilities": [
             "OWNER_VIEW"
           ]
+        },
+        {
+          "endpoint": "/api/owner/businesses",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/compliance/:param/business",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "WORKSPACE_ONLY",
+      "businessContextBehavior": "NO_BUSINESS_CONTEXT",
       "readApis": [
         {
           "method": "GET",
           "path": "/api/owner/compliance/:param"
+        },
+        {
+          "method": "GET",
+          "path": "/api/owner/businesses"
         }
       ],
       "writeApis": [
@@ -685,6 +731,10 @@
         {
           "method": "POST",
           "path": "/api/owner/compliance/:param/tasks"
+        },
+        {
+          "method": "POST",
+          "path": "/api/owner/compliance/:param/business"
         }
       ],
       "majorActions": [
@@ -695,6 +745,11 @@
         },
         {
           "endpoint": "/api/owner/compliance/:param/tasks",
+          "method": "POST",
+          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
+        },
+        {
+          "endpoint": "/api/owner/compliance/:param/business",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         }
@@ -2384,9 +2439,11 @@
         "src/app/(authenticated)/owner/tasks/page.tsx",
         "src/app/(authenticated)/owner/wealth/page.tsx",
         "src/domain/owner-mode/owner-data-hub.ts",
-        "src/domain/owner-spine/owner-decision.ts",
         "src/services/owner-home/owner-decision-candidates.ts",
-        "src/services/workspace/employee-lifecycle.service.ts"
+        "src/services/workspace/employee-lifecycle.service.ts",
+        "src/__tests__/owner-decision/priorities-consulting-decisions.test.tsx",
+        "src/__tests__/owner-decision/r7-canonical-blockers.test.ts",
+        "src/__tests__/owner-decision/r7-remediation.db.test.ts"
       ],
       "componentTreeFileCount": 6
     },
@@ -2450,6 +2507,13 @@
           "capabilities": [
             "OWNER_MANAGE"
           ]
+        },
+        {
+          "endpoint": "/api/decisions/list",
+          "method": "GET",
+          "capabilities": [
+            "ENGAGEMENT_VIEW"
+          ]
         }
       ],
       "previewState": "HIDDEN_FOR_SAFETY",
@@ -2466,6 +2530,10 @@
         {
           "method": "GET",
           "path": "/api/owner/risks"
+        },
+        {
+          "method": "GET",
+          "path": "/api/decisions/list"
         }
       ],
       "writeApis": [],
@@ -4220,6 +4288,20 @@
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
     {
+      "path": "/api/owner/compliance/[itemId]/business",
+      "sourceFile": "src/app/api/owner/compliance/[itemId]/business/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
       "path": "/api/owner/compliance/[itemId]/review",
       "sourceFile": "src/app/api/owner/compliance/[itemId]/review/route.ts",
       "httpMethods": [
@@ -4411,6 +4493,20 @@
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
     {
+      "path": "/api/owner/do-not-repeat/[ruleId]",
+      "sourceFile": "src/app/api/owner/do-not-repeat/[ruleId]/route.ts",
+      "httpMethods": [
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
       "path": "/api/owner/do-not-repeat",
       "sourceFile": "src/app/api/owner/do-not-repeat/route.ts",
       "httpMethods": [
@@ -4420,6 +4516,20 @@
         "OWNER_MANAGE"
       ],
       "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/do-not-repeat/rules",
+      "sourceFile": "src/app/api/owner/do-not-repeat/rules/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
       "scope": "business-scoped",
       "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
@@ -8347,6 +8457,19 @@
       "responseUsageNote": "Mechanically traced: stored via a `\"recoveryStatus\" in <rawVar>` presence check, then passed as a prop into a child component in the same traced tree that reads these fields directly (see deriveCockpitFieldsConsumed)."
     },
     {
+      "endpoint": "/api/owner/do-not-repeat/:param",
+      "method": "PATCH",
+      "sourceFile": "src/components/owner/OwnerDoNotRepeatPanel.tsx",
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "NO_EXPLICIT_BUSINESS_ID",
+        "note": "No businessId found in this call's URL or argument list."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "responseUsage": "NOT_VERIFIED",
+      "fieldsConsumed": []
+    },
+    {
       "endpoint": "/api/escalation/acknowledge",
       "method": "POST",
       "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
@@ -8425,6 +8548,19 @@
         "status",
         "reassessmentId (implied by REQUEST_REASSESSMENT branch)"
       ]
+    },
+    {
+      "endpoint": "/api/owner/do-not-repeat/rules",
+      "method": "GET",
+      "sourceFile": "src/components/owner/OwnerDoNotRepeatPanel.tsx",
+      "callSiteCount": 1,
+      "businessIdBehavior": {
+        "category": "QUERY_BUSINESS_ID",
+        "note": "Query string (direct)."
+      },
+      "failureBehavior": "NOT_VERIFIED",
+      "responseUsage": "NOT_VERIFIED",
+      "fieldsConsumed": []
     }
   ],
   "ownerActions": [
@@ -10448,6 +10584,13 @@
             "POST"
           ],
           "sourceFile": "src/app/api/owner/compliance/route.ts"
+        },
+        {
+          "path": "/api/owner/compliance/[itemId]/business",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/compliance/[itemId]/business/route.ts"
         }
       ],
       "currentOwnerUiPages": [
@@ -11418,6 +11561,32 @@
       "sourceFiles": [
         "src/app/api/owner/budget/override/route.ts",
         "src/app/api/owner/budget/working-capital/route.ts"
+      ]
+    },
+    {
+      "family": "do_not_repeat_rules",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/do-not-repeat/[ruleId]",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/do-not-repeat/[ruleId]/route.ts"
+        },
+        {
+          "path": "/api/owner/do-not-repeat",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/do-not-repeat/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/cockpit"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/do-not-repeat/[ruleId]/route.ts",
+        "src/app/api/owner/do-not-repeat/route.ts"
       ]
     }
   ],
@@ -12560,7 +12729,7 @@
     "NO_BUSINESS_CONTEXT": 11,
     "NOT_APPLICABLE": 6,
     "SHARED_ACTIVE_BUSINESS": 28,
-    "WORKSPACE_ONLY": 2
+    "WORKSPACE_ONLY": 1
   },
   "businessContextFindings": [],
   "publicRoutesTouchedBySharedComponents": [

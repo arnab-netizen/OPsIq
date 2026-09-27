@@ -79,7 +79,7 @@ export async function getOwnerHome(
 
   // Spine evidence → canonical candidates: the SAME builder every domain page's local step uses.
   const [evidence, complianceItems, singleRealBusiness, gate] = await Promise.all([
-    loadOwnerSpineEvidence(workspaceId, businessId),
+    loadOwnerSpineEvidence(workspaceId, businessId, now),
     // This business's compliance obligations and the business-less ones (a null businessId is attributable
     // only when the workspace holds exactly one real business; otherwise it is surfaced for attribution —
     // below). Terminal items raise nothing.

@@ -77,7 +77,7 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
   let marginPct = input.marginPct ?? null;
   if (marginPct == null) {
     const snap = await deps.db.ownerFinancialSnapshot.findFirst(
-      currentEffectiveFinancialSnapshotQuery({ workspaceId: input.workspaceId, businessId: input.businessId }, { revenue: true, costOfGoods: true })
+      currentEffectiveFinancialSnapshotQuery({ workspaceId: input.workspaceId, businessId: input.businessId }, { revenue: true, costOfGoods: true }, now)
     );
     const gm = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
     marginPct = gm == null ? null : gm / 100; // screenOpportunity wants 0..1

@@ -76,7 +76,7 @@ function input(candidates: OwnerDecisionCandidate[], gate: OwnerGateConstraints 
 
 const gate = (over: Partial<OwnerGateConstraints>): OwnerGateConstraints => ({ ...NO_OWNER_GATE_CONSTRAINTS, ...over });
 const CAPACITY_DOWN = gate({ capacity: { status: "blocked", reason: "Oven: down", bottlenecks: ["Oven"] } });
-const CASH_AT_RISK = gate({ cash: { gateState: "AT_RISK", basis: "" } });
+const CASH_AT_RISK = gate({ cash: { gateState: "AT_RISK", basis: "", driver: "cash" } });
 const MARGIN_LOW = gate({ grossMarginPct: 5 });
 
 const scaleWinner = cand({ domain: "marketing", findingCode: "MKT_OPP_SCALE_WINNER", title: "Scale the winning campaign" });
@@ -127,13 +127,18 @@ describe("Policy 1 — the canonical decision never instructs what the gate woul
     }
   });
 
-  it("EXECUTE is not treated as GROW: constraints apply by what it consumes (SOP work consumes no capacity/cash-growth/margin)", () => {
+  it("EXECUTE is not treated as GROW: carrying out existing work adds no volume and commits no new spend — no capacity or margin hold, cash only at existential risk", () => {
     const sop = cand({ domain: "sop", findingCode: "SOP_HIGH_OVERDUE", title: "Clear overdue SOP tasks" });
-    const { holds } = canonicalEligibility([sop], { businessId: BIZ, workspaceId: WS, gate: gate({ capacity: CAPACITY_DOWN.capacity, cash: { gateState: "AT_RISK", basis: "" }, grossMarginPct: 5 }) });
+    const { holds } = canonicalEligibility([sop], { businessId: BIZ, workspaceId: WS, gate: gate({ capacity: CAPACITY_DOWN.capacity, cash: { gateState: "AT_RISK", basis: "", driver: "cash" }, grossMarginPct: 5 }) });
     expect(holds).toEqual([]);
-    // An EXECUTE step in a capacity-consuming domain is held while capacity is unsafe.
+    // An EXECUTE step in a capacity-consuming domain is not held by capacity either (it adds no volume)…
     const ops = cand({ domain: "operations", findingCode: "OPS_OPP_CLOSE_SOP_GAP", title: "Close the SOP gap on the line" });
-    expect(canonicalEligibility([ops], { businessId: BIZ, workspaceId: WS, gate: CAPACITY_DOWN }).holds.map((h) => h.code)).toEqual(["CAPACITY_BLOCKED"]);
+    expect(canonicalEligibility([ops], { businessId: BIZ, workspaceId: WS, gate: CAPACITY_DOWN }).holds).toEqual([]);
+    // …while a GROW step in the same domain is.
+    const grow = cand({ domain: "operations", findingCode: "OPS_OPP_USE_CAPACITY_HEADROOM", title: "Take on more work with the spare capacity" });
+    expect(canonicalEligibility([grow], { businessId: BIZ, workspaceId: WS, gate: CAPACITY_DOWN }).holds.map((h) => h.code)).toEqual(["CAPACITY_BLOCKED"]);
+    // Cash holds EXECUTE only at existential risk (the cash gate's GENERAL sensitivity).
+    expect(canonicalEligibility([sop], { businessId: BIZ, workspaceId: WS, gate: gate({ cash: { gateState: "INSOLVENT_RISK", basis: "", driver: "cash" } }) }).holds.map((h) => h.code)).toEqual(["CASH_SAFETY_BLOCKED"]);
   });
 
   it("an expired attributed compliance obligation holds every action; the compliance item itself is the target (no duplicate)", () => {
@@ -173,8 +178,8 @@ describe("Policy 1 — the canonical decision never instructs what the gate woul
     ];
     const states: OwnerGateConstraints[] = [
       NO_OWNER_GATE_CONSTRAINTS, CAPACITY_DOWN, CASH_AT_RISK, MARGIN_LOW,
-      gate({ cash: { gateState: "CRITICAL", basis: "" } }),
-      gate({ cash: { gateState: "INSOLVENT_RISK", basis: "" }, grossMarginPct: 1, capacity: CAPACITY_DOWN.capacity }),
+      gate({ cash: { gateState: "CRITICAL", basis: "", driver: "cash" } }),
+      gate({ cash: { gateState: "INSOLVENT_RISK", basis: "", driver: "cash" }, grossMarginPct: 1, capacity: CAPACITY_DOWN.capacity }),
       gate({ doNotRepeat: [{ domain: "marketing", match: "broad", findingId: null }, { domain: "operations", match: "broad", findingId: null }] }),
       gate({ expiredCompliance: { name: "Permit", kind: "permit" } }),
     ];

@@ -242,9 +242,12 @@ describe("[db] the ONE cash/finance reading — parity across Home, Now View, th
     expect(rb.nowCash).toBe("OK");
     expect(ra.gate).toBe("blocked");
     expect(rb.gate).toBe("allowed");
-    // A recommendation carries no business: with two, neither reading is used (AT_RISK policy: growth held, spend allowed).
+    // A Consulting recommendation carries no business: with two, the temporary fail-safe takes the WORST valid
+    // current state across them (A's CRITICAL) — never the latest-written business, never an average.
     expect(ra.rec).toBe("blocked");
-    expect((await consumers(ws, bb, "cash flow")).rec).toBe("allowed");
+    expect(rb.rec).toBe("blocked");
+    expect((await consumers(ws, bb, "cash flow")).rec).toBe("blocked");
+    expect((await consumers(ws, bb, "customer experience")).rec).toBe("allowed");
     await teardownOwnerBusiness(a);
     await teardownOwnerBusiness(bb);
   });

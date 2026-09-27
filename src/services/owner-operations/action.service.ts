@@ -17,6 +17,7 @@ import {
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
 import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
 import type { OperationsActionUpdateInput } from "@/domain/owner-operations/validation";
 
 export async function updateOperationsAction(
@@ -44,9 +45,6 @@ export async function updateOperationsAction(
     }
     const to = input.status;
 
-    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
-    gateAssessment = await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "operations", toStatus: to, findingCode: action.findingCode, findingId: action.findingId });
-
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
       const evidence =
@@ -59,6 +57,10 @@ export async function updateOperationsAction(
       }
       data.completedAt = now;
     }
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition, after
+    // the request's own validation (a request that fails it never records a block).
+    gateAssessment = await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "operations", toStatus: to, findingCode: action.findingCode, findingId: action.findingId });
     data.status = to;
   }
 
@@ -66,10 +68,13 @@ export async function updateOperationsAction(
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
-  const updated = await db.ownerOperationsAction.update({
-    where: { id: actionId },
-    data,
+  // Compare-and-set on the status the transition was validated against (a double submission or a
+  // concurrent change never applies a stale transition twice).
+  const { row: updated, transitioned } = await applyGuardedActionUpdate<typeof action>(db.ownerOperationsAction, {
+    entity: "OwnerOperationsAction", actionId, workspaceId, expectedStatus: action.status, toStatus: input.status, data,
   });
+  // An identical concurrent request already applied this transition: nothing more to record or trigger.
+  if (!transitioned) return updated;
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_OPERATIONS_ACTION_UPDATED,
@@ -96,7 +101,7 @@ export async function updateOperationsAction(
     // Attempt automatic re-diagnosis from the latest confirmed snapshot (best-effort; non-blocking).
     try {
       const latestSnapshot = await db.ownerOperationsSnapshot.findFirst({
-        where: { businessId: updated.businessId, workspaceId },
+        where: { businessId: updated.businessId, workspaceId, periodEnd: { lte: new Date() } },
         orderBy: { periodEnd: "desc" },
         select: { id: true },
       });

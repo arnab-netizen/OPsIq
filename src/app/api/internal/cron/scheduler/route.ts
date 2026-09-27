@@ -49,6 +49,7 @@ import {
   enqueueDueEmailRetryTasks,
   enqueueDueFinanceLearningBridgeTasks,
   enqueueDueReassessmentScanTasks,
+  enqueueDueRiskReviewScanTasks,
 } from "@/services/scheduler/scheduler-producers";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
@@ -87,15 +88,17 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   // ─── 1. Producers: enqueue canonical ScheduledTask rows for outstanding work ──
   try {
-    const [emailScan, financeScan, reassessmentScan] = await Promise.all([
+    const [emailScan, financeScan, reassessmentScan, riskReviewScan] = await Promise.all([
       enqueueDueEmailRetryTasks(),
       enqueueDueFinanceLearningBridgeTasks(),
       enqueueDueReassessmentScanTasks(),
+      enqueueDueRiskReviewScanTasks(),
     ]);
     results.producers = {
       emailRetry: emailScan,
       financeLearningBridge: financeScan,
       reassessmentScan,
+      riskReviewScan,
     };
     logger.info("Cron: producer scans complete", results.producers as Record<string, unknown>);
   } catch (err) {

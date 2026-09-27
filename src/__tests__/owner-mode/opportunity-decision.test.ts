@@ -122,7 +122,7 @@ describe("decideOpportunity", () => {
     };
     await decideOpportunity({ workspaceId: "ws1", businessId: "bizA", fitScore: 0.9, paymentRisk: "low" }, d as never);
     expect(captured.equip).toEqual({ workspaceId: "ws1", OR: [{ businessId: "bizA" }, { businessId: null }] });
-    expect(captured.snap).toEqual({ workspaceId: "ws1", businessId: "bizA", supersededById: null });
+    expect(captured.snap).toEqual({ workspaceId: "ws1", businessId: "bizA", supersededById: null, periodEnd: { lte: new Date("2026-06-28T00:00:00.000Z") } });
     // "Current" is the latest evidence PERIOD, never insertion time (an amendment of an older period is inserted later).
     expect(snapOrder).toEqual([{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }]);
   });

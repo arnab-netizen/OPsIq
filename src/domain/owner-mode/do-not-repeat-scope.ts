@@ -2,7 +2,7 @@
  * The ONE do-not-repeat scope taxonomy (pure).
  *
  * A "scope" do-not-repeat memory is keyed `scope:<area>`. Every producer and every reader builds that key
- * here — no file writes the `scope:` prefix by hand (src/__tests__/governance/do-not-repeat-scope.test.ts).
+ * here — no file writes the `scope:` prefix by hand (src/__tests__/governance/owner-dnr-scope-taxonomy.test.ts).
  *
  * Owner Mode: owner action domains are the scope areas. The cash area has two historical spellings
  * ("cash" — Now View's issue vocabulary — and "cashflow" — the owner domain); the canonical area is the

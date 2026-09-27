@@ -28,6 +28,7 @@ import type { EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
 import type { FinancialHealthState } from "@/domain/owner-finance/cash-safety-gate";
 import { grossMarginPctFrom } from "@/domain/owner-finance/margin-safety-gate";
 import {
+  appliesToBusiness,
   capacityConstraint,
   evaluateOwnerActionGate,
   expiredComplianceFor,
@@ -39,11 +40,11 @@ import {
 import { DNR_SCOPE_PREFIX, parseOwnerDnrKey } from "@/domain/owner-mode/do-not-repeat-scope";
 import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { ownerFindingIntent, type OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { financeSurvivalDriver } from "@/domain/owner-spine/owner-decision";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
 export { MATERIAL_ACTION_STATUSES, OWNER_MARGIN_ABSTENTION_CODE };
-export { OWNER_MARGIN_REQUIRED_DATA, CAPACITY_SENSITIVE_DOMAINS } from "@/domain/owner-mode/owner-action-gate-policy";
 
 interface ActionGateDb {
   clientAccount: PolicyDeps["db"]["clientAccount"];
@@ -53,22 +54,22 @@ interface ActionGateDb {
   ownerDoNotRepeatRule: {
     findMany(args: {
       where: Record<string, unknown>;
-      select: { memoryKey: true; changedContextExplanation: true };
-    }): Promise<Array<{ memoryKey: string; changedContextExplanation: string | null }>>;
+      select: { id: true; businessId: true; memoryKey: true; changedContextExplanation: true };
+    }): Promise<Array<{ id: string; businessId: string | null; memoryKey: string; changedContextExplanation: string | null }>>;
   };
   ownerEquipment: {
-    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>>;
+    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string; businessId: string | null }>>;
   };
   ownerFinanceCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string };
+      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
-    }): Promise<{ survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
+      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } }; findings: { select: { code: true } } };
+    }): Promise<{ survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null; findings?: Array<{ code: string }> } | null>;
   };
   ownerCashflowCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string };
+      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
       select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
     }): Promise<{ cashflowState: string; snapshot?: { periodEnd: Date } | null } | null>;
@@ -82,8 +83,9 @@ interface ActionGateDb {
 }
 
 /**
- * Business-scoped where (H1/H2 isolation): rows for THIS business OR recorded with no business, so one
- * business's data never blocks another. Falls back to workspace-only when no businessId is supplied.
+ * Business-scoped read (H1/H2 isolation): rows for THIS business OR recorded with no business; a
+ * business-less row then applies only when this business is the workspace's sole real business
+ * (appliesToBusiness) — one business's data never blocks another, and null never means "every business".
  */
 function bizScope(workspaceId: string, businessId: string | null, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return businessId
@@ -114,23 +116,29 @@ export async function loadOwnerGateConstraints(
   const now = (deps.now ?? (() => new Date()))();
   const mode = await resolveOwnerGateMode(workspaceId, { db: deps.db as unknown as PolicyDeps["db"], now: () => now });
   const scope = businessId ? { workspaceId, businessId } : null;
+  // Current evidence only: a period that has not ended by `now` is never the current reading.
+  const cycleWhere = scope ? { ...scope, ...currentEvidenceWhere(now) } : null;
   const [rules, fleet, finCycle, cashCycle, snap, complianceItems, realBusinesses] = await Promise.all([
     deps.db.ownerDoNotRepeatRule.findMany({
       where: bizScope(workspaceId, businessId, { memoryKey: { startsWith: DNR_SCOPE_PREFIX }, blocksRepetition: true, active: true }),
-      select: { memoryKey: true, changedContextExplanation: true },
+      select: { id: true, businessId: true, memoryKey: true, changedContextExplanation: true },
     }),
     deps.db.ownerEquipment.findMany({
       where: bizScope(workspaceId, businessId),
-      select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
+      select: { name: true, businessId: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
     }),
-    scope
-      ? deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } } })
+    cycleWhere
+      ? deps.db.ownerFinanceCycle.findFirst({
+          where: cycleWhere,
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } },
+        })
+      : Promise.resolve(null),
+    cycleWhere
+      ? deps.db.ownerCashflowCycle.findFirst({ where: cycleWhere, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, snapshot: { select: { periodEnd: true } } } })
       : Promise.resolve(null),
     scope
-      ? deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, snapshot: { select: { periodEnd: true } } } })
-      : Promise.resolve(null),
-    scope
-      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true }))
+      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true }, now))
       : Promise.resolve(null),
     deps.db.ownerComplianceItem.findMany({
       where: bizScope(workspaceId, businessId, { status: "active" }),
@@ -138,37 +146,38 @@ export async function loadOwnerGateConstraints(
     }),
     deps.db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 }),
   ]);
+  const soleRealBusinessId = realBusinesses.length === 1 ? realBusinesses[0].id : null;
+  const applies = (rowBusinessId: string | null) => appliesToBusiness(rowBusinessId, businessId, soleRealBusinessId);
 
   // Do-not-repeat memories without a changed-context override, parsed through the ONE scope taxonomy.
   const doNotRepeat: OwnerGateDoNotRepeatRule[] = [];
   for (const r of rules) {
+    if (!applies(r.businessId)) continue;
     if (r.changedContextExplanation && r.changedContextExplanation.trim()) continue;
     const parsed = parseOwnerDnrKey(r.memoryKey);
-    if (parsed) doNotRepeat.push(parsed);
+    if (parsed) doNotRepeat.push({ id: r.id, ...parsed });
   }
 
   // The ONE current cash/finance reading (current-cash-finance-reading.ts): the current diagnosis cycles,
   // arbitrated by evidence period; an amended-but-undiagnosed unsafe Finance reading still counts until
-  // it is re-diagnosed. No reading at all → nothing to enforce.
+  // it is re-diagnosed; figures that are not current are never safe. No reading at all → nothing to enforce.
   const reading = currentCashFinanceReading(
     cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
-    finCycle ? { state: finCycle.survivalState, snapshot: finCycle.snapshot } : null,
+    finCycle ? { state: finCycle.survivalState, snapshot: finCycle.snapshot, driver: financeSurvivalDriver(finCycle.findings) } : null,
     now.getTime()
   );
   const basis = reading.conflicting
     ? " (Cash flow and Finance disagree and neither is more current; the worse reading applies until they are reconciled)"
-    : reading.financeAmendedLastKnown && !reading.financeState
-      ? " (the last Finance diagnosis, whose figures were amended since; re-run the Finance diagnosis)"
-      : "";
+    : "";
 
   return {
     optedOut: mode === "OPTED_OUT",
     businessScoped: businessId !== null,
     doNotRepeat,
-    capacity: capacityConstraint(fleet, now),
-    cash: { gateState: (reading.gateState as FinancialHealthState | null) ?? null, basis },
+    capacity: capacityConstraint(fleet.filter((e) => applies(e.businessId)), now),
+    cash: { gateState: (reading.gateState as FinancialHealthState | null) ?? null, basis, driver: reading.gateDriver },
     grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
-    expiredCompliance: expiredComplianceFor(complianceItems, businessId, realBusinesses.length === 1, now),
+    expiredCompliance: expiredComplianceFor(complianceItems, businessId, soleRealBusinessId, now),
   };
 }
 

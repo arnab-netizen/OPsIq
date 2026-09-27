@@ -74,7 +74,7 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
   // legacy null-business rows reports those domains as missing (it never inflates REAL_DB readiness).
   // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
   const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes, reputationRow] = await Promise.all([
-    db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
+    db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId, periodEnd: { lte: new Date() } }, orderBy: { periodEnd: "desc" } }),
     db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId })),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
     db.ownerCapacitySnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" } }),
@@ -91,7 +91,7 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
       : Promise.resolve([] as Array<{ targetDomain: string | null }>),
     // Latest customer-reputation signal (additive). Defensive: a partial injected db may lack the model.
     (db as { ownerMetricSnapshot?: { findFirst: (a: unknown) => Promise<{ complaintCount: number | null; rewashCount: number | null; refundAmount: number | null } | null> } }).ownerMetricSnapshot?.findFirst
-      ? db.ownerMetricSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" }, select: { complaintCount: true, rewashCount: true, refundAmount: true } })
+      ? db.ownerMetricSnapshot.findFirst({ where: { workspaceId, businessId, periodEnd: { lte: new Date() } }, orderBy: { periodEnd: "desc" }, select: { complaintCount: true, rewashCount: true, refundAmount: true } })
       : Promise.resolve(null),
   ]);
   const confirmedIntakeDomains = (confirmedIntakes as Array<{ targetDomain: string | null }>)

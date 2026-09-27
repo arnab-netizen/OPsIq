@@ -28,6 +28,7 @@ function deps(opts: {
   compliance?: Array<{ kind: string; name: string; expiresAt: Date | null; businessId?: string | null }>;
 }) {
   const now = new Date("2026-06-28T00:00:00.000Z");
+  const periodEnd = new Date("2026-06-18T00:00:00.000Z");
   return {
     db: {
       clientAccount: {
@@ -39,12 +40,13 @@ function deps(opts: {
         update: vi.fn(),
       },
       ownerDoNotRepeatRule: {
-        findMany: vi.fn(async () => (opts.dnrRule ? [{ memoryKey: opts.dnrRule.memoryKey ?? "scope:marketing", changedContextExplanation: opts.dnrRule.changedContextExplanation }] : [])),
+        findMany: vi.fn(async () => (opts.dnrRule ? [{ id: "rule1", businessId: null, memoryKey: opts.dnrRule.memoryKey ?? "scope:marketing", changedContextExplanation: opts.dnrRule.changedContextExplanation }] : [])),
       },
       ownerBusiness: { findMany: vi.fn(async () => opts.businesses ?? [{ id: "biz1" }]) },
-      ownerEquipment: { findMany: vi.fn(async () => opts.equipment ?? []) },
-      ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState ? { survivalState: opts.survivalState, snapshot: { supersededById: opts.financeSuperseded ? "newer" : null } } : null)) },
-      ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cashflowState !== undefined ? (opts.cashflowState ? { cashflowState: opts.cashflowState } : null) : null)) },
+      ownerEquipment: { findMany: vi.fn(async () => (opts.equipment ?? []).map((e) => ({ businessId: null, ...e }))) },
+      // Current readings: a period that ended ten days before `now` (inside the freshness window).
+      ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState ? { survivalState: opts.survivalState, snapshot: { periodEnd: periodEnd, supersededById: opts.financeSuperseded ? "newer" : null }, findings: [] } : null)) },
+      ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cashflowState !== undefined ? (opts.cashflowState ? { cashflowState: opts.cashflowState, snapshot: { periodEnd } } : null) : null)) },
       ownerFinancialSnapshot: { findFirst: vi.fn(async () => opts.snapshot ?? null) },
       ownerComplianceItem: { findMany: vi.fn(async () => (opts.compliance ?? []).map((c) => ({ businessId: null, ...c }))) },
     },
@@ -53,23 +55,6 @@ function deps(opts: {
 }
 
 const base = { workspaceId: "ws1", businessId: "biz1", actionId: "act1" };
-
-describe("owner-action-gate — module contract assertions", () => {
-  it("enforceOwnerActionGates is a function", () => { expect(typeof enforceOwnerActionGates).toBe("function"); });
-  it("ConflictError is a function", () => { expect(typeof ConflictError).toBe("function"); });
-  it("emitAuditEvent is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
-  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
-  it("base is an object", () => { expect(typeof base).toBe("object"); });
-  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
-  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
-  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
-  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
-  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
-  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
-  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
-  it("typeof Number.isInteger equals function", () => { expect(typeof Number.isInteger).toBe("function"); });
-  it("typeof Math.max equals function", () => { expect(typeof Math.max).toBe("function"); });
-});
 
 describe("enforceOwnerActionGates", () => {
   it("no-ops on a non-material transition (assigned)", async () => {
@@ -159,7 +144,7 @@ describe("enforceOwnerActionGates", () => {
     const amended = deps({ survivalState: "INSOLVENT_RISK", financeSuperseded: true, cashflowState: "SAFE" });
     const err = await enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress" }, amended as never).catch((e) => e);
     expect(err).toBeInstanceOf(ConflictError);
-    expect(err.message).toMatch(/amended since; re-run the Finance diagnosis/);
+    expect(err.message).toMatch(/amended and not yet re-diagnosed/);
     // With cash absent too, the amended unsafe reading still applies (it is never dropped to "no data").
     const onlyAmended = deps({ survivalState: "INSOLVENT_RISK", financeSuperseded: true, cashflowState: null });
     await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress" }, onlyAmended as never)).rejects.toBeInstanceOf(ConflictError);
@@ -258,7 +243,7 @@ describe("enforceOwnerActionGates", () => {
     expect(captured.compliance).toEqual({ workspaceId: "ws1", OR: [{ businessId: "bizA" }, { businessId: null }], status: "active" });
     expect(captured.dnr.OR).toEqual([{ businessId: "bizA" }, { businessId: null }]);
     // snapshot business is required → scoped directly to the business
-    expect(captured.snapshot).toEqual({ workspaceId: "ws1", businessId: "bizA", supersededById: null });
+    expect(captured.snapshot).toEqual({ workspaceId: "ws1", businessId: "bizA", supersededById: null, periodEnd: { lte: new Date("2026-06-28T00:00:00.000Z") } });
     // "Current" is the latest evidence PERIOD, never insertion time (an amendment of an older period is inserted later).
     expect(snapshotOrder).toEqual([{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }]);
   });
@@ -318,11 +303,14 @@ describe("enforceOwnerActionGates", () => {
     });
   });
 
-  it("Budget — the protect-cash action (BLOCK → STABILISE) passes at CRITICAL cash; releasing spend (INCREASE → GROW) does not", async () => {
-    const { budgetActionIntent } = await import("@/domain/owner-budget");
+  it("Budget — intents by PURPOSE: protect-cash (BLOCK → STABILISE) and evidence pass at CRITICAL cash; releasing spend (INCREASE → GROW) does not; a margin-repair reprice (INCREASE) is REPAIR", async () => {
+    const { budgetActionIntent, BUDGET_MARGIN_REPAIR_TITLES } = await import("@/domain/owner-budget");
     const d = deps({ cashflowState: "CRITICAL", survivalState: "CRITICAL" });
-    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent("BLOCK") }, d as never)).resolves.toBeDefined();
-    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent("COLLECT_EVIDENCE") }, d as never)).resolves.toBeDefined();
-    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent("INCREASE") }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent({ decisionType: "BLOCK" }) }, d as never)).resolves.toBeDefined();
+    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent({ decisionType: "COLLECT_EVIDENCE" }) }, d as never)).resolves.toBeDefined();
+    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent({ decisionType: "INCREASE" }) }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    const reprice = Object.values(BUDGET_MARGIN_REPAIR_TITLES)[0];
+    expect(budgetActionIntent({ decisionType: "INCREASE", title: reprice })).toBe("REPAIR");
+    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent({ decisionType: "INCREASE", title: reprice }) }, d as never)).resolves.toBeDefined();
   });
 });

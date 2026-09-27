@@ -78,11 +78,13 @@ describe("the current cash/finance reading has one source", () => {
     ]);
   });
 
-  it("Consulting Mode's cash gate passes BOTH raw states to the pure worst-of gate and arbitrates nothing", () => {
+  it("Consulting Mode's cash gate takes the WORST of each business's raw states (pure worst-of) and arbitrates nothing", () => {
     for (const r of CONSULTING_WORST_OF) {
       const src = stripComments(readFileSync(join(ROOT, r), "utf8"));
-      expect(src, r).toMatch(/assertCashSafetyForPromotion\(\s*toState\(cashRow\?\.cashflowState\),\s*toState\(finRow\?\.survivalState\)/);
-      expect(src, r).not.toMatch(/\bcurrentCashFinanceReading\b|\bresolveCashFinanceSignal\b|gateState/);
+      // Per business: both raw states into the worst-of rule; across businesses: the worst; the pure gate gets it.
+      expect(src, r).toMatch(/consultingBusinessCashState\(\s*cashRow\?\.cashflowState,\s*finRow\?\.survivalState\s*\)/);
+      expect(src, r).toMatch(/const state = consultingWorstCashState\(perBusiness\);\s*[\s\S]*assertCashSafetyForPromotion\(\s*state,\s*state,/);
+      expect(src, r).not.toMatch(/\bcurrentCashFinanceReading\b|\bresolveCashFinanceSignal\b|gateState|\baverage\b|\breduce\(/);
     }
   });
 });

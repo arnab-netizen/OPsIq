@@ -19,7 +19,7 @@ import { baselineFindingInclude, financeMeasuredBaseline } from "./baseline.serv
 import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceVerifyInput } from "@/domain/owner-finance/validation";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export async function recordFinanceVerification(
   actionId: string,
@@ -106,7 +106,7 @@ export async function recordFinanceVerification(
       // diagnosis no longer raises stays on an older cycle, and re-diagnosing that cycle's
       // snapshot would roll every finance surface back to stale data. Amendments still followed.
       const cycle = await db.ownerFinanceCycle.findFirst({
-        where: { businessId: action.businessId, workspaceId },
+        where: { businessId: action.businessId, workspaceId, ...currentEvidenceWhere(new Date()) },
         orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
         select: { snapshotId: true },
       });

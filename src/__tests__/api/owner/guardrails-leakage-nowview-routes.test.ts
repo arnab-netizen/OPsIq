@@ -507,10 +507,10 @@ describe("[now-view] GET /api/owner/now-view — handler", () => {
     expect(mocks.getOwnerNowView.mock.calls[0][1]).toBe("biz-77");
   });
 
-  it("passes null businessId when not in query", async () => {
+  it("with no businessId in the query, reads the business the canonical decision was resolved for (never workspace-wide)", async () => {
     mocks.getOwnerNowView.mockResolvedValue(SAMPLE_NOW_VIEW);
     await nowViewGet(makeGetCtx(`https://x/api/owner/now-view`));
-    expect(mocks.getOwnerNowView.mock.calls[0][1]).toBeNull();
+    expect(mocks.getOwnerNowView.mock.calls[0][1]).toBe("biz-auto");
   });
 
   it("workspace isolation: verifiedWorkspaceId used, not URL param", async () => {

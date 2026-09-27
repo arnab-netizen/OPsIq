@@ -1606,9 +1606,17 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
           {doNotRepeatAnnotation?.blocked && (
             <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.holdsBackTarget ? "Do not repeat" : "Earlier result in this area"}</span>
-              {doNotRepeatAnnotation.areaOnly && (
+              {doNotRepeatAnnotation.areaOnly && !doNotRepeatAnnotation.holdsBackTarget && (
                 <p data-testid="cockpit-dnr-area-history" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
                   This is history from the same area, not a verdict on your main target. Do not repeat the approach that failed.
+                </p>
+              )}
+              {doNotRepeatAnnotation.holdsBackTarget && (
+                <p data-testid="cockpit-dnr-holds" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
+                  {doNotRepeatAnnotation.areaOnly
+                    ? "This rule holds back new growth steps in this area until you record what has changed."
+                    : "This rule holds back repeating this step until you record what has changed."}{" "}
+                  <a href="#do-not-repeat-rules" style={{ textDecoration: "underline" }}>Do-not-repeat rules</a>
                 </p>
               )}
               <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
@@ -1617,11 +1625,6 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
               <p data-testid="cockpit-dnr-reason" style={{ margin: "4px 0 0", fontSize: 13, color: "#92400e" }}>
                 {doNotRepeatAnnotation.blockedReason}
               </p>
-              {doNotRepeatAnnotation.changedContextCondition && (
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
-                  Allowed if: {doNotRepeatAnnotation.changedContextCondition}
-                </p>
-              )}
               {doNotRepeatAnnotation.legacyMatch && (
                 <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Matched by area scope (informational).</p>
               )}

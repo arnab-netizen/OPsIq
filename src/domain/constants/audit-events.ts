@@ -264,6 +264,7 @@ export const AUDIT_EVENTS = {
   // Jarvis 360 Slice 12–14 — memory / self-eval / compliance
   OWNER_DO_NOT_REPEAT_BLOCKED: "owner.do_not_repeat_blocked",
   OWNER_DO_NOT_REPEAT_RECORDED: "owner.do_not_repeat_recorded",
+  OWNER_DO_NOT_REPEAT_CONTEXT_CHANGED: "owner.do_not_repeat_context_changed",
   OWNER_SELF_EVALUATION_RECORDED: "owner.self_evaluation_recorded",
   OWNER_COMPLIANCE_REVIEW_REQUIRED: "owner.compliance_review_required",
   // Jarvis 360 gap-closure — live owner-loop wiring
@@ -574,6 +575,7 @@ export const AUDIT_EVENTS = {
   OWNER_COMPLIANCE_REVIEW_COMPLETED: "owner.compliance_review_completed",
   OWNER_COMPLIANCE_BREACH_RECORDED: "owner.compliance_breach_recorded",
   OWNER_COMPLIANCE_TASK_LINKED: "owner.compliance_task_linked",
+  OWNER_COMPLIANCE_BUSINESS_ASSIGNED: "owner.compliance_business_assigned",
   OWNER_KPI_OWNERSHIP_ASSIGNED: "owner.kpi_ownership_assigned",
   OWNER_KPI_REVIEWED: "owner.kpi_reviewed",
   OWNER_DECISION_CONFIDENCE_RECORDED: "owner.decision_confidence_recorded",

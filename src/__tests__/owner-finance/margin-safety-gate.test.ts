@@ -92,7 +92,7 @@ describe("enforceMarginSafetyForPromotion", () => {
     const deps = depsFor("pricing discount policy", 100, 70);
     await enforceMarginSafetyForPromotion("rec1", "ws1", deps);
     const args = (deps.db.ownerFinancialSnapshot.findFirst as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz-1", supersededById: null });
+    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz-1", supersededById: null, periodEnd: { lte: expect.any(Date) } });
     expect(args.orderBy[0]).toEqual({ periodEnd: "desc" });
   });
 
@@ -113,7 +113,7 @@ describe("enforceMarginSafetyForPromotion", () => {
     const deps = depsFor("pricing discount policy", null, null, ["biz-1"]);
     await expect(enforceMarginSafetyForPromotion("rec1", "ws1", deps)).resolves.toBeUndefined();
     const args = (deps.db.ownerFinancialSnapshot.findFirst as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz-1", supersededById: null });
+    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz-1", supersededById: null, periodEnd: { lte: expect.any(Date) } });
   });
 
   it("skips entirely for non-pricing recommendations (no snapshot read)", async () => {

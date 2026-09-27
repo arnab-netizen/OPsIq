@@ -73,7 +73,7 @@ import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/servi
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 import { financeSurvivalDriver, type CurrentOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
@@ -164,7 +164,11 @@ interface GuidanceDb {
     findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean>; orderBy: Record<string, unknown>; take: number }): Promise<MetricSnapshotForTrend[]>;
   };
   ownerSupplierInventorySnapshot: { findFirst(args: unknown): Promise<SupplierRow | null> };
-  ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
+  ownerBusiness: {
+    findFirst(args: unknown): Promise<BusinessRow | null>;
+    /** Present on the live client: resolves the workspace's sole real business when no business is given. */
+    findMany?(args: unknown): Promise<Array<{ id: string }>>;
+  };
   proof: {
     count(args: unknown): Promise<number>;
     /** Optional — present on the live client; enables anti-gaming + credibility + timing analytics. */
@@ -870,17 +874,32 @@ export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null }> {
-  const scope = businessId ? { workspaceId, businessId } : { workspaceId };
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
   const nowDate = new Date(deps.now());
+  // Business-scoped evidence (cash, Finance, workload, capacity, metrics, supplier) is read for ONE business,
+  // never aggregated across businesses: the requested business; with none requested, the workspace's sole
+  // real business; with several (or none), no business-scoped evidence at all — never whichever business
+  // wrote last. (A DI client without ownerBusiness.findMany is a single-business fixture by construction.)
+  let scopedBusinessId: string | null = businessId;
+  if (!scopedBusinessId && deps.db.ownerBusiness.findMany) {
+    const real = await deps.db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 });
+    scopedBusinessId = real.length === 1 ? real[0].id : null;
+  }
+  const unscopedLegacy = !businessId && !deps.db.ownerBusiness.findMany;
+  const scope: { workspaceId: string; businessId?: string } | null = scopedBusinessId
+    ? { workspaceId, businessId: scopedBusinessId }
+    : unscopedLegacy ? { workspaceId } : null;
+  const none = Promise.resolve(null);
+  // A current cycle is one whose evidence period has ended (current-diagnosis-cycle.ts currentEvidenceWhere).
+  const cycleScope = scope ? { ...scope, ...currentEvidenceWhere(nowDate) } : null;
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } } }),
+    cycleScope ? deps.db.ownerCashflowCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }) : none,
+    cycleScope ? deps.db.ownerFinanceCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } } }) : none,
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -889,13 +908,15 @@ export async function assembleGuidanceContext(
     // most recently wrote a workload/capacity/supplier snapshot, presenting that business's real
     // problem (or lack of one) as this business's own.
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
-    deps.db.ownerWorkloadSnapshot.findFirst({ where: scope, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
-    deps.db.ownerCapacitySnapshot.findFirst({ where: scope, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
-    deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }),
-    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: scope, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
-    businessId
-      ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
-      : deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } }),
+    scope ? deps.db.ownerWorkloadSnapshot.findFirst({ where: scope, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }) : none,
+    scope ? deps.db.ownerCapacitySnapshot.findFirst({ where: scope, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }) : none,
+    scope ? deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }) : none,
+    scope ? deps.db.ownerSupplierInventorySnapshot.findFirst({ where: scope, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }) : none,
+    scopedBusinessId
+      ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: scopedBusinessId }, select: { businessType: true } })
+      : unscopedLegacy
+        ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } })
+        : none,
     safeCount(deps.db.proof.count({ where: { workspaceId, status: { in: OVERDUE_PROOF_STATUSES }, createdAt: { lt: overdueBefore } } })),
     safeCount(deps.db.ownerActionOutcome.count({ where: { workspaceId, OR: [{ outcomeStatus: OPEN_OUTCOME_STATUS }, { measurementPeriodEnd: { lt: nowDate } }] } })),
     safeCount(deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } })),
@@ -935,7 +956,7 @@ export async function assembleGuidanceContext(
   // safety gates use) arbitrates them — see current-cash-finance-reading.ts / cash-finance-conflict.ts.
   const cashFinanceResolution = currentCashFinanceReading(
     cash ? { state: cash.cashflowState, snapshot: cash.snapshot } : null,
-    fin ? { state: fin.survivalState, snapshot: fin.snapshot } : null,
+    fin ? { state: fin.survivalState, snapshot: fin.snapshot, driver: financeSurvivalDriver(fin.findings) } : null,
     deps.now()
   );
   const cashState: string | undefined = cashFinanceResolution.cashState ?? undefined;
@@ -1172,6 +1193,8 @@ export async function assembleGuidanceContext(
     cashFinanceEffectiveState: cashFinanceResolution.effectiveState,
     avgActiveMargin,
     pipelineSummary,
+    // The ONE business whose evidence was read (null ⇒ none): later business-scoped reads use the same scope.
+    evidenceScope: scope,
   };
 }
 
@@ -1828,24 +1851,21 @@ export interface GetOwnerNowViewOptions {
   ownerDecision?: CurrentOwnerDecision | null;
 }
 
-/** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
+/**
+ * Produce the live Owner Now View: assemble, diff vs the prior guidance snapshot, run the orchestrator, and
+ * append a guidance-history row only when the observed state changed. Raises no alerts and emits no audit.
+ */
 export async function getOwnerNowView(
   workspaceId: string,
   businessId: string | null,
   injected?: GuidanceDeps,
-  actorId?: string,
+  _actorId?: string,
   options?: GetOwnerNowViewOptions,
 ): Promise<OwnerNowViewPayload> {
-  // Best-effort overdue risk alert evaluation on every owner now-view load.
-  if (actorId) {
-    import("@/services/owner-mode/business-risk.service")
-      .then(({ evaluateOverdueRiskAlerts }) =>
-        evaluateOverdueRiskAlerts(workspaceId, actorId).catch(() => {})
-      )
-      .catch(() => {});
-  }
+  // Read-only: overdue risk-review alerts are raised by the scheduler's risk-review scan and by the risk
+  // mutations (business-risk.service.ts), never by loading this view.
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary, evidenceScope } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -2224,8 +2244,9 @@ export async function getOwnerNowView(
     ? buildTrainingAssignments(processIntelligence, processCorrections, sopChecklistCorrections, workspaceId)
     : null;
 
+  // The guidance history this view appends to is keyed exactly as it is written (businessId or null).
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
-    where: businessId ? { workspaceId, businessId } : { workspaceId },
+    where: { workspaceId, businessId: businessId ?? null },
     orderBy: { createdAt: "desc" },
   });
   const changes: DetectedChange[] = prev ? detectChanges(prevState(prev), state) : [];
@@ -2607,10 +2628,10 @@ export async function getOwnerNowView(
   // Trend Alerts — pairwise directional alerts from the last two ownerMetricSnapshot periods.
   // Null when fewer than 2 snapshots are available or period timestamps are identical.
   let trendAlerts: TrendAlert[] | null = null;
-  if (deps.db.ownerMetricSnapshot.findMany) {
+  if (deps.db.ownerMetricSnapshot.findMany && evidenceScope) {
     // One business's periods only: comparing business A's period with business B's is not a trend.
     const snapshots = await deps.db.ownerMetricSnapshot.findMany({
-      where: businessId ? { workspaceId, businessId } : { workspaceId },
+      where: evidenceScope,
       select: {
         periodEnd: true, revenue: true, grossProfit: true, netProfit: true,
         newCustomers: true, averageOrderValue: true, refundAmount: true, rewashCount: true,
@@ -2724,20 +2745,31 @@ export async function getOwnerNowView(
     buildBusinessOperatingSystem(workspaceId, businessId, deps.db, deps.objectiveGoalAlignmentFn),
   ]);
 
-  await deps.db.ownerGuidanceSnapshot.create({
-    data: {
-      id: deps.uuid(), workspaceId, businessId: businessId ?? null,
-      classification: view.classification, cashSafe: ctx.cashSafe, growthGatePassed: ctx.growthGatePassed,
-      staffOverloaded: ctx.staffOverloaded, ownerOverloaded: ctx.ownerOverloaded, dataConfidence: ctx.dataConfidence,
-      topIssueCount: view.topOwnerActions.length, missingDataCount: view.missingDataRequests.length,
-      cashRunwayDays: state.cashRunwayDays, netMarginPct: state.netMarginPct, complaintsCount: state.complaintsCount,
-      reworkCount: state.reworkCount, capacityUtilizationPct: state.capacityUtilizationPct,
-      staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
-      supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
-      outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
-      payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
-    },
-  });
+  // Guidance history ("what changed since the last check", and the SOP-effectiveness baseline) is only
+  // appended when the observed state differs from the latest recorded one: re-reading an unchanged business
+  // — repeatedly or concurrently — writes nothing. (Reads never raise alerts or audit events.)
+  const guidanceState = {
+    classification: view.classification, cashSafe: ctx.cashSafe, growthGatePassed: ctx.growthGatePassed,
+    staffOverloaded: ctx.staffOverloaded, ownerOverloaded: ctx.ownerOverloaded, dataConfidence: ctx.dataConfidence,
+    topIssueCount: view.topOwnerActions.length, missingDataCount: view.missingDataRequests.length,
+    cashRunwayDays: state.cashRunwayDays, netMarginPct: state.netMarginPct, complaintsCount: state.complaintsCount,
+    reworkCount: state.reworkCount, capacityUtilizationPct: state.capacityUtilizationPct,
+    staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
+    supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
+    outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
+  };
+  const prevRecord = prev as unknown as Record<string, unknown> | null;
+  const unchangedSincePrev = prevRecord !== null &&
+    (Object.keys(guidanceState) as Array<keyof typeof guidanceState>).every((k) => (prevRecord[k] ?? null) === (guidanceState[k] ?? null));
+  if (!unchangedSincePrev) {
+    await deps.db.ownerGuidanceSnapshot.create({
+      data: {
+        id: deps.uuid(), workspaceId, businessId: businessId ?? null,
+        ...guidanceState,
+        payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
+      },
+    });
+  }
 
   return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition, executionLifecycle, businessOperatingSystem };
 }

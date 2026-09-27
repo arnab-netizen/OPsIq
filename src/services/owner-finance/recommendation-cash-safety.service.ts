@@ -1,33 +1,59 @@
 /**
  * Modules 4 & 5 — cash/finance-safety enforcement at recommendation promotion (Formal Consulting Mode).
  *
- * Semantics are the pre-consolidation gate's, unchanged: BOTH persisted states are passed to the pure
- * gate, which takes the WORSE of the two (cash-safety-gate.ts worseState) — a newer SAFE Finance reading
- * never wipes out a still-recorded CRITICAL cash reading, and there is no source arbitration here (that is
- * Owner Mode's current-cash-finance-reading.ts). A missing half is AT_RISK (growth blocked, non-growth
- * allowed), exactly as before.
+ * The pure gate and its sensitivity rules are the pre-consolidation gate's, unchanged
+ * (cash-safety-gate.ts: the WORSE of the cash and survival states; a missing half is AT_RISK — growth
+ * blocked, non-growth allowed). No Owner-Mode source arbitration happens here.
  *
- * The only change from the base is attribution/isolation: the cycles read are those of the ONE business
- * the recommendation is attributable to (the workspace's only real business — a recommendation's
- * engagement carries no owner business), in current-cycle order (current-diagnosis-cycle.ts), never the
- * workspace-wide latest cycle that could belong to another business. No attributable business → both
- * halves are missing → AT_RISK.
+ * Which states it is given — TEMPORARY UNSCOPED-CONSULTING FAIL-SAFE. A recommendation belongs to an
+ * engagement, which carries no owner business. So:
+ *   - one real business → that business's current cash and Finance states (base-compatible);
+ *   - several real businesses → the WORST valid current state across them. Never an average, never the
+ *     latest-inserted business (the base's accidental "last written business wins"), never looser than
+ *     any one business's own reading;
+ *   - no business with a valid current reading → AT_RISK (both halves missing).
+ * Only current valid evidence counts: each business's current diagnosis cycles (current-diagnosis-cycle.ts
+ * order) over periods that have ENDED (currentEvidenceWhere — a future-dated period never counts), and a
+ * Finance cycle only while its snapshot is still the owner's figures (an amended/superseded snapshot's
+ * cycle is no longer effective). A business with no valid current reading contributes nothing; one with
+ * only one half contributes that half and AT_RISK for the missing one (the base's missing-half rule).
+ * This is a fail-safe for Consulting recommendations that cannot be attributed to one business — it is
+ * not Owner-Mode arbitration (current-cash-finance-reading.ts), and it is replaced once recommendations
+ * carry their business.
  * Enforced only when the workspace opted into the Owner Mode governance suite (same flag as M1/M2/M3).
  */
 
 import {
   assertCashSafetyForPromotion,
+  worseState,
   type FinancialHealthState,
 } from "@/domain/owner-finance/cash-safety-gate";
 import { mapImpactAreaToSensitivity, RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 const VALID_STATES = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
 
-function toState(v: string | undefined): FinancialHealthState {
-  // Missing/unknown finance data → AT_RISK: blocks growth, allows non-growth (the
-  // spec requires proven cash safety before growth, not before everything).
-  return v && VALID_STATES.has(v) ? (v as FinancialHealthState) : "AT_RISK";
+function validState(v: string | null | undefined): FinancialHealthState | null {
+  return v && VALID_STATES.has(v) ? (v as FinancialHealthState) : null;
+}
+
+/**
+ * The state one business contributes, or null when it has no valid current reading at all. A missing
+ * half is AT_RISK (blocks growth, allows non-growth — the spec requires proven cash safety before
+ * growth, not before everything).
+ */
+export function consultingBusinessCashState(cash: string | null | undefined, finance: string | null | undefined): FinancialHealthState | null {
+  const c = validState(cash);
+  const f = validState(finance);
+  if (c === null && f === null) return null;
+  return worseState(c ?? "AT_RISK", f ?? "AT_RISK");
+}
+
+/** The worst contributed state across businesses; AT_RISK when none has a valid current reading. */
+export function consultingWorstCashState(states: ReadonlyArray<FinancialHealthState | null>): FinancialHealthState {
+  let out: FinancialHealthState | null = null;
+  for (const s of states) if (s) out = out ? worseState(out, s) : s;
+  return out ?? "AT_RISK";
 }
 
 interface CashDb {
@@ -38,19 +64,18 @@ interface CashDb {
     findMany(args: {
       where: { workspaceId: string; isActive: true; isFixtureBusiness: false };
       select: { id: true };
-      take: 2;
     }): Promise<Array<{ id: string }>>;
   };
   ownerCashflowCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string };
+      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
       select: { cashflowState: true };
     }): Promise<{ cashflowState: string } | null>;
   };
   ownerFinanceCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string };
+      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date }; supersededById: null } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
       select: { survivalState: true };
     }): Promise<{ survivalState: string } | null>;
@@ -85,32 +110,36 @@ async function resolveSensitivity(recommendationId: string, workspaceId: string,
   return mapImpactAreaToSensitivity(finding?.impactArea);
 }
 
-/** Enforce the cash-safety gate using the latest persisted M4/M5 states. */
+/** Enforce the cash-safety gate using the current persisted M4/M5 states (see the module doc). */
 export async function enforceCashSafetyForPromotion(
   recommendationId: string,
   workspaceId: string,
-  injected?: CashDeps
+  injected?: CashDeps,
+  now: Date = new Date()
 ): Promise<void> {
   const deps = injected ?? (await resolveDefaultDeps());
-  // A recommendation belongs to an engagement, which carries no owner business: cash state is
-  // attributable only to the workspace's single real business (same rule as the margin gate).
   const businesses = await deps.db.ownerBusiness.findMany({
     where: { workspaceId, isActive: true, isFixtureBusiness: false },
     select: { id: true },
-    take: 2,
   });
-  const businessId = businesses.length === 1 ? businesses[0].id : null;
-  const [cashRow, finRow, sensitivity] = await Promise.all([
-    businessId
-      ? deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId, businessId }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true } })
-      : Promise.resolve(null),
-    businessId
-      ? deps.db.ownerFinanceCycle.findFirst({ where: { workspaceId, businessId }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true } })
-      : Promise.resolve(null),
+  const current = currentEvidenceWhere(now);
+  const [perBusiness, sensitivity] = await Promise.all([
+    Promise.all(businesses.map(async ({ id: businessId }) => {
+      const [cashRow, finRow] = await Promise.all([
+        deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId, businessId, ...current }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true } }),
+        deps.db.ownerFinanceCycle.findFirst({
+          where: { workspaceId, businessId, snapshot: { ...current.snapshot, supersededById: null } },
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { survivalState: true },
+        }),
+      ]);
+      return consultingBusinessCashState(cashRow?.cashflowState, finRow?.survivalState);
+    })),
     resolveSensitivity(recommendationId, workspaceId, deps),
   ]);
-  // Base semantics: the gate takes the worse of the two states; a missing half is AT_RISK.
-  assertCashSafetyForPromotion(toState(cashRow?.cashflowState), toState(finRow?.survivalState), sensitivity, recommendationId);
+  const state = consultingWorstCashState(perBusiness);
+  // The pure gate takes the worse of its two inputs; the worst valid current state is both.
+  assertCashSafetyForPromotion(state, state, sensitivity, recommendationId);
 }
 
 /** Backward-compatible guard: enforce only when the workspace opted in (default off). */

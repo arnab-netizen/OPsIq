@@ -17,6 +17,7 @@ import {
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
 import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
 import type { StrategyActionUpdateInput } from "@/domain/owner-strategy/validation";
 import {
   arbitrateStrategyActionRows,
@@ -94,19 +95,6 @@ export async function updateStrategyAction(
       }
     }
 
-    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition,
-    // with the step's intent under the live decision (the class the canonical owner decision gives it).
-    gateAssessment = await enforceOwnerActionGates({
-      workspaceId,
-      businessId: action.businessId,
-      actionId,
-      domain: "strategy",
-      toStatus: to,
-      findingCode: action.findingCode,
-      findingId: action.findingId,
-      intent: ownerStrategyStepIntent(liveDecision?.code ?? null, action.findingCode),
-    });
-
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
       const evidence =
@@ -119,6 +107,20 @@ export async function updateStrategyAction(
       }
       data.completedAt = now;
     }
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition, after
+    // the request's own validation (a request that fails it never records a block), with the step's intent
+    // under the live decision (the class the canonical owner decision gives it).
+    gateAssessment = await enforceOwnerActionGates({
+      workspaceId,
+      businessId: action.businessId,
+      actionId,
+      domain: "strategy",
+      toStatus: to,
+      findingCode: action.findingCode,
+      findingId: action.findingId,
+      intent: ownerStrategyStepIntent(liveDecision?.code ?? null, action.findingCode),
+    });
     data.status = to;
   }
 
@@ -126,10 +128,13 @@ export async function updateStrategyAction(
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
-  const updated = await db.ownerStrategyAction.update({
-    where: { id: actionId },
-    data,
+  // Compare-and-set on the status the transition was validated against (a double submission or a
+  // concurrent change never applies a stale transition twice).
+  const { row: updated, transitioned } = await applyGuardedActionUpdate<typeof action>(db.ownerStrategyAction, {
+    entity: "OwnerStrategyAction", actionId, workspaceId, expectedStatus: action.status, toStatus: input.status, data,
   });
+  // An identical concurrent request already applied this transition: nothing more to record or trigger.
+  if (!transitioned) return updated;
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_STRATEGY_ACTION_UPDATED,

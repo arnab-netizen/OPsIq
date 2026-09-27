@@ -15,14 +15,25 @@
  * by an alias (`const m = db.ownerFinanceCycle`) or through a wrapper taking the delegate — is held to the
  * same rule: in any file that names a cycle model that way, every ordered read on a non-`db` receiver
  * must use a shared order (no hand-written object, and no conditional arm that is not a shared order).
+ * Every receiver counts (`db.`, `tx.`, `prisma.`, any alias, `db["ownerFinanceCycle"]`, `(db as any)[x]`), an
+ * orderBy is shared only when it IS a shared constant (never a ternary or object that merely mentions one),
+ * and a read whose arguments are a prebuilt object is resolved to that object (an unresolvable one fails).
+ *
+ * A current read of an EVIDENCE-PERIOD domain (CURRENT_DIAGNOSIS / CURRENT_RECOVERY order) also filters to
+ * periods that have ended (currentEvidenceWhere, or an explicit `periodEnd: { lte }`): a future-dated
+ * period would otherwise sort first and hide the present one.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
 
 const ROOT = process.cwd();
-const CYCLE_READ = /\b(owner(?:Finance|Cashflow|Sales|Operations|Sop|Marketing|Strategy)Cycle|recoveryCycle)\s*\.\s*(findFirst|findFirstOrThrow|findMany)\s*\(/g;
+const CYCLE_READ = /(?:\b|\[\s*["'`])(owner(?:Finance|Cashflow|Sales|Operations|Sop|Marketing|Strategy)Cycle|recoveryCycle)(?:["'`]\s*\])?\s*\.\s*(findFirst|findFirstOrThrow|findMany)\s*\(/g;
 const SHARED_ORDER = /\bCURRENT_(DIAGNOSIS|RECOVERY|STRATEGY)_CYCLE_ORDER\b/;
+/** An orderBy expression that IS a shared constant (nothing else: no ternary, object or array around it). */
+const EXACT_SHARED_ORDER = /^(?:[A-Za-z_$][\w$]*\.)?CURRENT_(DIAGNOSIS|RECOVERY|STRATEGY)_CYCLE_ORDER$/;
+/** A where clause restricted to periods that have ended. */
+const CURRENT_EVIDENCE_FILTER = /currentEvidenceWhere\s*\(|periodEnd\s*:\s*\{[^}]*\blte\b/;
 
 /**
  * Reads that legitimately order by run number (never "which diagnosis is current"): write-path reads
@@ -90,7 +101,7 @@ function topLevelOrderBy(args: string): string | null {
     else if (c === "}" || c === "]" || c === ")") depth--;
     else if (depth === 1 && args.startsWith("orderBy", i) && /^orderBy\s*:/.test(args.slice(i))) {
       const rest = args.slice(i).replace(/^orderBy\s*:\s*/, "");
-      return rest.slice(0, 120);
+      return topLevelExpression(rest);
     }
     else if (depth === 1 && /^\.\.\.\s*[A-Za-z_$]/.test(args.slice(i))) {
       // a spread of a shared options object (e.g. `...latest`) — resolved by name below
@@ -101,24 +112,89 @@ function topLevelOrderBy(args: string): string | null {
   return null;
 }
 
-function orderedReads(file: string): Array<{ line: number; order: string; shared: boolean }> {
+/** The text of one expression up to its top-level terminator (a comma or the closing bracket). */
+function topLevelExpression(text: string): string {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === "{" || c === "[" || c === "(") depth++;
+    else if (c === "}" || c === "]" || c === ")") {
+      if (depth === 0) return text.slice(0, i).trim();
+      depth--;
+    } else if ((c === "," || c === ";") && depth === 0) return text.slice(0, i).trim();
+  }
+  return text.trim();
+}
+
+/** A local's initializer in the file (`const name = …`), as one expression; null when not found. */
+function localDefinition(src: string, name: string): string | null {
+  const m = new RegExp(`(?:const|let|var)\\s+${name.replace(/\$/g, "\\$")}\\s*(?::[^=]+)?=\\s*`).exec(src);
+  return m ? topLevelExpression(src.slice(m.index + m[0].length)) : null;
+}
+
+/** Whether an orderBy expression is exactly a shared order (directly, or a local defined as exactly one). */
+function isSharedOrder(src: string, order: string): boolean {
+  const expr = order.replace(/^\.\.\./, "").trim();
+  if (EXACT_SHARED_ORDER.test(expr)) return true;
+  // A conditional is shared only when EVERY arm is exactly a shared order.
+  const cond = /^[^?]+\?\s*([\w$.]+)\s*:\s*([\w$.]+)$/.exec(expr);
+  if (cond) return EXACT_SHARED_ORDER.test(cond[1]) && EXACT_SHARED_ORDER.test(cond[2]);
+  if (/^[A-Za-z_$][\w$]*$/.test(expr)) {
+    const def = localDefinition(src, expr);
+    if (def === null) return false;
+    // `...latest` where latest = { orderBy: CURRENT_… }: the object's own orderBy.
+    const inner = def.startsWith("{") ? topLevelOrderBy(def) : null;
+    return EXACT_SHARED_ORDER.test((inner ?? def).trim());
+  }
+  return false;
+}
+
+/**
+ * A read's effective arguments: the literal object, or — when the call passes a prebuilt local — that
+ * local's object. null when the arguments cannot be resolved to an object in this file.
+ */
+function resolvedArgs(src: string, args: string): string | null {
+  const a = args.trim();
+  if (a.startsWith("{")) return a;
+  if (/^[A-Za-z_$][\w$]*$/.test(a)) {
+    const def = localDefinition(src, a);
+    return def && def.startsWith("{") ? def : null;
+  }
+  return null;
+}
+
+function orderedReads(file: string): Array<{ line: number; order: string; shared: boolean; evidenceFiltered: boolean; kind: string | null }> {
   const src = stripComments(readFileSync(file, "utf8"));
-  const out: Array<{ line: number; order: string; shared: boolean }> = [];
+  const out: Array<{ line: number; order: string; shared: boolean; evidenceFiltered: boolean; kind: string | null }> = [];
   CYCLE_READ.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = CYCLE_READ.exec(src))) {
-    const order = topLevelOrderBy(callArgs(src, m.index + m[0].length - 1));
-    if (order === null) continue; // by id / unique key: not a "latest" choice
-    let shared = SHARED_ORDER.test(order);
-    if (!shared) {
-      // `orderBy: order` / `...latest`: the named local must itself be one of the shared constants.
-      const name = /^(?:\.\.\.)?([A-Za-z_$][\w$]*)\s*[,}\n]/.exec(order + "\n")?.[1];
-      if (name) {
-        const def = new RegExp(`(?:const|let)\\s+${name}\\s*=\\s*([^;]*)`).exec(src)?.[1] ?? "";
-        shared = SHARED_ORDER.test(def);
-      }
+    const line = src.slice(0, m.index).split("\n").length;
+    const raw = callArgs(src, m.index + m[0].length - 1);
+    const args = resolvedArgs(src, raw);
+    if (args === null) {
+      out.push({ line, order: `<unresolvable arguments: ${raw.trim().slice(0, 60)}>`, shared: false, evidenceFiltered: false, kind: null });
+      continue;
     }
-    out.push({ line: src.slice(0, m.index).split("\n").length, order: order.split("\n")[0], shared });
+    const order = topLevelOrderBy(args);
+    if (order === null) continue; // by id / unique key: not a "latest" choice
+    if (order.startsWith("...")) {
+      // A spread options object with no orderBy of its own (e.g. `...{ select }`) is not a "latest" choice.
+      const def = localDefinition(src, order.slice(3).trim());
+      if (def !== null && def.startsWith("{") && topLevelOrderBy(def) === null) continue;
+    }
+    const shared = isSharedOrder(src, order);
+    const expr = order.replace(/^\.\.\./, "").trim();
+    const resolvedOrder = EXACT_SHARED_ORDER.test(expr) ? expr : (localDefinition(src, expr) ?? expr);
+    const kind = /CURRENT_(DIAGNOSIS|RECOVERY)_CYCLE_ORDER/.exec(resolvedOrder)?.[1] ?? null;
+    // The where clause as written, or the local it names.
+    const whereExpr = /(?:^|[{,\s])where\s*:\s*/.exec(args);
+    const whereText = whereExpr ? topLevelExpression(args.slice(whereExpr.index + whereExpr[0].length)) : "";
+    // The where as written, the local it names, and every local spread into it (`...current`).
+    let whereResolved = /^[A-Za-z_$][\w$]*$/.test(whereText) ? `${whereText} ${localDefinition(src, whereText) ?? ""}` : whereText;
+    for (const spread of whereResolved.matchAll(/\.\.\.\s*([A-Za-z_$][\w$]*)/g)) whereResolved += ` ${localDefinition(src, spread[1]) ?? ""}`;
+    const evidenceFiltered = CURRENT_EVIDENCE_FILTER.test(whereResolved) || CURRENT_EVIDENCE_FILTER.test(args);
+    out.push({ line, order: order.split("\n")[0], shared, evidenceFiltered, kind });
   }
   return out;
 }
@@ -141,6 +217,37 @@ describe("the current diagnosis cycle has one definition", () => {
       }
     }
     expect(hand, detail.join("\n")).toEqual(WRITE_PATH_ORDERED_READS);
+  });
+
+  it("every current read of an evidence-period domain excludes periods that have not ended", () => {
+    const unfiltered: string[] = [];
+    for (const file of FILES) {
+      for (const r of orderedReads(file)) {
+        if (r.shared && r.kind && !r.evidenceFiltered) unfiltered.push(`${rel(file)}:${r.line} ${r.order}`);
+      }
+    }
+    expect(unfiltered).toEqual([]);
+  });
+
+  it("the detector rejects the evasion forms (non-vacuous)", () => {
+    const probe = (code: string) => {
+      const src = stripComments(code);
+      CYCLE_READ.lastIndex = 0;
+      const m = CYCLE_READ.exec(src);
+      if (!m) return "no-read";
+      const args = resolvedArgs(src, callArgs(src, m.index + m[0].length - 1));
+      if (args === null) return "unresolvable";
+      const order = topLevelOrderBy(args);
+      return order === null ? "unordered" : isSharedOrder(src, order) ? "shared" : "hand";
+    };
+    expect(probe(`db.ownerFinanceCycle.findFirst({ where, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER })`)).toBe("shared");
+    expect(probe(`tx.ownerFinanceCycle.findFirst({ where, orderBy: x ? CURRENT_DIAGNOSIS_CYCLE_ORDER : { createdAt: "desc" } })`)).toBe("hand");
+    expect(probe(`prisma.ownerSalesCycle.findMany({ orderBy: [CURRENT_DIAGNOSIS_CYCLE_ORDER[0], { createdAt: "desc" }] })`)).toBe("hand");
+    expect(probe(`db["ownerSopCycle"].findFirst({ orderBy: { sequenceNumber: "desc" } })`)).toBe("hand");
+    expect(probe(`const args = { orderBy: { createdAt: "desc" } }; db.ownerMarketingCycle.findFirst(args)`)).toBe("hand");
+    expect(probe(`db.ownerMarketingCycle.findFirst(buildArgs())`)).toBe("unresolvable");
+    expect(probe(`const order = cond ? CURRENT_DIAGNOSIS_CYCLE_ORDER : { createdAt: "desc" }; db.ownerOperationsCycle.findFirst({ orderBy: order })`)).toBe("hand");
+    expect(probe(`db.ownerOperationsCycle.findFirst({ orderBy: s ? CURRENT_STRATEGY_CYCLE_ORDER : CURRENT_DIAGNOSIS_CYCLE_ORDER })`)).toBe("shared");
   });
 
   it("the advice/gating readers read cycles in the shared order", () => {
@@ -168,7 +275,9 @@ describe("the current diagnosis cycle has one definition", () => {
     const CYCLE_NAME = "(?:owner(?:Finance|Cashflow|Sales|Operations|Sop|Marketing|Strategy)Cycle|recoveryCycle)";
     const QUOTED = new RegExp(`["'\`]${CYCLE_NAME}["'\`]`);
     const ALIAS = new RegExp(`=\\s*[^;=]*\\bdb\\b[^;=]*\\.${CYCLE_NAME}\\s*[;,)\\n]`);
-    const INDIRECT_READ = /(?<![.\w$])(?!db\b|tx\b)([A-Za-z_$][\w$]*)\s*\.\s*(findFirst|findFirstOrThrow|findMany)\s*\(/g;
+    // Any receiver that is not a literal cycle-model property access — an alias, a parameter, or a bracket
+    // lookup such as `(db as any)[spec.model]` / `db[CYCLE_DELEGATES[d]]`.
+    const INDIRECT_READ = /(?:(?<![.\w$])([A-Za-z_$][\w$]*)|(\]\s*\)?))\s*\.\s*(findFirst|findFirstOrThrow|findMany)\s*\(/g;
     const indirectFiles: string[] = [];
     const offenders: string[] = [];
     for (const file of FILES) {
@@ -178,16 +287,23 @@ describe("the current diagnosis cycle has one definition", () => {
       INDIRECT_READ.lastIndex = 0;
       let m: RegExpExecArray | null;
       while ((m = INDIRECT_READ.exec(src))) {
-        const order = topLevelOrderBy(callArgs(src, m.index + m[0].length - 1));
+        const receiver = m[1] ?? "]";
+        if (m[1] && /^(?:db|tx|prisma)$/.test(m[1])) continue; // a literal model access, checked by CYCLE_READ
+        const args = resolvedArgs(src, callArgs(src, m.index + m[0].length - 1));
+        if (args === null) {
+          offenders.push(`${rel(file)}:${src.slice(0, m.index).split("\n").length} ${receiver}.${m[3]} unresolvable arguments`);
+          continue;
+        }
+        const order = topLevelOrderBy(args);
         if (order === null) continue;
         const text = order.split("\n")[0];
-        let shared = SHARED_ORDER.test(text) && !/[{[]/.test(text.replace(/[,}\]]+\s*$/, ""));
+        let shared = isSharedOrder(src, order);
         // `orderBy: spec.order`: every `order:` entry of the file's model table must be a shared constant.
         if (!shared && /^[A-Za-z_$][\w$]*\.order\b/.test(text)) {
           const orders = [...src.matchAll(/\border\s*:\s*([^,}\n]+)/g)].map((x) => x[1].trim());
           shared = orders.length > 0 && orders.every((o) => SHARED_ORDER.test(o) && !/[{[]/.test(o));
         }
-        if (!shared) offenders.push(`${rel(file)}:${src.slice(0, m.index).split("\n").length} ${m[1]}.${m[2]} orderBy ${text}`);
+        if (!shared) offenders.push(`${rel(file)}:${src.slice(0, m.index).split("\n").length} ${receiver}.${m[3]} orderBy ${text}`);
       }
     }
     // The detector finds the known indirect readers (non-vacuous).

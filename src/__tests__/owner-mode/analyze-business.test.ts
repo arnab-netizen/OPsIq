@@ -75,7 +75,7 @@ describe("analyzeBusiness", () => {
     listOperationsSnapshotsMock.mockResolvedValue(NO_SNAPSHOTS);
     await analyzeBusiness("biz1", "ws1", "actor1");
     const args = currentFinancialSnapshotMock.mock.calls[0][0] as { where: unknown; orderBy: unknown[] };
-    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz1", supersededById: null });
+    expect(args.where).toEqual({ workspaceId: "ws1", businessId: "biz1", supersededById: null, periodEnd: { lte: expect.any(Date) } });
     expect(args.orderBy).toEqual([{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }]);
     expect(runFinanceDiagnosisMock).toHaveBeenCalledWith("biz1", "snap-current", "actor1", "ws1");
   });

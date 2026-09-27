@@ -15,7 +15,7 @@ import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRo
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -79,7 +79,7 @@ export async function getFinanceDashboard(
     // Current effective snapshot (financial-snapshot-selection.ts); the diagnosis-bound one is latestCycle.snapshot.
     db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId })),
     db.ownerFinanceCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(new Date()) },
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,

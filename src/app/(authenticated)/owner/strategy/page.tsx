@@ -561,7 +561,7 @@ function StrategyCycleView({
   score: any;
   missing: string[];
   recommended: any;
-  decisionStep: { state: "current" | "not_listed" | "replaced"; replacedBecause: string | null; openStep?: { title: string; description: string } | null } | null;
+  decisionStep: { state: "current" | "not_listed" | "replaced" | "held"; replacedBecause: string | null; openStep?: { title: string; description: string } | null } | null;
   decision: StrategyDecision | null;
   history: any[];
   busy: boolean;
@@ -580,7 +580,7 @@ function StrategyCycleView({
             decision={decision}
             caption={caption}
             nextStepRow={decisionStep?.state === "current" && recommended ? { status: recommended.status, statusLabel: ACTION_STATUS_LABEL[recommended.status] ?? recommended.status } : null}
-            replacedStep={decisionStep?.state === "replaced" ? { replacedBecause: decisionStep.replacedBecause ?? "", step: recommended ? { title: recommended.title, description: recommended.description } : null } : null}
+            replacedStep={decisionStep?.state === "replaced" || decisionStep?.state === "held" ? { replacedBecause: decisionStep.replacedBecause ?? "", held: decisionStep.state === "held", step: recommended ? { title: recommended.title, description: recommended.description } : null } : null}
             openStep={decisionStep?.state === "not_listed" ? decisionStep.openStep ?? null : null}
           />
           <Disclosure summary="Detailed scores">

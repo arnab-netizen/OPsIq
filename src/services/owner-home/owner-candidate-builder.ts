@@ -12,7 +12,7 @@
  */
 import { db } from "@/lib/db";
 import { loadOwnerGateConstraints } from "@/services/owner-mode/owner-action-gate.service";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { currentCashFinanceReading, currentEvidenceTime } from "@/services/owner-spine/current-cash-finance-reading";
 import { coherentStrategyActions, currentStrategyDecision } from "@/services/owner-strategy/decision-view";
@@ -22,12 +22,13 @@ import { clampConfidence, clampScore, type DomainScore, type OwnerDomain, type O
 import {
   canonicalEligibility,
   domainLocalCanonicalStep,
-  financeSurvivalDriver,
   strategyCandidatePriorityClass,
   type OwnerDecisionCandidate,
   type OwnerDecisionEvent,
   type OwnerDecisionStrategyContext,
+  type OwnerGateHold,
 } from "@/domain/owner-spine/owner-decision";
+import type { OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 import {
   domainActionToCandidate,
   issueVerificationFact,
@@ -163,6 +164,8 @@ export interface OwnerSpineEvidence {
   sop: PersistedCycleRow | null;
   marketing: PersistedCycleRow | null;
   strategy: PersistedCycleRow | null;
+  /** Domains holding figures for a period that has not ended yet (not used as current evidence). */
+  futureDomains: string[];
   verifications: Record<DomainKey | "recovery", PersistedVerificationRow[]>;
 }
 
@@ -170,35 +173,40 @@ export interface OwnerSpineEvidence {
  * Load the CURRENT diagnosis cycle (latest evidence period — current-diagnosis-cycle.ts) of every spine domain and every recorded verification (across ALL cycles:
  * re-diagnosis moves the live action to a new cycle, so the old cycle's actions hold the records).
  */
-export async function loadOwnerSpineEvidence(workspaceId: string, businessId: string): Promise<OwnerSpineEvidence> {
+export async function loadOwnerSpineEvidence(workspaceId: string, businessId: string, now: Date = new Date()): Promise<OwnerSpineEvidence> {
   const where = { businessId, workspaceId };
+  // Current evidence only: a period that has not ended by `now` is never the current reading.
+  const evidenceWhere = { ...where, ...currentEvidenceWhere(now) };
   const latest = { orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, include: spineCycleInclude };
+  // Figures entered for a period that has not ended yet are not used — the owner is told so.
+  const futureWhere = { ...where, snapshot: { periodEnd: { gt: now } } };
+  const futureSelect = { select: { id: true } } as const;
   const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
     financeVers, salesVers, operationsVers, sopVers, strategyVers, cashflowVers, marketingVers, recoveryVers] = await Promise.all([
     // Finance also needs its snapshot's amendment state: an amended (superseded) snapshot means the
     // latest diagnosis is based on figures the owner has since corrected.
     db.ownerFinanceCycle.findFirst({
-      where,
+      where: evidenceWhere,
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: { ...spineCycleInclude, snapshot: { select: { id: true, createdAt: true, periodEnd: true, supersededById: true, missingCriticalData: true } } },
     }),
     db.recoveryCycle.findFirst({
-      where,
+      where: evidenceWhere,
       orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
       include: {
         snapshot: true,
-        findings: { select: { code: true, severity: true, confidence: true } },
+        findings: { select: { code: true, severity: true, confidence: true, title: true } },
         actions: {
           include: { finding: { select: { code: true, severity: true } }, verifications: { orderBy: { createdAt: "desc" } } },
           orderBy: { createdAt: "asc" },
         },
       },
     }),
-    db.ownerCashflowCycle.findFirst({ where, ...latest }),
-    db.ownerSalesCycle.findFirst({ where, ...latest }),
-    db.ownerOperationsCycle.findFirst({ where, ...latest }),
-    db.ownerSopCycle.findFirst({ where, ...latest }),
-    db.ownerMarketingCycle.findFirst({ where, ...latest }),
+    db.ownerCashflowCycle.findFirst({ where: evidenceWhere, ...latest }),
+    db.ownerSalesCycle.findFirst({ where: evidenceWhere, ...latest }),
+    db.ownerOperationsCycle.findFirst({ where: evidenceWhere, ...latest }),
+    db.ownerSopCycle.findFirst({ where: evidenceWhere, ...latest }),
+    db.ownerMarketingCycle.findFirst({ where: evidenceWhere, ...latest }),
     // Strategy needs its evaluated snapshot: its actions are arbitrated against the current decision.
     db.ownerStrategyCycle.findFirst({ where, orderBy: CURRENT_STRATEGY_CYCLE_ORDER, include: { ...spineCycleInclude, snapshot: true } }),
     db.ownerFinanceVerification.findMany({ where, include: verificationInclude, orderBy: { createdAt: "desc" } }),
@@ -215,8 +223,18 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
       orderBy: { createdAt: "desc" },
     }),
   ]);
+  const futureReads = await Promise.all([
+    db.ownerFinanceCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "finance" : null)),
+    db.ownerCashflowCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "cashflow" : null)),
+    db.ownerSalesCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "sales" : null)),
+    db.ownerOperationsCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "operations" : null)),
+    db.ownerSopCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "sop" : null)),
+    db.ownerMarketingCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "marketing" : null)),
+    db.recoveryCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "recovery" : null)),
+  ]);
   return {
     finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
+    futureDomains: futureReads.filter((d): d is string => d !== null),
     verifications: {
       finance: financeVers, sales: salesVers, operations: operationsVers, sop: sopVers, strategy: strategyVers,
       cashflow: cashflowVers, marketing: marketingVers, recovery: recoveryVers,
@@ -232,7 +250,7 @@ export interface OwnerSpineBuild {
   verifications: OwnerHomeVerificationInput[];
   events: OwnerDecisionEvent[];
   staleDomains: string[];
-  /** Domains whose current evidence is for a period ending after now (a subset of staleDomains). */
+  /** Domains holding figures for a period that has not ended yet (never the current evidence). */
   futureDomains: string[];
   survivalReadings: SurvivalEvidenceReading[];
   strategyContext: OwnerDecisionStrategyContext | null;
@@ -253,7 +271,7 @@ export function buildOwnerSpineCandidates(
   const candidates: OwnerDecisionCandidate[] = [];
   const events: OwnerDecisionEvent[] = [];
   const staleDomains: string[] = [];
-  const futureDomains: string[] = [];
+  const futureDomains = [...ev.futureDomains];
   const staleCutoff = now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000;
   const issueVerifications: Record<"finance" | "cashflow", IssueVerificationFact[]> = { finance: [], cashflow: [] };
 
@@ -287,14 +305,10 @@ export function buildOwnerSpineCandidates(
     for (const f of findingRows) findings.push(rowToFinding(f, domain));
     const evidenceAsOf = cycle.snapshot?.createdAt ? asDate(cycle.snapshot.createdAt) : null;
     const periodEnd = cycle.snapshot?.periodEnd ? asDate(cycle.snapshot.periodEnd) : null;
-    // Not current: the evidence period is old, dated after now (future figures are never trusted current
-    // evidence), or (Finance) the diagnosed snapshot has since been amended.
-    // Strategy's snapshots are scenarios the owner is planning — a forward-looking period is their nature,
-    // not future-dated business evidence.
-    const futurePeriod = domain !== "strategy" && periodEnd !== null && periodEnd.getTime() > now.getTime();
-    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || futurePeriod || Boolean(cycle.snapshot?.supersededById);
+    // Not current: the evidence period is old, or (Finance) the diagnosed snapshot has since been amended.
+    // (A period that has not ended is never loaded as the current cycle — currentEvidenceWhere.)
+    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || Boolean(cycle.snapshot?.supersededById);
     if (stale) staleDomains.push(domain);
-    if (futurePeriod) futureDomains.push(domain);
     const verRows: Array<{ v: PersistedRow; findingCode: string; title: string }> = allVers.map((v) => ({
       v, findingCode: String(v.action?.findingCode ?? ""), title: String(v.action?.title ?? ""),
     }));
@@ -312,8 +326,7 @@ export function buildOwnerSpineCandidates(
       verifiedFixes: fixesFrom(verRows),
     };
     for (const a of actionRows) {
-      const c = domainActionToCandidate(a, ctx);
-      candidates.push(futurePeriod ? { ...c, futurePeriod: true } : c);
+      candidates.push(domainActionToCandidate(a, ctx));
       if (a.status === "completed" && a.completedAt) events.push({ kind: "ACTION_COMPLETED", title: a.title, at: asDate(a.completedAt) });
     }
   };
@@ -325,10 +338,8 @@ export function buildOwnerSpineCandidates(
     // the risk/opportunity lists (honest: nothing inferred). Recovery scores still count.
     const evidenceAsOf = recovery.snapshot?.createdAt ? asDate(recovery.snapshot.createdAt) : null;
     const periodEnd = recovery.snapshot?.periodEnd ? asDate(recovery.snapshot.periodEnd) : null;
-    const recoveryFuture = periodEnd !== null && periodEnd.getTime() > now.getTime();
-    const stale = (periodEnd !== null && periodEnd.getTime() < staleCutoff) || recoveryFuture;
+    const stale = periodEnd !== null && periodEnd.getTime() < staleCutoff;
     if (stale) staleDomains.push("recovery");
-    if (recoveryFuture) futureDomains.push("recovery");
     // Recovery persists targetValue 0 when its action had no target: "reached target" is judged
     // against the ACTION's own target (null ⇒ never reached), not the placeholder.
     const recoveryVerRows = ev.verifications.recovery.map((v) => ({
@@ -342,8 +353,7 @@ export function buildOwnerSpineCandidates(
     const ctx = { businessId, workspaceId, domain: "recovery" as const, findingsById: new Map(), evidenceAsOf, stale, verifiedFixes: fixesFrom(recoveryVerRows) };
     for (const a of recovery.actions) {
       const targetValue = typeof a.targetValue === "number" ? a.targetValue : null;
-      const c = recoveryActionToCandidate({ ...a, verifications: (a.verifications ?? []).map((v) => ({ ...v, targetValue })) }, ctx);
-      candidates.push(recoveryFuture ? { ...c, futurePeriod: true } : c);
+      candidates.push(recoveryActionToCandidate({ ...a, verifications: (a.verifications ?? []).map((v) => ({ ...v, targetValue })) }, ctx));
       if (a.status === "completed" && a.completedAt) events.push({ kind: "ACTION_COMPLETED", title: a.title, at: asDate(a.completedAt) });
     }
   }
@@ -362,10 +372,11 @@ export function buildOwnerSpineCandidates(
       { state: finance.survivalState as string | null, snapshot: finance.snapshot },
       now.getTime()
     );
-    // A newer Finance reading supersedes the cash check only when Finance's own findings are about cash: a
-    // profit-driven Finance state is a profit problem and never replaces the cash reading.
-    const financeProfitDriven = financeSurvivalDriver(finance.findings) === "profit";
-    supersededSurvivalDomain = cashFinance.supersededSource === "cash" && !financeProfitDriven ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
+    // Exactly the shared reading's supersession — the same effective-evidence eligibility the safety gate
+    // enforces (owner-action-gate.service.ts), so Home never elects what the gate would treat as superseded
+    // or vice versa. What DRIVES the enforced state (cash vs a profit-driven Finance state) names the
+    // blocker (gateDriver), it does not change which reading is current.
+    supersededSurvivalDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
     if (supersededSurvivalDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
       for (let i = 0; i < candidates.length; i++) {
         const c = candidates[i];
@@ -458,12 +469,27 @@ export async function getDomainEligibleOwnerSteps(
   domain: OwnerDecisionCandidate["domain"],
   now: Date = new Date()
 ): Promise<OwnerDecisionCandidate[]> {
+  return (await getDomainOwnerSteps(workspaceId, businessId, domain, now)).eligible;
+}
+
+/**
+ * One domain's canonically eligible items AND the domain's steps the owner action gate holds back (with
+ * the constraints they were resolved with) — so a domain page can say a step is held, and by what,
+ * instead of calling it done or superseded.
+ */
+export async function getDomainOwnerSteps(
+  workspaceId: string,
+  businessId: string,
+  domain: OwnerDecisionCandidate["domain"],
+  now: Date = new Date()
+): Promise<{ eligible: OwnerDecisionCandidate[]; holds: OwnerGateHold[]; gate: OwnerGateConstraints }> {
   const [ev, gate] = await Promise.all([
-    loadOwnerSpineEvidence(workspaceId, businessId),
+    loadOwnerSpineEvidence(workspaceId, businessId, now),
     loadOwnerGateConstraints(workspaceId, businessId, { db: db as never, now: () => now }),
   ]);
   const { candidates } = buildOwnerSpineCandidates(ev, { businessId, workspaceId, now });
-  return canonicalEligibility(candidates, { businessId, workspaceId, gate }).ranked.filter((c) => c.domain === domain);
+  const { ranked, holds } = canonicalEligibility(candidates, { businessId, workspaceId, gate });
+  return { eligible: ranked.filter((c) => c.domain === domain), holds: holds.filter((h) => h.domain === domain), gate };
 }
 
 /**
@@ -477,7 +503,7 @@ export async function getDomainLocalOwnerStep(
   now: Date = new Date()
 ): Promise<OwnerDecisionCandidate | null> {
   const [ev, gate] = await Promise.all([
-    loadOwnerSpineEvidence(workspaceId, businessId),
+    loadOwnerSpineEvidence(workspaceId, businessId, now),
     loadOwnerGateConstraints(workspaceId, businessId, { db: db as never, now: () => now }),
   ]);
   const { candidates } = buildOwnerSpineCandidates(ev, { businessId, workspaceId, now });
@@ -532,7 +558,9 @@ export type StrategyDecisionStepState =
   /** No action row carries the decision's step yet (the scenario was evaluated before it existed). */
   | "not_listed"
   /** Its row exists but is not canonically eligible (out-of-date figures, done, verified, superseded). */
-  | "replaced";
+  | "replaced"
+  /** Its row exists, or would, but the owner action gate holds it back at the current safety state. */
+  | "held";
 
 export interface StrategyLocalStepSelection<T> {
   recommended: (T & { localStepSource: "domain_action" }) | DomainLocalStepView | null;
@@ -555,7 +583,13 @@ export function selectStrategyLocalStep<T extends { id: string; status?: string;
   decisionPresent: boolean,
   rows: readonly T[],
   eligible: readonly OwnerDecisionCandidate[],
-  isDecisionStepRow: (row: T) => boolean
+  isDecisionStepRow: (row: T) => boolean,
+  held: {
+    /** Why each held row is held (ownerGateHoldText), by row id. */
+    rows: ReadonlyMap<string, string>;
+    /** Why the decision's step would be held if it had no row yet (null ⇒ the gate would allow it). */
+    unlistedStep: string | null;
+  } = { rows: new Map(), unlistedStep: null }
 ): StrategyLocalStepSelection<T> {
   const first = eligible[0] ?? null;
   const recommended = presentDomainLocalStep(first, rows);
@@ -571,11 +605,18 @@ export function selectStrategyLocalStep<T extends { id: string; status?: string;
     };
   }
   if (stepRows.length === 0) {
-    // The decision's step is not persisted yet: the card still shows it (the decision's real step), and the
-    // first eligible Strategy item — which IS in the action list — is shown with it, never dropped.
-    const openStep = first && recommended ? { title: recommended.title ?? first.title, description: ("description" in recommended && typeof recommended.description === "string") ? recommended.description : first.explanation } : null;
+    // The decision's step is not persisted yet. When the gate would hold it, the card says so (never "add
+    // it to your action list"). Otherwise the card still shows it, and the first eligible Strategy ACTION —
+    // which IS in the action list — is shown with it, never dropped.
+    if (held.unlistedStep) return { recommended, decisionStep: { state: "held", replacedBecause: held.unlistedStep } };
+    const openStep = first?.source === "domain_action" && recommended
+      ? { title: recommended.title ?? first.title, description: ("description" in recommended && typeof recommended.description === "string") ? recommended.description : first.explanation }
+      : null;
     return { recommended, decisionStep: { state: "not_listed", replacedBecause: null, openStep } };
   }
+  // A step row the owner action gate holds back is held — never called done, verified or superseded.
+  const heldRow = stepRows.find((r) => held.rows.has(String(r.id)));
+  if (heldRow) return { recommended, decisionStep: { state: "held", replacedBecause: held.rows.get(String(heldRow.id)) ?? null } };
   const eligibleRowIds = new Set(eligible.filter((c) => c.source === "domain_action").map((c) => c.sourceId));
   const openEligible = stepRows.find((r) => eligibleRowIds.has(String(r.id)));
   const replacedBecause = openEligible && first

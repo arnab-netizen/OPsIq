@@ -34,7 +34,10 @@ export const GET = withCanonicalEnforcement(
     // requested but the resolver selected a different one (e.g. an archived/fixture id in a
     // single-business workspace), there is no decision for the requested business.
     const ownerDecision = businessId && home.selectedBusinessId !== businessId ? null : home.currentOwnerDecision;
-    const payload = await getOwnerNowView(ctx.verifiedWorkspaceId, businessId, undefined, ctx.verifiedActorId, {
+    // Now View reads ONE business's evidence: the requested one, else the business the canonical decision
+    // was resolved for (never a workspace-wide aggregate of several businesses).
+    const viewBusinessId = businessId ?? home.selectedBusinessId ?? null;
+    const payload = await getOwnerNowView(ctx.verifiedWorkspaceId, viewBusinessId, undefined, ctx.verifiedActorId, {
       restrictExecutionToAttributableBusiness,
       ownerDecision,
     });

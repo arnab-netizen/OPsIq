@@ -15,23 +15,6 @@ import {
   type DnrGuidanceDb,
 } from "@/services/owner-mode/do-not-repeat.service";
 
-describe("do-not-repeat-dual-key — module contract assertions", () => {
-  it("checkDoNotRepeatForGuidance is a function", () => { expect(typeof checkDoNotRepeatForGuidance).toBe("function"); });
-  it("scopeKeyForImpactArea is a function", () => { expect(typeof scopeKeyForImpactArea).toBe("function"); });
-  it("scopeKeyForImpactArea('Operations') returns scope:operations", () => { expect(scopeKeyForImpactArea("Operations")).toBe("scope:operations"); });
-  it("scopeKeyForImpactArea(null) returns null", () => { expect(scopeKeyForImpactArea(null)).toBeNull(); });
-  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
-  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
-  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
-  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
-  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
-  it("typeof String equals function", () => { expect(typeof String).toBe("function"); });
-  it("typeof RegExp equals function", () => { expect(typeof RegExp).toBe("function"); });
-  it("typeof Number equals function", () => { expect(typeof Number).toBe("function"); });
-  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
-  it("it is a function", () => { expect(typeof it).toBe("function"); });
-});
-
 // ─── scopeKeyForImpactArea ────────────────────────────────────────────────────
 
 describe("scopeKeyForImpactArea", () => {
@@ -64,7 +47,8 @@ function fakeDb(rule: {
 } | null): DnrGuidanceDb {
   return {
     ownerDoNotRepeatRule: {
-      findFirst: async () => rule,
+      // Applies the query's own filter as Postgres would: a rule with a recorded change is not returned.
+      findFirst: async (args) => (rule && args.where.changedContextExplanation === null && rule.changedContextExplanation !== null ? null : rule),
     },
   };
 }
@@ -101,7 +85,7 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
       memoryKey: `scope:operations:finding:${findingId}`,
       summary: "Tried this before",
       reason: "It made things worse",
-      changedContextExplanation: "If demand doubles",
+      changedContextExplanation: null,
       blocksRepetition: true,
     });
     const result = await checkDoNotRepeatForGuidance(WS, "operations", findingId, db);
@@ -110,7 +94,7 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     expect(result!.legacyMatch).toBe(false);
     expect(result!.priorActionSummary).toBe("Tried this before");
     expect(result!.blockedReason).toBe("It made things worse");
-    expect(result!.changedContextCondition).toBe("If demand doubles");
+    expect(result!.changedContextCondition).toBeNull();
     expect(result!.matchedScope).toBe(`scope:operations:finding:${findingId}`);
   });
 
@@ -175,16 +159,19 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     expect(capturedArgs[0]).toEqual(["scope:compliance"]);
   });
 
-  it("surfaces changedContextCondition from the matched rule", async () => {
-    const db = fakeDb({
-      memoryKey: "scope:cash",
-      summary: "Cash flow intervention",
-      reason: "Prior attempt drained reserves",
-      changedContextExplanation: "Only if monthly revenue exceeds 150k",
-      blocksRepetition: true,
-    });
-    const result = await checkDoNotRepeatForGuidance(WS, "cash", null, db);
-    expect(result!.changedContextCondition).toBe("Only if monthly revenue exceeds 150k");
+  it("a rule whose owner has recorded what has changed no longer annotates the target (the query excludes it, as the gate does)", async () => {
+    let where: Record<string, unknown> | null = null;
+    const rule = { memoryKey: "scope:cash", summary: "Cash flow intervention", reason: "Prior attempt drained reserves", changedContextExplanation: "Monthly revenue now exceeds 150k", blocksRepetition: true };
+    const db: DnrGuidanceDb = {
+      ownerDoNotRepeatRule: {
+        findFirst: async (args) => {
+          where = args.where as unknown as Record<string, unknown>;
+          return args.where.changedContextExplanation === null ? null : rule;
+        },
+      },
+    };
+    expect(await checkDoNotRepeatForGuidance(WS, "cash", null, db)).toBeNull();
+    expect(where).toMatchObject({ changedContextExplanation: null, active: true, blocksRepetition: true });
   });
 
   it("changedContextCondition is null when rule has no changed context", async () => {

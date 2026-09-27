@@ -16,7 +16,12 @@
  *     supersedes; incomparable disagreement is an explicit conflict — never silently resolved).
  *   - `gateState` is what a safety gate enforces: the arbitrated state, the worse of the two when they
  *     conflict, and never safer than an amended-but-undiagnosed unsafe Finance reading (fail safe until
- *     the amended figures are diagnosed). null only when there is no reading at all.
+ *     the amended figures are diagnosed). When readings exist but NONE is current (out of date, or only an
+ *     amended Finance reading), an unverified reading is never treated as safe: it is at least AT_RISK.
+ *     null only when there is no reading at all.
+ *   - `gateDriver` says what drives `gateState` — cash, a Finance survival state driven by profit/margin
+ *     (the Finance diagnosis's own findings, supplied by the caller), or unverified figures — so a block is
+ *     named by its real cause (a margin problem is never called a cash danger).
  */
 import { resolveCashFinanceSignal, type CashFinanceResolution, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { asDate, OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
@@ -30,7 +35,12 @@ const RANK: Record<SurvivalLikeState, number> = { SAFE: 0, WATCH: 1, AT_RISK: 2,
 export interface CashFinanceCycleRead {
   state: string | null | undefined;
   snapshot?: { periodEnd?: unknown; supersededById?: unknown } | null;
+  /** Finance only: what drives its survival state, from its own findings (financeSurvivalDriver). */
+  driver?: "cash" | "profit" | null;
 }
+
+/** What drives a gate state: cash, a profit/margin-driven Finance state, or figures that are not current. */
+export type CashFinanceGateDriver = "cash" | "finance_profit" | "unverified";
 
 export interface CurrentCashFinanceReading extends CashFinanceResolution {
   /** Cash flow's state (null when there is no Cash flow diagnosis). */
@@ -41,6 +51,8 @@ export interface CurrentCashFinanceReading extends CashFinanceResolution {
   financeAmendedLastKnown: SurvivalLikeState | null;
   /** The state a safety gate enforces (see the module doc); null only when there is no reading. */
   gateState: SurvivalLikeState | null;
+  /** What drives `gateState` (see the module doc); null when there is no reading. */
+  gateDriver: CashFinanceGateDriver | null;
 }
 
 function asState(v: unknown): SurvivalLikeState | null {
@@ -79,12 +91,30 @@ export function currentCashFinanceReading(
   const amended = Boolean(finance?.snapshot?.supersededById);
   const financeState = amended ? null : financeRaw;
   const financeAmendedLastKnown = amended ? financeRaw : null;
-  const resolution = resolveCashFinanceSignal(
-    { state: cashState, generatedAt: currentEvidenceTime(cash?.snapshot, staleCutoffMs, nowMs) },
-    { state: financeState, generatedAt: currentEvidenceTime(finance?.snapshot, staleCutoffMs, nowMs) }
-  );
+  const cashAt = currentEvidenceTime(cash?.snapshot, staleCutoffMs, nowMs);
+  const financeAt = currentEvidenceTime(finance?.snapshot, staleCutoffMs, nowMs);
+  const resolution = resolveCashFinanceSignal({ state: cashState, generatedAt: cashAt }, { state: financeState, generatedAt: financeAt });
   const arbitrated = resolution.conflicting ? worst(cashState, financeState) : resolution.effectiveState;
   const amendedUnsafe = financeAmendedLastKnown && !SAFE.has(financeAmendedLastKnown) ? financeAmendedLastKnown : null;
-  const gateState = worst(arbitrated, amendedUnsafe) ?? (financeAmendedLastKnown ?? null);
-  return { ...resolution, cashState, financeState, financeAmendedLastKnown, gateState };
+  const known = worst(arbitrated, amendedUnsafe) ?? (financeAmendedLastKnown ?? null);
+  // Readings exist but none is current: unverified figures are never treated as safe.
+  const anyCurrent = (cashState !== null && cashAt !== null) || (financeState !== null && financeAt !== null);
+  const gateState = known === null ? null : anyCurrent ? known : worst(known, "AT_RISK");
+  // Which source decides the enforced state (for naming a block by its real cause).
+  const financeDecides =
+    gateState !== null && anyCurrent && (
+      resolution.supersededSource === "cash" ||
+      (cashState === null && financeState !== null) ||
+      (resolution.conflicting && financeState !== null && cashState !== null && RANK[financeState] > RANK[cashState])
+    );
+  // The last Finance reading on since-amended figures decides it: not a current figure either.
+  const fromAmended = amendedUnsafe !== null && (arbitrated === null || RANK[amendedUnsafe] > RANK[arbitrated]);
+  const gateDriver: CashFinanceGateDriver | null = gateState === null
+    ? null
+    : !anyCurrent || fromAmended
+      ? "unverified"
+      : financeDecides && finance?.driver === "profit"
+        ? "finance_profit"
+        : "cash";
+  return { ...resolution, cashState, financeState, financeAmendedLastKnown, gateState, gateDriver };
 }

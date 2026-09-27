@@ -216,6 +216,7 @@ describe("P1 — through the REAL builder: verification rows, action exclusion a
   });
   const evidence = (a: ReturnType<typeof action>) => ({
     finance: financeCycle([a]), recovery: null, cashflow: null, sales: null, operations: null, sop: null, marketing: null, strategy: null,
+    futureDomains: [],
     verifications: { finance: a.verifications.map((v) => ({ ...v, action: { title: a.title, findingCode: a.findingCode } })), sales: [], operations: [], sop: [], strategy: [], cashflow: [], marketing: [], recovery: [] },
   });
 

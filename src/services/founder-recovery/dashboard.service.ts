@@ -11,7 +11,7 @@ import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-contin
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "./business.service";
-import { CURRENT_RECOVERY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_RECOVERY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface RecoveryDashboardPayload {
   businesses: Array<{
@@ -86,7 +86,7 @@ export async function getRecoveryDashboard(
       orderBy: { periodEnd: "desc" },
     }),
     db.recoveryCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(new Date()) },
       orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
       include: {
         snapshot: true,

@@ -16,10 +16,12 @@ import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
+import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
 export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
+export const TASK_NAME_RISK_REVIEW_SCAN = "risk-review-scan";
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -130,11 +132,28 @@ const reassessmentScanHandler: TaskHandler = async (_payload, context): Promise<
   return { status: "SUCCESS", counts: { scanned: result.scanned, reassessed: result.reassessed } };
 };
 
+/**
+ * Overdue risk reviews: raise/resolve "Risk review overdue" alerts for one workspace. A risk becomes
+ * overdue by time passing, so this is the explicit process for it (never a read path — the owner Now
+ * View GET writes nothing). Alerts go to the workspace's active owner; resolutions are system events.
+ */
+const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<HandlerResult> => {
+  if (!context.workspaceId) {
+    throw new Error("risk-review-scan task missing workspaceId — cannot enforce workspace isolation");
+  }
+  const result = await scanOverdueRiskAlertsForWorkspace(context.workspaceId, new Date());
+  if (!result.recipientFound) {
+    return { status: "PARTIAL_FAILURE", summary: "No active workspace owner to receive overdue risk review alerts." };
+  }
+  return { status: "SUCCESS" };
+};
+
 /** The one production handler registry — pass to processDue() unmodified. */
 export function getProductionTaskHandlers(): Map<string, TaskHandler> {
   return new Map<string, TaskHandler>([
     [TASK_NAME_ALERT_EMAIL_RETRY, alertEmailRetryHandler],
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
     [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
+    [TASK_NAME_RISK_REVIEW_SCAN, riskReviewScanHandler],
   ]);
 }

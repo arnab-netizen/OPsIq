@@ -55,6 +55,7 @@ function cycle(domain: SpineKey, snapshot: typeof FRESH, actions: unknown[]) {
 function evidence(over: Partial<Record<SpineKey, unknown>>, vers: Partial<Record<SpineKey, unknown[]>> = {}): OwnerSpineEvidence {
   return {
     finance: null, recovery: null, cashflow: null, sales: null, operations: null, sop: null, marketing: null, strategy: null,
+    futureDomains: [],
     ...over,
     verifications: { finance: [], sales: [], operations: [], sop: [], strategy: [], cashflow: [], marketing: [], recovery: [], ...vers },
   } as OwnerSpineEvidence;
@@ -189,6 +190,30 @@ describe("P1 — Strategy's local step is the first canonically eligible item; i
   it("an open decision-step row that is not eligible (verified/superseded) → replaced with that reason", () => {
     const r = selectStrategyLocalStep(true, rows, [cand({ candidateId: "domain_action:strategy:s1", sourceId: "s1" })], isStep);
     expect(r.decisionStep).toEqual({ state: "replaced", replacedBecause: "It is already verified or no longer part of the current plan." });
+  });
+
+  it("an open decision-step row the owner action gate holds back → HELD (by what, and what clears it) — never 'already verified' or superseded", () => {
+    const heldText = "This step is currently held by the cash safety limit. Stabilise cash before proceeding.";
+    const r = selectStrategyLocalStep(true, rows, [cand({ candidateId: "domain_action:strategy:s1", sourceId: "s1" })], isStep, { rows: new Map([["p1", heldText]]), unlistedStep: null });
+    expect(r.decisionStep).toEqual({ state: "held", replacedBecause: heldText });
+    expect(r.decisionStep.replacedBecause).not.toMatch(/verified|no longer part/);
+    expect(r.recommended).toMatchObject({ id: "s1" });
+  });
+
+  it("no row carries the decision's step and the gate would hold it → HELD, never 'add it to your action list'", () => {
+    const heldText = "This step is currently held by the capacity limit. Clear the capacity bottleneck before proceeding.";
+    const r = selectStrategyLocalStep(true, [rows[1]], [cand({ candidateId: "domain_action:strategy:s1", sourceId: "s1" })], isStep, { rows: new Map(), unlistedStep: heldText });
+    expect(r.decisionStep).toEqual({ state: "held", replacedBecause: heldText });
+  });
+
+  it("not_listed shows an open step 'in your action list' only when it IS an action row (never a refresh target or survival issue)", () => {
+    const listed = selectStrategyLocalStep(true, [rows[1]], [cand({ candidateId: "domain_action:strategy:s1", sourceId: "s1", title: "Get a quote" })], isStep);
+    expect(listed.decisionStep.openStep).toMatchObject({ title: "Get a quote" });
+    const refresh = cand({ candidateId: "evidence_refresh:strategy", source: "evidence_refresh", sourceId: "strategy", title: "Update the figures", findingCode: "EVIDENCE_REFRESH" });
+    const issue = cand({ candidateId: "survival_reading:strategy", source: "survival_reading", sourceId: "x", title: "A survival issue" });
+    // A refresh target makes the decision step "replaced" (figures out of date); a non-action item is never an openStep.
+    expect(selectStrategyLocalStep(true, [rows[1]], [refresh], isStep).decisionStep.state).toBe("replaced");
+    expect(selectStrategyLocalStep(true, [rows[1]], [issue], isStep).decisionStep).toEqual({ state: "not_listed", replacedBecause: null, openStep: null });
   });
 
   it("no row carries the decision's step yet → not_listed; without a decision, the first eligible item", () => {

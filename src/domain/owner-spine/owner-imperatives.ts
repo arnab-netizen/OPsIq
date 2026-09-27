@@ -320,7 +320,14 @@ const humanizeCodes = (x: string) => x.replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (m) 
 const PLAN_ORDER_LEAD_ALWAYS = /^(?:start\s+(?:with|by)|begin\s+(?:with|by)|before\s+anything\s+else|first\s+thing|immediately|right\s+now|above\s+all|must(?!\s+not\b|n['’]?t\b))\b\s*[:,—–-]?\s*/i;
 /** Leading labels that are an ordering claim only as a label ("First: …", "Top priority — …"), never "The first cohort …". */
 const PLAN_ORDER_LEAD_LABEL = /^(?:the\s+)?(?:first\s+priority|first\s+step|highest\s+priority|top\s+priority|priority\s+one|number\s+one|urgent(?:ly)?|first|now)\s*[:,—–-]\s*/i;
-const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?|no\s+more)\b\s*:?\s*/i;
+const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?)\b\s*:?\s*/i;
+/**
+ * A sentence that OPENS with an imperative verb addressed to the owner ("Collect receivables first.").
+ * Inline ordering phrases and a trailing "first" are removed only from such a sentence (or one with an
+ * ordering lead) — factual prose ("Revenue dropped immediately after the price rise.", "The loan is repaid
+ * first.") is never rewritten.
+ */
+const PLAN_IMPERATIVE_VERB = /^(?:please\s+)?(?:add|address|build|call|cancel|chase|check|clear|close|collect|confirm|consolidate|contact|create|cut|defer|delay|drop|ensure|expand|fix|focus|freeze|get|grow|hire|improve|increase|invest|keep|launch|lock|lower|make|measure|move|negotiate|open|pause|pay|prioriti[sz]e|protect|raise|record|recover|reduce|renegotiate|reprice|resolve|restore|review|run|scale|secure|sell|set|shift|stabili[sz]e|target|test|tighten|track|trim|verify)\b/i;
 /** A prohibition introduced inside the sentence after a dash ("Protect cash — do not add growth spend."). */
 const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid)\b\s*:?\s*/gi;
 /** Inline ordering phrases; "before any action/commitment/…" takes the rest of its clause with it. */
@@ -355,8 +362,11 @@ function neutralizePlanSentence(sentence: string): { text: string; heldBack: boo
     heldBack = true;
     return `${dash}the plan analysis holds back `;
   });
+  // Ordering words are removed only from an owner-directed imperative (an ordering lead, or an opening
+  // imperative verb); a descriptive sentence keeps its words exactly.
+  const directed = ordered || PLAN_IMPERATIVE_VERB.test(asides);
   const inline = new RegExp(PLAN_ORDER_INLINE.source, "i").test(asides);
-  const imperative = ordered || inline || PLAN_TRAILING_FIRST.test(asides);
+  const imperative = directed && (ordered || inline || PLAN_TRAILING_FIRST.test(asides));
   if (!imperative) return { text: heldBack ? `${lead}${asides}` : sentence, heldBack };
   const cleaned = asides.replace(PLAN_ORDER_INLINE, "").replace(PLAN_TRAILING_FIRST, "");
   return { text: `${lead}${capitalize(cleaned.trimStart())}`, heldBack };

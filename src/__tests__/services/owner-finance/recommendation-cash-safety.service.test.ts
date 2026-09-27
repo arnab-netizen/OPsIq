@@ -8,9 +8,20 @@ import {
 } from "@/services/owner-finance/recommendation-cash-safety.service";
 import { CashSafetyGateError } from "@/domain/owner-finance/cash-safety-gate";
 
+interface BusinessReading {
+  cash?: string | null;
+  fin?: string | null;
+  /** This business's Finance snapshot was amended since: its cycle is no longer effective evidence. */
+  finSuperseded?: boolean;
+  /** These readings describe a period that has not ended yet. */
+  future?: boolean;
+}
+
 interface World {
   /** Real (active, non-fixture) businesses in the workspace (default: exactly one, "b1"). */
   businesses?: string[];
+  /** Per-business readings (overrides cashflowState/survivalState for the businesses named). */
+  perBusiness?: Record<string, BusinessReading>;
   flag?: boolean;
   /** The Finance diagnosis's snapshot was amended since (its reading is not current). */
   financeSuperseded?: boolean;
@@ -19,35 +30,36 @@ interface World {
   impactArea?: string | null;
 }
 
+function reading(w: World, businessId: string): BusinessReading {
+  return w.perBusiness?.[businessId] ?? { cash: w.cashflowState ?? null, fin: w.survivalState ?? null, finSuperseded: w.financeSuperseded };
+}
+
 function deps(w: World): CashDeps {
   return {
     db: {
       clientAccount: { findUnique: async () => (w.flag === undefined ? null : { requireBusinessImpactAssessment: w.flag }) },
       ownerBusiness: { findMany: async () => (w.businesses ?? ["b1"]).map((id) => ({ id })) },
-      ownerCashflowCycle: { findFirst: async () => (w.cashflowState == null ? null : { cashflowState: w.cashflowState }) },
-      ownerFinanceCycle: { findFirst: async () => (w.survivalState == null ? null : { survivalState: w.survivalState, snapshot: { supersededById: w.financeSuperseded ? "newer" : null } }) },
+      // The mocks apply the service's own filters as Postgres would: a period that has not ended, or an
+      // amended (superseded) Finance snapshot, is not returned.
+      ownerCashflowCycle: {
+        findFirst: async (args: any) => {
+          const r = reading(w, args.where.businessId);
+          return r.cash == null || (r.future && args.where.snapshot?.periodEnd?.lte) ? null : { cashflowState: r.cash };
+        },
+      },
+      ownerFinanceCycle: {
+        findFirst: async (args: any) => {
+          const r = reading(w, args.where.businessId);
+          if (r.fin == null || (r.future && args.where.snapshot?.periodEnd?.lte)) return null;
+          if (r.finSuperseded && args.where.snapshot && "supersededById" in args.where.snapshot) return null;
+          return { survivalState: r.fin };
+        },
+      },
       recommendation: { findUnique: async () => ({ findingId: "f1" }) },
       finding: { findFirst: async () => ({ impactArea: w.impactArea ?? "operations" }) },
     } as any,
   };
 }
-
-describe("cash-safety enforcement service — module contract assertions", () => {
-  it("isCashSafetyGateEnabled is a function", () => { expect(typeof isCashSafetyGateEnabled).toBe("function"); });
-  it("enforceCashSafetyForPromotion is a function", () => { expect(typeof enforceCashSafetyForPromotion).toBe("function"); });
-  it("enforceCashSafetyIfRequired is a function", () => { expect(typeof enforceCashSafetyIfRequired).toBe("function"); });
-  it("CashSafetyGateError is a class/function", () => { expect(typeof CashSafetyGateError).toBe("function"); });
-  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
-  it("deps({}) returns an object", () => { expect(typeof deps({})).toBe("object"); });
-  it("deps({}) has db field", () => { expect(deps({})).toHaveProperty("db"); });
-  it("deps({}).db is an object", () => { expect(typeof (deps({}) as any).db).toBe("object"); });
-  it("CashSafetyGateError.prototype is an instance of Error", () => { expect(CashSafetyGateError.prototype).toBeInstanceOf(Error); });
-  it("deps({ impactArea: 'growth' }) has db field", () => { expect(deps({ impactArea: "growth" })).toHaveProperty("db"); });
-  it("deps({ flag: true }) returns an object", () => { expect(typeof deps({ flag: true })).toBe("object"); });
-  it("deps({ flag: false }) has db field", () => { expect(deps({ flag: false })).toHaveProperty("db"); });
-  it("deps({ cashflowState: 'INSOLVENT' }) has db field", () => { expect(deps({ cashflowState: "INSOLVENT" })).toHaveProperty("db"); });
-  it("deps({ survivalState: 'CRITICAL' }) has db field", () => { expect(deps({ survivalState: "CRITICAL" })).toHaveProperty("db"); });
-});
 
 describe("[module4/5] cash-safety enforcement service (DI)", () => {
   it("gate-enabled reflects the per-workspace flag (default off)", async () => {
@@ -91,10 +103,12 @@ describe("[module4/5] cash-safety enforcement service (DI)", () => {
     expect(err).toBeInstanceOf(CashSafetyGateError);
     expect(err.effectiveState).toBe("CRITICAL");
     await expect(enforceCashSafetyForPromotion("rec-2", "ws", deps({ flag: true, cashflowState: "CRITICAL", survivalState: "SAFE", impactArea: "growth" }))).rejects.toBeInstanceOf(CashSafetyGateError);
-    // The persisted state is used as recorded (amendment is an Owner-Mode reading concept, not the consulting gate's).
-    const amended = await enforceCashSafetyForPromotion("rec-3", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: "INSOLVENT_RISK", financeSuperseded: true, impactArea: "cash flow" })).catch((e) => e);
+    // Decision 3 (E): a Finance diagnosis whose figures were amended is no longer effective evidence — its
+    // INSOLVENT_RISK does not masquerade as current; the Finance half is then missing (AT_RISK, base rule).
+    const amended = await enforceCashSafetyForPromotion("rec-3", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: "INSOLVENT_RISK", financeSuperseded: true, impactArea: "growth" })).catch((e) => e);
     expect(amended).toBeInstanceOf(CashSafetyGateError);
-    expect(amended.message).toMatch(/INSOLVENT_RISK/);
+    expect(amended.effectiveState).toBe("AT_RISK");
+    await expect(enforceCashSafetyForPromotion("rec-4", "ws", deps({ flag: true, cashflowState: "SAFE", survivalState: "INSOLVENT_RISK", financeSuperseded: true, impactArea: "cash flow" }))).resolves.toBeUndefined();
   });
 
   it("Consulting: a missing half is AT_RISK (base): growth held, non-growth allowed", async () => {
@@ -115,7 +129,7 @@ describe("[module4/5] cash-safety enforcement service (DI)", () => {
   });
 });
 
-describe("P2 — cross-business cash safety: cycles are read for the ONE attributable business, never workspace-wide", () => {
+describe("Decision 3 — Consulting multi-business cash: the WORST valid current state across real businesses", () => {
   function recording(w: World) {
     const calls: any[] = [];
     const d = deps(w) as any;
@@ -125,25 +139,56 @@ describe("P2 — cross-business cash safety: cycles are read for the ONE attribu
     d.db.ownerFinanceCycle.findFirst = async (args: any) => { calls.push(args); return fin(args); };
     return { d: d as CashDeps, calls };
   }
+  const state = async (w: World, impactArea = "growth") =>
+    enforceCashSafetyForPromotion("rec-1", "ws", deps({ flag: true, impactArea, ...w })).then(() => "allowed", (e) => (e as CashSafetyGateError).effectiveState);
 
-  it("single business: both cycle reads are scoped to it, in the current-diagnosis order (latest evidence period)", async () => {
-    const { d, calls } = recording({ cashflowState: "SAFE", survivalState: "SAFE", impactArea: "growth" });
-    await enforceCashSafetyForPromotion("rec-1", "ws", d);
-    expect(calls).toHaveLength(2);
+  it("each business's cycles are read scoped to it, current order, periods that have ended, Finance only while its figures are effective", async () => {
+    const now = new Date("2026-09-01T00:00:00.000Z");
+    const { d, calls } = recording({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "SAFE", fin: "SAFE" } }, impactArea: "growth" });
+    await enforceCashSafetyForPromotion("rec-1", "ws", d, now);
+    expect(calls).toHaveLength(4);
     for (const c of calls) {
-      expect(c.where).toEqual({ workspaceId: "ws", businessId: "b1" });
+      expect(["a", "b"]).toContain(c.where.businessId);
+      expect(c.where.workspaceId).toBe("ws");
+      expect(c.where.snapshot.periodEnd).toEqual({ lte: now });
       expect(c.orderBy).toEqual([{ snapshot: { periodEnd: "desc" } }, { snapshot: { createdAt: "desc" } }, { sequenceNumber: "desc" }]);
     }
+    expect(calls.filter((c) => "supersededById" in c.where.snapshot)).toHaveLength(2);
   });
 
-  it("two businesses: no cycle is read (another business's SAFE figures can never clear growth) — unattributable cash is AT_RISK", async () => {
-    const { d, calls } = recording({ businesses: ["a", "b"], cashflowState: "SAFE", survivalState: "SAFE", impactArea: "growth" });
-    const err = await enforceCashSafetyForPromotion("rec-1", "ws", d).catch((e) => e);
-    expect(err).toBeInstanceOf(CashSafetyGateError);
+  it("A: business A SAFE, business B CRITICAL → CRITICAL", async () => {
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "CRITICAL", fin: "SAFE" } } })).toBe("CRITICAL");
+  });
+
+  it("B: business A CRITICAL, business B SAFE → CRITICAL (order of businesses / insertion never decides)", async () => {
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "CRITICAL" }, b: { cash: "SAFE", fin: "SAFE" } } })).toBe("CRITICAL");
+    expect(await state({ businesses: ["b", "a"], perBusiness: { a: { cash: "SAFE", fin: "CRITICAL" }, b: { cash: "SAFE", fin: "SAFE" } } })).toBe("CRITICAL");
+  });
+
+  it("C: business A SAFE, business B WATCH → WATCH (growth proceeds; no averaging, no relaxation)", async () => {
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "WATCH", fin: "SAFE" } } })).toBe("allowed");
+    const err = await enforceCashSafetyForPromotion("rec-1", "ws", deps({ flag: true, impactArea: "growth", businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "WATCH", fin: "AT_RISK" } } })).catch((e) => e);
     expect(err.effectiveState).toBe("AT_RISK");
-    expect(calls).toEqual([]);
-    // Unknown cash is AT_RISK: spend and non-growth work are not blocked by the fail-safe.
-    await expect(enforceCashSafetyForPromotion("rec-3", "ws", recording({ businesses: ["a", "b"], impactArea: "cash flow" }).d)).resolves.toBeUndefined();
-    await expect(enforceCashSafetyForPromotion("rec-2", "ws", recording({ businesses: ["a", "b"], impactArea: "customer experience" }).d)).resolves.toBeUndefined();
+  });
+
+  it("D: a future-dated CRITICAL period cannot silently win — the business with only future figures contributes nothing", async () => {
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "CRITICAL", fin: "CRITICAL", future: true } } })).toBe("allowed");
+  });
+
+  it("E: a superseded unsafe Finance reading does not masquerade as current (its business's Finance half is missing → AT_RISK)", async () => {
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "SAFE", fin: "INSOLVENT_RISK", finSuperseded: true } } })).toBe("AT_RISK");
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE" }, b: { cash: "SAFE", fin: "INSOLVENT_RISK", finSuperseded: true } } }, "cash flow")).toBe("allowed");
+  });
+
+  it("F: a single business behaves as the base gate (worse of its two states; a missing half AT_RISK)", async () => {
+    expect(await state({ perBusiness: { b1: { cash: "CRITICAL", fin: "SAFE" } } })).toBe("CRITICAL");
+    expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE" } } })).toBe("allowed");
+    expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: null } } })).toBe("AT_RISK");
+    expect(await state({ perBusiness: { b1: { cash: null, fin: null } } })).toBe("AT_RISK");
+  });
+
+  it("no business with a valid current reading → AT_RISK (growth held; non-growth proceeds)", async () => {
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: null, fin: null }, b: { cash: null, fin: null } } })).toBe("AT_RISK");
+    expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: null, fin: null }, b: { cash: null, fin: null } } }, "customer experience")).toBe("allowed");
   });
 });

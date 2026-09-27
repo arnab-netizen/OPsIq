@@ -307,17 +307,21 @@ export function unattributedComplianceItemToCandidate(
   ctx: { businessId: string; workspaceId: string; now: Date }
 ): OwnerDecisionCandidate | null {
   const base = complianceItemToCandidate({ ...item, businessId: ctx.businessId }, ctx);
-  if (!base || !base.blocking) return null;
+  if (!base) return null;
   const name = String(item.name ?? "compliance obligation");
+  const condition = item.status === "breached" ? "breached" : base.blocking ? "expired" : "expired, with its renewal in progress,";
   return {
     ...base,
-    findingCode: "COMPLIANCE_UNATTRIBUTED",
+    // A hard stop (breach / expired) stays safety work; a renewal already in progress keeps its class.
+    findingCode: base.blocking ? "COMPLIANCE_UNATTRIBUTED" : base.findingCode,
     title: `Assign "${name}" to the business it affects`,
     explanation:
-      `This ${item.status === "breached" ? "breached" : "expired"} compliance item has not been assigned to an affected business, so OpsIQ cannot safely determine which business actions it restricts. It is not resolved: assign it to the business it applies to, then renew or resolve it.`,
+      `This ${condition} compliance item has not been assigned to an affected business, so OpsIQ cannot safely determine which business actions it restricts. It is not resolved: assign it to the business it applies to, then ${base.blocking ? "renew or resolve it" : "finish the renewal"}.`,
     // Not a recorded block on THIS business (its applicability is unknown): no "recorded block" precedence.
     blocking: false,
     evidence: [...base.evidence, "Recorded with no business, and this workspace has more than one business."],
+    // Straight to the assignment control (compliance detail page, "Affected business").
+    targetRoute: `/owner/compliance/${String(item.id)}#assign-business`,
   };
 }
 

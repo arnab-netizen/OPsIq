@@ -15,6 +15,7 @@
  *          its replacement copies its period and is inserted later;
  *        - "current" is the latest evidence PERIOD (`periodEnd`), never insertion time; `createdAt`
  *          and `id` only break ties deterministically between unsuperseded rows of the same period.
+ *        - a snapshot whose period has not ENDED by `now` (future-dated) is not current evidence.
  *      Always scoped to one business in one workspace — never workspace-wide.
  *
  * Every owner-advice/gating read of "the latest" financial snapshot must use
@@ -31,26 +32,29 @@ type SelectShape = Record<string, true>;
 
 /** The query `currentEffectiveFinancialSnapshotQuery` builds (for dependency-injected readers). */
 export interface CurrentEffectiveSnapshotQuery<S extends SelectShape = SelectShape> {
-  where: { workspaceId: string; businessId: string; supersededById: null };
+  where: { workspaceId: string; businessId: string; supersededById: null; periodEnd: { lte: Date } };
   orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }];
   select: S;
 }
 
 export function currentEffectiveFinancialSnapshotQuery(scope: FinancialSnapshotScope): {
-  where: { workspaceId: string; businessId: string; supersededById: null };
+  where: { workspaceId: string; businessId: string; supersededById: null; periodEnd: { lte: Date } };
   orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }];
 };
 export function currentEffectiveFinancialSnapshotQuery<S extends SelectShape>(
   scope: FinancialSnapshotScope,
-  select: S
+  select: S,
+  now?: Date
 ): {
-  where: { workspaceId: string; businessId: string; supersededById: null };
+  where: { workspaceId: string; businessId: string; supersededById: null; periodEnd: { lte: Date } };
   orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }];
   select: S;
 };
-export function currentEffectiveFinancialSnapshotQuery<S extends SelectShape>(scope: FinancialSnapshotScope, select?: S) {
+export function currentEffectiveFinancialSnapshotQuery<S extends SelectShape>(scope: FinancialSnapshotScope, select?: S, now: Date = new Date()) {
   return {
-    where: { workspaceId: scope.workspaceId, businessId: scope.businessId, supersededById: null },
+    // A snapshot for a period that has not ended by `now` is never the current effective one: a future
+    // period would otherwise sort first and hide the present figures.
+    where: { workspaceId: scope.workspaceId, businessId: scope.businessId, supersededById: null, periodEnd: { lte: now } },
     orderBy: [{ periodEnd: "desc" as const }, { createdAt: "desc" as const }, { id: "desc" as const }] as [
       { periodEnd: "desc" },
       { createdAt: "desc" },

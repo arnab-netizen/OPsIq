@@ -86,6 +86,7 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import { StartHereContinuationCard } from "@/components/owner/StartHereContinuationCard";
+import { OwnerDoNotRepeatPanel } from "@/components/owner/OwnerDoNotRepeatPanel";
 import { OwnerAssessmentSummary } from "@/components/owner/OwnerAssessmentSummary";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
@@ -552,6 +553,9 @@ export default function OwnerCockpitPage() {
       {/* The condition summary is context for the canonical main target (rendered inside the cockpit
           above), so it follows it and never reads as the first headline. */}
       {!loading && !error && assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
+      {/* The do-not-repeat rules and the owner's changed-context override (the main target's DNR blocker
+          routes here); a recorded change reloads the canonical decision. */}
+      <OwnerDoNotRepeatPanel businessId={activeBusinessId} onChanged={() => void load(activeBusinessId)} />
       {/* Setup continuation is secondary to the canonical main target, so it renders after it. */}
       <StartHereContinuationCard businessId={activeBusinessId} />
     </PageContainer>

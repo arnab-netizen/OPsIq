@@ -25,6 +25,7 @@ import {
   type OwnerRecordIssueFact,
 } from "@/domain/owner-spine/owner-decision";
 import type { OwnerSeverity } from "@/domain/owner-spine/contracts";
+import { ownerLeverKey } from "@/domain/owner-spine/owner-imperatives";
 
 const DAY_MS = 86_400_000;
 
@@ -57,7 +58,7 @@ interface FindingFacts {
 }
 interface CycleFactsRow {
   snapshotId: string;
-  snapshot?: { createdAt?: unknown; periodEnd?: unknown } | null;
+  snapshot?: { createdAt?: unknown; periodEnd?: unknown; supersededById?: unknown } | null;
   findings?: readonly FindingFacts[];
 }
 /** The two reads this module makes on each evidence cycle model. */
@@ -69,7 +70,7 @@ interface CycleModelReader {
   }): Promise<{ _min: { createdAt: Date | null } }>;
   /** The baseline: the current diagnosis of the evidence that was available before the current evidence. */
   findFirst(args: {
-    where: { workspaceId: string; businessId: string; snapshotId: { not: string }; createdAt: { lt: Date }; snapshot: { periodEnd: { lte: Date } } };
+    where: { workspaceId: string; businessId: string; snapshotId: { not: string }; createdAt: { lt: Date }; snapshot: { periodEnd: { lte: Date }; supersededById?: null } };
     orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER | typeof CURRENT_RECOVERY_CYCLE_ORDER;
     select: typeof cycleSelect;
   }): Promise<CycleFactsRow | null>;
@@ -104,12 +105,18 @@ const cycleSelect = {
   findings: { select: { code: true, severity: true, title: true }, orderBy: [{ code: "asc" }, { id: "asc" }] },
 } as const;
 
-function issuesOf(domain: SpineDomain, findings: readonly FindingFacts[]): Record<string, { severity: OwnerSeverity | null; title: string }> {
+/**
+ * One issue per business LEVER where the code belongs to one (ownerLeverKey — e.g. every runway code is
+ * `cash_runway`), else per code: a tier change of the same problem (CF_INSOLVENT_RUNWAY → CF_LOW_RUNWAY) is
+ * the same issue changing severity, never "resolved" plus "new".
+ */
+export function issuesOf(domain: SpineDomain, findings: readonly FindingFacts[]): Record<string, { severity: OwnerSeverity | null; title: string }> {
   const out: Record<string, { severity: OwnerSeverity | null; title: string }> = {};
   for (const f of findings) {
     const code = typeof f?.code === "string" ? f.code : "";
     if (!code) continue;
-    const key = ownerCandidateIssueKey({ domain, findingCode: code, candidateId: `${domain}:${code}`, source: "domain_action" });
+    const lever = ownerLeverKey(code);
+    const key = lever ? `${domain}:lever:${lever}` : ownerCandidateIssueKey({ domain, findingCode: code, candidateId: `${domain}:${code}`, source: "domain_action" });
     const severity = toOwnerSeverity(f.severity);
     const prev = out[key];
     // One issue per code: the most severe row wins when a cycle repeats a code.
@@ -130,7 +137,7 @@ export interface CurrentDiagnosisFacts {
   snapshotId: string;
   /** When this diagnosis ran. */
   createdAt?: unknown;
-  snapshot?: { createdAt?: unknown; periodEnd?: unknown } | null;
+  snapshot?: { createdAt?: unknown; periodEnd?: unknown; supersededById?: unknown } | null;
   findings: readonly FindingFacts[];
 }
 
@@ -166,17 +173,26 @@ async function evidenceTransition(
   if (!current?.snapshotId) return null;
   const currentAt = asDate(current.snapshot?.createdAt);
   if (!currentAt) return null;
-  // Figures for a period that has not ended are not trusted current evidence: they report no change.
+  // Only CURRENT EFFECTIVE evidence reports change: figures for a period that has not ended, figures
+  // older than the freshness window (stale evidence is not a new business state), and Finance figures the
+  // owner has since amended (not the owner's figures any more) report nothing.
   const currentPeriodEnd = asDate(current.snapshot?.periodEnd);
   if (currentPeriodEnd && currentPeriodEnd.getTime() > now.getTime()) return null;
+  if (currentPeriodEnd && currentPeriodEnd.getTime() < now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * DAY_MS) return null;
+  if (current.snapshot?.supersededById) return null;
   const model = (db as Record<string, CycleModelReader>)[spec.model];
   const first = await model.aggregate({
     where: { workspaceId, businessId, snapshotId: String(current.snapshotId) },
     _min: { createdAt: true },
   });
   const firstDiagnosedAt = asDate(first._min.createdAt) ?? asDate(current.createdAt) ?? currentAt;
+  // The baseline is effective evidence too: a Finance version the owner later amended is not what the
+  // business looked like (its corrected version is).
   const previous = await model.findFirst({
-    where: { workspaceId, businessId, snapshotId: { not: String(current.snapshotId) }, createdAt: { lt: firstDiagnosedAt }, snapshot: { periodEnd: { lte: now } } },
+    where: {
+      workspaceId, businessId, snapshotId: { not: String(current.snapshotId) }, createdAt: { lt: firstDiagnosedAt },
+      snapshot: { periodEnd: { lte: now }, ...(spec.domain === "finance" ? { supersededById: null } : {}) },
+    },
     orderBy: spec.order,
     select: cycleSelect,
   });
@@ -191,6 +207,9 @@ async function evidenceTransition(
     at: firstDiagnosedAt,
     previousIssues: previous ? issuesOf(spec.domain, previous.findings ?? []) : {},
     currentIssues: issuesOf(spec.domain, current.findings ?? []),
+    // A diagnosis that could not measure (it raised a missing-critical-data finding) cannot prove that an
+    // earlier issue went away: its absence is a data gap, never "resolved".
+    resolutionUnproven: (current.findings ?? []).some((f) => typeof f?.code === "string" && /_MISSING_CRITICAL_DATA$/.test(f.code)),
   };
 }
 
@@ -352,10 +371,12 @@ export async function gatherOwnerChangeFacts(input: OwnerChangeFactsInput): Prom
 
   // Evidence that went out of date inside the window (its period passed the freshness limit).
   const newlyStaleDomains: string[] = [];
+  // Same boundary as the candidate builder (stale ⇔ periodEnd < now − window). Strategy evaluates a
+  // hypothetical plan, not the running business's figures, so it never "goes out of date" here.
   for (const [domain, periodEnd] of Object.entries(input.evidencePeriodEnds)) {
-    if (!periodEnd) continue;
+    if (!periodEnd || domain === "strategy") continue;
     const staleAt = periodEnd.getTime() + OWNER_DECISION_STALE_EVIDENCE_DAYS * DAY_MS;
-    if (staleAt >= since.getTime() && staleAt <= now.getTime()) newlyStaleDomains.push(domain);
+    if (staleAt >= since.getTime() && staleAt < now.getTime()) newlyStaleDomains.push(domain);
   }
 
   return { since, transitions, events: input.events, recordIssues, attribution, newlyStaleDomains };

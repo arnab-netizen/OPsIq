@@ -325,6 +325,10 @@ export default function OwnerCommandCenterPage() {
     const seq = ++requestSeq.current;
     setProfileLoading(true);
     setError(null);
+    // A (re)load — including a business switch — never keeps showing the previous load's data (the
+    // previous business's main target, plan or action) while this one is in flight or if it fails.
+    setData(null); setControl(null); setWbp(null); setGuidance(null);
+    setReadiness(null); setActionPlan(null); setPriorities(null);
     try {
       const qs = `?businessId=${businessId}`;
       const res = await api(`/api/owner/command-center${qs}`);
@@ -691,7 +695,7 @@ export default function OwnerCommandCenterPage() {
             <Disclosure summary="Plan action & proof (supporting analysis)" className="mb-6" data-testid="owner-action-plan-disclosure">
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-action-plan">
               <div className="text-xs uppercase text-muted-foreground mb-2">Plan action &amp; proof (supporting analysis)</div>
-              <div className="text-sm font-medium mb-2" data-testid="action-title">{actionPlan.assignment.actionTitle}</div>
+              <div className="text-sm font-medium mb-2" data-testid="action-title">{planNextActionText(actionPlan.assignment.actionTitle, imperativeCtx)}</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-md border p-2 text-sm" data-testid="action-responsible">
                   <strong>Who owns it:</strong> <span className="capitalize">{actionPlan.assignment.responsibleParty}</span>
