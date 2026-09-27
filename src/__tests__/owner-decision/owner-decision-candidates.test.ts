@@ -84,3 +84,15 @@ describe("control records", () => {
     expect(businessRiskToCandidate(risk({ status: "ACCEPTED" }), { businessId: "b1", workspaceId: "w1" })).toBeNull();
   });
 });
+
+describe("Home cash/finance supersession never trusts an out-of-date reading (confirmation review P2-a)", () => {
+  it("returns the evidence period only for current, un-amended evidence", async () => {
+    const { currentEvidenceTime } = await import("@/services/owner-home/home.service");
+    const cutoff = Date.parse("2026-08-13T00:00:00Z");
+    const fresh = new Date("2026-09-20T00:00:00Z");
+    expect(currentEvidenceTime({ periodEnd: fresh }, cutoff)).toEqual(fresh);
+    expect(currentEvidenceTime({ periodEnd: fresh, supersededById: "newer-version" }, cutoff)).toBeNull();
+    expect(currentEvidenceTime({ periodEnd: new Date("2026-07-01T00:00:00Z") }, cutoff)).toBeNull();
+    expect(currentEvidenceTime(null, cutoff)).toBeNull();
+  });
+});

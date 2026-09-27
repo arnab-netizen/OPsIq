@@ -9,7 +9,7 @@ import { GuidanceClassification } from "@/domain/owner-guidance/guidance-classif
 
 interface Rows {
   cash?: { cashflowState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } } | null;
-  fin?: { survivalState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } } | null;
+  fin?: { survivalState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date; supersededById?: string | null } } | null;
   emp?: { overburdened: boolean; utilizationPct: number } | null;
   own?: { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number } | null;
   cap?: { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number } | null;
@@ -234,12 +234,15 @@ describe("[module41] retention cohort → growth gate cross-domain wiring", () =
   });
 });
 
+/** A date N days before the fake clock (fakeDeps' now = 1_900_000_000_000) — inside the freshness window when N <= 45. */
+const daysBeforeClock = (n: number) => new Date(1_900_000_000_000 - n * 86_400_000);
+
 describe("[module41] Home same-business cash/finance conflict arbitration", () => {
   it("reproduces the human-test bug (same business: older AT_RISK cash + newer SAFE finance) — Home must not present the stale AT_RISK reading as current truth", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01"), snapshot: { periodEnd: new Date("2026-01-01") } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01"), snapshot: { periodEnd: new Date("2026-06-01") } },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(true);
@@ -249,8 +252,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("newer cash reading is unsafe, superseding an older SAFE finance diagnosis — uses the newer (unsafe) reading and names the superseded source", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01"), snapshot: { periodEnd: new Date("2026-06-01") } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01"), snapshot: { periodEnd: new Date("2026-01-01") } },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
@@ -266,12 +269,33 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
     // new, the evidence is not. Freshness is the evidence period, so the current cash danger stands.
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-10"), snapshot: { periodEnd: new Date("2026-06-10") } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-12"), snapshot: { periodEnd: new Date("2026-06-01") } },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(5), snapshot: { periodEnd: daysBeforeClock(5) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(3), snapshot: { periodEnd: daysBeforeClock(10) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
     expect(ctx.issues.find((i) => i.id === "cash")?.severity).toBe("CRITICAL");
+  });
+
+  it("an OUT-OF-DATE reading never supersedes: a newer-period but amended (superseded) Finance snapshot cannot hide current cash danger", async () => {
+    const { deps } = fakeDeps({
+      ...healthy,
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(10) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(2), supersededById: "newer-version" } },
+    });
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(ctx.cashSafe).toBe(false);
+  });
+
+  it("an OUT-OF-DATE reading (period older than the freshness window) never supersedes a current one", async () => {
+    const { deps } = fakeDeps({
+      ...healthy,
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(120) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(90) } },
+    });
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    // Neither reading can be shown to be current: fail safe, never "safe" by an old reading.
+    expect(ctx.cashSafe).toBe(false);
   });
 
   it("disagreement with no timestamps: fails safe and surfaces an explicit conflicting-information headline, never silently picking one side", async () => {

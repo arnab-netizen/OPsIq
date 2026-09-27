@@ -76,6 +76,7 @@ import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 import type { CurrentOwnerDecision, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
+import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -86,7 +87,7 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } | null }
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date; supersededById?: string | null } | null }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -891,7 +892,7 @@ export async function assembleGuidanceContext(
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
     deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }),
+    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } } } }),
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -951,8 +952,11 @@ export async function assembleGuidanceContext(
     // Freshness is the period each reading DESCRIBES (its snapshot's periodEnd), never when the cycle
     // row was written: completing/verifying an action re-diagnoses from the SAME old snapshot, which
     // would otherwise make old evidence look "newer" than a current reading of the other source.
-    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: cash?.snapshot?.periodEnd ?? null },
-    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: fin?.snapshot?.periodEnd ?? null }
+    // A reading whose own evidence is out of date (older than the freshness window, or an amended
+    // Finance snapshot) cannot be shown to be current, so it never supersedes the other — the same
+    // rule as the canonical owner decision (owner-home service).
+    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: currentReadingTime(cash?.snapshot, deps.now()) },
+    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: currentReadingTime(fin?.snapshot, deps.now()) }
   );
   // Growth/high-impact gating stays conservative exactly as before when either signal is
   // entirely missing (fail closed on missing critical data, tracked separately below via
@@ -1150,22 +1154,33 @@ const IF_IGNORED_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
   PROCESS_OPTIMISATION: "the process keeps costing more time than it needs to",
 };
 
-const GROWTH_GATE_AVOID_ID = "avoid_growth_before_gates";
+/** The evidence period a cash/finance reading describes, or null when that evidence is out of date. */
+function currentReadingTime(snapshot: { periodEnd: Date; supersededById?: string | null } | null | undefined, nowMs: number): Date | null {
+  if (!snapshot?.periodEnd || snapshot.supersededById) return null;
+  const periodEnd = snapshot.periodEnd instanceof Date ? snapshot.periodEnd : new Date(snapshot.periodEnd);
+  return periodEnd.getTime() >= nowMs - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000 ? periodEnd : null;
+}
+
 
 /**
  * Reconcile Now View's "do not" list with the ONE canonical owner decision so the two never
- * contradict: when the main target is itself a growth step, the (fail-closed) growth gate becomes a
- * precondition on HOW to do it — keep it to a small trial until the gates pass — instead of a veto
- * on the main target. Every other avoid is unrelated to the target and kept as-is.
+ * contradict: when the main target is itself a growth step, every avoid rule that would veto growth
+ * or marketing becomes a precondition on HOW to do it (a small, low-cost trial) that keeps its
+ * reason, instead of a veto on the main target. Every other avoid is unrelated and kept as-is.
  */
+const GROWTH_VETO_PRECONDITION: Record<string, (title: string) => string> = {
+  avoid_growth_before_gates: (t) => `Do not scale "${t}" beyond a small trial until cash, profit, capacity, workload and quality gates pass`,
+  avoid_growth_on_cash_danger: (t) => `Keep "${t}" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week`,
+  avoid_marketing_on_service_failure: (t) => `Do not scale "${t}" beyond a small trial until service quality is fixed`,
+};
+
 export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {
   const primary = decision.primaryTarget;
   if (!primary || primary.priorityClass !== "GROWTH_OPPORTUNITY") return avoids;
-  return avoids.map((a) =>
-    a.id === GROWTH_GATE_AVOID_ID
-      ? { ...a, avoid: `Do not scale "${primary.title}" beyond a small trial until cash, profit, capacity, workload and quality gates pass` }
-      : a
-  );
+  return avoids.map((a) => {
+    const precondition = GROWTH_VETO_PRECONDITION[a.id];
+    return precondition ? { ...a, avoid: precondition(primary.title) } : a;
+  });
 }
 
 function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?: CurrentOwnerDecision | null): BeginnerExplanation {
@@ -1198,7 +1213,7 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?
           : cashSignalUnsafe
             ? "No diagnosed area has an open action, but your cash signals need a check"
             : "No diagnosed area has an open action right now",
-      businessFunction: [primary ? BUSINESS_FUNCTION_BY_OWNER_CLASS[primary.priorityClass] : BusinessFunction.DATA_QUALITY],
+      businessFunction: [primary && primary.source !== "evidence_refresh" ? BUSINESS_FUNCTION_BY_OWNER_CLASS[primary.priorityClass] : BusinessFunction.DATA_QUALITY],
       whatToDoFirst,
       whatNotToDo: whatNotToDo.length > 0 ? whatNotToDo : ["Do not take on risk you cannot measure yet"],
       proofToCollect: ownerDecision.evidence.slice(0, 4),
@@ -1206,7 +1221,11 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?
         ? `${primary.title} is marked done and verified on the next check`
         : "OpsIQ can name a main target from your numbers",
       ifIgnoredConsequence: primary
-        ? IF_IGNORED_BY_OWNER_CLASS[primary.priorityClass]
+        ? primary.source === "evidence_refresh"
+          // A refresh target stands in for out-of-date findings: the consequence is acting (or not)
+          // on figures that may no longer be true — never a claim that the old problem is current.
+          ? "OpsIQ's advice keeps resting on out-of-date figures, and a real problem they showed could go unchecked"
+          : IF_IGNORED_BY_OWNER_CLASS[primary.priorityClass]
         : cashSignalUnsafe
           ? "you may run out of cash without warning"
           : "problems can build up unnoticed",
@@ -2632,7 +2651,7 @@ export async function getOwnerNowView(
   const canonicalPrimary = options?.ownerDecision ? options.ownerDecision.primaryTarget : undefined;
   const topActionCategory = view.topOwnerActions[0]?.category;
   const topActionImpactArea = canonicalPrimary !== undefined
-    ? (canonicalPrimary ? IMPACT_AREA_BY_OWNER_CLASS[canonicalPrimary.priorityClass] : null)
+    ? (canonicalPrimary ? (canonicalPrimary.source === "evidence_refresh" ? "governance" : IMPACT_AREA_BY_OWNER_CLASS[canonicalPrimary.priorityClass]) : null)
     : topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
   const [doNotRepeatAnnotation, executionLifecycle, businessOperatingSystem] = await Promise.all([
     topActionImpactArea

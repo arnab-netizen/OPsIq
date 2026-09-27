@@ -48,6 +48,17 @@ describe("Now View avoid list vs the canonical main target", () => {
     expect(out[1]).toEqual(overload);
   });
 
+  it("every growth/marketing veto (cash danger, service failure) becomes a precondition that keeps its reason", () => {
+    const cash: ActionToAvoid = { id: "avoid_growth_on_cash_danger", avoid: "Do not start a new marketing/ad campaign or expand this week", reason: "cash", businessFunction: [BusinessFunction.CASH_FLOW], triggeredBy: [IssueCategory.CASH_DANGER] };
+    const service: ActionToAvoid = { id: "avoid_marketing_on_service_failure", avoid: "Do not scale marketing or acquisition before fixing service quality", reason: "service", businessFunction: [BusinessFunction.MARKETING], triggeredBy: [IssueCategory.CUSTOMER_SERVICE_FAILURE] };
+    const out = reconcileAvoidsWithOwnerDecision([cash, service], decisionWith("GROWTH_OPPORTUNITY", "Add a referral ask"));
+    expect(out.map((a) => a.avoid)).toEqual([
+      'Keep "Add a referral ask" to a small, low-cost trial while cash is in danger — no new paid campaign or expansion this week',
+      'Do not scale "Add a referral ask" beyond a small trial until service quality is fixed',
+    ]);
+    expect(out.map((a) => a.reason)).toEqual(["cash", "service"]);
+  });
+
   it("with a non-growth main target, the growth gate is unchanged", () => {
     const out = reconcileAvoidsWithOwnerDecision([growthGate], decisionWith("PROFIT_LOSS", "Stop the discount leak"));
     expect(out).toEqual([growthGate]);

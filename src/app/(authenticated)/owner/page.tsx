@@ -494,7 +494,7 @@ export default function OwnerCommandCenterPage() {
               collapsed behind one disclosure BELOW the canonical decision and never presented as a
               competing "first" (hostile review A P1-1). */}
           {(wbp?.supervisor?.found || priorities?.found || wbp?.found) && (
-          <Disclosure summary="Supporting plan analysis (context for your main target above)" className="mb-6" data-testid="command-center-plan-analysis">
+          <Disclosure summary={decision ? "Supporting plan analysis (context for your main target above)" : "Supporting plan analysis"} className="mb-6" data-testid="command-center-plan-analysis">
           <div className="p-3">
           {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} />}
 

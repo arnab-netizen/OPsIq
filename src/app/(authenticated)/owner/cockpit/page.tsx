@@ -310,7 +310,10 @@ export default function OwnerCockpitPage() {
           growthReadinessStatus: view.growthReadinessStatus,
           topOwnerActions: view.topOwnerActions,
           urgentRisks: view.urgentRisks,
-          canonicalPrimaryClass: decision?.primaryTarget?.priorityClass ?? null,
+          // A refresh target's concern is out-of-date information, never the old problem it stands in for.
+          canonicalPrimaryClass: decision?.primaryTarget
+            ? decision.primaryTarget.source === "evidence_refresh" ? "MISSING_CRITICAL_EVIDENCE" : decision.primaryTarget.priorityClass
+            : null,
           conditionDimensions: (data.derivedBusinessCondition as DerivedBusinessConditionSignals) ?? null,
         });
         setAssessmentNarrative(composeOwnerAssessment(canonicalAssessment));

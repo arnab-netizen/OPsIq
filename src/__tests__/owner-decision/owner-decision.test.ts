@@ -295,6 +295,14 @@ describe("what changed", () => {
     expect(later.whatChanged.map((c) => c.kind)).toEqual(["CONFIDENCE_CHANGED"]);
   });
 
+  it("a refresh target never claims the old problem is current; confidence explains it is out-of-date information", () => {
+    const d = resolveOwnerDecision(input([cand({ findingCode: "FIN_INSOLVENT_RUNWAY", title: "Cash runs out in 20 days", severity: "critical", stale: true })], { staleDomains: ["finance"] }));
+    expect(d.primaryTarget?.source).toBe("evidence_refresh");
+    expect(d.whyThisWins[0]).toMatch(/^Your Finance figures are out of date, and they last showed a cash-survival danger \(critical\); confirming them comes before acting/);
+    expect(d.whyThisWins[0]).not.toMatch(/^This is/);
+    expect(d.confidence.reasons).toContain("OpsIQ is certain these figures are out of date; confirm them before acting on what they showed.");
+  });
+
   it("two 'covered' funding gaps are not reported as a change", () => {
     const strategy = (fundingGap: number) => ({ code: "GO" as const, headline: "Go", headlineDetail: null, optionName: null, fundingGap, currency: "INR" });
     const first = resolveOwnerDecision(input([cand({ findingCode: "FIN_DISCOUNT_LEAKAGE", title: "x" })], { strategy: strategy(-100) }));

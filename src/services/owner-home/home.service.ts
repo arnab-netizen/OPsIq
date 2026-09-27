@@ -15,7 +15,8 @@
  * shared Module 1 `getBusiness` guard and every read is workspace- and business-scoped. Reuses the
  * proven Business Condition domain-score mappers — no domain scoring is duplicated here.
  */
-import { db } from "@/lib/db";
+import { db, withStatementTimeout } from "@/lib/db";
+import { logger } from "@/infra/logger";
 import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
@@ -137,7 +138,17 @@ export interface OwnerHomeResult {
  * Decision-memory events live under their own entity type (keyed by businessId) so they never crowd
  * the owner-business entity's governed audit trail (trust.service getEntityAuditTrail).
  */
+const OWNER_DECISION_MEMORY_WRITE_TIMEOUT_MS = 3_000;
+const OWNER_DECISION_MEMORY_LOCK_WAIT_MS = 2_000;
+
 export const OWNER_DECISION_ENTITY_TYPE = "OwnerDecision";
+
+/** The evidence period a cycle's snapshot describes, or null when that evidence is out of date. */
+export function currentEvidenceTime(snapshot: { periodEnd?: unknown; supersededById?: unknown } | null | undefined, staleCutoffMs: number): Date | null {
+  if (!snapshot?.periodEnd || snapshot.supersededById) return null;
+  const periodEnd = asDate(snapshot.periodEnd);
+  return periodEnd && periodEnd.getTime() >= staleCutoffMs ? periodEnd : null;
+}
 
 function ownerDecisionMemoryWhere(workspaceId: string, businessId: string) {
   return { workspaceId, eventName: AUDIT_EVENTS.OWNER_DECISION_CHANGED, entityType: OWNER_DECISION_ENTITY_TYPE, entityId: businessId };
@@ -348,8 +359,10 @@ export async function getOwnerHome(
     const cashFinance = resolveCashFinanceSignal(
       // The period each reading describes — not the cycle's createdAt (a re-diagnosis from an old
       // snapshot after an action is completed/verified would otherwise look newer). Same as Now View.
-      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: cashflow.snapshot?.periodEnd ? asDate(cashflow.snapshot.periodEnd) : null },
-      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: finance.snapshot?.periodEnd ? asDate(finance.snapshot.periodEnd) : null }
+      // A reading that is itself out of date (old period, or an amended Finance snapshot) cannot be
+      // shown to be current, so it never supersedes the other source (→ incomparable, nothing excluded).
+      { state: (cashflow.cashflowState as SurvivalLikeState | null) ?? null, generatedAt: currentEvidenceTime(cashflow.snapshot, staleCutoff) },
+      { state: (finance.survivalState as SurvivalLikeState | null) ?? null, generatedAt: currentEvidenceTime(finance.snapshot, staleCutoff) }
     );
     const supersededDomain = cashFinance.supersededSource === "cash" ? "cashflow" : cashFinance.supersededSource === "finance" ? "finance" : null;
     if (supersededDomain && cashFinance.supersededState && !SAFE_SURVIVAL_STATES.has(cashFinance.supersededState)) {
@@ -479,7 +492,10 @@ export async function getOwnerHome(
   const latestMemory = memories[0] ?? null;
   if (!latestMemory || !sameOwnerDecisionMemory(latestMemory, currentOwnerDecision.memory)) {
     try {
-      await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Through the pool-aware acquisition queue (never an ad-hoc interactive transaction on a read
+      // path), with a bounded lock wait so a busy workspace cannot stall Home.
+      await withStatementTimeout(db, OWNER_DECISION_MEMORY_WRITE_TIMEOUT_MS, async (tx: Prisma.TransactionClient) => {
+        await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = ${OWNER_DECISION_MEMORY_LOCK_WAIT_MS}`);
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-decision:${workspaceId}`}))`;
         const latest = await tx.auditEvent.findFirst({
           where: ownerDecisionMemoryWhere(workspaceId, businessId),
@@ -502,9 +518,15 @@ export async function getOwnerHome(
             priorityClass: currentOwnerDecision.primaryTarget?.priorityClass ?? null,
           },
         }, tx);
+      }, "owner-decision-memory");
+    } catch (err) {
+      // The decision is still correct and returned; only its change history misses this entry —
+      // logged (never silent) so a lost "what changed" entry is observable.
+      logger.warn("[owner-home] decision memory not recorded", {
+        workspaceId,
+        businessId,
+        error: err instanceof Error ? err.name : "unknown",
       });
-    } catch {
-      // The decision is still correct and returned; only its change history misses this entry.
     }
   }
 

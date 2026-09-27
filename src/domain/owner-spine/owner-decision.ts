@@ -540,7 +540,7 @@ function factorSentence(
       const w = rating(winner);
       const r = rating(runnerUp);
       return w === r
-        ? `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has a slightly ${measure.replace(/^higher /, "higher ")} than ${other}.`
+        ? `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has a slightly ${measure} than ${other}.`
         : `Both are ${OWNER_PRIORITY_CLASS_LABEL[winner.priorityClass]}${sameSeverity}; this one has the ${measure} (${w} vs ${r} for ${other}).`;
     }
     case "impact":
@@ -792,10 +792,11 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const reasons: string[] = [];
   let score = primary ? Math.round(clampConfidence(primary.confidence) * 100) : 0;
   let capped = false;
-  const primaryIsDataRequest = primary?.priorityClass === "MISSING_CRITICAL_EVIDENCE";
+  const primaryIsRefresh = primary?.source === "evidence_refresh";
+  const primaryIsDataRequest = primary?.priorityClass === "MISSING_CRITICAL_EVIDENCE" || primaryIsRefresh;
   // Recorded control facts (a compliance breach, an owner-recorded risk) do not depend on domain
   // data completeness, so business-wide data sufficiency never caps them.
-  const primaryIsRecordedFact = primary !== null && primary.source !== "domain_action";
+  const primaryIsRecordedFact = primary !== null && (primary.source === "compliance_item" || primary.source === "business_risk");
   if (primary && !primaryIsDataRequest && !primaryIsRecordedFact) {
     // The reason is stated whenever data is short — also when the score was already at or below the cap.
     if (input.dataSufficiency.status === "insufficient") {
@@ -806,7 +807,8 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       reasons.push("Some data is incomplete, so treat this advice with some caution.");
     }
   }
-  if (primaryIsDataRequest) reasons.push("OpsIQ is certain this information is missing; advice on everything else waits for it.");
+  if (primaryIsRefresh) reasons.push("OpsIQ is certain these figures are out of date; confirm them before acting on what they showed.");
+  else if (primaryIsDataRequest) reasons.push("OpsIQ is certain this information is missing; advice on everything else waits for it.");
   const level: OwnerDecisionConfidenceLevel = primary ? confidenceLevelFor(score) : "insufficient";
   if (!primary && !hasEvidence) reasons.push("There is no business data yet.");
 
@@ -814,7 +816,12 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   // competitor from a DIFFERENT domain (so a Finance-vs-Strategy conflict is always named).
   const whyThisWins: string[] = [];
   if (primary) {
-    whyThisWins.push(`This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""} from your ${ownerDomainLabel(primary.domain)} evidence.`);
+    whyThisWins.push(
+      primaryIsRefresh
+        // Never claims the old problem is current — only that it was last flagged and needs confirming.
+        ? `Your ${ownerDomainLabel(primary.domain)} figures are out of date, and they last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming them comes before acting on anything they showed.`
+        : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""} from your ${ownerDomainLabel(primary.domain)} evidence.`
+    );
     const runnerUp = ranked[1] ?? null;
     if (runnerUp) {
       const [, factor] = compareOwnerCandidatesWithFactor(primary, runnerUp);
