@@ -464,9 +464,11 @@
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [
         "src/__tests__/owner-activation/onboarding-cash-wiring.test.tsx",
+        "src/__tests__/owner-decision/first-value-disposition.test.tsx",
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/onboarding/page.tsx",
-        "src/app/(authenticated)/owner/page.tsx"
+        "src/app/(authenticated)/owner/page.tsx",
+        "src/services/owner-home/owner-decision-candidates.ts"
       ],
       "componentTreeFileCount": 2
     },
@@ -624,7 +626,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 4
+      "componentTreeFileCount": 5
     },
     {
       "route": "/owner/compliance/[id]",
@@ -1126,6 +1128,13 @@
           "capabilities": [
             "OWNER_VIEW"
           ]
+        },
+        {
+          "capabilities": [
+            "OWNER_VIEW"
+          ],
+          "endpoint": "/api/owner/home",
+          "method": "GET"
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
@@ -1134,13 +1143,17 @@
         {
           "method": "GET",
           "path": "/api/owner/first-value"
+        },
+        {
+          "method": "GET",
+          "path": "/api/owner/home"
         }
       ],
       "writeApis": [],
       "majorActions": [],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [],
-      "componentTreeFileCount": 1
+      "componentTreeFileCount": 2
     },
     {
       "route": "/owner/goals",
@@ -1346,7 +1359,7 @@
         "src/app/(authenticated)/owner/alerts/page.tsx",
         "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx"
       ],
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 4
     },
     {
       "route": "/owner/intake",
@@ -1860,7 +1873,7 @@
         "src/app/(authenticated)/owner/adjudication/page.tsx",
         "src/app/(authenticated)/owner/process-intelligence/page.tsx"
       ],
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 4
     },
     {
       "route": "/owner/onboarding",
@@ -2315,8 +2328,11 @@
         "src/__tests__/owner-activation/navigation-activation.test.tsx",
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
         "src/__tests__/owner-condition/owner-home-page.test.ts",
+        "src/__tests__/owner-decision/home-cockpit-priorities-invariant.test.tsx",
+        "src/__tests__/owner-decision/user-hostile-audit-regressions.test.ts",
         "src/__tests__/owner-finance/finance-page.test.ts",
         "src/__tests__/owner-home/home-page.test.ts",
+        "src/__tests__/owner-portfolio/engine.test.ts",
         "src/__tests__/owner-trust/trust-page.test.ts",
         "src/__tests__/services/owner-diagnosis-action-ordering-governance.test.ts",
         "src/app/(authenticated)/owner/automation/page.tsx",
@@ -2325,6 +2341,7 @@
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/intake/page.tsx",
         "src/app/(authenticated)/owner/portfolio/page.tsx",
+        "src/app/(authenticated)/owner/priorities/page.tsx",
         "src/app/(authenticated)/owner/risks/page.tsx",
         "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx",
         "src/app/(authenticated)/owner/startup/page.tsx",
@@ -2333,10 +2350,10 @@
         "src/app/(authenticated)/owner/tasks/page.tsx",
         "src/app/(authenticated)/owner/wealth/page.tsx",
         "src/domain/owner-mode/owner-data-hub.ts",
-        "src/services/owner-guidance/cockpit-finance-priority.service.ts",
+        "src/services/owner-home/owner-decision-candidates.ts",
         "src/services/workspace/employee-lifecycle.service.ts"
       ],
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/portfolio",
@@ -2379,13 +2396,6 @@
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
       "apiCapabilityRequirements": [
         {
-          "endpoint": "/api/decisions/list",
-          "method": "GET",
-          "capabilities": [
-            "ENGAGEMENT_VIEW"
-          ]
-        },
-        {
           "endpoint": "/api/owner/alerts",
           "method": "GET",
           "capabilities": [
@@ -2412,10 +2422,6 @@
       "readApis": [
         {
           "method": "GET",
-          "path": "/api/decisions/list"
-        },
-        {
-          "method": "GET",
           "path": "/api/owner/alerts"
         },
         {
@@ -2431,7 +2437,7 @@
       "majorActions": [],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 1
+      "componentTreeFileCount": 2
     },
     {
       "route": "/owner/process-intelligence",
