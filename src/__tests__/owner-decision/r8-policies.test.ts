@@ -301,6 +301,21 @@ describe("action requests: exact replay is a no-op; completed and cancelled reco
     expect(requestMatchesRow({ a: [1, 2], d: new Date("2026-01-01T00:00:00Z") }, { a: [1, 2], d: "2026-01-01T00:00:00.000Z" })).toBe(true);
     expect(requestMatchesRow({ a: [1, 2] }, { a: [2, 1] })).toBe(false);
   });
+  // R10 P2-14
+  it("a UUID field compares equal regardless of case (the DB column stores lower case)", () => {
+    const id = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    expect(requestMatchesRow({ assignedTo: id }, { assignedTo: id.toUpperCase() })).toBe(true);
+    expect(requestMatchesRow({ assignedTo: id }, { assignedTo: `${id.slice(0, -1)}b` })).toBe(false);
+  });
+  it("an empty update (no data fields, no dependent write) is refused, never silently reported as applied", async () => {
+    const { applyGuardedActionTransition } = await import("@/services/owner-mode/owner-action-transition");
+    await expect(
+      applyGuardedActionTransition({
+        model: "ownerFinanceAction", entity: "OwnerFinanceAction", actionId: "a1", workspaceId: "ws1",
+        expectedStatus: "assigned", data: {}, request: {}, audits: () => [],
+      })
+    ).rejects.toThrow(ValidationError);
+  });
 });
 
 describe("continuity: a cycle on in-progress, future or amended figures never takes over engaged work", () => {

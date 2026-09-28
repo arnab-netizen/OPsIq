@@ -86,6 +86,14 @@ export interface CurrentCashFinanceReading extends CashFinanceResolution {
   provisionalState: SurvivalLikeState | null;
   /** True when the in-progress current period's figures decide `gateState` (label as in progress). */
   provisional: boolean;
+  /**
+   * P2-8: each source's OWN in-progress reading, independent of which one drives the overall
+   * `gateState`/`gateDriver`. A card (Home's cash card, Home's financial card) tightens by ITS OWN
+   * source's provisional reading — never dropped just because the OTHER source happens to be worse and
+   * therefore wins the single overall gate decision.
+   */
+  provisionalCashState: SurvivalLikeState | null;
+  provisionalFinanceState: SurvivalLikeState | null;
   /** Source-derived confidence in `gateState`, 0..1 (see the module doc). */
   gateConfidence: number | null;
 }
@@ -259,6 +267,8 @@ export function currentCashFinanceReading(
     gateSource,
     provisionalState,
     provisional,
+    provisionalCashState: provCash,
+    provisionalFinanceState: provFinance,
     gateConfidence,
   };
 }

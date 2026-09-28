@@ -225,6 +225,10 @@ export async function loadOwnerGateConstraints(
       confidence: reading.gateConfidence,
       provisional: reading.provisional,
       source: reading.gateSource,
+      // P2-8: each source's OWN in-progress reading — a card tightens by its own source's danger, never
+      // dropped just because the OTHER source is worse and wins the single overall gate decision above.
+      provisionalCashState: reading.provisionalCashState,
+      provisionalFinanceState: reading.provisionalFinanceState,
     },
     grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
     grossMarginConfidence: marginConfidence(snap, now),

@@ -145,6 +145,14 @@ export interface OwnerGateConstraints {
     provisional?: boolean;
     /** The source whose figures decide gateState (routes a refresh to the right source). */
     source?: "cashflow" | "finance" | null;
+    /**
+     * P2-8: each source's OWN in-progress reading, independent of `driver` (which names only the source
+     * that wins the single overall enforced state). Home's cash card and financial card each tighten by
+     * their own source's danger here — never dropped just because the other source is worse and wins the
+     * enforcement decision above.
+     */
+    provisionalCashState?: "SAFE" | "WATCH" | "AT_RISK" | "CRITICAL" | "INSOLVENT_RISK" | null;
+    provisionalFinanceState?: "SAFE" | "WATCH" | "AT_RISK" | "CRITICAL" | "INSOLVENT_RISK" | null;
   };
   /** Gross margin of the business's current effective snapshot (null ⇒ unknown). */
   grossMarginPct: number | null;
@@ -163,7 +171,7 @@ export const NO_OWNER_GATE_CONSTRAINTS: OwnerGateConstraints = Object.freeze({
   businessScoped: true,
   doNotRepeat: [],
   capacity: { status: "safe" as CapacityStatus, reason: "No equipment tracked.", bottlenecks: [], confidence: null },
-  cash: { gateState: null, basis: "", driver: null, confidence: null, provisional: false, source: null },
+  cash: { gateState: null, basis: "", driver: null, confidence: null, provisional: false, source: null, provisionalCashState: null, provisionalFinanceState: null },
   grossMarginPct: null,
   grossMarginConfidence: null,
   expiredCompliance: null,

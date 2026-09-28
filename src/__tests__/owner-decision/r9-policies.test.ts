@@ -375,4 +375,21 @@ describe("Home: an in-progress profit-driven Finance reading is financial danger
     const s = buildOwnerHomeSummary({ ...base, provisionalCash: { state: "CRITICAL", source: "cashflow" } });
     expect(s.cashDanger).toMatchObject({ status: "in_progress", level: "high", evidenceAsOf: null });
   });
+  // R10 P2-8: a real provisional Cash danger must not be dropped from the cash card merely because a
+  // WORSE provisional profit-driven Finance reading is the one that wins the single overall gate driver.
+  it("R10 P2-8: provisional Cash AT_RISK is shown even though a worse provisional profit-driven Finance wins the overall gate driver", () => {
+    const reading = currentCashFinanceReading(null, null, NOW.getTime(), {
+      cash: { state: "AT_RISK", confidence: 0.8 },
+      finance: { state: "CRITICAL", driver: "profit", confidence: 0.8 },
+    });
+    expect(reading.gateDriver).toBe("finance_profit"); // Finance is worse and wins the overall decision
+    expect(reading.provisionalCashState).toBe("AT_RISK"); // but Cash's own danger is not lost
+    const s = buildOwnerHomeSummary({
+      ...base,
+      provisionalCash: reading.provisionalCashState ? { state: reading.provisionalCashState, source: "cashflow" } : null,
+      provisionalFinancial: reading.provisionalFinanceState ? { state: reading.provisionalFinanceState } : null,
+    });
+    expect(s.cashDanger).toMatchObject({ status: "in_progress", level: "elevated" });
+    expect(s.financialDanger).toMatchObject({ status: "in_progress", level: "high" });
+  });
 });
