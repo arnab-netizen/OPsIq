@@ -7,7 +7,7 @@
  * verification), overdue actions, and cycle history. Returns an explicit empty
  * state when the owner has no businesses or no cycles yet.
  */
-import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "./business.service";
@@ -30,6 +30,8 @@ export interface RecoveryDashboardPayload {
    * built on. A genuinely future snapshot is never returned.
    */
   latestSnapshotPeriodState: EvidencePeriodState | null;
+  /** The latest snapshot's own diagnosis, when it was already diagnosed (the page never prompts a re-run of it). */
+  latestSnapshotDiagnosis: SnapshotDiagnosisState | null;
   latestCycle: any | null;
   overdueActions: any[];
   cycleHistory: Array<{
@@ -79,6 +81,7 @@ export async function getRecoveryDashboard(
       hasData: false,
       latestSnapshot: null,
       latestSnapshotPeriodState: null,
+      latestSnapshotDiagnosis: null,
       latestCycle: null,
       overdueActions: [],
       cycleHistory: [],
@@ -104,7 +107,8 @@ export async function getRecoveryDashboard(
         // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
         findings: true,
         actions: {
-          include: { verifications: { orderBy: { createdAt: "desc" } } },
+          // The finding code is the action's continuity key (dashboardContinuityActions).
+          include: { verifications: { orderBy: { createdAt: "desc" } }, finding: { select: { code: true } } },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -119,6 +123,16 @@ export async function getRecoveryDashboard(
     }),
   ]);
 
+  // Whether the snapshot this page would diagnose was already diagnosed (and on what): shown instead of a
+  // prompt to re-run the same evidence (a changed snapshot needs a new cycle).
+  const latestSnapshotCycle = latestSnapshot
+    ? await db.recoveryCycle.findFirst({
+        where: { businessId: selectedBusinessId, workspaceId, snapshotId: latestSnapshot.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, createdAt: true, healthStatus: true },
+      })
+    : null;
+
   const now = new Date();
   const overdueActions = await db.recoveryAction.findMany({
     where: {
@@ -126,6 +140,8 @@ export async function getRecoveryDashboard(
       workspaceId,
       status: { in: ["proposed", "assigned", "in_progress", "blocked"] },
       dueAt: { lt: now },
+      // Never a step of a plan for a period that has not started.
+      cycle: { snapshot: { periodStart: { lte: now } } },
     },
     orderBy: { dueAt: "asc" },
   });
@@ -136,12 +152,13 @@ export async function getRecoveryDashboard(
   // finished or cancelled.
   const carriedActions = latestCycleRow
     ? await db.recoveryAction.findMany({
-        where: {
-          businessId: selectedBusinessId,
-          workspaceId,
-          cycleId: { not: latestCycleRow.id },
-          status: { in: [...ENGAGED_ACTION_STATUSES] },
-        },
+        where: dashboardPriorWorkWhere(
+          { businessId: selectedBusinessId, workspaceId },
+          latestCycleRow.id,
+          latestCycleRow.findings.map((f: { code: string }) => f.code),
+          dashboardNow,
+          true
+        ),
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
           cycle: { select: { cycleNumber: true } },
@@ -154,15 +171,15 @@ export async function getRecoveryDashboard(
     ? {
         ...latestCycleRow,
         findings: rankOwnerFindingsBySeverity(latestCycleRow.findings),
-        actions: [
-          ...latestCycleRow.actions,
-          ...carriedActions.map((a: { cycle: { cycleNumber: number }; finding: { code: string } | null }) => ({
-            ...a,
-            carriedFromCycleSequence: a.cycle.cycleNumber,
-            stillFlaggedByLatestDiagnosis:
-              a.finding !== null && latestCycleRow.findings.some((f: { code: string }) => f.code === a.finding!.code),
-          })),
-        ],
+        // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
+        // owner's engaged or completed work for the same key.
+        actions: dashboardContinuityActions<any>(
+          latestCycleRow,
+          latestCycleRow.actions,
+          carriedActions,
+          (a) => a.finding?.code ?? null,
+          (a) => a.cycle?.cycleNumber
+        ),
       }
     : null;
 
@@ -172,6 +189,7 @@ export async function getRecoveryDashboard(
     hasData: latestCycleRow !== null,
     latestSnapshot: latestSnapshot ?? null,
     latestSnapshotPeriodState: latestSnapshot ? evidencePeriodState(latestSnapshot, dashboardNow) : null,
+    latestSnapshotDiagnosis: snapshotDiagnosisState(latestSnapshot, latestSnapshotCycle, latestSnapshotCycle?.healthStatus ?? null),
     latestCycle,
     overdueActions,
     cycleHistory: cycles.map((c: any) => ({

@@ -14,7 +14,7 @@ import { listBusinesses, getBusiness } from "@/services/founder-recovery/busines
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { getDomainOwnerSteps, selectStrategyLocalStep, type StrategyDecisionStepState } from "@/services/owner-home/owner-candidate-builder";
 import { evaluateOwnerActionGate } from "@/domain/owner-mode/owner-action-gate-policy";
-import { ownerGateHoldText } from "@/domain/owner-spine/owner-decision";
+import { ownerGateHoldsText } from "@/domain/owner-spine/owner-decision";
 import { ownerStrategyStepIntent } from "@/domain/owner-spine/owner-imperatives";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import type { StrategyDecision } from "@/domain/owner-strategy/decision";
@@ -215,7 +215,7 @@ export async function getStrategyDashboard(
   // A step the owner action gate holds back is "held" (by what, and what clears it) — never called done,
   // verified or superseded; the decision's not-yet-listed step is checked against the same gate.
   const steps = latestCycle ? await getDomainOwnerSteps(workspaceId, selectedBusinessId, "strategy") : null;
-  const heldRows = new Map((steps?.holds ?? []).map((h) => [h.sourceId, ownerGateHoldText(h.code, steps!.gate)] as const));
+  const heldRows = new Map((steps?.holds ?? []).map((h) => [h.sourceId, ownerGateHoldsText(h.blocks, steps!.gate)] as const));
   const unlistedVerdict = decision && steps
     ? evaluateOwnerActionGate(steps.gate, { domain: "strategy", intent: ownerStrategyStepIntent(decision.code, decision.primaryStep.findingCode), findingId: null, findingCode: decision.primaryStep.findingCode })
     : null;
@@ -224,7 +224,7 @@ export async function getStrategyDashboard(
     arbitratedActions,
     steps?.eligible ?? [],
     (row) => decision !== null && isStrategyDecisionStep(row, decision),
-    { rows: heldRows, unlistedStep: unlistedVerdict && !unlistedVerdict.allowed ? ownerGateHoldText(unlistedVerdict.code, steps!.gate) : null }
+    { rows: heldRows, unlistedStep: unlistedVerdict && !unlistedVerdict.allowed ? ownerGateHoldsText(unlistedVerdict.blocks, steps!.gate) : null }
   );
 
   return {

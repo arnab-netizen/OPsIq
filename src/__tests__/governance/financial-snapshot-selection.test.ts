@@ -104,6 +104,8 @@ describe("financial snapshot selection is centralised", () => {
     // destructuring, aggregate/groupBy, bracket access and raw SQL all fail here.
     const ALLOWED = [
       /^ownerFinancialSnapshot\s*\.\s*(findFirst|findMany)\(\s*currentEffectiveFinancialSnapshotQuery\(/,
+      // The in-progress period's snapshot, from the same selector module (provisional: labelled, never current).
+      /^ownerFinancialSnapshot\s*\.\s*findFirst\(\s*inProgressFinancialSnapshotQuery\(/,
       /^ownerFinancialSnapshot\s*:\s*\{\s*findFirst\(args:\s*CurrentEffectiveSnapshotQuery</,
     ];
     // A Prisma TYPE reference (PrismaClient["ownerFinancialSnapshot"]["findFirst"] inside a type) is not a

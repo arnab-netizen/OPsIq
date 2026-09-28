@@ -18,6 +18,7 @@ import {
   describeOwnerChanges,
   ownerGateHoldText,
   OWNER_DNR_RULES_ROUTE,
+  ownerDnrRuleRoute,
   resolveOwnerDecision,
   type OwnerDecisionCandidate,
   type ResolveOwnerDecisionInput,
@@ -85,10 +86,11 @@ describe("a cash-safety block is named and routed by what drives it", () => {
 });
 
 describe("the do-not-repeat blocker routes to the rule and is worded by what it matches", () => {
-  it("broad area rule → 'growth step', routed to Cockpit → Do-not-repeat rules", () => {
+  it("broad area rule → 'growth step', routed to that rule in Cockpit → Do-not-repeat rules (Round 9: the exact rule)", () => {
     const g = gate({ doNotRepeat: [{ id: "r1", domain: "marketing", match: "broad", findingId: null }] });
     const d = resolveOwnerDecision(input([scale], g));
-    expect(d.primaryTarget).toMatchObject({ source: "safety_gate", findingCode: "GATE_DO_NOT_REPEAT_REVIEW", targetRoute: OWNER_DNR_RULES_ROUTE });
+    expect(d.primaryTarget).toMatchObject({ source: "safety_gate", findingCode: "GATE_DO_NOT_REPEAT_REVIEW", ruleId: "r1", targetRoute: ownerDnrRuleRoute("r1") });
+    expect(ownerDnrRuleRoute("r1").startsWith(OWNER_DNR_RULES_ROUTE.split("#")[0])).toBe(true);
     expect(d.primaryTarget!.title).toMatch(/growth step$/);
   });
 
@@ -97,16 +99,16 @@ describe("the do-not-repeat blocker routes to the rule and is worded by what it 
     const g = gate({ doNotRepeat: [{ id: "r2", domain: "sales", match: "exact", findingId: "f-1" }] });
     const d = resolveOwnerDecision(input([repeat], g));
     expect(d.primaryTarget!.title).toBe("Review the earlier Sales result marked do-not-repeat before repeating that step");
-    expect(d.primaryTarget!.targetRoute).toBe(OWNER_DNR_RULES_ROUTE);
+    expect(d.primaryTarget!.targetRoute).toBe(ownerDnrRuleRoute("r2"));
   });
 
-  it("exact finding rule on work that answers a present problem → the problem stays visible, with the rule review as its step (Round 8)", () => {
+  it("exact finding rule on work that answers a present problem → the problem stays visible, with the rule review as its step (Round 8; Round 9 wording: the ISSUE, the step quoted)", () => {
     const repeat = cand({ domain: "sales", findingCode: "SALES_LOW_CONVERSION", title: "Retrain on follow-up", findingId: "f-1" });
     const g = gate({ doNotRepeat: [{ id: "r2", domain: "sales", match: "exact", findingId: "f-1" }] });
     const d = resolveOwnerDecision(input([repeat], g));
-    expect(d.primaryTarget!.title).toBe("Retrain on follow-up: the planned step repeats one marked do-not-repeat — review that rule or choose a different response");
+    expect(d.primaryTarget!.title).toMatch(/in Sales is still open, and its planned step "Retrain on follow-up" is marked do-not-repeat — respond another way or review that rule$/);
     expect(d.primaryTarget!.priorityClass).toBe(classifyOwnerFindingCode("SALES_LOW_CONVERSION"));
-    expect(d.primaryTarget!.targetRoute).toBe(OWNER_DNR_RULES_ROUTE);
+    expect(d.primaryTarget!.targetRoute).toBe(ownerDnrRuleRoute("r2"));
   });
 });
 

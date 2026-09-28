@@ -29,8 +29,10 @@ import type { FinancialHealthState } from "@/domain/owner-finance/cash-safety-ga
 import { grossMarginPctFrom } from "@/domain/owner-finance/margin-safety-gate";
 import {
   appliesToBusiness,
+  CAPACITY_RECORD_FRESH_DAYS,
   capacityConstraint,
   evaluateOwnerActionGate,
+  OUT_OF_DATE_EVIDENCE_CONFIDENCE,
   expiredComplianceFor,
   MATERIAL_ACTION_STATUSES,
   OWNER_MARGIN_ABSTENTION_CODE,
@@ -60,7 +62,7 @@ interface ActionGateDb extends ProvisionalCashFinanceDb, DnrOwnerOverrideDb {
     }): Promise<Array<{ id: string; businessId: string | null; memoryKey: string; summary?: string; reason?: string; changedContextExplanation: string | null }>>;
   };
   ownerEquipment: {
-    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string; businessId: string | null }>>;
+    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string; businessId: string | null; updatedAt?: Date | null }>>;
   };
   ownerFinanceCycle: {
     findFirst(args: {
@@ -82,7 +84,7 @@ interface ActionGateDb extends ProvisionalCashFinanceDb, DnrOwnerOverrideDb {
     }): Promise<{ cashflowState: string; dataConfidenceScore?: number | null; snapshot?: { periodStart?: Date; periodEnd: Date } | null } | null>;
   };
   ownerFinancialSnapshot: {
-    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true; dataConfidenceScore: true }>): Promise<{ revenue: number | null; costOfGoods: number | null; dataConfidenceScore?: number | null } | null>;
+    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true; dataConfidenceScore: true; periodEnd: true }>): Promise<{ revenue: number | null; costOfGoods: number | null; dataConfidenceScore?: number | null; periodEnd?: Date | null } | null>;
   };
   ownerComplianceItem: {
     findMany(args: { where: Record<string, unknown>; select: { businessId: true; kind: true; name: true; expiresAt: true } }): Promise<Array<{ businessId: string | null; kind: string; name: string; expiresAt: Date | null }>>;
@@ -103,6 +105,18 @@ function bizScope(workspaceId: string, businessId: string | null, extra: Record<
 /** A 0..100 data-confidence score as 0..1 (null when absent). */
 function unitScore(v: number | null | undefined): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v / 100)) : null;
+}
+
+/**
+ * Confidence in the margin figure (0..1, null ⇒ unknown): the snapshot's data confidence, capped at
+ * OUT_OF_DATE_EVIDENCE_CONFIDENCE when its period ended more than the freshness window ago.
+ */
+export function marginConfidence(snap: { dataConfidenceScore?: number | null; periodEnd?: Date | null } | null, now: Date): number | null {
+  const base = unitScore(snap?.dataConfidenceScore);
+  const end = snap?.periodEnd instanceof Date ? snap.periodEnd.getTime() : null;
+  const outOfDate = end === null || now.getTime() - end > CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+  if (!outOfDate) return base;
+  return base === null ? OUT_OF_DATE_EVIDENCE_CONFIDENCE : Math.min(base, OUT_OF_DATE_EVIDENCE_CONFIDENCE);
 }
 
 export interface OwnerActionGateDeps {
@@ -137,7 +151,7 @@ export async function loadOwnerGateConstraints(
     }),
     deps.db.ownerEquipment.findMany({
       where: bizScope(workspaceId, businessId),
-      select: { name: true, businessId: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
+      select: { name: true, businessId: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true, updatedAt: true },
     }),
     cycleWhere
       ? deps.db.ownerFinanceCycle.findFirst({
@@ -158,7 +172,7 @@ export async function loadOwnerGateConstraints(
         })
       : Promise.resolve(null),
     scope
-      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true, dataConfidenceScore: true }, now))
+      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true, dataConfidenceScore: true, periodEnd: true }, now))
       : Promise.resolve(null),
     deps.db.ownerComplianceItem.findMany({
       where: bizScope(workspaceId, businessId, { status: "active" }),
@@ -213,7 +227,7 @@ export async function loadOwnerGateConstraints(
       source: reading.gateSource,
     },
     grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
-    grossMarginConfidence: unitScore(snap?.dataConfidenceScore),
+    grossMarginConfidence: marginConfidence(snap, now),
     expiredCompliance: expiredComplianceFor(complianceItems, businessId, soleRealBusinessId, now),
   };
 }
@@ -273,9 +287,12 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
       actorType: "system",
       entityType: "owner_action",
       entityId: input.actionId,
-      payload: { domain: input.domain, businessId: input.businessId, toStatus: input.toStatus, code: verdict.code, errorName: "OwnerActionGateError" },
+      payload: { domain: input.domain, businessId: input.businessId, toStatus: input.toStatus, code: verdict.code, codes: verdict.blocks.map((b) => b.code), errorName: "OwnerActionGateError" },
     });
-    throw new ConflictError(verdict.reason);
+    // The first failing check is enforced (deterministic); every other check that holds it is named too, so
+    // clearing one never reveals a surprise second block.
+    const others = verdict.blocks.slice(1).map((b) => b.reason);
+    throw new ConflictError(others.length === 0 ? verdict.reason : `${verdict.reason} It is also held: ${others.join(" ")}`, { codes: verdict.blocks.map((b) => b.code) });
   }
   return allowed(verdict.marginAbstention);
 }

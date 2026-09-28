@@ -18,7 +18,7 @@ interface BusinessReading {
    * amended current cycle (a `supersededById: null` filter) would fall back to it — the defect this models.
    */
   finOlder?: string | null;
-  /** These completed readings are older than the freshness window (unverified). */
+  /** These completed readings are older than Owner Mode's 45-day freshness window (Consulting ignores age). */
   stale?: boolean;
   /** These readings describe a period that has not STARTED (genuinely future): never returned. */
   future?: boolean;
@@ -239,9 +239,35 @@ describe("Decision 3 — Consulting multi-business cash: the WORST valid current
     expect(await state({ perBusiness: { b1: { cash: "CRITICAL", fin: "CRITICAL", future: true } } })).toBe("AT_RISK");
   });
 
-  it("freshness: an out-of-date SAFE reading is not verified safety; an out-of-date unsafe one is kept", async () => {
-    expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE", stale: true } } })).toBe("AT_RISK");
-    expect(await state({ perBusiness: { b1: { cash: "CRITICAL", fin: "SAFE", stale: true } } })).toBe("CRITICAL");
+  describe("Consulting compatibility matrix (Policy A — Owner freshness policy != Consulting compatibility policy)", () => {
+    it("1 — completed SAFE reading >45 days old: the base SAFE input is preserved (growth allowed)", async () => {
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE", stale: true } } })).toBe("allowed");
+    });
+    it("2 — completed CRITICAL reading >45 days old: CRITICAL preserved", async () => {
+      expect(await state({ perBusiness: { b1: { cash: "CRITICAL", fin: "SAFE", stale: true } } })).toBe("CRITICAL");
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "CRITICAL", stale: true } } })).toBe("CRITICAL");
+    });
+    it("3 — provisional unsafe current month tightens the completed result", async () => {
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE", stale: true, provCash: "CRITICAL" } } })).toBe("CRITICAL");
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE", provFin: "INSOLVENT_RISK" } } })).toBe("INSOLVENT_RISK");
+    });
+    it("4 — provisional SAFE current month cannot relax older stricter completed evidence", async () => {
+      expect(await state({ perBusiness: { b1: { cash: "CRITICAL", fin: "SAFE", stale: true, provCash: "SAFE", provFin: "SAFE" } } })).toBe("CRITICAL");
+    });
+    it("5 — a genuinely future period is excluded", async () => {
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE", future: true } } })).toBe("AT_RISK");
+      expect(await state({ perBusiness: { b1: { cash: "CRITICAL", fin: "CRITICAL", future: true } } })).toBe("AT_RISK");
+    });
+    it("6 — amended latest Finance: an older period never silently replaces it as current truth", async () => {
+      // Amended CRITICAL is kept (never the older SAFE); an amended SAFE is not proof of safety (missing → AT_RISK).
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "CRITICAL", finSuperseded: true, finOlder: "SAFE" } } })).toBe("CRITICAL");
+      expect(await state({ perBusiness: { b1: { cash: "SAFE", fin: "SAFE", finSuperseded: true, finOlder: "SAFE" } } })).toBe("AT_RISK");
+    });
+    it("7 — multi-business: the worst valid Consulting contribution wins (old readings included)", async () => {
+      expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE", stale: true }, b: { cash: "AT_RISK", fin: "SAFE" } } })).toBe("AT_RISK");
+      expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "CRITICAL", fin: "SAFE", stale: true }, b: { cash: "SAFE", fin: "SAFE" } } })).toBe("CRITICAL");
+      expect(await state({ businesses: ["a", "b"], perBusiness: { a: { cash: "SAFE", fin: "SAFE", stale: true }, b: { cash: "SAFE", fin: "SAFE" } } })).toBe("allowed");
+    });
   });
 
   it("F: a single business behaves as the base gate (worse of its two states; a missing half AT_RISK)", async () => {

@@ -681,7 +681,7 @@ function StrategyCycleView({
                     )}
                     {a.decisionFitNote && <div className="text-xs text-muted-foreground">{a.decisionFitNote}</div>}
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && !a.decisionFitNote && " — the latest diagnosis no longer flags this; finish or cancel it"}
                       </div>
                     )}

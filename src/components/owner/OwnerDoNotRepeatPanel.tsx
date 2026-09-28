@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Textarea } from "@/ui/primitives";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { httpResponseErrorFromBody, toOperatorSafeError } from "@/lib/operator-safe-errors";
 import { MIN_CHANGED_CONTEXT_LENGTH } from "@/domain/owner-mode/decision-memory";
 
 export interface OwnerDoNotRepeatRuleRow {
@@ -32,54 +32,101 @@ const REFUSAL_MESSAGES: Readonly<Record<string, string>> = Object.freeze({
   ALREADY_RECORDED: "What has changed was already recorded on this rule for this business. Reload to see it.",
 });
 
+/** A refusal the server named by a stable code: shown by its code's owner text, never by any server text. */
 class RefusedError extends Error {
-  constructor(readonly code: string, message: string) {
-    super(message);
+  constructor(readonly code: keyof typeof REFUSAL_MESSAGES & string) {
+    super(code);
   }
+}
+
+/** The anchor id of one rule in the panel (the Cockpit's and Home's links land on the exact rule). */
+export function ownerDnrRuleAnchor(ruleId: string): string {
+  return `dnr-rule-${ruleId}`;
+}
+
+/** The rule a `#dnr-rule-<id>` location hash points at, or null. */
+function hashFocusRuleId(): string | null {
+  if (typeof window === "undefined") return null;
+  const m = /^#dnr-rule-([0-9a-f-]{36})$/i.exec(window.location.hash);
+  return m ? m[1] : null;
+}
+
+/** The error a failed response becomes: a named refusal by its code, else a status-classified HTTP error. */
+export function ownerDnrErrorFromResponse(status: number, body: unknown): Error {
+  const code = (body as { code?: unknown } | null)?.code;
+  if (typeof code === "string" && REFUSAL_MESSAGES[code]) return new RefusedError(code);
+  return httpResponseErrorFromBody(status, body);
 }
 
 async function call(path: string, init?: RequestInit) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...init });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    if (typeof data?.code === "string" && REFUSAL_MESSAGES[data.code]) throw new RefusedError(data.code, REFUSAL_MESSAGES[data.code]);
-    throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
-  }
+  if (!res.ok) throw ownerDnrErrorFromResponse(res.status, data);
   return data;
 }
 
-export function OwnerDoNotRepeatPanel({ businessId, onChanged }: { businessId: string | null; onChanged: (businessId: string) => void }) {
+/** Owner text for a failed save: a named refusal's own text, otherwise the operator-safe classification. */
+export function ownerDnrSaveErrorText(err: unknown): string {
+  return err instanceof RefusedError ? REFUSAL_MESSAGES[err.code] : toOperatorSafeError(err, "save").error;
+}
+
+type Loaded =
+  | { businessId: string; status: "loaded"; rules: OwnerDoNotRepeatRuleRow[] }
+  | { businessId: string; status: "failed"; message: string };
+
+export function OwnerDoNotRepeatPanel({ businessId, onChanged, focusRuleId = null }: {
+  businessId: string | null;
+  onChanged: (businessId: string) => void;
+  /** The rule a surface names as holding work (the gate's exact blocking rule): the panel shows and focuses it. */
+  focusRuleId?: string | null;
+}) {
   // The business currently shown (a save made for another business never reloads over it).
   const currentBusinessRef = useRef(businessId);
   useEffect(() => {
     currentBusinessRef.current = businessId;
   }, [businessId]);
   // Rules are held with the business they were loaded for: a business switch never shows the previous
-  // business's rules (they are simply not this business's until its own load completes).
-  const [loaded, setLoaded] = useState<{ businessId: string | null; rules: OwnerDoNotRepeatRuleRow[] } | null>(null);
-  const rules = loaded && loaded.businessId === businessId ? loaded.rules : null;
+  // business's rules (they are simply not this business's until its own load completes). A failed load is
+  // a failure, never "no rules".
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const current = loaded && loaded.businessId === businessId ? loaded : null;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [hashRuleId, setHashRuleId] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const focus = focusRuleId ?? hashRuleId;
+
+  useEffect(() => {
+    const read = () => setHashRuleId(hashFocusRuleId());
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
 
   const load = useCallback(async (id: string | null, isCurrent: () => boolean) => {
     if (!id) return;
     try {
       const data = await call(`/api/owner/do-not-repeat/rules?businessId=${encodeURIComponent(id)}`);
-      if (isCurrent()) setLoaded({ businessId: id, rules: Array.isArray(data.rules) ? data.rules : [] });
-    } catch {
-      if (isCurrent()) setLoaded({ businessId: id, rules: [] });
+      if (isCurrent()) setLoaded({ businessId: id, status: "loaded", rules: Array.isArray(data.rules) ? data.rules : [] });
+    } catch (err) {
+      if (isCurrent()) setLoaded({ businessId: id, status: "failed", message: toOperatorSafeError(err, "load").error });
     }
   }, []);
 
   useEffect(() => {
     if (!businessId) return;
-    let current = true;
-    call(`/api/owner/do-not-repeat/rules?businessId=${encodeURIComponent(businessId)}`)
-      .then((data) => { if (current) setLoaded({ businessId, rules: Array.isArray(data.rules) ? data.rules : [] }); })
-      .catch(() => { if (current) setLoaded({ businessId, rules: [] }); });
-    return () => { current = false; };
-  }, [businessId]);
+    let live = true;
+    void load(businessId, () => live && currentBusinessRef.current === businessId);
+    return () => { live = false; };
+  }, [businessId, load, attempt]);
+
+  // Land on the exact rule once it is listed (the link's target exists only after the load).
+  const listedFocus = current?.status === "loaded" && focus !== null && current.rules.some((r) => r.id === focus) ? focus : null;
+  useEffect(() => {
+    if (!listedFocus) return;
+    document.getElementById(ownerDnrRuleAnchor(listedFocus))?.scrollIntoView({ block: "center" });
+  }, [listedFocus]);
 
   async function save(ruleId: string) {
     const forBusiness = businessId;
@@ -99,23 +146,51 @@ export function OwnerDoNotRepeatPanel({ businessId, onChanged }: { businessId: s
       if (stillCurrent()) onChanged(forBusiness);
     } catch (err) {
       if (!stillCurrent()) return;
-      const message = err instanceof RefusedError ? err.message : classifyOperatorError(err, { context: "save" }).operatorMessage;
-      setErrors((e) => ({ ...e, [ruleId]: message }));
+      const text = ownerDnrSaveErrorText(err);
+      setErrors((e) => ({ ...e, [ruleId]: text }));
     } finally {
       setSavingId(null);
     }
   }
 
-  if (!rules || rules.length === 0) return null;
+  if (!businessId) return null;
+  // A surface that links here (a named blocking rule) always finds the panel: loading, failed or empty.
+  const linked = focus !== null;
+  if (current?.status === "failed") {
+    return (
+      <section id="do-not-repeat-rules" data-testid="do-not-repeat-rules" className="rounded-lg border border-border p-5 scroll-mt-20">
+        <h2 className="text-sm font-semibold mb-1">Do-not-repeat rules</h2>
+        <p role="alert" className="text-sm text-destructive mb-3">{current.message}</p>
+        <Button size="sm" variant="outline" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+      </section>
+    );
+  }
+  if (!current) {
+    if (!linked) return null;
+    return (
+      <section id="do-not-repeat-rules" data-testid="do-not-repeat-rules" className="rounded-lg border border-border p-5 scroll-mt-20">
+        <h2 className="text-sm font-semibold mb-1">Do-not-repeat rules</h2>
+        <p className="text-xs text-muted-foreground">Loading the rules for this business…</p>
+      </section>
+    );
+  }
+  const rules = current.rules;
+  if (rules.length === 0 && !linked) return null;
   return (
     <section id="do-not-repeat-rules" data-testid="do-not-repeat-rules" className="rounded-lg border border-border p-5 scroll-mt-20">
       <h2 className="text-sm font-semibold mb-1">Do-not-repeat rules</h2>
       <p className="text-xs text-muted-foreground mb-4">
-        Decisions marked not to be repeated after an earlier result. A rule holds that work back until you record what has changed.
+        Decisions marked not to be repeated after an earlier result. While OpsIQ&apos;s safety checks are on for this business, a rule holds that work back until you record what has changed.
       </p>
+      {rules.length === 0 && (
+        <p className="text-sm">No do-not-repeat rule currently holds back work for this business. Reload the Cockpit to see its current main target.</p>
+      )}
+      {focus !== null && rules.length > 0 && !rules.some((r) => r.id === focus) && (
+        <p className="text-sm mb-3">The rule that was named is no longer in force for this business (it was lifted or ended). Reload the Cockpit to see its current main target.</p>
+      )}
       <ul className="flex flex-col gap-4">
         {rules.map((r) => (
-          <li key={r.id} className="flex flex-col gap-2">
+          <li key={r.id} id={ownerDnrRuleAnchor(r.id)} data-focused={r.id === focus ? "true" : undefined} className={`flex flex-col gap-2 scroll-mt-20${r.id === focus ? " rounded-md border border-amber-400 p-3" : ""}`}>
             <p className="text-sm font-medium">{r.summary}</p>
             <p className="text-xs text-muted-foreground">Why: {r.reason}</p>
             <p className="text-xs text-muted-foreground">Holds back: {r.holds}</p>

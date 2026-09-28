@@ -1605,18 +1605,20 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
               shared strip. */}
           {doNotRepeatAnnotation?.blocked && (
             <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.holdsBackTarget ? "Do not repeat" : "Earlier result in this area"}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen ? "Do not repeat" : "Earlier result in this area"}</span>
               {doNotRepeatAnnotation.areaOnly && !doNotRepeatAnnotation.holdsBackTarget && (
                 <p data-testid="cockpit-dnr-area-history" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
                   This is history from the same area, not a verdict on your main target. Do not repeat the approach that failed.
                 </p>
               )}
-              {doNotRepeatAnnotation.holdsBackTarget && (
+              {(doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen) && (
                 <p data-testid="cockpit-dnr-holds" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
-                  {doNotRepeatAnnotation.areaOnly
-                    ? "This rule holds back new growth steps in this area until you record what has changed."
-                    : "This rule holds back repeating this step until you record what has changed."}{" "}
-                  <a href="#do-not-repeat-rules" style={{ textDecoration: "underline" }}>Do-not-repeat rules</a>
+                  {doNotRepeatAnnotation.issueStaysOpen
+                    ? "This rule holds back repeating the earlier step, not the problem: the problem is still open, so respond to it another way or record what has changed."
+                    : doNotRepeatAnnotation.areaOnly
+                      ? "This rule holds back new growth steps in this area until you record what has changed."
+                      : "This rule holds back repeating this step until you record what has changed."}{" "}
+                  <a href={doNotRepeatAnnotation.ruleId ? `#dnr-rule-${doNotRepeatAnnotation.ruleId}` : "#do-not-repeat-rules"} style={{ textDecoration: "underline" }}>Do-not-repeat rules</a>
                 </p>
               )}
               <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>

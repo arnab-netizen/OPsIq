@@ -131,6 +131,13 @@ export interface DoNotRepeatAnnotation {
    * repair, evidence) is never held back by a broad area memory.
    */
   holdsBackTarget: boolean;
+  /**
+   * The main target is an open ISSUE whose earlier STEP the rule forbids repeating: the rule holds the step,
+   * never the issue (the problem stays the target; respond another way or review the rule).
+   */
+  issueStaysOpen?: boolean;
+  /** The rule annotated (the exact rule the gate enforces for the target); null for a legacy lookup. */
+  ruleId?: string | null;
   priorActionSummary: string;
   blockedReason: string;
   changedContextCondition: string | null;
@@ -214,7 +221,7 @@ export async function checkDoNotRepeatForGuidance(
  */
 export function ownerDnrAnnotationFromGate(
   gate: OwnerGateConstraints | null | undefined,
-  target: { source: string; domain: string; findingId: string | null; findingCode: string; intent: OwnerTargetIntent | null } | null
+  target: { source: string; domain: string; findingId: string | null; findingCode: string; intent: OwnerTargetIntent | null; ruleId?: string | null } | null
 ): DoNotRepeatAnnotation | null {
   if (!gate || gate.optedOut || !target) return null;
   const review = target.source === "safety_gate" && target.findingCode === "GATE_DO_NOT_REPEAT_REVIEW";
@@ -222,23 +229,29 @@ export function ownerDnrAnnotationFromGate(
   const domain = canonicalOwnerScopeDomain(target.domain);
   if (!domain) return null;
   const rules = gate.doNotRepeat.filter((r) => r.domain === domain);
-  const rule =
-    (target.findingId ? rules.find((r) => r.match === "exact" && r.findingId === target.findingId) : undefined) ??
-    rules.find((r) => r.match === "broad") ??
-    (review ? rules[0] : undefined);
-  if (!rule) return null;
   const verdict = review
     ? null
     : evaluateOwnerActionGate(
         { ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: gate.doNotRepeat },
         { domain: target.domain, intent: target.intent, findingId: target.findingId, findingCode: target.findingCode }
       );
-  const holdsBackTarget = review || (verdict !== null && !verdict.allowed && verdict.code === "DO_NOT_REPEAT_BLOCKED");
+  const gateHolds = verdict !== null && !verdict.allowed && verdict.code === "DO_NOT_REPEAT_BLOCKED";
+  // The rule named is the one the gate enforces: the target's own rule (a review target carries it), else the
+  // rule the gate's verdict names; a broad rule of the area only as history when no rule holds the target.
+  const enforcedRuleId = target.ruleId ?? (gateHolds ? verdict.ruleId ?? null : null);
+  const rule =
+    (enforcedRuleId ? gate.doNotRepeat.find((r) => r.id === enforcedRuleId) : undefined) ??
+    (review ? undefined : rules.find((r) => r.match === "broad"));
+  if (!rule) return null;
+  const issueStaysOpen = target.source === "survival_reading" && gateHolds;
+  const holdsBackTarget = review || (gateHolds && !issueStaysOpen);
   return {
     blocked: true,
     legacyMatch: false,
     areaOnly: rule.match === "broad",
     holdsBackTarget,
+    issueStaysOpen,
+    ruleId: rule.id,
     priorActionSummary: rule.summary ?? "",
     blockedReason: rule.reason ?? "",
     changedContextCondition: null,

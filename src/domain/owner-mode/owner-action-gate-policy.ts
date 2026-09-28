@@ -26,7 +26,7 @@
  *     Rows recorded with no business (obligations, equipment, do-not-repeat memories) apply only when the
  *     action's business is the workspace's sole real business (appliesToBusiness) — never to every business.
  */
-import { assessFleetCapacity, type CapacityStatus, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
+import { assessEquipmentCapacity, assessFleetCapacity, type CapacityStatus, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
 import { evaluateCashSafetyGate, type FinancialHealthState } from "@/domain/owner-finance/cash-safety-gate";
 import { evaluateMarginSafety, DEFAULT_MARGIN_FLOOR_PCT, MarginSafetyOutcome } from "@/domain/owner-finance/margin-safety-gate";
 import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
@@ -124,7 +124,13 @@ export interface OwnerGateConstraints {
   /** False when the action carries no business: the business-level cash and margin limits cannot apply. */
   businessScoped: boolean;
   doNotRepeat: readonly OwnerGateDoNotRepeatRule[];
-  capacity: { status: CapacityStatus; reason: string; bottlenecks: string[] };
+  /**
+   * Fleet capacity. `confidence` (0..1) comes from the equipment record that decides the status
+   * (capacityConstraint): a dated fact (maintenance overdue) 1; a recorded state (down / out of service /
+   * utilization at the ceiling) updated within the freshness window 0.9, older — or with no record time —
+   * capped at 0.4; null ⇒ unknown (no blocking evidence).
+   */
+  capacity: { status: CapacityStatus; reason: string; bottlenecks: string[]; confidence?: number | null };
   /**
    * The ONE current cash/finance reading's gate state (null ⇒ no reading: nothing to enforce) and what
    * drives it (current-cash-finance-reading.ts gateDriver) — a block is named by its real cause.
@@ -142,7 +148,10 @@ export interface OwnerGateConstraints {
   };
   /** Gross margin of the business's current effective snapshot (null ⇒ unknown). */
   grossMarginPct: number | null;
-  /** That snapshot's own data confidence, 0..1 (null ⇒ unknown). */
+  /**
+   * Confidence in that margin, 0..1 (null ⇒ unknown): the snapshot's own data confidence, capped at 0.4 when
+   * its period ended more than the freshness window ago (out-of-date figures are never high confidence).
+   */
   grossMarginConfidence?: number | null;
   /** The first expired obligation that applies to this business (attributed), or null. */
   expiredCompliance: { name: string; kind: string } | null;
@@ -153,7 +162,7 @@ export const NO_OWNER_GATE_CONSTRAINTS: OwnerGateConstraints = Object.freeze({
   optedOut: false,
   businessScoped: true,
   doNotRepeat: [],
-  capacity: { status: "safe" as CapacityStatus, reason: "No equipment tracked.", bottlenecks: [] },
+  capacity: { status: "safe" as CapacityStatus, reason: "No equipment tracked.", bottlenecks: [], confidence: null },
   cash: { gateState: null, basis: "", driver: null, confidence: null, provisional: false, source: null },
   grossMarginPct: null,
   grossMarginConfidence: null,
@@ -209,9 +218,27 @@ function cashHoldReason(c: OwnerGateConstraints["cash"], state: FinancialHealthS
 }
 
 /** Pure constraint builders over the rows the service loads. */
-export function capacityConstraint(fleet: Array<EquipmentRecord & { name: string }>, now: Date): OwnerGateConstraints["capacity"] {
+/** Freshness window for recorded equipment state (the Owner evidence window). */
+export const CAPACITY_RECORD_FRESH_DAYS = 45;
+/** Confidence cap for out-of-date or undated evidence (the same cap as unverified cash/finance readings). */
+export const OUT_OF_DATE_EVIDENCE_CONFIDENCE = 0.4;
+
+export function capacityConstraint(fleet: Array<EquipmentRecord & { name: string; updatedAt?: Date | null }>, now: Date): OwnerGateConstraints["capacity"] {
   const c = assessFleetCapacity(fleet, now);
-  return { status: c.status, reason: c.reason, bottlenecks: c.bottlenecks };
+  // Confidence from the evidence that decides the status: the best-supported record at the worst status.
+  let confidence: number | null = null;
+  if (c.status === "blocked" || c.status === "high_risk") {
+    for (const eq of fleet) {
+      const a = assessEquipmentCapacity(eq, now);
+      if (a.status !== c.status) continue;
+      const datedFact = eq.maintenanceDueAt !== null && eq.maintenanceDueAt.getTime() <= now.getTime() && eq.downtimeState !== "down" && eq.status !== "out_of_service";
+      const recordedAt = eq.updatedAt instanceof Date ? eq.updatedAt.getTime() : null;
+      const fresh = recordedAt !== null && now.getTime() - recordedAt <= CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+      const conf = datedFact ? 1 : fresh ? 0.9 : OUT_OF_DATE_EVIDENCE_CONFIDENCE;
+      confidence = confidence === null ? conf : Math.max(confidence, conf);
+    }
+  }
+  return { status: c.status, reason: c.reason, bottlenecks: c.bottlenecks, confidence };
 }
 
 /**

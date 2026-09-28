@@ -12,6 +12,7 @@
  * `src/__tests__/api/owner/now-view.test.ts`; DB persistence + workspace isolation in
  * the `*.db.test.ts` suites.
  */
+import { NO_OWNER_GATE_CONSTRAINTS } from "@/domain/owner-mode/owner-action-gate-policy";
 import { it, expect, describe } from "vitest";
 import { getOwnerNowView, type GuidanceDeps, type GuidanceStep } from "@/services/owner-guidance/owner-now-view.service";
 import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
@@ -194,7 +195,9 @@ describe("[module41][e2e] hostile M1–M41 owner-mode proof", () => {
 
 describe("[module41][e2e] cross-cutting safety properties", () => {
   it("healthy business → GUIDANCE_READY, no actions-to-avoid, top actions empty", async () => {
-    const out = await getOwnerNowView("ws1", "biz1", deps({ cash: okCash, fin: okFin, cap: okCap, supplier: safeSupplier, business: { businessType: "laundry_local_service" }, metric: m({}) }));
+    // Round 9: growth readiness needs the owner action gate's constraints (a missing gate is never "ready").
+    const healthy = { ...deps({ cash: okCash, fin: okFin, cap: okCap, supplier: safeSupplier, business: { businessType: "laundry_local_service" }, metric: m({}) }), ownerGate: async () => NO_OWNER_GATE_CONSTRAINTS };
+    const out = await getOwnerNowView("ws1", "biz1", healthy);
     expect(out.view.classification).toBe(GuidanceClassification.GUIDANCE_READY);
     expect(out.view.actionsToAvoid).toHaveLength(0);
   });

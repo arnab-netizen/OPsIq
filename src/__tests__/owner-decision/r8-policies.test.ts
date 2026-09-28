@@ -202,8 +202,9 @@ describe("canonical decision: every simultaneous blocker surfaced; a do-not-repe
     const complaints = cand({ domain: "sales", findingCode: "SALES_HIGH_COMPLAINT_RATIO", title: "Fix the complaint spike" });
     const d = resolveOwnerDecision(input([runway, complaints], gate({ doNotRepeat: [exact("cashflow", "f-runway")] })));
     expect(d.primaryTarget).toMatchObject({ source: "safety_gate", findingCode: "GATE_DO_NOT_REPEAT_REVIEW", priorityClass: "SURVIVAL_CASH", severity: "critical" });
-    expect(d.primaryTarget!.title).toMatch(/^Extend the cash runway: the planned step repeats one marked do-not-repeat/);
-    expect(d.primaryTarget!.explanation).toMatch(/The problem is still there/);
+    // Round 9: the target names the ISSUE (its class), quoting the held step as the one marked do-not-repeat.
+    expect(d.primaryTarget!.title).toMatch(/is still open, and its planned step "Extend the cash runway" is marked do-not-repeat/);
+    expect(d.primaryTarget!.explanation).toMatch(/The problem is still open/);
   });
 
   it("a do-not-repeat rule holding a growth step never lifts it above missing evidence", () => {
@@ -254,10 +255,13 @@ describe("Decision 4 — a safety-gate target's confidence reflects its evidence
     expect(compliance.confidence.score).toBe(100);
   });
 
-  it("an exact recorded do-not-repeat rule is a recorded fact (high); a broad rule carries the held work's confidence", () => {
+  it("an exact recorded do-not-repeat rule is a recorded fact (high) — but a held DANGER keeps its own evidence confidence (Round 9); a broad rule carries the held work's confidence", () => {
     const fix = cand({ domain: "operations", findingCode: "OPS_HIGH_REWORK", title: "Cut rework", findingId: "f-rw", confidence: 0.55 });
     const exactD = canonicalEligibility([fix], { businessId: BIZ, workspaceId: WS, gate: gate({ doNotRepeat: [exact("operations", "f-rw")] }) });
-    expect(exactD.ranked.find((c) => c.source === "safety_gate")!.confidence).toBe(1);
+    expect(exactD.ranked.find((c) => c.source === "safety_gate")!.confidence).toBe(0.55);
+    const growth = cand({ domain: "marketing", findingCode: "MKT_OPP_SCALE_WINNER", title: "Scale", findingId: "f-g", confidence: 0.55 });
+    const exactGrowth = canonicalEligibility([growth], { businessId: BIZ, workspaceId: WS, gate: gate({ doNotRepeat: [exact("marketing", "f-g")] }) });
+    expect(exactGrowth.ranked.find((c) => c.source === "safety_gate")!.confidence).toBe(1);
     const broadD = canonicalEligibility([scale], { businessId: BIZ, workspaceId: WS, gate: gate({ doNotRepeat: [broad("marketing")] }) });
     expect(broadD.ranked.find((c) => c.source === "safety_gate")!.confidence).toBe(0.85);
   });
@@ -276,9 +280,11 @@ describe("the Cockpit do-not-repeat annotation comes from the gate's own constra
     const a = ownerDnrAnnotationFromGate(gate({ doNotRepeat: [broad("marketing")] }), t({ findingCode: "MKT_POOR_CONVERSION", intent: "REPAIR" }));
     expect(a).toMatchObject({ blocked: true, areaOnly: true, holdsBackTarget: false });
   });
-  it("the review target of a rule holding work says it holds it back", () => {
-    const a = ownerDnrAnnotationFromGate(gate({ doNotRepeat: [broad("marketing")] }), t({ source: "safety_gate", findingCode: "GATE_DO_NOT_REPEAT_REVIEW", intent: "EVIDENCE" }));
-    expect(a).toMatchObject({ holdsBackTarget: true, priorActionSummary: "Paid ads burst", matchedScope: "scope:marketing" });
+  it("the review target of a rule holding work says it holds it back — the rule it carries (Round 9: never a guess)", () => {
+    const a = ownerDnrAnnotationFromGate(gate({ doNotRepeat: [broad("marketing")] }), { ...t({ source: "safety_gate", findingCode: "GATE_DO_NOT_REPEAT_REVIEW", intent: "EVIDENCE" }), ruleId: "rule-marketing" });
+    expect(a).toMatchObject({ holdsBackTarget: true, priorActionSummary: "Paid ads burst", matchedScope: "scope:marketing", ruleId: "rule-marketing" });
+    // A review target that names no rule is annotated with none (no rule of the area is substituted).
+    expect(ownerDnrAnnotationFromGate(gate({ doNotRepeat: [broad("marketing")] }), t({ source: "safety_gate", findingCode: "GATE_DO_NOT_REPEAT_REVIEW", intent: "EVIDENCE" }))).toBeNull();
   });
 });
 
@@ -382,8 +388,8 @@ function nowViewDeps(rows: { cash?: CycleRow[]; fin?: CycleRow[] }): GuidanceDep
 }
 
 describe("Now View uses the gate's enforced state: never safer than the gate, never 'growth ready' while it holds growth", () => {
-  it("current SAFE/SAFE → growth ready (the baseline)", async () => {
-    const { ctx, state } = await assembleGuidanceContext("ws", "biz", nowViewDeps({ cash: [{ state: "SAFE", periodEndDaysAgo: 5 }], fin: [{ state: "SAFE", periodEndDaysAgo: 5 }] }));
+  it("current SAFE/SAFE → growth ready (the baseline, with the gate's constraints — Round 9: never without them)", async () => {
+    const { ctx, state } = await assembleGuidanceContext("ws", "biz", nowViewDeps({ cash: [{ state: "SAFE", periodEndDaysAgo: 5 }], fin: [{ state: "SAFE", periodEndDaysAgo: 5 }] }), gate({}));
     expect(ctx.cashSafe).toBe(true);
     expect(state.growthReadinessTier).toBe("GROWTH_READY");
   });

@@ -142,6 +142,14 @@ export default function OwnerWealthPage() {
         />
       </div>
 
+      {data.inProgressPeriodEnd && (
+        <p data-testid="wealth-in-progress-period" style={{ color: "#b45309", fontSize: 13, marginBottom: 12 }}>
+          {data.snapshotPeriodEnd
+            ? `Figures for the period ending ${String(data.inProgressPeriodEnd).slice(0, 10)} are still in progress, so they are not used here: this view rests on the latest completed period (ending ${String(data.snapshotPeriodEnd).slice(0, 10)}).`
+            : `Figures for the period ending ${String(data.inProgressPeriodEnd).slice(0, 10)} are still in progress, and there is no completed period yet, so this view has no completed figures to rest on.`}
+        </p>
+      )}
+
       {cc.provisional && (
         <p style={{ color: "#b45309", fontSize: 13, marginBottom: 12 }}>
           Provisional: this view is based on limited data. Add more business inputs to sharpen it.

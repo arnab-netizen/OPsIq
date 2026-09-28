@@ -233,8 +233,14 @@ export async function resolveOwnerHome(
         cashFinanceConflict,
         // The in-progress period's reading tightens the cash card only when it decides the gate's state (the
         // SAME shared reading the gate enforces), labelled as in progress.
-        provisionalCash: gate.cash.provisional && gate.cash.gateState && gate.cash.driver !== "unverified"
+        // Named by what drives it (gateDriver): a cash driver tightens the CASH card; a profit/margin-driven
+        // Finance state tightens the FINANCIAL card (never shown as cash danger); unverified figures fabricate
+        // no level (the canonical decision asks for them to be confirmed).
+        provisionalCash: gate.cash.provisional && gate.cash.gateState && gate.cash.driver === "cash"
           ? { state: gate.cash.gateState, source: gate.cash.source === "finance" ? "finance" : "cashflow" }
+          : null,
+        provisionalFinancial: gate.cash.provisional && gate.cash.gateState && gate.cash.driver === "finance_profit"
+          ? { state: gate.cash.gateState }
           : null,
       })
     : null;

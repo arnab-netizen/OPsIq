@@ -48,14 +48,15 @@ const PROVISIONAL_EVIDENCE_FILTER = /\bprovisionalEvidenceWhere\s*\(/;
 const WRITE_PATH_ORDERED_READS: Readonly<Record<string, number>> = {
   // next cycleNumber for a new Recovery cycle + the cycle history list (listCycles)
   "src/services/founder-recovery/cycle.service.ts": 2,
-  // cycle history lists shown on each domain page (every run, newest first)
-  "src/services/founder-recovery/dashboard.service.ts": 1,
-  "src/services/owner-cashflow/dashboard.service.ts": 1,
-  "src/services/owner-finance/dashboard.service.ts": 1,
-  "src/services/owner-marketing/dashboard.service.ts": 1,
-  "src/services/owner-operations/dashboard.service.ts": 1,
-  "src/services/owner-sales/dashboard.service.ts": 1,
-  "src/services/owner-sop/dashboard.service.ts": 1,
+  // cycle history lists shown on each domain page (every run, newest first) + the latest run on ONE given
+  // snapshot (by snapshotId: "were these figures already diagnosed?") — not a choice between evidence
+  "src/services/founder-recovery/dashboard.service.ts": 2,
+  "src/services/owner-cashflow/dashboard.service.ts": 2,
+  "src/services/owner-finance/dashboard.service.ts": 2,
+  "src/services/owner-marketing/dashboard.service.ts": 2,
+  "src/services/owner-operations/dashboard.service.ts": 2,
+  "src/services/owner-sales/dashboard.service.ts": 2,
+  "src/services/owner-sop/dashboard.service.ts": 2,
   "src/services/owner-strategy/dashboard.service.ts": 1,
   // next sequence number for a new cycle of each domain
   "src/services/owner-cashflow/diagnosis.service.ts": 1,

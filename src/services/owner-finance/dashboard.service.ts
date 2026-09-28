@@ -12,16 +12,27 @@ import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
-import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
-import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
+import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
   selectedBusinessId: string | null;
   hasData: boolean;
   latestSnapshot: any | null;
+  /**
+   * The in-progress current period's snapshot (provisional — never the current effective snapshot above),
+   * shown and diagnosable, labelled as in progress; null when there is none.
+   */
+  inProgressSnapshot: any | null;
+  /** Where the snapshot the page diagnoses sits: "provisional" when it is the in-progress one. */
+  latestSnapshotPeriodState: EvidencePeriodState | null;
+  /** The snapshot the page's "Run finance diagnosis" diagnoses: the in-progress one, else the current effective one. */
+  diagnosisTargetSnapshot: any | null;
+  /** That snapshot's own diagnosis, when it was already diagnosed (the page never prompts a re-run of it). */
+  latestSnapshotDiagnosis: SnapshotDiagnosisState | null;
   latestCycle: any | null;
   domainScore: {
     domain: "finance";
@@ -68,6 +79,7 @@ export async function getFinanceDashboard(
   if (!selectedBusinessId) {
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
+      inProgressSnapshot: null, latestSnapshotPeriodState: null, diagnosisTargetSnapshot: null, latestSnapshotDiagnosis: null,
       latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
       cycleHistory: [],
     };
@@ -75,11 +87,14 @@ export async function getFinanceDashboard(
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
-  const [latestSnapshot, latestCycle, cycles] = await Promise.all([
+  const dashboardNow = new Date();
+  const [latestSnapshot, inProgressSnapshot, latestCycle, cycles] = await Promise.all([
     // Current effective snapshot (financial-snapshot-selection.ts); the diagnosis-bound one is latestCycle.snapshot.
-    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId })),
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId }, undefined, dashboardNow)),
+    // The in-progress period's figures (provisional): shown, labelled and diagnosable — never current evidence.
+    db.ownerFinancialSnapshot.findFirst(inProgressFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId }, undefined, dashboardNow)),
     db.ownerFinanceCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(new Date()) },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(dashboardNow) },
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,
@@ -126,12 +141,12 @@ export async function getFinanceDashboard(
   // finished or cancelled.
   const carriedActions = latestCycle
     ? await db.ownerFinanceAction.findMany({
-        where: {
-          businessId: selectedBusinessId,
-          workspaceId,
-          cycleId: { not: latestCycle.id },
-          status: { in: [...ENGAGED_ACTION_STATUSES] },
-        },
+        where: dashboardPriorWorkWhere(
+          { businessId: selectedBusinessId, workspaceId },
+          latestCycle.id,
+          latestCycle.findings.map((f: { code: string }) => f.code),
+          dashboardNow
+        ),
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
           ...baselineFindingInclude,
@@ -149,17 +164,11 @@ export async function getFinanceDashboard(
     ? {
         ...latestCycle,
         findings: rankOwnerFindingsBySeverity(latestCycle.findings),
-        actions: [
-          ...(await Promise.all(latestCycle.actions.map(withBaseline))),
-          ...(await Promise.all(
-            carriedActions.map(async (a: { verificationMetric: string; findingCode: string; finding: BaselineFindingRow | null; cycle: { sequenceNumber: number } }) => ({
-              ...(await withBaseline(a)),
-              carriedFromCycleSequence: a.cycle.sequenceNumber,
-              // false when the latest diagnosis no longer raises this finding (finish or cancel it).
-              stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
-            }))
-          )),
-        ],
+        // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
+        // owner's engaged or completed work for the same key.
+        actions: await Promise.all(
+          dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
+        ),
       }
     : null;
 
@@ -182,11 +191,24 @@ export async function getFinanceDashboard(
     ? presentDomainLocalStep(await getDomainLocalOwnerStep(workspaceId, selectedBusinessId, "finance"), latestCycleView?.actions ?? [])
     : null;
 
+  const diagnosisTargetSnapshot = inProgressSnapshot ?? latestSnapshot ?? null;
+  const targetCycle = diagnosisTargetSnapshot
+    ? await db.ownerFinanceCycle.findFirst({
+        where: { businessId: selectedBusinessId, workspaceId, snapshotId: diagnosisTargetSnapshot.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, createdAt: true, survivalState: true },
+      })
+    : null;
+
   return {
     businesses: businessList,
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
+    inProgressSnapshot: inProgressSnapshot ?? null,
+    latestSnapshotPeriodState: diagnosisTargetSnapshot ? evidencePeriodState(diagnosisTargetSnapshot, dashboardNow) : null,
+    diagnosisTargetSnapshot,
+    latestSnapshotDiagnosis: snapshotDiagnosisState(diagnosisTargetSnapshot, targetCycle, targetCycle?.survivalState ?? null),
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,

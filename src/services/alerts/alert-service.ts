@@ -136,6 +136,91 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
   }
 }
 
+/** What raising an idempotent alert did (never "created" for an alert that already existed). */
+export type IdempotentAlertOutcome = "created" | "reactivated" | "already_active";
+
+type AlertTxClient = {
+  alert: {
+    findFirst(args: { where: Record<string, unknown> }): Promise<Record<string, unknown> | null>;
+    create(args: { data: Record<string, unknown> }): Promise<Record<string, unknown>>;
+    updateMany(args: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<{ count: number }>;
+  };
+};
+
+/**
+ * Raise an alert keyed by `idempotencyKey`, inside the caller's transaction, with its audit event in the SAME
+ * transaction (an audit failure fails the raise — it is never swallowed):
+ *   - no alert with the key → created (ALERT_CREATED);
+ *   - an alert with the key that was RESOLVED → reactivated (unresolved, unread; ALERT_UPDATED): the
+ *     condition is back, so the owner sees it again — a resolved alert is never counted as a new raise;
+ *   - an active alert with the key → already_active (nothing written).
+ * The audit actor is `auditActor` (a system process never impersonates the recipient).
+ */
+export async function raiseIdempotentAlert(
+  tx: unknown,
+  input: Required<Pick<CreateAlertInput, "workspaceId" | "userId" | "type" | "channel" | "message" | "idempotencyKey">> &
+    Pick<CreateAlertInput, "entityType" | "entityId" | "severity" | "auditActor">,
+  now: Date = new Date()
+): Promise<{ alertId: string; outcome: IdempotentAlertOutcome }> {
+  enforceWorkspaceId(input.workspaceId, "raiseIdempotentAlert", "Alert");
+  const client = tx as AlertTxClient;
+  const actor = input.auditActor ?? { actorId: input.userId };
+  const existing = await client.alert.findFirst({ where: { workspaceId: input.workspaceId, idempotencyKey: input.idempotencyKey } });
+  if (existing) {
+    if (existing.resolvedAt === null || existing.resolvedAt === undefined) return { alertId: String(existing.id), outcome: "already_active" };
+    const res = await client.alert.updateMany({
+      where: { id: existing.id, workspaceId: input.workspaceId, resolvedAt: { not: null } },
+      data: { resolvedAt: null, isRead: false, readAt: null, message: input.message, severity: input.severity ?? "medium" },
+    });
+    if (res.count !== 1) return { alertId: String(existing.id), outcome: "already_active" };
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_UPDATED, ...actor, entityType: "alert", entityId: String(existing.id), workspaceId: input.workspaceId,
+      payload: { reactivatedAt: now.toISOString(), reason: "condition_returned", message: input.message }, visibility: "internal",
+    }, tx as never);
+    return { alertId: String(existing.id), outcome: "reactivated" };
+  }
+  const created = await client.alert.create({
+    data: {
+      workspaceId: input.workspaceId, userId: input.userId, type: input.type, channel: input.channel, message: input.message,
+      entityType: input.entityType ?? null, entityId: input.entityId ?? null, severity: input.severity ?? "medium", idempotencyKey: input.idempotencyKey,
+    },
+  });
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ALERT_CREATED, ...actor, entityType: "alert", entityId: String(created.id), workspaceId: input.workspaceId,
+    payload: { type: input.type, channel: input.channel, message: input.message, severity: input.severity ?? "medium", entityType: input.entityType ?? null, entityId: input.entityId ?? null },
+    visibility: "internal",
+  }, tx as never);
+  return { alertId: String(created.id), outcome: "created" };
+}
+
+/**
+ * Resolve the ACTIVE alerts with these idempotency keys inside the caller's transaction: compare-and-set on
+ * "still unresolved" (a concurrent resolver never resolves or audits one twice), each with its audit event in
+ * the same transaction. Returns how many were resolved.
+ */
+export async function resolveIdempotentAlerts(
+  tx: unknown,
+  input: { workspaceId: string; idempotencyKeys: readonly string[]; auditActor: { actorId?: string; actorType?: "user" | "system" }; reason: string },
+  now: Date = new Date()
+): Promise<number> {
+  const client = tx as AlertTxClient & { alert: { findMany(args: { where: Record<string, unknown>; select: { id: true } }): Promise<Array<{ id: string }>> } };
+  const active = await client.alert.findMany({
+    where: { workspaceId: input.workspaceId, idempotencyKey: { in: [...input.idempotencyKeys] }, resolvedAt: null },
+    select: { id: true },
+  });
+  let resolved = 0;
+  for (const a of active) {
+    const res = await client.alert.updateMany({ where: { id: a.id, workspaceId: input.workspaceId, resolvedAt: null }, data: { resolvedAt: now, isRead: true, readAt: now } });
+    if (res.count !== 1) continue;
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_UPDATED, ...input.auditActor, entityType: "alert", entityId: a.id, workspaceId: input.workspaceId,
+      payload: { resolvedAt: now.toISOString(), reason: input.reason }, visibility: "internal",
+    }, tx as never);
+    resolved++;
+  }
+  return resolved;
+}
+
 export async function markAlertAsRead(
   alertId: string,
   workspaceId: string,

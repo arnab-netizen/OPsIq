@@ -80,6 +80,12 @@ export interface OwnerHomeSummaryInput {
    * clears or softens the card.
    */
   provisionalCash?: { state: string; source: "cashflow" | "finance" } | null;
+  /**
+   * The in-progress period's Finance reading when it is worse than the completed one AND driven by profit and
+   * margin (the shared reading's gateDriver "finance_profit"): it tightens the FINANCIAL card, labelled as in
+   * progress — a profit/margin danger is never shown as cash danger.
+   */
+  provisionalFinancial?: { state: string } | null;
   /** Injectable clock for deterministic output; defaults to now. */
   now?: Date;
 }
@@ -185,18 +191,25 @@ const SURVIVAL_STATE_LEVEL: Record<string, DangerLevel> = { SAFE: "none", WATCH:
 const SURVIVAL_STATE_WORDS: Record<string, string> = { SAFE: "safe", WATCH: "on watch", AT_RISK: "at risk", CRITICAL: "critical", INSOLVENT_RISK: "at risk of insolvency" };
 
 function cashDanger(ctx: DangerContext, input: OwnerHomeSummaryInput): DomainDanger {
-  const base = completedCashDanger(ctx, input);
-  const prov = input.provisionalCash ?? null;
+  return tightenInProgress(completedCashDanger(ctx, input), input.provisionalCash ?? null, "cash survival");
+}
+
+/**
+ * A card tightened by the in-progress period's reading when that is worse (labelled as in progress, never
+ * completed truth); otherwise the completed card as is.
+ */
+function tightenInProgress(base: DomainDanger, prov: { state: string; source: "cashflow" | "finance" } | null, subject: string): DomainDanger {
   const provLevel = prov ? SURVIVAL_STATE_LEVEL[prov.state] : undefined;
   if (!prov || !provLevel || LEVEL_RANK[provLevel] <= LEVEL_RANK[base.level]) return base;
-  // The in-progress period is worse: it tightens the card, labelled as in progress (never completed truth).
-  const note = `This period's in-progress ${prov.source === "finance" ? "Finance" : "cash"} figures show ${SURVIVAL_STATE_WORDS[prov.state] ?? prov.state.toLowerCase()} (in progress — not a completed period yet).`;
+  const note = `This period's in-progress ${prov.source === "finance" ? "Finance" : "cash"} figures show ${subject} ${SURVIVAL_STATE_WORDS[prov.state] ?? prov.state.toLowerCase()} (in progress — not a completed period yet).`;
   return {
     ...base,
     sourceDomains: base.sourceDomains.includes(prov.source) ? base.sourceDomains : [...base.sourceDomains, prov.source],
     drivenBy: base.drivenBy ? `${note} ${base.drivenBy}` : note,
     status: "in_progress",
     level: provLevel,
+    // The completed period's date is not the in-progress reading's: no date is shown for it.
+    evidenceAsOf: null,
     riskScore: null,
     lastFlagged: false,
     updateDataLabel: null,
@@ -363,7 +376,11 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
     businessHealthScore,
     cashDanger: cashDanger(dangerCtx, input),
     // A Finance reading superseded by a newer, disagreeing Cash flow reading is never shown as current.
-    financialDanger: dangerForDomain(dangerCtx, "financial", "finance", input.financeSuperseded ? "Superseded by newer Cash flow figures" : financialDrivenBy(input.findings), Boolean(input.financeSuperseded)),
+    financialDanger: tightenInProgress(
+      dangerForDomain(dangerCtx, "financial", "finance", input.financeSuperseded ? "Superseded by newer Cash flow figures" : financialDrivenBy(input.findings), Boolean(input.financeSuperseded)),
+      input.provisionalFinancial ? { state: input.provisionalFinancial.state, source: "finance" } : null,
+      "financial survival (driven by profit and margin)"
+    ),
     salesDanger: dangerForDomain(dangerCtx, "sales", "sales", null),
     operationsDanger: dangerForDomain(dangerCtx, "operations", "operations", null),
     executionDanger: executionDanger(dangerCtx),

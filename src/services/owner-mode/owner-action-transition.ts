@@ -35,8 +35,11 @@ function statusWords(s: string): string {
   return STATUS_WORDS[s] ?? "changed";
 }
 
+const UUID_TEXT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function normalize(v: unknown): unknown {
   if (v instanceof Date) return v.toISOString();
+  // A uuid column stores lower case; the same id sent in upper case is the same value.
+  if (typeof v === "string" && UUID_TEXT.test(v)) return v.toLowerCase();
   if (Array.isArray(v)) return v.map(normalize);
   if (v && typeof v === "object") {
     return Object.fromEntries(Object.keys(v as Record<string, unknown>).sort().map((k) => [k, normalize((v as Record<string, unknown>)[k])]));
@@ -104,6 +107,11 @@ export interface GuardedActionTransition<T> {
 export async function applyGuardedActionTransition<T extends { status: string }>(
   u: GuardedActionTransition<T>
 ): Promise<{ row: T; transitioned: boolean }> {
+  // A request that changes nothing is never applied (no write, no "applied" audit): the service must refuse
+  // what it cannot record rather than report success for it.
+  if (Object.keys(u.data).length === 0 && !u.inTransaction) {
+    throw new ValidationError("This request changes nothing on the action.");
+  }
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
     const delegate = (tx as unknown as Record<string, TxDelegate<T>>)[u.model];
     const where: Record<string, unknown> = { id: u.actionId, workspaceId: u.workspaceId, status: u.expectedStatus };

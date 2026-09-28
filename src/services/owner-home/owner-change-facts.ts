@@ -256,6 +256,8 @@ export async function gatherOwnerChangeFacts(input: OwnerChangeFactsInput): Prom
           AUDIT_EVENTS.OWNER_COMPLIANCE_REVIEW_COMPLETED,
           AUDIT_EVENTS.OWNER_BUSINESS_RISK_IDENTIFIED,
           AUDIT_EVENTS.OWNER_BUSINESS_RISK_STATUS_CHANGED,
+          // A field edit (no status change) — e.g. a MITIGATING risk's residual risk lowered below critical.
+          AUDIT_EVENTS.OWNER_BUSINESS_RISK_UPDATED,
           AUDIT_EVENTS.OWNER_BUSINESS_RISK_RESOLVED,
           AUDIT_EVENTS.OWNER_BUSINESS_RISK_CLOSED,
           AUDIT_EVENTS.OWNER_BUSINESS_RISK_REVIEW_COMPLETED,

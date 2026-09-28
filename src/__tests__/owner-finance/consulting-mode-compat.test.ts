@@ -13,6 +13,8 @@
  *   Cash worst-of — one owner business with BOTH readings: the gate takes the WORSE of the two persisted
  *       states exactly as before, whichever reading is newer (a newer SAFE Finance reading never wipes out a
  *       CRITICAL cash reading); a missing half is AT_RISK.
+ *   Age — completed readings older than Owner Mode's 45-day freshness window keep the base behaviour (a SAFE
+ *       input stays SAFE, a CRITICAL one stays CRITICAL): Consulting does not adopt Owner freshness.
  *   F — two owner businesses: business A's margin can never gate a recommendation; the unattributable
  *       margin is unknown (deferred), not a known-safe reading. (Differs from base BY DESIGN: the base read
  *       whichever business's snapshot was newest workspace-wide.)
@@ -101,6 +103,22 @@ describe("Consulting Mode compatibility — cash worst-of (base semantics, which
     if (!g.allowed) expect((g as any).error.effectiveState).toBe(blockedState);
     expect((await run("cash flow", cash, finance)).allowed).toBe(spendOk);
     expect((await run("customer experience", cash, finance)).allowed).toBe(generalOk);
+  });
+});
+
+describe("Consulting Mode compatibility — completed readings of ANY age (Policy A: no Owner 45-day rule)", () => {
+  // Owner freshness policy != Consulting compatibility policy: the base gate used the latest persisted states
+  // with no age cutoff, and PR A keeps that for Consulting.
+  const old = new Date(Date.now() - 120 * 86_400_000);
+  const run = (impactArea: string, cash: { state: string; periodEnd: Date } | null, finance: { state: string; periodEnd: Date } | null) =>
+    outcome(enforceCashSafetyForPromotion("rec-age", "ws", world({ impactArea, businesses: ["biz-1"], cash, finance }).deps));
+  it("1 — completed SAFE readings >45 days old: the base SAFE input behaviour is preserved (growth allowed)", async () => {
+    expect((await run("growth", { state: "SAFE", periodEnd: old }, { state: "SAFE", periodEnd: old })).allowed).toBe(true);
+  });
+  it("2 — a completed CRITICAL reading >45 days old stays CRITICAL", async () => {
+    const g = await run("growth", { state: "CRITICAL", periodEnd: old }, { state: "SAFE", periodEnd: old });
+    expect(g.allowed).toBe(false);
+    expect((g as any).error.effectiveState).toBe("CRITICAL");
   });
 });
 

@@ -74,7 +74,7 @@ import { evaluateOwnerActionGate, type OwnerGateConstraints } from "@/domain/own
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
-import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
+import { currentCashFinanceReading, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
@@ -264,6 +264,13 @@ export interface GuidanceDeps {
    */
   proofOutcome?: (workspaceId: string) => Promise<ProofOutcomeLinkageReport>;
   /**
+   * The owner action gate's constraints loader (loadOwnerGateConstraints — the SAME constraints the canonical
+   * decision is resolved with). Present on the live path, so a caller that does not pass `ownerGate` still
+   * gets the gate's growth limits; absent on a fake-DI unit test, in which case growth readiness for a
+   * business is UNVERIFIED (never GROWTH_READY) — a missing gate never reads as "growth ready".
+   */
+  ownerGate?: (workspaceId: string, businessId: string) => Promise<OwnerGateConstraints>;
+  /**
    * Optional — the live dispute→risk source (maps governed proof-dispute categories into
    * Profit-Leak + Constraint signals). Present on the live path; absent on a fake-DI unit test,
    * in which case dispute-derived leaks/constraints simply do not fire (no fabrication).
@@ -335,8 +342,10 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getPersistedExecutionTasks } = await import("@/services/owner-mode/opportunity-execution.service");
   const { resolveHomeGoal, resolveAlignedObjectiveLinks } = await import("@/services/owner-strategy/goal.service");
   const { listPolicies, evaluatePolicy } = await import("@/services/governance/operating-policy.service");
+  const { loadOwnerGateConstraints } = await import("@/services/owner-mode/owner-action-gate.service");
   return {
     db: db as unknown as GuidanceDb,
+    ownerGate: (workspaceId: string, businessId: string) => loadOwnerGateConstraints(workspaceId, businessId),
     uuid: () => randomUUID(),
     now: () => Date.now(),
     externalOpportunitySignals: (workspaceId: string) => getActiveExternalOpportunitySignals(workspaceId),
@@ -866,9 +875,11 @@ export async function assembleGuidanceContext(
   deps: GuidanceDeps,
   /**
    * The owner action gate's constraints for this business (the SAME ones the canonical decision was
-   * resolved with): growth is never shown as ready while the gate holds growth.
+   * resolved with): growth is never shown as ready while the gate holds growth. Not supplied (undefined) →
+   * loaded through `deps.ownerGate`; unavailable (null, or no loader) → growth readiness is unverified for a
+   * business (never ready).
    */
-  gate: OwnerGateConstraints | null = null
+  gateInput?: OwnerGateConstraints | null
 ): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
@@ -884,6 +895,8 @@ export async function assembleGuidanceContext(
     scopedBusinessId = real.length === 1 ? real[0].id : null;
   }
   const unscopedLegacy = !businessId && !deps.db.ownerBusiness.findMany;
+  const gate: OwnerGateConstraints | null =
+    gateInput !== undefined ? gateInput : scopedBusinessId && deps.ownerGate ? await deps.ownerGate(workspaceId, scopedBusinessId) : null;
   const scope: { workspaceId: string; businessId?: string } | null = scopedBusinessId
     ? { workspaceId, businessId: scopedBusinessId }
     : unscopedLegacy ? { workspaceId } : null;
@@ -947,7 +960,7 @@ export async function assembleGuidanceContext(
 
   // The in-progress current period's cash/Finance readings (provisional: they may only tighten).
   const provisional = scopedBusinessId
-    ? await loadProvisionalCashFinance(deps.db as unknown as ProvisionalCashFinanceDb, { workspaceId, businessId: scopedBusinessId }, nowDate).catch(() => null)
+    ? await loadProvisionalCashFinance(deps.db as unknown as ProvisionalCashFinanceDb, { workspaceId, businessId: scopedBusinessId }, nowDate)
     : null;
   const ag = archetypeGuidance(business?.businessType);
   // Cash-survival-triage and finance diagnosis are two separate signals for the same business that
@@ -963,9 +976,13 @@ export async function assembleGuidanceContext(
   // The state the safety gates enforce (stale, amended and in-progress figures included) — Now View never
   // shows cash as safer than it.
   const enforcedState = cashFinanceResolution.gateState;
-  const cashState: string | undefined = cashFinanceResolution.cashState ?? undefined;
-  // Finance's CURRENT state: null once its figures were amended (their last state is kept separately).
-  const finState: string | undefined = cashFinanceResolution.financeState ?? undefined;
+  // Each source's CURRENT state only: a reading that is out of date, future-dated or (Finance) amended is
+  // last-known context, never presented as current truth (it is named as last known below, and the gate's
+  // unverified state applies).
+  const cashState: string | undefined = cashFinanceResolution.cashCurrent ? cashFinanceResolution.cashState ?? undefined : undefined;
+  const finState: string | undefined = cashFinanceResolution.financeCurrent ? cashFinanceResolution.financeState ?? undefined : undefined;
+  const cashLastKnown = !cashFinanceResolution.cashCurrent ? cashFinanceResolution.cashState : null;
+  const finStaleLastKnown = !cashFinanceResolution.financeCurrent ? cashFinanceResolution.financeState : null;
   const finAmendedLastKnown = cashFinanceResolution.financeAmendedLastKnown;
   // Growth/high-impact gating stays conservative when either current signal is missing (fail closed on
   // missing critical data, tracked separately below via missingCriticalData).
@@ -999,14 +1016,22 @@ export async function assembleGuidanceContext(
   const retentionRiskHigh = hasCustomerEvidence && churnRiskScore >= 0.5;
   // The owner action gate's own growth limits (cash, capacity, margin, compliance — never a domain-specific
   // do-not-repeat rule): growth is never "ready" here while the gate would hold a growth step.
-  const gateHoldsGrowth = gate !== null && scopedBusinessId !== null &&
-    !evaluateOwnerActionGate({ ...gate, doNotRepeat: [] }, { domain: "sales", intent: "GROW", findingId: null, findingCode: null }).allowed;
+  // Without the gate (not supplied and no loader) a business's growth readiness is unverified: never ready.
+  const gateHoldsGrowth = scopedBusinessId !== null && (
+    gate === null ||
+    !evaluateOwnerActionGate({ ...gate, doNotRepeat: [] }, { domain: "sales", intent: "GROW", findingId: null, findingCode: null }).allowed
+  );
   const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh && !gateHoldsGrowth;
   const outcomeChecksDue = outcomeOpen + reassessOpen;
 
-  const confScore =
+  const rawConfScore =
     cash && fin ? Math.min(cash.dataConfidenceScore, fin.dataConfidenceScore)
       : cash ? cash.dataConfidenceScore : fin ? fin.dataConfidenceScore : null;
+  // Figures that are not current (out of date, amended, in progress) are never high confidence: the same
+  // cap the gate applies (UNVERIFIED_GATE_CONFIDENCE).
+  const confScore = rawConfScore !== null && cashFinanceResolution.gateDriver === "unverified"
+    ? Math.min(rawConfScore, UNVERIFIED_GATE_CONFIDENCE * 100)
+    : rawConfScore;
   const dataConfidence = confidenceFromScore(confScore);
 
   // Named, smallest-useful-first missing data — never a generic warning.
@@ -1111,26 +1136,37 @@ export async function assembleGuidanceContext(
       }
     }
   }
-  if (finAmendedLastKnown && !SAFE_STATES.has(finAmendedLastKnown)) {
+  const unverifiedGate = enforcedState !== null && cashFinanceResolution.gateDriver === "unverified";
+  if (finAmendedLastKnown && (!SAFE_STATES.has(finAmendedLastKnown) || unverifiedGate)) {
     // Fail safe until the amended figures are diagnosed: the last Finance reading still counts as a
-    // warning, stated as last known — never as current, never silently dropped.
-    const sev = cashSeverity(finAmendedLastKnown);
-    issues.push({ id: "finance_amended", category: financeProfitDriven ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
-      businessFunction: [financeProfitDriven ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
+    // warning, stated as last known — never as current, never silently dropped. An amended SAFE/WATCH
+    // reading is not proof of safety either when nothing current supports it (the gate's unverified state):
+    // "last known safe; figures amended; current state unverified".
+    const unsafeLastKnown = !SAFE_STATES.has(finAmendedLastKnown);
+    const sev = cashSeverity(unsafeLastKnown ? finAmendedLastKnown : enforcedState ?? "AT_RISK");
+    issues.push({ id: "finance_amended", category: financeProfitDriven && unsafeLastKnown ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
+      businessFunction: [financeProfitDriven && unsafeLastKnown ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
       severity: sev,
-      headline: `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed — re-run the Finance diagnosis.`,
+      headline: unsafeLastKnown
+        ? `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed, so the current state is not proven either way — re-run the Finance diagnosis.`
+        : `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}, but its figures have since been amended and not analysed, and no current cash check confirms it — OpsIQ cannot treat cash as safe until the Finance diagnosis is re-run.`,
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
   }
-  if (enforcedState && cashFinanceResolution.gateDriver === "unverified" && !finAmendedLastKnown && !issues.some((i) => i.category === IssueCategory.CASH_DANGER)) {
-    // Readings exist but none is a current completed reading (out of date, or only this period's in-progress
-    // figures): the same unverified state the gate enforces — never shown as safe.
+  if (unverifiedGate && !issues.some((i) => i.id === "finance_amended")) {
+    // The enforced state rests on figures that are not current (out of date, or only this period's in-progress
+    // figures): the same unverified state the gate enforces — the last-known figures are named as last known,
+    // never as current, and cash is never shown as safe.
     const sev = cashSeverity(enforcedState);
+    const lastKnown = [
+      cashLastKnown ? `the last cash check showed ${cashLastKnown}` : null,
+      finStaleLastKnown ? `the last Finance diagnosis showed ${finStaleLastKnown}` : null,
+    ].filter(Boolean).join(" and ");
     issues.push({ id: "cash_unverified", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
       severity: sev,
       headline: cashFinanceResolution.provisional
         ? "Only this period's in-progress cash and Finance figures are available (in progress — not a completed period); OpsIQ cannot treat cash as safe until a completed period is entered and diagnosed."
-        : "Your cash and Finance figures are out of date, so OpsIQ cannot treat cash as safe; enter and diagnose current figures.",
-      requiresOwnerAction: false });
+        : `${lastKnown ? `Last known (out of date): ${lastKnown}. ` : ""}Those figures are out of date, so OpsIQ cannot treat them as current; enter and diagnose current figures.`,
+      requiresOwnerAction: sev === "CRITICAL" });
   }
   if (cashFinanceResolution.provisional && enforcedState && !SAFE_STATES.has(enforcedState) && cashFinanceResolution.gateDriver !== "unverified") {
     // The in-progress current period is worse than the completed reading: it tightens, labelled as in progress.
@@ -1909,7 +1945,7 @@ export async function getOwnerNowView(
   // Read-only: overdue risk-review alerts are raised by the scheduler's risk-review scan and by the risk
   // mutations (business-risk.service.ts), never by loading this view.
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary, evidenceScope } = await assembleGuidanceContext(workspaceId, businessId, deps, options?.ownerGate ?? null);
+  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary, evidenceScope } = await assembleGuidanceContext(workspaceId, businessId, deps, options?.ownerGate);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -2781,6 +2817,7 @@ export async function getOwnerNowView(
         findingId: canonicalPrimary.findingId,
         findingCode: canonicalPrimary.findingCode,
         intent: ownerTargetIntent(canonicalPrimary),
+        ruleId: canonicalPrimary.ruleId ?? null,
       })
     : null;
   const [executionLifecycle, businessOperatingSystem] = await Promise.all([

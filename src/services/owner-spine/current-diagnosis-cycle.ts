@@ -80,3 +80,16 @@ export const PROVISIONAL_DIAGNOSIS_CYCLE_ORDER: [
   { snapshot: { createdAt: "desc" } },
   { sequenceNumber: "desc" },
 ] = [{ snapshot: { periodEnd: "desc" } }, { snapshot: { createdAt: "desc" } }, { sequenceNumber: "desc" }];
+
+/**
+ * A metric snapshot table's own period filters (snapshots carry periodStart/periodEnd directly, not through
+ * a cycle): COMPLETED — the period has ended by `now` (the only evidence a classification or trend rests
+ * on); PROVISIONAL — started, not yet ended (labelled as in progress, never a completed trend point). A
+ * period that has not started (genuinely future) matches neither.
+ */
+export function completedSnapshotWhere(now: Date): { periodEnd: { lte: Date } } {
+  return { periodEnd: { lte: now } };
+}
+export function provisionalSnapshotWhere(now: Date): { periodStart: { lte: Date }; periodEnd: { gt: Date } } {
+  return { periodStart: { lte: now }, periodEnd: { gt: now } };
+}

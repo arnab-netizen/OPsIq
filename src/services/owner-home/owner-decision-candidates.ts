@@ -555,6 +555,7 @@ export function survivalIssueCandidates(
         stale: r.stale,
         exclusion: null,
         targetRoute: OWNER_DOMAIN_ROUTE[r.domain] ?? "/owner",
+        issueTitle: `Deal with: ${findingTitle}`,
       });
     }
   }

@@ -115,3 +115,93 @@ export function periodEndOf(v: unknown): Date | null {
   }
   return null;
 }
+
+/** An action row as read-time continuity sees it. */
+export interface ReadTimeContinuityAction {
+  id: string;
+  cycleId: string;
+  status: string;
+  completedAt?: Date | string | null;
+}
+
+/** The current cycle as read-time continuity sees it. */
+export interface ReadTimeContinuityCycle {
+  id: string;
+  /** When the cycle was diagnosed. */
+  createdAt: Date | string | null;
+  /** The end of the evidence period it describes. */
+  periodEnd: Date | string | null;
+  /** The finding codes its diagnosis raises. */
+  raisedCodes: ReadonlySet<string>;
+}
+
+/**
+ * Whether the current cycle's evidence post-dates a completion: the cycle was diagnosed after the work was
+ * completed AND its evidence period ended after it (figures that include time after the work). Only such
+ * evidence can show the same intervention is required again; a proposal from figures that predate the
+ * completion (an in-progress period diagnosed before it, a re-diagnosis of an older period) cannot.
+ */
+export function evidencePostdatesCompletion(cycle: Pick<ReadTimeContinuityCycle, "createdAt" | "periodEnd">, completedAt: Date | string | null | undefined): boolean {
+  const done = periodEndOf(completedAt ?? null);
+  const diagnosed = periodEndOf(cycle.createdAt);
+  const end = periodEndOf(cycle.periodEnd);
+  if (done === null || diagnosed === null || end === null) return false;
+  return diagnosed.getTime() > done.getTime() && end.getTime() > done.getTime();
+}
+
+/**
+ * Read-time action continuity for the CURRENT cycle, shared by Owner Home (the canonical candidate builder)
+ * and every domain dashboard, so the two never disagree about what is live work:
+ *   - ENGAGED work (assigned / in progress / blocked) on another cycle whose finding the current diagnosis
+ *     still raises is followed as live work (`followed`), and takes the place of the current cycle's
+ *     never-engaged copy for the same continuity key;
+ *   - engaged work whose finding the current diagnosis no longer raises is returned apart (`notRaised`) —
+ *     dashboards flag it for the owner to finish or cancel; it is never a current step;
+ *   - COMPLETED work on another cycle is terminal historical evidence (`completedEarlier`): it suppresses the
+ *     current cycle's never-engaged proposal for the SAME continuity key (finding code + recommendation code —
+ *     never a title match) until evidence that post-dates the completion re-raises it
+ *     (evidencePostdatesCompletion). It is never carried forward as actionable work;
+ *   - CANCELLED work is not completion: it never suppresses a proposal (a cancelled step may be proposed
+ *     again), exactly as at diagnosis time.
+ * A proposal the owner has already engaged on stays (the owner chose to act again). Unrelated completed work
+ * (another key) suppresses nothing.
+ */
+export function readTimeContinuity<A extends ReadTimeContinuityAction>(
+  cycle: ReadTimeContinuityCycle,
+  own: readonly A[],
+  others: readonly A[],
+  keyOf: (a: A) => string | null,
+  codeOf: (a: A) => string | null
+): { own: A[]; followed: A[]; notRaised: A[]; completedEarlier: A[] } {
+  const engaged: ReadonlySet<string> = new Set(ENGAGED_ACTION_STATUSES);
+  const elsewhere = others.filter((a) => a.cycleId !== cycle.id);
+  const engagedElsewhere = elsewhere.filter((a) => engaged.has(a.status));
+  const followed = engagedElsewhere.filter((a) => {
+    const code = codeOf(a);
+    return code !== null && cycle.raisedCodes.has(code);
+  });
+  const notRaised = engagedElsewhere.filter((a) => !followed.includes(a));
+  const followedKeys = new Set(followed.map(keyOf).filter((k): k is string => k !== null));
+  const ownProposalKeys = new Set(own.filter((a) => a.status === "proposed").map(keyOf).filter((k): k is string => k !== null));
+  // The latest standing completion per key that has a never-engaged proposal to suppress.
+  const completedByKey = new Map<string, A>();
+  for (const a of elsewhere) {
+    if (a.status !== "completed") continue;
+    const key = keyOf(a);
+    if (key === null || !ownProposalKeys.has(key) || followedKeys.has(key)) continue;
+    if (evidencePostdatesCompletion(cycle, a.completedAt)) continue;
+    const prev = completedByKey.get(key);
+    const at = periodEndOf(a.completedAt ?? null)?.getTime() ?? 0;
+    if (!prev || at > (periodEndOf(prev.completedAt ?? null)?.getTime() ?? 0)) completedByKey.set(key, a);
+  }
+  const completedEarlier = [...completedByKey.values()];
+  const suppressFollowed = (a: A) => {
+    const key = keyOf(a);
+    return key !== null && followedKeys.has(key) && !engaged.has(a.status) && a.status !== "completed";
+  };
+  const suppressCompleted = (a: A) => {
+    const key = keyOf(a);
+    return key !== null && completedByKey.has(key) && a.status === "proposed";
+  };
+  return { own: own.filter((a) => !suppressFollowed(a) && !suppressCompleted(a)), followed, notRaised, completedEarlier };
+}

@@ -40,7 +40,7 @@ import {
   type OwnerDomain,
   type OwnerSeverity,
 } from "./contracts";
-import { evaluateOwnerActionGate, type OwnerGateBlock, type OwnerGateBlockCode, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
+import { evaluateOwnerActionGate, NO_OWNER_GATE_CONSTRAINTS, type OwnerGateBlock, type OwnerGateBlockCode, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 
 // --- Business-semantic priority classes ---------------------------------------------------------
 
@@ -335,6 +335,13 @@ export interface OwnerDecisionCandidate {
   exclusion: OwnerCandidateExclusion | null;
   /** Owner page where this is worked. */
   targetRoute: string;
+  /**
+   * The do-not-repeat rule this candidate is about: the rule a `GATE_DO_NOT_REPEAT_REVIEW` target reviews,
+   * or the exact rule that forbids repeating the earlier step of a survival issue. Absent otherwise.
+   */
+  ruleId?: string | null;
+  /** The ISSUE's own wording (a survival reading's finding title), independent of any action's title. */
+  issueTitle?: string | null;
 }
 
 export function isEligibleOwnerCandidate(c: OwnerDecisionCandidate): boolean {
@@ -443,6 +450,8 @@ export interface OwnerDecisionTarget {
   severity: OwnerSeverity | null;
   status: string;
   targetRoute: string;
+  /** The do-not-repeat rule the target is about (the gate's exact blocking rule); null when none. */
+  ruleId?: string | null;
 }
 
 export type OwnerDecisionChangeKind =
@@ -645,6 +654,7 @@ function toTarget(c: OwnerDecisionCandidate): OwnerDecisionTarget {
     severity: c.severity,
     status: c.status,
     targetRoute: c.targetRoute,
+    ruleId: c.ruleId ?? null,
   };
 }
 
@@ -862,6 +872,8 @@ export interface OwnerGateHold {
   candidateId: string;
   /** The held action row's id (the candidate's sourceId). */
   sourceId: string;
+  /** The finding the held work responds to (null when none). */
+  findingId: string | null;
   title: string;
   domain: OwnerDecisionCandidate["domain"];
   code: OwnerGateBlockCode;
@@ -917,8 +929,12 @@ interface GateTarget { findingCode: string; priorityClass: OwnerPriorityClass; d
 
 /** The do-not-repeat rules are recorded and overridden on the Cockpit (OwnerDoNotRepeatPanel). */
 export const OWNER_DNR_RULES_ROUTE = "/owner/cockpit#do-not-repeat-rules";
+/** The Cockpit panel's anchor for ONE rule (the panel lists and focuses it: OwnerDoNotRepeatPanel). */
+export function ownerDnrRuleRoute(ruleId: string): string {
+  return `/owner/cockpit#dnr-rule-${ruleId}`;
+}
 
-function gateTarget(code: OwnerGateBlockCode, gate: OwnerGateConstraints, heldDomain: OwnerDecisionCandidate["domain"]): GateTarget {
+function gateTarget(code: OwnerGateBlockCode, gate: OwnerGateConstraints, heldDomain: OwnerDecisionCandidate["domain"], ruleId: string | null = null): GateTarget {
   switch (code) {
     case "COMPLIANCE_BLOCKED":
       return { findingCode: "GATE_COMPLIANCE_EXPIRED", priorityClass: "SAFETY_COMPLIANCE", domain: "compliance", route: "/owner/compliance" };
@@ -938,7 +954,7 @@ function gateTarget(code: OwnerGateBlockCode, gate: OwnerGateConstraints, heldDo
     case "CAPACITY_BLOCKED":
       return { findingCode: "GATE_CAPACITY_UNSAFE", priorityClass: "OVERLOAD_BLOCKING", domain: "operations", route: "/owner/operations" };
     case "DO_NOT_REPEAT_BLOCKED":
-      return { findingCode: "GATE_DO_NOT_REPEAT_REVIEW", priorityClass: "BLOCKED_EXECUTION", domain: heldDomain, route: OWNER_DNR_RULES_ROUTE };
+      return { findingCode: "GATE_DO_NOT_REPEAT_REVIEW", priorityClass: "BLOCKED_EXECUTION", domain: heldDomain, route: ruleId ? ownerDnrRuleRoute(ruleId) : OWNER_DNR_RULES_ROUTE };
   }
 }
 
@@ -971,6 +987,23 @@ export function ownerGateHoldText(code: OwnerGateBlockCode, gate: OwnerGateConst
   return `This step is currently held by ${constraint}. ${condition} before proceeding.`;
 }
 
+/**
+ * Every check that holds a step, in owner words: the first one's full text, then each other one named — so
+ * clearing one never reveals a hidden second (planning sees them all; mutation enforcement still reports its
+ * deterministic first).
+ */
+export function ownerGateHoldsText(blocks: readonly Pick<OwnerGateBlock, "code">[], gate: OwnerGateConstraints): string {
+  const codes = [...new Set(blocks.map((b) => b.code))];
+  if (codes.length === 0) return "";
+  const first = ownerGateHoldText(codes[0], gate);
+  if (codes.length === 1) return first;
+  const others = codes.slice(1).map((c) => {
+    const m = /held by (.*?)\. /.exec(ownerGateHoldText(c, gate));
+    return m ? m[1] : c;
+  });
+  return `${first} It is also held by ${others.length === 1 ? others[0] : `${others.slice(0, -1).join(", ")} and ${others[others.length - 1]}`}: each must be cleared.`;
+}
+
 function gateBlockerTitle(code: OwnerGateBlockCode, gate: OwnerGateConstraints, domainLabel: string, dnrMatch: "broad" | "exact" | null): string {
   switch (code) {
     case "COMPLIANCE_BLOCKED":
@@ -999,23 +1032,27 @@ const DANGER_CLASSES: ReadonlySet<OwnerPriorityClass> = new Set([
 
 /**
  * How far a gate blocker target can be trusted, from its SOURCE (never an unconditional 1):
- *   - recorded facts — an expired obligation with a known expiry, an exact recorded do-not-repeat rule,
- *     recorded equipment capacity: high (1);
- *   - a broad do-not-repeat rule: the held work's own confidence (the rule is recorded; whether it applies
- *     to that work rests on the held work's evidence);
- *   - the cash/finance reading: its own source-derived confidence (already capped for unverified or
- *     provisional figures); a margin reading: its snapshot's data confidence;
+ *   - an expired obligation with a known expiry: a recorded, dated fact (1);
+ *   - capacity: the confidence of the equipment record that decides it (capacityConstraint: a dated
+ *     maintenance fact 1, a recorded state within the freshness window 0.9, older or undated ≤ 0.4);
+ *   - an exact recorded do-not-repeat rule: the RULE is a recorded fact (1) — but when the held work
+ *     responds to a present danger, the target presents that danger, whose confidence is the held work's own
+ *     evidence confidence (the rule proves nothing about the danger); a broad rule: the held work's own
+ *     confidence (whether it applies rests on the held work's evidence);
+ *   - the cash/finance reading: its own source-derived confidence (capped for unverified, out-of-date or
+ *     provisional figures); a margin reading: its snapshot's confidence (capped when out of date);
  *   - unknown: never high (UNKNOWN_BLOCKER_CONFIDENCE).
  * Low confidence never lowers the blocker's priority class.
  */
 const UNKNOWN_BLOCKER_CONFIDENCE = 0.4;
-function blockerConfidence(code: OwnerGateBlockCode, gate: OwnerGateConstraints, group: readonly OwnerGateHold[], exactDnr: boolean): number {
+function blockerConfidence(code: OwnerGateBlockCode, gate: OwnerGateConstraints, group: readonly OwnerGateHold[], exactDnr: boolean, dangerHeld: boolean): number {
   switch (code) {
     case "COMPLIANCE_BLOCKED":
-    case "CAPACITY_BLOCKED":
       return 1;
+    case "CAPACITY_BLOCKED":
+      return typeof gate.capacity.confidence === "number" ? clampConfidence(gate.capacity.confidence) : UNKNOWN_BLOCKER_CONFIDENCE;
     case "DO_NOT_REPEAT_BLOCKED":
-      return exactDnr ? 1 : Math.max(...group.map((h) => clampConfidence(h.confidence)));
+      return exactDnr && !dangerHeld ? 1 : Math.max(...group.map((h) => clampConfidence(h.confidence)));
     case "CASH_SAFETY_BLOCKED":
       return typeof gate.cash.confidence === "number" ? clampConfidence(gate.cash.confidence) : UNKNOWN_BLOCKER_CONFIDENCE;
     case "MARGIN_SAFETY_BLOCKED":
@@ -1023,7 +1060,10 @@ function blockerConfidence(code: OwnerGateBlockCode, gate: OwnerGateConstraints,
   }
 }
 
-/** Gate targets that rest on recorded facts, not on data-derived readings (never capped as provisional). */
+/**
+ * Gate targets that rest on recorded control records, not on diagnosed domain data (the business-wide
+ * data-sufficiency cap does not apply; their own confidence is still source-derived — see blockerConfidence).
+ */
 const RECORDED_FACT_GATE_CODES: ReadonlySet<string> = new Set(["GATE_COMPLIANCE_EXPIRED", "GATE_CAPACITY_UNSAFE"]);
 
 /**
@@ -1043,20 +1083,24 @@ function buildGateBlockerTargets(
   scope: { businessId: string; workspaceId: string }
 ): OwnerDecisionCandidate[] {
   const out: OwnerDecisionCandidate[] = [];
-  const groups = new Map<string, { code: OwnerGateBlockCode; reason: string; holds: OwnerGateHold[] }>();
+  const groups = new Map<string, { code: OwnerGateBlockCode; reason: string; ruleId: string | null; holds: OwnerGateHold[] }>();
   for (const h of holds) {
     for (const b of h.blocks) {
-      const key = b.code === "DO_NOT_REPEAT_BLOCKED" ? `${b.code}:${h.domain}` : b.code;
-      const g = groups.get(key) ?? { code: b.code, reason: b.reason, holds: [] };
+      // One review target per do-not-repeat RULE (the exact rule that holds the work — never a broad rule
+      // that merely shares its domain); one target per other blocker kind.
+      const ruleId = b.code === "DO_NOT_REPEAT_BLOCKED" ? b.ruleId ?? null : null;
+      const key = b.code === "DO_NOT_REPEAT_BLOCKED" ? `${b.code}:${ruleId ?? h.domain}` : b.code;
+      const g = groups.get(key) ?? { code: b.code, reason: b.reason, ruleId, holds: [] };
       g.holds.push(h);
       groups.set(key, g);
     }
   }
   for (const [key, g] of groups) {
-    const { code, holds: group } = g;
+    const { code, holds: group, ruleId } = g;
     if (eligible.some((c) => addressesBlocker(c, code, gate))) continue;
-    const t = gateTarget(code, gate, group[0].domain);
-    const exactDnr = code === "DO_NOT_REPEAT_BLOCKED" && group.every((h) => h.blocks.some((b) => b.code === code && gate.doNotRepeat.find((r) => r.id === b.ruleId)?.match === "exact"));
+    const t = gateTarget(code, gate, group[0].domain, ruleId);
+    const rule = ruleId ? gate.doNotRepeat.find((r) => r.id === ruleId) ?? null : null;
+    const exactDnr = code === "DO_NOT_REPEAT_BLOCKED" && rule?.match === "exact";
     const dnrMatch = code === "DO_NOT_REPEAT_BLOCKED" ? (exactDnr ? "exact" : "broad") : null;
     const held = quoteHeld(group.map((h) => h.title));
     // A do-not-repeat hold carries the held work's most urgent class/severity/score (see the doc above).
@@ -1064,8 +1108,10 @@ function buildGateBlockerTargets(
       ? [...group].sort((a, b) => ownerPriorityClassRank(a.priorityClass) - ownerPriorityClassRank(b.priorityClass) || severityRankOrUnknown(b.severity) - severityRankOrUnknown(a.severity))[0]
       : null;
     const dangerHeld = lead !== null && DANGER_CLASSES.has(lead.priorityClass);
+    // A held danger stays the ISSUE: the title names the problem's class, and the held STEP is quoted as the
+    // step that is marked do-not-repeat (never presented as "the problem").
     const title = dangerHeld
-      ? `${lead!.title}: the planned step repeats one marked do-not-repeat — review that rule or choose a different response`
+      ? `${OWNER_PRIORITY_CLASS_LABEL[lead!.priorityClass]} in ${ownerDomainLabel(lead!.domain)} is still open, and its planned step "${lead!.title}" is marked do-not-repeat — respond another way or review that rule`
       : gateBlockerTitle(code, gate, ownerDomainLabel(group[0].domain), dnrMatch);
     const provisionalNote = code === "CASH_SAFETY_BLOCKED" && gate.cash.provisional && gate.cash.driver !== "unverified" ? " This rests on this period's in-progress figures, not a completed period." : "";
     out.push({
@@ -1077,17 +1123,19 @@ function buildGateBlockerTargets(
       sourceId: key,
       priorityClass: lead ? lead.priorityClass : t.priorityClass,
       findingCode: t.findingCode,
-      findingId: null,
+      // A do-not-repeat review names the exact rule and the finding it is about (a single held finding).
+      findingId: code === "DO_NOT_REPEAT_BLOCKED" ? rule?.findingId ?? (new Set(group.map((h) => h.findingId)).size === 1 ? group[0].findingId : null) : null,
+      ruleId,
       title,
       explanation: dangerHeld
-        ? `The problem is still there: "${lead!.title}". ${g.reason} OpsIQ holds ${held} until the rule is reviewed, so review it (record what has changed) or respond to the problem another way.`
+        ? `The problem is still open (${OWNER_PRIORITY_CLASS_LABEL[lead!.priorityClass]}${lead!.severity ? `, ${lead!.severity}` : ""}); only its planned step is held. ${g.reason} OpsIQ holds ${held} until the rule is reviewed, so respond to the problem another way or review the rule (record what has changed).`
         : `${g.reason}${provisionalNote} OpsIQ holds ${held} until this is cleared, so it is not a step for now.`,
       // Nothing is invented: the gate records no severity, score or effort for its own constraint; a
       // do-not-repeat hold carries the held work's own.
       severity: lead ? lead.severity : null,
       priorityScore: lead ? lead.priorityScore : 0,
       expectedImpactScore: 0,
-      confidence: blockerConfidence(code, gate, group, exactDnr),
+      confidence: blockerConfidence(code, gate, group, exactDnr, dangerHeld),
       effortScore: 50,
       status: "open",
       ownerActionRequired: true,
@@ -1135,11 +1183,30 @@ export function canonicalEligibility(
   const holds: OwnerGateHold[] = [];
   const processed = scoped.map((c) => {
     if (c.exclusion === null && c.stale && (c.source === "domain_action" || c.source === "survival_reading")) return { ...c, exclusion: "stale_evidence" as const };
+    // A survival ISSUE is never held — a do-not-repeat rule forbids repeating a STEP, it does not make the
+    // danger go away. When an exact rule forbids the step the issue was last responded with, the issue stays
+    // eligible under its own wording (never the forbidden step's title) and names that rule.
+    if (c.exclusion === null && c.source === "survival_reading" && scope.gate && !scope.gate.optedOut && c.findingId) {
+      const dnr = evaluateOwnerActionGate(
+        { ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: scope.gate.doNotRepeat },
+        { domain: c.domain, intent: ownerTargetIntent(c), findingId: c.findingId, findingCode: c.findingCode }
+      );
+      if (!dnr.allowed && dnr.code === "DO_NOT_REPEAT_BLOCKED") {
+        const rule = scope.gate.doNotRepeat.find((r) => r.id === dnr.ruleId) ?? null;
+        const earlier = c.status !== "no_action" ? ` "${c.title}"` : "";
+        return {
+          ...c,
+          title: c.issueTitle ?? c.title,
+          explanation: `${c.explanation} The earlier step${earlier} for it is marked do-not-repeat${rule?.summary ? ` ("${rule.summary}")` : ""}: respond to the problem another way, or review that rule (record what has changed).`,
+          ruleId: dnr.ruleId ?? null,
+        };
+      }
+    }
     if (c.exclusion === null && c.source === "domain_action" && scope.gate) {
       const verdict = evaluateOwnerActionGate(scope.gate, { domain: c.domain, intent: ownerTargetIntent(c), findingId: c.findingId, findingCode: c.findingCode });
       if (!verdict.allowed) {
         holds.push({
-          candidateId: c.candidateId, sourceId: c.sourceId, title: c.title, domain: c.domain, code: verdict.code, reason: verdict.reason,
+          candidateId: c.candidateId, sourceId: c.sourceId, findingId: c.findingId, title: c.title, domain: c.domain, code: verdict.code, reason: verdict.reason,
           ...(verdict.ruleId ? { ruleId: verdict.ruleId } : {}),
           blocks: verdict.blocks, priorityClass: c.priorityClass, severity: c.severity, priorityScore: c.priorityScore, confidence: c.confidence,
         });
@@ -1193,7 +1260,11 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     pushMissing(`${ownerDomainLabel(d)} figures entered for a period that has not started yet are not used. Correct the period if it was entered by mistake.`);
   }
   for (const d of input.provisionalDomains ?? []) {
-    pushMissing(`${ownerDomainLabel(d)} figures for the current period are still in progress: OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth, until the period ends. Advice rests on the latest completed period.`);
+    // Only Cash flow and Finance in-progress figures feed a safety check (they may tighten it); other domains'
+    // in-progress figures are not used at all until the period ends.
+    pushMissing(d === "cashflow" || d === "finance"
+      ? `${ownerDomainLabel(d)} figures for the current period are still in progress: OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth, until the period ends. Advice rests on the latest completed period.`
+      : `${ownerDomainLabel(d)} figures for the current period are still in progress, so they are not used until the period ends. Advice rests on the latest completed period.`);
   }
 
   // Confidence: the primary's own evidence confidence, capped by business-wide data sufficiency.

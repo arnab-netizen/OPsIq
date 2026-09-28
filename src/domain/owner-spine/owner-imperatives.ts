@@ -319,8 +319,30 @@ const humanizeCodes = (x: string) => x.replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (m) 
 /** Leading clauses that are an ordering claim whatever follows ("Start with …", "Before anything else, …"). */
 const PLAN_ORDER_LEAD_ALWAYS = /^(?:start\s+(?:with|by)|begin\s+(?:with|by)|before\s+anything\s+else|first\s+thing|immediately|right\s+now|above\s+all|must(?!\s+not\b|n['’]?t\b))\b\s*[:,—–-]?\s*/i;
 /** Leading labels that are an ordering claim only as a label ("First: …", "Top priority — …"), never "The first cohort …". */
-const PLAN_ORDER_LEAD_LABEL = /^(?:the\s+)?(?:first\s+priority|first\s+step|highest\s+priority|top\s+priority|priority\s+one|number\s+one|urgent(?:ly)?|first|now)\s*[:,—–-]\s*/i;
+const PLAN_ORDER_LEAD_LABEL = /^(?:(?:the\s+)?(?:first\s+priority|first\s+step|highest\s+priority|top\s+priority|priority\s+one|number\s+one|urgent(?:ly)?|first|now)\s*[:,—–-]|next\s*[:—–-])\s*/i;
 const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?|no\s+more(?!\s+than))\b\s*:?\s*/i;
+/**
+ * A clause that states a fact rather than addressing the owner: it carries a finite verb of its own
+ * ("No more stock-outs WERE recorded.", "avoid rate WAS 12%") or its first word is a past form ("never
+ * REVIEWED since 2024", "never FOLLOWED up"). Such a clause is never rewritten.
+ */
+const PLAN_FINITE_VERB = /\b(?:is|are|was|were|has|have|had|did|does|been|being|will|would|could|should|fell|rose|grew|went|came|stayed|became|remained|seemed|showed|shows)\b/i;
+function planClauseIsFactual(rest: string): boolean {
+  // Only the MAIN clause counts: a subordinate one ("… until cash IS safe", "… before cash IS safe") describes
+  // a condition of the instruction, not a fact the sentence reports.
+  const clause = (rest.split(/[.;!?]/)[0] ?? "").split(/\b(?:before|until|unless|while|when|whenever|if|because|after|since|once|as long as|so that)\b/i)[0] ?? "";
+  const first = /^\s*([A-Za-z'’-]+)/.exec(clause)?.[1] ?? "";
+  return PLAN_FINITE_VERB.test(clause) || /ed$/i.test(first);
+}
+/** Whether a sentence opens as an instruction to the owner (an imperative verb not used as a noun or a past form). */
+function opensWithImperative(body: string): boolean {
+  const m = PLAN_IMPERATIVE_VERB.exec(body);
+  if (!m) return false;
+  // "Use of the oven peaked…", "Spend fell…", "Cut costs rose…": the verb word is a noun subject there.
+  const next = /^\s*([A-Za-z'’-]+)/.exec(body.slice(m[0].length))?.[1] ?? "";
+  if (/^(?:of|is|are|was|were|has|had)$/i.test(next) || /ed$/i.test(next) || PLAN_FINITE_VERB.test(next)) return false;
+  return true;
+}
 /**
  * A sentence that OPENS with an imperative verb addressed to the owner ("Collect receivables first.").
  * Inline ordering phrases and a trailing "first" are removed only from such a sentence (or one with an
@@ -330,7 +352,9 @@ const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|mu
 const PLAN_IMPERATIVE_VERB = /^(?:please\s+)?(?:act|add|address|apply|begin|build|call|cancel|chase|check|clear|close|collect|complete|confirm|consolidate|contact|create|cut|defer|delay|do|drop|ensure|expand|finish|fix|focus|follow|freeze|get|grow|hire|hold|improve|increase|invest|keep|launch|limit|lock|lower|make|measure|move|negotiate|offer|open|pause|pay|plan|prepare|prioriti[sz]e|protect|put|raise|record|recover|reduce|remove|renegotiate|replace|reprice|resolve|restore|review|run|scale|schedule|secure|sell|send|set|shift|spend|stabili[sz]e|start|switch|take|target|test|tighten|track|trim|use|verify)\b/i;
 /**
  * A prohibition introduced inside the sentence after a dash or a colon ("Protect cash — do not add growth
- * spend.", "Protect cash: stop discretionary spend.").
+ * spend.", "Protect cash: stop discretionary spend.") — only when the sentence itself opens as an
+ * instruction to the owner ("Supplier status: never reviewed since 2024." and "Customers said: no more
+ * delays." are reports, never rewritten) and the prohibited clause is not a factual one.
  */
 const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s|:\s+)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|no\s+more(?!\s+than))\b\s*:?\s*/gi;
 /** Inline ordering phrases; "before any action/commitment/…" takes the rest of its clause with it. */
@@ -360,18 +384,22 @@ function neutralizePlanSentence(sentence: string): { text: string; heldBack: boo
   const lead = /^\s*/.exec(sentence)![0];
   const { body, ordered } = stripOrderLeads(sentence.slice(lead.length));
   const prohibition = PLAN_PROHIBITION_LEAD.exec(body);
-  if (prohibition) {
+  if (prohibition && !planClauseIsFactual(body.slice(prohibition[0].length))) {
     // Lower case: the restated sentence is shown after its own label ("Plan analysis (context): the plan …").
     return { text: `${lead}the plan analysis holds back ${body.slice(prohibition[0].length).replace(PLAN_ORDER_INLINE, "")}`, heldBack: true };
   }
   let heldBack = false;
-  const asides = body.replace(PLAN_PROHIBITION_ASIDE, (_m, dash: string) => {
-    heldBack = true;
-    return `${dash}the plan analysis holds back `;
-  });
+  const instructs = ordered || opensWithImperative(body);
+  const asides = instructs
+    ? body.replace(PLAN_PROHIBITION_ASIDE, (m: string, dash: string, offset: number) => {
+        if (planClauseIsFactual(body.slice(offset + m.length))) return m;
+        heldBack = true;
+        return `${dash}the plan analysis holds back `;
+      })
+    : body;
   // Ordering words are removed only from an owner-directed imperative (an ordering lead, or an opening
   // imperative verb); a descriptive sentence keeps its words exactly.
-  const directed = ordered || PLAN_IMPERATIVE_VERB.test(asides);
+  const directed = instructs;
   const inline = new RegExp(PLAN_ORDER_INLINE.source, "i").test(asides);
   const imperative = directed && (ordered || inline || PLAN_TRAILING_FIRST.test(asides));
   if (!imperative) return { text: heldBack ? `${lead}${asides}` : sentence, heldBack };

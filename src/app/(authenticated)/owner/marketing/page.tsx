@@ -357,7 +357,7 @@ export default function OwnerMarketingPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add marketing snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
+            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy || Boolean(dashboard?.latestSnapshotDiagnosis?.current)} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Enter new or corrected figures to diagnose again." : undefined}>
               Run marketing diagnosis
             </Button>
           </div>
@@ -402,12 +402,14 @@ export default function OwnerMarketingPage() {
               load must never render "No marketing snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
-          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} />
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
           <DomainMainTargetContext domain="marketing" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard.latestSnapshot
+              {dashboard.latestSnapshotDiagnosis?.current
+                ? "These figures were already diagnosed. Their period is still in progress, so the result is provisional (see the note above) and there is no completed reading yet — it appears here once a completed period is diagnosed."
+                : dashboard.latestSnapshot
                 ? "Snapshot recorded. Click “Run marketing diagnosis” to generate findings and an action plan."
                 : "No marketing snapshot yet. Add a snapshot, then run a marketing diagnosis."}
             </div>
@@ -524,8 +526,9 @@ function MarketingCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

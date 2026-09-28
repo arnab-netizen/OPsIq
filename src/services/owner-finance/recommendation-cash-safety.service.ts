@@ -14,16 +14,19 @@
  *   - no business with any reading → AT_RISK (both halves missing).
  * What one business contributes, per half (Cash flow's cashflowState, Finance's survivalState), from its
  * current diagnosis cycle (current-diagnosis-cycle.ts order) over COMPLETED periods (currentEvidenceWhere):
- *   - a half whose figures are valid and current is used as is;
- *   - a half that is not verified — out of date (older than the freshness window) or, for Finance, an
- *     AMENDED snapshot not yet re-diagnosed — keeps its last-known state only when that state is unsafe
- *     (it never becomes safer: the last completed Finance diagnosis is never replaced by an OLDER period's
- *     cycle); a SAFE/WATCH unverified half counts as missing;
+ *   - a completed half is used as recorded, WHATEVER ITS AGE: Consulting keeps the pre-consolidation
+ *     completed-reading contract (548908a8 used the latest persisted states with no age cutoff). Owner
+ *     Mode's freshness policy (OWNER_DECISION_STALE_EVIDENCE_DAYS: stale → refresh, low confidence, no
+ *     current-safety claim) is NOT Consulting's — Owner freshness policy != Consulting compatibility policy;
+ *   - a Finance half whose snapshot was AMENDED and not yet re-diagnosed keeps its last-known state only
+ *     when that state is unsafe (the last completed Finance diagnosis is never replaced by an OLDER
+ *     period's cycle, and an amended SAFE/WATCH is not proof of safety): a SAFE/WATCH amended half counts
+ *     as missing;
  *   - a missing half is AT_RISK (the base's missing-half rule: growth blocked, non-growth allowed);
  *   - the in-progress current period (PROVISIONAL — provisional-cash-finance.ts) only tightens: effective =
  *     worse(completed state, provisional state); provisional SAFE/WATCH alone never proves safety (the
  *     missing halves stay AT_RISK); a genuinely future period never counts.
- * With one real business and completed, current, unamended figures this is exactly the base rule
+ * With one real business and completed, unamended figures (of any age) this is exactly the base rule
  * (worse of the two halves). It is a fail-safe for Consulting recommendations that cannot be attributed to
  * one business — not Owner-Mode arbitration (current-cash-finance-reading.ts) — and it is replaced once
  * recommendations carry their business.
@@ -37,9 +40,7 @@ import {
 } from "@/domain/owner-finance/cash-safety-gate";
 import { mapImpactAreaToSensitivity, RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
-import { currentEvidenceTime } from "@/services/owner-spine/current-cash-finance-reading";
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
-import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 
 const VALID_STATES = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
 
@@ -60,7 +61,6 @@ export function consultingBusinessCashState(cash: string | null | undefined, fin
 }
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
-const DAY_MS = 86_400_000;
 
 /** One half's completed reading: its state and snapshot (period, amendment). */
 export interface ConsultingHalfRead {
@@ -69,8 +69,8 @@ export interface ConsultingHalfRead {
 }
 
 /**
- * What one business contributes (see the module doc): each completed half, verified or — when unverified
- * (stale, amended) — kept only while unsafe; the missing-half rule; then tightened (never relaxed) by the
+ * What one business contributes (see the module doc): each completed half as recorded (no age cutoff) — an
+ * amended Finance half kept only while unsafe; the missing-half rule; then tightened (never relaxed) by the
  * in-progress period. null when the business has no reading at all.
  */
 export function consultingBusinessEvidenceState(
@@ -79,12 +79,14 @@ export function consultingBusinessEvidenceState(
   provisional: { cash?: { state?: string | null } | null; finance?: { state?: string | null } | null } | null,
   nowMs: number
 ): FinancialHealthState | null {
-  const staleCutoffMs = nowMs - OWNER_DECISION_STALE_EVIDENCE_DAYS * DAY_MS;
   const half = (r: ConsultingHalfRead | null): FinancialHealthState | null => {
     const st = validState(r?.state ?? null);
     if (st === null) return null;
-    const verified = currentEvidenceTime(r?.snapshot, staleCutoffMs, nowMs) !== null;
-    return verified || !SAFE_STATES.has(st) ? st : null;
+    // A period that has not ended is never a completed reading (the query already excludes it; re-checked).
+    const periodEnd = r?.snapshot?.periodEnd instanceof Date ? r.snapshot.periodEnd.getTime() : typeof r?.snapshot?.periodEnd === "string" ? Date.parse(r.snapshot.periodEnd) : null;
+    if (periodEnd !== null && Number.isFinite(periodEnd) && periodEnd > nowMs) return null;
+    const amended = r?.snapshot?.supersededById !== null && r?.snapshot?.supersededById !== undefined;
+    return !amended || !SAFE_STATES.has(st) ? st : null;
   };
   const anyCompleted = validState(cash?.state ?? null) !== null || validState(finance?.state ?? null) !== null;
   const completed = anyCompleted ? consultingBusinessCashState(half(cash) ?? "AT_RISK", half(finance) ?? "AT_RISK") : null;

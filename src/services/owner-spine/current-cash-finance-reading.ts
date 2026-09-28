@@ -72,6 +72,10 @@ export interface CurrentCashFinanceReading extends CashFinanceResolution {
   financeState: SurvivalLikeState | null;
   /** The last Finance diagnosis's state when its figures have since been amended (not yet re-diagnosed). */
   financeAmendedLastKnown: SurvivalLikeState | null;
+  /** Whether Cash flow's reading is CURRENT completed evidence (within the freshness window, not future). */
+  cashCurrent: boolean;
+  /** Whether Finance's reading is CURRENT completed evidence (within the window, not future, not amended). */
+  financeCurrent: boolean;
   /** The state a safety gate enforces (see the module doc); null only when there is no reading. */
   gateState: SurvivalLikeState | null;
   /** What drives `gateState` (see the module doc); null when there is no reading. */
@@ -140,28 +144,33 @@ export function currentCashFinanceReading(
   // Readings exist but none is current: unverified figures are never treated as safe.
   const anyCurrent = (cashState !== null && cashAt !== null) || (financeState !== null && financeAt !== null);
   const completedGate = known === null ? null : anyCurrent ? known : worst(known, "AT_RISK");
-  // Which completed source decides the enforced state (for naming a block by its real cause): Finance
-  // whenever the arbitrated state is Finance's and Cash flow's is not at least as severe (Finance alone,
-  // Cash flow superseded, or Finance strictly worse — in agreement or in conflict).
-  const financeDecides =
-    completedGate !== null && anyCurrent && financeState !== null && arbitrated === financeState && (
-      cashState === null ||
-      resolution.supersededSource === "cash" ||
-      RANK[financeState] > RANK[cashState]
-    );
-  // The last Finance reading on since-amended figures decides it: not a current figure either.
-  const fromAmended = amendedUnsafe !== null && (arbitrated === null || RANK[amendedUnsafe] > RANK[arbitrated]);
-  const unverified = completedGate !== null && (!anyCurrent || fromAmended);
-  let gateSource: "cashflow" | "finance" | null = completedGate === null
-    ? null
-    : fromAmended || (!anyCurrent && cashState === null) || financeDecides
-      ? "finance"
-      : "cashflow";
+  // Which completed reading DECIDES the enforced state (names the block by its real cause and says how far it
+  // can be trusted). Every reading that reaches the enforced state competes — a superseded reading never
+  // does — and a CURRENT one is preferred: when a current source supports the state, it decides. Only when
+  // the state rests on a reading that is NOT current (out of date, or an amended Finance reading kept as a
+  // fail-safe) is it unverified: the last-known figure keeps the fail-safe, but it is never a fully trusted
+  // current driver — driver "unverified", refresh routed to that source, confidence capped.
+  type Contributor = { src: "cashflow" | "finance"; state: SurvivalLikeState; current: boolean };
+  const contributors: Contributor[] = [];
+  if (cashState !== null && resolution.supersededSource !== "cash") contributors.push({ src: "cashflow", state: cashState, current: cashAt !== null });
+  if (financeState !== null && resolution.supersededSource !== "finance") contributors.push({ src: "finance", state: financeState, current: financeAt !== null });
+  if (financeAmendedLastKnown !== null) contributors.push({ src: "finance", state: financeAmendedLastKnown, current: false });
+  const reaches = (c: Contributor) =>
+    completedGate !== null && (RANK[c.state] >= RANK[completedGate] || (SAFE.has(c.state) && SAFE.has(completedGate)));
+  const deciders = contributors.filter(reaches);
+  const pick = (cs: Contributor[]): Contributor | null =>
+    // Between two readings at the enforced state, Finance decides only when it is strictly worse (a tie is
+    // named by Cash flow, as before).
+    cs.length === 0 ? null : cs.reduce((a, b) => (RANK[b.state] > RANK[a.state] ? b : a));
+  const currentDecider = pick(deciders.filter((c) => c.current));
+  const decider = currentDecider ?? pick(deciders) ?? pick(contributors);
+  const unverified = completedGate !== null && currentDecider === null;
+  let gateSource: "cashflow" | "finance" | null = completedGate === null ? null : decider?.src ?? (cashState !== null ? "cashflow" : "finance");
   let gateDriver: CashFinanceGateDriver | null = completedGate === null
     ? null
     : unverified
       ? "unverified"
-      : financeDecides && finance?.driver === "profit"
+      : gateSource === "finance" && finance?.driver === "profit"
         ? "finance_profit"
         : "cash";
   const sourceConfidence = (src: "cashflow" | "finance" | null) =>
@@ -204,6 +213,8 @@ export function currentCashFinanceReading(
     cashState,
     financeState,
     financeAmendedLastKnown,
+    cashCurrent: cashState !== null && cashAt !== null,
+    financeCurrent: financeState !== null && financeAt !== null,
     gateState,
     gateDriver,
     gateSource,

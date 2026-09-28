@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
-import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
@@ -27,6 +27,8 @@ export interface MarketingDashboardPayload {
    * built on. A genuinely future snapshot is never returned.
    */
   latestSnapshotPeriodState: EvidencePeriodState | null;
+  /** The latest snapshot's own diagnosis, when it was already diagnosed (the page never prompts a re-run of it). */
+  latestSnapshotDiagnosis: SnapshotDiagnosisState | null;
   latestCycle: any | null;
   domainScore: {
     domain: "marketing";
@@ -72,7 +74,7 @@ export async function getMarketingDashboard(
 
   if (!selectedBusinessId) {
     return {
-      businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null, latestSnapshotPeriodState: null,
+      businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null, latestSnapshotPeriodState: null, latestSnapshotDiagnosis: null,
       latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
       cycleHistory: [],
     };
@@ -128,6 +130,16 @@ export async function getMarketingDashboard(
     }),
   ]);
 
+  // Whether the snapshot this page would diagnose was already diagnosed (and on what): shown instead of a
+  // prompt to re-run the same evidence (a changed snapshot needs a new diagnosis).
+  const latestSnapshotCycle = latestSnapshot
+    ? await db.ownerMarketingCycle.findFirst({
+        where: { businessId: selectedBusinessId, workspaceId, snapshotId: latestSnapshot.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, createdAt: true, marketingState: true },
+      })
+    : null;
+
   // Each action carries the value the diagnosis measured for its verification
   // metric (null when not measured) — the baseline an outcome is compared to.
   // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
@@ -136,12 +148,12 @@ export async function getMarketingDashboard(
   // finished or cancelled.
   const carriedActions = latestCycle
     ? await db.ownerMarketingAction.findMany({
-        where: {
-          businessId: selectedBusinessId,
-          workspaceId,
-          cycleId: { not: latestCycle.id },
-          status: { in: [...ENGAGED_ACTION_STATUSES] },
-        },
+        where: dashboardPriorWorkWhere(
+          { businessId: selectedBusinessId, workspaceId },
+          latestCycle.id,
+          latestCycle.findings.map((f: { code: string }) => f.code),
+          dashboardNow
+        ),
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
           finding: { select: { sourceMetric: true, sourceValue: true } },
@@ -154,15 +166,15 @@ export async function getMarketingDashboard(
     ? {
         ...latestCycle,
         findings: rankOwnerFindingsBySeverity(latestCycle.findings),
-        actions: [
-          ...latestCycle.actions.map(withMeasuredBaseline),
-          ...carriedActions.map((a: { verificationMetric: string; findingCode: string; cycle: { sequenceNumber: number } }) => ({
-            ...withMeasuredBaseline(a),
-            carriedFromCycleSequence: a.cycle.sequenceNumber,
-            // false when the latest diagnosis no longer raises this finding (finish or cancel it).
-            stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
-          })),
-        ],
+        // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
+        // owner's engaged or completed work for the same key.
+        actions: dashboardContinuityActions<any>(
+          latestCycle,
+          latestCycle.actions,
+          carriedActions,
+          (a) => a.findingCode,
+          (a) => a.cycle?.sequenceNumber
+        ).map(withMeasuredBaseline),
       }
     : null;
 
@@ -191,6 +203,7 @@ export async function getMarketingDashboard(
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
     latestSnapshotPeriodState: latestSnapshot ? evidencePeriodState(latestSnapshot, dashboardNow) : null,
+    latestSnapshotDiagnosis: snapshotDiagnosisState(latestSnapshot, latestSnapshotCycle, latestSnapshotCycle?.marketingState ?? null),
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,

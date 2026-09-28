@@ -1,6 +1,7 @@
 "use client";
 
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -414,10 +415,12 @@ export default function OwnerFinancePage() {
   }
 
   async function runDiagnosis() {
-    if (!selected || !dashboard?.latestSnapshot) return;
+    const target = dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot;
+    if (!selected || !target) return;
     // See addSnapshot's comment on why the target business is captured before the await.
     const targetBusinessId = selected;
-    const snapshotId = dashboard.latestSnapshot.id;
+    // The in-progress period's snapshot when there is one (diagnosed as provisional), else the current one.
+    const snapshotId = target.id;
     setBusy(true);
     setError(null);
     try {
@@ -598,7 +601,7 @@ export default function OwnerFinancePage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add financial snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
+            <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy || Boolean(dashboard?.latestSnapshotDiagnosis?.current)} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Enter new or corrected figures to diagnose again." : undefined}>
               Run finance diagnosis
             </Button>
           </div>
@@ -695,12 +698,14 @@ export default function OwnerFinancePage() {
             </form>
           )}
 
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.diagnosisTargetSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
           <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="financial"
-              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              hasSnapshot={Boolean(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot)}
+              inProgressDiagnosis={dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
               snapshotLabel="financial snapshot"
               diagnosisLabel="Run finance diagnosis"
             />
@@ -861,8 +866,9 @@ function FinanceCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

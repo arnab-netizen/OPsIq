@@ -255,7 +255,8 @@ describe("[db] Decision 1 — a cycle on in-progress, future or older figures ne
     // same key is not shown beside it.
     expect(ids.some((id) => id.endsWith(`:${action.id}`))).toBe(true);
     const dup = await db.ownerCashflowAction.findFirst({ where: { cycleId: provisional.id, findingCode: action.findingCode, recommendationCode: action.recommendationCode } });
-    if (dup) expect(ids.some((id) => id.endsWith(`:${dup.id}`))).toBe(false);
+    expect(dup, "the in-progress diagnosis proposed the same step").toBeTruthy();
+    expect(ids.some((id) => id.endsWith(`:${dup!.id}`))).toBe(false);
     await teardownOwnerBusiness(b);
   });
 });
@@ -431,7 +432,7 @@ describe("[db] risks: closed records are final; edits are audited as updates; cl
     const risk = await createBusinessRisk({ workspaceId: ws, actorId: actor, riskCode: "R8-SCAN", title: "Overdue", category: "OPERATIONAL" as any, likelihood: 20, impact: 20 });
     await db.businessRiskEntry.update({ where: { id: risk.id }, data: { reviewDueDate: new Date(Date.now() - 3 * DAY) } });
     const result = await scanOverdueRiskAlertsForWorkspace(ws);
-    expect(result).toMatchObject({ recipientFound: true, raised: 1, failed: 0 });
+    expect(result).toMatchObject({ recipientFound: true, attempted: 1, created: 1, failed: 0 });
     const alert = await db.alert.findFirst({ where: { workspaceId: ws, idempotencyKey: `risk_overdue_${risk.id}` } });
     expect(alert!.userId).toBe(actor);
     const created = await db.auditEvent.findFirst({ where: { workspaceId: ws, entityId: alert!.id, eventName: AUDIT_EVENTS.ALERT_CREATED } });
@@ -441,7 +442,7 @@ describe("[db] risks: closed records are final; edits are audited as updates; cl
     await db.alert.deleteMany({ where: { workspaceId: ws } });
     const failed = await evaluateOverdueRiskAlerts(ws, randomUUID(), new Date(), SCHEDULER_SYSTEM_ACTOR);
     expect(failed.failed).toBe(1);
-    expect(failed.raised).toBe(0);
+    expect(failed.created + failed.reactivated).toBe(0);
     await db.alert.deleteMany({ where: { workspaceId: ws } });
     await db.businessRiskEntry.deleteMany({ where: { workspaceId: ws } });
     await db.workspaceMembership.deleteMany({ where: { workspaceId: ws } });

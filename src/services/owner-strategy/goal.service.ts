@@ -16,6 +16,7 @@
  *   excluded from the trajectory and reported, never converted or combined.
  */
 
+import { completedSnapshotWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
@@ -553,8 +554,10 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
   }
 
   // Newest 12 periods in the goal's currency (then oldest-first for the engine).
+  // Completed periods only (current-diagnosis-cycle.ts): an in-progress partial period is never a trajectory
+  // point, and a period that has not started never counts.
   const newestFirst = (await db.ownerMetricSnapshot.findMany({
-    where: { ...scopeWhere, currency: currencyMatch },
+    where: { ...scopeWhere, currency: currencyMatch, ...completedSnapshotWhere(new Date()) },
     select: { businessId: true, periodStart: true, periodEnd: true, revenue: true, netProfit: true },
     orderBy: { periodStart: "desc" },
     take: 12,

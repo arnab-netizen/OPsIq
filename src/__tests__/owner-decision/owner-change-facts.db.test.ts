@@ -15,9 +15,23 @@ import { teardownOwnerBusiness } from "../test-helpers/owner-business-teardown";
 import { createBusiness, updateBusiness } from "@/services/founder-recovery/business.service";
 import { createSalesSnapshot } from "@/services/owner-sales/snapshot.service";
 import { runSalesDiagnosis } from "@/services/owner-sales/diagnosis.service";
-import { createBusinessRisk, reviewRisk } from "@/services/owner-mode/business-risk.service";
+import { createBusinessRisk as createBusinessRiskInService, reviewRisk } from "@/services/owner-mode/business-risk.service";
 import { recordComplianceItem, updateComplianceStatus } from "@/services/owner-mode/compliance.service";
 import { getOwnerHome } from "@/services/owner-home/home.service";
+
+/**
+ * A critical risk's alert is raised in the risk's own transaction (Round 9), and an alert belongs to a real
+ * workspace: the risk's workspace row is ensured first (production risks always have one).
+ */
+async function createBusinessRisk(input: Parameters<typeof createBusinessRiskInService>[0]) {
+  await db.workspace.upsert({
+    where: { id: input.workspaceId },
+    update: {},
+    create: { id: input.workspaceId, name: "Risk QA", slug: `risk-qa-${input.workspaceId}`, isActive: true, updatedAt: new Date() },
+  });
+  return createBusinessRiskInService(input);
+}
+
 
 const actor = randomUUID();
 

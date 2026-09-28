@@ -532,7 +532,7 @@ export default function OwnerOperationsPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add operations snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
+            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy || Boolean(dashboard?.latestSnapshotDiagnosis?.current)} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Enter new or corrected figures to diagnose again." : undefined}>
               Run operations diagnosis
             </Button>
           </div>
@@ -615,13 +615,14 @@ export default function OwnerOperationsPage() {
           )}
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
-          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} />
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
           <DomainMainTargetContext domain="operations" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="operations"
               hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              inProgressDiagnosis={dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
               snapshotLabel="operations snapshot"
               diagnosisLabel="Run operations diagnosis"
             />
@@ -769,8 +770,9 @@ function OperationsCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

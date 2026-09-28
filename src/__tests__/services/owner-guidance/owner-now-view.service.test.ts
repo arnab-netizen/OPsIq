@@ -1,3 +1,4 @@
+import { NO_OWNER_GATE_CONSTRAINTS } from "@/domain/owner-mode/owner-action-gate-policy";
 import { describe, it, expect } from "vitest";
 import {
   getOwnerNowView,
@@ -205,7 +206,8 @@ describe("[module41] retention cohort → growth gate cross-domain wiring", () =
     deps.db.retentionCohort = {
       findMany: async () => [{ avgMonthlyChurn: 0.03, cohortMonth: "2026-06" }],
     };
-    const { ctx, state } = await assembleGuidanceContext("ws1", "biz1", deps);
+    // Round 9: growth readiness needs the owner action gate's constraints (a missing gate is never "ready").
+    const { ctx, state } = await assembleGuidanceContext("ws1", "biz1", deps, NO_OWNER_GATE_CONSTRAINTS);
     expect(state.churnRiskScore).toBeCloseTo(0.15, 5);
     expect(ctx.growthGatePassed).toBe(true); // healthy fixture: cashSafe=true, capacityGrowthSafe=true, supplierRiskHigh=false
     expect(ctx.issues.some((i) => i.id === "churn")).toBe(false);

@@ -63,3 +63,20 @@ export function currentEffectiveFinancialSnapshotQuery<S extends SelectShape>(sc
     ...(select ? { select } : {}),
   };
 }
+
+/**
+ * The in-progress current period's financial snapshot (started, not yet ended, not amended) — PROVISIONAL
+ * evidence (current-diagnosis-cycle.ts): shown and diagnosable, labelled as in progress, but never the
+ * current effective snapshot (currentEffectiveFinancialSnapshotQuery) and never a completed reading.
+ */
+export function inProgressFinancialSnapshotQuery<S extends SelectShape>(scope: FinancialSnapshotScope, select: S | undefined, now: Date) {
+  return {
+    where: { workspaceId: scope.workspaceId, businessId: scope.businessId, supersededById: null, periodStart: { lte: now }, periodEnd: { gt: now } },
+    orderBy: [{ periodEnd: "desc" as const }, { createdAt: "desc" as const }, { id: "desc" as const }] as [
+      { periodEnd: "desc" },
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
+    ...(select ? { select } : {}),
+  };
+}

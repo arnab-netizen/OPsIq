@@ -561,7 +561,10 @@ export default function OwnerCockpitPage() {
       {!loading && !error && assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
       {/* The do-not-repeat rules and the owner's changed-context override (the main target's DNR blocker
           routes here); a recorded change reloads the canonical decision. */}
-      <OwnerDoNotRepeatPanel businessId={activeBusinessId} onChanged={(changedBusinessId) => { if (changedBusinessId === activeBusinessIdRef.current) void load(changedBusinessId); }} />
+      <OwnerDoNotRepeatPanel
+        businessId={activeBusinessId}
+        focusRuleId={doNotRepeatAnnotation && (doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen) ? doNotRepeatAnnotation.ruleId ?? null : null}
+        onChanged={(changedBusinessId) => { if (changedBusinessId === activeBusinessIdRef.current) void load(changedBusinessId); }} />
       {/* Setup continuation is secondary to the canonical main target, so it renders after it. */}
       <StartHereContinuationCard businessId={activeBusinessId} />
     </PageContainer>

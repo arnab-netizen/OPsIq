@@ -10,6 +10,7 @@
  * rather than guessing. Workspace ownership is enforced via the shared Module 1
  * `getBusiness` guard (no new auth path).
  */
+import { completedSnapshotWhere, provisionalSnapshotWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { db } from "@/lib/db";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import { classifyWealthPath } from "@/domain/owner-strategy/wealth-path";
@@ -59,6 +60,8 @@ export interface WealthPathServiceResult {
   selectedBusinessId: string | null;
   hasData: boolean;
   snapshotPeriodEnd: string | null; // ISO string of the snapshot the verdict is based on
+  /** The in-progress period's end when figures for it exist (labelled; never used for the verdict). */
+  inProgressPeriodEnd: string | null;
   input: WealthPathInput; // echo of the mapped inputs (transparency)
   result: WealthPathResult;
 }
@@ -101,6 +104,7 @@ export async function getWealthPath(
       selectedBusinessId: null,
       hasData: false,
       snapshotPeriodEnd: null,
+      inProgressPeriodEnd: null,
       input: emptyInput,
       result: classifyWealthPath(emptyInput),
     };
@@ -108,10 +112,24 @@ export async function getWealthPath(
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership + existence guard
 
-  const snapshot = await db.ownerMetricSnapshot.findFirst({
-    where: { businessId: selectedBusinessId, workspaceId },
-    orderBy: { periodEnd: "desc" },
-  });
+  // Evidence-period policy (current-diagnosis-cycle.ts): the classification rests on the latest COMPLETED
+  // period only. An in-progress period is reported as in progress (never a completed reading or trend
+  // point); a period that has not started is never read.
+  const wealthNow = new Date();
+  const [snapshot, inProgress] = await Promise.all([
+    db.ownerMetricSnapshot.findFirst({
+      where: { businessId: selectedBusinessId, workspaceId, ...completedSnapshotWhere(wealthNow) },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    }),
+    db.ownerMetricSnapshot.findFirst({
+      where: { businessId: selectedBusinessId, workspaceId, ...provisionalSnapshotWhere(wealthNow) },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      select: { periodStart: true, periodEnd: true },
+    }),
+  ]);
+  const inProgressPeriodEnd = inProgress?.periodEnd
+    ? (inProgress.periodEnd instanceof Date ? inProgress.periodEnd : new Date(inProgress.periodEnd)).toISOString()
+    : null;
 
   const input = mapMetricSnapshotToWealthPathInput(snapshot);
   const result = classifyWealthPath(input);
@@ -124,6 +142,8 @@ export async function getWealthPath(
     selectedBusinessId,
     hasData: snapshot != null,
     snapshotPeriodEnd: periodEnd,
+    // The in-progress period's end when figures for it exist (labelled; never used for the classification).
+    inProgressPeriodEnd,
     input,
     result,
   };

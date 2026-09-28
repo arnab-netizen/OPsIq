@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mocks = vi.hoisted(() => ({ getOwnerNowView: vi.fn(), getOwnerHome: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getOwnerNowView: vi.fn(), getOwnerHome: vi.fn(), gate: null as unknown }));
 
 /** The canonical decision the owner-home service resolves for (workspace, business). */
 function decisionFor(workspaceId: string, businessId: string | null) {
@@ -36,7 +36,7 @@ vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
 vi.mock("@/services/owner-home/home.service", () => ({
   getOwnerHome: mocks.getOwnerHome,
   // The route resolves the decision with the gate constraints it was resolved with (none in these fixtures).
-  resolveOwnerHome: async (...args: unknown[]) => ({ home: await (mocks.getOwnerHome as (...a: unknown[]) => unknown)(...args), gate: null }),
+  resolveOwnerHome: async (...args: unknown[]) => ({ home: await (mocks.getOwnerHome as (...a: unknown[]) => unknown)(...args), gate: mocks.gate }),
 }));
 
 import { GET } from "@/app/api/owner/now-view/route";
@@ -74,6 +74,7 @@ const sample = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.gate = null;
   mocks.getOwnerHome.mockImplementation(async (workspaceId: string, businessId: string | null) => ({
     selectedBusinessId: businessId ?? "biz-auto",
     currentOwnerDecision: decisionFor(workspaceId, businessId),
@@ -254,3 +255,22 @@ describe("[module41] GET /api/owner/now-view", () => {
     expect(res).toHaveProperty("generatedFromLiveData");
   });
 });
+
+describe("the real route supplies Now View the SAME gate constraints the canonical decision was resolved with", () => {
+  const GATE = { optedOut: false, businessScoped: true, doNotRepeat: [{ id: "rule-x", domain: "marketing", match: "exact", findingId: "f1" }], marker: "resolved-gate" };
+  it("passes resolveOwnerHome's gate as ownerGate (growth-readiness and the do-not-repeat annotation are derived from it)", async () => {
+    mocks.gate = GATE;
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await (GET as unknown as (c: unknown) => Promise<Response>)(makeCtx("http://x/api/owner/now-view?businessId=biz-1"));
+    expect(mocks.getOwnerNowView).toHaveBeenCalledTimes(1);
+    expect(mocks.getOwnerNowView.mock.calls[0][4].ownerGate).toBe(GATE);
+  });
+  it("never pairs another business's gate with the requested business (mismatch → no gate, no decision)", async () => {
+    mocks.gate = GATE;
+    mocks.getOwnerHome.mockImplementation(async () => ({ selectedBusinessId: "biz-other", currentOwnerDecision: decisionFor("ws-1", "biz-other") }));
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await (GET as unknown as (c: unknown) => Promise<Response>)(makeCtx("http://x/api/owner/now-view?businessId=biz-1"));
+    expect(mocks.getOwnerNowView.mock.calls[0][4]).toMatchObject({ ownerGate: null, ownerDecision: null });
+  });
+});
+

@@ -11,7 +11,7 @@
  * Read-only: loads persisted, workspace- and business-scoped rows and normalizes them. Owns no table.
  */
 import { db } from "@/lib/db";
-import { continuityKey, ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { continuityKey, ENGAGED_ACTION_STATUSES, readTimeContinuity } from "@/domain/founder-recovery/action-continuity";
 import { loadOwnerGateConstraints } from "@/services/owner-mode/owner-action-gate.service";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere, provisionalEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
@@ -173,36 +173,43 @@ export interface OwnerSpineEvidence {
 }
 
 /**
- * Read-time action continuity (action-continuity.ts): the owner's ENGAGED work (assigned, in progress,
- * blocked) that is still attached to an OLDER cycle — because the current cycle was diagnosed while its
- * period was in progress, or back-filled — follows the current issue by continuity key, exactly as the
- * domain dashboards list it: an engaged action whose finding the current diagnosis still raises takes the
- * place of that cycle's never-engaged proposal for the same key, and is described by the CURRENT diagnosis's
- * finding (its own findingId — its baseline — is kept). Work whose finding the current diagnosis no longer
- * raises is not a current step (the dashboard flags it for the owner to finish or cancel).
+ * Read-time action continuity (readTimeContinuity, action-continuity.ts — the SAME rule the domain dashboards
+ * apply): the owner's ENGAGED work still attached to an older cycle follows the current issue by continuity
+ * key and takes the place of the current cycle's never-engaged proposal for that key (described by the
+ * CURRENT diagnosis's finding; its own findingId — its baseline — is kept); COMPLETED work on another cycle is
+ * terminal evidence that suppresses the current cycle's duplicate proposal until evidence that post-dates
+ * the completion re-raises it, and is kept in view as completed (never as a step). Work whose finding the
+ * current diagnosis no longer raises is not a current step.
  */
-function followEngagedWork<C extends { id: string; findings?: unknown[]; actions?: unknown[] }>(
+function followEngagedWork<C extends { id: string; createdAt?: unknown; snapshot?: { periodEnd?: unknown } | null; findings?: unknown[]; actions?: unknown[] }>(
   cycle: C | null,
-  engaged: ReadonlyArray<Record<string, unknown>>,
+  prior: ReadonlyArray<Record<string, unknown>>,
   codeOf: (a: Record<string, unknown>) => string | null
 ): (C & { continuityFindingAlias?: Map<string, unknown> }) | null {
   if (!cycle) return null;
   const findings = (cycle.findings ?? []) as Array<{ id: unknown; code?: unknown }>;
   const byCode = new Map(findings.map((f) => [String(f.code), f]));
-  const follow = engaged.filter((e) => {
-    const code = codeOf(e);
-    return code !== null && byCode.has(code) && e.cycleId !== cycle.id;
-  });
-  if (follow.length === 0) return cycle;
-  const keyOf = (a: Record<string, unknown>) => continuityKey({ findingCode: codeOf(a) ?? "", recommendationCode: (a.recommendationCode as string | null | undefined) ?? null });
-  const followedKeys = new Set(follow.map(keyOf));
-  const engagedStatuses: ReadonlySet<string> = new Set(ENGAGED_ACTION_STATUSES);
-  const own = ((cycle.actions ?? []) as Array<Record<string, unknown>>).filter(
-    (a) => !(followedKeys.has(keyOf(a)) && !engagedStatuses.has(String(a.status)) && a.status !== "completed")
+  type Row = Record<string, unknown> & { id: string; cycleId: string; status: string; completedAt?: Date | string | null };
+  const keyOf = (a: Row) => {
+    const code = codeOf(a);
+    return code === null ? null : continuityKey({ findingCode: code, recommendationCode: (a.recommendationCode as string | null | undefined) ?? null });
+  };
+  const r = readTimeContinuity<Row>(
+    {
+      id: cycle.id,
+      createdAt: (cycle.createdAt as Date | string | null | undefined) ?? null,
+      periodEnd: (cycle.snapshot?.periodEnd as Date | string | null | undefined) ?? null,
+      raisedCodes: new Set(byCode.keys()),
+    },
+    (cycle.actions ?? []) as Row[],
+    prior as Row[],
+    keyOf,
+    codeOf
   );
+  if (r.followed.length === 0 && r.completedEarlier.length === 0) return cycle;
   const alias = new Map<string, unknown>();
-  for (const e of follow) if (typeof e.findingId === "string") alias.set(e.findingId, byCode.get(codeOf(e) ?? ""));
-  return { ...cycle, actions: [...own, ...follow], continuityFindingAlias: alias };
+  for (const e of [...r.followed, ...r.completedEarlier]) if (typeof e.findingId === "string") alias.set(e.findingId, byCode.get(codeOf(e) ?? ""));
+  return { ...cycle, actions: [...r.own, ...r.followed, ...r.completedEarlier], continuityFindingAlias: alias };
 }
 
 /**
@@ -261,19 +268,31 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
       orderBy: { createdAt: "desc" },
     }),
   ]);
-  // Engaged work on other cycles (read-time continuity — followEngagedWork).
-  const engagedWhere = { ...where, status: { in: [...ENGAGED_ACTION_STATUSES] } };
+  // Work on other cycles for read-time continuity (followEngagedWork): engaged work, and completed work for a
+  // finding the current cycle raises (terminal evidence against a duplicate proposal). Never work on a cycle
+  // of a period that has not started (a future plan's priority and wording are never followed).
+  const startedCycle = { cycle: { snapshot: { periodStart: { lte: now } } } };
+  const priorWhere = (codes: string[]) => ({
+    ...where,
+    ...startedCycle,
+    OR: [{ status: { in: [...ENGAGED_ACTION_STATUSES] } }, { status: "completed", findingCode: { in: codes } }],
+  });
+  const codesOf = (c: { findings?: unknown[] } | null) => ((c?.findings ?? []) as Array<{ code?: unknown }>).map((f) => String(f.code));
   const engagedInclude = { include: { verifications: { orderBy: { createdAt: "desc" as const } } } };
   const [engFinance, engCashflow, engSales, engOperations, engSop, engMarketing, engRecovery] = await Promise.all([
-    finance ? db.ownerFinanceAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
-    cashflow ? db.ownerCashflowAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
-    sales ? db.ownerSalesAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
-    operations ? db.ownerOperationsAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
-    sop ? db.ownerSopAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
-    marketing ? db.ownerMarketingAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    finance ? db.ownerFinanceAction.findMany({ where: priorWhere(codesOf(finance)), ...engagedInclude }) : [],
+    cashflow ? db.ownerCashflowAction.findMany({ where: priorWhere(codesOf(cashflow)), ...engagedInclude }) : [],
+    sales ? db.ownerSalesAction.findMany({ where: priorWhere(codesOf(sales)), ...engagedInclude }) : [],
+    operations ? db.ownerOperationsAction.findMany({ where: priorWhere(codesOf(operations)), ...engagedInclude }) : [],
+    sop ? db.ownerSopAction.findMany({ where: priorWhere(codesOf(sop)), ...engagedInclude }) : [],
+    marketing ? db.ownerMarketingAction.findMany({ where: priorWhere(codesOf(marketing)), ...engagedInclude }) : [],
     recovery
       ? db.recoveryAction.findMany({
-          where: engagedWhere,
+          where: {
+            ...where,
+            ...startedCycle,
+            OR: [{ status: { in: [...ENGAGED_ACTION_STATUSES] } }, { status: "completed", finding: { code: { in: codesOf(recovery) } } }],
+          },
           include: { finding: { select: { code: true, severity: true } }, verifications: { orderBy: { createdAt: "desc" as const } } },
         })
       : [],

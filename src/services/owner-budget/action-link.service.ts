@@ -175,6 +175,13 @@ export async function updateBudgetAction(
   };
   if (classifyActionRequest((await recordedState(db, action)) as typeof action & Record<string, unknown>, request) === "replay") return action;
 
+  // Outcome inputs are recorded ONLY with the completion they describe (the learning loop's record). On any
+  // other update they would be silently dropped while the call reported success — so they are refused.
+  const outcomeSent = input.expectedImpact !== undefined || input.actualImpact !== undefined || input.externalFactor !== undefined || input.ownerOverridden !== undefined;
+  if (outcomeSent && input.status !== "completed") {
+    throw new ValidationError("Expected impact, actual impact, external factor and owner override are recorded only when completing a budget action (send them with status \"completed\").");
+  }
+
   const data: Record<string, unknown> = {};
   const now = new Date();
   let completedNow = false;
