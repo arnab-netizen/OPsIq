@@ -75,6 +75,7 @@ import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/ser
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { currentCashFinanceReading, toUnitConfidence, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
+import { cashFinanceOwnerNarrative } from "@/domain/owner-guidance/cash-finance-narrative";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
@@ -397,12 +398,6 @@ function confidenceFromScore(score: number | null): EvidenceConfidenceLevel {
   if (score >= 0.5) return EvidenceConfidenceLevel.MODERATE;
   if (score >= 0.3) return EvidenceConfidenceLevel.WEAK;
   return EvidenceConfidenceLevel.INSUFFICIENT;
-}
-
-function cashSeverity(state: string | undefined): BusinessIssue["severity"] {
-  if (state === "INSOLVENT_RISK" || state === "CRITICAL") return "CRITICAL";
-  if (state === "AT_RISK") return "HIGH";
-  return "MEDIUM";
 }
 
 function countSeverity(n: number, hi: number, med: number): BusinessIssue["severity"] {
@@ -988,9 +983,11 @@ export async function assembleGuidanceContext(
   // Growth/high-impact gating stays conservative when either current signal is missing (fail closed on
   // missing critical data, tracked separately below via missingCriticalData).
   const enforcedSafe = enforcedState !== null && SAFE_STATES.has(enforcedState);
-  const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe && enforcedSafe;
+  // R10 P2-9: driven ONLY by the authoritative gateState (enforcedSafe) — never by the legacy
+  // resolution's own `.safe`, which is a second, independent arbitration of the same facts.
+  const cashSafe = !!cashState && !!finState && enforcedSafe;
   // One safe reading with the other missing: a caution on the cash status, never a manufactured danger issue.
-  const cashHalfMeasured = (!!cashState !== !!finState) && cashFinanceResolution.safe && enforcedSafe;
+  const cashHalfMeasured = (!!cashState !== !!finState) && enforcedSafe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
   // Deliberately conservative, matching cashSafe above: no capacity snapshot means growth
@@ -1060,137 +1057,23 @@ export async function assembleGuidanceContext(
 
   const issues: BusinessIssue[] = [];
   // Finance's survival state reads overall financial survival; its OWN findings say whether a danger there
-  // is about cash (runway, debt, payables) or about profit/margin. A profit-driven Finance state is
-  // described as the profit problem it is — never as "cash danger".
-  const financeDriver = financeSurvivalDriver(fin?.findings);
-  const financeProfitDriven = financeDriver === "profit";
-  let profitIssueRaised = false;
-  const pushFinanceProfitIssue = (state: string, note: string) => {
-    const sev = cashSeverity(state);
-    issues.push({ id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
-      severity: sev,
-      headline: `Financial survival (Finance diagnosis) is ${state}, driven by profit and margin rather than cash.${note}`,
-      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-    profitIssueRaised = true;
-  };
-  if (cashState && finState) {
-    // Both signals present — use the freshness/conflict-aware resolution so a stale reading is
-    // never presented as unqualified current truth (see cash-finance-conflict.ts). A newer SAFE
-    // reading that supersedes an older unsafe one means NO issue is pushed here at all — that is
-    // the fix for "Home must not present the stale action as current truth."
-    if (cashFinanceResolution.conflicting) {
-      if (financeProfitDriven) {
-        // Not a disagreement about cash: the cash check reads cash; Finance's danger is profit.
-        if (!SAFE_STATES.has(cashState)) {
-          const sev = cashSeverity(cashState);
-          issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-            severity: sev, headline: `Cash survival (cash check) is ${cashState}.`, requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-        }
-        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, "");
-      } else {
-        issues.push({
-          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
-          headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
-          requiresOwnerAction: true,
-        });
-      }
-    } else if (!cashFinanceResolution.safe) {
-      const effectiveState = cashFinanceResolution.effectiveState as string;
-      const sev = cashSeverity(effectiveState);
-      const supersedeNote = cashFinanceResolution.supersededSource
-        ? ` An earlier ${cashFinanceResolution.supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${cashFinanceResolution.supersededState}; that reading is now out of date.`
-        : "";
-      if (financeProfitDriven && cashFinanceResolution.supersededSource !== "finance") {
-        // Finance's danger is profit-driven: each source is named for what it measures — the cash check's
-        // own state as cash (unless a newer Finance reading superseded it), Finance's as a profit problem.
-        if (cashFinanceResolution.supersededSource !== "cash" && !SAFE_STATES.has(cashState)) {
-          const cashSev = cashSeverity(cashState);
-          issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-            severity: cashSev, headline: `Cash survival (cash check) is ${cashState}.`, requiresOwnerAction: cashSev === "CRITICAL" || cashSev === "HIGH" });
-        }
-        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, cashFinanceResolution.supersededSource === "cash" ? supersedeNote : "");
-      } else {
-        // Name the reading it comes from: the cash check reads the cash position; the Finance diagnosis
-        // reads overall financial survival (margin, debt and runway), never "cash" alone.
-        const subject = cashFinanceResolution.supersededSource === "cash"
-          ? "Financial survival (Finance diagnosis)"
-          : cashFinanceResolution.supersededSource === "finance"
-            ? "Cash survival (cash check)"
-            : "Cash and financial survival";
-        issues.push({
-          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          severity: sev, headline: `${subject} is ${effectiveState}.${supersedeNote}`,
-          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
-        });
-      }
-    }
-  } else if (cashState || finState) {
-    // Exactly one of the two signals exists. A single SAFE/WATCH reading is not a danger (the missing other
-    // reading is asked for under missing data) — an issue is raised only when that one reading is unsafe.
-    if (cashState && !SAFE_STATES.has(cashState)) {
-      const sev = cashSeverity(cashState);
-      issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: sev, headline: `Cash survival (cash check) is ${cashState}; there is no current Finance diagnosis.`,
-        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-    } else if (finState && !SAFE_STATES.has(finState)) {
-      if (financeProfitDriven) {
-        pushFinanceProfitIssue(finState, " There is no cash check yet.");
-      } else {
-        const sev = cashSeverity(finState);
-        issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          severity: sev, headline: `Financial survival (Finance diagnosis) is ${finState}; there is no cash check yet.`,
-          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-      }
-    }
-  }
-  const unverifiedGate = enforcedState !== null && cashFinanceResolution.gateDriver === "unverified";
-  if (finAmendedLastKnown && (!SAFE_STATES.has(finAmendedLastKnown) || unverifiedGate)) {
-    // Fail safe until the amended figures are diagnosed: the last Finance reading still counts as a
-    // warning, stated as last known — never as current, never silently dropped. An amended SAFE/WATCH
-    // reading is not proof of safety either when nothing current supports it (the gate's unverified state):
-    // "last known safe; figures amended; current state unverified".
-    const unsafeLastKnown = !SAFE_STATES.has(finAmendedLastKnown);
-    const sev = cashSeverity(unsafeLastKnown ? finAmendedLastKnown : enforcedState ?? "AT_RISK");
-    issues.push({ id: "finance_amended", category: financeProfitDriven && unsafeLastKnown ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
-      businessFunction: [financeProfitDriven && unsafeLastKnown ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
-      severity: sev,
-      headline: unsafeLastKnown
-        ? `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed, so the current state is not proven either way — re-run the Finance diagnosis.`
-        : `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}, but its figures have since been amended and not analysed, and no current cash check confirms it — OpsIQ cannot treat cash as safe until the Finance diagnosis is re-run.`,
-      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-  }
-  if (unverifiedGate && !issues.some((i) => i.id === "finance_amended")) {
-    // The enforced state rests on figures that are not current (out of date, or only this period's in-progress
-    // figures): the same unverified state the gate enforces — the last-known figures are named as last known,
-    // never as current, and cash is never shown as safe.
-    const sev = cashSeverity(enforcedState);
-    const lastKnown = [
-      cashLastKnown ? `the last cash check showed ${cashLastKnown}` : null,
-      finStaleLastKnown ? `the last Finance diagnosis showed ${finStaleLastKnown}` : null,
-    ].filter(Boolean).join(" and ");
-    issues.push({ id: "cash_unverified", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-      severity: sev,
-      headline: cashFinanceResolution.provisional
-        ? "Only this period's in-progress cash and Finance figures are available (in progress — not a completed period); OpsIQ cannot treat cash as safe until a completed period is entered and diagnosed."
-        : `${lastKnown ? `Last known (out of date): ${lastKnown}. ` : ""}Those figures are out of date, so OpsIQ cannot treat them as current; enter and diagnose current figures.`,
-      requiresOwnerAction: sev === "CRITICAL" });
-  }
-  if (cashFinanceResolution.provisional && enforcedState && !SAFE_STATES.has(enforcedState) && cashFinanceResolution.gateDriver !== "unverified") {
-    // The in-progress current period is worse than the completed reading: it tightens, labelled as in progress.
-    const sev = cashSeverity(enforcedState);
-    const profit = cashFinanceResolution.gateDriver === "finance_profit";
-    issues.push({ id: "cash_in_progress", category: profit ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
-      businessFunction: [profit ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
-      severity: sev,
-      headline: `This period's in-progress ${cashFinanceResolution.gateSource === "finance" ? "Finance" : "cash"} figures show ${profit ? "financial survival" : "cash survival"} ${enforcedState} (in progress — not a completed period yet).`,
-      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-  }
-  if (finState && !SAFE_STATES.has(finState) && !profitIssueRaised) {
-    issues.push({ id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
-      severity: finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM",
-      headline: "Profit/margin is below a safe level", requiresOwnerAction: false });
-  }
+  // is about cash (runway, debt, payables) or about profit/margin — independent of whether Finance is the
+  // source currently deciding the gate. A profit-driven Finance state is described as the profit problem
+  // it is — never as "cash danger" — even when it is stale/superseded and `gateDriver` is "cash".
+  const financeProfitDriven = financeSurvivalDriver(fin?.findings) === "profit";
+  // R10 P2-9: the ONE narrative mapper for cash/finance issue text — it narrates the already-decided
+  // gateState/gateDriver/gateSource projection only; it never independently re-arbitrates via the
+  // legacy resolution's `.safe`/`.effectiveState`/`.supersededSource`/`.supersededState`. The one
+  // exception is `bothCurrentDisagree` (Case F): a narration trigger only, never a decider.
+  issues.push(...cashFinanceOwnerNarrative({
+    cashState, finState, cashLastKnown, finStaleLastKnown, finAmendedLastKnown,
+    gateState: enforcedState, gateDriver: cashFinanceResolution.gateDriver, gateSource: cashFinanceResolution.gateSource,
+    provisional: cashFinanceResolution.provisional, financeProfitDriven,
+    bothCurrentDisagree: Boolean(cashState) && Boolean(finState) && cashFinanceResolution.conflicting,
+    // CONTEXT ONLY (see cash-finance-narrative.ts doc): names which earlier reading is out of date,
+    // never used to decide severity/classification — gateState/gateDriver/gateSource do that.
+    supersededSource: cashFinanceResolution.supersededSource, supersededState: cashFinanceResolution.supersededState,
+  }));
   if (complaints >= 1) {
     issues.push({ id: "complaints", category: IssueCategory.CUSTOMER_SERVICE_FAILURE,
       businessFunction: [BusinessFunction.QUALITY, BusinessFunction.CUSTOMER_COMPLAINTS],
