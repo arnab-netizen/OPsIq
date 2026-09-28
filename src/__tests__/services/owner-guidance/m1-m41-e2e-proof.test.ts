@@ -59,8 +59,8 @@ function deps(rows: Rows): GuidanceDeps {
 }
 const m = (o: Record<string, number | null>) => ({ complaintCount: 0, rewashCount: 0, refundAmount: 0, newCustomers: 10, repeatCustomers: 30, revenue: 100000, ...o });
 const safeSupplier = { worstStockoutRisk: "NONE", riskScore: 0, supplyCutoffRisk: false, belowReorderCount: 0 };
-const okCash = { cashflowState: "SAFE", dataConfidenceScore: 0.9 };
-const okFin = { survivalState: "SAFE", dataConfidenceScore: 0.9 };
+const okCash = { cashflowState: "SAFE", dataConfidenceScore: 90 };
+const okFin = { survivalState: "SAFE", dataConfidenceScore: 90 };
 const okCap = { growthSafe: true, expansionTriggered: false, bottleneckUtilization: 0.4 };
 
 /** Every step must be proof-bearing, have a rollback trigger, and survive the generic-output guard. */
@@ -121,7 +121,7 @@ describe("[module41][e2e] hostile M1–M41 owner-mode proof", () => {
 
   it("scenario 3 — distressed housekeeping: cash stress + churn + staff & owner overload", async () => {
     const out = await getOwnerNowView("ws1", "biz1", deps({
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9 }, fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.9 },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90 }, fin: { survivalState: "AT_RISK", dataConfidenceScore: 90 },
       business: { businessType: "housekeeping_cleaning" }, metric: m({ newCustomers: 50, repeatCustomers: 5 }), supplier: safeSupplier,
       emp: { overburdened: true, utilizationPct: 140 }, own: { overloaded: true, bottleneckRisk: true, dailyLoadPct: 130 },
     }));
@@ -152,7 +152,7 @@ describe("[module41][e2e] hostile M1–M41 owner-mode proof", () => {
   });
 
   it("scenario 5 — weak-data beginner: cap confidence + ask only smallest-useful missing data", async () => {
-    const out = await getOwnerNowView("ws1", "biz1", deps({ cash: { cashflowState: "WATCH", dataConfidenceScore: 0.2 } }));
+    const out = await getOwnerNowView("ws1", "biz1", deps({ cash: { cashflowState: "WATCH", dataConfidenceScore: 20 } }));
     expect(out.view.confidenceCapped).toBe(true);
     expect(out.view.classification).not.toBe(GuidanceClassification.GUIDANCE_READY);
     // smallest-useful-first, named (not generic): finance before customer before supplier
@@ -163,7 +163,7 @@ describe("[module41][e2e] hostile M1–M41 owner-mode proof", () => {
 
   it("scenario 6 — growth opportunity blocked by cash/workload/quality/capacity risk", async () => {
     const out = await getOwnerNowView("ws1", "biz1", deps({
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9 }, fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.9 },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90 }, fin: { survivalState: "AT_RISK", dataConfidenceScore: 90 },
       cap: { growthSafe: false, expansionTriggered: false, bottleneckUtilization: 0.9 }, supplier: safeSupplier,
       business: { businessType: "laundry_local_service" }, emp: { overburdened: true, utilizationPct: 120 }, metric: m({ complaintCount: 6 }),
     }));
@@ -184,7 +184,7 @@ describe("[module41][e2e] hostile M1–M41 owner-mode proof", () => {
   it("scenario 8 — second run shows what changed since last check", async () => {
     const prev = { cashRunwayDays: 120, netMarginPct: 20, complaintsCount: 0, reworkCount: 0, capacityUtilizationPct: 50, staffOverloadPct: 60, ownerLoadPct: 50, churnRiskScore: 0, supplierInventoryRiskScore: 0, overdueProofCount: 0, outcomeChecksDue: 0, growthReadinessTier: "GROWTH_READY" };
     const out = await getOwnerNowView("ws1", "biz1", deps({
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9 }, fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.9 },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90 }, fin: { survivalState: "AT_RISK", dataConfidenceScore: 90 },
       business: { businessType: "laundry_local_service" }, metric: m({ complaintCount: 8 }), prevSnapshot: prev,
     }));
     expect(out.whatChanged.some((c) => c.category === "CASH_WORSENED" && c.ownerAlert)).toBe(true);
@@ -203,14 +203,14 @@ describe("[module41][e2e] cross-cutting safety properties", () => {
   });
 
   it("many non-emergency issues stay capped at 3; only a real emergency lifts the cap", async () => {
-    const busy = deps({ cash: okCash, fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.9 }, cap: { growthSafe: false, expansionTriggered: true, bottleneckUtilization: 0.9 }, supplier: { worstStockoutRisk: "HIGH", riskScore: 0.7, supplyCutoffRisk: false, belowReorderCount: 2 }, business: { businessType: "laundry_local_service" }, metric: m({ complaintCount: 12, rewashCount: 9, newCustomers: 50, repeatCustomers: 5 }), overdueProofCount: 3, outcomeOpen: 2 });
+    const busy = deps({ cash: okCash, fin: { survivalState: "AT_RISK", dataConfidenceScore: 90 }, cap: { growthSafe: false, expansionTriggered: true, bottleneckUtilization: 0.9 }, supplier: { worstStockoutRisk: "HIGH", riskScore: 0.7, supplyCutoffRisk: false, belowReorderCount: 2 }, business: { businessType: "laundry_local_service" }, metric: m({ complaintCount: 12, rewashCount: 9, newCustomers: 50, repeatCustomers: 5 }), overdueProofCount: 3, outcomeOpen: 2 });
     const out = await getOwnerNowView("ws1", "biz1", busy);
     expect(out.view.topOwnerActions.length).toBeLessThanOrEqual(3);
     expect(out.view.emergency).toBe(false);
   });
 
   it("no high-risk guidance auto-executes: critical scenarios never silently READY", async () => {
-    const out = await getOwnerNowView("ws1", "biz1", deps({ cash: { cashflowState: "INSOLVENT_RISK", dataConfidenceScore: 0.9 }, fin: { survivalState: "CRITICAL", dataConfidenceScore: 0.9 }, business: { businessType: "laundry_local_service" } }));
+    const out = await getOwnerNowView("ws1", "biz1", deps({ cash: { cashflowState: "INSOLVENT_RISK", dataConfidenceScore: 90 }, fin: { survivalState: "CRITICAL", dataConfidenceScore: 90 }, business: { businessType: "laundry_local_service" } }));
     expect(out.view.classification).not.toBe(GuidanceClassification.GUIDANCE_READY);
   });
 });

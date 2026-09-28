@@ -317,7 +317,10 @@ const humanizeCodes = (x: string) => x.replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (m) 
  * Only CurrentOwnerDecision owns the overall imperative; beside it the plan describes, it never instructs.
  */
 /** Leading clauses that are an ordering claim whatever follows ("Start with …", "Before anything else, …"). */
-const PLAN_ORDER_LEAD_ALWAYS = /^(?:start\s+(?:with|by)|begin\s+(?:with|by)|before\s+anything\s+else|first\s+thing|immediately|right\s+now|above\s+all|must(?!\s+not\b|n['’]?t\b))\b\s*[:,—–-]?\s*/i;
+// "you must" is the same ordering claim as a bare "must" lead ("You must reduce discretionary spend." reads
+// the same as "Must reduce discretionary spend.") — the optional "you " does not change what follows being
+// an owner-directed order.
+const PLAN_ORDER_LEAD_ALWAYS = /^(?:start\s+(?:with|by)|begin\s+(?:with|by)|before\s+anything\s+else|first\s+thing|immediately|right\s+now|above\s+all|(?:you\s+)?must(?!\s+not\b|n['’]?t\b))\b\s*[:,—–-]?\s*/i;
 /** Leading labels that are an ordering claim only as a label ("First: …", "Top priority — …"), never "The first cohort …". */
 const PLAN_ORDER_LEAD_LABEL = /^(?:(?:the\s+)?(?:first\s+priority|first\s+step|highest\s+priority|top\s+priority|priority\s+one|number\s+one|urgent(?:ly)?|first|now)\s*[:,—–-]|next\s*[:—–-])\s*/i;
 const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?|no\s+more(?!\s+than))\b\s*:?\s*/i;
@@ -356,7 +359,11 @@ const PLAN_IMPERATIVE_VERB = /^(?:please\s+)?(?:act|add|address|apply|begin|buil
  * instruction to the owner ("Supplier status: never reviewed since 2024." and "Customers said: no more
  * delays." are reports, never rewritten) and the prohibited clause is not a factual one.
  */
-const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s|:\s+)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|no\s+more(?!\s+than))\b\s*:?\s*/gi;
+// R10 P2-1: the lead-in also accepts a bare comma (", stop …", ", do not …") — a prohibition fronted by a
+// subordinate clause ("First, while demand is weak, stop adding channels.") reaches this aside via a plain
+// comma, not a dash or colon. Still gated on `instructs` (the sentence already opens as an owner-directed
+// imperative) and on `planClauseIsFactual`, so a factual comma elsewhere in descriptive prose is unaffected.
+const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s|:\s+|,\s+)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|no\s+more(?!\s+than))\b\s*:?\s*/gi;
 /** Inline ordering phrases; "before any action/commitment/…" takes the rest of its clause with it. */
 const PLAN_ORDER_INLINE = /\s*,?\s*\b(?:before\s+anything\s+else|before\s+any\s+(?:(?:other|new|further)\s+)?(?:action|commitment|spend|spending|decision|step|move|investment)s?\b[^,.;!?]*|as\s+(?:a|the|your)\s+first\s+(?:step|move|priority)|first\s+thing|right\s+away|immediately|at\s+once|as\s+(?:the|a|your)\s+(?:highest|top)\s+priority)\b/gi;
 /**
@@ -379,14 +386,18 @@ function stripOrderLeads(body: string): { body: string; ordered: boolean } {
   }
 }
 
-/** One plan sentence restated (see above). */
-function neutralizePlanSentence(sentence: string): { text: string; heldBack: boolean } {
+/** One plan sentence restated (see above). `imperative` is true whenever the sentence is an owner-directed
+ *  whole-business instruction (an ordering claim or a prohibition) that must be reconciled with the
+ *  canonical decision — never merely because it was reworded (a factual sentence is never reworded, so
+ *  `imperative` and "text changed" always agree in practice, but callers that only need the CLASSIFICATION
+ *  — never the rewritten text — should read `imperative`, not infer it from whether `text !== sentence`). */
+function neutralizePlanSentence(sentence: string): { text: string; heldBack: boolean; imperative: boolean } {
   const lead = /^\s*/.exec(sentence)![0];
   const { body, ordered } = stripOrderLeads(sentence.slice(lead.length));
   const prohibition = PLAN_PROHIBITION_LEAD.exec(body);
   if (prohibition && !planClauseIsFactual(body.slice(prohibition[0].length))) {
     // Lower case: the restated sentence is shown after its own label ("Plan analysis (context): the plan …").
-    return { text: `${lead}the plan analysis holds back ${body.slice(prohibition[0].length).replace(PLAN_ORDER_INLINE, "")}`, heldBack: true };
+    return { text: `${lead}the plan analysis holds back ${body.slice(prohibition[0].length).replace(PLAN_ORDER_INLINE, "")}`, heldBack: true, imperative: true };
   }
   let heldBack = false;
   const instructs = ordered || opensWithImperative(body);
@@ -402,11 +413,29 @@ function neutralizePlanSentence(sentence: string): { text: string; heldBack: boo
   const directed = instructs;
   const inline = new RegExp(PLAN_ORDER_INLINE.source, "i").test(asides);
   const imperative = directed && (ordered || inline || PLAN_TRAILING_FIRST.test(asides));
-  if (!imperative) return { text: heldBack ? `${lead}${asides}` : sentence, heldBack };
+  if (!imperative) return { text: heldBack ? `${lead}${asides}` : sentence, heldBack, imperative: heldBack };
   const cleaned = asides.replace(PLAN_ORDER_INLINE, "").replace(PLAN_TRAILING_FIRST, "");
   // A removed ordering lead ("First: collect …") leaves a lower-case start to capitalise; otherwise the
   // sentence keeps its own case.
-  return { text: `${lead}${ordered ? capitalize(cleaned.trimStart()) : cleaned.trimStart()}`, heldBack };
+  return { text: `${lead}${ordered ? capitalize(cleaned.trimStart()) : cleaned.trimStart()}`, heldBack, imperative: true };
+}
+
+/**
+ * R10 P2-1 — the ONE pure function that answers whether a plan statement is a whole-business imperative
+ * (an ordering claim or a prohibition addressed to the owner) that must be reconciled with the canonical
+ * owner decision, as opposed to descriptive/factual prose. Built on the SAME structural, per-sentence
+ * classification `neutralizePlanImperatives` uses to reword plan text — this is not a second, separately
+ * maintained rule set; it is that classifier's own verdict, exposed directly for callers that only need
+ * the yes/no answer (e.g. plan-analysis metadata callers deciding whether a statement needs reconciling at
+ * all before ever touching its text).
+ *
+ * Multi-sentence input classifies as an imperative if ANY of its sentences is one (matching
+ * neutralizePlanImperatives' own per-sentence, whole-text heldBack semantics).
+ */
+export function isWholeBusinessImperative(statement: string): boolean {
+  return statement
+    .split(/(?<=[.;!?])(?=\s)/)
+    .some((sentence) => neutralizePlanSentence(sentence).imperative);
 }
 
 export function neutralizePlanImperatives(text: string): { text: string; heldBack: boolean } {

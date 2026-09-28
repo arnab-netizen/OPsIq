@@ -51,8 +51,8 @@ function fakeDeps(rows: Rows): { deps: GuidanceDeps; created: Record<string, unk
 }
 
 const healthy: Rows = {
-  cash: { cashflowState: "SAFE", dataConfidenceScore: 0.9 },
-  fin: { survivalState: "SAFE", dataConfidenceScore: 0.9 },
+  cash: { cashflowState: "SAFE", dataConfidenceScore: 90 },
+  fin: { survivalState: "SAFE", dataConfidenceScore: 90 },
   cap: { growthSafe: true, expansionTriggered: false, bottleneckUtilization: 0.4 },
   metric: { complaintCount: 0, rewashCount: 0, refundAmount: 0, newCustomers: 10, repeatCustomers: 30, revenue: 100000 },
   supplier: { worstStockoutRisk: "NONE", riskScore: 0, supplyCutoffRisk: false, belowReorderCount: 0 },
@@ -79,8 +79,8 @@ describe("owner-now-view.service — module contract assertions", () => {
 describe("[module41] live signal assembly", () => {
   it("derives cash danger + growth block from unsafe states", async () => {
     const { deps } = fakeDeps({
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.8 },
-      fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.8 },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 80 },
+      fin: { survivalState: "AT_RISK", dataConfidenceScore: 80 },
       cap: { growthSafe: false, expansionTriggered: false, bottleneckUtilization: 0.9 },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
@@ -124,8 +124,8 @@ describe("[module41] live signal assembly", () => {
 
   it("archetype is resolved from businessType and shapes step wording", async () => {
     const { deps } = fakeDeps({
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.8 },
-      fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.8 },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 80 },
+      fin: { survivalState: "AT_RISK", dataConfidenceScore: 80 },
       business: { businessType: "home_services_maintenance" },
     });
     const out = await getOwnerNowView("ws1", "biz1", deps);
@@ -244,8 +244,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("reproduces the human-test bug (same business: older AT_RISK cash + newer SAFE finance) — Home must not present the stale AT_RISK reading as current truth", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(true);
@@ -255,8 +255,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("newer cash reading is unsafe, superseding an older SAFE finance diagnosis — uses the newer (unsafe) reading and names the superseded source", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
@@ -272,8 +272,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
     // new, the evidence is not. Freshness is the evidence period, so the current cash danger stands.
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(5), snapshot: { periodEnd: daysBeforeClock(5) } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: daysBeforeClock(3), snapshot: { periodEnd: daysBeforeClock(10) } },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90, createdAt: daysBeforeClock(5), snapshot: { periodEnd: daysBeforeClock(5) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, createdAt: daysBeforeClock(3), snapshot: { periodEnd: daysBeforeClock(10) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
@@ -283,8 +283,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("an OUT-OF-DATE reading never supersedes: a newer-period but amended (superseded) Finance snapshot cannot hide current cash danger", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(10) } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(2), supersededById: "newer-version" } },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(10) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(2), supersededById: "newer-version" } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
@@ -293,8 +293,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("an OUT-OF-DATE reading (period older than the freshness window) never supersedes a current one", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(120) } },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, snapshot: { periodEnd: daysBeforeClock(90) } },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(120) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(90) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     // Neither reading can be shown to be current: fail safe, never "safe" by an old reading.
@@ -304,8 +304,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("disagreement with no timestamps: fails safe and surfaces an explicit conflicting-information headline, never silently picking one side", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9 },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9 },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90 },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90 },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);

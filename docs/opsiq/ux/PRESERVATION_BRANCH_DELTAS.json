@@ -1,0 +1,13 @@
+{
+  "description": "R10 P2-12 — OPTION 1 relative-delta ledger for docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json. Each entry records, for one field this branch changed, the accepted main baseline value at the SHA named, this branch's OWN delta from its own code changes, and the resulting expected committed value (acceptedMainValue + branchDelta). The committed baseline's own field must always equal acceptedMainValue + branchDelta -- never a bare absolute number carried over from a stale generation. src/__tests__/governance/preservation-relative-delta.test.ts proves this relationship holds, using a synthetic accepted-main value in addition to the real one, so the test cannot pass merely because today's numbers happen to agree.",
+  "entries": [
+    {
+      "path": "ownerPageRoutes[route=/owner/cockpit].componentTreeFileCount",
+      "acceptedMainValue": 4,
+      "acceptedMainSha": "e5d6fd8b73d6a1619b89377b764b6ec0046335fd",
+      "branchDelta": 3,
+      "expectedBranchValue": 7,
+      "reason": "This branch's own Owner Decision Consolidation changes to /owner/cockpit's component tree (imports the branch added under this page) contribute +3 files relative to main; unrelated to any change main has made independently to the same route."
+    }
+  ]
+}
