@@ -36,6 +36,31 @@ function readPageField(route: string, field: string): number | undefined {
   return page ? (page[field] as number | undefined) : undefined;
 }
 
+/** Reads `cockpitExternalFeeds[key=<METHOD ENDPOINT>].<field>` (undefined when no matching feed exists at all). */
+function readCockpitFeedField(methodAndEndpoint: string, field: string): number | undefined {
+  const [method, endpoint] = [methodAndEndpoint.slice(0, methodAndEndpoint.indexOf(" ")), methodAndEndpoint.slice(methodAndEndpoint.indexOf(" ") + 1)];
+  const feed = (baseline.cockpitExternalFeeds as Array<{ method: string; endpoint: string } & Record<string, unknown>>).find(
+    (f) => f.method === method && f.endpoint === endpoint
+  );
+  return feed ? (feed[field] as number | undefined) : undefined;
+}
+
+/** Reads a top-level `businessContextClassificationCounts.<KEY>` value. */
+function readClassificationCount(keyName: string): number | undefined {
+  return (baseline.businessContextClassificationCounts as Record<string, number>)[keyName];
+}
+
+/** Resolves any of the three recognised ledger path shapes to the committed baseline's current value. */
+function readCommittedValue(path: string): number | undefined {
+  let m = /^ownerPageRoutes\[route=(.+)\]\.(.+)$/.exec(path);
+  if (m) return readPageField(m[1], m[2]);
+  m = /^cockpitExternalFeeds\[key=(.+)\]\.(.+)$/.exec(path);
+  if (m) return readCockpitFeedField(m[1], m[2]);
+  m = /^businessContextClassificationCounts\.(.+)$/.exec(path);
+  if (m) return readClassificationCount(m[1]);
+  return undefined;
+}
+
 describe("R10 P2-12 — preservation baseline entries are a proven relative delta", () => {
   it("the ledger itself is internally consistent: expectedBranchValue always equals acceptedMainValue + branchDelta", () => {
     for (const e of deltas.entries) {
@@ -45,12 +70,22 @@ describe("R10 P2-12 — preservation baseline entries are a proven relative delt
 
   it("the committed baseline's own value matches the ledger's expected branch value for every tracked entry", () => {
     for (const e of deltas.entries) {
-      const m = /^ownerPageRoutes\[route=(.+)\]\.(.+)$/.exec(e.path);
-      expect(m, `unrecognised ledger path shape: ${e.path}`).toBeTruthy();
-      const [, route, field] = m!;
-      const committed = readPageField(route, field);
+      const isRecognised = /^ownerPageRoutes\[route=/.test(e.path) || /^cockpitExternalFeeds\[key=/.test(e.path) || /^businessContextClassificationCounts\./.test(e.path);
+      expect(isRecognised, `unrecognised ledger path shape: ${e.path}`).toBe(true);
+      const committed = readCommittedValue(e.path);
       expect(committed, `${e.path} not found in the committed baseline`).toBe(e.expectedBranchValue);
     }
+  });
+
+  it("every entry's branchDelta is non-zero — a field main alone moved (unrelated main drift) never belongs in this ledger", () => {
+    for (const e of deltas.entries) {
+      expect(e.branchDelta, e.path).not.toBe(0);
+    }
+  });
+
+  it("no ledger path is duplicated (one entry per tracked field)", () => {
+    const paths = deltas.entries.map((e) => e.path);
+    expect(new Set(paths).size).toBe(paths.length);
   });
 
   // Mutation proof: this must NOT be true merely because today's real numbers agree. Using a SYNTHETIC

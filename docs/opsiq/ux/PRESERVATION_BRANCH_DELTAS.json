@@ -1,13 +1,149 @@
 {
-  "description": "R10 P2-12 — OPTION 1 relative-delta ledger for docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json. Each entry records, for one field this branch changed, the accepted main baseline value at the SHA named, this branch's OWN delta from its own code changes, and the resulting expected committed value (acceptedMainValue + branchDelta). The committed baseline's own field must always equal acceptedMainValue + branchDelta -- never a bare absolute number carried over from a stale generation. src/__tests__/governance/preservation-relative-delta.test.ts proves this relationship holds, using a synthetic accepted-main value in addition to the real one, so the test cannot pass merely because today's numbers happen to agree.",
+  "description": "R10 task 5 (full audit, supersedes the earlier single-entry P2-12 ledger) -- OPTION 1 relative-delta ledger for docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json. Every numeric leaf field in the generated baseline (ownerPageRoutes[].componentTreeFileCount, cockpitExternalFeeds[].callSiteCount, businessContextClassificationCounts.*) was diffed between a fresh generation at the current main tip (548908a8501e45a587b90fffeaa286fcfbc7d6a9, which this branch fully contains -- merge-base(main,HEAD) === main's own tip, so there is no unrelated main drift left unaccounted for) and a fresh generation at this branch's HEAD. Each entry records, for one field this branch changed, the accepted main baseline value at the SHA named, this branch's OWN delta from its own code changes across the full branch history (merge-base(main,branch)..HEAD), and the resulting expected committed value (acceptedMainValue + branchDelta). The committed baseline's own field must always equal acceptedMainValue + branchDelta -- never a bare absolute number carried over from a stale generation. src/__tests__/governance/preservation-relative-delta.test.ts proves this relationship holds for every entry, using a synthetic accepted-main value in addition to the real one, so the test cannot pass merely because today's numbers happen to agree. No entry here reflects main's own independent drift alone (branchDelta === 0 entries are out of scope and intentionally absent) -- every entry's branchDelta is non-zero and traceable to a specific branch-owned source change.",
   "entries": [
     {
+      "path": "businessContextClassificationCounts.NO_BUSINESS_CONTEXT",
+      "acceptedMainValue": 10,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 11,
+      "reason": "This branch reclassified /owner/compliance/[id] and /owner/first-value (first-value.page.tsx was retired to a workspace-scope-free stub, compliance/[id] dropped its workspace-only business-context reference) away from WORKSPACE_ONLY, shifting this classification bucket's count by 1 relative to main; unrelated to any independent classification change main has made."
+    },
+    {
+      "path": "businessContextClassificationCounts.NOT_APPLICABLE",
+      "acceptedMainValue": 5,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 6,
+      "reason": "This branch reclassified /owner/compliance/[id] and /owner/first-value (first-value.page.tsx was retired to a workspace-scope-free stub, compliance/[id] dropped its workspace-only business-context reference) away from WORKSPACE_ONLY, shifting this classification bucket's count by 1 relative to main; unrelated to any independent classification change main has made."
+    },
+    {
+      "path": "businessContextClassificationCounts.WORKSPACE_ONLY",
+      "acceptedMainValue": 3,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": -2,
+      "expectedBranchValue": 1,
+      "reason": "This branch reclassified /owner/compliance/[id] and /owner/first-value (first-value.page.tsx was retired to a workspace-scope-free stub, compliance/[id] dropped its workspace-only business-context reference) away from WORKSPACE_ONLY, shifting this classification bucket's count by -2 relative to main; unrelated to any independent classification change main has made."
+    },
+    {
+      "path": "cockpitExternalFeeds[key=GET /api/owner/do-not-repeat/rules].callSiteCount",
+      "acceptedMainValue": 0,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 1,
+      "reason": "This branch added the Cockpit do-not-repeat-rules feed (Round 10 P2-6 DNR business-scoped focus); main has no call sites for this endpoint at all (treated as a baseline of 0), so the branch's own 1 call site(s) is the entire delta."
+    },
+    {
+      "path": "cockpitExternalFeeds[key=PATCH /api/owner/do-not-repeat/:param].callSiteCount",
+      "acceptedMainValue": 0,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 1,
+      "reason": "This branch added the Cockpit do-not-repeat-rules feed (Round 10 P2-6 DNR business-scoped focus); main has no call sites for this endpoint at all (treated as a baseline of 0), so the branch's own 1 call site(s) is the entire delta."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner].componentTreeFileCount",
+      "acceptedMainValue": 5,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 6,
+      "reason": "This branch's own changes to /owner's component tree (imports this branch added/changed) contribute a net +1 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/cashflow].componentTreeFileCount",
+      "acceptedMainValue": 3,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
+      "expectedBranchValue": 5,
+      "reason": "This branch's own changes to /owner/cashflow's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
       "path": "ownerPageRoutes[route=/owner/cockpit].componentTreeFileCount",
-      "acceptedMainValue": 4,
-      "acceptedMainSha": "e5d6fd8b73d6a1619b89377b764b6ec0046335fd",
-      "branchDelta": 3,
+      "acceptedMainValue": 5,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
       "expectedBranchValue": 7,
-      "reason": "This branch's own Owner Decision Consolidation changes to /owner/cockpit's component tree (imports the branch added under this page) contribute +3 files relative to main; unrelated to any change main has made independently to the same route."
+      "reason": "This branch's own changes to /owner/cockpit's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/execution].componentTreeFileCount",
+      "acceptedMainValue": 4,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
+      "expectedBranchValue": 6,
+      "reason": "This branch's own changes to /owner/execution's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/finance].componentTreeFileCount",
+      "acceptedMainValue": 6,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
+      "expectedBranchValue": 8,
+      "reason": "This branch's own changes to /owner/finance's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/home].componentTreeFileCount",
+      "acceptedMainValue": 3,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 4,
+      "reason": "This branch's own changes to /owner/home's component tree (imports this branch added/changed) contribute a net +1 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/marketing].componentTreeFileCount",
+      "acceptedMainValue": 3,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
+      "expectedBranchValue": 5,
+      "reason": "This branch's own changes to /owner/marketing's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/now].componentTreeFileCount",
+      "acceptedMainValue": 3,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 4,
+      "reason": "This branch's own changes to /owner/now's component tree (imports this branch added/changed) contribute a net +1 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/operations].componentTreeFileCount",
+      "acceptedMainValue": 6,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
+      "expectedBranchValue": 8,
+      "reason": "This branch's own changes to /owner/operations's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/priorities].componentTreeFileCount",
+      "acceptedMainValue": 1,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 2,
+      "reason": "This branch's own changes to /owner/priorities's component tree (imports this branch added/changed) contribute a net +1 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/recovery].componentTreeFileCount",
+      "acceptedMainValue": 2,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 3,
+      "reason": "This branch's own changes to /owner/recovery's component tree (imports this branch added/changed) contribute a net +1 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/sales].componentTreeFileCount",
+      "acceptedMainValue": 6,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 2,
+      "expectedBranchValue": 8,
+      "reason": "This branch's own changes to /owner/sales's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+    },
+    {
+      "path": "ownerPageRoutes[route=/owner/strategy].componentTreeFileCount",
+      "acceptedMainValue": 4,
+      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
+      "branchDelta": 1,
+      "expectedBranchValue": 5,
+      "reason": "This branch's own changes to /owner/strategy's component tree (imports this branch added/changed) contribute a net +1 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
     }
   ]
 }
