@@ -271,10 +271,12 @@ export async function getFinanceDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
-    // From the snapshot the CURRENT diagnosis ran on (its cycle's own snapshot) — never inferred from
-    // the latest period; only before any diagnosis does the latest snapshot guide what to enter.
-    missingCriticalData: (latestCycle?.snapshot ?? latestSnapshot)
-      ? (Array.isArray((latestCycle?.snapshot ?? latestSnapshot).missingCriticalData) ? ((latestCycle?.snapshot ?? latestSnapshot).missingCriticalData as string[]) : [])
+    // From the diagnosis TARGET snapshot — the same snapshot diagnosisTargetSnapshot/the diagnosis
+    // button point at. Reading `latestCycle?.snapshot` instead would show a stale amended-and-
+    // superseded snapshot's missing-data list (the old diagnosis's own snapshot) while the button is
+    // about to diagnose the NEW undiagnosed replacement — this must always track the actual target.
+    missingCriticalData: diagnosisTargetSnapshot
+      ? (Array.isArray(diagnosisTargetSnapshot.missingCriticalData) ? (diagnosisTargetSnapshot.missingCriticalData as string[]) : [])
       : [],
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

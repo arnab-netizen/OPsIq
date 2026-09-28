@@ -217,6 +217,29 @@ describe("[db] P1-1 — completed held work never reappears as duplicate work (e
     expect((dash2.overdueActions as any[]).map((a) => a.id)).not.toContain(dupRow.id);
     await teardownOwnerBusiness(b);
   });
+
+  // Hostile-review fix: when NO completed cycle exists at all (only an in-progress/provisional one),
+  // getRecoveryDashboard's fallback overdue query must scope to COMPLETED evidence (periodEnd <= now),
+  // never a looser "has started" (periodStart <= now) test that would also match the in-progress
+  // cycle's own actions before its period has even ended.
+  it("[db] hostile-review fix: an in-progress-only cycle's open action with a past due date is never counted as overdue before its period ends", async () => {
+    const d = DOMAINS.find((x) => x.name === "recovery")!;
+    const ws = randomUUID();
+    const b = await business(ws, "QA hostile-review Recovery in-progress-only overdue");
+    const inProgress = await d.run(ws, b, IN_PROGRESS);
+
+    const dash = await d.dashboard(ws, b);
+    expect(dash.latestCycle, "no COMPLETED cycle exists yet — only the in-progress one").toBeNull();
+
+    const liveAction = (inProgress.actions as any[]).find((a: any) => a.status === "proposed");
+    expect(liveAction, "the in-progress diagnosis proposed at least one open action").toBeTruthy();
+    await db.recoveryAction.update({ where: { id: liveAction.id }, data: { dueAt: new Date(Date.now() - 5 * DAY) } });
+
+    const dash2 = await d.dashboard(ws, b);
+    const overdueIds = (dash2.overdueActions as any[]).map((a) => a.id);
+    expect(overdueIds, "an in-progress period's own action is never overdue evidence before its period ends").not.toContain(liveAction.id);
+    await teardownOwnerBusiness(b);
+  });
 });
 
 describe("[db] back-fill — an older period diagnosed later never becomes the current reading (every domain)", () => {

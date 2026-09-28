@@ -111,16 +111,30 @@ export function OwnerDoNotRepeatPanel({ businessId, onChanged, focusRuleId = nul
   const hashRuleId = hashFocus && hashFocus.businessId === businessId ? hashFocus.ruleId : null;
   const focus = focusRuleId ?? hashRuleId;
 
+  const readHashFocus = useRef<() => void>(() => {});
   useEffect(() => {
-    const read = () => {
+    readHashFocus.current = () => {
       const ruleId = hashFocusRuleId();
       const bid = businessIdRef.current;
       setHashFocus(ruleId && bid ? { businessId: bid, ruleId } : null);
     };
-    read();
-    window.addEventListener("hashchange", read);
-    return () => window.removeEventListener("hashchange", read);
+    readHashFocus.current();
+    window.addEventListener("hashchange", readHashFocus.current);
+    return () => window.removeEventListener("hashchange", readHashFocus.current);
   }, []);
+  // Hostile-review fix: on first mount `businessId` can still be null (the active-business context
+  // is asynchronous), so the mount-time read above resolves no focus at all and no hashchange event
+  // ever fires to retry it (the URL hash never moved). Re-run the SAME read exactly once, the first
+  // time `businessId` transitions from null to a real id, so a direct `#dnr-rule-<id>` link still
+  // resolves once the business context catches up -- never on a later business SWITCH (guarded by
+  // `resolvedInitialBusiness`, which only ever flips once).
+  const resolvedInitialBusiness = useRef(false);
+  useEffect(() => {
+    if (businessId && !resolvedInitialBusiness.current) {
+      resolvedInitialBusiness.current = true;
+      readHashFocus.current();
+    }
+  }, [businessId]);
 
   const load = useCallback(async (id: string | null, isCurrent: () => boolean) => {
     if (!id) return;

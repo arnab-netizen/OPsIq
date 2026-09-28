@@ -94,6 +94,9 @@ describe("[db] R10 P1-1: getFinanceDashboard diagnosis-target resolver — 5-cas
     expect(dash.diagnosisTargetReason).toBe("amended");
     // The amended replacement has never itself been diagnosed:
     expect(dash.latestSnapshotDiagnosis).toBeNull();
+    // Hostile-review fix: missingCriticalData must reflect the AMENDED replacement (the actual
+    // diagnosis target) — never the old diagnosis's superseded snapshot (latestCycle.snapshot).
+    expect(dash.missingCriticalData).toEqual((amended as { missingCriticalData?: string[] })?.missingCriticalData ?? []);
 
     await teardownOwnerBusiness(businessId);
   });

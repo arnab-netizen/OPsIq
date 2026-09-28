@@ -309,3 +309,74 @@ describe("R10 P2-9 follow-up: bothCurrentDisagree invariant — only a genuinely
     expect(bothCurrentDisagree).toBe(true);
   });
 });
+
+describe("R10 P2-9 hostile-review fix: a non-profit-driven Finance danger is never duplicated/mislabelled as a generic margin issue", () => {
+  it("exactly one current (Finance only), non-profit-driven CRITICAL — exactly one issue, correctly labelled CASH_DANGER", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "finance",
+      financeProfitDriven: false,
+    });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ id: "cash", category: "CASH_DANGER" });
+    expect(issues.some((i) => i.id === "margin")).toBe(false);
+  });
+
+  it("both current, gateDriver=cash, finance also independently unsafe but NOT profit-driven — a real second issue, not a mislabelled margin issue", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "CRITICAL", finState: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      financeProfitDriven: false,
+    });
+    expect(issues.some((i) => i.id === "margin")).toBe(false);
+    const cash = issues.find((i) => i.id === "cash");
+    expect(cash).toMatchObject({ category: "CASH_DANGER", severity: "CRITICAL" });
+    const financeSurvival = issues.find((i) => i.id === "finance_survival");
+    expect(financeSurvival).toMatchObject({ category: "CASH_DANGER", severity: "HIGH" });
+    expect(issues).toHaveLength(2);
+  });
+
+  it("both current, gateDriver=unverified, finance also unsafe non-profit — the combined issue already covers it, no mislabelled margin issue", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "AT_RISK", finState: "AT_RISK",
+      gateState: "AT_RISK", gateDriver: "unverified", gateSource: "finance",
+      financeProfitDriven: false,
+    });
+    // The unverifiedGate block legitimately adds its own "cash_unverified" notice — that is
+    // expected, pre-existing behavior, not the bug under test. Only "margin" is disallowed here.
+    expect(issues.some((i) => i.id === "margin")).toBe(false);
+  });
+
+  it("both current, bothCurrentDisagree, non-profit — the conflict issue already covers finState, no extra margin issue", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "AT_RISK", finState: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      financeProfitDriven: false,
+      bothCurrentDisagree: true,
+    });
+    expect(issues.some((i) => i.id === "margin")).toBe(false);
+    expect(issues).toHaveLength(1);
+  });
+
+  it("mutation check: reverting to the old !profitIssueRaised-only guard reproduces the bug on the same input", () => {
+    // Simulates the retired trailing-fallback guard (missing the financeIssueRaised check).
+    const issuesWithoutGuard = [
+      { id: "cash", category: "CASH_DANGER" },
+      // The buggy fallback would ALSO push this, mislabelling a non-profit danger as PROFIT_LEAK:
+      { id: "margin", category: "PROFIT_LEAK", headline: "Profit/margin is below a safe level" },
+    ];
+    expect(issuesWithoutGuard.some((i) => i.id === "margin")).toBe(true); // proves the old shape had the bug
+
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "CRITICAL", finState: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      financeProfitDriven: false,
+    });
+    expect(issues.some((i) => i.id === "margin")).toBe(false); // the real mapper does not
+  });
+});

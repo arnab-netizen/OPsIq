@@ -95,6 +95,10 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
   } = input;
   const issues: CashFinanceNarrativeIssue[] = [];
   let profitIssueRaised = false;
+  // Tracks whether finState's OWN unsafe reading has already been narrated by some issue above
+  // (profit-labeled or otherwise) — never re-labelled as a generic "margin" issue by the trailing
+  // fallback once it has been.
+  let financeIssueRaised = false;
 
   const pushFinanceProfitIssue = (state: string, note: string) => {
     const sev = cashSeverity(state);
@@ -105,6 +109,7 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
     });
     profitIssueRaised = true;
+    financeIssueRaised = true;
   };
 
   if (cashState && finState) {
@@ -128,6 +133,7 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
           headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
           requiresOwnerAction: true,
         });
+        financeIssueRaised = true;
       }
     } else if (gateState !== null && !SAFE_STATES.has(gateState)) {
       // Not conflicting: gateState/gateDriver/gateSource are the SOLE authoritative decision of
@@ -159,9 +165,23 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
           severity: sev, headline: `Cash survival (cash check) is ${gateState}.${supersedeNote}`,
           requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
         });
-        // Independently-current second issue: Finance's OWN current reading, if it is itself unsafe
-        // and profit-driven — decided from finState + financeProfitDriven, never from supersededSource.
-        if (financeProfitDriven && !SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, "");
+        // Independently-current second issue: Finance's OWN current reading, if it is itself unsafe —
+        // decided from finState + financeProfitDriven, never from supersededSource. Profit-driven gets
+        // its own PROFIT_LEAK issue; a non-profit-driven Finance danger still gets its own CASH_DANGER
+        // issue (never silently unrepresented, never mislabelled as a generic "margin" issue).
+        if (!SAFE_STATES.has(finState)) {
+          if (financeProfitDriven) {
+            pushFinanceProfitIssue(finState, "");
+          } else {
+            const finSev = cashSeverity(finState);
+            issues.push({
+              id: "finance_survival", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+              severity: finSev, headline: `Financial survival (Finance diagnosis) is ${finState}.`,
+              requiresOwnerAction: finSev === "CRITICAL" || finSev === "HIGH",
+            });
+            financeIssueRaised = true;
+          }
+        }
       } else {
         // gateDriver "unverified" (or absent) while both sources are nonetheless current: name both,
         // never inferring a specific cash/profit danger from a stale source.
@@ -170,6 +190,7 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
           severity: sev, headline: `Cash and financial survival is ${gateState}.${supersedeNote}`,
           requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
         });
+        financeIssueRaised = true;
       }
     }
   } else if (cashState || finState) {
@@ -191,6 +212,7 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
           severity: sev, headline: `Financial survival (Finance diagnosis) is ${finState}; there is no cash check yet.`,
           requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
         });
+        financeIssueRaised = true;
       }
     }
   }
@@ -248,7 +270,7 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
     });
   }
-  if (finState && !SAFE_STATES.has(finState) && !profitIssueRaised) {
+  if (finState && !SAFE_STATES.has(finState) && !profitIssueRaised && !financeIssueRaised) {
     issues.push({
       id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
       severity: finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM",

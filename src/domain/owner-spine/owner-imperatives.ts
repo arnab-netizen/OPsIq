@@ -330,12 +330,19 @@ const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|mu
  * REVIEWED since 2024", "never FOLLOWED up"). Such a clause is never rewritten.
  */
 const PLAN_FINITE_VERB = /\b(?:is|are|was|were|has|have|had|did|does|been|being|will|would|could|should|fell|rose|grew|went|came|stayed|became|remained|seemed|showed|shows)\b/i;
+// Common past-tense REPORTING verbs a factual clause uses anywhere in ordinary subject-verb-object order
+// ("Stock-outs occurred.", "No more delays occurred this quarter.") — not just when the verb happens to be
+// the clause's first word (the /ed$/ first-word check below only catches an inverted/verb-led phrasing).
+// A hostile-review fix: without this, "No more stock-outs occurred." was wrongly classified as an
+// imperative (the "No more" prohibition lead stripped, leaving "stock-outs occurred" — a plain subject
+// noun first, verb second — which neither PLAN_FINITE_VERB nor the first-word check recognised as factual).
+const PLAN_FACTUAL_REPORTING_VERB = /\b(?:occurred|happened|took\s+place|resulted|declined|dropped|increased|decreased)\b/i;
 function planClauseIsFactual(rest: string): boolean {
   // Only the MAIN clause counts: a subordinate one ("… until cash IS safe", "… before cash IS safe") describes
   // a condition of the instruction, not a fact the sentence reports.
   const clause = (rest.split(/[.;!?]/)[0] ?? "").split(/\b(?:before|until|unless|while|when|whenever|if|because|after|since|once|as long as|so that)\b/i)[0] ?? "";
   const first = /^\s*([A-Za-z'’-]+)/.exec(clause)?.[1] ?? "";
-  return PLAN_FINITE_VERB.test(clause) || /ed$/i.test(first);
+  return PLAN_FINITE_VERB.test(clause) || PLAN_FACTUAL_REPORTING_VERB.test(clause) || /ed$/i.test(first);
 }
 /** Whether a sentence opens as an instruction to the owner (an imperative verb not used as a noun or a past form). */
 function opensWithImperative(body: string): boolean {

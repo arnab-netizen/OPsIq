@@ -185,12 +185,15 @@ export async function getRecoveryDashboard(
         .sort((a: any, b: any) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())
     : await db.recoveryAction.findMany({
         // No current cycle at all: nothing for continuity to dedupe against yet — the same raw, unscoped
-        // query as before this fix.
+        // query as before this fix. Scoped to COMPLETED evidence only (currentEvidenceWhere's own
+        // periodEnd <= now test) — never a genuinely in-progress cycle's actions, which would otherwise
+        // slip through a looser "has started" (periodStart <= now) test and be counted as overdue before
+        // their own period has even ended.
         where: {
           businessId: selectedBusinessId, workspaceId,
           status: { in: [...OPEN_STATUSES] },
           dueAt: { lt: now },
-          cycle: { snapshot: { periodStart: { lte: now } } },
+          cycle: currentEvidenceWhere(now),
         },
         orderBy: { dueAt: "asc" },
       });

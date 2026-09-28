@@ -73,4 +73,32 @@ describe("OwnerDoNotRepeatPanel — R10 P2-6 business-scoped focus", () => {
     render(<OwnerDoNotRepeatPanel businessId="biz-b" onChanged={() => {}} />);
     await waitFor(() => expect(screen.getByText("B's rule").closest("li")?.getAttribute("data-focused")).toBe("true"));
   });
+
+  it("hostile-review fix: a direct link followed while businessId is still null (active-business context still loading) resolves focus once businessId arrives, with no hashchange event", async () => {
+    installFetchMock();
+    window.location.hash = `#dnr-rule-${RULE_B.id}`;
+    // Mounts with businessId=null, exactly as Cockpit does while ActiveBusinessContext is still
+    // resolving — no hashchange event ever fires here, since the URL hash never moves.
+    const { rerender } = render(<OwnerDoNotRepeatPanel businessId={null} onChanged={() => {}} />);
+    expect(screen.queryByText("B's rule")).toBeNull();
+
+    rerender(<OwnerDoNotRepeatPanel businessId="biz-b" onChanged={() => {}} />);
+    await waitFor(() => expect(screen.getByText("B's rule")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("B's rule").closest("li")?.getAttribute("data-focused")).toBe("true"));
+  });
+
+  it("hostile-review fix: the null-to-id resolution fires only once — a later business switch does not re-resolve a stale hash", async () => {
+    installFetchMock();
+    window.location.hash = `#dnr-rule-${RULE_A.id}`;
+    const { rerender } = render(<OwnerDoNotRepeatPanel businessId={null} onChanged={() => {}} />);
+    rerender(<OwnerDoNotRepeatPanel businessId="biz-a" onChanged={() => {}} />);
+    await waitFor(() => expect(screen.getByText("A's rule").closest("li")?.getAttribute("data-focused")).toBe("true"));
+
+    // Switching away and back must not re-trigger the one-time null->id resolution as if this were
+    // a fresh direct link — B never focuses A's rule id.
+    rerender(<OwnerDoNotRepeatPanel businessId="biz-b" onChanged={() => {}} />);
+    await waitFor(() => expect(screen.getByText("B's rule")).toBeTruthy());
+    expect(screen.queryByText("A's rule")).toBeNull();
+    expect(screen.getByText("B's rule").closest("li")?.getAttribute("data-focused")).toBeNull();
+  });
 });

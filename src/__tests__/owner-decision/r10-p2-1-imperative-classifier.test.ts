@@ -28,6 +28,14 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     "The customer stopped ordering last month.",
     "Costs increased first, then revenue followed.",
     "Supplier status: never reviewed since 2024.",
+    // Hostile-review fix: an ordinary subject-verb-object factual clause using a past-tense
+    // REPORTING verb ("occurred"/"happened"/"took place") is never an imperative, even when a
+    // prohibition-lead phrase ("No more") is stripped from the front, leaving the subject noun
+    // (not the verb) as the clause's first word.
+    "No more stock-outs occurred.",
+    "No more delays occurred this quarter.",
+    "No more complaints happened last week.",
+    "The outage took place before the fix shipped.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
