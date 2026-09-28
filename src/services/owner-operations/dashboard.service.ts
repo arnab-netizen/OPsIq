@@ -207,10 +207,12 @@ export async function getOperationsDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
-    // The missing data of the snapshot this page's (completed) cycle was diagnosed on — never an in-progress
-    // or other period's snapshot beside that cycle's scores and findings.
-    missingCriticalData: latestCycle?.snapshot
-      ? (Array.isArray(latestCycle.snapshot.missingCriticalData) ? (latestCycle.snapshot.missingCriticalData as string[]) : [])
+    // Hostile-review fix (same root cause as Finance's diagnosisTargetSnapshot fix): the diagnosis
+    // TARGET's own missing-data list -- latestSnapshot is the actual snapshot the re-diagnose button
+    // points at -- never the last-diagnosed cycle's own (possibly stale) snapshot, which would show an
+    // old snapshot's gaps while the page prompts re-diagnosis on a newer, undiagnosed one.
+    missingCriticalData: latestSnapshot
+      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
       : [],
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

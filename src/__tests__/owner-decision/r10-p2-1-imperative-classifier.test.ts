@@ -16,6 +16,11 @@ describe("R10 P2-1: isWholeBusinessImperative — must classify as imperative", 
     "Avoid scaling this campaign.",
     "Before anything else, fix collections.",
     "You must reduce discretionary spend.",
+    // Round-10-round-2 hostile-review fix: a reporting verb (occurred/dropped/resulted/...) inside a
+    // RELATIVE clause ("that dropped...", "that resulted in...") describes the object, not a fact the
+    // sentence itself reports — the genuine imperative must still be recognised.
+    "Stop the campaign that dropped conversions last quarter.",
+    "Never resume marketing spend that resulted in the prior loss.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(true);
   });
@@ -36,8 +41,25 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     "No more delays occurred this quarter.",
     "No more complaints happened last week.",
     "The outage took place before the fix shipped.",
+    // Round-10-round-2 hostile-review fix: broadened whitelist coverage for common business-reporting
+    // past-tense verbs beyond the original 8 (documented as a maintained, non-exhaustive list).
+    "No more stock-outs worsened.",
+    "No more stock-outs improved.",
+    "No more delays climbed this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
+  });
+});
+
+describe("R10 P2-1 round-2 hostile-review mutation proof: scanning the WHOLE clause (including relative clauses) for factual-reporting verbs reproduces the false-negative regression", () => {
+  it("mutation check: an unscoped whole-clause scan wrongly disarms a genuine imperative containing a relative clause", () => {
+    const UNSCOPED_FACTUAL_REPORTING_VERB = /\b(?:occurred|happened|took\s+place|resulted|declined|dropped|increased|decreased)\b/i;
+    const clause = "Stop the campaign that dropped conversions last quarter";
+    // The buggy, unscoped whole-clause version WOULD misclassify this as factual (proves the mutation
+    // actually reproduces the regression, not merely asserts it):
+    expect(UNSCOPED_FACTUAL_REPORTING_VERB.test(clause)).toBe(true);
+    // The real classifier does not, because it excludes the relative clause before scanning:
+    expect(isWholeBusinessImperative("Stop the campaign that dropped conversions last quarter.")).toBe(true);
   });
 });
 

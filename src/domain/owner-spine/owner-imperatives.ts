@@ -336,13 +336,24 @@ const PLAN_FINITE_VERB = /\b(?:is|are|was|were|has|have|had|did|does|been|being|
 // A hostile-review fix: without this, "No more stock-outs occurred." was wrongly classified as an
 // imperative (the "No more" prohibition lead stripped, leaving "stock-outs occurred" — a plain subject
 // noun first, verb second — which neither PLAN_FINITE_VERB nor the first-word check recognised as factual).
-const PLAN_FACTUAL_REPORTING_VERB = /\b(?:occurred|happened|took\s+place|resulted|declined|dropped|increased|decreased)\b/i;
+// KNOWN LIMITATION (documented per the ambiguity-resolution rule — an exhaustive past-tense/POS
+// classifier is out of scope here): this is a maintained whitelist, not a structural tense detector. A
+// reporting verb outside this list (e.g. "improved", "worsened") is still not recognised as factual by
+// this check alone — PLAN_FINITE_VERB's own auxiliary/copula coverage is what catches most such cases in
+// practice ("...IS/WAS/HAS..."); a bare synonym with no auxiliary can still be misclassified.
+const PLAN_FACTUAL_REPORTING_VERB = /\b(?:occurred|happened|took\s+place|resulted|declined|dropped|increased|decreased|improved|worsened|deteriorated|recovered|rebounded|surged|slipped|tumbled|climbed|plunged|spiked|stabilized|stabilised)\b/i;
 function planClauseIsFactual(rest: string): boolean {
   // Only the MAIN clause counts: a subordinate one ("… until cash IS safe", "… before cash IS safe") describes
   // a condition of the instruction, not a fact the sentence reports.
   const clause = (rest.split(/[.;!?]/)[0] ?? "").split(/\b(?:before|until|unless|while|when|whenever|if|because|after|since|once|as long as|so that)\b/i)[0] ?? "";
   const first = /^\s*([A-Za-z'’-]+)/.exec(clause)?.[1] ?? "";
-  return PLAN_FINITE_VERB.test(clause) || PLAN_FACTUAL_REPORTING_VERB.test(clause) || /ed$/i.test(first);
+  // Hostile-review fix: PLAN_FACTUAL_REPORTING_VERB must NOT see inside a relative clause ("...that
+  // resulted in...", "...which dropped...") — that describes the OBJECT, not a fact the sentence itself
+  // reports, and would otherwise wrongly disarm a genuine imperative ("Stop the campaign that dropped
+  // conversions last quarter." is still an instruction to stop the campaign). PLAN_FINITE_VERB is left
+  // scanning the full clause (unchanged, pre-existing behavior) since no regression was found there.
+  const mainClauseOnly = clause.split(/\b(?:that|which)\b/i)[0] ?? clause;
+  return PLAN_FINITE_VERB.test(clause) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }
 /** Whether a sentence opens as an instruction to the owner (an imperative verb not used as a noun or a past form). */
 function opensWithImperative(body: string): boolean {

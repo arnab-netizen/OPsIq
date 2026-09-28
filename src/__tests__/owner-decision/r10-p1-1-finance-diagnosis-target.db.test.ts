@@ -80,11 +80,17 @@ describe("[db] R10 P1-1: getFinanceDashboard diagnosis-target resolver — 5-cas
   it("[db] Case 2: amended completed snapshot awaiting its own diagnosis + provisional evidence → the amended replacement wins", async () => {
     const workspaceId = ws();
     const businessId = await newBusiness(workspaceId);
-    const original = await createFinancialSnapshot(
-      businessId, completedSnapshotInput(new Date(Date.now() - 10 * DAY), new Date(Date.now() - 40 * DAY)), actor, workspaceId
-    );
+    // The original is missing cashOnHand (a real data-confidence gap); the amendment SUPPLIES it — a
+    // genuinely different missing-data profile between the two, so the assertion below actually
+    // distinguishes "reads the amended replacement" from "reads the stale, last-diagnosed original"
+    // (a bug reading the wrong snapshot would otherwise pass vacuously if both had the same gaps).
+    const fullInput = completedSnapshotInput(new Date(Date.now() - 10 * DAY), new Date(Date.now() - 40 * DAY));
+    const withoutCashOnHand = { ...fullInput, cashOnHand: undefined };
+    const original = await createFinancialSnapshot(businessId, withoutCashOnHand, actor, workspaceId);
+    expect(original.missingCriticalData).toContain("cashOnHand");
     await runFinanceDiagnosis(businessId, original.id, actor, workspaceId);
-    const { snapshot: amended } = await amendFinancialSnapshot(original.id, { revenue: 250000 }, actor, workspaceId);
+    const { snapshot: amended } = await amendFinancialSnapshot(original.id, { revenue: 250000, cashOnHand: 60000 }, actor, workspaceId);
+    expect((amended as { missingCriticalData?: string[] })?.missingCriticalData ?? []).not.toContain("cashOnHand");
     await createFinancialSnapshot(
       businessId, completedSnapshotInput(new Date(Date.now() + 20 * DAY), new Date(Date.now() - 5 * DAY)), actor, workspaceId
     ); // provisional, present alongside the amendment
@@ -95,8 +101,11 @@ describe("[db] R10 P1-1: getFinanceDashboard diagnosis-target resolver — 5-cas
     // The amended replacement has never itself been diagnosed:
     expect(dash.latestSnapshotDiagnosis).toBeNull();
     // Hostile-review fix: missingCriticalData must reflect the AMENDED replacement (the actual
-    // diagnosis target) — never the old diagnosis's superseded snapshot (latestCycle.snapshot).
+    // diagnosis target) — never the old diagnosis's superseded snapshot (latestCycle.snapshot), which
+    // is STILL missing cashOnHand.
+    expect(original.missingCriticalData).not.toEqual((amended as { missingCriticalData?: string[] })?.missingCriticalData ?? []);
     expect(dash.missingCriticalData).toEqual((amended as { missingCriticalData?: string[] })?.missingCriticalData ?? []);
+    expect(dash.missingCriticalData).not.toContain("cashOnHand");
 
     await teardownOwnerBusiness(businessId);
   });
