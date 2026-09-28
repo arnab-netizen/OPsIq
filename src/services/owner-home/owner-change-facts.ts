@@ -7,7 +7,7 @@
  */
 import { db } from "@/lib/db";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import {
   asDate,
   complianceItemToCandidate,
@@ -186,12 +186,15 @@ async function evidenceTransition(
     _min: { createdAt: true },
   });
   const firstDiagnosedAt = asDate(first._min.createdAt) ?? asDate(current.createdAt) ?? currentAt;
+  // When these figures became CURRENT evidence: their first diagnosis, or — for figures diagnosed while their
+  // period was still in progress — the end of that period (they were provisional until then, never current).
+  const effectiveAt = currentPeriodEnd && currentPeriodEnd.getTime() > firstDiagnosedAt.getTime() ? currentPeriodEnd : firstDiagnosedAt;
   // The baseline is effective evidence too: a Finance version the owner later amended is not what the
   // business looked like (its corrected version is).
   const previous = await model.findFirst({
     where: {
-      workspaceId, businessId, snapshotId: { not: String(current.snapshotId) }, createdAt: { lt: firstDiagnosedAt },
-      snapshot: { periodEnd: { lte: now }, ...(spec.domain === "finance" ? { supersededById: null } : {}) },
+      workspaceId, businessId, snapshotId: { not: String(current.snapshotId) }, createdAt: { lt: effectiveAt },
+      snapshot: { ...currentEvidenceWhere(now).snapshot, ...(spec.domain === "finance" ? { supersededById: null } : {}) },
     },
     orderBy: spec.order,
     select: cycleSelect,
@@ -204,7 +207,7 @@ async function evidenceTransition(
       { periodEnd: asDate(current.snapshot?.periodEnd), createdAt: currentAt },
       { periodEnd: asDate(previous.snapshot?.periodEnd), createdAt: asDate(previous.snapshot?.createdAt) }
     ),
-    at: firstDiagnosedAt,
+    at: effectiveAt,
     previousIssues: previous ? issuesOf(spec.domain, previous.findings ?? []) : {},
     currentIssues: issuesOf(spec.domain, current.findings ?? []),
     // A diagnosis that could not measure (it raised a missing-critical-data finding) cannot prove that an

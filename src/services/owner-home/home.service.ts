@@ -24,6 +24,7 @@ import { buildBusinessConditionProfile, ownerSeverityRank, type OwnerSeverity } 
 import { classifyOwnerFindingCode, financeSurvivalDriver, resolveOwnerDecision, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { businessRiskToCandidate, complianceItemToCandidate, toOwnerSeverity, unattributedComplianceItemToCandidate } from "@/services/owner-home/owner-decision-candidates";
 import { loadOwnerGateConstraints } from "@/services/owner-mode/owner-action-gate.service";
+import type { OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 import { buildOwnerSpineCandidates, loadOwnerSpineEvidence } from "@/services/owner-home/owner-candidate-builder";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 import { gatherOwnerChangeFacts } from "@/services/owner-home/owner-change-facts";
@@ -53,6 +54,20 @@ export async function getOwnerHome(
   requestedBusinessId?: string | null,
   opts: { now?: Date } = {}
 ): Promise<OwnerHomeResult> {
+  return (await resolveOwnerHome(workspaceId, requestedBusinessId, opts)).home;
+}
+
+/**
+ * getOwnerHome plus the owner action gate's constraints the canonical decision was resolved with (null when
+ * no business is selected) — for surfaces that must describe the decision against the SAME constraints
+ * (Now View: growth readiness and the do-not-repeat annotation). Server-side only: the constraints are never
+ * part of the Home payload.
+ */
+export async function resolveOwnerHome(
+  workspaceId: string,
+  requestedBusinessId?: string | null,
+  opts: { now?: Date } = {}
+): Promise<{ home: OwnerHomeResult; gate: OwnerGateConstraints | null }> {
   const now = opts.now ?? new Date();
   const businesses = await listBusinesses(workspaceId);
   const businessList = businesses.map((b: any) => ({
@@ -71,7 +86,7 @@ export async function getOwnerHome(
   if (!selectedBusinessId && businesses.length === 1) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null };
+    return { home: { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null }, gate: null };
   }
   const businessId = selectedBusinessId;
 
@@ -181,6 +196,7 @@ export async function getOwnerHome(
     dataSufficiency,
     staleDomains,
     futureDomains: build.futureDomains,
+    provisionalDomains: build.provisionalDomains,
     strategy: build.strategyContext,
     reassessment,
     changeFacts,
@@ -215,18 +231,26 @@ export async function getOwnerHome(
         financeSuperseded: Boolean(financeReading?.superseded),
         financeCashSignal,
         cashFinanceConflict,
+        // The in-progress period's reading tightens the cash card only when it decides the gate's state (the
+        // SAME shared reading the gate enforces), labelled as in progress.
+        provisionalCash: gate.cash.provisional && gate.cash.gateState && gate.cash.driver !== "unverified"
+          ? { state: gate.cash.gateState, source: gate.cash.source === "finance" ? "finance" : "cashflow" }
+          : null,
       })
     : null;
 
   return {
-    businesses: businessList,
-    selectedBusinessId: businessId,
-    hasData: domainScores.length > 0,
-    domainsWired: domainScores.map((d) => d.domain),
-    summary,
-    currentOwnerDecision,
-    // The review cadence the canonical decision was resolved with (the single cadence surfaces show).
-    reassessment,
+    home: {
+      businesses: businessList,
+      selectedBusinessId: businessId,
+      hasData: domainScores.length > 0,
+      domainsWired: domainScores.map((d) => d.domain),
+      summary,
+      currentOwnerDecision,
+      // The review cadence the canonical decision was resolved with (the single cadence surfaces show).
+      reassessment,
+    },
+    gate,
   };
 }
 

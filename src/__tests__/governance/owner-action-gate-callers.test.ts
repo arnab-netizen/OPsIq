@@ -10,7 +10,8 @@
  *
  * Every non-test source file that calls `enforceOwnerActionGates(` is enumerated here (a new caller fails
  * until it is listed with how it supplies intent). Each call's argument object must name `findingCode:` or
- * `intent:`; each caller must record the assessment (recordOwnerGateAssessment) AFTER its update write.
+ * `intent:`; each caller hands the gate's assessment to its atomic transition (applyGuardedActionTransition),
+ * which records it only after the compare-and-set applied, in the same transaction.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
@@ -97,23 +98,35 @@ describe("every owner action-gate caller carries the action's intent", () => {
     }
   });
 
-  it("at EVERY call, the caller records the gate's assessment only after its (compare-and-set) update is written", () => {
-    const WRITE = /\.\s*update(?:Many)?\s*\(|\bapplyGuardedActionUpdate\s*(?:<[^>]*>)?\s*\(/;
+  it("at EVERY call, the gate's assessment is recorded by the atomic transition — after its compare-and-set applies, in the same transaction", () => {
+    const TRANSITION = /\bapplyGuardedActionTransition\s*(?:<[^>]*>)?\s*\(/;
     for (const f of callers) {
       const src = stripComments(readFileSync(f, "utf8"));
+      // No caller records the assessment itself (never before or outside its write).
+      expect(/\brecordOwnerGateAssessment\s*\(/.test(src), `${rel(f)} never records the assessment itself`).toBe(false);
       CALL.lastIndex = 0;
       let m: RegExpExecArray | null;
       let calls = 0;
       while ((m = CALL.exec(src))) {
         calls++;
         const after = src.slice(m.index);
-        const write = after.search(WRITE);
-        const record = after.search(/\brecordOwnerGateAssessment\s*\(/);
-        expect(write, `${rel(f)} writes after the gate (call ${calls})`).toBeGreaterThan(0);
-        expect(record, `${rel(f)} records the assessment after the write (call ${calls})`).toBeGreaterThan(write);
+        const t = TRANSITION.exec(after);
+        expect(t, `${rel(f)} applies its transition after the gate (call ${calls})`).not.toBeNull();
+        const args = callArgs(after, t!.index + t![0].length - 1);
+        expect(/\bgateAssessment\b/.test(args), `${rel(f)} hands the gate's assessment to the transition (call ${calls})`).toBe(true);
       }
       expect(calls, rel(f)).toBeGreaterThan(0);
     }
+    // The transition records it only once its compare-and-set applied, in the same transaction as the write.
+    const helper = stripComments(readFileSync(join(ROOT, "src/services/owner-mode/owner-action-transition.ts"), "utf8"));
+    const body = helper.slice(helper.indexOf("export async function applyGuardedActionTransition"));
+    expect(body).toMatch(/db\.\$transaction\(/);
+    const cas = body.search(/\.updateMany\(/);
+    const applied = body.search(/if \(res\.count === 1\) \{/);
+    const record = body.search(/recordOwnerGateAssessment\(u\.gateAssessment, tx\)/);
+    expect(cas).toBeGreaterThan(0);
+    expect(applied).toBeGreaterThan(cas);
+    expect(record).toBeGreaterThan(applied);
   });
 
   it("Budget: every plan decision type has an intent by PURPOSE; withholding and evidence work is protective; a margin repair is REPAIR", () => {

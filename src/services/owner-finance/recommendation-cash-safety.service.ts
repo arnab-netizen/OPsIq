@@ -7,19 +7,26 @@
  *
  * Which states it is given — TEMPORARY UNSCOPED-CONSULTING FAIL-SAFE. A recommendation belongs to an
  * engagement, which carries no owner business. So:
- *   - one real business → that business's current cash and Finance states (base-compatible);
- *   - several real businesses → the WORST valid current state across them. Never an average, never the
+ *   - each real business contributes ONE state (consultingBusinessEvidenceState, below);
+ *   - several real businesses → the WORST contributed state across them. Never an average, never the
  *     latest-inserted business (the base's accidental "last written business wins"), never looser than
  *     any one business's own reading;
- *   - no business with a valid current reading → AT_RISK (both halves missing).
- * Only current valid evidence counts: each business's current diagnosis cycles (current-diagnosis-cycle.ts
- * order) over periods that have ENDED (currentEvidenceWhere — a future-dated period never counts), and a
- * Finance cycle only while its snapshot is still the owner's figures (an amended/superseded snapshot's
- * cycle is no longer effective). A business with no valid current reading contributes nothing; one with
- * only one half contributes that half and AT_RISK for the missing one (the base's missing-half rule).
- * This is a fail-safe for Consulting recommendations that cannot be attributed to one business — it is
- * not Owner-Mode arbitration (current-cash-finance-reading.ts), and it is replaced once recommendations
- * carry their business.
+ *   - no business with any reading → AT_RISK (both halves missing).
+ * What one business contributes, per half (Cash flow's cashflowState, Finance's survivalState), from its
+ * current diagnosis cycle (current-diagnosis-cycle.ts order) over COMPLETED periods (currentEvidenceWhere):
+ *   - a half whose figures are valid and current is used as is;
+ *   - a half that is not verified — out of date (older than the freshness window) or, for Finance, an
+ *     AMENDED snapshot not yet re-diagnosed — keeps its last-known state only when that state is unsafe
+ *     (it never becomes safer: the last completed Finance diagnosis is never replaced by an OLDER period's
+ *     cycle); a SAFE/WATCH unverified half counts as missing;
+ *   - a missing half is AT_RISK (the base's missing-half rule: growth blocked, non-growth allowed);
+ *   - the in-progress current period (PROVISIONAL — provisional-cash-finance.ts) only tightens: effective =
+ *     worse(completed state, provisional state); provisional SAFE/WATCH alone never proves safety (the
+ *     missing halves stay AT_RISK); a genuinely future period never counts.
+ * With one real business and completed, current, unamended figures this is exactly the base rule
+ * (worse of the two halves). It is a fail-safe for Consulting recommendations that cannot be attributed to
+ * one business — not Owner-Mode arbitration (current-cash-finance-reading.ts) — and it is replaced once
+ * recommendations carry their business.
  * Enforced only when the workspace opted into the Owner Mode governance suite (same flag as M1/M2/M3).
  */
 
@@ -30,6 +37,9 @@ import {
 } from "@/domain/owner-finance/cash-safety-gate";
 import { mapImpactAreaToSensitivity, RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { currentEvidenceTime } from "@/services/owner-spine/current-cash-finance-reading";
+import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
+import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 
 const VALID_STATES = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
 
@@ -49,6 +59,44 @@ export function consultingBusinessCashState(cash: string | null | undefined, fin
   return worseState(c ?? "AT_RISK", f ?? "AT_RISK");
 }
 
+const SAFE_STATES = new Set(["SAFE", "WATCH"]);
+const DAY_MS = 86_400_000;
+
+/** One half's completed reading: its state and snapshot (period, amendment). */
+export interface ConsultingHalfRead {
+  state: string | null | undefined;
+  snapshot?: { periodEnd?: unknown; supersededById?: unknown } | null;
+}
+
+/**
+ * What one business contributes (see the module doc): each completed half, verified or — when unverified
+ * (stale, amended) — kept only while unsafe; the missing-half rule; then tightened (never relaxed) by the
+ * in-progress period. null when the business has no reading at all.
+ */
+export function consultingBusinessEvidenceState(
+  cash: ConsultingHalfRead | null,
+  finance: ConsultingHalfRead | null,
+  provisional: { cash?: { state?: string | null } | null; finance?: { state?: string | null } | null } | null,
+  nowMs: number
+): FinancialHealthState | null {
+  const staleCutoffMs = nowMs - OWNER_DECISION_STALE_EVIDENCE_DAYS * DAY_MS;
+  const half = (r: ConsultingHalfRead | null): FinancialHealthState | null => {
+    const st = validState(r?.state ?? null);
+    if (st === null) return null;
+    const verified = currentEvidenceTime(r?.snapshot, staleCutoffMs, nowMs) !== null;
+    return verified || !SAFE_STATES.has(st) ? st : null;
+  };
+  const anyCompleted = validState(cash?.state ?? null) !== null || validState(finance?.state ?? null) !== null;
+  const completed = anyCompleted ? consultingBusinessCashState(half(cash) ?? "AT_RISK", half(finance) ?? "AT_RISK") : null;
+  // The in-progress period's states only tighten (worse of); none → the completed state as is.
+  let prov: FinancialHealthState | null = null;
+  for (const st of [validState(provisional?.cash?.state ?? null), validState(provisional?.finance?.state ?? null)]) {
+    if (st) prov = prov ? worseState(prov, st) : st;
+  }
+  if (prov === null) return completed;
+  return worseState(completed ?? "AT_RISK", prov);
+}
+
 /** The worst contributed state across businesses; AT_RISK when none has a valid current reading. */
 export function consultingWorstCashState(states: ReadonlyArray<FinancialHealthState | null>): FinancialHealthState {
   let out: FinancialHealthState | null = null;
@@ -56,7 +104,7 @@ export function consultingWorstCashState(states: ReadonlyArray<FinancialHealthSt
   return out ?? "AT_RISK";
 }
 
-interface CashDb {
+interface CashDb extends ProvisionalCashFinanceDb {
   clientAccount: {
     findUnique(args: { where: { id: string }; select: { requireBusinessImpactAssessment: true } }): Promise<{ requireBusinessImpactAssessment: boolean } | null>;
   };
@@ -68,17 +116,17 @@ interface CashDb {
   };
   ownerCashflowCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date } } };
+      where: Record<string, unknown>;
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { cashflowState: true };
-    }): Promise<{ cashflowState: string } | null>;
+      select: Record<string, unknown>;
+    }): Promise<unknown>;
   };
   ownerFinanceCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date }; supersededById: null } };
+      where: Record<string, unknown>;
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { survivalState: true };
-    }): Promise<{ survivalState: string } | null>;
+      select: Record<string, unknown>;
+    }): Promise<unknown>;
   };
   recommendation: {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { findingId: true } }): Promise<{ findingId: string | null } | null>;
@@ -125,15 +173,31 @@ export async function enforceCashSafetyForPromotion(
   const current = currentEvidenceWhere(now);
   const [perBusiness, sensitivity] = await Promise.all([
     Promise.all(businesses.map(async ({ id: businessId }) => {
-      const [cashRow, finRow] = await Promise.all([
-        deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId, businessId, ...current }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true } }),
-        deps.db.ownerFinanceCycle.findFirst({
-          where: { workspaceId, businessId, snapshot: { ...current.snapshot, supersededById: null } },
+      // The latest COMPLETED cycle of each half, as recorded — an amended Finance snapshot's cycle included
+      // (never skipped for an older period's), judged by consultingBusinessEvidenceState.
+      const [cashRow, finRow, provisional] = (await Promise.all([
+        deps.db.ownerCashflowCycle.findFirst({
+          where: { workspaceId, businessId, ...current },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { survivalState: true },
+          select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
         }),
-      ]);
-      return consultingBusinessCashState(cashRow?.cashflowState, finRow?.survivalState);
+        deps.db.ownerFinanceCycle.findFirst({
+          where: { workspaceId, businessId, ...current },
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } },
+        }),
+        loadProvisionalCashFinance(deps.db, { workspaceId, businessId }, now),
+      ])) as [
+        { cashflowState: string; snapshot?: { periodEnd: Date } | null } | null,
+        { survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null,
+        Awaited<ReturnType<typeof loadProvisionalCashFinance>>,
+      ];
+      return consultingBusinessEvidenceState(
+        cashRow ? { state: cashRow.cashflowState, snapshot: cashRow.snapshot ?? null } : null,
+        finRow ? { state: finRow.survivalState, snapshot: finRow.snapshot ?? null } : null,
+        provisional,
+        now.getTime()
+      );
     })),
     resolveSensitivity(recommendationId, workspaceId, deps),
   ]);

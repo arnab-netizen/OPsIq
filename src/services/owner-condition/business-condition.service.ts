@@ -437,7 +437,7 @@ export async function getBusinessCondition(
       },
     }),
     // Only used when there is NO Finance diagnosis yet (pre-diagnosis input guidance).
-    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId })),
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId }, undefined, evidenceNow)),
     // Read-only read of the proven Module 1 recovery cycle (no recovery mutation).
     db.recoveryCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },

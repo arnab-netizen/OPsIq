@@ -19,6 +19,18 @@
  *     the amended figures are diagnosed). When readings exist but NONE is current (out of date, or only an
  *     amended Finance reading), an unverified reading is never treated as safe: it is at least AT_RISK.
  *     null only when there is no reading at all.
+ *   - PROVISIONAL evidence (the in-progress current period, current-diagnosis-cycle.ts) is supplied
+ *     separately. It is never completed truth: it may only TIGHTEN — effective = worse(completed gate
+ *     state, provisional state) — so a provisional SAFE/WATCH never clears or relaxes a stricter completed
+ *     reading, and never supersedes one because its period ends later. With no completed reading at all,
+ *     a provisional unsafe reading applies; a provisional SAFE/WATCH alone never claims safety (AT_RISK,
+ *     unverified). `provisional` says when the in-progress period decides the enforced state (surfaces
+ *     label it as in progress).
+ *   - `gateConfidence` is how far the enforced state can be trusted: the deciding source's own data
+ *     confidence, capped at UNVERIFIED_GATE_CONFIDENCE when the state rests on unverified or provisional
+ *     figures; null when the deciding source supplied no confidence (the caller then treats it as unknown).
+ *   - `gateSource` names the source whose figures decide it (cash flow or finance), so a refresh target
+ *     points at the source that actually needs refreshing (an amended Finance snapshot → Finance).
  *   - `gateDriver` says what drives `gateState` — cash, a Finance survival state driven by profit/margin
  *     (the Finance diagnosis's own findings, supplied by the caller), or unverified figures — so a block is
  *     named by its real cause (a margin problem is never called a cash danger).
@@ -37,7 +49,18 @@ export interface CashFinanceCycleRead {
   snapshot?: { periodEnd?: unknown; supersededById?: unknown } | null;
   /** Finance only: what drives its survival state, from its own findings (financeSurvivalDriver). */
   driver?: "cash" | "profit" | null;
+  /** The diagnosis's own data confidence, 0..1 (null/absent when unknown). */
+  confidence?: number | null;
 }
+
+/** Provisional (in-progress current period) readings, one per source; never completed truth. */
+export interface ProvisionalCashFinanceReads {
+  cash?: CashFinanceCycleRead | null;
+  finance?: CashFinanceCycleRead | null;
+}
+
+/** Confidence cap for a state resting on unverified (stale, amended) or provisional figures. */
+export const UNVERIFIED_GATE_CONFIDENCE = 0.4;
 
 /** What drives a gate state: cash, a profit/margin-driven Finance state, or figures that are not current. */
 export type CashFinanceGateDriver = "cash" | "finance_profit" | "unverified";
@@ -53,6 +76,14 @@ export interface CurrentCashFinanceReading extends CashFinanceResolution {
   gateState: SurvivalLikeState | null;
   /** What drives `gateState` (see the module doc); null when there is no reading. */
   gateDriver: CashFinanceGateDriver | null;
+  /** The source whose figures decide `gateState`; null when there is no reading. */
+  gateSource: "cashflow" | "finance" | null;
+  /** The worst in-progress (provisional) state, when one was supplied. */
+  provisionalState: SurvivalLikeState | null;
+  /** True when the in-progress current period's figures decide `gateState` (label as in progress). */
+  provisional: boolean;
+  /** Source-derived confidence in `gateState`, 0..1 (see the module doc). */
+  gateConfidence: number | null;
 }
 
 function asState(v: unknown): SurvivalLikeState | null {
@@ -80,10 +111,19 @@ function worst(...states: Array<SurvivalLikeState | null>): SurvivalLikeState | 
   return out;
 }
 
+function unitConfidence(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : null;
+}
+
+function capped(v: number | null): number {
+  return v === null ? UNVERIFIED_GATE_CONFIDENCE : Math.min(v, UNVERIFIED_GATE_CONFIDENCE);
+}
+
 export function currentCashFinanceReading(
   cash: CashFinanceCycleRead | null,
   finance: CashFinanceCycleRead | null,
-  nowMs: number
+  nowMs: number,
+  provisionalReads: ProvisionalCashFinanceReads | null = null
 ): CurrentCashFinanceReading {
   const staleCutoffMs = nowMs - OWNER_DECISION_STALE_EVIDENCE_DAYS * DAY_MS;
   const cashState = asState(cash?.state);
@@ -99,22 +139,76 @@ export function currentCashFinanceReading(
   const known = worst(arbitrated, amendedUnsafe) ?? (financeAmendedLastKnown ?? null);
   // Readings exist but none is current: unverified figures are never treated as safe.
   const anyCurrent = (cashState !== null && cashAt !== null) || (financeState !== null && financeAt !== null);
-  const gateState = known === null ? null : anyCurrent ? known : worst(known, "AT_RISK");
-  // Which source decides the enforced state (for naming a block by its real cause).
+  const completedGate = known === null ? null : anyCurrent ? known : worst(known, "AT_RISK");
+  // Which completed source decides the enforced state (for naming a block by its real cause): Finance
+  // whenever the arbitrated state is Finance's and Cash flow's is not at least as severe (Finance alone,
+  // Cash flow superseded, or Finance strictly worse — in agreement or in conflict).
   const financeDecides =
-    gateState !== null && anyCurrent && (
+    completedGate !== null && anyCurrent && financeState !== null && arbitrated === financeState && (
+      cashState === null ||
       resolution.supersededSource === "cash" ||
-      (cashState === null && financeState !== null) ||
-      (resolution.conflicting && financeState !== null && cashState !== null && RANK[financeState] > RANK[cashState])
+      RANK[financeState] > RANK[cashState]
     );
   // The last Finance reading on since-amended figures decides it: not a current figure either.
   const fromAmended = amendedUnsafe !== null && (arbitrated === null || RANK[amendedUnsafe] > RANK[arbitrated]);
-  const gateDriver: CashFinanceGateDriver | null = gateState === null
+  const unverified = completedGate !== null && (!anyCurrent || fromAmended);
+  let gateSource: "cashflow" | "finance" | null = completedGate === null
     ? null
-    : !anyCurrent || fromAmended
+    : fromAmended || (!anyCurrent && cashState === null) || financeDecides
+      ? "finance"
+      : "cashflow";
+  let gateDriver: CashFinanceGateDriver | null = completedGate === null
+    ? null
+    : unverified
       ? "unverified"
       : financeDecides && finance?.driver === "profit"
         ? "finance_profit"
         : "cash";
-  return { ...resolution, cashState, financeState, financeAmendedLastKnown, gateState, gateDriver };
+  const sourceConfidence = (src: "cashflow" | "finance" | null) =>
+    src === "finance" ? unitConfidence(finance?.confidence) : src === "cashflow" ? unitConfidence(cash?.confidence) : null;
+  let gateConfidence: number | null = completedGate === null ? null : unverified ? capped(sourceConfidence(gateSource)) : sourceConfidence(gateSource);
+
+  // Provisional (in-progress) evidence: tightens only; never clears, relaxes or proves safety.
+  const provCash = asState(provisionalReads?.cash?.state);
+  const provFinance = asState(provisionalReads?.finance?.state);
+  const provisionalState = worst(provCash, provFinance);
+  let gateState = completedGate;
+  let provisional = false;
+  if (provisionalState !== null) {
+    const provSource: "cashflow" | "finance" = provFinance !== null && (provCash === null || RANK[provFinance] > RANK[provCash]) ? "finance" : "cashflow";
+    const provConfidence = capped(
+      provSource === "finance" ? unitConfidence(provisionalReads?.finance?.confidence) : unitConfidence(provisionalReads?.cash?.confidence)
+    );
+    if (completedGate === null) {
+      if (SAFE.has(provisionalState)) {
+        // An in-progress SAFE/WATCH alone is not evidence of safety.
+        gateState = "AT_RISK";
+        gateDriver = "unverified";
+      } else {
+        gateState = provisionalState;
+        gateDriver = provSource === "finance" && provisionalReads?.finance?.driver === "profit" ? "finance_profit" : "cash";
+      }
+      gateSource = provSource;
+      gateConfidence = provConfidence;
+      provisional = true;
+    } else if (RANK[provisionalState] > RANK[completedGate]) {
+      gateState = provisionalState;
+      gateDriver = provSource === "finance" && provisionalReads?.finance?.driver === "profit" ? "finance_profit" : "cash";
+      gateSource = provSource;
+      gateConfidence = provConfidence;
+      provisional = true;
+    }
+  }
+  return {
+    ...resolution,
+    cashState,
+    financeState,
+    financeAmendedLastKnown,
+    gateState,
+    gateDriver,
+    gateSource,
+    provisionalState,
+    provisional,
+    gateConfidence,
+  };
 }

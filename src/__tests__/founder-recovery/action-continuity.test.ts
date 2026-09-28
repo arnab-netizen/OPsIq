@@ -20,7 +20,7 @@ describe("action continuity", () => {
       { findingCode: "F2", recommendationCode: "R2", priorityScore: 40 },
     ];
     const prior = { id: "a1", findingCode: "F1", recommendationCode: "R1" };
-    const r = planWithContinuity(planned, [prior]);
+    const r = planWithContinuity(planned, [prior], null);
     expect(r.toCreate.map((a) => a.findingCode)).toEqual(["F2"]);
     expect(r.carried).toEqual([{ prior, planned: planned[0] }]);
   });
@@ -29,20 +29,20 @@ describe("action continuity", () => {
     const r = planWithContinuity([{ findingCode: "F1", recommendationCode: "R1" }], [
       { id: "a1", findingCode: "F1", recommendationCode: "R1" },
       { id: "a2", findingCode: "F1", recommendationCode: "R1" },
-    ]);
+    ], null);
     expect(r.carried.map((c) => c.prior.id)).toEqual(["a1", "a2"]);
     expect(r.toCreate).toHaveLength(0);
   });
 
   it("a different recommendation for the same finding is not a duplicate", () => {
-    const r = planWithContinuity([{ findingCode: "F1", recommendationCode: "R9" }], [{ id: "a1", findingCode: "F1", recommendationCode: "R1" }]);
+    const r = planWithContinuity([{ findingCode: "F1", recommendationCode: "R9" }], [{ id: "a1", findingCode: "F1", recommendationCode: "R1" }], null);
     expect(r.toCreate).toHaveLength(1);
     expect(r.carried).toHaveLength(0);
   });
 
   it("finding-only keys (recovery) match on finding code", () => {
     expect(continuityKey({ findingCode: "F1" })).toBe(continuityKey({ findingCode: "F1", recommendationCode: null }));
-    expect(planWithContinuity([{ findingCode: "F1" }], [{ id: "x", findingCode: "F1" }]).toCreate).toHaveLength(0);
+    expect(planWithContinuity([{ findingCode: "F1" }], [{ id: "x", findingCode: "F1" }], null).toCreate).toHaveLength(0);
   });
 
 });

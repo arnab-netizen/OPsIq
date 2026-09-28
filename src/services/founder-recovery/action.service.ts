@@ -15,8 +15,8 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
-import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
+import { enforceOwnerActionGates, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionTransition, classifyActionRequest } from "@/services/owner-mode/owner-action-transition";
 import { recoveryActionFindingCode } from "@/services/owner-home/owner-decision-candidates";
 
 export interface UpdateRecoveryActionInput {
@@ -39,6 +39,11 @@ export async function updateRecoveryAction(
     include: { finding: { select: { code: true } } },
   });
   if (!action) throw new NotFoundError("RecoveryAction", actionId);
+
+  // The request's own fields: an exact replay of the action's state is a no-op (whatever version it was
+  // sent with), and a completed or cancelled action's record is never rewritten (owner-action-transition.ts).
+  const request = { status: input.status, assignedToUserId: input.assignedToUserId, completionNotes: input.completionNotes, actualOutcome: input.actualOutcome };
+  if (classifyActionRequest(action, request) === "replay") return action;
 
   if (action.version !== input.version) {
     throw new ConflictError("Recovery action was modified by another request. Reload and retry.", {
@@ -92,24 +97,35 @@ export async function updateRecoveryAction(
   if (input.actualOutcome !== undefined) data.actualOutcome = input.actualOutcome;
   data.version = { increment: 1 };
 
-  // Compare-and-set on the version AND status the update was validated against: a concurrent change or a
-  // double submission never applies a stale transition twice.
-  const { row: updated, transitioned } = await applyGuardedActionUpdate<typeof action>(db.recoveryAction, {
-    entity: "RecoveryAction", actionId, workspaceId, expectedStatus: action.status, expectedVersion: action.version, toStatus: input.status, data,
+  // Compare-and-set on the version AND status the update was validated against, atomically with its audit
+  // events and the accepted gate assessment: a concurrent change or a double submission never applies a
+  // stale transition twice, and a lost race with different data is a conflict.
+  const { row: updated, transitioned } = await applyGuardedActionTransition<typeof action>({
+    model: "recoveryAction", entity: "RecoveryAction", actionId, workspaceId, expectedStatus: action.status, expectedVersion: action.version, data, request,
+    gateAssessment,
+    audits: (row) => [
+      {
+        eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
+        actorId,
+        workspaceId,
+        entityType: "RecoveryAction",
+        entityId: actionId,
+        payload: { status: row.status, previousStatus: action.status, assignedToUserId: row.assignedToUserId, changedFields: Object.keys(data).filter((k) => k !== "version") },
+      },
+      ...(row.status === "completed" && action.status !== "completed"
+        ? [{
+            eventName: AUDIT_EVENTS.RECOVERY_ACTION_COMPLETED,
+            actorId,
+            workspaceId,
+            entityType: "RecoveryAction",
+            entityId: actionId,
+            payload: { businessId: row.businessId, cycleId: row.cycleId },
+          }]
+        : []),
+    ],
   });
   // An identical concurrent request already applied this transition: nothing more to record or trigger.
   if (!transitioned) return updated;
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
-    actorId,
-    workspaceId,
-    entityType: "RecoveryAction",
-    entityId: actionId,
-    payload: { status: updated.status, assignedToUserId: updated.assignedToUserId },
-  });
-  // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
-  if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
 
   // Mandatory adaptive re-evaluation (CLAUDE.md): a completed recovery
   // action is exactly the "failed implementation" / "resolved critical
@@ -119,14 +135,6 @@ export async function updateRecoveryAction(
   // and was never wired to it -- this closes that gap without changing any
   // other behavior.
   if (updated.status === "completed") {
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.RECOVERY_ACTION_COMPLETED,
-      actorId,
-      workspaceId,
-      entityType: "RecoveryAction",
-      entityId: actionId,
-      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
-    });
     try {
       const latestSnapshot = await db.ownerMetricSnapshot.findFirst({
         where: { businessId: updated.businessId, workspaceId, periodEnd: { lte: new Date() } },

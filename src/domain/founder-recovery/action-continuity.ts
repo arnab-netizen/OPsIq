@@ -40,7 +40,22 @@ export function continuityKey(a: ContinuityKeyed): string {
  */
 export interface ContinuityPeriods<P> {
   current: Date | null;
+  /**
+   * Whether the NEW cycle's evidence is completed, effective evidence (completedEvidencePeriod): its period
+   * has ended by now and (Finance) its snapshot has not been amended since. A cycle on in-progress, future
+   * or amended figures is never the current cycle, so it never becomes the owner of in-flight work.
+   */
+  currentCompleted: boolean;
   of: (prior: P) => Date | null;
+}
+
+/**
+ * Whether a snapshot is completed, effective evidence at `now` (see ContinuityPeriods.currentCompleted): its
+ * period has ended and it has not been superseded by an amendment.
+ */
+export function completedEvidencePeriod(snapshot: { periodEnd?: unknown; supersededById?: unknown } | null | undefined, now: Date): boolean {
+  const end = periodEndOf(snapshot?.periodEnd);
+  return end !== null && end.getTime() <= now.getTime() && !snapshot?.supersededById;
 }
 
 /**
@@ -51,12 +66,20 @@ export interface ContinuityPeriods<P> {
  * Back-fill: a diagnosis of an OLDER period (entered after a newer one) is historical diagnosis, not the
  * current issue. An engaged action attached to a cycle of a NEWER period than the new cycle is "held" —
  * it is neither re-attached to the historical cycle nor duplicated there (its continuity stays with the
- * current cycle it is on). Without `periods` every match is carried (the pre-existing behaviour).
+ * current cycle it is on).
+ *
+ * Not completed evidence (an in-progress or future period, or amended figures — `currentCompleted` false):
+ * the new cycle is never the owner of in-flight work. Every engaged match is "held" on its cycle, and the
+ * new cycle receives its own fresh proposals (so it has a full plan once its period ends); when it becomes
+ * current, the owner's engaged work continues from the older cycle by continuity key at read time (Owner
+ * Home and the domain dashboards), until a diagnosis of completed evidence carries it forward.
+ *
+ * `periods` is null only for Strategy, whose cycles are scenarios, not evidence periods.
  */
 export function planWithContinuity<T extends ContinuityKeyed, P extends ContinuityKeyed & { id: string }>(
   planned: readonly T[],
   engagedPrior: readonly P[],
-  periods?: ContinuityPeriods<P>
+  periods: ContinuityPeriods<P> | null
 ): { toCreate: T[]; carried: Array<{ prior: P; planned: T }>; held: Array<{ prior: P; planned: T }> } {
   const byKey = new Map<string, P[]>();
   for (const p of engagedPrior) {
@@ -71,9 +94,13 @@ export function planWithContinuity<T extends ContinuityKeyed, P extends Continui
   const toCreate: T[] = [];
   const carried: Array<{ prior: P; planned: T }> = [];
   const held: Array<{ prior: P; planned: T }> = [];
+  const notCompleted = periods !== null && !periods.currentCompleted;
   for (const a of planned) {
     const priors = byKey.get(continuityKey(a));
-    if (priors) for (const prior of priors) (newerThanCurrent(prior) ? held : carried).push({ prior, planned: a });
+    if (notCompleted) {
+      for (const prior of priors ?? []) held.push({ prior, planned: a });
+      toCreate.push(a);
+    } else if (priors) for (const prior of priors) (newerThanCurrent(prior) ? held : carried).push({ prior, planned: a });
     else toCreate.push(a);
   }
   return { toCreate, carried, held };

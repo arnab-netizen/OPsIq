@@ -154,7 +154,7 @@ export async function runStrategyDiagnosis(
         where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
         select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true, title: true },
       });
-      const continuity = planWithContinuity(actionRows, engagedPrior);
+      const continuity = planWithContinuity(actionRows, engagedPrior, null);
       carriedForwardIds = [];
       // Re-attach each carried action to this cycle (ranking and wording re-evaluated) so every reader
       // of the latest cycle sees the owner's in-flight work; audited in the same transaction. The

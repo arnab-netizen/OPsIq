@@ -21,6 +21,7 @@ import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -494,6 +495,7 @@ export default function OwnerSalesPage() {
             </form>
           )}
 
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} />
           <DomainMainTargetContext domain="sales" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (

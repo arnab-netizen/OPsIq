@@ -16,8 +16,8 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { enforceOwnerActionGates, recordOwnerGateAssessment, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
-import { applyGuardedActionUpdate } from "@/services/owner-mode/owner-action-transition";
+import { enforceOwnerActionGates, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionTransition, classifyActionRequest } from "@/services/owner-mode/owner-action-transition";
 import type { MarketingActionUpdateInput } from "@/domain/owner-marketing/validation";
 
 export async function updateMarketingAction(
@@ -30,6 +30,11 @@ export async function updateMarketingAction(
     where: { id: actionId, workspaceId },
   });
   if (!action) throw new NotFoundError("OwnerMarketingAction", actionId);
+
+  // The request's own fields: an exact replay of the action's state is a no-op, and a completed or
+  // cancelled action's record is never rewritten (owner-action-transition.ts).
+  const request = { status: input.status, assignedTo: input.assignedTo, completionNotes: input.completionNotes, completionEvidence: input.completionEvidence };
+  if (classifyActionRequest(action, request) === "replay") return action;
 
   const data: Record<string, unknown> = {};
   let gateAssessment: OwnerGateAssessment | null = null;
@@ -68,39 +73,37 @@ export async function updateMarketingAction(
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
-  // Compare-and-set on the status the transition was validated against (a double submission or a
-  // concurrent change never applies a stale transition twice).
-  const { row: updated, transitioned } = await applyGuardedActionUpdate<typeof action>(db.ownerMarketingAction, {
-    entity: "OwnerMarketingAction", actionId, workspaceId, expectedStatus: action.status, toStatus: input.status, data,
+  // Compare-and-set on the status the transition was validated against, atomically with its audit events
+  // and the accepted gate assessment (a double submission never applies twice; a lost race with different
+  // data is a conflict, never reported as applied).
+  const { row: updated, transitioned } = await applyGuardedActionTransition<typeof action>({
+    model: "ownerMarketingAction", entity: "OwnerMarketingAction", actionId, workspaceId, expectedStatus: action.status, data, request,
+    gateAssessment,
+    audits: (row) => [
+      {
+        eventName: AUDIT_EVENTS.OWNER_MARKETING_ACTION_UPDATED,
+        actorId,
+        workspaceId,
+        entityType: "OwnerMarketingAction",
+        entityId: actionId,
+        payload: { status: row.status, previousStatus: action.status, assignedTo: row.assignedTo, changedFields: Object.keys(data) },
+      },
+      ...(row.status === "completed" && action.status !== "completed"
+        ? [{
+            eventName: AUDIT_EVENTS.OWNER_MARKETING_ACTION_COMPLETED,
+            actorId,
+            workspaceId,
+            entityType: "OwnerMarketingAction",
+            entityId: actionId,
+            payload: { businessId: row.businessId, cycleId: row.cycleId },
+          }]
+        : []),
+    ],
   });
   // An identical concurrent request already applied this transition: nothing more to record or trigger.
   if (!transitioned) return updated;
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_MARKETING_ACTION_UPDATED,
-    actorId,
-    workspaceId,
-    entityType: "OwnerMarketingAction",
-    entityId: actionId,
-    payload: { status: updated.status, assignedTo: updated.assignedTo },
-  });
-  // The gate's Owner-mode assessment is recorded only now that the transition is validated and saved.
-  if (gateAssessment) await recordOwnerGateAssessment(gateAssessment);
-
-  // On action completion, emit a dedicated event and trigger re-diagnosis from
-  // latest snapshot -- matches every other owner-domain action service
-  // (finance/cashflow/sales/operations/sop/strategy); marketing was missing
-  // this mechanism entirely.
   if (updated.status === "completed") {
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.OWNER_MARKETING_ACTION_COMPLETED,
-      actorId,
-      workspaceId,
-      entityType: "OwnerMarketingAction",
-      entityId: actionId,
-      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
-    });
-
     try {
       const latestSnapshot = await db.ownerMarketingSnapshot.findFirst({
         where: { businessId: updated.businessId, workspaceId, periodEnd: { lte: new Date() } },

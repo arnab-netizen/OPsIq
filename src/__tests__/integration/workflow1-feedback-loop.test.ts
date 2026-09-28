@@ -117,7 +117,9 @@ function makeDbMock(): DbMock {
     updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     create: vi.fn().mockResolvedValue(BASE_VERIFICATION),
   });
-  return {
+  const mock = {
+    // The transition, its audit and the gate assessment commit in one transaction (the mock runs it inline).
+    $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(mock)),
     ownerFinanceAction: makeTable(BASE_ACTION, { ...BASE_ACTION, status: "completed" }),
     ownerFinanceCycle: { findFirst: vi.fn().mockResolvedValue({ snapshotId: "snap-1" }) },
     ownerFinancialSnapshot: { findFirst: vi.fn().mockResolvedValue(BASE_SNAPSHOT) },
@@ -140,7 +142,8 @@ function makeDbMock(): DbMock {
     ownerStrategyCycle: { findFirst: vi.fn().mockResolvedValue(null) },
     ownerStrategySnapshot: { findFirst: vi.fn().mockResolvedValue(BASE_SNAPSHOT) },
     ownerStrategyVerification: { create: vi.fn().mockResolvedValue(BASE_VERIFICATION) },
-  } as unknown as DbMock;
+  };
+  return mock as unknown as DbMock;
 }
 
 let db: DbMock;

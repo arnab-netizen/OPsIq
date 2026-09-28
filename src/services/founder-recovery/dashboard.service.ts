@@ -11,7 +11,7 @@ import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-contin
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "./business.service";
-import { CURRENT_RECOVERY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_RECOVERY_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface RecoveryDashboardPayload {
   businesses: Array<{
@@ -24,6 +24,12 @@ export interface RecoveryDashboardPayload {
   selectedBusinessId: string | null;
   hasData: boolean;
   latestSnapshot: any | null;
+  /**
+   * Where `latestSnapshot`'s period sits (current-diagnosis-cycle.ts): "provisional" when it is the
+   * in-progress current period — shown as in progress, never as the completed reading this page's cycle is
+   * built on. A genuinely future snapshot is never returned.
+   */
+  latestSnapshotPeriodState: EvidencePeriodState | null;
   latestCycle: any | null;
   overdueActions: any[];
   cycleHistory: Array<{
@@ -72,6 +78,7 @@ export async function getRecoveryDashboard(
       selectedBusinessId: null,
       hasData: false,
       latestSnapshot: null,
+      latestSnapshotPeriodState: null,
       latestCycle: null,
       overdueActions: [],
       cycleHistory: [],
@@ -80,13 +87,16 @@ export async function getRecoveryDashboard(
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
+  const dashboardNow = new Date();
   const [latestSnapshot, latestCycleRow, cycles] = await Promise.all([
+    // The latest snapshot that has STARTED (the one the owner can diagnose): a genuinely future period is
+    // never shown; an in-progress one is labelled (latestSnapshotPeriodState).
     db.ownerMetricSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
+      where: { businessId: selectedBusinessId, workspaceId, periodStart: { lte: dashboardNow } },
       orderBy: { periodEnd: "desc" },
     }),
     db.recoveryCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(new Date()) },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(dashboardNow) },
       orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
       include: {
         snapshot: true,
@@ -161,6 +171,7 @@ export async function getRecoveryDashboard(
     selectedBusinessId,
     hasData: latestCycleRow !== null,
     latestSnapshot: latestSnapshot ?? null,
+    latestSnapshotPeriodState: latestSnapshot ? evidencePeriodState(latestSnapshot, dashboardNow) : null,
     latestCycle,
     overdueActions,
     cycleHistory: cycles.map((c: any) => ({

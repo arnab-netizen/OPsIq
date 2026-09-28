@@ -10,6 +10,7 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -349,6 +350,7 @@ export default function OwnerRecoveryPage() {
               load must never render "No metric snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} />
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
               {dashboard.latestSnapshot

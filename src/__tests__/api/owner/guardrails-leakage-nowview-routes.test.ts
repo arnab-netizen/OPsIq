@@ -58,6 +58,8 @@ vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
 
 vi.mock("@/services/owner-home/home.service", () => ({
   getOwnerHome: mocks.getOwnerHome,
+  // The route resolves the decision with the gate constraints it was resolved with (none in these fixtures).
+  resolveOwnerHome: async (...args: unknown[]) => ({ home: await (mocks.getOwnerHome as (...a: unknown[]) => unknown)(...args), gate: null }),
 }));
 
 // ─── Route imports (after mocks) ─────────────────────────────────────────────

@@ -145,6 +145,13 @@ const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<Ha
   if (!result.recipientFound) {
     return { status: "PARTIAL_FAILURE", summary: "No active workspace owner to receive overdue risk review alerts." };
   }
+  // A failed alert is never reported as a successful scan.
+  if (result.failed > 0) {
+    return {
+      status: "PARTIAL_FAILURE",
+      summary: `${result.failed} overdue risk review alert(s) could not be raised or resolved (${result.raised} raised, ${result.resolved} resolved).`,
+    };
+  }
   return { status: "SUCCESS" };
 };
 

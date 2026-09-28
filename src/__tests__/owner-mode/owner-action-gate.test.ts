@@ -136,7 +136,7 @@ describe("enforceOwnerActionGates", () => {
       eventName: "owner.gate_assessment_abstained",
       entityId: "act1",
       payload: expect.objectContaining({ code: "CANNOT_ASSESS_MARGIN_SAFETY", requiredData: expect.arrayContaining([expect.stringMatching(/revenue/)]) }),
-    }));
+    }), undefined);
     expect(emitAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_promotion_blocked" }));
   });
 
@@ -179,7 +179,7 @@ describe("enforceOwnerActionGates", () => {
     it("Owner matrix D — a GROW action with unknown margin: not falsely blocked (the shared margin contract), the Owner-mode abstention is recorded for its business", async () => {
       const assessment = await enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "in_progress", findingCode: "MKT_OPP_SCALE_WINNER" }, deps({ snapshot: null }) as never);
       await recordOwnerGateAssessment(assessment);
-      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained", payload: expect.objectContaining({ code: "CANNOT_ASSESS_MARGIN_SAFETY", businessId: "biz1" }) }));
+      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained", payload: expect.objectContaining({ code: "CANNOT_ASSESS_MARGIN_SAFETY", businessId: "biz1" }) }), undefined);
     });
     it("Owner matrix E — REPAIR / STABILISE / EVIDENCE actions in Finance, Sales or Marketing with unknown margin and unknown cash: never blocked by domain, nothing abstained", async () => {
       for (const [domain, findingCode] of [["sales", "SALES_DISCOUNT_DEPENDENCE"], ["finance", "FIN_INSOLVENT_RUNWAY"], ["marketing", "MKT_OPP_DATA_QUALITY"], ["cashflow", "CF_LOW_RUNWAY"]] as const) {
@@ -207,11 +207,11 @@ describe("enforceOwnerActionGates", () => {
       const expiredCompliance = [{ kind: "licence", name: "Trade licence", expiresAt: new Date("2026-01-01") }];
       const d = deps({ snapshot: null, compliance: expiredCompliance });
       await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, d as never)).rejects.toBeInstanceOf(ConflictError);
-      expect(emitAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained" }));
+      expect(emitAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained" }), undefined);
       emitAuditEvent.mockClear();
       const assessment = await enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, deps({ snapshot: null }) as never);
       await recordOwnerGateAssessment(assessment);
-      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained", payload: expect.objectContaining({ businessId: "biz1" }) }));
+      expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_assessment_abstained", payload: expect.objectContaining({ businessId: "biz1" }) }), undefined);
     });
   });
 

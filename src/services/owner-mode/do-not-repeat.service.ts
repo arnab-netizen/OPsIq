@@ -10,12 +10,21 @@
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { evaluateDoNotRepeat, type DoNotRepeatMemory } from "@/domain/owner-mode/do-not-repeat";
-import { canonicalOwnerScopeDomain, consultingScopeKey, exactScopeKey, ownerDoNotRepeatApplies, ownerScopeLookupKeys, parseOwnerDnrKey } from "@/domain/owner-mode/do-not-repeat-scope";
+import { canonicalOwnerScopeDomain, consultingScopeKey, exactScopeKey, ownerDoNotRepeatApplies, ownerScopeKey, ownerScopeLookupKeys, parseOwnerDnrKey } from "@/domain/owner-mode/do-not-repeat-scope";
 import { ownerDomainLabel } from "@/domain/owner-spine/owner-decision";
 import type { OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
 import { MIN_CHANGED_CONTEXT_LENGTH } from "@/domain/owner-mode/decision-memory";
-import { appliesToBusiness } from "@/domain/owner-mode/owner-action-gate-policy";
+import { appliesToBusiness, evaluateOwnerActionGate, NO_OWNER_GATE_CONSTRAINTS, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
+import {
+  DNR_OWNER_OVERRIDE_MEMORY_TYPE,
+  DNR_OWNER_OVERRIDE_SOURCE_MODEL,
+  dnrOwnerOverrideKey,
+  dnrOwnerOverrideKeyPrefix,
+  dnrOwnerOverrideSourceId,
+  parseDnrOwnerOverride,
+  type DnrOwnerOverride,
+} from "@/domain/owner-mode/dnr-owner-override";
 
 interface DnrDb {
   recommendation: {
@@ -193,6 +202,50 @@ export async function checkDoNotRepeatForGuidance(
   };
 }
 
+/**
+ * The Owner Cockpit's do-not-repeat annotation for the canonical main target, derived from the SAME gate
+ * constraints the owner action gate enforces (loadOwnerGateConstraints: business attribution, the audited
+ * opt-out, lifted rules and this business's Owner overrides) — never a second lookup with its own rules.
+ *   - opted out, or no rule of the target's owner domain in force → no annotation;
+ *   - `holdsBackTarget` only when the gate itself holds that work: the gate refuses the target's step for a
+ *     do-not-repeat rule, or the target IS the review of a rule holding held work. A step the gate allows is
+ *     never claimed to be held (an area rule is then shown as history only).
+ * Every rule annotated is one the Cockpit's do-not-repeat panel lists for that business.
+ */
+export function ownerDnrAnnotationFromGate(
+  gate: OwnerGateConstraints | null | undefined,
+  target: { source: string; domain: string; findingId: string | null; findingCode: string; intent: OwnerTargetIntent | null } | null
+): DoNotRepeatAnnotation | null {
+  if (!gate || gate.optedOut || !target) return null;
+  const review = target.source === "safety_gate" && target.findingCode === "GATE_DO_NOT_REPEAT_REVIEW";
+  if (!review && target.source !== "domain_action" && target.source !== "survival_reading") return null;
+  const domain = canonicalOwnerScopeDomain(target.domain);
+  if (!domain) return null;
+  const rules = gate.doNotRepeat.filter((r) => r.domain === domain);
+  const rule =
+    (target.findingId ? rules.find((r) => r.match === "exact" && r.findingId === target.findingId) : undefined) ??
+    rules.find((r) => r.match === "broad") ??
+    (review ? rules[0] : undefined);
+  if (!rule) return null;
+  const verdict = review
+    ? null
+    : evaluateOwnerActionGate(
+        { ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: gate.doNotRepeat },
+        { domain: target.domain, intent: target.intent, findingId: target.findingId, findingCode: target.findingCode }
+      );
+  const holdsBackTarget = review || (verdict !== null && !verdict.allowed && verdict.code === "DO_NOT_REPEAT_BLOCKED");
+  return {
+    blocked: true,
+    legacyMatch: false,
+    areaOnly: rule.match === "broad",
+    holdsBackTarget,
+    priorActionSummary: rule.summary ?? "",
+    blockedReason: rule.reason ?? "",
+    changedContextCondition: null,
+    matchedScope: rule.memoryKey ?? ownerScopeKey(rule.domain) ?? rule.domain,
+  };
+}
+
 export interface RecordDoNotRepeatInput {
   workspaceId: string;
   businessId: string;
@@ -236,7 +289,46 @@ export async function recordDoNotRepeat(input: RecordDoNotRepeatInput, injected?
   return created.id;
 }
 
-// ─── Owner-mode rules: list and changed-context override ────────────────────
+// ─── Owner-mode rules: list and the business-scoped Owner override ─────────
+
+/** Minimal operating-memory reader for the Owner overrides (dnr-owner-override.ts). */
+export interface DnrOwnerOverrideDb {
+  operatingMemoryEntry?: {
+    findMany(args: {
+      where: Record<string, unknown>;
+      select: { memoryType: true; sourceId: true; key: true; data: true };
+    }): Promise<Array<{ memoryType: string; sourceId: string; key: string; data: unknown }>>;
+  };
+}
+
+/**
+ * The Owner overrides recorded for ONE business, by rule id (current, unexpired, valid entries only). Read
+ * by the owner gate loader and the rules list — never by Formal Consulting Mode.
+ */
+export async function loadOwnerDnrOverrides(
+  db: DnrOwnerOverrideDb,
+  workspaceId: string,
+  businessId: string | null,
+  now: Date
+): Promise<Map<string, DnrOwnerOverride>> {
+  const out = new Map<string, DnrOwnerOverride>();
+  if (!businessId || !db.operatingMemoryEntry) return out;
+  const rows = await db.operatingMemoryEntry.findMany({
+    where: {
+      workspaceId,
+      memoryType: DNR_OWNER_OVERRIDE_MEMORY_TYPE,
+      supersededById: null,
+      key: { startsWith: dnrOwnerOverrideKeyPrefix(businessId) },
+      OR: [{ validUntil: null }, { validUntil: { gt: now } }],
+    },
+    select: { memoryType: true, sourceId: true, key: true, data: true },
+  });
+  for (const r of rows) {
+    const o = parseDnrOwnerOverride(r, businessId);
+    if (o) out.set(o.ruleId, o);
+  }
+  return out;
+}
 
 export interface OwnerDoNotRepeatRuleView {
   id: string;
@@ -244,8 +336,13 @@ export interface OwnerDoNotRepeatRuleView {
   memoryKey: string;
   summary: string;
   reason: string;
-  /** The owner's recorded account of what has changed; null while the rule still holds work back. */
+  /**
+   * What has changed, as recorded for THIS business in Owner Mode (the Owner override), or on the rule itself
+   * by its originating workflow; null while the rule still holds this business's work back.
+   */
   changedContextExplanation: string | null;
+  /** Whether the Owner override for this business is what lifted it (vs the rule's own recorded change). */
+  ownerOverride: boolean;
   /** What the rule holds back, in owner words (from the one scope taxonomy). */
   holds: string;
   createdAt: string;
@@ -259,111 +356,159 @@ function dnrHoldsText(memoryKey: string): string {
   return parsed.match === "exact" ? `Repeating that specific ${area} step` : `New growth steps in ${area}`;
 }
 
-/**
- * The active blocking do-not-repeat rules that apply to one business — the same applicability the owner
- * action gate uses (appliesToBusiness: its own rules, and business-less rules only when it is the
- * workspace's sole real business). The business must be a business of this workspace.
- */
-export async function listOwnerDoNotRepeatRules(workspaceId: string, businessId: string): Promise<OwnerDoNotRepeatRuleView[]> {
+type RuleRow = { id: string; businessId: string | null; memoryKey: string; summary: string; reason: string; changedContextExplanation: string | null; createdAt: Date };
+
+function ruleView(r: RuleRow, override: DnrOwnerOverride | null): OwnerDoNotRepeatRuleView {
+  const own = r.changedContextExplanation && r.changedContextExplanation.trim() ? r.changedContextExplanation : null;
+  return {
+    id: r.id,
+    businessId: r.businessId,
+    memoryKey: r.memoryKey,
+    summary: r.summary,
+    reason: r.reason,
+    changedContextExplanation: own ?? override?.reason ?? null,
+    ownerOverride: own === null && override !== null,
+    holds: dnrHoldsText(r.memoryKey),
+    createdAt: r.createdAt.toISOString(),
+  };
+}
+
+/** Whether a rule can be lifted through the Owner path at all: an owner-domain key (parseOwnerDnrKey). */
+function ownerOverridable(memoryKey: string): boolean {
+  return parseOwnerDnrKey(memoryKey) !== null;
+}
+
+async function ownerBusinessContext(workspaceId: string, businessId: string) {
   const { db } = await import("@/lib/db");
   const business = await db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId }, select: { id: true } });
   if (!business) throw new NotFoundError("OwnerBusiness", businessId);
-  const [rules, real] = await Promise.all([
+  const real = await db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 });
+  return { db, soleRealBusinessId: real.length === 1 ? real[0].id : null };
+}
+
+/**
+ * The active blocking do-not-repeat rules the Owner can act on for one business: rules attributable to it
+ * (appliesToBusiness — the owner gate's own applicability: its own rules, and business-less rules only when
+ * it is the workspace's sole real business) whose key is an owner-domain key (Consulting-only keys are
+ * never listed: the Owner path cannot lift them). Each carries this business's Owner override, if any.
+ */
+export async function listOwnerDoNotRepeatRules(workspaceId: string, businessId: string): Promise<OwnerDoNotRepeatRuleView[]> {
+  const { db, soleRealBusinessId } = await ownerBusinessContext(workspaceId, businessId);
+  const [rules, overrides] = await Promise.all([
     db.ownerDoNotRepeatRule.findMany({
       where: { workspaceId, active: true, blocksRepetition: true, OR: [{ businessId }, { businessId: null }] },
       orderBy: { createdAt: "desc" },
       select: { id: true, businessId: true, memoryKey: true, summary: true, reason: true, changedContextExplanation: true, createdAt: true },
     }),
-    db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 }),
+    loadOwnerDnrOverrides(db as unknown as DnrOwnerOverrideDb, workspaceId, businessId, new Date()),
   ]);
-  const soleRealBusinessId = real.length === 1 ? real[0].id : null;
-  return rules
-    .filter((r: { businessId: string | null }) => appliesToBusiness(r.businessId, businessId, soleRealBusinessId))
-    .map((r: { id: string; businessId: string | null; memoryKey: string; summary: string; reason: string; changedContextExplanation: string | null; createdAt: Date }) => ({
-      id: r.id,
-      businessId: r.businessId,
-      memoryKey: r.memoryKey,
-      summary: r.summary,
-      reason: r.reason,
-      changedContextExplanation: r.changedContextExplanation,
-      holds: dnrHoldsText(r.memoryKey),
-      createdAt: r.createdAt.toISOString(),
-    }));
+  return (rules as RuleRow[])
+    .filter((r) => appliesToBusiness(r.businessId, businessId, soleRealBusinessId) && ownerOverridable(r.memoryKey))
+    .map((r) => ruleView(r, overrides.get(r.id) ?? null));
 }
 
-export interface RecordDoNotRepeatChangedContextInput {
+export interface RecordOwnerDnrOverrideInput {
   workspaceId: string;
+  businessId: string;
   ruleId: string;
   actorId: string;
-  explanation: string;
+  reason: string;
+}
+
+/** Why an Owner override was refused, as a stable code the Owner UI maps to its own actionable text. */
+export type OwnerDnrOverrideRefusal = "REASON_TOO_SHORT" | "RULE_INACTIVE" | "ALREADY_RECORDED";
+export class OwnerDnrOverrideRefusedError extends ValidationError {
+  constructor(readonly refusal: OwnerDnrOverrideRefusal, message: string) {
+    super(message);
+    this.name = "OwnerDnrOverrideRefusedError";
+  }
 }
 
 /**
- * Record what has changed since a do-not-repeat rule was set, on that exact rule. This is the override
- * the owner action gate and the guidance annotation already honour (changedContextExplanation) — no
- * second rule engine. Governed:
- *   - the exact rule, in this workspace; a rule recorded for a business must belong to a business of this
- *     workspace;
- *   - only an active, blocking rule without a recorded change (an explanation is never silently replaced:
- *     the same text again is idempotent, a different one is refused);
- *   - a meaningful reason (at least MIN_CHANGED_CONTEXT_LENGTH characters after trimming — the decision
- *     memory's repeat-guard minimum);
- *   - a compare-and-set on `changedContextExplanation: null` with the audit event (old → new) in the same
- *     transaction. The owner decision is resolved on read, so the next read reflects the override.
+ * Record, for Owner Mode of ONE business, what has changed since a do-not-repeat rule was set (Decision 3).
+ * The shared rule row is never modified, so Formal Consulting Mode's semantics are unchanged. Governed:
+ *   - the business belongs to the workspace; the rule is in the workspace, active, blocking, an
+ *     owner-domain rule (Consulting-only keys cannot be lifted here) and attributable to that business
+ *     (appliesToBusiness) — a rule of another business, or a business-less rule in a multi-business
+ *     workspace, is refused (never silently lifted);
+ *   - a meaningful reason (MIN_CHANGED_CONTEXT_LENGTH characters after trimming);
+ *   - append-only: an override already recorded for this rule and business is never replaced — the same
+ *     text again is idempotent, a different one is refused; a concurrent duplicate resolves the same way;
+ *   - the override fact and its audit event are written in one transaction.
  */
-export async function recordDoNotRepeatChangedContext(input: RecordDoNotRepeatChangedContextInput): Promise<OwnerDoNotRepeatRuleView> {
-  const { db } = await import("@/lib/db");
-  const explanation = input.explanation.trim();
-  if (explanation.length < MIN_CHANGED_CONTEXT_LENGTH) {
-    throw new ValidationError(`Describe what has changed in at least ${MIN_CHANGED_CONTEXT_LENGTH} characters.`);
+export async function recordOwnerDnrOverride(input: RecordOwnerDnrOverrideInput): Promise<OwnerDoNotRepeatRuleView> {
+  const reason = input.reason.trim();
+  if (reason.length < MIN_CHANGED_CONTEXT_LENGTH) {
+    throw new OwnerDnrOverrideRefusedError("REASON_TOO_SHORT", `Describe what has changed in at least ${MIN_CHANGED_CONTEXT_LENGTH} characters.`);
   }
-  const rule = await db.ownerDoNotRepeatRule.findFirst({
+  const { db, soleRealBusinessId } = await ownerBusinessContext(input.workspaceId, input.businessId);
+  const rule = (await db.ownerDoNotRepeatRule.findFirst({
     where: { id: input.ruleId, workspaceId: input.workspaceId },
     select: { id: true, businessId: true, memoryKey: true, summary: true, reason: true, changedContextExplanation: true, active: true, blocksRepetition: true, createdAt: true },
-  });
-  if (!rule) throw new NotFoundError("OwnerDoNotRepeatRule", input.ruleId);
-  if (rule.businessId) {
-    const business = await db.ownerBusiness.findFirst({ where: { id: rule.businessId, workspaceId: input.workspaceId }, select: { id: true } });
-    if (!business) throw new NotFoundError("OwnerDoNotRepeatRule", input.ruleId);
+  })) as (RuleRow & { active: boolean; blocksRepetition: boolean }) | null;
+  if (!rule || !appliesToBusiness(rule.businessId, input.businessId, soleRealBusinessId) || !ownerOverridable(rule.memoryKey)) {
+    throw new NotFoundError("OwnerDoNotRepeatRule", input.ruleId);
   }
-  const view = (changed: string | null): OwnerDoNotRepeatRuleView => ({
-    id: rule.id, businessId: rule.businessId, memoryKey: rule.memoryKey, summary: rule.summary, reason: rule.reason,
-    changedContextExplanation: changed, holds: dnrHoldsText(rule.memoryKey), createdAt: rule.createdAt.toISOString(),
-  });
   if (!rule.active || !rule.blocksRepetition) {
-    throw new ValidationError("This do-not-repeat rule is no longer active, so it holds nothing back.");
+    throw new OwnerDnrOverrideRefusedError("RULE_INACTIVE", "This do-not-repeat rule is no longer active, so it holds nothing back.");
   }
-  if (rule.changedContextExplanation !== null && rule.changedContextExplanation.trim() !== "") {
-    if (rule.changedContextExplanation.trim() === explanation) return view(rule.changedContextExplanation);
-    throw new ValidationError("What has changed was already recorded on this rule.");
-  }
+  const sourceId = dnrOwnerOverrideSourceId(rule.id, input.businessId);
+  const existing = async () =>
+    (await loadOwnerDnrOverrides(db as unknown as DnrOwnerOverrideDb, input.workspaceId, input.businessId, new Date())).get(rule.id) ?? null;
+  const settle = (o: DnrOwnerOverride) => {
+    if (o.reason.trim() === reason) return ruleView(rule, o);
+    throw new OwnerDnrOverrideRefusedError("ALREADY_RECORDED", "What has changed was already recorded on this rule for this business. It cannot be replaced.");
+  };
+  const prior = await existing();
+  if (prior) return settle(prior);
 
-  await db.$transaction(async (tx: import("@/generated/prisma/client").Prisma.TransactionClient) => {
-    const res = await tx.ownerDoNotRepeatRule.updateMany({
-      where: { id: rule.id, workspaceId: input.workspaceId, active: true, changedContextExplanation: rule.changedContextExplanation },
-      data: { changedContextExplanation: explanation },
+  const recordedAt = new Date().toISOString();
+  const override: DnrOwnerOverride = { ruleId: rule.id, businessId: input.businessId, actorId: input.actorId, reason, recordedAt };
+  try {
+    await db.$transaction(async (tx: import("@/generated/prisma/client").Prisma.TransactionClient) => {
+      // Version 1 only: the (workspace, type, source, version) unique key makes a concurrent duplicate fail
+      // here instead of superseding the first override.
+      await tx.operatingMemoryEntry.create({
+        data: {
+          workspaceId: input.workspaceId,
+          memoryType: DNR_OWNER_OVERRIDE_MEMORY_TYPE,
+          sourceModel: DNR_OWNER_OVERRIDE_SOURCE_MODEL,
+          sourceId,
+          version: 1,
+          key: dnrOwnerOverrideKey(rule.id, input.businessId),
+          summary: `Owner recorded what has changed for do-not-repeat rule "${rule.summary}"`.slice(0, 1000),
+          data: { ...override },
+        },
+      });
+      await emitAuditEvent(
+        {
+          workspaceId: input.workspaceId,
+          eventName: AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_CONTEXT_CHANGED,
+          actorId: input.actorId,
+          actorType: "user",
+          entityType: "owner_do_not_repeat_rule",
+          entityId: rule.id,
+          payload: {
+            scope: "owner_business_override",
+            ruleId: rule.id,
+            businessId: input.businessId,
+            ruleBusinessId: rule.businessId,
+            memoryKey: rule.memoryKey,
+            changedContextExplanation: reason,
+            recordedAt,
+          },
+        },
+        tx,
+      );
     });
-    if (res.count !== 1) {
+  } catch (err) {
+    // A concurrent request recorded the override first: same text → idempotent, different → refused.
+    if ((err as { code?: string })?.code === "P2002") {
+      const won = await existing();
+      if (won) return settle(won);
       throw new ConflictError("This rule was changed by another request. Reload and retry.", { ruleId: rule.id });
     }
-    await emitAuditEvent(
-      {
-        workspaceId: input.workspaceId,
-        eventName: AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_CONTEXT_CHANGED,
-        actorId: input.actorId,
-        actorType: "user",
-        entityType: "owner_do_not_repeat_rule",
-        entityId: rule.id,
-        payload: {
-          ruleId: rule.id,
-          businessId: rule.businessId,
-          memoryKey: rule.memoryKey,
-          previousChangedContextExplanation: rule.changedContextExplanation,
-          changedContextExplanation: explanation,
-        },
-      },
-      tx,
-    );
-  });
-  return view(explanation);
+    throw err;
+  }
+  return ruleView(rule, override);
 }

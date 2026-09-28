@@ -89,6 +89,9 @@ describe("one do-not-repeat scope taxonomy", () => {
   it("Now View reads the main target's own domain scope, never a class-derived area", () => {
     const src = readFileSync(join(ROOT, "src/services/owner-guidance/owner-now-view.service.ts"), "utf8");
     expect(src).not.toMatch(/IMPACT_AREA_BY_OWNER_CLASS/);
-    expect(src).toMatch(/checkDoNotRepeatForGuidance\([^)]*topActionIntent\)/);
+    // The annotation is derived from the gate constraints the decision was resolved with, for the main
+    // target's own domain and intent (never a class-derived area, never a second rule lookup).
+    expect(src).toMatch(/ownerDnrAnnotationFromGate\(options\?\.ownerGate \?\? null, \{[\s\S]*?domain: canonicalPrimary\.domain,[\s\S]*?intent: ownerTargetIntent\(canonicalPrimary\)/);
+    expect(src).not.toMatch(/checkDoNotRepeatForGuidance\(/);
   });
 });

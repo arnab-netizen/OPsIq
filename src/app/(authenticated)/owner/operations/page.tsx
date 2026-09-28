@@ -22,6 +22,7 @@ import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 import { formatHumanDate } from "@/lib/format-human-date";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -614,6 +615,7 @@ export default function OwnerOperationsPage() {
           )}
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} />
           <DomainMainTargetContext domain="operations" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (

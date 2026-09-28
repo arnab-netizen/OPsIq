@@ -43,10 +43,12 @@ import { ownerFindingIntent, type OwnerTargetIntent } from "@/domain/owner-spine
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { financeSurvivalDriver } from "@/domain/owner-spine/owner-decision";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
+import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
+import { loadOwnerDnrOverrides, type DnrOwnerOverrideDb } from "@/services/owner-mode/do-not-repeat.service";
 
 export { MATERIAL_ACTION_STATUSES, OWNER_MARGIN_ABSTENTION_CODE };
 
-interface ActionGateDb {
+interface ActionGateDb extends ProvisionalCashFinanceDb, DnrOwnerOverrideDb {
   clientAccount: PolicyDeps["db"]["clientAccount"];
   ownerBusiness: {
     findMany(args: { where: { workspaceId: string; isActive: true; isFixtureBusiness: false }; select: { id: true }; take: number }): Promise<Array<{ id: string }>>;
@@ -54,28 +56,33 @@ interface ActionGateDb {
   ownerDoNotRepeatRule: {
     findMany(args: {
       where: Record<string, unknown>;
-      select: { id: true; businessId: true; memoryKey: true; changedContextExplanation: true };
-    }): Promise<Array<{ id: string; businessId: string | null; memoryKey: string; changedContextExplanation: string | null }>>;
+      select: { id: true; businessId: true; memoryKey: true; summary: true; reason: true; changedContextExplanation: true };
+    }): Promise<Array<{ id: string; businessId: string | null; memoryKey: string; summary?: string; reason?: string; changedContextExplanation: string | null }>>;
   };
   ownerEquipment: {
     findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string; businessId: string | null }>>;
   };
   ownerFinanceCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date } } };
+      where: Record<string, unknown>;
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } }; findings: { select: { code: true } } };
-    }): Promise<{ survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null; findings?: Array<{ code: string }> } | null>;
+      select: Record<string, unknown>;
+    }): Promise<{
+      survivalState: string;
+      dataConfidenceScore?: number | null;
+      snapshot?: { periodStart?: Date; periodEnd: Date; supersededById: string | null } | null;
+      findings?: Array<{ code: string; severity?: string }>;
+    } | null>;
   };
   ownerCashflowCycle: {
     findFirst(args: {
-      where: { workspaceId: string; businessId: string; snapshot: { periodEnd: { lte: Date } } };
+      where: Record<string, unknown>;
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
-    }): Promise<{ cashflowState: string; snapshot?: { periodEnd: Date } | null } | null>;
+      select: Record<string, unknown>;
+    }): Promise<{ cashflowState: string; dataConfidenceScore?: number | null; snapshot?: { periodStart?: Date; periodEnd: Date } | null } | null>;
   };
   ownerFinancialSnapshot: {
-    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true }>): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true; dataConfidenceScore: true }>): Promise<{ revenue: number | null; costOfGoods: number | null; dataConfidenceScore?: number | null } | null>;
   };
   ownerComplianceItem: {
     findMany(args: { where: Record<string, unknown>; select: { businessId: true; kind: true; name: true; expiresAt: true } }): Promise<Array<{ businessId: string | null; kind: string; name: string; expiresAt: Date | null }>>;
@@ -91,6 +98,11 @@ function bizScope(workspaceId: string, businessId: string | null, extra: Record<
   return businessId
     ? { workspaceId, OR: [{ businessId }, { businessId: null }], ...extra }
     : { workspaceId, ...extra };
+}
+
+/** A 0..100 data-confidence score as 0..1 (null when absent). */
+function unitScore(v: number | null | undefined): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v / 100)) : null;
 }
 
 export interface OwnerActionGateDeps {
@@ -118,10 +130,10 @@ export async function loadOwnerGateConstraints(
   const scope = businessId ? { workspaceId, businessId } : null;
   // Current evidence only: a period that has not ended by `now` is never the current reading.
   const cycleWhere = scope ? { ...scope, ...currentEvidenceWhere(now) } : null;
-  const [rules, fleet, finCycle, cashCycle, snap, complianceItems, realBusinesses] = await Promise.all([
+  const [rules, fleet, finCycle, cashCycle, snap, complianceItems, realBusinesses, provisional, overrides] = await Promise.all([
     deps.db.ownerDoNotRepeatRule.findMany({
       where: bizScope(workspaceId, businessId, { memoryKey: { startsWith: DNR_SCOPE_PREFIX }, blocksRepetition: true, active: true }),
-      select: { id: true, businessId: true, memoryKey: true, changedContextExplanation: true },
+      select: { id: true, businessId: true, memoryKey: true, summary: true, reason: true, changedContextExplanation: true },
     }),
     deps.db.ownerEquipment.findMany({
       where: bizScope(workspaceId, businessId),
@@ -131,42 +143,59 @@ export async function loadOwnerGateConstraints(
       ? deps.db.ownerFinanceCycle.findFirst({
           where: cycleWhere,
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } },
+          select: {
+            survivalState: true, dataConfidenceScore: true,
+            snapshot: { select: { periodStart: true, periodEnd: true, supersededById: true } },
+            findings: { select: { code: true, severity: true } },
+          },
         })
       : Promise.resolve(null),
     cycleWhere
-      ? deps.db.ownerCashflowCycle.findFirst({ where: cycleWhere, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, snapshot: { select: { periodEnd: true } } } })
+      ? deps.db.ownerCashflowCycle.findFirst({
+          where: cycleWhere,
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { cashflowState: true, dataConfidenceScore: true, snapshot: { select: { periodStart: true, periodEnd: true } } },
+        })
       : Promise.resolve(null),
     scope
-      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true }, now))
+      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true, dataConfidenceScore: true }, now))
       : Promise.resolve(null),
     deps.db.ownerComplianceItem.findMany({
       where: bizScope(workspaceId, businessId, { status: "active" }),
       select: { businessId: true, kind: true, name: true, expiresAt: true },
     }),
     deps.db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 }),
+    // The in-progress current period (provisional): may only tighten the cash/finance state.
+    scope ? loadProvisionalCashFinance(deps.db, scope, now) : Promise.resolve(null),
+    // This business's Owner overrides (Decision 3): lift a rule for Owner Mode of this business only.
+    loadOwnerDnrOverrides(deps.db, workspaceId, businessId, now),
   ]);
   const soleRealBusinessId = realBusinesses.length === 1 ? realBusinesses[0].id : null;
   const applies = (rowBusinessId: string | null) => appliesToBusiness(rowBusinessId, businessId, soleRealBusinessId);
 
-  // Do-not-repeat memories without a changed-context override, parsed through the ONE scope taxonomy.
+  // Do-not-repeat memories attributable to this business, parsed through the ONE scope taxonomy, minus those
+  // lifted: by the rule's own recorded change, or by this business's Owner override (never another's).
   const doNotRepeat: OwnerGateDoNotRepeatRule[] = [];
   for (const r of rules) {
     if (!applies(r.businessId)) continue;
     if (r.changedContextExplanation && r.changedContextExplanation.trim()) continue;
+    if (overrides.has(r.id)) continue;
     const parsed = parseOwnerDnrKey(r.memoryKey);
-    if (parsed) doNotRepeat.push({ id: r.id, ...parsed });
+    if (parsed) doNotRepeat.push({ id: r.id, ...parsed, memoryKey: r.memoryKey, summary: r.summary ?? null, reason: r.reason ?? null });
   }
 
   // The ONE current cash/finance reading (current-cash-finance-reading.ts): the current diagnosis cycles,
   // arbitrated by evidence period; an amended-but-undiagnosed unsafe Finance reading still counts until
   // it is re-diagnosed; figures that are not current are never safe. No reading at all → nothing to enforce.
   const reading = currentCashFinanceReading(
-    cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
-    finCycle ? { state: finCycle.survivalState, snapshot: finCycle.snapshot, driver: financeSurvivalDriver(finCycle.findings) } : null,
-    now.getTime()
+    cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot, confidence: unitScore(cashCycle.dataConfidenceScore) } : null,
+    finCycle
+      ? { state: finCycle.survivalState, snapshot: finCycle.snapshot, driver: financeSurvivalDriver(finCycle.findings), confidence: unitScore(finCycle.dataConfidenceScore) }
+      : null,
+    now.getTime(),
+    provisional
   );
-  const basis = reading.conflicting
+  const basis = reading.conflicting && !reading.provisional
     ? " (Cash flow and Finance disagree and neither is more current; the worse reading applies until they are reconciled)"
     : "";
 
@@ -175,8 +204,16 @@ export async function loadOwnerGateConstraints(
     businessScoped: businessId !== null,
     doNotRepeat,
     capacity: capacityConstraint(fleet.filter((e) => applies(e.businessId)), now),
-    cash: { gateState: (reading.gateState as FinancialHealthState | null) ?? null, basis, driver: reading.gateDriver },
+    cash: {
+      gateState: (reading.gateState as FinancialHealthState | null) ?? null,
+      basis,
+      driver: reading.gateDriver,
+      confidence: reading.gateConfidence,
+      provisional: reading.provisional,
+      source: reading.gateSource,
+    },
     grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
+    grossMarginConfidence: unitScore(snap?.dataConfidenceScore),
     expiredCompliance: expiredComplianceFor(complianceItems, businessId, soleRealBusinessId, now),
   };
 }
@@ -228,7 +265,7 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
   });
   if (!MATERIAL_ACTION_STATUSES.has(input.toStatus)) return allowed(null);
   const constraints = await loadOwnerGateConstraints(input.workspaceId, input.businessId, injected);
-  const verdict = evaluateOwnerActionGate(constraints, { domain: input.domain, intent: ownerActionGateIntent(input), findingId: input.findingId ?? null });
+  const verdict = evaluateOwnerActionGate(constraints, { domain: input.domain, intent: ownerActionGateIntent(input), findingId: input.findingId ?? null, findingCode: input.findingCode ?? null });
   if (!verdict.allowed) {
     await emitAuditEvent({
       workspaceId: input.workspaceId,
@@ -244,10 +281,10 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
 }
 
 /**
- * Record an allowed transition's Owner-mode margin abstention. Called by the action service AFTER its
- * update is validated and saved, alongside its own update audit — never before the write.
+ * Record an allowed transition's Owner-mode margin abstention. Recorded with the action's own update, in the
+ * same transaction (applyGuardedActionTransition) — never before the write, never without it.
  */
-export async function recordOwnerGateAssessment(assessment: OwnerGateAssessment): Promise<void> {
+export async function recordOwnerGateAssessment(assessment: OwnerGateAssessment, tx?: Parameters<typeof emitAuditEvent>[1]): Promise<void> {
   if (!assessment.marginAbstention) return;
   await emitAuditEvent({
     workspaceId: assessment.workspaceId,
@@ -262,5 +299,5 @@ export async function recordOwnerGateAssessment(assessment: OwnerGateAssessment)
       code: OWNER_MARGIN_ABSTENTION_CODE,
       requiredData: assessment.marginAbstention,
     },
-  });
+  }, tx);
 }

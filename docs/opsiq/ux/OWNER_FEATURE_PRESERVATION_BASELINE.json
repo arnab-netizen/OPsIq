@@ -482,7 +482,7 @@
         "src/services/owner-home/owner-decision-candidates.ts",
         "src/__tests__/owner-decision/r7-canonical-blockers.test.ts"
       ],
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 5
     },
     {
       "route": "/owner/cockpit",
@@ -1043,7 +1043,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/feedback",
@@ -1912,7 +1912,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 5
     },
     {
       "route": "/owner/now",
@@ -2263,7 +2263,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 8
     },
     {
       "route": "/owner",
@@ -2443,7 +2443,8 @@
         "src/services/workspace/employee-lifecycle.service.ts",
         "src/__tests__/owner-decision/priorities-consulting-decisions.test.tsx",
         "src/__tests__/owner-decision/r7-canonical-blockers.test.ts",
-        "src/__tests__/owner-decision/r7-remediation.db.test.ts"
+        "src/__tests__/owner-decision/r7-remediation.db.test.ts",
+        "src/__tests__/owner-decision/r8-policies.test.ts"
       ],
       "componentTreeFileCount": 6
     },
@@ -2766,7 +2767,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 2
+      "componentTreeFileCount": 3
     },
     {
       "route": "/owner/risks/[id]",
@@ -3001,7 +3002,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 8
     },
     {
       "route": "/owner/start-here",
@@ -4502,7 +4503,7 @@
         "OWNER_MANAGE"
       ],
       "readOrWrite": "write",
-      "scope": "workspace-scoped",
+      "scope": "business-scoped",
       "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
@@ -8462,8 +8463,8 @@
       "sourceFile": "src/components/owner/OwnerDoNotRepeatPanel.tsx",
       "callSiteCount": 1,
       "businessIdBehavior": {
-        "category": "NO_EXPLICIT_BUSINESS_ID",
-        "note": "No businessId found in this call's URL or argument list."
+        "category": "BODY_BUSINESS_ID",
+        "note": "Inline object literal argument references `businessId` directly."
       },
       "failureBehavior": "NOT_VERIFIED",
       "responseUsage": "NOT_VERIFIED",
@@ -8553,12 +8554,15 @@
       "endpoint": "/api/owner/do-not-repeat/rules",
       "method": "GET",
       "sourceFile": "src/components/owner/OwnerDoNotRepeatPanel.tsx",
-      "callSiteCount": 1,
+      "callSiteCount": 2,
       "businessIdBehavior": {
         "category": "QUERY_BUSINESS_ID",
         "note": "Query string (direct)."
       },
-      "failureBehavior": "NOT_VERIFIED",
+      "failureBehavior": [
+        "NOT_VERIFIED",
+        "NOT_VERIFIED (a .then/.catch is chained but its exact null-safety shape wasn't recognized)"
+      ],
       "responseUsage": "NOT_VERIFIED",
       "fieldsConsumed": []
     }

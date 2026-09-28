@@ -37,7 +37,7 @@ export interface CurrentEffectiveSnapshotQuery<S extends SelectShape = SelectSha
   select: S;
 }
 
-export function currentEffectiveFinancialSnapshotQuery(scope: FinancialSnapshotScope): {
+export function currentEffectiveFinancialSnapshotQuery(scope: FinancialSnapshotScope, select?: undefined, now?: Date): {
   where: { workspaceId: string; businessId: string; supersededById: null; periodEnd: { lte: Date } };
   orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }];
 };

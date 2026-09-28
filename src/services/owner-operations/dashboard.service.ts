@@ -14,13 +14,19 @@ import { listBusinesses, getBusiness } from "@/services/founder-recovery/busines
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface OperationsDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
   selectedBusinessId: string | null;
   hasData: boolean;
   latestSnapshot: any | null;
+  /**
+   * Where `latestSnapshot`'s period sits (current-diagnosis-cycle.ts): "provisional" when it is the
+   * in-progress current period — shown as in progress, never as the completed reading this page's cycle is
+   * built on. A genuinely future snapshot is never returned.
+   */
+  latestSnapshotPeriodState: EvidencePeriodState | null;
   latestCycle: any | null;
   domainScore: {
     domain: "operations";
@@ -66,7 +72,7 @@ export async function getOperationsDashboard(
 
   if (!selectedBusinessId) {
     return {
-      businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
+      businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null, latestSnapshotPeriodState: null,
       latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
       cycleHistory: [],
     };
@@ -74,13 +80,16 @@ export async function getOperationsDashboard(
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
+  const dashboardNow = new Date();
   const [latestSnapshot, latestCycle, cycles] = await Promise.all([
+    // The latest snapshot that has STARTED (the one the owner can diagnose): a genuinely future period is
+    // never shown; an in-progress one is labelled (latestSnapshotPeriodState).
     db.ownerOperationsSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
+      where: { businessId: selectedBusinessId, workspaceId, periodStart: { lte: dashboardNow } },
       orderBy: { periodEnd: "desc" },
     }),
     db.ownerOperationsCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(new Date()) },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(dashboardNow) },
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,
@@ -181,11 +190,14 @@ export async function getOperationsDashboard(
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
+    latestSnapshotPeriodState: latestSnapshot ? evidencePeriodState(latestSnapshot, dashboardNow) : null,
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
-    missingCriticalData: latestSnapshot
-      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
+    // The missing data of the snapshot this page's (completed) cycle was diagnosed on — never an in-progress
+    // or other period's snapshot beside that cycle's scores and findings.
+    missingCriticalData: latestCycle?.snapshot
+      ? (Array.isArray(latestCycle.snapshot.missingCriticalData) ? (latestCycle.snapshot.missingCriticalData as string[]) : [])
       : [],
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

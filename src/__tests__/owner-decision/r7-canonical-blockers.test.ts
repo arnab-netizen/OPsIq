@@ -5,7 +5,7 @@
  *     Finance state → "Restore profitability" (Finance, profit class); figures that are not current →
  *     "Confirm current cash and Finance figures" (a data request) — a margin problem is never "Stabilise cash";
  *   - the do-not-repeat blocker routes to the rule's own control and is worded by what the rule matches;
- *   - a safety-gate blocker is the gate's recorded constraint: its confidence is never capped as provisional;
+ *   - a safety-gate blocker's confidence reflects its evidence (Round 8: recorded facts high, data-derived capped);
  *   - a held step says what holds it and what clears it;
  *   - change history: a tier change of one lever is one issue changing severity (never resolved + new);
  *     a diagnosis that could not measure never reports an issue as resolved;
@@ -92,23 +92,39 @@ describe("the do-not-repeat blocker routes to the rule and is worded by what it 
     expect(d.primaryTarget!.title).toMatch(/growth step$/);
   });
 
-  it("exact finding rule → 'that step' (it may hold any step for that finding, not only growth)", () => {
-    const repeat = cand({ domain: "sales", findingCode: "SALES_LOW_CONVERSION", title: "Retrain on follow-up", findingId: "f-1" });
+  it("exact finding rule on growth work → 'that step' (it may hold any step for that finding, not only growth)", () => {
+    const repeat = cand({ domain: "sales", findingCode: "SALES_OPP_WINBACK", title: "Win back lapsed customers", findingId: "f-1" });
     const g = gate({ doNotRepeat: [{ id: "r2", domain: "sales", match: "exact", findingId: "f-1" }] });
     const d = resolveOwnerDecision(input([repeat], g));
     expect(d.primaryTarget!.title).toBe("Review the earlier Sales result marked do-not-repeat before repeating that step");
     expect(d.primaryTarget!.targetRoute).toBe(OWNER_DNR_RULES_ROUTE);
   });
+
+  it("exact finding rule on work that answers a present problem → the problem stays visible, with the rule review as its step (Round 8)", () => {
+    const repeat = cand({ domain: "sales", findingCode: "SALES_LOW_CONVERSION", title: "Retrain on follow-up", findingId: "f-1" });
+    const g = gate({ doNotRepeat: [{ id: "r2", domain: "sales", match: "exact", findingId: "f-1" }] });
+    const d = resolveOwnerDecision(input([repeat], g));
+    expect(d.primaryTarget!.title).toBe("Retrain on follow-up: the planned step repeats one marked do-not-repeat — review that rule or choose a different response");
+    expect(d.primaryTarget!.priorityClass).toBe(classifyOwnerFindingCode("SALES_LOW_CONVERSION"));
+    expect(d.primaryTarget!.targetRoute).toBe(OWNER_DNR_RULES_ROUTE);
+  });
 });
 
-describe("a safety-gate blocker is the gate's recorded constraint", () => {
-  it("its confidence is never capped as provisional by business-wide data shortage", () => {
+describe("a safety-gate blocker's confidence reflects its evidence (Round 8, Decision 4)", () => {
+  it("a data-derived cash blocker is capped by business-wide data shortage and says so; an unknown source is never high", () => {
     const d = resolveOwnerDecision(input([scale], cashGate("cash"), {
       dataSufficiency: { status: "insufficient", lowestDataConfidenceScore: 20, lowConfidenceDomains: ["sales"], missingCriticalData: [] },
     }));
     expect(d.primaryTarget!.source).toBe("safety_gate");
+    expect(d.confidence.score).toBeLessThanOrEqual(40);
+    expect(d.confidence.reasons.join(" ")).toMatch(/provisional/);
+  });
+  it("a recorded fact (an expired obligation with a known expiry) is not capped", () => {
+    const d = resolveOwnerDecision(input([scale], gate({ expiredCompliance: { name: "Trade licence", kind: "licence" } }), {
+      dataSufficiency: { status: "insufficient", lowestDataConfidenceScore: 20, lowConfidenceDomains: ["sales"], missingCriticalData: [] },
+    }));
+    expect(d.primaryTarget!.findingCode).toBe("GATE_COMPLIANCE_EXPIRED");
     expect(d.confidence.score).toBe(100);
-    expect(d.confidence.reasons.join(" ")).not.toMatch(/provisional/);
   });
 });
 

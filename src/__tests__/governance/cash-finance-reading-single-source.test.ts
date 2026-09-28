@@ -12,8 +12,12 @@
  * it, never combine them and are outside this rule.
  *
  * Formal Consulting Mode's recommendation cash gate is NOT an Owner-Mode consumer: it keeps the
- * pre-consolidation semantics — both states go straight to the pure gate, which takes the worse of the two
- * (no source arbitration, no freshness preference). It is named here and pinned to exactly that shape.
+ * pre-consolidation worst-of semantics — per business, the worse of the two halves (no source arbitration,
+ * no freshness preference between them), each half failing SAFE when unverified (stale, amended) and the
+ * in-progress period only tightening (consultingBusinessEvidenceState). It is named here and pinned to that shape.
+ *
+ * The provisional loader (provisional-cash-finance.ts) reads both sources' in-progress readings only to hand
+ * them to the shared reading (and to the Consulting gate): it combines nothing itself.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
@@ -48,8 +52,17 @@ const stripComments = (src: string) =>
 
 /** Consulting Mode's worst-of gate callers (no arbitration: both raw states into the pure gate). */
 const CONSULTING_WORST_OF = new Set(["src/services/owner-finance/recommendation-cash-safety.service.ts"]);
+/** Loaders that only READ both sources for the shared reading (they combine nothing). */
+const SHARED_READING_LOADERS = new Set(["src/services/owner-spine/provisional-cash-finance.ts"]);
 
 describe("the current cash/finance reading has one source", () => {
+  it("the shared-reading loaders only load (never arbitrate or combine)", () => {
+    for (const r of SHARED_READING_LOADERS) {
+      const src = stripComments(readFileSync(join(ROOT, r), "utf8"));
+      expect(src, r).not.toMatch(/\bresolveCashFinanceSignal\b|\bworseState\b|\bgateState\b/);
+    }
+  });
+
   it("the raw arbiter is called only by the shared reading", () => {
     const callers = FILES.filter((f) => rel(f) !== ARBITER && /\bresolveCashFinanceSignal\s*\(/.test(stripComments(readFileSync(f, "utf8")))).map(rel);
     expect(callers).toEqual([SHARED]);
@@ -60,7 +73,7 @@ describe("the current cash/finance reading has one source", () => {
     const consumers: string[] = [];
     for (const file of FILES) {
       const r = rel(file);
-      if (r === SHARED || r === ARBITER || PURE_TWO_STATE_RULES.has(r) || CONSULTING_WORST_OF.has(r)) continue;
+      if (r === SHARED || r === ARBITER || PURE_TWO_STATE_RULES.has(r) || CONSULTING_WORST_OF.has(r) || SHARED_READING_LOADERS.has(r)) continue;
       const src = stripComments(readFileSync(file, "utf8"));
       if (!(/\bcashflowState\b/.test(src) && /\bsurvivalState\b/.test(src))) continue;
       // Domain-local display/writer files mention only their own source's field; combining both is the rule's subject.
@@ -78,11 +91,15 @@ describe("the current cash/finance reading has one source", () => {
     ]);
   });
 
-  it("Consulting Mode's cash gate takes the WORST of each business's raw states (pure worst-of) and arbitrates nothing", () => {
+  it("Consulting Mode's cash gate takes the WORST of each business's states (pure worst-of) and arbitrates nothing", () => {
     for (const r of CONSULTING_WORST_OF) {
       const src = stripComments(readFileSync(join(ROOT, r), "utf8"));
-      // Per business: both raw states into the worst-of rule; across businesses: the worst; the pure gate gets it.
-      expect(src, r).toMatch(/consultingBusinessCashState\(\s*cashRow\?\.cashflowState,\s*finRow\?\.survivalState\s*\)/);
+      // Per business: both halves (as recorded — never an older period's) into the worst-of rule, tightened by the
+      // in-progress period; across businesses: the worst; the pure gate gets it.
+      expect(src, r).toMatch(/consultingBusinessEvidenceState\(\s*cashRow \? \{ state: cashRow\.cashflowState/);
+      expect(src, r).toMatch(/finRow \? \{ state: finRow\.survivalState/);
+      expect(src, r).toMatch(/return worseState\(completed \?\? "AT_RISK", prov\)/);
+      expect(src, r).not.toMatch(/supersededById:\s*null/);
       expect(src, r).toMatch(/const state = consultingWorstCashState\(perBusiness\);\s*[\s\S]*assertCashSafetyForPromotion\(\s*state,\s*state,/);
       expect(src, r).not.toMatch(/\bcurrentCashFinanceReading\b|\bresolveCashFinanceSignal\b|gateState|\baverage\b|\breduce\(/);
     }

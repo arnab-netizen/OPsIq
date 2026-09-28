@@ -23,35 +23,13 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createCashflowSnapshot } from "@/services/owner-cashflow/snapshot.service";
 import { runCashflowDiagnosis } from "@/services/owner-cashflow/diagnosis.service";
 import { updateCashflowAction } from "@/services/owner-cashflow/action.service";
-import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
-import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
-import { updateFinanceAction } from "@/services/owner-finance/action.service";
-import { createSalesSnapshot } from "@/services/owner-sales/snapshot.service";
-import { runSalesDiagnosis } from "@/services/owner-sales/diagnosis.service";
-import { updateSalesAction } from "@/services/owner-sales/action.service";
-import { createOperationsSnapshot } from "@/services/owner-operations/snapshot.service";
-import { runOperationsDiagnosis } from "@/services/owner-operations/diagnosis.service";
-import { updateOperationsAction } from "@/services/owner-operations/action.service";
-import { createSopSnapshot } from "@/services/owner-sop/snapshot.service";
-import { runSopDiagnosis } from "@/services/owner-sop/diagnosis.service";
-import { updateSopAction } from "@/services/owner-sop/action.service";
-import { createMarketingSnapshot } from "@/services/owner-marketing/snapshot.service";
-import { runMarketingDiagnosis } from "@/services/owner-marketing/diagnosis.service";
-import { updateMarketingAction } from "@/services/owner-marketing/action.service";
-import { createStrategySnapshot } from "@/services/owner-strategy/snapshot.service";
-import { runStrategyDiagnosis } from "@/services/owner-strategy/diagnosis.service";
-import { updateStrategyAction } from "@/services/owner-strategy/action.service";
-import { createSnapshot as createRecoverySnapshot } from "@/services/founder-recovery/snapshot.service";
-import { runCycle } from "@/services/founder-recovery/cycle.service";
-import { updateRecoveryAction } from "@/services/founder-recovery/action.service";
-import { createBudgetPeriod, recordSpendEntry } from "@/services/owner-budget/budget.service";
-import { listBudgetActions, updateBudgetAction } from "@/services/owner-budget/action-link.service";
 import { recordComplianceItem, assignComplianceItemBusiness } from "@/services/owner-mode/compliance.service";
-import { recordDoNotRepeat, recordDoNotRepeatChangedContext } from "@/services/owner-mode/do-not-repeat.service";
+import { recordDoNotRepeat, recordOwnerDnrOverride } from "@/services/owner-mode/do-not-repeat.service";
 import { createBusinessRisk } from "@/services/owner-mode/business-risk.service";
 import { getOwnerHome } from "@/services/owner-home/home.service";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
 import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { ACTION_SERVICES } from "./action-services-fixture";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 
 const actor = randomUUID();
@@ -152,28 +130,31 @@ describe("[db] Decision 1 — assigning an unattributed compliance item to the b
   });
 });
 
-describe("[db] Decision 2 — recording what has changed on a do-not-repeat rule", () => {
+describe("[db] Decision 2 (as revised by Round 8 Decision 3) — recording what has changed on a do-not-repeat rule, for Owner Mode of that business", () => {
   it("[db] the rule holds growth work (the decision routes to the rule); a governed changed-context record lifts it at the gate and on the next read", async () => {
     const ws = randomUUID();
     const b = await business(ws, "QA R7 DNR");
     const ruleId = await recordDoNotRepeat({ workspaceId: ws, businessId: b, memoryKey: "scope:marketing", summary: "Paid social push", reason: "Burned budget with no orders", actorId: actor });
     expect(await growthGate(ws, b)).toMatch(/do-not-repeat/);
 
-    await expect(recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId, actorId: actor, explanation: "  new offer  " })).rejects.toBeInstanceOf(ValidationError);
-    await expect(recordDoNotRepeatChangedContext({ workspaceId: randomUUID(), ruleId, actorId: actor, explanation: "A new supplier contract halves the cost per order." })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId, actorId: actor, reason: "  new offer  " })).rejects.toBeInstanceOf(ValidationError);
+    await expect(recordOwnerDnrOverride({ workspaceId: randomUUID(), businessId: b, ruleId, actorId: actor, reason: "A new supplier contract halves the cost per order." })).rejects.toBeInstanceOf(NotFoundError);
 
-    const view = await recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId, actorId: actor, explanation: "A new supplier contract halves the cost per order." });
+    const view = await recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId, actorId: actor, reason: "A new supplier contract halves the cost per order." });
     expect(view.changedContextExplanation).toBe("A new supplier contract halves the cost per order.");
     const audit = await db.auditEvent.findMany({ where: { workspaceId: ws, entityId: ruleId, eventName: "owner.do_not_repeat_context_changed" } });
     expect(audit).toHaveLength(1);
-    expect(audit[0].payload).toMatchObject({ ruleId, previousChangedContextExplanation: null, changedContextExplanation: "A new supplier contract halves the cost per order." });
+    expect(audit[0].payload).toMatchObject({ ruleId, businessId: b, scope: "owner_business_override", changedContextExplanation: "A new supplier contract halves the cost per order." });
     expect(await growthGate(ws, b)).toBe("allowed");
+    // The shared rule row is never modified (Formal Consulting Mode never observes an Owner override).
+    expect((await db.ownerDoNotRepeatRule.findFirst({ where: { id: ruleId } }))!.changedContextExplanation).toBeNull();
 
     // Idempotent for the same text; a different text is refused (never silently replaced).
-    await expect(recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId, actorId: actor, explanation: "A new supplier contract halves the cost per order." })).resolves.toBeDefined();
-    await expect(recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId, actorId: actor, explanation: "Something else entirely changed since then." })).rejects.toBeInstanceOf(ValidationError);
+    await expect(recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId, actorId: actor, reason: "A new supplier contract halves the cost per order." })).resolves.toBeDefined();
+    await expect(recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId, actorId: actor, reason: "Something else entirely changed since then." })).rejects.toBeInstanceOf(ValidationError);
     expect(await db.auditEvent.count({ where: { workspaceId: ws, entityId: ruleId, eventName: "owner.do_not_repeat_context_changed" } })).toBe(1);
     await db.ownerDoNotRepeatRule.deleteMany({ where: { workspaceId: ws } });
+    await db.operatingMemoryEntry.deleteMany({ where: { workspaceId: ws } });
     await teardownOwnerBusiness(b);
   });
 
@@ -182,16 +163,18 @@ describe("[db] Decision 2 — recording what has changed on a do-not-repeat rule
     const b = await business(ws, "QA R7 DNR Concurrency");
     const inactive = await recordDoNotRepeat({ workspaceId: ws, businessId: b, memoryKey: "scope:sales", summary: "s", reason: "r", actorId: actor });
     await db.ownerDoNotRepeatRule.update({ where: { id: inactive }, data: { active: false } });
-    await expect(recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId: inactive, actorId: actor, explanation: "The market has changed since this was set." })).rejects.toBeInstanceOf(ValidationError);
+    await expect(recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId: inactive, actorId: actor, reason: "The market has changed since this was set." })).rejects.toBeInstanceOf(ValidationError);
 
     const ruleId = await recordDoNotRepeat({ workspaceId: ws, businessId: b, memoryKey: "scope:marketing", summary: "s", reason: "r", actorId: actor });
     const results = await Promise.allSettled([
-      recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId, actorId: actor, explanation: "First account of what changed since then." }),
-      recordDoNotRepeatChangedContext({ workspaceId: ws, ruleId, actorId: actor, explanation: "Second account of what changed since then." }),
+      recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId, actorId: actor, reason: "First account of what changed since then." }),
+      recordOwnerDnrOverride({ workspaceId: ws, businessId: b, ruleId, actorId: actor, reason: "Second account of what changed since then." }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await db.operatingMemoryEntry.count({ where: { workspaceId: ws, memoryType: "DNR_OWNER_OVERRIDE" } })).toBe(1);
     expect(await db.auditEvent.count({ where: { workspaceId: ws, entityId: ruleId, eventName: "owner.do_not_repeat_context_changed" } })).toBe(1);
     await db.ownerDoNotRepeatRule.deleteMany({ where: { workspaceId: ws } });
+    await db.operatingMemoryEntry.deleteMany({ where: { workspaceId: ws } });
     await teardownOwnerBusiness(b);
   });
 });
@@ -221,90 +204,45 @@ describe("[db] Decision 5A — a back-filled period never takes over in-flight w
   });
 });
 
-describe("[db] Decision 5B — Recovery's trend baseline is the previous evidence period", () => {
-  const recoveryPeriod = (endDaysAgo: number, revenue: number) => ({
-    ...period(endDaysAgo, 29), currency: "INR", revenue, totalCosts: revenue * 0.7, orderCount: 1000, newCustomers: 50, repeatCustomers: 50, deliveryCost: revenue * 0.02,
-  });
-  const trendFindings = async (cycleId: string) =>
-    (await db.recoveryFinding.findMany({ where: { cycleId }, select: { code: true, comparisonValue: true } })).filter((f: any) => f.comparisonValue !== null);
-
-  it("[db] a back-filled OLDER period is compared with nothing newer; the next NEWER period is compared with the latest earlier period — never with the last run", async () => {
-    const ws = randomUUID();
-    const b = await business(ws, "QA R7 Recovery Baseline");
-    const mid = await runCycle(b, (await createRecoverySnapshot(b, recoveryPeriod(40, 100000) as any, actor, ws)).id, actor, ws);
-    // Back-fill an OLDER period with much HIGHER revenue after it: it has no earlier period, so no trend.
-    const old = await runCycle(b, (await createRecoverySnapshot(b, recoveryPeriod(80, 400000) as any, actor, ws)).id, actor, ws);
-    expect(await trendFindings(old.id)).toEqual([]);
-    // The next NEWER period (same revenue as the mid period): its baseline is the mid period, not the back-fill
-    // run — so no false revenue collapse is reported.
-    const latest = await runCycle(b, (await createRecoverySnapshot(b, recoveryPeriod(5, 100000) as any, actor, ws)).id, actor, ws);
-    const trends = await trendFindings(latest.id);
-    for (const f of trends) expect(f.comparisonValue).not.toBe(400000);
-    expect(latest.cycleNumber).toBe(3);
-    expect(mid.cycleNumber).toBe(1);
-    await teardownOwnerBusiness(b);
-  });
-});
+// Decision 5B (Recovery's trend baseline) is covered by the mutation-sensitive test in r8-remediation.db.test.ts
+// (runs whose run order disagrees with period order; the pre-fix baseline fails it).
 
 describe("[db] Decision 5C — all nine action services apply a transition exactly once under concurrent submission", () => {
   const evidence = { completionNotes: "Done and checked", completionEvidence: ["receipt.pdf"] };
-  type Svc = { name: string; seed: (ws: string, b: string) => Promise<string>; update: (id: string, input: any, ws: string) => Promise<any>; version?: (id: string) => Promise<number> };
-  const firstAction = async (model: string, where: Record<string, unknown>) => (await (db as any)[model].findMany({ where, orderBy: { id: "asc" } }))[0].id as string;
-  const SERVICES: Svc[] = [
-    { name: "finance", seed: async (ws, b) => { const s = await createFinancialSnapshot(b, { ...period(10), currency: "INR", revenue: 100000, fixedCosts: 40000, variableCosts: 40000, discountAmount: 15000, cashOnHand: 50000 } as any, actor, ws); const c = await runFinanceDiagnosis(b, s.id, actor, ws); return firstAction("ownerFinanceAction", { cycleId: c.id }); }, update: (id, i, ws) => updateFinanceAction(id, i, actor, ws) },
-    { name: "cashflow", seed: async (ws, b) => { const c = await runCashflowDiagnosis(b, (await createCashflowSnapshot(b, { ...period(10), currency: "INR", ...UNSAFE }, actor, ws)).id, actor, ws); return firstAction("ownerCashflowAction", { cycleId: c.id }); }, update: (id, i, ws) => updateCashflowAction(id, i, actor, ws) },
-    { name: "sales", seed: async (ws, b) => { const s = await createSalesSnapshot(b, { ...period(10), currency: "INR", leads: 1000, qualifiedLeads: 400, orders: 30, revenue: 60000, newCustomers: 12, repeatCustomers: 3, lostCustomers: 25, complaints: 6, discountAmount: 18000, refundAmount: 6000, b2bRevenue: 10000, b2cRevenue: 50000, b2bPipelineValue: 6000 } as any, actor, ws); const c = await runSalesDiagnosis(b, s.id, actor, ws); return firstAction("ownerSalesAction", { cycleId: c.id }); }, update: (id, i, ws) => updateSalesAction(id, i, actor, ws) },
-    { name: "operations", seed: async (ws, b) => { const s = await createOperationsSnapshot(b, { ...period(10), currency: "INR", ordersReceived: 1500, ordersCompleted: 900, ordersDelayed: 500, reworkCount: 180, complaints: 120, staffHours: 400, machineCapacityUnits: 1000, idleHours: 120, deliveryAttempts: 900, deliveryFailures: 200, inventoryShortages: 4, sopChecks: 100, sopMisses: 50 } as any, actor, ws); const c = await runOperationsDiagnosis(b, s.id, actor, ws); return firstAction("ownerOperationsAction", { cycleId: c.id }); }, update: (id, i, ws) => updateOperationsAction(id, i, actor, ws) },
-    { name: "sop", seed: async (ws, b) => { const s = await createSopSnapshot(b, { ...period(10), currency: "INR", actionsAssigned: 100, actionsCompleted: 50, actionsVerified: 10, actionsOverdue: 40, actionsDisputed: 8, actionsReassigned: 30, repeatedFailures: 30, proofRequired: 40, proofProvided: 10, recurringProcesses: 20, documentedSops: 5 } as any, actor, ws); const c = await runSopDiagnosis(b, s.id, actor, ws); return firstAction("ownerSopAction", { cycleId: c.id }); }, update: (id, i, ws) => updateSopAction(id, i, actor, ws) },
-    { name: "marketing", seed: async (ws, b) => { const s = await createMarketingSnapshot(b, { ...period(10), currency: "INR", marketingSpend: 100000, revenue: 30000, leads: 200, inquiries: 150, orders: 4, newCustomers: 4, paidLeads: 180, organicLeads: 20, campaignsRun: 10, campaignsWithFollowup: 2, contentPosted: 2, couponsRedeemed: 1, referrals: 0, walkIns: 5 } as any, actor, ws); const c = await runMarketingDiagnosis(b, s.id, actor, ws); return firstAction("ownerMarketingAction", { cycleId: c.id }); }, update: (id, i, ws) => updateMarketingAction(id, i, actor, ws) },
-    { name: "strategy", seed: async (ws, b) => { const s = await createStrategySnapshot(b, { ...period(10), currency: "INR", optionName: "Open a second branch", currentRevenue: 500000, expectedRevenueChange: 20000, costChange: 60000, investmentRequired: 800000, timeToImpactMonths: 12, riskLevel: "high", cashAvailable: 100000, capacityImpactPct: 80, staffImpact: 4 } as any, actor, ws); const c = await runStrategyDiagnosis(b, s.id, actor, ws); return (await db.ownerStrategyAction.findMany({ where: { cycleId: c.id, status: "proposed" } }))[0].id; }, update: (id, i, ws) => updateStrategyAction(id, i, actor, ws) },
-    {
-      name: "recovery",
-      seed: async (ws, b) => { const c = await runCycle(b, (await createRecoverySnapshot(b, { ...period(10, 29), currency: "INR", revenue: 100000, totalCosts: 95000, orderCount: 1000, newCustomers: 70, repeatCustomers: 30, deliveryCost: 12000 } as any, actor, ws)).id, actor, ws); return firstAction("recoveryAction", { cycleId: c.id }); },
-      update: async (id, i, ws) => updateRecoveryAction(id, { ...i, ...(i.status === "completed" ? { actualOutcome: "Margin restored" } : {}), version: (await db.recoveryAction.findFirst({ where: { id } }))!.version }, actor, ws),
-    },
-    {
-      name: "budget",
-      seed: async (ws, b) => {
-        const p = await createBudgetPeriod(b, { label: "Period", periodStart: period(10).periodStart, periodEnd: period(10).periodEnd, currency: "INR", approvedBudget: 100000, statutoryReserveRequired: 50000, ownerGoal: "growth" } as any, actor, ws);
-        await recordSpendEntry(b, { periodId: p.id, label: "Payroll (committed)", category: "statutory_payroll_tax", amount: 420000, state: "committed", obligationKind: "payroll", dueInDays: 5, requestedByUserId: actor, ownerApprovalThreshold: 50000 } as any, actor, ws);
-        return (await listBudgetActions(ws, b))[0].id;
-      },
-      update: (id, i, ws) => updateBudgetAction(id, i, actor, ws),
-    },
-  ];
-
-  for (const svc of SERVICES) {
+  for (const svc of ACTION_SERVICES) {
     it(`[db] ${svc.name}: a double-submitted completion applies once (one audit, one completedAt); a conflicting concurrent transition is refused`, async () => {
       const ws = randomUUID();
       const b = await business(ws, `QA R7 CAS ${svc.name}`);
-      const id = await svc.seed(ws, b);
-      await svc.update(id, { status: "assigned" }, ws);
-      await svc.update(id, { status: "in_progress" }, ws);
+      const id = await svc.seed(ws, b, actor);
+      await svc.update(id, { status: "assigned" }, ws, actor);
+      await svc.update(id, { status: "in_progress" }, ws, actor);
       const results = await Promise.allSettled([
-        svc.update(id, { status: "completed", ...evidence }, ws),
-        svc.update(id, { status: "completed", ...evidence }, ws),
+        svc.update(id, { status: "completed", ...evidence }, ws, actor),
+        svc.update(id, { status: "completed", ...evidence }, ws, actor),
       ]);
+      // An identical concurrent submission: both are reported applied (the second is an exact replay) — never twice written.
       expect(results.filter((r) => r.status === "fulfilled").length).toBeGreaterThanOrEqual(1);
       for (const r of results) if (r.status === "rejected") expect(r.reason).toBeInstanceOf(ConflictError);
       const completedAudits = await db.auditEvent.findMany({ where: { workspaceId: ws, entityId: id, payload: { path: ["status"], equals: "completed" } } });
       expect(completedAudits, `${svc.name} completion audited once`).toHaveLength(1);
 
-      // A second action: completed vs cancelled at once — exactly one transition applies, the other is refused.
-      const id2 = await svc.seed(ws, b).catch(() => null);
-      if (id2 && id2 !== id) {
-        await svc.update(id2, { status: "assigned" }, ws);
-        await svc.update(id2, { status: "in_progress" }, ws);
-        const race = await Promise.allSettled([
-          svc.update(id2, { status: "completed", ...evidence }, ws),
-          svc.update(id2, { status: "cancelled" }, ws),
-        ]);
-        expect(race.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-        for (const r of race) if (r.status === "rejected") expect(r.reason instanceof ConflictError || r.reason instanceof ValidationError).toBe(true);
-        const terminal = await db.auditEvent.count({ where: { workspaceId: ws, entityId: id2, OR: [{ payload: { path: ["status"], equals: "completed" } }, { payload: { path: ["status"], equals: "cancelled" } }] } });
-        expect(terminal).toBe(1);
-      }
+      // A second action (every service seeds one, on a second business of the workspace): completed vs cancelled
+      // at once — exactly one transition applies.
+      const b2 = await business(ws, `QA R7 CAS ${svc.name} 2`);
+      const id2 = await svc.seed(ws, b2, actor);
+      expect(id2, `${svc.name} seeds a distinct second action`).not.toBe(id);
+      await svc.update(id2, { status: "assigned" }, ws, actor);
+      await svc.update(id2, { status: "in_progress" }, ws, actor);
+      const race = await Promise.allSettled([
+        svc.update(id2, { status: "completed", ...evidence }, ws, actor),
+        svc.update(id2, { status: "cancelled" }, ws, actor),
+      ]);
+      expect(race.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      for (const r of race) if (r.status === "rejected") expect(r.reason instanceof ConflictError || r.reason instanceof ValidationError).toBe(true);
+      const terminal = await db.auditEvent.count({ where: { workspaceId: ws, entityId: id2, OR: [{ payload: { path: ["status"], equals: "completed" } }, { payload: { path: ["status"], equals: "cancelled" } }] } });
+      expect(terminal).toBe(1);
       await teardownOwnerBusiness(b);
+      await teardownOwnerBusiness(b2);
     });
   }
 });

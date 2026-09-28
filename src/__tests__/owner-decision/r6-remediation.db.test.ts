@@ -144,9 +144,9 @@ describe("[db] future-dated periods are never trusted current evidence", () => {
     expect(["CRITICAL", "INSOLVENT_RISK"]).toContain(r.gateState);
     expect(await growthGate(ws, b)).toBe("blocked");
     const d = (await getOwnerHome(ws, b)).currentOwnerDecision!;
-    // Future-dated figures are not current evidence at all (never read as current, never "out of date"):
-    // the decision says they are not used, and nothing is built on them.
-    expect(d.missingInformation.join(" ")).toMatch(/Finance figures entered for a period that has not ended yet are not used — OpsIQ advises on the latest period that has ended/);
+    // Genuinely future figures (the period has not started) are not evidence at all (never read as current, never
+    // "out of date", Round 8 Decision 1): the decision says they are not used, and nothing is built on them.
+    expect(d.missingInformation.join(" ")).toMatch(/Finance figures entered for a period that has not started yet are not used/);
     expect(d.missingInformation.join(" ")).not.toMatch(/Current figures for Finance — the latest ones are out of date/);
     expect(d.attention.some((t: any) => t.candidateId === "evidence_refresh:finance")).toBe(false);
     await teardownOwnerBusiness(b);
@@ -162,7 +162,7 @@ describe("[db] future-dated periods are never trusted current evidence", () => {
     expect(r.gateState).toBe("CRITICAL");
     expect(await growthGate(ws, b)).toBe("blocked");
     const d = (await getOwnerHome(ws, b)).currentOwnerDecision!;
-    expect(d.missingInformation.join(" ")).toMatch(/Cash flow figures entered for a period that has not ended yet are not used/);
+    expect(d.missingInformation.join(" ")).toMatch(/Cash flow figures entered for a period that has not started yet are not used/);
     expect(d.missingInformation.join(" ")).not.toMatch(/Current figures for Cash flow — the latest ones are out of date/);
     await teardownOwnerBusiness(b);
   });

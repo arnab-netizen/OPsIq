@@ -14,6 +14,7 @@ import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domai
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
 const querySchema = z.object({
@@ -133,7 +134,7 @@ export async function buildOwnerDashboardPayload(
   const businessSnapshots = await Promise.all(
     businesses.map(async (biz, idx) => {
       const reader = db as unknown as SurvivalCycleReader;
-      const [progress, financeCycle, cashCycle] = await Promise.all([
+      const [progress, financeCycle, cashCycle, provisional] = await Promise.all([
         getOwnerBusinessProgress(biz.id, workspaceId, db as never),
         reader.ownerFinanceCycle.findFirst({
           where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
@@ -145,6 +146,8 @@ export async function buildOwnerDashboardPayload(
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
           select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
         }),
+        // The in-progress current period (provisional): may only tighten the health status.
+        loadProvisionalCashFinance(db as unknown as ProvisionalCashFinanceDb, { workspaceId, businessId: biz.id }, evidenceNow),
       ]);
 
       // The ONE current cash/finance survival reading (the same one Owner Home, Now View and the action
@@ -153,7 +156,8 @@ export async function buildOwnerDashboardPayload(
       const survival = currentCashFinanceReading(
         cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
         financeCycle ? { state: financeCycle.survivalState, snapshot: financeCycle.snapshot } : null,
-        evidenceNow.getTime()
+        evidenceNow.getTime(),
+        provisional
       ).gateState;
       const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
         survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"

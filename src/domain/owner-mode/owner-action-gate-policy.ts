@@ -11,10 +11,14 @@
  *   - SAFETY / STABILISE / REPAIR / EVIDENCE respond to a danger: never held back by the growth limits
  *     (capacity, cash, margin) nor by a broad do-not-repeat area rule.
  *   - GROW: every limit applies (capacity, cash at AT_RISK or worse, known margin below the floor).
- *   - EXECUTE (carrying out existing work — process, SOP and execution fixes): not growth. It adds no volume
- *     and commits no new spend, so the capacity and margin limits do not apply, and cash holds it only at
- *     existential (insolvency) risk — the cash gate's GENERAL sensitivity. A broad do-not-repeat area rule
- *     does not hold it (an exact finding memory does).
+ *   - EXECUTE (carrying out existing work — process, SOP and execution fixes): intent describes the business
+ *     PURPOSE, not the workflow state. EXECUTE is released from capacity by default — it is held by unsafe
+ *     capacity only when its lever explicitly pushes more volume through capacity (CAPACITY_CONSUMING_CODES).
+ *     It is NOT released from cash or margin: cash applies with the domain's normal spend sensitivity, and a
+ *     KNOWN margin below the floor holds it when its lever is pricing/margin-sensitive (PRICING_SENSITIVE_CODES;
+ *     the domain decides only when the action carries no finding code). Work that actually fixes a margin or
+ *     cash problem is REPAIR / STABILISE, never EXECUTE. A broad do-not-repeat area rule does not hold it (an
+ *     exact finding memory does).
  *   - unknown intent (no finding code — the documented legacy fallback): the domain's own sensitivity
  *     (capacity, spend, margin), and a broad do-not-repeat area rule applies (do-not-repeat-scope.ts).
  *   - An expired, business-attributed compliance obligation is a professional-review hard stop for every
@@ -51,6 +55,30 @@ export const DOMAIN_CASH_SENSITIVITY: Readonly<Record<string, RecommendationSens
   recovery: RecommendationSensitivity.GENERAL,
 });
 
+/**
+ * Levers that push more volume through physical capacity (by what the finding's remedy does, never by its
+ * domain alone): an EXECUTE step with one of these is held by unsafe capacity like growth.
+ */
+export const CAPACITY_CONSUMING_CODES: ReadonlySet<string> = new Set([
+  // "Recover delayed throughput": pulls late orders through the slow stage — more load on the bottleneck.
+  "OPS_OPP_RECOVER_DELAYS",
+  "OPS_OPP_USE_CAPACITY_HEADROOM",
+  "SALES_OPP_CONVERT_PIPELINE", "SALES_OPP_RAISE_CONVERSION", "SALES_OPP_WINBACK", "SALES_OPP_IMPROVE_RETENTION",
+  "MKT_OPP_SCALE_WINNER", "MKT_OPP_LIFT_CONVERSION", "MKT_OPP_ACTIVATE_REFERRALS", "MKT_OPP_BUILD_ORGANIC", "MKT_OPP_ADD_FOLLOWUP",
+]);
+
+/**
+ * Levers that sell more volume at the current price/discount (a known below-floor margin scales the loss):
+ * an EXECUTE step with one of these is held by a known below-floor margin. Repricing or tightening discounts
+ * repairs margin (REPAIR), so it is not listed.
+ */
+export const PRICING_SENSITIVE_CODES: ReadonlySet<string> = new Set([
+  "SALES_OPP_CONVERT_PIPELINE", "SALES_OPP_RAISE_CONVERSION", "SALES_OPP_WINBACK", "SALES_OPP_IMPROVE_RETENTION",
+  "SALES_WEAK_B2B_PIPELINE", "B2B_CONCENTRATION",
+  "MKT_OPP_SCALE_WINNER", "MKT_OPP_LIFT_CONVERSION", "MKT_OPP_ACTIVATE_REFERRALS", "MKT_OPP_BUILD_ORGANIC", "MKT_OPP_ADD_FOLLOWUP",
+  "MKT_LOW_REFERRAL", "MKT_WRONG_CHANNEL_MIX",
+]);
+
 /** Intents that respond to a danger: never held back by the growth limits or a broad do-not-repeat rule. */
 export const PROTECTIVE_INTENTS: ReadonlySet<OwnerTargetIntent> = new Set(["SAFETY", "STABILISE", "REPAIR", "EVIDENCE"]);
 
@@ -64,6 +92,14 @@ export const OWNER_MARGIN_REQUIRED_DATA: readonly string[] = [
 
 export type OwnerGateBlockCode = "DO_NOT_REPEAT_BLOCKED" | "CAPACITY_BLOCKED" | "CASH_SAFETY_BLOCKED" | "MARGIN_SAFETY_BLOCKED" | "COMPLIANCE_BLOCKED";
 
+/** One failing check of a transition. */
+export interface OwnerGateBlock {
+  code: OwnerGateBlockCode;
+  reason: string;
+  /** The do-not-repeat rule that holds it (DO_NOT_REPEAT_BLOCKED only). */
+  ruleId?: string;
+}
+
 /** One active, blocking do-not-repeat memory without a changed-context override. */
 export interface OwnerGateDoNotRepeatRule {
   /** The rule's id (the owner records what has changed on this rule to lift it). */
@@ -74,6 +110,11 @@ export interface OwnerGateDoNotRepeatRule {
   match: "broad" | "exact";
   /** The finding an exact memory is about (`scope:<area>:finding:<id>`); null for a broad area memory. */
   findingId: string | null;
+  /** The rule's stored key (for surfaces that name it). */
+  memoryKey?: string;
+  /** What the rule records (for surfaces that name it); null when not loaded. */
+  summary?: string | null;
+  reason?: string | null;
 }
 
 /** A business's current safety state, as the gate reads it. */
@@ -88,9 +129,21 @@ export interface OwnerGateConstraints {
    * The ONE current cash/finance reading's gate state (null ⇒ no reading: nothing to enforce) and what
    * drives it (current-cash-finance-reading.ts gateDriver) — a block is named by its real cause.
    */
-  cash: { gateState: FinancialHealthState | null; basis: string; driver: "cash" | "finance_profit" | "unverified" | null };
+  cash: {
+    gateState: FinancialHealthState | null;
+    basis: string;
+    driver: "cash" | "finance_profit" | "unverified" | null;
+    /** Source-derived confidence in gateState, 0..1 (capped when unverified/provisional); null ⇒ unknown. */
+    confidence?: number | null;
+    /** The in-progress current period's figures decide gateState (label as in progress). */
+    provisional?: boolean;
+    /** The source whose figures decide gateState (routes a refresh to the right source). */
+    source?: "cashflow" | "finance" | null;
+  };
   /** Gross margin of the business's current effective snapshot (null ⇒ unknown). */
   grossMarginPct: number | null;
+  /** That snapshot's own data confidence, 0..1 (null ⇒ unknown). */
+  grossMarginConfidence?: number | null;
   /** The first expired obligation that applies to this business (attributed), or null. */
   expiredCompliance: { name: string; kind: string } | null;
 }
@@ -101,8 +154,9 @@ export const NO_OWNER_GATE_CONSTRAINTS: OwnerGateConstraints = Object.freeze({
   businessScoped: true,
   doNotRepeat: [],
   capacity: { status: "safe" as CapacityStatus, reason: "No equipment tracked.", bottlenecks: [] },
-  cash: { gateState: null, basis: "", driver: null },
+  cash: { gateState: null, basis: "", driver: null, confidence: null, provisional: false, source: null },
   grossMarginPct: null,
+  grossMarginConfidence: null,
   expiredCompliance: null,
 });
 
@@ -111,11 +165,18 @@ export interface OwnerGateSubject {
   intent: OwnerTargetIntent | null;
   /** The action's finding (matches an exact do-not-repeat memory). */
   findingId?: string | null;
+  /** The action's finding code — its lever (capacity-consuming / pricing-sensitive EXECUTE work). */
+  findingCode?: string | null;
 }
 
+/**
+ * A blocked verdict names its FIRST failing check (code/reason/ruleId — the order below) and lists EVERY
+ * failing check in `blocks`, so a surface can show all simultaneous blockers (clearing one never reveals a
+ * hidden second one).
+ */
 export type OwnerGateVerdict =
   | { allowed: true; marginAbstention: readonly string[] | null }
-  | { allowed: false; code: OwnerGateBlockCode; reason: string; ruleId?: string };
+  | { allowed: false; code: OwnerGateBlockCode; reason: string; ruleId?: string; blocks: readonly OwnerGateBlock[] };
 
 const STATE_WORDS: Readonly<Record<FinancialHealthState, string>> = Object.freeze({
   SAFE: "safe",
@@ -132,13 +193,19 @@ const DOMAIN_WORDS: Readonly<Record<string, string>> = Object.freeze({
 /** The owner-facing reason for a cash hold, named by what drives it (never a Consulting enum). */
 function cashHoldReason(c: OwnerGateConstraints["cash"], state: FinancialHealthState, area: string, growth: boolean): string {
   const s = STATE_WORDS[state];
-  if (c.driver === "finance_profit") {
+  if (c.driver === "finance_profit" && !c.provisional) {
     return `Financial survival is ${s} in your Finance diagnosis, driven by profit and margin rather than cash${c.basis}. This ${area} step waits until profitability is restored.`;
   }
   if (c.driver === "unverified") {
-    return `Your cash and Finance figures are not current (out of date, or amended and not yet re-diagnosed); OpsIQ cannot treat them as safe (last reading: ${s}). This ${area} step waits until current figures are entered and diagnosed.`;
+    return c.provisional
+      ? `Only this period's in-progress figures are available, and they are not yet a completed reading; OpsIQ cannot treat them as safe. This ${area} step waits until a completed period is entered and diagnosed.`
+      : `Your cash and Finance figures are not current (out of date, or amended and not yet re-diagnosed); OpsIQ cannot treat them as safe (last reading: ${s}). This ${area} step waits until current figures are entered and diagnosed.`;
   }
-  return `Cash survival is ${s}${c.basis}. This ${area} step waits until cash is ${growth ? "safe enough for growth" : "no longer at this level"}.`;
+  const inProgress = c.provisional ? " in this period's in-progress figures" : "";
+  if (c.driver === "finance_profit" && c.provisional) {
+    return `Financial survival is ${s}${inProgress}, driven by profit and margin rather than cash${c.basis}. This ${area} step waits until profitability is restored.`;
+  }
+  return `Cash survival is ${s}${inProgress}${c.basis}. This ${area} step waits until cash is ${growth ? "safe enough for growth" : "no longer at this level"}.`;
 }
 
 /** Pure constraint builders over the rows the service loads. */
@@ -174,8 +241,8 @@ export function appliesToBusiness(rowBusinessId: string | null, businessId: stri
 }
 
 /**
- * Evaluate one material transition against the constraints. Order (the first failing check decides):
- * do-not-repeat → capacity → cash → margin → compliance.
+ * Evaluate one material transition against the constraints. Every check runs; the verdict names the first
+ * failing one in this order — do-not-repeat → capacity → cash → margin → compliance — and lists them all.
  */
 export function evaluateOwnerActionGate(c: OwnerGateConstraints, s: OwnerGateSubject): OwnerGateVerdict {
   if (c.optedOut) return { allowed: true, marginAbstention: null };
@@ -184,6 +251,12 @@ export function evaluateOwnerActionGate(c: OwnerGateConstraints, s: OwnerGateSub
   const execute = s.intent === "EXECUTE";
   const domain = canonicalOwnerScopeDomain(s.domain) ?? s.domain;
   const area = DOMAIN_WORDS[domain] ?? s.domain;
+  const code = s.findingCode ?? null;
+  const blocks: OwnerGateBlock[] = [];
+  // EXECUTE levers (see the module doc): capacity only when it pushes volume through capacity; margin when
+  // it sells volume at the current price (by domain only when the action carries no finding code).
+  const consumesCapacity = execute ? code !== null && CAPACITY_CONSUMING_CODES.has(code) : CAPACITY_SENSITIVE_DOMAINS.has(s.domain);
+  const pricingSensitive = execute ? (code !== null ? PRICING_SENSITIVE_CODES.has(code) : MARGIN_SENSITIVE_DOMAINS.has(s.domain)) : MARGIN_SENSITIVE_DOMAINS.has(s.domain);
 
   // 1. Do-not-repeat: an exact memory of this finding applies to any intent; a broad area memory only to
   //    growth (or unknown intent).
@@ -191,59 +264,54 @@ export function evaluateOwnerActionGate(c: OwnerGateConstraints, s: OwnerGateSub
     (r) => r.domain === domain && (r.match === "broad" || (s.findingId != null && r.findingId === s.findingId)) && ownerDoNotRepeatApplies(r.match, s.intent)
   );
   if (dnr) {
-    return {
-      allowed: false,
+    blocks.push({
       code: "DO_NOT_REPEAT_BLOCKED",
       reason: `This ${area} step repeats a decision marked do-not-repeat after an earlier result. Record what has changed on that rule (Cockpit → Do-not-repeat rules) to proceed.`,
       ruleId: dnr.id,
-    };
+    });
   }
 
   if (!protective) {
-    // 2. Capacity — only for work that adds volume (never EXECUTE).
-    if (!execute && CAPACITY_SENSITIVE_DOMAINS.has(s.domain) && (c.capacity.status === "blocked" || c.capacity.status === "high_risk")) {
-      return {
-        allowed: false,
+    // 2. Capacity — work that adds volume.
+    if (consumesCapacity && (c.capacity.status === "blocked" || c.capacity.status === "high_risk")) {
+      blocks.push({
         code: "CAPACITY_BLOCKED",
         reason: `Capacity is unsafe (${c.capacity.reason}${c.capacity.bottlenecks.length ? `: ${c.capacity.bottlenecks.join(", ")}` : ""}). This ${area} step waits until the bottleneck is cleared.`,
-      };
+      });
     }
-    // 3. Cash — growth at AT_RISK or worse; EXECUTE only at existential risk; otherwise by the domain's spend.
+    // 3. Cash — growth at AT_RISK or worse; otherwise (EXECUTE included) by the domain's spend sensitivity.
     if (c.businessScoped && c.cash.gateState) {
-      const sensitivity = growth
-        ? RecommendationSensitivity.GROWTH_SENSITIVE
-        : execute
-          ? RecommendationSensitivity.GENERAL
-          : DOMAIN_CASH_SENSITIVITY[s.domain] ?? RecommendationSensitivity.GENERAL;
+      const sensitivity = growth ? RecommendationSensitivity.GROWTH_SENSITIVE : DOMAIN_CASH_SENSITIVITY[s.domain] ?? RecommendationSensitivity.GENERAL;
       const r = evaluateCashSafetyGate(c.cash.gateState, c.cash.gateState, sensitivity);
-      if (!r.allowed) {
-        return { allowed: false, code: "CASH_SAFETY_BLOCKED", reason: cashHoldReason(c.cash, c.cash.gateState, area, growth) };
-      }
+      if (!r.allowed) blocks.push({ code: "CASH_SAFETY_BLOCKED", reason: cashHoldReason(c.cash, c.cash.gateState, area, growth) });
     }
-    // 4. Margin — a KNOWN margin below the floor stops pricing-domain work that scales volume (never EXECUTE).
-    if (!execute && c.businessScoped && MARGIN_SENSITIVE_DOMAINS.has(s.domain)) {
+    // 4. Margin — a KNOWN margin below the floor stops pricing-sensitive work that scales volume.
+    if (c.businessScoped && pricingSensitive) {
       const m = evaluateMarginSafety(c.grossMarginPct, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
       if (m.outcome === MarginSafetyOutcome.BLOCKED_BELOW_FLOOR) {
-        return {
-          allowed: false,
+        blocks.push({
           code: "MARGIN_SAFETY_BLOCKED",
           reason: `Gross margin is ${Math.round((c.grossMarginPct ?? 0) * 10) / 10}%, below the ${DEFAULT_MARGIN_FLOOR_PCT}% safety floor. This ${area} step waits until margin is restored above the floor.`,
-        };
+        });
       }
     }
   }
 
   // 5. Compliance — an expired, attributed obligation is a professional-review hard stop.
   if (c.expiredCompliance) {
-    return {
-      allowed: false,
+    blocks.push({
       code: "COMPLIANCE_BLOCKED",
       reason: `Professional review required: "${c.expiredCompliance.name}" (${c.expiredCompliance.kind}) has expired. Renew it (or get professional review) before this ${area} step goes ahead.`,
-    };
+    });
   }
 
-  // Allowed. A pricing-domain action that scales volume, whose margin is unknown, is not claimed as a loss
+  if (blocks.length > 0) {
+    const first = blocks[0];
+    return { allowed: false, code: first.code, reason: first.reason, ...(first.ruleId ? { ruleId: first.ruleId } : {}), blocks };
+  }
+
+  // Allowed. Pricing-sensitive work that scales volume, whose margin is unknown, is not claimed as a loss
   // (the shared margin gate's contract) — the Owner-mode abstention is reported for the caller to record.
-  const abstain = c.businessScoped && !protective && !execute && MARGIN_SENSITIVE_DOMAINS.has(s.domain) && c.grossMarginPct === null;
+  const abstain = c.businessScoped && !protective && pricingSensitive && c.grossMarginPct === null;
   return { allowed: true, marginAbstention: abstain ? OWNER_MARGIN_REQUIRED_DATA : null };
 }

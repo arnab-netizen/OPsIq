@@ -79,13 +79,15 @@ function DangerCard({ label, danger, testId }: { label: string; danger: any; tes
   // out-of-date one shows only its last-known level and which data to update.
   const lastKnown = danger?.status === "last_known";
   const conflicting = danger?.status === "conflicting";
+  // The in-progress current period's figures set this level: labelled as in progress, never as completed.
+  const inProgress = danger?.status === "in_progress";
   const asOf = danger?.evidenceAsOf ? new Date(danger.evidenceAsOf).toISOString().slice(0, 10) : null;
   return (
     <div className="border rounded-lg p-3 bg-card" data-testid={testId}>
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-center gap-2 flex-wrap">
         <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>
-          {conflicting ? "Signals disagree" : lastKnown ? `Last flagged: ${levelLabel}${danger?.updateDataLabel ? ` — update ${danger.updateDataLabel} data` : ""}` : levelLabel}
+          {conflicting ? "Signals disagree" : inProgress ? `In progress: ${levelLabel}` : lastKnown ? `Last flagged: ${levelLabel}${danger?.updateDataLabel ? ` — update ${danger.updateDataLabel} data` : ""}` : levelLabel}
         </Badge>
         {!lastKnown && !conflicting && typeof danger?.riskScore === "number" && (
           <span className="text-sm text-muted-foreground">{Math.round(danger.riskScore)}/100</span>

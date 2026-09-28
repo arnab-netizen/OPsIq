@@ -15,7 +15,7 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
-import { ENGAGED_ACTION_STATUSES, periodEndOf, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
+import { ENGAGED_ACTION_STATUSES, periodEndOf, completedEvidencePeriod, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -140,6 +140,7 @@ export async function runOperationsDiagnosis(
       // period's cycle (action-continuity.ts "held").
       const continuity = planWithContinuity(actionRows, engagedPrior, {
         current: periodEndOf(snapshotRow.periodEnd),
+        currentCompleted: completedEvidencePeriod(snapshotRow as { periodEnd?: unknown; supersededById?: unknown }, new Date()),
         of: (p) => periodEndOf(p.cycle?.snapshot?.periodEnd),
       });
       carriedForwardIds = [];

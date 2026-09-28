@@ -10,8 +10,8 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
-import { ENGAGED_ACTION_STATUSES, periodEndOf, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
-import { CURRENT_RECOVERY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
+import { ENGAGED_ACTION_STATUSES, periodEndOf, completedEvidencePeriod, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
+import { CURRENT_RECOVERY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -56,7 +56,7 @@ export async function runCycle(
   // raise a false critical transition.
   const snapshotPeriodEnd = snapshotRow.periodEnd instanceof Date ? snapshotRow.periodEnd : new Date(snapshotRow.periodEnd as unknown as string);
   const baselineCycle = await db.recoveryCycle.findFirst({
-    where: { businessId, workspaceId, snapshot: { periodEnd: { lte: new Date(), lt: snapshotPeriodEnd } } },
+    where: { businessId, workspaceId, snapshot: { periodEnd: { ...currentEvidenceWhere(new Date()).snapshot.periodEnd, lt: snapshotPeriodEnd } } },
     orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
     include: { snapshot: true },
   });
@@ -142,7 +142,11 @@ export async function runCycle(
         periodEnd: periodEndOf(r.cycle?.snapshot?.periodEnd),
       }));
     // Back-fill: a cycle for an older period never takes over in-flight work on a newer period's cycle.
-    const continuity = planWithContinuity(actionSpecs, engagedPrior, { current: snapshotPeriodEnd, of: (p) => p.periodEnd });
+    const continuity = planWithContinuity(actionSpecs, engagedPrior, {
+      current: snapshotPeriodEnd,
+      currentCompleted: completedEvidencePeriod(snapshotRow, new Date()),
+      of: (p) => p.periodEnd,
+    });
     carriedForwardIds = [];
     // Re-attach (guarded by status; original findingId kept — its baseline predates the work).
     const movedPlanned = new Set<(typeof actionSpecs)[number]>();

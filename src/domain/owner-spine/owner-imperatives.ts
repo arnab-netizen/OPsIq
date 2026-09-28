@@ -320,20 +320,26 @@ const humanizeCodes = (x: string) => x.replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (m) 
 const PLAN_ORDER_LEAD_ALWAYS = /^(?:start\s+(?:with|by)|begin\s+(?:with|by)|before\s+anything\s+else|first\s+thing|immediately|right\s+now|above\s+all|must(?!\s+not\b|n['’]?t\b))\b\s*[:,—–-]?\s*/i;
 /** Leading labels that are an ordering claim only as a label ("First: …", "Top priority — …"), never "The first cohort …". */
 const PLAN_ORDER_LEAD_LABEL = /^(?:the\s+)?(?:first\s+priority|first\s+step|highest\s+priority|top\s+priority|priority\s+one|number\s+one|urgent(?:ly)?|first|now)\s*[:,—–-]\s*/i;
-const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?)\b\s*:?\s*/i;
+const PLAN_PROHIBITION_LEAD = /^(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|must\s+not|mustn['’]?t|hold\s+off(?:\s+on)?|no\s+more(?!\s+than))\b\s*:?\s*/i;
 /**
  * A sentence that OPENS with an imperative verb addressed to the owner ("Collect receivables first.").
  * Inline ordering phrases and a trailing "first" are removed only from such a sentence (or one with an
  * ordering lead) — factual prose ("Revenue dropped immediately after the price rise.", "The loan is repaid
  * first.") is never rewritten.
  */
-const PLAN_IMPERATIVE_VERB = /^(?:please\s+)?(?:add|address|build|call|cancel|chase|check|clear|close|collect|confirm|consolidate|contact|create|cut|defer|delay|drop|ensure|expand|fix|focus|freeze|get|grow|hire|improve|increase|invest|keep|launch|lock|lower|make|measure|move|negotiate|open|pause|pay|prioriti[sz]e|protect|raise|record|recover|reduce|renegotiate|reprice|resolve|restore|review|run|scale|secure|sell|set|shift|stabili[sz]e|target|test|tighten|track|trim|verify)\b/i;
-/** A prohibition introduced inside the sentence after a dash ("Protect cash — do not add growth spend."). */
-const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid)\b\s*:?\s*/gi;
+const PLAN_IMPERATIVE_VERB = /^(?:please\s+)?(?:act|add|address|apply|begin|build|call|cancel|chase|check|clear|close|collect|complete|confirm|consolidate|contact|create|cut|defer|delay|do|drop|ensure|expand|finish|fix|focus|follow|freeze|get|grow|hire|hold|improve|increase|invest|keep|launch|limit|lock|lower|make|measure|move|negotiate|offer|open|pause|pay|plan|prepare|prioriti[sz]e|protect|put|raise|record|recover|reduce|remove|renegotiate|replace|reprice|resolve|restore|review|run|scale|schedule|secure|sell|send|set|shift|spend|stabili[sz]e|start|switch|take|target|test|tighten|track|trim|use|verify)\b/i;
+/**
+ * A prohibition introduced inside the sentence after a dash or a colon ("Protect cash — do not add growth
+ * spend.", "Protect cash: stop discretionary spend.").
+ */
+const PLAN_PROHIBITION_ASIDE = /(\s[—–]\s|:\s+)(?:do\s+not|don['’]?t|never|stop(?!-)|avoid|no\s+more(?!\s+than))\b\s*:?\s*/gi;
 /** Inline ordering phrases; "before any action/commitment/…" takes the rest of its clause with it. */
 const PLAN_ORDER_INLINE = /\s*,?\s*\b(?:before\s+anything\s+else|before\s+any\s+(?:(?:other|new|further)\s+)?(?:action|commitment|spend|spending|decision|step|move|investment)s?\b[^,.;!?]*|as\s+(?:a|the|your)\s+first\s+(?:step|move|priority)|first\s+thing|right\s+away|immediately|at\s+once|as\s+(?:the|a|your)\s+(?:highest|top)\s+priority)\b/gi;
-/** An ordering "first" closing a clause ("Stabilise first, then …", "Collect receivables first."). */
-const PLAN_TRAILING_FIRST = /\s+first(?=\s*(?:[,;!]|\.|$))/i;
+/**
+ * An ordering "first" / "next" closing a clause ("Stabilise first, then …", "Collect receivables first.",
+ * "Protect cash first: …", "Do the cash-survival action next: …").
+ */
+const PLAN_TRAILING_FIRST = /\s+(?:first|next)(?=\s*(?:[,;:!]|\.|$))/i;
 
 function capitalize(x: string): string {
   return x ? x[0].toUpperCase() + x.slice(1) : x;
@@ -355,6 +361,7 @@ function neutralizePlanSentence(sentence: string): { text: string; heldBack: boo
   const { body, ordered } = stripOrderLeads(sentence.slice(lead.length));
   const prohibition = PLAN_PROHIBITION_LEAD.exec(body);
   if (prohibition) {
+    // Lower case: the restated sentence is shown after its own label ("Plan analysis (context): the plan …").
     return { text: `${lead}the plan analysis holds back ${body.slice(prohibition[0].length).replace(PLAN_ORDER_INLINE, "")}`, heldBack: true };
   }
   let heldBack = false;
@@ -369,7 +376,9 @@ function neutralizePlanSentence(sentence: string): { text: string; heldBack: boo
   const imperative = directed && (ordered || inline || PLAN_TRAILING_FIRST.test(asides));
   if (!imperative) return { text: heldBack ? `${lead}${asides}` : sentence, heldBack };
   const cleaned = asides.replace(PLAN_ORDER_INLINE, "").replace(PLAN_TRAILING_FIRST, "");
-  return { text: `${lead}${capitalize(cleaned.trimStart())}`, heldBack };
+  // A removed ordering lead ("First: collect …") leaves a lower-case start to capitalise; otherwise the
+  // sentence keeps its own case.
+  return { text: `${lead}${ordered ? capitalize(cleaned.trimStart()) : cleaned.trimStart()}`, heldBack };
 }
 
 export function neutralizePlanImperatives(text: string): { text: string; heldBack: boolean } {

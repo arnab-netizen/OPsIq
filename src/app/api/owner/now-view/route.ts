@@ -13,7 +13,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
-import { getOwnerHome } from "@/services/owner-home/home.service";
+import { resolveOwnerHome } from "@/services/owner-home/home.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,17 +29,20 @@ export const GET = withCanonicalEnforcement(
     // /owner/now) omits it and keeps the workspace-wide processExecution/executionLifecycle payload.
     const restrictExecutionToAttributableBusiness = url.searchParams.get("restrictExecutionToBusiness") === "true";
     // Resolve the canonical decision FIRST: Now View enriches it (its headline names the main target).
-    const home = await getOwnerHome(ctx.verifiedWorkspaceId, businessId);
+    const { home, gate } = await resolveOwnerHome(ctx.verifiedWorkspaceId, businessId);
     // Never pair one business's Now View with another business's decision: when a business was
     // requested but the resolver selected a different one (e.g. an archived/fixture id in a
     // single-business workspace), there is no decision for the requested business.
-    const ownerDecision = businessId && home.selectedBusinessId !== businessId ? null : home.currentOwnerDecision;
+    const mismatched = Boolean(businessId && home.selectedBusinessId !== businessId);
+    const ownerDecision = mismatched ? null : home.currentOwnerDecision;
     // Now View reads ONE business's evidence: the requested one, else the business the canonical decision
     // was resolved for (never a workspace-wide aggregate of several businesses).
     const viewBusinessId = businessId ?? home.selectedBusinessId ?? null;
     const payload = await getOwnerNowView(ctx.verifiedWorkspaceId, viewBusinessId, undefined, ctx.verifiedActorId, {
       restrictExecutionToAttributableBusiness,
       ownerDecision,
+      // The gate constraints that decision was resolved with (same business), never another business's.
+      ownerGate: mismatched ? null : gate,
     });
     return { ...payload, ownerDecision };
   },

@@ -74,6 +74,12 @@ export interface OwnerHomeSummaryInput {
    * current (the ONE current cash/finance reading's `conflicting`): the cash card states the conflict.
    */
   cashFinanceConflict?: { cashState: string; financeState: string } | null;
+  /**
+   * The in-progress current period's cash/finance reading, when it is WORSE than the completed reading (the
+   * shared reading's `provisional`): it tightens the cash card and is labelled as in progress. It never
+   * clears or softens the card.
+   */
+  provisionalCash?: { state: string; source: "cashflow" | "finance" } | null;
   /** Injectable clock for deterministic output; defaults to now. */
   now?: Date;
 }
@@ -174,7 +180,30 @@ function executionDanger(ctx: DangerContext): DomainDanger {
  * reading, Finance's own cash-survival findings (severity only, no score); otherwise Cash flow's
  * last-known reading. Finance's overall (margin/profit-driven) risk is never presented as cash danger.
  */
+const LEVEL_RANK: Record<DangerLevel, number> = { unknown: -1, none: 0, low: 1, elevated: 2, high: 3, critical: 4 };
+const SURVIVAL_STATE_LEVEL: Record<string, DangerLevel> = { SAFE: "none", WATCH: "low", AT_RISK: "elevated", CRITICAL: "high", INSOLVENT_RISK: "critical" };
+const SURVIVAL_STATE_WORDS: Record<string, string> = { SAFE: "safe", WATCH: "on watch", AT_RISK: "at risk", CRITICAL: "critical", INSOLVENT_RISK: "at risk of insolvency" };
+
 function cashDanger(ctx: DangerContext, input: OwnerHomeSummaryInput): DomainDanger {
+  const base = completedCashDanger(ctx, input);
+  const prov = input.provisionalCash ?? null;
+  const provLevel = prov ? SURVIVAL_STATE_LEVEL[prov.state] : undefined;
+  if (!prov || !provLevel || LEVEL_RANK[provLevel] <= LEVEL_RANK[base.level]) return base;
+  // The in-progress period is worse: it tightens the card, labelled as in progress (never completed truth).
+  const note = `This period's in-progress ${prov.source === "finance" ? "Finance" : "cash"} figures show ${SURVIVAL_STATE_WORDS[prov.state] ?? prov.state.toLowerCase()} (in progress — not a completed period yet).`;
+  return {
+    ...base,
+    sourceDomains: base.sourceDomains.includes(prov.source) ? base.sourceDomains : [...base.sourceDomains, prov.source],
+    drivenBy: base.drivenBy ? `${note} ${base.drivenBy}` : note,
+    status: "in_progress",
+    level: provLevel,
+    riskScore: null,
+    lastFlagged: false,
+    updateDataLabel: null,
+  };
+}
+
+function completedCashDanger(ctx: DangerContext, input: OwnerHomeSummaryInput): DomainDanger {
   const conflict = input.cashFinanceConflict ?? null;
   if (conflict) {
     // Two current readings disagree and neither supersedes the other: say so — no side is picked, and no

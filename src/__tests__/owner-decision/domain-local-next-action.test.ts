@@ -56,6 +56,7 @@ function evidence(over: Partial<Record<SpineKey, unknown>>, vers: Partial<Record
   return {
     finance: null, recovery: null, cashflow: null, sales: null, operations: null, sop: null, marketing: null, strategy: null,
     futureDomains: [],
+    provisionalDomains: [],
     ...over,
     verifications: { finance: [], sales: [], operations: [], sop: [], strategy: [], cashflow: [], marketing: [], recovery: [], ...vers },
   } as OwnerSpineEvidence;

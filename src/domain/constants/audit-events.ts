@@ -566,6 +566,8 @@ export const AUDIT_EVENTS = {
   OWNER_RESOURCE_RELEASED: "owner.resource_released",
   OWNER_BUSINESS_RISK_IDENTIFIED: "owner.business_risk_identified",
   OWNER_BUSINESS_RISK_STATUS_CHANGED: "owner.business_risk_status_changed",
+  /** A risk's recorded fields were edited without a status change (old → new values in the payload). */
+  OWNER_BUSINESS_RISK_UPDATED: "owner.business_risk_updated",
   OWNER_BUSINESS_RISK_RESOLVED: "owner.business_risk_resolved",
   OWNER_BUSINESS_RISK_REVIEW_COMPLETED: "owner.business_risk_review_completed",
   OWNER_BUSINESS_RISK_ACCEPTED: "owner.business_risk_accepted",

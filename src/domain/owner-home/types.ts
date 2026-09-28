@@ -33,7 +33,8 @@ export interface DomainDanger {
    * conflicting = two current readings disagree and neither is more current (shown as a conflict, never
    * resolved by picking one); unknown = no diagnosis.
    */
-  status: "current" | "last_known" | "conflicting" | "unknown";
+  /** in_progress: the in-progress current period's (provisional) figures are worse and set the level. */
+  status: "current" | "last_known" | "conflicting" | "unknown" | "in_progress";
   /** 0..100, ONLY for a current reading from a scored domain; null otherwise (never invented, never stale). */
   riskScore: number | null;
   /** The current level, or the last-known level when status is last_known. */

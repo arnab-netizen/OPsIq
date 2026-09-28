@@ -11,8 +11,9 @@
  * Read-only: loads persisted, workspace- and business-scoped rows and normalizes them. Owns no table.
  */
 import { db } from "@/lib/db";
+import { continuityKey, ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import { loadOwnerGateConstraints } from "@/services/owner-mode/owner-action-gate.service";
-import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere, provisionalEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { currentCashFinanceReading, currentEvidenceTime } from "@/services/owner-spine/current-cash-finance-reading";
 import { coherentStrategyActions, currentStrategyDecision } from "@/services/owner-strategy/decision-view";
@@ -164,9 +165,44 @@ export interface OwnerSpineEvidence {
   sop: PersistedCycleRow | null;
   marketing: PersistedCycleRow | null;
   strategy: PersistedCycleRow | null;
-  /** Domains holding figures for a period that has not ended yet (not used as current evidence). */
+  /** Domains holding figures for a period that has not STARTED yet (genuinely future: excluded entirely). */
   futureDomains: string[];
+  /** Domains holding figures for the in-progress current period (provisional: never the current cycle). */
+  provisionalDomains: string[];
   verifications: Record<DomainKey | "recovery", PersistedVerificationRow[]>;
+}
+
+/**
+ * Read-time action continuity (action-continuity.ts): the owner's ENGAGED work (assigned, in progress,
+ * blocked) that is still attached to an OLDER cycle — because the current cycle was diagnosed while its
+ * period was in progress, or back-filled — follows the current issue by continuity key, exactly as the
+ * domain dashboards list it: an engaged action whose finding the current diagnosis still raises takes the
+ * place of that cycle's never-engaged proposal for the same key, and is described by the CURRENT diagnosis's
+ * finding (its own findingId — its baseline — is kept). Work whose finding the current diagnosis no longer
+ * raises is not a current step (the dashboard flags it for the owner to finish or cancel).
+ */
+function followEngagedWork<C extends { id: string; findings?: unknown[]; actions?: unknown[] }>(
+  cycle: C | null,
+  engaged: ReadonlyArray<Record<string, unknown>>,
+  codeOf: (a: Record<string, unknown>) => string | null
+): (C & { continuityFindingAlias?: Map<string, unknown> }) | null {
+  if (!cycle) return null;
+  const findings = (cycle.findings ?? []) as Array<{ id: unknown; code?: unknown }>;
+  const byCode = new Map(findings.map((f) => [String(f.code), f]));
+  const follow = engaged.filter((e) => {
+    const code = codeOf(e);
+    return code !== null && byCode.has(code) && e.cycleId !== cycle.id;
+  });
+  if (follow.length === 0) return cycle;
+  const keyOf = (a: Record<string, unknown>) => continuityKey({ findingCode: codeOf(a) ?? "", recommendationCode: (a.recommendationCode as string | null | undefined) ?? null });
+  const followedKeys = new Set(follow.map(keyOf));
+  const engagedStatuses: ReadonlySet<string> = new Set(ENGAGED_ACTION_STATUSES);
+  const own = ((cycle.actions ?? []) as Array<Record<string, unknown>>).filter(
+    (a) => !(followedKeys.has(keyOf(a)) && !engagedStatuses.has(String(a.status)) && a.status !== "completed")
+  );
+  const alias = new Map<string, unknown>();
+  for (const e of follow) if (typeof e.findingId === "string") alias.set(e.findingId, byCode.get(codeOf(e) ?? ""));
+  return { ...cycle, actions: [...own, ...follow], continuityFindingAlias: alias };
 }
 
 /**
@@ -178,8 +214,10 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
   // Current evidence only: a period that has not ended by `now` is never the current reading.
   const evidenceWhere = { ...where, ...currentEvidenceWhere(now) };
   const latest = { orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, include: spineCycleInclude };
-  // Figures entered for a period that has not ended yet are not used — the owner is told so.
-  const futureWhere = { ...where, snapshot: { periodEnd: { gt: now } } };
+  // Figures for a period that has not STARTED are not used at all; figures for the in-progress current
+  // period are provisional (never the current cycle) — the owner is told which is which.
+  const futureWhere = { ...where, snapshot: { periodStart: { gt: now } } };
+  const provisionalWhere = { ...where, ...provisionalEvidenceWhere(now) };
   const futureSelect = { select: { id: true } } as const;
   const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
     financeVers, salesVers, operationsVers, sopVers, strategyVers, cashflowVers, marketingVers, recoveryVers] = await Promise.all([
@@ -223,18 +261,49 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
       orderBy: { createdAt: "desc" },
     }),
   ]);
-  const futureReads = await Promise.all([
-    db.ownerFinanceCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "finance" : null)),
-    db.ownerCashflowCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "cashflow" : null)),
-    db.ownerSalesCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "sales" : null)),
-    db.ownerOperationsCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "operations" : null)),
-    db.ownerSopCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "sop" : null)),
-    db.ownerMarketingCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "marketing" : null)),
-    db.recoveryCycle.findFirst({ where: futureWhere, ...futureSelect }).then((r: unknown) => (r ? "recovery" : null)),
+  // Engaged work on other cycles (read-time continuity — followEngagedWork).
+  const engagedWhere = { ...where, status: { in: [...ENGAGED_ACTION_STATUSES] } };
+  const engagedInclude = { include: { verifications: { orderBy: { createdAt: "desc" as const } } } };
+  const [engFinance, engCashflow, engSales, engOperations, engSop, engMarketing, engRecovery] = await Promise.all([
+    finance ? db.ownerFinanceAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    cashflow ? db.ownerCashflowAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    sales ? db.ownerSalesAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    operations ? db.ownerOperationsAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    sop ? db.ownerSopAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    marketing ? db.ownerMarketingAction.findMany({ where: engagedWhere, ...engagedInclude }) : [],
+    recovery
+      ? db.recoveryAction.findMany({
+          where: engagedWhere,
+          include: { finding: { select: { code: true, severity: true } }, verifications: { orderBy: { createdAt: "desc" as const } } },
+        })
+      : [],
   ]);
+  const byFindingCode = (a: Record<string, unknown>) => (typeof a.findingCode === "string" ? a.findingCode : null);
+  const byLinkedFinding = (a: Record<string, unknown>) => {
+    const f = a.finding as { code?: unknown } | null | undefined;
+    return typeof f?.code === "string" ? f.code : null;
+  };
+  const periodReads = (w: Record<string, unknown>) => Promise.all([
+    db.ownerFinanceCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "finance" : null)),
+    db.ownerCashflowCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "cashflow" : null)),
+    db.ownerSalesCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "sales" : null)),
+    db.ownerOperationsCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "operations" : null)),
+    db.ownerSopCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "sop" : null)),
+    db.ownerMarketingCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "marketing" : null)),
+    db.recoveryCycle.findFirst({ where: w, ...futureSelect }).then((r: unknown) => (r ? "recovery" : null)),
+  ]);
+  const [futureReads, provisionalReads] = await Promise.all([periodReads(futureWhere), periodReads(provisionalWhere)]);
   return {
-    finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
+    finance: followEngagedWork(finance, engFinance, byFindingCode),
+    recovery: followEngagedWork(recovery, engRecovery, byLinkedFinding),
+    cashflow: followEngagedWork(cashflow, engCashflow, byFindingCode),
+    sales: followEngagedWork(sales, engSales, byFindingCode),
+    operations: followEngagedWork(operations, engOperations, byFindingCode),
+    sop: followEngagedWork(sop, engSop, byFindingCode),
+    marketing: followEngagedWork(marketing, engMarketing, byFindingCode),
+    strategy,
     futureDomains: futureReads.filter((d): d is string => d !== null),
+    provisionalDomains: provisionalReads.filter((d): d is string => d !== null),
     verifications: {
       finance: financeVers, sales: salesVers, operations: operationsVers, sop: sopVers, strategy: strategyVers,
       cashflow: cashflowVers, marketing: marketingVers, recovery: recoveryVers,
@@ -250,8 +319,10 @@ export interface OwnerSpineBuild {
   verifications: OwnerHomeVerificationInput[];
   events: OwnerDecisionEvent[];
   staleDomains: string[];
-  /** Domains holding figures for a period that has not ended yet (never the current evidence). */
+  /** Domains holding figures for a period that has not started yet (excluded entirely). */
   futureDomains: string[];
+  /** Domains holding figures for the in-progress current period (provisional, labelled as in progress). */
+  provisionalDomains: string[];
   survivalReadings: SurvivalEvidenceReading[];
   strategyContext: OwnerDecisionStrategyContext | null;
   /** Missing critical data of the EXACT snapshot the latest Finance diagnosis ran on. */
@@ -272,6 +343,7 @@ export function buildOwnerSpineCandidates(
   const events: OwnerDecisionEvent[] = [];
   const staleDomains: string[] = [];
   const futureDomains = [...ev.futureDomains];
+  const provisionalDomains = [...ev.provisionalDomains];
   const staleCutoff = now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000;
   const issueVerifications: Record<"finance" | "cashflow", IssueVerificationFact[]> = { finance: [], cashflow: [] };
 
@@ -320,7 +392,11 @@ export function buildOwnerSpineCandidates(
       businessId,
       workspaceId,
       domain,
-      findingsById: new Map<string, PersistedFindingRow>((cycle.findings ?? []).map((f) => [String(f.id), f])),
+      findingsById: new Map<string, PersistedFindingRow>([
+        ...(cycle.findings ?? []).map((f) => [String(f.id), f] as [string, PersistedFindingRow]),
+        // Engaged work followed from an older cycle is described by the CURRENT diagnosis's finding.
+        ...[...((cycle as { continuityFindingAlias?: Map<string, PersistedFindingRow> }).continuityFindingAlias ?? new Map<string, PersistedFindingRow>())],
+      ]),
       evidenceAsOf,
       stale,
       verifiedFixes: fixesFrom(verRows),
@@ -455,7 +531,7 @@ export function buildOwnerSpineCandidates(
     ? (finance.snapshot.missingCriticalData as unknown[]).filter((m): m is string => typeof m === "string")
     : [];
 
-  return { candidates, domainScores, findings, verifications, events, staleDomains, futureDomains, survivalReadings, strategyContext, missingCriticalData };
+  return { candidates, domainScores, findings, verifications, events, staleDomains, futureDomains, provisionalDomains, survivalReadings, strategyContext, missingCriticalData };
 }
 
 /**

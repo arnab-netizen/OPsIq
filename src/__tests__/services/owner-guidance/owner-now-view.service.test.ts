@@ -28,8 +28,9 @@ function fakeDeps(rows: Rows): { deps: GuidanceDeps; created: Record<string, unk
     uuid: () => "00000000-0000-0000-0000-000000000001",
     now: () => 1_900_000_000_000,
     db: {
-      ownerCashflowCycle: { findFirst: async () => rows.cash ?? null },
-      ownerFinanceCycle: { findFirst: async () => rows.fin ?? null },
+      // A reading with no stated period is for a completed period 10 days before the fake clock (current evidence).
+      ownerCashflowCycle: { findFirst: async () => (rows.cash ? { snapshot: { periodEnd: new Date(1_900_000_000_000 - 10 * 86_400_000) }, ...rows.cash } : null) },
+      ownerFinanceCycle: { findFirst: async () => (rows.fin ? { snapshot: { periodEnd: new Date(1_900_000_000_000 - 10 * 86_400_000), supersededById: null }, ...rows.fin } : null) },
       ownerEmployeeWorkloadSnapshot: { findFirst: async () => rows.emp ?? null },
       ownerWorkloadSnapshot: { findFirst: async () => rows.own ?? null },
       ownerCapacitySnapshot: { findFirst: async () => rows.cap ?? null },

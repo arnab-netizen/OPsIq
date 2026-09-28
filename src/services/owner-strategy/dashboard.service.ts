@@ -217,7 +217,7 @@ export async function getStrategyDashboard(
   const steps = latestCycle ? await getDomainOwnerSteps(workspaceId, selectedBusinessId, "strategy") : null;
   const heldRows = new Map((steps?.holds ?? []).map((h) => [h.sourceId, ownerGateHoldText(h.code, steps!.gate)] as const));
   const unlistedVerdict = decision && steps
-    ? evaluateOwnerActionGate(steps.gate, { domain: "strategy", intent: ownerStrategyStepIntent(decision.code, decision.primaryStep.findingCode), findingId: null })
+    ? evaluateOwnerActionGate(steps.gate, { domain: "strategy", intent: ownerStrategyStepIntent(decision.code, decision.primaryStep.findingCode), findingId: null, findingCode: decision.primaryStep.findingCode })
     : null;
   const { recommended: recommendedNextAction, decisionStep } = selectStrategyLocalStep(
     decision !== null,

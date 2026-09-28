@@ -241,6 +241,12 @@ export default function OwnerCockpitPage() {
   // never turn `loading` back on/off for a request that's no longer current, and it can never
   // overwrite state a newer, current request already rendered.
   const loadGenerationRef = useRef(0);
+  // The business currently shown: a change recorded for a business the owner has since switched away from
+  // never reloads that business's decision over the current one.
+  const activeBusinessIdRef = useRef(activeBusinessId);
+  useEffect(() => {
+    activeBusinessIdRef.current = activeBusinessId;
+  }, [activeBusinessId]);
 
   const load = useCallback(async (businessId: string | null) => {
     const generation = ++loadGenerationRef.current;
@@ -555,7 +561,7 @@ export default function OwnerCockpitPage() {
       {!loading && !error && assessmentNarrative && <OwnerAssessmentSummary narrative={assessmentNarrative} />}
       {/* The do-not-repeat rules and the owner's changed-context override (the main target's DNR blocker
           routes here); a recorded change reloads the canonical decision. */}
-      <OwnerDoNotRepeatPanel businessId={activeBusinessId} onChanged={() => void load(activeBusinessId)} />
+      <OwnerDoNotRepeatPanel businessId={activeBusinessId} onChanged={(changedBusinessId) => { if (changedBusinessId === activeBusinessIdRef.current) void load(changedBusinessId); }} />
       {/* Setup continuation is secondary to the canonical main target, so it renders after it. */}
       <StartHereContinuationCard businessId={activeBusinessId} />
     </PageContainer>

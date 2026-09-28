@@ -20,6 +20,11 @@ export interface CreateAlertInput {
   entityId?: string;
   severity?: AlertSeverity;
   idempotencyKey?: string;
+  /**
+   * Who raised the alert, for its ALERT_CREATED audit — the recipient (`userId`) by default. A system process
+   * (e.g. the scheduler's risk-review scan) passes a system actor: the recipient did not act.
+   */
+  auditActor?: { actorId?: string; actorType: "user" | "system" };
 }
 
 export type EmailDeliveryStatus = "PENDING" | "CLAIMED" | "SENT" | "FAILED" | "SKIPPED";
@@ -61,6 +66,7 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
     entityId,
     severity = "medium",
     idempotencyKey,
+    auditActor,
   } = input;
 
   enforceWorkspaceId(workspaceId, "createAlert", "Alert");
@@ -94,7 +100,7 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ALERT_CREATED,
-      actorId: userId,
+      ...(auditActor ?? { actorId: userId }),
       entityType: "alert",
       entityId: alert.id,
       workspaceId,
