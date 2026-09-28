@@ -17,20 +17,25 @@ const SUBJECT = { domain: "finance", intent: "EXECUTE" as const, findingId: "fin
 const SUBJECT_GROW = { domain: "finance", intent: "GROW" as const, findingId: "finding-1", findingCode: "finding-1" };
 
 describe("R10 P1-2: exact DNR precedence over broad", () => {
+  // These use GROW intent deliberately: a broad rule only applies under GROW (or an unknown intent) —
+  // ownerDoNotRepeatApplies. Under EXECUTE (or any other intent) the broad rule is filtered out entirely
+  // regardless of array order, so exact would "win" trivially without proving real precedence. GROW is the
+  // one intent where BOTH rules are genuinely co-applicable, which is exactly the ambiguity 14c36b12's
+  // Array.prototype.find (whichever the array lists first) got wrong.
   it("broad listed first, exact second → exact rule wins", () => {
-    const v = evaluateOwnerActionGate({ ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: [BROAD, EXACT] }, SUBJECT);
+    const v = evaluateOwnerActionGate({ ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: [BROAD, EXACT] }, SUBJECT_GROW);
     expect(v.allowed).toBe(false);
     if (!v.allowed) expect(v.ruleId).toBe("rule-exact");
   });
 
   it("exact listed first, broad second → exact rule still wins", () => {
-    const v = evaluateOwnerActionGate({ ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: [EXACT, BROAD] }, SUBJECT);
+    const v = evaluateOwnerActionGate({ ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: [EXACT, BROAD] }, SUBJECT_GROW);
     expect(v.allowed).toBe(false);
     if (!v.allowed) expect(v.ruleId).toBe("rule-exact");
   });
 
   it("array reversed relative to the first case → still exact", () => {
-    const v = evaluateOwnerActionGate({ ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: [EXACT, BROAD].reverse() }, SUBJECT);
+    const v = evaluateOwnerActionGate({ ...NO_OWNER_GATE_CONSTRAINTS, doNotRepeat: [EXACT, BROAD].reverse() }, SUBJECT_GROW);
     expect(v.allowed).toBe(false);
     if (!v.allowed) expect(v.ruleId).toBe("rule-exact");
   });
