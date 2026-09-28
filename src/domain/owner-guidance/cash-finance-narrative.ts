@@ -6,13 +6,17 @@
  * provisional evidence. This module NEVER re-decides any of that. It only narrates the already-
  * decided projection into owner-facing issue text.
  *
- * It deliberately takes primitive, authoritative facts as input — never the legacy
- * `CashFinanceResolution` fields (`effectiveState`, `safe`, `conflicting`, `supersededSource`,
- * `supersededState`) — so it is structurally impossible for this mapper to re-arbitrate. The one
- * exception is `bothCurrentDisagree`: true only when both sources are CURRENT and genuinely
- * disagree with no way to tell which is more current (Case F). That is a narration trigger only —
- * it never substitutes for `gateState`/`gateDriver`/`gateSource`, which still decide severity and
- * attribution even inside that branch.
+ * It deliberately takes primitive, authoritative facts as input — never `effectiveState` or
+ * `safe` from the legacy `CashFinanceResolution` at all. Two legacy fields are still accepted, but
+ * under a hard contract: they may ONLY change wording, never which issue exists, its id, category,
+ * severity, or requiresOwnerAction:
+ *   - `bothCurrentDisagree`: true only when both sources are CURRENT and genuinely disagree with no
+ *     way to tell which is more current (Case F). A narration TRIGGER only — every branch it opens
+ *     still gets its severity/category from `gateState`/`gateDriver`, never from this flag itself.
+ *   - `supersededSource`/`supersededState`: which earlier, now-stale reading to name in an extra
+ *     context sentence. All branching in this module is driven by `gateDriver` alone
+ *     ("cash" | "finance_profit" | "unverified"); these two fields are read only inside the
+ *     already-chosen branch, to append " An earlier X showed Y" — never to choose the branch.
  */
 import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
 import { BusinessFunction } from "@/domain/owner-guidance/business-function";
@@ -126,15 +130,21 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
         });
       }
     } else if (gateState !== null && !SAFE_STATES.has(gateState)) {
-      // Not conflicting: gateState/gateDriver/gateSource are the authoritative decision, never
-      // recomputed here. supersededSource/supersededState are read only as narrative CONTEXT (which
-      // earlier reading to name and what it showed) — they never decide severity or classification.
+      // Not conflicting: gateState/gateDriver/gateSource are the SOLE authoritative decision of
+      // which issue exists, its id/category/severity/requiresOwnerAction. supersededSource/
+      // supersededState are read ONLY to build an extra context sentence (which earlier, now-stale
+      // reading to name) — they must never select a branch or alter classification.
       const sev = cashSeverity(gateState);
       const supersedeNote = supersededSource
         ? ` An earlier ${supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${supersededState}; that reading is now out of date.`
         : "";
-      if (financeProfitDriven && supersededSource !== "finance") {
-        if (supersededSource !== "cash" && !SAFE_STATES.has(cashState)) {
+      if (gateDriver === "finance_profit") {
+        // The enforced danger is profitability/financial survival, from Finance's own current
+        // provenance — never relabelled CASH_DANGER because of a legacy supersession field.
+        pushFinanceProfitIssue(gateState, supersedeNote);
+        // Independently-current second issue: cash's OWN current reading, if it is itself unsafe —
+        // decided from cashState alone, never from supersededSource.
+        if (!SAFE_STATES.has(cashState)) {
           const cashSev = cashSeverity(cashState);
           issues.push({
             id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
@@ -142,16 +152,22 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
             requiresOwnerAction: cashSev === "CRITICAL" || cashSev === "HIGH",
           });
         }
-        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, supersededSource === "cash" ? supersedeNote : "");
-      } else {
-        const subject = supersededSource === "cash"
-          ? "Financial survival (Finance diagnosis)"
-          : supersededSource === "finance"
-            ? "Cash survival (cash check)"
-            : "Cash and financial survival";
+      } else if (gateDriver === "cash") {
+        // The enforced danger is cash/financial-survival cash risk, from Cash flow's own current reading.
         issues.push({
           id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          severity: sev, headline: `${subject} is ${gateState}.${supersedeNote}`,
+          severity: sev, headline: `Cash survival (cash check) is ${gateState}.${supersedeNote}`,
+          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
+        });
+        // Independently-current second issue: Finance's OWN current reading, if it is itself unsafe
+        // and profit-driven — decided from finState + financeProfitDriven, never from supersededSource.
+        if (financeProfitDriven && !SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, "");
+      } else {
+        // gateDriver "unverified" (or absent) while both sources are nonetheless current: name both,
+        // never inferring a specific cash/profit danger from a stale source.
+        issues.push({
+          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+          severity: sev, headline: `Cash and financial survival is ${gateState}.${supersedeNote}`,
           requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
         });
       }

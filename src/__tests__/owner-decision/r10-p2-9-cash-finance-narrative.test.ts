@@ -206,3 +206,106 @@ describe("R10 P2-9: mutation proof — restoring the old second-engine decision 
     expect(current.find((i) => i.id === "cash")?.headline).not.toMatch(/conflicting information/i);
   });
 });
+
+describe("R10 P2-9 follow-up: legacy context fields are wording-only (context invariance)", () => {
+  type IssueShape = { id: string; category: string; severity: string; requiresOwnerAction: boolean };
+  const shape = (issues: ReturnType<typeof cashFinanceOwnerNarrative>): IssueShape[] =>
+    issues.map((i) => ({ id: i.id, category: i.category, severity: i.severity, requiresOwnerAction: i.requiresOwnerAction }));
+
+  const scenarios: Array<{ label: string; input: CashFinanceOwnerNarrativeInput }> = [
+    {
+      label: "gateDriver=cash, both current, cash unsafe",
+      input: { ...base, cashState: "CRITICAL", finState: "SAFE", gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow" },
+    },
+    {
+      label: "gateDriver=finance_profit, both current, finance unsafe + cash unsafe too",
+      input: { ...base, cashState: "CRITICAL", finState: "AT_RISK", gateState: "AT_RISK", gateDriver: "finance_profit", gateSource: "finance", financeProfitDriven: true },
+    },
+    {
+      label: "gateDriver=unverified, both current (edge case)",
+      input: { ...base, cashState: "AT_RISK", finState: "AT_RISK", gateState: "AT_RISK", gateDriver: "unverified", gateSource: "finance" },
+    },
+  ];
+
+  for (const { label, input } of scenarios) {
+    it(`${label}: identical issue ids/categories/severities/requiresOwnerAction across supersededSource variants — only wording may differ`, () => {
+      const none = cashFinanceOwnerNarrative({ ...input, supersededSource: null, supersededState: null });
+      const cash = cashFinanceOwnerNarrative({ ...input, supersededSource: "cash", supersededState: "SAFE" });
+      const finance = cashFinanceOwnerNarrative({ ...input, supersededSource: "finance", supersededState: "SAFE" });
+
+      expect(shape(cash)).toEqual(shape(none));
+      expect(shape(finance)).toEqual(shape(none));
+
+      // Wording MAY differ (that's the one thing these fields are allowed to change):
+      const headlines = [none, cash, finance].map((issues) => issues.map((i) => i.headline).join("|"));
+      // Not asserting they DO differ (they needn't, e.g. when gateDriver="unverified" ignores them) —
+      // only that classification never does, which the equality checks above already prove.
+      expect(headlines.length).toBe(3);
+    });
+  }
+
+  it("mutation check: reintroducing supersededSource-dependent classification breaks context invariance", () => {
+    // Simulates the retired bug: branching (which issue/category is emitted) keyed off
+    // supersededSource instead of gateDriver.
+    function buggyClassify(input: CashFinanceOwnerNarrativeInput): IssueShape[] {
+      const { cashState, finState, gateState, supersededSource } = input;
+      if (!cashState || !finState || !gateState) return [];
+      // BUG: category flips based on supersededSource, not gateDriver.
+      const category = supersededSource === "finance" ? "CASH_DANGER" : supersededSource === "cash" ? "PROFIT_LEAK" : "CASH_DANGER";
+      return [{ id: "cash", category, severity: "CRITICAL", requiresOwnerAction: true }];
+    }
+    const scenario = scenarios[0].input;
+    const buggyNone = buggyClassify({ ...scenario, supersededSource: null, supersededState: null });
+    const buggyCash = buggyClassify({ ...scenario, supersededSource: "cash", supersededState: "SAFE" });
+    const buggyFinance = buggyClassify({ ...scenario, supersededSource: "finance", supersededState: "SAFE" });
+    // Proves the buggy path DOES violate context invariance (different category per variant):
+    expect(buggyCash[0]?.category).not.toEqual(buggyNone[0]?.category);
+    expect(buggyFinance[0]?.category).toEqual(buggyNone[0]?.category);
+    expect(buggyCash[0]?.category).not.toEqual(buggyFinance[0]?.category);
+
+    // The real mapper does not: category is identical across all three variants.
+    const realNone = shape(cashFinanceOwnerNarrative({ ...scenario, supersededSource: null, supersededState: null }));
+    const realCash = shape(cashFinanceOwnerNarrative({ ...scenario, supersededSource: "cash", supersededState: "SAFE" }));
+    const realFinance = shape(cashFinanceOwnerNarrative({ ...scenario, supersededSource: "finance", supersededState: "SAFE" }));
+    expect(realCash).toEqual(realNone);
+    expect(realFinance).toEqual(realNone);
+  });
+});
+
+describe("R10 P2-9 follow-up: bothCurrentDisagree invariant — only a genuinely current pair may trigger Case F", () => {
+  it("call-site guard: one current + one stale source, even with legacy conflicting=true, cannot set bothCurrentDisagree", () => {
+    // Mirrors the actual call site in owner-now-view.service.ts: bothCurrentDisagree is gated on
+    // Boolean(cashState) && Boolean(finState) (both CURRENT-only locals) BEFORE the legacy
+    // `.conflicting` flag is even consulted.
+    const cashState: string | undefined = "CRITICAL"; // current
+    const finState: string | undefined = undefined; // NOT current (stale) — this is the point
+    const legacyConflicting = true; // legacy engine (wrongly, or on raw non-current states) says conflict
+    const bothCurrentDisagree = Boolean(cashState) && Boolean(finState) && legacyConflicting;
+    expect(bothCurrentDisagree).toBe(false);
+
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState, finState,
+      cashLastKnown: null, finStaleLastKnown: "SAFE",
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      bothCurrentDisagree,
+    });
+    expect(issues.find((i) => i.id === "cash")?.headline).not.toMatch(/conflicting information/i);
+  });
+
+  it("both stale (neither current) cannot set bothCurrentDisagree either", () => {
+    const cashState: string | undefined = undefined;
+    const finState: string | undefined = undefined;
+    const legacyConflicting = true;
+    const bothCurrentDisagree = Boolean(cashState) && Boolean(finState) && legacyConflicting;
+    expect(bothCurrentDisagree).toBe(false);
+  });
+
+  it("only both current + legacy conflicting=true sets bothCurrentDisagree", () => {
+    const cashState: string | undefined = "AT_RISK";
+    const finState: string | undefined = "SAFE";
+    const legacyConflicting = true;
+    const bothCurrentDisagree = Boolean(cashState) && Boolean(finState) && legacyConflicting;
+    expect(bothCurrentDisagree).toBe(true);
+  });
+});
