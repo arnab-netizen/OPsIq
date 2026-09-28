@@ -93,12 +93,30 @@ export function OwnerDoNotRepeatPanel({ businessId, onChanged, focusRuleId = nul
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [hashRuleId, setHashRuleId] = useState<string | null>(null);
+  // R10 P2-6: the interpreted hash focus is qualified by the business it was resolved for. It is resolved
+  // once at mount and again on every ACTUAL hash change (a real navigation) -- never merely because the
+  // businessId PROP changed while the URL's hash did not. That is the fix: switching the active business
+  // does not re-read a hash that has not moved, so business A's mount-time (or last-hashchange-time)
+  // resolution stays tagged to A and the `hashFocus.businessId === businessId` comparison below clears it
+  // for B INSTANTLY on the switch, in the same render as the prop update. Switching back to A later (with
+  // the hash still unchanged) correctly re-matches it. An actual hashchange always re-resolves against
+  // whichever business is active at that moment (businessIdRef -- a direct link works right after landing
+  // on the business it names, or after switching to it and then following a fresh link).
+  const businessIdRef = useRef(businessId);
+  useEffect(() => {
+    businessIdRef.current = businessId;
+  }, [businessId]);
+  const [hashFocus, setHashFocus] = useState<{ businessId: string; ruleId: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const hashRuleId = hashFocus && hashFocus.businessId === businessId ? hashFocus.ruleId : null;
   const focus = focusRuleId ?? hashRuleId;
 
   useEffect(() => {
-    const read = () => setHashRuleId(hashFocusRuleId());
+    const read = () => {
+      const ruleId = hashFocusRuleId();
+      const bid = businessIdRef.current;
+      setHashFocus(ruleId && bid ? { businessId: bid, ruleId } : null);
+    };
     read();
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);

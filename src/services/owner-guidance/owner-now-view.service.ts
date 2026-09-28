@@ -74,7 +74,7 @@ import { evaluateOwnerActionGate, type OwnerGateConstraints } from "@/domain/own
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
-import { currentCashFinanceReading, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
+import { currentCashFinanceReading, toUnitConfidence, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
@@ -389,6 +389,7 @@ async function safeCount(p: Promise<number>): Promise<number> {
   }
 }
 
+/** `score` is the fractional 0..1 confidence scale (toUnitConfidence) — never the raw 0..100 DB score. */
 function confidenceFromScore(score: number | null): EvidenceConfidenceLevel {
   if (score === null) return EvidenceConfidenceLevel.INSUFFICIENT;
   if (score >= 0.85) return EvidenceConfidenceLevel.VERIFIED;
@@ -1024,15 +1025,22 @@ export async function assembleGuidanceContext(
   const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh && !gateHoldsGrowth;
   const outcomeChecksDue = outcomeOpen + reassessOpen;
 
+  // R10 P2-7: dataConfidenceScore is persisted 0..100; confidenceFromScore's thresholds (and
+  // UNVERIFIED_GATE_CONFIDENCE) are the fractional 0..1 scale every confidence constant in this domain
+  // uses -- convert ONCE, at this boundary, with the one shared helper (toUnitConfidence). Comparing the
+  // raw 0..100 score against the 0..1 cap directly (the previous `* 100` at the cap instead of dividing the
+  // score) made the cap numerically vacuous: any positive raw score already exceeds every fractional
+  // threshold in confidenceFromScore, so the capped value never changed which tier was reported.
   const rawConfScore =
     cash && fin ? Math.min(cash.dataConfidenceScore, fin.dataConfidenceScore)
       : cash ? cash.dataConfidenceScore : fin ? fin.dataConfidenceScore : null;
+  const rawConfUnit = toUnitConfidence(rawConfScore);
   // Figures that are not current (out of date, amended, in progress) are never high confidence: the same
   // cap the gate applies (UNVERIFIED_GATE_CONFIDENCE).
-  const confScore = rawConfScore !== null && cashFinanceResolution.gateDriver === "unverified"
-    ? Math.min(rawConfScore, UNVERIFIED_GATE_CONFIDENCE * 100)
-    : rawConfScore;
-  const dataConfidence = confidenceFromScore(confScore);
+  const confUnit = rawConfUnit !== null && cashFinanceResolution.gateDriver === "unverified"
+    ? Math.min(rawConfUnit, UNVERIFIED_GATE_CONFIDENCE)
+    : rawConfUnit;
+  const dataConfidence = confidenceFromScore(confUnit);
 
   // Named, smallest-useful-first missing data — never a generic warning.
   const missingCriticalData: string[] = [];

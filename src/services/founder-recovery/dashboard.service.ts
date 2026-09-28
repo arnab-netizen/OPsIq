@@ -134,17 +134,6 @@ export async function getRecoveryDashboard(
     : null;
 
   const now = new Date();
-  const overdueActions = await db.recoveryAction.findMany({
-    where: {
-      businessId: selectedBusinessId,
-      workspaceId,
-      status: { in: ["proposed", "assigned", "in_progress", "blocked"] },
-      dueAt: { lt: now },
-      // Never a step of a plan for a period that has not started.
-      cycle: { snapshot: { periodStart: { lte: now } } },
-    },
-    orderBy: { dueAt: "asc" },
-  });
 
   // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
   // (action-continuity.ts). Engaged actions left on an earlier cycle are still shown (after
@@ -182,6 +171,29 @@ export async function getRecoveryDashboard(
         ),
       }
     : null;
+
+  // P2-4: overdue actions/count come from the SAME canonical live action set the page displays
+  // (latestCycle.actions — own actions minus a suppressed duplicate, plus engaged work elsewhere, per
+  // dashboardContinuityActions) rather than an independent raw query. A hidden duplicate proposal a fresh
+  // diagnosis re-plans beside the owner's already-completed work is excluded from `own` by continuity —
+  // it must never inflate the overdue count/list either. Historical `completedEarlier` rows are never open
+  // (status "completed"), so they are naturally excluded by the status filter below.
+  const OPEN_STATUSES = new Set(["proposed", "assigned", "in_progress", "blocked"]);
+  const overdueActions = latestCycle
+    ? latestCycle.actions
+        .filter((a: any) => OPEN_STATUSES.has(a.status) && a.dueAt && new Date(a.dueAt).getTime() < now.getTime())
+        .sort((a: any, b: any) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())
+    : await db.recoveryAction.findMany({
+        // No current cycle at all: nothing for continuity to dedupe against yet — the same raw, unscoped
+        // query as before this fix.
+        where: {
+          businessId: selectedBusinessId, workspaceId,
+          status: { in: [...OPEN_STATUSES] },
+          dueAt: { lt: now },
+          cycle: { snapshot: { periodStart: { lte: now } } },
+        },
+        orderBy: { dueAt: "asc" },
+      });
 
   return {
     businesses: businessList,

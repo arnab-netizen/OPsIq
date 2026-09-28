@@ -35,7 +35,7 @@ export type DashboardContinuityRow<A> = A & {
 };
 
 export function dashboardContinuityActions<A extends ReadTimeContinuityAction & { recommendationCode?: string | null }>(
-  cycle: { id: string; createdAt?: Date | string | null; snapshot?: { periodEnd?: Date | string | null } | null; findings: ReadonlyArray<{ code: string }> },
+  cycle: { id: string; createdAt?: Date | string | null; snapshot?: { periodStart?: Date | string | null; periodEnd?: Date | string | null } | null; findings: ReadonlyArray<{ code: string }> },
   own: readonly A[],
   prior: readonly A[],
   codeOf: (a: A) => string | null,
@@ -43,7 +43,7 @@ export function dashboardContinuityActions<A extends ReadTimeContinuityAction & 
 ): Array<DashboardContinuityRow<A>> {
   const raised = new Set(cycle.findings.map((f) => f.code));
   const r = readTimeContinuity<A>(
-    { id: cycle.id, createdAt: cycle.createdAt ?? null, periodEnd: cycle.snapshot?.periodEnd ?? null, raisedCodes: raised },
+    { id: cycle.id, createdAt: cycle.createdAt ?? null, periodStart: cycle.snapshot?.periodStart ?? null, periodEnd: cycle.snapshot?.periodEnd ?? null, raisedCodes: raised },
     own,
     prior,
     (a) => {

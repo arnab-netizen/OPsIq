@@ -148,21 +148,73 @@ describe("[db] P1-1 — completed held work never reappears as duplicate work (e
     });
   }
 
-  it("[db] genuinely newer evidence (a period diagnosed after the completion) re-raises the same step", async () => {
+  it("[db] genuinely newer evidence (a period STARTING after the completion) re-raises the same step", async () => {
     const d = DOMAINS[0];
     const ws = randomUUID();
     const b = await business(ws, "QA R9 Terminal newer evidence");
     const aug = await d.run(ws, b, period(40));
     const done = await completeOne(d, ws, aug.id);
     // The work was completed 20 days ago (a completion is always stamped "now" by the service; the clock is
-    // moved back so a later period can exist): a newer completed period, ending after the completion and
-    // diagnosed after it, raises the same finding again.
+    // moved back so a later period can exist). R10 P2-3: the newer period must START after the completion,
+    // not merely END after it — period(2, 10) starts 12 days ago (after the 20-days-ago completion) and
+    // ends 2 days ago, so it genuinely covers only time after the work was done.
     await db.ownerCashflowAction.update({ where: { id: done.id }, data: { completedAt: new Date(Date.now() - 20 * DAY) } });
-    const oct = await d.run(ws, b, period(2));
+    const oct = await d.run(ws, b, period(2, 10));
     const again = await db.ownerCashflowAction.findFirst({ where: { cycleId: oct.id, findingCode: done.findingCode, recommendationCode: done.recommendationCode } });
     expect(again).toBeTruthy();
     const dash = await d.dashboard(ws, b);
     expect((dash.latestCycle.actions as any[]).some((a) => a.id === again!.id)).toBe(true);
+    await teardownOwnerBusiness(b);
+  });
+
+  // R10 P2-3: a period that merely ENDS after the completion but STARTS before/during it (overlapping) must
+  // NOT be able to revive the same completed step — this is the exact defect the test above used to miss.
+  it("[db] R10 P2-3: a period that only ENDS after the completion (but starts before it) does NOT re-raise the same step", async () => {
+    const d = DOMAINS[0];
+    const ws = randomUUID();
+    const b = await business(ws, "QA R10 P2-3 overlapping period");
+    const aug = await d.run(ws, b, period(40));
+    const done = await completeOne(d, ws, aug.id);
+    await db.ownerCashflowAction.update({ where: { id: done.id }, data: { completedAt: new Date(Date.now() - 20 * DAY) } });
+    // period(2) with the default length (20) starts 22 days ago — BEFORE the 20-days-ago completion —
+    // and ends 2 days ago. It overlaps the completion; it must not prove recurrence.
+    const oct = await d.run(ws, b, period(2));
+    const again = await db.ownerCashflowAction.findFirst({ where: { cycleId: oct.id, findingCode: done.findingCode, recommendationCode: done.recommendationCode } });
+    expect(again, "the overlapping period still proposes the same step (it is not suppressed at diagnosis time)").toBeTruthy();
+    const dash = await d.dashboard(ws, b);
+    // It must not appear as a current, live step: continuity holds it back as a duplicate of the completed work.
+    expect((dash.latestCycle.actions as any[]).some((a) => a.id === again!.id && !a.completedEarlier)).toBe(false);
+    await teardownOwnerBusiness(b);
+  });
+
+  // R10 P2-4: a hidden duplicate proposal (suppressed from latestCycle.actions by continuity) must never
+  // inflate the Recovery dashboard's overdue count/list — overdue is derived from the SAME canonical live
+  // set the page displays, never an independent raw query.
+  it("[db] R10 P2-4: a suppressed duplicate proposal with a past due date never inflates Recovery's overdue count", async () => {
+    const d = DOMAINS.find((x) => x.name === "recovery")!;
+    const ws = randomUUID();
+    const b = await business(ws, "QA R10 Recovery overdue dedupe");
+    const aug = await d.run(ws, b, period(12));
+    const sept = await d.run(ws, b, IN_PROGRESS);
+    const done = await completeOne(d, ws, aug.id);
+    const dupRow = await duplicateOf(d, sept.id, done);
+    expect(dupRow, "the in-progress diagnosis proposed the same step again").toBeTruthy();
+    // Back-date the duplicate's due date so it would count as overdue if it were counted independently.
+    await db.recoveryAction.update({ where: { id: dupRow.id }, data: { dueAt: new Date(Date.now() - 5 * DAY) } });
+    await endPeriod(d, sept.id);
+
+    const dash = await d.dashboard(ws, b);
+    expect(dash.latestCycle.id).toBe(sept.id);
+    const overdueIds = (dash.overdueActions as any[]).map((a) => a.id);
+    expect(overdueIds, "the suppressed duplicate must not appear in the overdue list").not.toContain(dupRow.id);
+    // Sanity: overdueActions is genuinely derived from latestCycle.actions, not merely empty by accident —
+    // make a DIFFERENT, non-duplicate action overdue and confirm it DOES appear.
+    const liveRows = (dash.latestCycle.actions as any[]).filter((a) => a.status === "proposed" && a.id !== dupRow.id);
+    expect(liveRows.length, "there is other live work to test against").toBeGreaterThan(0);
+    await db.recoveryAction.update({ where: { id: liveRows[0].id }, data: { dueAt: new Date(Date.now() - 5 * DAY) } });
+    const dash2 = await d.dashboard(ws, b);
+    expect((dash2.overdueActions as any[]).map((a) => a.id)).toContain(liveRows[0].id);
+    expect((dash2.overdueActions as any[]).map((a) => a.id)).not.toContain(dupRow.id);
     await teardownOwnerBusiness(b);
   });
 });

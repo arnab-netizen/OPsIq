@@ -129,7 +129,11 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     expect(result!.matchedScope).toBe("scope:finance");
   });
 
-  it("passes correct keys to findFirst — canonical key first, legacy key second", async () => {
+  // R10 P1-2: a single findFirst over both key sets combined (ordered only by createdAt) let a more
+  // recently created broad rule shadow an older exact one — checkDoNotRepeatForGuidance now searches the
+  // canonical (exact) key in its OWN query first, and only falls back to a SEPARATE broad/legacy-key query
+  // when nothing exact matched, so a broad rule can never win over an exact one regardless of createdAt.
+  it("passes correct keys to findFirst — canonical key searched alone first, legacy/broad key in a separate fallback query", async () => {
     const capturedArgs: string[][] = [];
     const db: DnrGuidanceDb = {
       ownerDoNotRepeatRule: {
@@ -140,9 +144,26 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
       },
     };
     await checkDoNotRepeatForGuidance(WS, "management", "finding-xyz", db);
+    expect(capturedArgs).toHaveLength(2);
+    expect(capturedArgs[0]).toEqual(["scope:management:finding:finding-xyz"]);
+    expect(capturedArgs[1]).toEqual(["scope:management"]);
+  });
+
+  it("an exact match short-circuits: the broad/legacy fallback query never runs", async () => {
+    const capturedArgs: string[][] = [];
+    const db: DnrGuidanceDb = {
+      ownerDoNotRepeatRule: {
+        findFirst: async (args) => {
+          capturedArgs.push(args.where.memoryKey.in);
+          return args.where.memoryKey.in.includes("scope:management:finding:finding-xyz")
+            ? { memoryKey: "scope:management:finding:finding-xyz", summary: "Exact", reason: "Exact reason", changedContextExplanation: null, blocksRepetition: true }
+            : null;
+        },
+      },
+    };
+    const result = await checkDoNotRepeatForGuidance(WS, "management", "finding-xyz", db);
     expect(capturedArgs).toHaveLength(1);
-    expect(capturedArgs[0][0]).toBe("scope:management:finding:finding-xyz");
-    expect(capturedArgs[0][1]).toBe("scope:management");
+    expect(result?.matchedScope).toBe("scope:management:finding:finding-xyz");
   });
 
   it("when findingId is absent, only the legacy scope key is searched", async () => {

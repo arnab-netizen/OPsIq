@@ -122,6 +122,12 @@ export interface ReadTimeContinuityAction {
   cycleId: string;
   status: string;
   completedAt?: Date | string | null;
+  /**
+   * P2-3: the action's recorded verifications (latest first), when loaded. A verification is stronger
+   * terminal proof than the completion timestamp alone — an owner-confirmed outcome recorded after
+   * completion is itself evidence the work is genuinely done as of that later moment.
+   */
+  verifications?: ReadonlyArray<{ createdAt?: unknown }>;
 }
 
 /** The current cycle as read-time continuity sees it. */
@@ -129,6 +135,8 @@ export interface ReadTimeContinuityCycle {
   id: string;
   /** When the cycle was diagnosed. */
   createdAt: Date | string | null;
+  /** The start of the evidence period it describes. */
+  periodStart: Date | string | null;
   /** The end of the evidence period it describes. */
   periodEnd: Date | string | null;
   /** The finding codes its diagnosis raises. */
@@ -136,17 +144,31 @@ export interface ReadTimeContinuityCycle {
 }
 
 /**
- * Whether the current cycle's evidence post-dates a completion: the cycle was diagnosed after the work was
- * completed AND its evidence period ended after it (figures that include time after the work). Only such
- * evidence can show the same intervention is required again; a proposal from figures that predate the
- * completion (an in-progress period diagnosed before it, a re-diagnosis of an older period) cannot.
+ * The terminal proof time for a completed action: its completion timestamp, or its latest verification's
+ * timestamp when that is later (a verification is stronger, more recent terminal proof than completion
+ * alone). Null when neither is known.
  */
-export function evidencePostdatesCompletion(cycle: Pick<ReadTimeContinuityCycle, "createdAt" | "periodEnd">, completedAt: Date | string | null | undefined): boolean {
-  const done = periodEndOf(completedAt ?? null);
+export function terminalProofTime(a: { completedAt?: Date | string | null; verifications?: ReadonlyArray<{ createdAt?: unknown }> }): Date | null {
+  const completed = periodEndOf(a.completedAt ?? null);
+  const verified = periodEndOf(a.verifications?.[0]?.createdAt ?? null);
+  if (completed === null) return verified;
+  if (verified === null) return completed;
+  return verified.getTime() > completed.getTime() ? verified : completed;
+}
+
+/**
+ * Whether the current cycle's evidence can prove the same intervention is required again after a
+ * completion: its evidence period must START strictly after the terminal proof time — a period that
+ * merely ENDS after it (but started before or during it) still covers time before the work was proven
+ * done, and cannot itself prove recurrence. The cycle must also have been diagnosed after that time (a
+ * back-dated re-diagnosis of an old period is never treated as new evidence).
+ */
+export function evidencePostdatesCompletion(cycle: Pick<ReadTimeContinuityCycle, "createdAt" | "periodStart">, terminalProofAt: Date | string | null | undefined): boolean {
+  const done = periodEndOf(terminalProofAt ?? null);
   const diagnosed = periodEndOf(cycle.createdAt);
-  const end = periodEndOf(cycle.periodEnd);
-  if (done === null || diagnosed === null || end === null) return false;
-  return diagnosed.getTime() > done.getTime() && end.getTime() > done.getTime();
+  const start = periodEndOf(cycle.periodStart);
+  if (done === null || diagnosed === null || start === null) return false;
+  return diagnosed.getTime() > done.getTime() && start.getTime() > done.getTime();
 }
 
 /**
@@ -189,10 +211,10 @@ export function readTimeContinuity<A extends ReadTimeContinuityAction>(
     if (a.status !== "completed") continue;
     const key = keyOf(a);
     if (key === null || !ownProposalKeys.has(key) || followedKeys.has(key)) continue;
-    if (evidencePostdatesCompletion(cycle, a.completedAt)) continue;
+    if (evidencePostdatesCompletion(cycle, terminalProofTime(a))) continue;
     const prev = completedByKey.get(key);
-    const at = periodEndOf(a.completedAt ?? null)?.getTime() ?? 0;
-    if (!prev || at > (periodEndOf(prev.completedAt ?? null)?.getTime() ?? 0)) completedByKey.set(key, a);
+    const at = terminalProofTime(a)?.getTime() ?? 0;
+    if (!prev || at > (terminalProofTime(prev)?.getTime() ?? 0)) completedByKey.set(key, a);
   }
   const completedEarlier = [...completedByKey.values()];
   const suppressFollowed = (a: A) => {

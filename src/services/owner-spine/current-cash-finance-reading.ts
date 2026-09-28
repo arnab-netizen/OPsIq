@@ -62,6 +62,18 @@ export interface ProvisionalCashFinanceReads {
 /** Confidence cap for a state resting on unverified (stale, amended) or provisional figures. */
 export const UNVERIFIED_GATE_CONFIDENCE = 0.4;
 
+/**
+ * R10 P2-7: the ONE conversion between the persisted 0..100 `dataConfidenceScore` columns and the
+ * fractional 0..1 scale every confidence CONSTANT and COMPARISON in this domain (UNVERIFIED_GATE_CONFIDENCE,
+ * OUT_OF_DATE_EVIDENCE_CONFIDENCE, confidenceFromScore's thresholds) is written in. Nothing outside a DTO's
+ * own presentation boundary may convert a 0..100 score to 0..1 (or the reverse) by any other means —
+ * comparing a raw 0..100 score against a 0..1 constant directly makes the comparison meaningless (any
+ * positive raw score trivially exceeds every fractional threshold).
+ */
+export function toUnitConfidence(score0to100: number | null | undefined): number | null {
+  return typeof score0to100 === "number" && Number.isFinite(score0to100) ? Math.max(0, Math.min(1, score0to100 / 100)) : null;
+}
+
 /** What drives a gate state: cash, a profit/margin-driven Finance state, or figures that are not current. */
 export type CashFinanceGateDriver = "cash" | "finance_profit" | "unverified";
 

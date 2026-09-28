@@ -128,7 +128,7 @@ const spineCycleInclude = {
   // buildOwnerHomeSummary and by the *CycleToDomainScore adapters.
   findings: true,
   // Evidence time (snapshot capture) decides whether a verified fix predates this cycle's evidence.
-  snapshot: { select: { id: true, createdAt: true, periodEnd: true } },
+  snapshot: { select: { id: true, createdAt: true, periodStart: true, periodEnd: true } },
   actions: {
     // Deterministic total order: priorityScore is clamped to [0,100], so
     // ties at the ceiling are a real, expected occurrence -- a single-key
@@ -181,7 +181,7 @@ export interface OwnerSpineEvidence {
  * the completion re-raises it, and is kept in view as completed (never as a step). Work whose finding the
  * current diagnosis no longer raises is not a current step.
  */
-function followEngagedWork<C extends { id: string; createdAt?: unknown; snapshot?: { periodEnd?: unknown } | null; findings?: unknown[]; actions?: unknown[] }>(
+function followEngagedWork<C extends { id: string; createdAt?: unknown; snapshot?: { periodStart?: unknown; periodEnd?: unknown } | null; findings?: unknown[]; actions?: unknown[] }>(
   cycle: C | null,
   prior: ReadonlyArray<Record<string, unknown>>,
   codeOf: (a: Record<string, unknown>) => string | null
@@ -198,6 +198,7 @@ function followEngagedWork<C extends { id: string; createdAt?: unknown; snapshot
     {
       id: cycle.id,
       createdAt: (cycle.createdAt as Date | string | null | undefined) ?? null,
+      periodStart: (cycle.snapshot?.periodStart as Date | string | null | undefined) ?? null,
       periodEnd: (cycle.snapshot?.periodEnd as Date | string | null | undefined) ?? null,
       raisedCodes: new Set(byCode.keys()),
     },
@@ -233,7 +234,7 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
     db.ownerFinanceCycle.findFirst({
       where: evidenceWhere,
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-      include: { ...spineCycleInclude, snapshot: { select: { id: true, createdAt: true, periodEnd: true, supersededById: true, missingCriticalData: true } } },
+      include: { ...spineCycleInclude, snapshot: { select: { id: true, createdAt: true, periodStart: true, periodEnd: true, supersededById: true, missingCriticalData: true } } },
     }),
     db.recoveryCycle.findFirst({
       where: evidenceWhere,

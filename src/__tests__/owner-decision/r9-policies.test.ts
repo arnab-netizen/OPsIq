@@ -34,6 +34,7 @@ import { ownerDnrAnnotationFromGate } from "@/services/owner-mode/do-not-repeat.
 import { continuityKey, evidencePostdatesCompletion, readTimeContinuity } from "@/domain/founder-recovery/action-continuity";
 import { buildOwnerHomeSummary } from "@/domain/owner-home/summary";
 import { assembleGuidanceContext, type GuidanceDeps } from "@/services/owner-guidance/owner-now-view.service";
+import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
 import { NO_CHANGE_FACTS } from "./change-facts-fixture";
 
 const BIZ = "biz-1";
@@ -85,8 +86,10 @@ describe("P1-1 — completed held work never disappears and reappears as duplica
     expect(r.completedEarlier.map((a) => a.id)).toEqual(["x"]);
   });
 
-  it("2 — genuinely newer evidence (diagnosed after the completion, period ending after it) re-raises it", () => {
-    const newer = { ...sept, createdAt: new Date(NOW.getTime() - 2 * DAY), periodEnd: new Date(NOW.getTime() - 3 * DAY) };
+  it("2 — genuinely newer evidence (diagnosed after the completion, period STARTING after it) re-raises it", () => {
+    // R10 P2-3: the period must START after the completion (not merely end after it) to prove recurrence —
+    // periodStart here (33 days ago) is after X's completedAt (35 days ago).
+    const newer = { ...sept, createdAt: new Date(NOW.getTime() - 2 * DAY), periodStart: new Date(NOW.getTime() - 33 * DAY), periodEnd: new Date(NOW.getTime() - 3 * DAY) };
     expect(evidencePostdatesCompletion(newer, X.completedAt)).toBe(true);
     const r = readTimeContinuity(newer, [Xdup, other], [X], key, code);
     expect(r.own.map((a) => a.id).sort()).toEqual(["o", "x2"]);
@@ -199,7 +202,13 @@ describe("P1-4 — Now View matches the gate on amended Finance; a missing gate 
     expect(issue.headline).toMatch(/cannot treat cash as safe/);
     expect(ctx.cashSafe).toBe(false);
     expect(state.growthReadinessTier).toBe("STABILIZE_FIRST");
-    expect(ctx.dataConfidence).not.toBe("HIGH");
+    // R10 P2-7: `ctx.dataConfidence` is an EvidenceConfidenceLevel enum (VERIFIED/STRONG/MODERATE/WEAK/
+    // INSUFFICIENT) -- it can never equal the string "HIGH", so `.not.toBe("HIGH")` was vacuously true
+    // regardless of whether the unverified-state cap did anything at all. The fixture's own
+    // dataConfidenceScore is 90 (a 0..100 raw score); capped at UNVERIFIED_GATE_CONFIDENCE (0.4 fractional)
+    // this must land in WEAK (0.3 <= 0.4 < 0.5) -- if the cap were deleted or its scale conversion broken
+    // (comparing the raw 90 against 0.4 directly), confidenceFromScore would see 90 and return VERIFIED.
+    expect(ctx.dataConfidence).toBe(EvidenceConfidenceLevel.WEAK);
   });
   it("amended SAFE Finance + an out-of-date SAFE cash check → still a stated danger (the gate is AT_RISK, unverified)", async () => {
     const { ctx } = await assembleGuidanceContext("ws", "biz", nowViewDeps({ cash: [{ state: "SAFE", periodEndDaysAgo: 120 }], fin: [{ state: "SAFE", periodEndDaysAgo: 5, superseded: true }] }, gate({})));

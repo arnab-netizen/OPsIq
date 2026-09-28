@@ -255,6 +255,12 @@ export default function OwnerCockpitPage() {
     // UX-03: never let the previous business's assessment linger while this new load is in
     // flight or if it fails -- it is only re-set below, inside the generation guard, on success.
     setAssessmentNarrative(null);
+    // R10 P2-6: same rule for the do-not-repeat annotation -- the generation guard below already stops a
+    // STALE RESPONSE from committing A's data over B's, but without this the STATE from before the switch
+    // (A's annotation/focusRuleId) would still render while B's request is in flight, letting the DNR
+    // panel show A's rule id as B's focus target and then wrongly claim it "is no longer in force for this
+    // business" once B's own (necessarily empty-of-it) rules load.
+    setDoNotRepeatAnnotation(null);
     try {
       // restrictExecutionToBusiness=true (sent here and by /owner/priorities — see now-view/route.ts's doc comment)
       // closes the cockpit business-scoping bug where switching the active business changed the
