@@ -11,6 +11,12 @@ export function InProgressPeriodNotice({
   periodEnd,
   hasCompletedReading = false,
   diagnosis = null,
+  // P1-4: only Cash/Finance actually consumes provisional evidence in canonical safety arbitration
+  // (current-cash-finance-reading.ts worst-of). Sales, Operations, Execution, Marketing and Recovery do
+  // not — their diagnosis engines never read an in-progress snapshot into the safety/gate decision, so
+  // this notice must not claim they do. Pass true only for a domain whose provisional-evidence consumption
+  // is actually implemented and tested.
+  provisionalSafetyImplemented = false,
 }: {
   periodState: string | null | undefined;
   periodEnd?: string | Date | null;
@@ -18,6 +24,8 @@ export function InProgressPeriodNotice({
   hasCompletedReading?: boolean;
   /** The in-progress figures' own diagnosis, when they were diagnosed (current: not changed since). */
   diagnosis?: { diagnosedAt: string; state: string | null; current: boolean } | null;
+  /** True only for Cash/Finance, where safety arbitration actually reads provisional evidence. */
+  provisionalSafetyImplemented?: boolean;
 }) {
   if (periodState !== "provisional") return null;
   const end = periodEnd ? new Date(periodEnd) : null;
@@ -26,11 +34,17 @@ export function InProgressPeriodNotice({
   const result = diagnosed
     ? ` They were diagnosed on ${diagnosed.diagnosedAt.slice(0, 10)}${diagnosed.state ? ` and currently show ${diagnosed.state.replace(/_/g, " ").toLowerCase()}` : ""} — a provisional result until the period ends.`
     : " They have not been diagnosed yet; a diagnosis of them is provisional until the period ends.";
+  const behaviorClause = provisionalSafetyImplemented
+    ? " OpsIQ uses in-progress figures only to flag a worsening — never to clear a problem or approve growth — until the period ends; where they are worse than the completed reading, OpsIQ's safety checks already apply them."
+    : " These figures cover a period still in progress. They are shown as provisional and do not replace the latest completed-period evidence used for overall decisions.";
+  const noCompletedBehaviorClause = provisionalSafetyImplemented
+    ? ` They have not been diagnosed yet; a diagnosis of them is provisional until the period ends. OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth.`
+    : " These are provisional figures for the current period. OpsIQ will not treat them as completed-period evidence.";
   return (
     <p data-testid="in-progress-period-notice" className="rounded-md border border-border px-3 py-2 text-xs text-muted-foreground">
       {hasCompletedReading
-        ? `Your latest figures${label} are for a period that is still in progress. OpsIQ uses in-progress figures only to flag a worsening — never to clear a problem or approve growth — until the period ends; where they are worse than the completed reading, OpsIQ's safety checks already apply them.${result} The reading below is from the latest completed period.`
-        : `Your only figures here${label} are for a period that is still in progress, so there is no completed reading yet.${result} OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth.`}
+        ? `Your latest figures${label} are for a period that is still in progress.${behaviorClause}${provisionalSafetyImplemented ? result : ""} The reading below is from the latest completed period.`
+        : `Your only figures here${label} are for a period that is still in progress, so there is no completed reading yet.${provisionalSafetyImplemented ? result : noCompletedBehaviorClause}`}
     </p>
   );
 }

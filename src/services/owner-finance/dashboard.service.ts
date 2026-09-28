@@ -29,10 +29,18 @@ export interface FinanceDashboardPayload {
   inProgressSnapshot: any | null;
   /** Where the snapshot the page diagnoses sits: "provisional" when it is the in-progress one. */
   latestSnapshotPeriodState: EvidencePeriodState | null;
-  /** The snapshot the page's "Run finance diagnosis" diagnoses: the in-progress one, else the current effective one. */
+  /**
+   * The snapshot the page's diagnosis button targets. Priority: (1) the current effective snapshot when it
+   * is an amended replacement awaiting its own diagnosis; (2) the current effective snapshot when it has
+   * never been diagnosed; (3) the current effective snapshot even when already diagnosed (re-run is always
+   * offered — see latestSnapshotDiagnosis); (4) the in-progress period's snapshot, only when there is no
+   * current effective snapshot at all.
+   */
   diagnosisTargetSnapshot: any | null;
-  /** That snapshot's own diagnosis, when it was already diagnosed (the page never prompts a re-run of it). */
-  latestSnapshotDiagnosis: SnapshotDiagnosisState | null;
+  /** Why diagnosisTargetSnapshot was chosen — drives the button/CTA copy. Never affects the priority above. */
+  diagnosisTargetReason: "amended" | "completed" | "provisional" | null;
+  /** That snapshot's own diagnosis, when it was already diagnosed. Re-running it is always allowed. */
+  latestSnapshotDiagnosis: (SnapshotDiagnosisState & { dependenciesChanged: boolean }) | null;
   latestCycle: any | null;
   domainScore: {
     domain: "finance";
@@ -79,7 +87,8 @@ export async function getFinanceDashboard(
   if (!selectedBusinessId) {
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
-      inProgressSnapshot: null, latestSnapshotPeriodState: null, diagnosisTargetSnapshot: null, latestSnapshotDiagnosis: null,
+      inProgressSnapshot: null, latestSnapshotPeriodState: null, diagnosisTargetSnapshot: null,
+      diagnosisTargetReason: null, latestSnapshotDiagnosis: null,
       latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
       cycleHistory: [],
     };
@@ -191,7 +200,11 @@ export async function getFinanceDashboard(
     ? presentDomainLocalStep(await getDomainLocalOwnerStep(workspaceId, selectedBusinessId, "finance"), latestCycleView?.actions ?? [])
     : null;
 
-  const diagnosisTargetSnapshot = inProgressSnapshot ?? latestSnapshot ?? null;
+  // P1-1: the current effective snapshot (completed evidence — including an amended replacement) always
+  // outranks the in-progress provisional one as the diagnosis target. In-progress is the target only when
+  // there is no current effective snapshot at all (nothing completed has ever been entered). Re-diagnosing
+  // an already-diagnosed current snapshot is always offered (P2-2) rather than falling back to provisional.
+  const diagnosisTargetSnapshot = latestSnapshot ?? inProgressSnapshot ?? null;
   const targetCycle = diagnosisTargetSnapshot
     ? await db.ownerFinanceCycle.findFirst({
         where: { businessId: selectedBusinessId, workspaceId, snapshotId: diagnosisTargetSnapshot.id },
@@ -199,6 +212,48 @@ export async function getFinanceDashboard(
         select: { id: true, createdAt: true, survivalState: true },
       })
     : null;
+
+  const diagnosisTargetReason: FinanceDashboardPayload["diagnosisTargetReason"] =
+    diagnosisTargetSnapshot === null
+      ? null
+      : diagnosisTargetSnapshot === latestSnapshot
+        ? ((latestSnapshot as { version?: number } | null)?.version ?? 1) > 1 && !targetCycle
+          ? "amended"
+          : "completed"
+        : "provisional";
+
+  // Finance diagnosis dependency tracking: bank-balance enrichment (ownerCashflowSnapshot, ≤45-day
+  // freshness window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
+  // snapshot itself (diagnosis.service.ts). A newer eligible one arriving after the last cycle ran means
+  // the existing diagnosis was not computed from all currently-available evidence — recommend a re-run
+  // without claiming the snapshot itself is new data.
+  const dependenciesChanged = await (async () => {
+    if (!targetCycle || !diagnosisTargetSnapshot) return false;
+    const snapshotEnd = diagnosisTargetSnapshot.periodEnd instanceof Date
+      ? diagnosisTargetSnapshot.periodEnd
+      : new Date(diagnosisTargetSnapshot.periodEnd as string);
+    const freshnessFloor = new Date(snapshotEnd.getTime() - 45 * 86_400_000);
+    const [newerCashflow, newerIntake] = await Promise.all([
+      db.ownerCashflowSnapshot.findFirst({
+        where: {
+          workspaceId, businessId: selectedBusinessId,
+          periodEnd: { lte: snapshotEnd, gte: freshnessFloor },
+          createdAt: { gt: targetCycle.createdAt },
+        },
+        select: { id: true },
+      }),
+      diagnosisTargetSnapshot.totalDebtOutstanding == null || diagnosisTargetSnapshot.debtPayments == null
+        ? db.ownerDataIntake.findFirst({
+            where: {
+              workspaceId, businessId: selectedBusinessId, ownerConfirmed: true, targetDomain: "cash_debt",
+              confirmedAt: { gt: targetCycle.createdAt },
+            },
+            select: { id: true },
+          })
+        : null,
+    ]);
+    return Boolean(newerCashflow || newerIntake);
+  })();
 
   return {
     businesses: businessList,
@@ -208,7 +263,11 @@ export async function getFinanceDashboard(
     inProgressSnapshot: inProgressSnapshot ?? null,
     latestSnapshotPeriodState: diagnosisTargetSnapshot ? evidencePeriodState(diagnosisTargetSnapshot, dashboardNow) : null,
     diagnosisTargetSnapshot,
-    latestSnapshotDiagnosis: snapshotDiagnosisState(diagnosisTargetSnapshot, targetCycle, targetCycle?.survivalState ?? null),
+    diagnosisTargetReason,
+    latestSnapshotDiagnosis: (() => {
+      const base = snapshotDiagnosisState(diagnosisTargetSnapshot, targetCycle, targetCycle?.survivalState ?? null);
+      return base ? { ...base, dependenciesChanged } : null;
+    })(),
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,

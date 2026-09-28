@@ -78,6 +78,29 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+// P1-1/P2-2: the diagnosis button's label and title are derived from diagnosisTargetReason and the
+// target's own diagnosis state — never a fixed "Run finance diagnosis" string, and never permanently
+// disabled once diagnosed (a completed/amended evidence re-run is always available).
+function financeDiagnosisButtonLabel(dashboard: { diagnosisTargetReason?: string | null; latestSnapshotDiagnosis?: { current?: boolean } | null } | null): string {
+  const reason = dashboard?.diagnosisTargetReason ?? null;
+  const diagnosed = Boolean(dashboard?.latestSnapshotDiagnosis?.current);
+  if (reason === "provisional") return "Diagnose current period (provisional)";
+  if (reason === "amended" && !diagnosed) return "Re-run Finance diagnosis on corrected figures";
+  if (diagnosed) return "Re-run finance diagnosis";
+  return "Run finance diagnosis";
+}
+
+function financeDiagnosisButtonTitle(dashboard: {
+  latestSnapshotDiagnosis?: { current?: boolean; dependenciesChanged?: boolean } | null;
+} | null): string | undefined {
+  const diag = dashboard?.latestSnapshotDiagnosis;
+  if (!diag?.current) return undefined;
+  if (diag.dependenciesChanged) {
+    return "New evidence (bank balance or debt details) is available since this diagnosis ran. Re-running is recommended.";
+  }
+  return "These figures were already diagnosed. Re-run if something changed.";
+}
+
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
     ...init,
@@ -601,8 +624,8 @@ export default function OwnerFinancePage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add financial snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy || Boolean(dashboard?.latestSnapshotDiagnosis?.current)} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Enter new or corrected figures to diagnose again." : undefined}>
-              Run finance diagnosis
+            <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy} title={financeDiagnosisButtonTitle(dashboard)}>
+              {financeDiagnosisButtonLabel(dashboard)}
             </Button>
           </div>
 
@@ -698,16 +721,16 @@ export default function OwnerFinancePage() {
             </form>
           )}
 
-          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.diagnosisTargetSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.diagnosisTargetSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} provisionalSafetyImplemented />
           <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="financial"
               hasSnapshot={Boolean(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot)}
-              inProgressDiagnosis={dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
+              inProgressDiagnosis={dashboard?.diagnosisTargetReason === "provisional" && dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
               snapshotLabel="financial snapshot"
-              diagnosisLabel="Run finance diagnosis"
+              diagnosisLabel={financeDiagnosisButtonLabel(dashboard)}
             />
           ) : (
             <FinanceCycleView

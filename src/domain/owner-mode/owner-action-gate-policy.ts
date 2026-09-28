@@ -286,10 +286,16 @@ export function evaluateOwnerActionGate(c: OwnerGateConstraints, s: OwnerGateSub
   const pricingSensitive = execute ? (code !== null ? PRICING_SENSITIVE_CODES.has(code) : MARGIN_SENSITIVE_DOMAINS.has(s.domain)) : MARGIN_SENSITIVE_DOMAINS.has(s.domain);
 
   // 1. Do-not-repeat: an exact memory of this finding applies to any intent; a broad area memory only to
-  //    growth (or unknown intent).
-  const dnr = c.doNotRepeat.find(
+  //    growth (or unknown intent). P1-2: when BOTH an exact and a broad rule match, the exact rule always
+  //    wins — deterministically, never by createdAt, row id, or the DB's return order for c.doNotRepeat.
+  //    Ties within the same match kind (should not occur in practice, but the evaluator itself must stay
+  //    total) break on the rule id's own sort order, never on array position.
+  const matchingDnr = c.doNotRepeat.filter(
     (r) => r.domain === domain && (r.match === "broad" || (s.findingId != null && r.findingId === s.findingId)) && ownerDoNotRepeatApplies(r.match, s.intent)
   );
+  const exactDnr = matchingDnr.filter((r) => r.match === "exact").sort((a, b) => a.id.localeCompare(b.id))[0];
+  const broadDnr = matchingDnr.filter((r) => r.match === "broad").sort((a, b) => a.id.localeCompare(b.id))[0];
+  const dnr = exactDnr ?? broadDnr;
   if (dnr) {
     blocks.push({
       code: "DO_NOT_REPEAT_BLOCKED",

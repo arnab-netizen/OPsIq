@@ -406,7 +406,7 @@ export default function OwnerCashflowPage() {
               load must never render "No cashflow snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
-          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} provisionalSafetyImplemented />
           <DomainMainTargetContext domain="cashflow" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {dashboard === null ? null : !dashboard.hasData ? (

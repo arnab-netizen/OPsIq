@@ -176,21 +176,27 @@ export async function checkDoNotRepeatForGuidance(
   intent: OwnerTargetIntent | null = null,
 ): Promise<DoNotRepeatAnnotation | null> {
   if (!db.ownerDoNotRepeatRule) return null;
+  const ruleTable = db.ownerDoNotRepeatRule;
   const areaKeys = canonicalOwnerScopeDomain(impactArea) ? ownerScopeLookupKeys(impactArea) : [consultingScopeKey(impactArea)].filter((k): k is string => k !== null);
   if (areaKeys.length === 0) return null;
 
   const exactKeys = findingId ? areaKeys.map((k) => exactScopeKey(k, findingId)) : [];
-  const keysToSearch: string[] = [...exactKeys, ...areaKeys];
 
-  // A rule whose owner has recorded what has changed no longer holds anything back (the owner action
-  // gate skips it the same way), so it never annotates the target either.
-  const rule = await db.ownerDoNotRepeatRule.findFirst({
-    where: {
-      workspaceId, memoryKey: { in: keysToSearch }, blocksRepetition: true, active: true, changedContextExplanation: null,
-      ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  // P1-2: exact always outranks broad, independent of createdAt/DB order. A single findFirst over both
+  // key sets combined would let a more recently created broad rule shadow an older exact one — search the
+  // exact keys first and only fall back to the broad area keys when no exact rule matches.
+  const lookup = (keys: string[]) =>
+    keys.length === 0
+      ? null
+      : ruleTable.findFirst({
+          where: {
+            workspaceId, memoryKey: { in: keys }, blocksRepetition: true, active: true, changedContextExplanation: null,
+            ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+  const rule = (await lookup(exactKeys)) ?? (await lookup(areaKeys));
 
   if (!rule) return null;
 

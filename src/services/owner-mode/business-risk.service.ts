@@ -373,6 +373,18 @@ const CRITICAL_SEVERITY_THRESHOLD = 75;
 // MITIGATING, ASSESSED, IDENTIFIED remain active — mitigation underway ≠ remediation verified.
 const RISK_RESOLUTION_STATUSES = new Set(["RESOLVED", "CLOSED"]);
 
+/**
+ * P2-10: the ONE definition of "this risk's alerts are resolved, not a live overdue risk" — reused by both
+ * the review mutation (resolvesAlerts, above) and the scheduled overdue scan below. A risk the owner accepted
+ * with an explicit rationale is a governed lifecycle state, not an unresolved ignored risk: it must not
+ * re-enter the scheduled scan's candidate set and be re-alerted as overdue. Re-alerting happens only on an
+ * explicit lifecycle change (reopened, acceptance revoked, a transition back out of ACCEPTED) — never
+ * invented as a time-based acceptance expiry the risk model does not have.
+ */
+function riskAlertsAreResolved(status: string, acceptanceRationale: string | null): boolean {
+  return RISK_RESOLUTION_STATUSES.has(status) || (status === "ACCEPTED" && !!acceptanceRationale);
+}
+
 const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
   IDENTIFIED:  ["ASSESSED", "MITIGATING", "ACCEPTED", "CLOSED"],
   ASSESSED:    ["MITIGATING", "ACCEPTED", "CLOSED"],
@@ -444,7 +456,7 @@ export async function reviewRisk(input: ReviewRiskInput) {
     //     active critical alert and an overdue review an active overdue alert (a resolved one is reactivated).
     //     MITIGATING does NOT resolve alerts — work underway is not remediation verified.
     const effectiveReviewDueDate = input.reviewDueDate !== undefined ? input.reviewDueDate : existing.reviewDueDate;
-    const resolvesAlerts = RISK_RESOLUTION_STATUSES.has(input.newStatus) || (input.newStatus === "ACCEPTED" && !!input.acceptanceRationale);
+    const resolvesAlerts = riskAlertsAreResolved(input.newStatus, input.acceptanceRationale ?? null);
     if (resolvesAlerts) {
       await resolveIdempotentAlerts(tx, { workspaceId: input.workspaceId, idempotencyKeys: riskAlertKeys(input.riskId), auditActor: toAuditActor(input.actorId), reason: "risk_resolved" }, now);
     } else {
@@ -517,6 +529,10 @@ export async function evaluateOverdueRiskAlerts(
       workspaceId,
       reviewDueDate: { lt: now },
       status: { notIn: ["RESOLVED", "CLOSED"] },
+      // P2-10: a risk ACCEPTED with an explicit rationale is a governed lifecycle state whose alerts the
+      // review mutation already resolved (riskAlertsAreResolved, above) — it must never re-enter this
+      // scan's candidate set and be reactivated as overdue merely because time passed.
+      NOT: { status: "ACCEPTED", acceptanceRationale: { not: null } },
       isFixtureRecord: false,
       ...fixtureSessionExclusion,
     },
@@ -551,7 +567,13 @@ export async function evaluateOverdueRiskAlerts(
   const riskIdOf = (key: string | null) => String(key).replace(/^risk_(overdue|critical)_/, "");
   const riskIds = [...new Set(openRiskAlerts.map((a) => riskIdOf(a.idempotencyKey)))];
   const closedRisks: Array<{ id: string }> = riskIds.length > 0
-    ? await db.businessRiskEntry.findMany({ where: { workspaceId, id: { in: riskIds }, status: { in: ["RESOLVED", "CLOSED"] } }, select: { id: true } })
+    ? await db.businessRiskEntry.findMany({
+        where: {
+          workspaceId, id: { in: riskIds },
+          OR: [{ status: { in: ["RESOLVED", "CLOSED"] } }, { status: "ACCEPTED", acceptanceRationale: { not: null } }],
+        },
+        select: { id: true },
+      })
     : [];
   for (const r of closedRisks) {
     try {

@@ -142,8 +142,44 @@ export function currentCashFinanceReading(
   const amendedUnsafe = financeAmendedLastKnown && !SAFE.has(financeAmendedLastKnown) ? financeAmendedLastKnown : null;
   const known = worst(arbitrated, amendedUnsafe) ?? (financeAmendedLastKnown ?? null);
   // Readings exist but none is current: unverified figures are never treated as safe.
-  const anyCurrent = (cashState !== null && cashAt !== null) || (financeState !== null && financeAt !== null);
-  const completedGate = known === null ? null : anyCurrent ? known : worst(known, "AT_RISK");
+  const cashIsCurrent = cashState !== null && cashAt !== null;
+  const financeIsCurrent = financeState !== null && financeAt !== null; // an amended reading is never current
+  const anyCurrent = cashIsCurrent || financeIsCurrent;
+  let completedGate = known === null ? null : anyCurrent ? known : worst(known, "AT_RISK");
+  // P1-3: when exactly one source is CURRENT, its currency — not raw severity — decides who drives the
+  // gate. A stale (or amended) second source must never demote a current unsafe reading to an "unverified"
+  // missing-evidence class just because it happens to read more severe, and it must never let its own
+  // specific severity stand in as current truth when the current source is itself safe. See the module doc
+  // Cases A-D. Both-current and neither-current keep the arbitration above unchanged (Cases E and D).
+  const exactlyOneCurrent = cashIsCurrent !== financeIsCurrent;
+  let forcedDecider: { src: "cashflow" | "finance"; current: boolean } | null = null;
+  if (exactlyOneCurrent) {
+    const currentSrc: "cashflow" | "finance" = cashIsCurrent ? "cashflow" : "finance";
+    const currentState = cashIsCurrent ? cashState : financeState;
+    const staleState = cashIsCurrent ? (financeState ?? financeAmendedLastKnown) : cashState;
+    if (currentState !== null && !SAFE.has(currentState)) {
+      // Case A/C: the current unsafe source remains the primary driver at its own real severity,
+      // regardless of a stale/amended second source's severity.
+      completedGate = currentState;
+      forcedDecider = { src: currentSrc, current: true };
+    } else if (staleState !== null && !SAFE.has(staleState)) {
+      // Case B: current source is SAFE/WATCH but the OTHER source is unsafe and not current. Two sub-cases:
+      //   - genuinely stale (never re-run, its evidence period is simply old): fail-safe hold at a generic
+      //     floor (AT_RISK) — never assert its specific severity (e.g. INSOLVENT_RISK) as current truth.
+      //   - an AMENDED Finance reading awaiting re-diagnosis: this is a deliberate, already-diagnosed danger
+      //     the owner has since corrected but not yet re-run — the module doc's own invariant ("never safer
+      //     than an amended-but-undiagnosed unsafe Finance reading") keeps its real severity as the fail-safe
+      //     floor instead of generalizing it away.
+      const financeAmendedStale = cashIsCurrent && financeAmendedLastKnown !== null;
+      completedGate = financeAmendedStale ? staleState : "AT_RISK";
+      const staleSrc: "cashflow" | "finance" = cashIsCurrent ? "finance" : "cashflow";
+      forcedDecider = { src: staleSrc, current: false };
+    } else if (currentState !== null) {
+      // Current source SAFE/WATCH, nothing unsafe on file to fail-safe against.
+      completedGate = currentState;
+      forcedDecider = { src: currentSrc, current: true };
+    }
+  }
   // Which completed reading DECIDES the enforced state (names the block by its real cause and says how far it
   // can be trusted). Every reading that reaches the enforced state competes — a superseded reading never
   // does — and a CURRENT one is preferred: when a current source supports the state, it decides. Only when
@@ -162,8 +198,11 @@ export function currentCashFinanceReading(
     // Between two readings at the enforced state, Finance decides only when it is strictly worse (a tie is
     // named by Cash flow, as before).
     cs.length === 0 ? null : cs.reduce((a, b) => (RANK[b.state] > RANK[a.state] ? b : a));
-  const currentDecider = pick(deciders.filter((c) => c.current));
-  const decider = currentDecider ?? pick(deciders) ?? pick(contributors);
+  // P1-3: when exactly one source is current, forcedDecider (computed above) names who drives the gate and
+  // whether that driver counts as current — bypassing the reaches()/pick() contributor search entirely, so
+  // a stale second source can never win the decider slot by literal severity alone.
+  const currentDecider = forcedDecider ? (forcedDecider.current ? forcedDecider : null) : pick(deciders.filter((c) => c.current));
+  const decider = forcedDecider ?? currentDecider ?? pick(deciders) ?? pick(contributors);
   const unverified = completedGate !== null && currentDecider === null;
   let gateSource: "cashflow" | "finance" | null = completedGate === null ? null : decider?.src ?? (cashState !== null ? "cashflow" : "finance");
   let gateDriver: CashFinanceGateDriver | null = completedGate === null

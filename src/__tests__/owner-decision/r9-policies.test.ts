@@ -117,23 +117,29 @@ describe("P1-1 — completed held work never disappears and reappears as duplica
 // ─── P1-3: an out-of-date second source ───────────────────────────────────────────────────────────────────
 describe("P1-3 — an out-of-date second source never decides the Owner gate at full confidence", () => {
   const now = NOW.getTime();
-  it("current SAFE cash + a 200-day-old CRITICAL profit-driven Finance → unverified, Finance refresh, ≤ 0.4 — never a 0.95 profit target", () => {
+  // Round 10 P1-3 supersedes the R9-era compromise this test used to encode (asserting the stale source's
+  // literal severity as current truth): current SAFE/WATCH + a stale unsafe second source now fails safe
+  // at a GENERIC floor (AT_RISK) rather than asserting the stale source's specific class as current fact.
+  it("current SAFE cash + a 200-day-old CRITICAL profit-driven Finance → fail-safe AT_RISK, unverified, Finance refresh, ≤ 0.4", () => {
     const r = currentCashFinanceReading(
       { state: "SAFE", snapshot: snap(5), confidence: 0.9 },
       { state: "CRITICAL", snapshot: snap(200), driver: "profit", confidence: 0.95 },
       now
     );
-    expect(r.gateState).toBe("CRITICAL"); // the fail-safe keeps the last-known danger
+    expect(r.gateState).toBe("AT_RISK"); // fail-safe floor — never the stale source's literal CRITICAL
     expect(r.gateDriver).toBe("unverified");
-    expect(r.gateSource).toBe("finance");
+    expect(r.gateSource).toBe("finance"); // the stale source is the one that needs refreshing
     expect(r.gateConfidence).toBeLessThanOrEqual(UNVERIFIED_GATE_CONFIDENCE);
     expect(r.financeCurrent).toBe(false);
     expect(r.cashCurrent).toBe(true);
   });
-  it("a 200-day-old CRITICAL cash + current AT_RISK Finance → unverified, Cash flow refresh, ≤ 0.4", () => {
+  // Round 10 P1-3 Case A: the CURRENT unsafe source is sufficient on its own and remains the primary
+  // driver at its own severity and confidence — a stale second source, even a more severe one, never
+  // displaces it into an "unverified" missing-evidence class.
+  it("a 200-day-old CRITICAL cash + current AT_RISK Finance → Finance drives at its own severity/confidence, not unverified", () => {
     const r = currentCashFinanceReading({ state: "CRITICAL", snapshot: snap(200), confidence: 0.95 }, { state: "AT_RISK", snapshot: snap(5), driver: "cash", confidence: 0.8 }, now);
-    expect(r).toMatchObject({ gateState: "CRITICAL", gateDriver: "unverified", gateSource: "cashflow" });
-    expect(r.gateConfidence).toBeLessThanOrEqual(UNVERIFIED_GATE_CONFIDENCE);
+    expect(r).toMatchObject({ gateState: "AT_RISK", gateDriver: "cash", gateSource: "finance" });
+    expect(r.gateConfidence).toBe(0.8); // Finance's own confidence — not capped, this is a real current danger
   });
   it("when a CURRENT source supports the enforced state, it decides — at its own confidence", () => {
     const r = currentCashFinanceReading({ state: "CRITICAL", snapshot: snap(5), confidence: 0.8 }, { state: "CRITICAL", snapshot: snap(200), driver: "cash", confidence: 0.95 }, now);
