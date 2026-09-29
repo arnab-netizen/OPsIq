@@ -422,14 +422,20 @@ function planClauseIsFactual(rest: string): boolean {
   // character, including one glued inside a compound word with no surrounding whitespace ("follow-up")
   // — so a comma-opened aside containing a hyphenated word truncated early and leaked the aside's own
   // tail (which can contain a PLAN_FINITE_VERB word) into mainClauseOnly, wrongly flipping a genuine
-  // imperative to factual. A dash only counts as an aside delimiter when it is flanked by whitespace (or
-  // the clause boundary) on both sides — real dash punctuation is always written with surrounding
-  // spaces ("word — word"); a word-internal hyphen never has them. A comma is unconditionally a
-  // delimiter (a comma is never part of a word). The content between delimiters is matched by excluding
-  // each delimiter position directly (an "unrolled loop": consume one character only where a delimiter
-  // does not start) rather than a single negated character class, since the two delimiter kinds now have
-  // different recognition rules.
-  const ASIDE_DELIM = /,|(?<=\s|^)[-–—](?=\s|$)/;
+  // imperative to factual. Round 8's own fix (requiring an ASCII hyphen to be whitespace-flanked to
+  // count as a delimiter) then broke two OTHER real dash conventions round 9 hostile review found: an
+  // UNSPACED em/en dash ("delays—which were flagged—occurred", common AP-style prose) and a DOUBLE
+  // ASCII hyphen used as an em-dash substitute ("delays--which were flagged--occurred", routine in
+  // plain-text/typed business prose). Both are now unconditional delimiters, since neither ever appears
+  // as a genuine word-internal hyphen: a true Unicode en/em dash character is typographically never used
+  // mid-word, and a real word-internal hyphen is always exactly one character (never doubled). Only a
+  // SINGLE ASCII hyphen keeps the whitespace-flanking requirement, since that is the one character that
+  // is genuinely ambiguous between "spaced dash punctuation" and "word-internal hyphen". A comma is
+  // unconditionally a delimiter (a comma is never part of a word). The content between delimiters is
+  // matched by excluding each delimiter position directly (an "unrolled loop": consume one character
+  // only where a delimiter does not start) rather than a single negated character class, since the
+  // delimiter kinds now have different recognition rules.
+  const ASIDE_DELIM = /,|[–—]|-{2,}|(?<=\s|^)-(?=\s|$)/;
   const asideStripRe = new RegExp(`(?:${ASIDE_DELIM.source})\\s*(?:that|which|who|whose)\\b(?:(?!${ASIDE_DELIM.source})[\\s\\S])*(?=${ASIDE_DELIM.source})`, "gi");
   const withoutRelativeAsides = clause.replace(asideStripRe, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;

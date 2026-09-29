@@ -678,3 +678,53 @@ describe("R10 P2-9 round-8 hostile-review fix: finance_amended's severity/headli
     expect(amended?.headline).not.toMatch(/last cash check also showed/i);
   });
 });
+
+describe("R10 P2-9 round-9 hostile-review fix: finance_amended's category/businessFunction never mislabel a cash-driven escalation as a pure margin problem", () => {
+  it("financeProfitDriven + amended AT_RISK (HIGH) escalated to CRITICAL by a worse stale cash reading — category is CASH_DANGER, not PROFIT_LEAK", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "CRITICAL",
+      finAmendedLastKnown: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "cashflow",
+      financeProfitDriven: true,
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended).toBeDefined();
+    expect(amended?.severity).toBe("CRITICAL");
+    // The escalation is entirely cash-driven — must not be filed as a pure margin problem with no
+    // CASH_FLOW tag:
+    expect(amended?.category).toBe("CASH_DANGER");
+    expect(amended?.businessFunction).toContain("CASH_FLOW");
+    expect(amended?.businessFunction).not.toContain("PROFITABILITY");
+  });
+
+  it("financeProfitDriven + amended CRITICAL, stale cash lower (or absent) — category stays PROFIT_LEAK, unchanged from before", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "AT_RISK",
+      finAmendedLastKnown: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "finance",
+      financeProfitDriven: true,
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended?.severity).toBe("CRITICAL");
+    expect(amended?.category).toBe("PROFIT_LEAK");
+    expect(amended?.businessFunction).toContain("PROFITABILITY");
+  });
+
+  it("mutation check: keying category off financeProfitDriven alone would mislabel the cash-driven escalation as PROFIT_LEAK", () => {
+    const retiredCategory = (financeProfitDriven: boolean, unsafeLastKnown: boolean) => (financeProfitDriven && unsafeLastKnown ? "PROFIT_LEAK" : "CASH_DANGER");
+    expect(retiredCategory(true, true)).toBe("PROFIT_LEAK"); // proves the old shape had the bug
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "CRITICAL",
+      finAmendedLastKnown: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "cashflow",
+      financeProfitDriven: true,
+    });
+    expect(issues.find((i) => i.id === "finance_amended")?.category).toBe("CASH_DANGER"); // the real mapper does not mislabel it
+  });
+});

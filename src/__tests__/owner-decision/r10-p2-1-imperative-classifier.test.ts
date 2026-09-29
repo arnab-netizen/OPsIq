@@ -73,6 +73,12 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     // must strip the same way as a single-delimiter-type aside.
     "No more delays, which were flagged — occurred this quarter.",
     "No more delays — which were flagged, occurred this quarter.",
+    // Round-9 hostile-review fix: round 8's whitespace-flanking requirement for dashes broke an
+    // UNSPACED em/en dash aside (common AP-style prose) and a DOUBLE ASCII hyphen used as an em-dash
+    // substitute (routine in plain-text business prose) — neither is ever a genuine word-internal
+    // hyphen, so both are now unconditional delimiters regardless of spacing.
+    "No more delays—which caused a follow-up—occurred this quarter.",
+    "No more delays--which were flagged--occurred this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
@@ -189,6 +195,31 @@ describe("R10 P2-1 round-8 hostile-review mutation proof: a single negated chara
     // The real classifier's whitespace-aware delimiter recognises "follow-up"'s hyphen as NOT a
     // delimiter (no surrounding whitespace), so the whole aside strips correctly and the genuine
     // imperative survives:
+    expect(isWholeBusinessImperative("Stop the campaign, which triggered a follow-up was flagged, before losses grow.")).toBe(true);
+  });
+});
+
+describe("R10 P2-1 round-9 hostile-review mutation proof: requiring whitespace on BOTH sides of every dash character breaks unspaced em-dash and double-hyphen dash conventions", () => {
+  it("mutation check: the round-8 regex (single ASCII/Unicode dash, whitespace-flanked) does not strip an unspaced em-dash aside, leaking the real verb", () => {
+    const clause = "delays—which caused a follow-up—occurred this quarter";
+    const round8WhitespaceOnly = /(?<=\s|^)[-–—](?=\s|$)/;
+    // Neither em-dash in this unspaced string is whitespace-flanked, so the round-8-only whitespace
+    // rule finds no delimiter at all here (proves the mutation reproduces the regression):
+    expect(round8WhitespaceOnly.test(clause)).toBe(false);
+    // The real classifier treats a Unicode en/em dash as an unconditional delimiter (never a genuine
+    // word-internal hyphen), so the aside strips correctly regardless of spacing:
+    expect(isWholeBusinessImperative("No more delays—which caused a follow-up—occurred this quarter.")).toBe(false);
+  });
+
+  it("mutation check: a double ASCII hyphen ('--', an em-dash substitute) has no surrounding whitespace either, so the round-8-only whitespace rule misses it too", () => {
+    const round8WhitespaceOnly = /(?<=\s|^)[-–—](?=\s|$)/;
+    expect(round8WhitespaceOnly.test("delays--which were flagged--occurred")).toBe(false);
+    // The real classifier treats 2+ consecutive hyphens as an unconditional delimiter (a genuine
+    // word-internal hyphen is always exactly one character):
+    expect(isWholeBusinessImperative("No more delays--which were flagged--occurred this quarter.")).toBe(false);
+  });
+
+  it("a single word-internal hyphen ('follow-up') still correctly stays OUT of the delimiter set (round 8's own fix is preserved)", () => {
     expect(isWholeBusinessImperative("Stop the campaign, which triggered a follow-up was flagged, before losses grow.")).toBe(true);
   });
 });

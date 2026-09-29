@@ -311,12 +311,20 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     // needs to fold in the STALE cash reading, which nothing else in this function represents.
     const cashAlsoUnsafe = !!cashLastKnown && !SAFE_STATES.has(cashLastKnown);
     const baseState = unsafeLastKnown ? finAmendedLastKnown : gateState ?? "AT_RISK";
-    const sev = cashAlsoUnsafe ? worseSeverity(cashSeverity(baseState), cashSeverity(cashLastKnown)) : cashSeverity(baseState);
+    const baseSev = cashSeverity(baseState);
+    // Hostile-review fix (round 9): the stale cash reading can be the WORSE contributor to `sev` (that
+    // is the whole point of the round-8 fix above) — category/businessFunction must not stay keyed on
+    // `financeProfitDriven` alone in that case, or a cash-driven escalation gets filed as a pure margin
+    // problem with no CASH_FLOW tag at all, contradicting this file's own "never mislabel a cash-driven
+    // danger as margin" principle (the same principle already enforced everywhere else in this file).
+    const cashDrivesSeverity = cashAlsoUnsafe && SEVERITY_ORDER.indexOf(cashSeverity(cashLastKnown)) > SEVERITY_ORDER.indexOf(baseSev);
+    const sev = cashAlsoUnsafe ? worseSeverity(baseSev, cashSeverity(cashLastKnown)) : baseSev;
     const cashNote = cashAlsoUnsafe ? ` The last cash check also showed ${cashLastKnown}; that reading is out of date too.` : "";
+    const isProfitIssue = financeProfitDriven && unsafeLastKnown && !cashDrivesSeverity;
     issues.push({
       id: "finance_amended",
-      category: financeProfitDriven && unsafeLastKnown ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
-      businessFunction: [financeProfitDriven && unsafeLastKnown ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
+      category: isProfitIssue ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
+      businessFunction: [isProfitIssue ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
       severity: sev,
       headline: unsafeLastKnown
         ? `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed, so the current state is not proven either way — re-run the Finance diagnosis.${cashNote}`
