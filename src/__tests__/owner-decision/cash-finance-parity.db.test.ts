@@ -190,7 +190,10 @@ describe("[db] the ONE cash/finance reading — parity across Home, Now View, th
     // Now View's documented policy: with one reading missing, cash safety is unmeasured — a caution, never
     // OK, never danger (its growth gate needs both readings).
     expect(r.nowCash).toBe("WATCH");
-    expect(r.nowMissing).toContain("latest cash position (cash on hand + obligations)");
+    // The Finance snapshot already measured cash on hand: the owner is not asked for it again, only for what the
+    // missing Cash flow half adds (obligations and expected inflows).
+    expect(r.nowMissing.join(" | ")).not.toMatch(/latest cash position/);
+    expect(r.nowMissing).toContain("cash obligations and expected inflows from a Cash flow check (your cash on hand is already measured from your Finance snapshot)");
     expect(r.gate).toBe("allowed");
     expect(r.rec).toBe("blocked"); // policy: the missing Cash half is AT_RISK for a growth recommendation
     expect((await consumers(ws, b, "cash flow")).rec).toBe("allowed"); // …which permits spend
