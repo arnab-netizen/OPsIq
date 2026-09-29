@@ -83,10 +83,12 @@ describe("[db] Strategy — the owner's chosen scenario drives the decision", ()
       // Missing inputs are the evaluated scenario's, not the latest period's.
       const olderRow = await db.ownerStrategySnapshot.findUniqueOrThrow({ where: { id: older.id } });
       expect(d1.missingCriticalData).toEqual(olderRow.missingCriticalData);
-      const home1 = await getOwnerHome(workspaceId, businessId);
-      expect((home1.summary?.requiredActions ?? []).filter((a) => a.domain === "strategy").map((a) => a.title)).toEqual(["Close the ₹50,000 funding gap"]);
+      // As of a day inside the evaluated (July 2026) scenario's evidence-freshness window.
+      const home1 = await getOwnerHome(workspaceId, businessId, { now: new Date("2026-08-10T00:00:00.000Z") });
+      expect((home1.currentOwnerDecision?.attention ?? []).filter((a) => a.domain === "strategy").map((a) => a.title)).toEqual(["Close the ₹50,000 funding gap"]);
+      expect(home1.currentOwnerDecision?.primaryTarget?.title).not.toMatch(/pursue|size up|go ahead/i);
       const cond1 = await getBusinessCondition(workspaceId, businessId);
-      expect(cond1.profile?.recommendedNextAction?.title).not.toMatch(/pursue|size up|go ahead/i);
+      expect(cond1.profile).not.toHaveProperty("recommendedNextAction");
 
       // Now the NEWER scenario explicitly.
       const c2 = await runStrategyDiagnosis(businessId, newer.id, actor, workspaceId);
@@ -106,8 +108,14 @@ describe("[db] Strategy — the owner's chosen scenario drives the decision", ()
       expect(d3.decision?.code).toBe("NOT_YET");
       expect(d3.scenarios.find((s) => s.id === older.id)?.isCurrentDecision).toBe(true);
 
-      // Completing the current step re-evaluates the CURRENT scenario (older), not the latest period.
-      const step = d3.recommendedNextAction;
+      // The evaluated July scenario's figures are outside the freshness window today, so the page follows
+      // the canonical eligibility contract: its next step is the explicit refresh target and the
+      // decision's own step is marked as replaced (never shown as "Your next step").
+      expect(d3.recommendedNextAction?.localStepSource).toBe("evidence_refresh");
+      expect(d3.decisionStep.state).toBe("replaced");
+      expect(d3.decisionStep.replacedBecause).toMatch(/out of date/);
+      // Completing the decision's step (its persisted row) re-evaluates the CURRENT scenario (older), not the latest period.
+      const step = (d3.latestCycle.actions as Array<{ id: string; title: string; decisionFit: string }>).find((a) => a.decisionFit === "primary")!;
       expect(step?.title).toBe("Close the ₹50,000 funding gap");
       await updateStrategyAction(step.id, { status: "assigned" }, actor, workspaceId);
       await updateStrategyAction(step.id, { status: "in_progress" }, actor, workspaceId);

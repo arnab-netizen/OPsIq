@@ -13,15 +13,66 @@ import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView
 import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domain/owner-mode/owner-dashboard";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
+import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 
 const querySchema = z.object({
   includeKPIs: z.enum(["true", "false"]).optional().default("true"),
   daysOfHistory: z.string().optional().default("30"),
 });
 
-function toOwnerDashboardDTO(data: any, realRecommendations?: any[]) {
+/** The dashboard view fields this DTO reads (structural: every field optional, defaulted below). */
+interface OwnerDashboardDtoSource {
+  workspaceId: string;
+  config?: { createdAt?: string };
+  health?: {
+    recommendedActions?: unknown[];
+    overallStatus?: HealthStatus;
+    engagementCount?: number;
+    healthyEngagements?: number;
+    atRiskEngagements?: number;
+    criticalEngagements?: number;
+    topRisks?: unknown[];
+  };
+  actionQueue?: {
+    totalCount?: number;
+    overdueCount?: number;
+    byStatus?: Record<string, unknown>;
+    byPriority?: Record<string, unknown>;
+    criticalActions?: unknown[];
+    dueThisWeek?: unknown[];
+  };
+}
+
+interface DashboardRecommendationRow {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+}
+
+/** The two survival-cycle reads this route makes (the `db` proxy is untyped). */
+interface SurvivalCycleReader {
+  ownerFinanceCycle: {
+    findFirst(args: {
+      where: { businessId: string; workspaceId: string; snapshot: { periodEnd: { lte: Date } } };
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
+    }): Promise<{ survivalState: string | null; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
+  };
+  ownerCashflowCycle: {
+    findFirst(args: {
+      where: { businessId: string; workspaceId: string; snapshot: { periodEnd: { lte: Date } } };
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
+    }): Promise<{ cashflowState: string | null; snapshot?: { periodEnd: Date } | null } | null>;
+  };
+}
+
+function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?: DashboardRecommendationRow[]) {
   const recommendedActions = realRecommendations && realRecommendations.length > 0
-    ? realRecommendations.map((rec: any) => ({
+    ? realRecommendations.map((rec) => ({
         id: rec.id,
         title: rec.title,
         description: rec.description,
@@ -76,23 +127,41 @@ export async function buildOwnerDashboardPayload(
   const businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }> =
     await listBusinesses(workspaceId);
 
-  // QUERY 2: Per-business — health status from latest finance cycle + cross-domain action counts
+  // Current evidence is judged relative to one `now` for every business (future periods excluded).
+  const evidenceNow = new Date();
+
+  // QUERY 2: Per-business — health status from the shared cash/finance survival reading + cross-domain action counts
   const businessSnapshots = await Promise.all(
     businesses.map(async (biz, idx) => {
-      const [progress, latestCycle] = await Promise.all([
+      const reader = db as unknown as SurvivalCycleReader;
+      const [progress, financeCycle, cashCycle, provisional] = await Promise.all([
         getOwnerBusinessProgress(biz.id, workspaceId, db as never),
-        (db as any).ownerFinanceCycle.findFirst({
-          where: { businessId: biz.id, workspaceId },
-          orderBy: { createdAt: "desc" },
-          select: { survivalState: true },
+        reader.ownerFinanceCycle.findFirst({
+          where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } },
         }),
+        reader.ownerCashflowCycle.findFirst({
+          where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
+        }),
+        // The in-progress current period (provisional): may only tighten the health status.
+        loadProvisionalCashFinance(db as unknown as ProvisionalCashFinanceDb, { workspaceId, businessId: biz.id }, evidenceNow),
       ]);
 
-      const survivalState: string | null = (latestCycle as any)?.survivalState ?? null;
+      // The ONE current cash/finance survival reading (the same one Owner Home, Now View and the action
+      // gate use): a critical Cash flow reading is never hidden behind a SAFE Finance diagnosis, a genuine
+      // disagreement counts as the worse reading, and amended Finance figures fail safe.
+      const survival = currentCashFinanceReading(
+        cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
+        financeCycle ? { state: financeCycle.survivalState, snapshot: financeCycle.snapshot } : null,
+        evidenceNow.getTime(),
+        provisional
+      ).gateState;
       const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
-        survivalState === "critical" || progress.summary === "blocked" ? "critical"
-        : survivalState === "at_risk" || progress.summary === "at_risk" ? "at_risk"
-        : survivalState === "recovering" ? "improving"
+        survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
+        : survival === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
         : "healthy";
 
       return { bizId: biz.id, bizIdx: idx, healthStatus, progress };

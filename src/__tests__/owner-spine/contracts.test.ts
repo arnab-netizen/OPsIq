@@ -165,7 +165,7 @@ describe("Owner Spine — action ranking", () => {
 });
 
 describe("Owner Spine — Business Condition Profile", () => {
-  it("aggregates domain scores and picks the recommended next action", () => {
+  it("aggregates domain scores and never elects its own next action (resolveOwnerDecision owns the #1)", () => {
     const profile = buildBusinessConditionProfile({
       businessId: "biz1",
       domainScores: [
@@ -182,7 +182,7 @@ describe("Owner Spine — Business Condition Profile", () => {
     expect(profile.survivalRiskScore).toBe(80); // finance is a survival domain
     expect(profile.growthOpportunityScore).toBe(70); // max opportunity
     expect(profile.dataConfidenceScore).toBe(80); // avg(70,90)
-    expect(profile.recommendedNextAction?.findingCode).toBe("HIGH");
+    expect(profile).not.toHaveProperty("recommendedNextAction");
     expect(profile.generatedAt).toBe(FIXED_NOW);
   });
 

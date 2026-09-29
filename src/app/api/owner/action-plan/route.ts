@@ -1,6 +1,7 @@
 /**
- * GET /api/owner/action-plan?businessId=... — the structured assignment + proof framing for the LIVE
- *     next best action: responsible party, owner/delegate split, OpsIQ-prepared work, proof required +
+ * GET /api/owner/action-plan?businessId=... — the structured assignment + proof framing for the
+ *     whole-business plan analysis's suggested step (supporting context — the owner's main target is
+ *     the canonical owner decision, never this plan step): responsible party, owner/delegate split, OpsIQ-prepared work, proof required +
  *     type, acceptance criteria, reassessment metric, escalation trigger, approval + delegatable flags.
  *     Derived from the runtime whole-business plan. OWNER_VIEW, workspace-scoped, canonically enforced.
  */

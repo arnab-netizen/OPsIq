@@ -4,7 +4,7 @@
  * Translates the UX-02A CanonicalOwnerAssessment into deterministic, plain-language
  * copy an owner can read directly. It is a mapping only: it does not compute,
  * rank, score, or diagnose anything, and it never reads OwnerNowView,
- * derivedBusinessCondition, domain diagnoses, financeTopPriority, Recovery state,
+ * derivedBusinessCondition, domain diagnoses, the owner decision, Recovery state,
  * public signals, or the legacy BusinessConditionProfile directly — those were
  * already reconciled by UX-02A. Missing or unknown evidence can only change how
  * certain the copy sounds (confidenceLabel/confidenceMessage); it never changes
@@ -15,7 +15,7 @@
  */
 
 import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
-import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
+import type { OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import type { CanonicalOwnerAssessment } from "@/domain/owner-guidance/owner-assessment-reconciliation";
 import type { AreaStatus } from "@/domain/owner-guidance/guidance-orchestrator";
 
@@ -36,18 +36,29 @@ const HEALTH_HEADLINE: Record<AreaStatus, string> = {
   CRITICAL: "The business needs urgent attention.",
 };
 
-const PRIMARY_CONCERN_BY_CATEGORY: Record<IssueCategory, string> = {
-  [IssueCategory.CASH_DANGER]: "Cash flow is the first issue to address.",
-  [IssueCategory.CUSTOMER_SERVICE_FAILURE]: "Customer service or quality is the first issue to address.",
-  [IssueCategory.OVERLOAD]: "Staff or owner workload is the first issue to address.",
-  [IssueCategory.PROFIT_LEAK]: "Profitability is the first issue to address.",
-  [IssueCategory.CAPACITY_BOTTLENECK]: "Capacity or supply constraints are the first issue to address.",
-  [IssueCategory.COMPLIANCE_SAFETY_RISK]: "Compliance or safety is the first issue to address.",
-  [IssueCategory.BLOCKED_EXECUTION]: "Work that cannot move forward is the first issue to address.",
-  [IssueCategory.PENDING_PROOF_OUTCOME]: "Missing proof or an outcome check is the first issue to address.",
-  [IssueCategory.GROWTH_OPPORTUNITY]: "Growth is the first opportunity to consider.",
-  [IssueCategory.PROCESS_IMPROVEMENT]: "Process improvement is the first opportunity to consider.",
+const PRIMARY_CONCERN_BY_CLASS: Record<OwnerPriorityClass, string> = {
+  SAFETY_COMPLIANCE: "Compliance or safety is the first issue to address.",
+  SURVIVAL_CASH: "Cash flow is the first issue to address.",
+  CUSTOMER_SERVICE_FAILURE: "Customer service or quality is the first issue to address.",
+  OVERLOAD_BLOCKING: "Staff or owner workload is the first issue to address.",
+  PROFIT_LOSS: "Profitability is the first issue to address.",
+  BLOCKED_EXECUTION: "Work that cannot move forward is the first issue to address.",
+  PLAN_COMMITMENT_RISK: "A plan you are considering carries risk; settle it before committing.",
+  MISSING_CRITICAL_EVIDENCE: "Missing business information is the first issue to address.",
+  GROWTH_OPPORTUNITY: "Growth is the first opportunity to consider.",
+  PROCESS_OPTIMISATION: "Process improvement is the first opportunity to consider.",
 };
+
+/** Classes that name a problem to fix (as opposed to an opportunity to consider). */
+const PROBLEM_CLASSES = new Set<OwnerPriorityClass>([
+  "SAFETY_COMPLIANCE",
+  "SURVIVAL_CASH",
+  "CUSTOMER_SERVICE_FAILURE",
+  "OVERLOAD_BLOCKING",
+  "PROFIT_LOSS",
+  "BLOCKED_EXECUTION",
+  "MISSING_CRITICAL_EVIDENCE",
+]);
 
 const AVAILABLE_CONFIDENCE_LABEL: Record<EvidenceConfidenceLevel, string> = {
   [EvidenceConfidenceLevel.VERIFIED]: "Verified evidence",
@@ -67,12 +78,17 @@ function composeHeadline(assessment: CanonicalOwnerAssessment): string {
     // Fail safely rather than inventing a health state.
     return INSUFFICIENT_EVIDENCE_HEADLINE;
   }
+  // The overall condition can read OK while the canonical main target is still an open problem
+  // (e.g. one cash action). Keep the health description, but never let it contradict the target.
+  if (assessment.health === "OK" && assessment.primaryConcernClass !== null && PROBLEM_CLASSES.has(assessment.primaryConcernClass)) {
+    return "No major problem is showing overall, but one open issue needs attention first.";
+  }
   return HEALTH_HEADLINE[assessment.health];
 }
 
 function composePrimaryConcern(assessment: CanonicalOwnerAssessment): string | null {
-  if (assessment.primaryIssue === null) return null;
-  return PRIMARY_CONCERN_BY_CATEGORY[assessment.primaryIssue.category];
+  if (assessment.primaryConcernClass === null) return null;
+  return PRIMARY_CONCERN_BY_CLASS[assessment.primaryConcernClass];
 }
 
 function composeConfidenceLabel(assessment: CanonicalOwnerAssessment): string {

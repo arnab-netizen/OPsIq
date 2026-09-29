@@ -1,5 +1,6 @@
 "use client";
 
+import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,6 +19,7 @@ import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -460,8 +462,8 @@ export default function OwnerExecutionPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add execution snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
-              Run execution diagnosis
+            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run execution diagnosis" : "Run execution diagnosis"}
             </Button>
           </div>
 
@@ -495,6 +497,9 @@ export default function OwnerExecutionPage() {
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save snapshot"}</Button>
             </form>
           )}
+
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
+          <DomainMainTargetContext domain="sop" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
           {!dashboard?.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
@@ -579,12 +584,14 @@ function SopCycleView({
 
       {recommended && (
         <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next execution action</div>
+          <div className="text-xs uppercase text-muted-foreground">Next step within Execution (local to this area — your overall main target is on Home)</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 
@@ -631,8 +638,9 @@ function SopCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

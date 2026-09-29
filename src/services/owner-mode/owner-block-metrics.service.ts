@@ -42,14 +42,25 @@ const FINANCE_GATE_CODES = new Set(["CASH_SAFETY_BLOCKED", "MARGIN_SAFETY_BLOCKE
 
 const DEFAULT_WINDOW_DAYS = 30;
 
+/** The business whose advice the metrics feed (finance blocks are business-scoped). */
+export interface BlockMetricsBusinessScope {
+  businessId: string | null;
+  /** Whether events carrying no business (e.g. a consulting recommendation's promotion) belong to this business: exactly one real business. */
+  unscopedAttributable: boolean;
+}
+
 /**
  * Aggregate recent block events for a workspace. `blockedRecommendations` counts every
  * gate/do-not-repeat block; `financeBlocked` is the cash/margin subset; `proofBlocked`
- * counts task-completion blocks (proof not cleared).
+ * counts task-completion blocks (proof not cleared). With a business scope, every block counter counts
+ * only that business's blocks (an event naming another business never constrains this one's advice;
+ * one naming no business counts only when it is attributable to this business). Approvals auto-handled
+ * are workspace-level memory and are not business-scoped.
  */
 export async function getOwnerBlockMetrics(
   workspaceId: string,
-  injected?: BlockMetricsDeps & { windowDays?: number }
+  injected?: BlockMetricsDeps & { windowDays?: number },
+  business?: BlockMetricsBusinessScope
 ): Promise<OwnerBlockMetrics> {
   const deps = injected ?? (await resolveDefaultDeps());
   const now = (deps.now ?? (() => new Date()))();
@@ -78,17 +89,23 @@ export async function getOwnerBlockMetrics(
   let approvalsAvoided = 0;
 
   for (const e of events) {
-    if (e.eventName === AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED) {
-      proofBlocked += 1;
-      continue;
-    }
     if (e.eventName === AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED) {
       approvalsAvoided += 1;
       continue;
     }
+    // Every block counter is business-scoped when a business is given: an event naming another business
+    // never counts for this one; one naming no business counts only when attributable to this business.
+    const payload = (e.payload && typeof e.payload === "object" ? e.payload : {}) as Record<string, unknown>;
+    const eventBusiness = typeof payload.businessId === "string" ? payload.businessId : null;
+    const ofThisBusiness = !business
+      || (eventBusiness !== null ? eventBusiness === business.businessId : business.unscopedAttributable);
+    if (!ofThisBusiness) continue;
+    if (e.eventName === AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED) {
+      proofBlocked += 1;
+      continue;
+    }
     blockedRecommendations += 1;
     if (e.eventName === AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED) {
-      const payload = (e.payload && typeof e.payload === "object" ? e.payload : {}) as Record<string, unknown>;
       const errorName = payload.errorName;
       const code = payload.code;
       if (

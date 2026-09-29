@@ -189,10 +189,12 @@ export async function getFinancialSnapshot(snapshotId: string, workspaceId: stri
 
 export async function listFinancialSnapshots(businessId: string, workspaceId: string) {
   await getBusiness(businessId, workspaceId);
-  // Return only current (non-superseded) versions — amended snapshots are visible by their new ID
+  // HISTORICAL LIST: every current (non-superseded) version, newest period first — amended snapshots
+  // are visible by their new ID. Deterministic order (same tie-break as the current-effective selector);
+  // "the current snapshot" is never taken from this list (currentEffectiveFinancialSnapshotQuery).
   return db.ownerFinancialSnapshot.findMany({
     where: { businessId, workspaceId, supersededById: null },
-    orderBy: { periodEnd: "desc" },
+    orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
   });
 }
 

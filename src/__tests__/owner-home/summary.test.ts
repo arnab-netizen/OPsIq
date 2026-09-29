@@ -6,11 +6,12 @@ import { describe, it, expect } from "vitest";
 import {
   buildOwnerHomeSummary,
   dangerLevel,
-  OPEN_ACTION_STATUSES,
-  MAX_REQUIRED_ACTIONS,
   type OwnerHomeVerificationInput,
 } from "@/domain/owner-home";
+import { OPEN_OWNER_ACTION_STATUSES, domainActionToCandidate } from "@/services/owner-home/owner-decision-candidates";
+import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import type { DomainScore, OwnerAction, OwnerFinding, OwnerDomain } from "@/domain/owner-spine/contracts";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 const NOW = new Date("2026-06-14T00:00:00.000Z");
 
@@ -84,9 +85,11 @@ function verification(over: Partial<OwnerHomeVerificationInput> = {}): OwnerHome
 describe("owner-home summary — module contract assertions", () => {
   it("buildOwnerHomeSummary is a function", () => { expect(typeof buildOwnerHomeSummary).toBe("function"); });
   it("dangerLevel is a function", () => { expect(typeof dangerLevel).toBe("function"); });
-  it("OPEN_ACTION_STATUSES is an array", () => { expect(Array.isArray(OPEN_ACTION_STATUSES)).toBe(true); });
-  it("OPEN_ACTION_STATUSES.length is greater than 0", () => { expect(OPEN_ACTION_STATUSES.length).toBeGreaterThan(0); });
-  it("MAX_REQUIRED_ACTIONS is a number", () => { expect(typeof MAX_REQUIRED_ACTIONS).toBe("number"); });
+  it("OPEN_OWNER_ACTION_STATUSES is an array", () => { expect(Array.isArray(OPEN_OWNER_ACTION_STATUSES)).toBe(true); });
+  it("OPEN_OWNER_ACTION_STATUSES excludes terminal statuses", () => {
+    expect(OPEN_OWNER_ACTION_STATUSES).not.toContain("completed");
+    expect(OPEN_OWNER_ACTION_STATUSES).not.toContain("cancelled");
+  });
   it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
   it("score is a function", () => { expect(typeof score).toBe("function"); });
   it("finding is a function", () => { expect(typeof finding).toBe("function"); });
@@ -123,7 +126,9 @@ describe("buildOwnerHomeSummary", () => {
       verifications: [],
       now: NOW,
     });
-    expect(summary.cashDanger).toEqual({ key: "cashflow", riskScore: null, level: "unknown" });
+    expect(summary.cashDanger).toEqual({
+      key: "cashflow", sourceDomains: [], drivenBy: null, evidenceAsOf: null, status: "unknown", riskScore: null, level: "unknown", lastFlagged: false, updateDataLabel: null,
+    });
     expect(summary.salesDanger.level).toBe("unknown");
     expect(summary.operationsDanger.level).toBe("unknown");
     expect(summary.executionDanger.level).toBe("unknown");
@@ -142,11 +147,14 @@ describe("buildOwnerHomeSummary", () => {
       verifications: [],
       now: NOW,
     });
-    expect(summary.cashDanger).toEqual({ key: "cashflow", riskScore: 85, level: "critical" });
-    expect(summary.salesDanger).toEqual({ key: "sales", riskScore: 45, level: "elevated" });
-    expect(summary.operationsDanger).toEqual({ key: "operations", riskScore: 30, level: "low" });
+    const pick = (d: { key: string; riskScore: number | null; level: string; status: string }) => ({ key: d.key, riskScore: d.riskScore, level: d.level, status: d.status });
+    expect(pick(summary.cashDanger)).toEqual({ key: "cashflow", riskScore: 85, level: "critical", status: "current" });
+    expect(pick(summary.salesDanger)).toEqual({ key: "sales", riskScore: 45, level: "elevated", status: "current" });
+    expect(pick(summary.operationsDanger)).toEqual({ key: "operations", riskScore: 30, level: "low", status: "current" });
     // execution = max(operations 30, sop 65) = 65 → high
-    expect(summary.executionDanger).toEqual({ key: "execution", riskScore: 65, level: "high" });
+    expect(pick(summary.executionDanger)).toEqual({ key: "execution", riskScore: 65, level: "high", status: "current" });
+    // The source is the domain that DRIVES the level (sop at 65), not every execution domain.
+    expect(summary.executionDanger.sourceDomains).toEqual(["sop"]);
     expect(summary.businessHealthScore).toBe(Math.round((20 + 60 + 70 + 40) / 4));
   });
 
@@ -202,22 +210,30 @@ describe("buildOwnerHomeSummary", () => {
     expect(summary.top3Opportunities.some((o) => o.code === "R1")).toBe(false);
   });
 
-  it("lists today's required actions: open only, ranked, capped", () => {
-    const actions: OwnerAction[] = [
-      action({ findingCode: "A_DONE", status: "completed", priorityScore: 99 }),
-      action({ findingCode: "A_CANCELLED", status: "cancelled", priorityScore: 98 }),
-      action({ findingCode: "A1", status: "proposed", priorityScore: 30 }),
-      action({ findingCode: "A2", status: "in_progress", priorityScore: 90 }),
-      action({ findingCode: "A3", status: "assigned", priorityScore: 60 }),
-      action({ findingCode: "A4", status: "blocked", priorityScore: 70 }),
-      action({ findingCode: "A5", status: "proposed", priorityScore: 50 }),
-      action({ findingCode: "A6", status: "proposed", priorityScore: 80 }),
-    ];
-    const summary = buildOwnerHomeSummary({ domainScores: [score("finance")], findings: [], actions, verifications: [], now: NOW });
-    expect(summary.requiredActions.length).toBe(MAX_REQUIRED_ACTIONS);
-    // closed actions excluded; remaining ranked by priority desc
-    expect(summary.requiredActions.map((a) => a.findingCode)).toEqual(["A2", "A6", "A4", "A3", "A5"]);
-    expect(summary.requiredActions.every((a) => OPEN_ACTION_STATUSES.includes(a.status))).toBe(true);
+  it("today's open work is the canonical decision's attention order: open only, ranked, nothing dropped", () => {
+    // The Home summary no longer builds its own required-actions list; the ONE canonical owner
+    // decision owns "what to do, in what order" (home.service → resolveOwnerDecision).
+    const rows = [
+      { id: "done", findingCode: "A_DONE", status: "completed", priorityScore: 99 },
+      { id: "cancelled", findingCode: "A_CANCELLED", status: "cancelled", priorityScore: 98 },
+      { id: "a1", findingCode: "A1", status: "proposed", priorityScore: 30 },
+      { id: "a2", findingCode: "A2", status: "in_progress", priorityScore: 90 },
+      { id: "a3", findingCode: "A3", status: "assigned", priorityScore: 60 },
+      { id: "a4", findingCode: "A4", status: "blocked", priorityScore: 70 },
+      { id: "a5", findingCode: "A5", status: "proposed", priorityScore: 50 },
+      { id: "a6", findingCode: "A6", status: "proposed", priorityScore: 80 },
+    ].map((r) => ({ ...r, title: r.findingCode, expectedImpactScore: 50, effortScore: 30, confidence: 0.8 }));
+    const ctx = { businessId: "b", workspaceId: "w", domain: "finance" as const, findingsById: new Map(), evidenceAsOf: NOW, stale: false, verifiedFixes: new Map() };
+    const summary = buildOwnerHomeSummary({ domainScores: [score("finance")], findings: [], verifications: [], now: NOW });
+    const decision = resolveOwnerDecision({
+      businessId: "b", workspaceId: "w", candidates: rows.map((r) => domainActionToCandidate(r, ctx)),
+      diagnosedDomains: ["finance"], dataSufficiency: summary.dataSufficiency, staleDomains: [], strategy: null,
+      reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS, now: NOW,
+    });
+    expect(decision.attention.map((a) => a.findingCode)).toEqual(["A2", "A6", "A4", "A3", "A5", "A1"]);
+    expect(decision.attention.every((a) => OPEN_OWNER_ACTION_STATUSES.includes(a.status))).toBe(true);
+    expect(decision.excluded.map((e) => e.reason).sort()).toEqual(["cancelled", "completed"]);
+    expect(summary).not.toHaveProperty("requiredActions");
   });
 
   it("returns the most recent verified improvement, or null when none", () => {
@@ -262,8 +278,96 @@ describe("buildOwnerHomeSummary", () => {
     expect(empty.businessHealthScore).toBe(0);
     expect(empty.top3Risks).toEqual([]);
     expect(empty.top3Opportunities).toEqual([]);
-    expect(empty.requiredActions).toEqual([]);
+    expect(empty).not.toHaveProperty("requiredActions");
     expect(empty.lastVerifiedImprovement).toBeNull();
     expect(empty.cashDanger.level).toBe("unknown");
+  });
+});
+
+describe("Home presentation provenance (stale severity, reconciled cash danger)", () => {
+  const base = { verifications: [] as OwnerHomeVerificationInput[], now: NOW };
+
+  it("a finding from out-of-date figures is marked last flagged, never shown as a current severity", () => {
+    const s = buildOwnerHomeSummary({
+      ...base,
+      domainScores: [score("finance"), score("sales")],
+      findings: [finding({ domain: "finance", code: "FIN_LOW_RUNWAY", severity: "high" }), finding({ domain: "sales", code: "S", severity: "medium" })],
+      staleDomains: ["finance"],
+    });
+    expect(s.top3Risks.find((r) => r.domain === "finance")?.lastFlagged).toBe(true);
+    expect(s.top3Risks.find((r) => r.domain === "sales")?.lastFlagged).toBe(false);
+  });
+
+  it("P2 — margin-driven Finance risk is never presented as cash danger: it is Financial danger with its provenance", () => {
+    const margin = finding({ domain: "finance", code: "FIN_LOW_GROSS_MARGIN", title: "Gross margin is below target", severity: "critical", findingType: "risk" });
+    const s = buildOwnerHomeSummary({ ...base, domainScores: [score("finance", { riskScore: 85 })], findings: [margin] });
+    // No cash-flow reading and no Finance CASH finding: the cash card does not borrow Finance's margin-driven score.
+    expect(s.cashDanger.status).toBe("unknown");
+    expect(s.cashDanger.riskScore).toBeNull();
+    expect(s.financialDanger).toMatchObject({ key: "financial", sourceDomains: ["finance"], status: "current", riskScore: 85, level: "critical", drivenBy: "Driven by: Gross margin is below target" });
+  });
+
+  it("the cash card uses Finance's own CASH-survival finding (severity only, no borrowed score) when Cash flow has no current reading", () => {
+    const s = buildOwnerHomeSummary({
+      ...base, domainScores: [score("finance", { riskScore: 85 })], findings: [],
+      financeCashSignal: { severity: "critical", title: "Cash runs out within days", current: true },
+    });
+    expect(s.cashDanger).toMatchObject({ key: "cashflow", sourceDomains: ["finance"], status: "current", riskScore: null, level: "critical", drivenBy: "From your Finance figures: Cash runs out within days" });
+  });
+
+  it("a cash-danger reading from stale evidence is last-known: no score, names the data to update", () => {
+    const s = buildOwnerHomeSummary({ ...base, domainScores: [score("cashflow", { riskScore: 70 })], findings: [], staleDomains: ["cashflow"] });
+    expect(s.cashDanger).toMatchObject({ status: "last_known", lastFlagged: true, riskScore: null, level: "high", updateDataLabel: "Cash flow" });
+  });
+
+  it("D-P2-2 — an incomparable Cash flow / Finance disagreement is shown as a CONFLICT on the cash card, never resolved by picking Cash flow", () => {
+    const s = buildOwnerHomeSummary({
+      ...base, domainScores: [score("cashflow", { riskScore: 10 }), score("finance", { riskScore: 90 })], findings: [],
+      cashFinanceConflict: { cashState: "SAFE", financeState: "CRITICAL" },
+    });
+    // No side picked, no fabricated combined level or score.
+    expect(s.cashDanger).toMatchObject({ key: "cashflow", status: "conflicting", riskScore: null, level: "unknown", sourceDomains: ["cashflow", "finance"], lastFlagged: false });
+    expect(s.cashDanger.drivenBy).toBe("Cash and Finance signals currently disagree (Cash flow: SAFE, Finance: CRITICAL). Confirm the latest figures before relying on the survival assessment.");
+  });
+
+  it("a Cash flow reading superseded by newer Finance figures is never shown as a current score", () => {
+    const s = buildOwnerHomeSummary({ ...base, domainScores: [score("cashflow", { riskScore: 90 }), score("finance", { riskScore: 10 })], findings: [], cashflowSuperseded: true });
+    expect(s.cashDanger).toMatchObject({ status: "last_known", riskScore: null, drivenBy: "Superseded by newer Finance figures" });
+  });
+
+  it("P2 — a STALE Finance cash-survival reading with no Cash flow diagnosis is last known on the cash card — never 'no data'", () => {
+    const s = buildOwnerHomeSummary({
+      ...base, domainScores: [score("finance", { riskScore: 85 })], findings: [], staleDomains: ["finance"],
+      financeCashSignal: { severity: "critical", title: "Cash runs out within days", current: false },
+    });
+    expect(s.cashDanger).toMatchObject({ status: "last_known", lastFlagged: true, riskScore: null, level: "critical", updateDataLabel: "Finance", sourceDomains: ["finance"] });
+  });
+
+  it("P2 — a Finance reading superseded by newer Cash flow figures is never shown as a current Financial danger", () => {
+    const s = buildOwnerHomeSummary({ ...base, domainScores: [score("cashflow", { riskScore: 10 }), score("finance", { riskScore: 85 })], findings: [], financeSuperseded: true });
+    expect(s.financialDanger).toMatchObject({ status: "last_known", riskScore: null, drivenBy: "Superseded by newer Cash flow figures" });
+    expect(s.cashDanger).toMatchObject({ status: "current", riskScore: 10 });
+  });
+
+  it("P2 — execution rollup follows the domain that drives it: a CURRENT worse reading stays current beside a milder stale one", () => {
+    const s = buildOwnerHomeSummary({
+      ...base, domainScores: [score("operations", { riskScore: 90 }), score("sop", { riskScore: 20 })], findings: [], staleDomains: ["sop"],
+      evidenceAsOf: { operations: new Date("2026-09-20T00:00:00Z"), sop: new Date("2026-05-01T00:00:00Z") },
+    });
+    expect(s.executionDanger).toMatchObject({ status: "current", riskScore: 90, level: "critical", sourceDomains: ["operations"], updateDataLabel: null, evidenceAsOf: new Date("2026-09-20T00:00:00Z") });
+  });
+
+  it("P2 — stale Execution card: last-known level only, never a current score, and it names the data to update", () => {
+    const asOf = new Date("2026-05-01T00:00:00Z");
+    const s = buildOwnerHomeSummary({
+      ...base,
+      domainScores: [score("operations", { riskScore: 30 }), score("sop", { riskScore: 70 })],
+      findings: [],
+      staleDomains: ["sop"],
+      evidenceAsOf: { operations: new Date("2026-09-01T00:00:00Z"), sop: asOf },
+    });
+    expect(s.executionDanger).toMatchObject({ key: "execution", status: "last_known", lastFlagged: true, riskScore: null, level: "high", updateDataLabel: "Execution", evidenceAsOf: asOf });
+    // A current single-domain card keeps its score.
+    expect(s.operationsDanger).toMatchObject({ status: "current", riskScore: 30 });
   });
 });

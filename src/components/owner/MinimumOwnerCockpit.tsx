@@ -6,7 +6,8 @@
  * bridged action the server already computed (from the process-execution bridge), in the 10-section
  * safety layout defined by docs/audits/2026-07-07-owner-ui-capability-exposure/MINIMUM_OWNER_COCKPIT_SPEC.md:
  *
- *   1. Top Priority Action   2. Why This Is First   3. Required Owner Decision   4. Evidence Required
+ *   0. The canonical owner decision (OwnerDecisionCard) — always first, the ONE main target
+ *   1. Governed work you can start (subordinate)   2. Why this matters   3. Required Owner Decision   4. Evidence Required
  *   5. Safe Actions          6. Blocked / Not Allowed 7. Next Reassessment
  *   8. Secondary Actions (collapsed) 9. Monitor-only (collapsed) 10. Proof / Audit (collapsed drawer)
  *
@@ -25,17 +26,9 @@ import type { DerivedBusinessConditionSignals } from "@/services/business-condit
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
-import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
-import type { CockpitDomainPriority } from "@/services/owner-guidance/cockpit-domain-priority.service";
-
-/** Same survival-state palette as /owner/finance (owner/finance/page.tsx's SURVIVAL_VARIANT) — kept local since that page is a separate client bundle. */
-const SURVIVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted"> = {
-  SAFE: "success-accessible",
-  WATCH: "default-accessible",
-  AT_RISK: "warning-accessible",
-  CRITICAL: "destructive-accessible",
-  INSOLVENT_RISK: "destructive-accessible",
-};
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import { ownerImperativeContext, reconcileRecoveryBlocks, reconcileRecoveryGrowthGate } from "@/domain/owner-spine/owner-imperatives";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -129,14 +122,6 @@ export function groupRequiresDecisionItems(items: readonly ExecutionLifecycleIte
   return order.map((key) => ({ key, items: byKey.get(key)! }));
 }
 
-const SURVIVAL_LABEL: Record<string, string> = {
-  SAFE: "Safe",
-  WATCH: "Watch",
-  AT_RISK: "At risk",
-  CRITICAL: "Critical",
-  INSOLVENT_RISK: "Insolvency risk",
-};
-
 const POLICY_DECISION_LABEL: Record<string, string> = {
   BLOCK: "Blocked",
   WARN: "Warning",
@@ -199,6 +184,8 @@ export interface MinimumOwnerCockpitProps {
   bridge: ProcessExecutionBridgeView | null;
   /** The governed "do NOT do now" list from the now-view (each {avoid}), for the Blocked / Not Allowed section. */
   actionsToAvoid?: string[];
+  /** Avoid rules reconciled into the permitted scope of canonical steps (how to carry them out). */
+  stepConditions?: string[];
   /** Read-only recovery status projection (PASS 37). Rendered as a collapsed low-load section. */
   recovery?: OwnerRecoveryStatusResponse | null;
   /** Read-only public-signal ("Outside signals") projection (PASS 39). Rendered as a collapsed low-load section. */
@@ -233,23 +220,13 @@ export interface MinimumOwnerCockpitProps {
   /** Phase 4 — BOS action: run-arbitration | override | resolve-constraint | accept-constraint. */
   onBosAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
   /**
-   * F3 — the latest fresh Finance-diagnosis top action for the currently resolvable business (see
-   * `cockpit-finance-priority.service.ts` for scoping + freshness rules). Precedence: the governed
-   * process-execution bridge's `topRoute` (an actionable CRITICAL/HIGH/MEDIUM/LOW governed route)
-   * always wins the primary "Your top priority now" slot when one exists — this never overwrites an
-   * urgent existing governed issue. When there is no actionable bridge route (the clean state, or a
-   * MONITOR_ONLY-only route), the Finance diagnosis's own top action is what fills the primary slot
-   * instead of a bare "nothing to do" message. When a governed route IS primary, the Finance action
-   * still surfaces as a secondary signal card (same tier as `topProfitLeak`), so it is never hidden.
+   * The ONE canonical owner decision (owner-home service → Spine arbiter), delivered by the now-view
+   * route as `ownerDecision`. It is ALWAYS the primary "Your main business target" slot. The governed
+   * process-execution bridge's `topRoute` is execution work (Now View context) rendered beneath it —
+   * it is never labelled as the owner's top priority, so the Cockpit can never elect a different
+   * winner from Home or Priorities.
    */
-  financeTopPriority?: CockpitFinancePriority | null;
-  /**
-   * BIV-03: highest-ranked open action from the other domain diagnoses (Sales, Strategy, Operations,
-   * SOP, Marketing, Cash flow, Recovery) — see `cockpit-domain-priority.service.ts`. Same precedence
-   * as `financeTopPriority`: never overrides a governed `topRoute`; fills the primary slot in the
-   * clean state when there is no Finance priority; otherwise shown as a secondary card.
-   */
-  domainTopPriority?: CockpitDomainPriority | null;
+  ownerDecision?: CurrentOwnerDecision | null;
   /** False only when the owner has no business yet; drives the "add your business" prompt. */
   hasBusiness?: boolean;
   /**
@@ -274,68 +251,6 @@ export interface MinimumOwnerCockpitProps {
    * Never used to alter what gets sent for a submit that happens before that change.
    */
   activeBusinessId?: string | null;
-}
-
-/** F3: the Finance-diagnosis top-action card, shared by the primary (clean-state) and secondary renders. */
-function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinancePriority; primary: boolean }) {
-  const testId = primary ? "cockpit-finance-priority-primary" : "cockpit-finance-priority-secondary";
-  return (
-    <div
-      data-testid={testId}
-      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
-      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
-    >
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span
-          className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
-          style={primary ? { color: "var(--accent-ink)" } : undefined}
-        >
-          {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
-        </span>
-        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default-accessible"}>
-          {SURVIVAL_LABEL[priority.survivalState] ?? priority.survivalState.replace(/_/g, " ")}
-        </Badge>
-      </div>
-      {priority.topAction ? (
-        <>
-          <strong data-testid="cockpit-finance-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>{priority.topAction.title}</strong>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{priority.topAction.description}</p>
-        </>
-      ) : (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
-          A finance diagnosis ran for {priority.businessName || "your business"} but has no ranked action yet.
-        </p>
-      )}
-      <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
-        See the full finance diagnosis →
-      </a>
-    </div>
-  );
-}
-
-/** BIV-03: the top open action from a non-Finance domain diagnosis, primary (clean state) or secondary. */
-function DomainTopPriorityCard({ priority, primary }: { priority: CockpitDomainPriority; primary: boolean }) {
-  const testId = primary ? "cockpit-domain-priority-primary" : "cockpit-domain-priority-secondary";
-  return (
-    <div
-      data-testid={testId}
-      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
-      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
-    >
-      <span
-        className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
-        style={primary ? { color: "var(--accent-ink)" } : undefined}
-      >
-        {primary ? `Open action from your ${priority.domainLabel} diagnosis` : `Open ${priority.domainLabel} action`}
-      </span>
-      <strong data-testid="cockpit-domain-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>
-        {priority.title}
-      </strong>
-      <a href={priority.href} style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
-        Open {priority.domainLabel} →
-      </a>
-    </div>
-  );
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -377,7 +292,7 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
         ) : (
           <>
             {signals.topPublicSignalAction && (
-              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Next step:</strong> {signals.topPublicSignalAction}</p>
+              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Signal follow-up:</strong> {signals.topPublicSignalAction}</p>
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-why">{signals.whyThisMatters}</p>
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-quality">
@@ -1107,13 +1022,19 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
 }
 
 /** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
-function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
+function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryStatusResponse; ownerDecision: CurrentOwnerDecision | null }) {
   const inProgress = recovery.recoveryStatus !== "NONE";
+  // Recovery's growth constraints pass through the shared reconciler: they constrain GROW work only and
+  // become conditions on a canonical growth step, never a veto of the main target or a supporting step.
+  const imperativeCtx = ownerImperativeContext(ownerDecision);
+  const recoveryBlocks = reconcileRecoveryBlocks(recovery.blockedUnsafeActions, imperativeCtx);
+  const statusLabel = RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus;
+  const recoveryStatusLabel = recovery.recoveryStatus === "THRIVE_GATE_BLOCKED" ? reconcileRecoveryGrowthGate(statusLabel, imperativeCtx) : statusLabel;
   return (
     <details data-testid="cockpit-recovery-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
       <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Recovery status
-        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {recoveryStatusLabel}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!inProgress ? (
@@ -1121,25 +1042,28 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
         ) : (
           <>
             <div data-testid="cockpit-recovery-state" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <Badge variant="muted-accessible">{RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</Badge>
+              <Badge variant="muted-accessible">{recoveryStatusLabel}</Badge>
               <span data-testid="cockpit-recovery-stabilization">Stabilization: {recovery.stabilizationGate}</span>
-              <span data-testid="cockpit-recovery-thrive">Growth gate: {recovery.thriveGate}</span>
+              <span data-testid="cockpit-recovery-thrive">Growth gate: {reconcileRecoveryGrowthGate(recovery.thriveGate, imperativeCtx, recovery.thriveGate === "BLOCKED")}</span>
             </div>
             {recovery.topRecoveryBottleneck && (
-              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Next step:</strong> {recovery.topRecoveryBottleneck}</p>
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Recovery follow-up:</strong> {recovery.topRecoveryBottleneck}</p>
             )}
             {recovery.requiredEvidence.length > 0 && (
               <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
-            {recovery.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+            {recoveryBlocks.blocked.length > 0 && (
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recoveryBlocks.blocked.slice(0, 2).join("; ")}</p>
+            )}
+            {recoveryBlocks.conditions.length > 0 && (
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-conditions">How to run your next steps: {recoveryBlocks.conditions.join(" ")}</p>
             )}
             {recovery.ownerApprovalRequired && (
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
             )}
             {recovery.linkedProcessExecutionTaskIds.length > 0 && (
-              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — act on them in your top action above.</p>
+              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — find them under &ldquo;Governed work you can start&rdquo;.</p>
             )}
           </>
         )}
@@ -1180,7 +1104,7 @@ function GoalAttentionSection({ signal }: { signal: GoalAttentionSignal }) {
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, domainTopPriority = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepConditions = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, ownerDecision = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -1208,17 +1132,15 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
     }
   }, [activeBusinessId]);
 
-  // ── Clean state: no governed process-execution route. Nothing is fabricated to fill the primary
-  // slot — but a real Finance diagnosis, when one exists, is a real prioritized recommendation, not a
-  // fabrication, so it takes the primary slot here (F3). ──
+  // The canonical owner decision always owns the primary slot (see `ownerDecision`'s doc comment).
+  const decisionCard = ownerDecision ? <OwnerDecisionCard decision={ownerDecision} /> : null;
+
+  // ── Clean state: no governed process-execution route. The primary slot is the canonical owner
+  // decision; nothing is fabricated when there is none. ──
   if (!top) {
     return (
       <section data-testid="cockpit-clean" className="flex flex-col gap-3 rounded-md border border-border bg-card p-5">
-        {financeTopPriority ? (
-          <FinanceTopPriorityCard priority={financeTopPriority} primary />
-        ) : domainTopPriority ? (
-          <DomainTopPriorityCard priority={domainTopPriority} primary />
-        ) : (
+        {decisionCard ?? (
           <div>
             <strong className="text-base font-semibold text-foreground">No urgent action needs your attention right now.</strong>
             <p className="mt-1.5 text-sm text-muted-foreground">
@@ -1235,11 +1157,10 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             )}
           </div>
         )}
-        {financeTopPriority && domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={false} />}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
         {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
-        {recovery && <RecoverySection recovery={recovery} />}
+        {recovery && <RecoverySection recovery={recovery} ownerDecision={ownerDecision} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
     );
@@ -1303,21 +1224,30 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   return (
     <section data-testid="owner-cockpit" data-execution-route={top.executionRoute}
       className="flex max-w-2xl flex-col gap-3.5">
+      {decisionCard}
 
-      {/* 1. Top Priority Action — an editorial "briefing" treatment (a thin accent rule + open
+      {/* 1. Governed work (subordinate to the decision above) — an editorial "briefing" treatment (a thin accent rule + open
           layout) rather than a boxed admin-panel card, per the premium-redesign visual pass.
           Every value rendered here (top.severity, top.ownerVisibleSummary, whyBullets) is
           unchanged from before; only the surrounding markup/classNames changed. */}
-      <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+      {/* Governed work is SUBORDINATE to the canonical decision above: it is never styled as the
+          main target (smaller title, neutral rule) and, without a canonical decision, it is not
+          presented as the business's overall priority. */}
+      <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 border-border pl-5 py-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>Your top priority now</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Governed work you can start</span>
           <Badge variant={SEVERITY_VARIANT(top.severity)}>{severityLabel(top.severity)}</Badge>
         </div>
-        <strong data-testid="cockpit-top-action-title" className="font-display text-[1.375rem] font-semibold leading-snug tracking-tight text-foreground">{top.ownerVisibleSummary}</strong>
+        {!ownerDecision && (
+          <p data-testid="cockpit-no-canonical-decision" className="m-0 text-sm text-muted-foreground">
+            OpsIQ has not named a main business target yet, so this is work you can start — not your overall priority.
+          </p>
+        )}
+        <strong data-testid="cockpit-top-action-title" className="text-base font-semibold leading-snug text-foreground">{top.ownerVisibleSummary}</strong>
 
         {/* 2. Why This Is First — stays visible; it's the one thing a lay owner needs up front. */}
         <div data-testid="cockpit-why">
-          <span className="text-sm font-medium text-foreground">Why this is first</span>
+          <span className="text-sm font-medium text-foreground">Why this matters</span>
           <ul className="mt-1.5 list-disc space-y-1 pl-[18px]">
             {whyBullets.map((b, i) => (
               <li key={i} data-testid="cockpit-why-bullet" className="text-[0.9375rem] leading-relaxed text-muted-foreground">{b}</li>
@@ -1333,7 +1263,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <div data-testid="cockpit-safe-actions" className="flex flex-col gap-3">
             {(dominantIsStartWork || dominantPrimaryAction) && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">Recommended next step</span>
+                <span className="text-sm font-medium text-foreground">Next step for this work</span>
                 {dominantIsStartWork ? (
                   <button
                     type="button"
@@ -1494,6 +1424,17 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </div>
         </Disclosure>
 
+        {stepConditions.length > 0 && (
+          <div data-testid="cockpit-step-conditions" className="border-t border-border pt-2.5">
+            <span className="text-sm font-medium text-foreground">How to carry out your next steps</span>
+            <ul className="mt-1 list-disc space-y-0.5 pl-[18px]">
+              {stepConditions.slice(0, 3).map((c, i) => (
+                <li key={i} style={{ fontSize: 13 }}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* 6. Blocked / Not Allowed */}
         <div data-testid="cockpit-blocked" className="border-t border-border pt-2.5">
           <span className="text-sm font-medium text-foreground">Blocked / not allowed</span>
@@ -1559,14 +1500,6 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
       </details>
 
-      {/*
-        Finance diagnosis top action (F3) — secondary here because a real governed process-execution
-        route (`top`, rendered above as "Your top priority now") is currently primary; never
-        overwrites it. Shown whenever a fresh diagnosis exists, including when `top` is itself only
-        MONITOR_ONLY (nothing actionable in the governed queue) so the owner still sees it prominently.
-      */}
-      {financeTopPriority && <FinanceTopPriorityCard priority={financeTopPriority} primary={isMonitorOnly} />}
-      {domainTopPriority && <DomainTopPriorityCard priority={domainTopPriority} primary={isMonitorOnly && !financeTopPriority} />}
 
       {/*
         Also worth knowing — Goal / Profit leak / Operating policies / Trend alerts / Do-not-repeat /
@@ -1672,18 +1605,28 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
               shared strip. */}
           {doNotRepeatAnnotation?.blocked && (
             <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>Do not repeat</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen ? "Do not repeat" : "Earlier result in this area"}</span>
+              {doNotRepeatAnnotation.areaOnly && !doNotRepeatAnnotation.holdsBackTarget && (
+                <p data-testid="cockpit-dnr-area-history" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
+                  This is history from the same area, not a verdict on your main target. Do not repeat the approach that failed.
+                </p>
+              )}
+              {(doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen) && (
+                <p data-testid="cockpit-dnr-holds" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
+                  {doNotRepeatAnnotation.issueStaysOpen
+                    ? "This rule holds back repeating the earlier step, not the problem: the problem is still open, so respond to it another way or record what has changed."
+                    : doNotRepeatAnnotation.areaOnly
+                      ? "This rule holds back new growth steps in this area until you record what has changed."
+                      : "This rule holds back repeating this step until you record what has changed."}{" "}
+                  <a href={doNotRepeatAnnotation.ruleId ? `#dnr-rule-${doNotRepeatAnnotation.ruleId}` : "#do-not-repeat-rules"} style={{ textDecoration: "underline" }}>Do-not-repeat rules</a>
+                </p>
+              )}
               <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
                 {doNotRepeatAnnotation.priorActionSummary}
               </p>
               <p data-testid="cockpit-dnr-reason" style={{ margin: "4px 0 0", fontSize: 13, color: "#92400e" }}>
                 {doNotRepeatAnnotation.blockedReason}
               </p>
-              {doNotRepeatAnnotation.changedContextCondition && (
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
-                  Allowed if: {doNotRepeatAnnotation.changedContextCondition}
-                </p>
-              )}
               {doNotRepeatAnnotation.legacyMatch && (
                 <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Matched by area scope (informational).</p>
               )}
@@ -1721,7 +1664,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       </div>
 
       {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
-      {recovery && <RecoverySection recovery={recovery} />}
+      {recovery && <RecoverySection recovery={recovery} ownerDecision={ownerDecision} />}
 
       {/* Outside signals — read-only, collapsed low-load public-signal summary (PASS 39). */}
       {publicSignals && <OutsideSignalsSection signals={publicSignals} />}

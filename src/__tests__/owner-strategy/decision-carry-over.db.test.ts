@@ -129,13 +129,14 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       expect(dash.cycleHistory[1].strategyState).toBe(c1.strategyState);
 
       const home = await getOwnerHome(workspaceId, businessId);
-      const homeStrategy = (home.summary?.requiredActions ?? []).filter((a) => a.domain === "strategy").map((a) => a.title);
+      const homeStrategy = (home.currentOwnerDecision?.attention ?? []).filter((a) => a.domain === "strategy").map((a) => a.title);
       expect(homeStrategy).toEqual(["Close the ₹50,000 funding gap"]);
 
       const condition = await getBusinessCondition(workspaceId, businessId);
       const topStrategy = (condition.profile?.topActions ?? []).filter((a) => a.domain === "strategy").map((a) => a.title);
       expect(topStrategy).toEqual(["Close the ₹50,000 funding gap"]);
-      expect(condition.profile?.recommendedNextAction?.title).not.toMatch(/pursue|size up|go ahead/i);
+      expect(condition.profile).not.toHaveProperty("recommendedNextAction");
+      expect(home.currentOwnerDecision?.primaryTarget?.title).not.toMatch(/pursue|size up|go ahead/i);
       const strategyScore = condition.profile?.domainScores.find((d) => d.domain === "strategy");
       expect(strategyScore?.topActionCodes).toEqual(["STR_UNAFFORDABLE"]);
       // The owner cancels the on-hold legacy action (allowed).

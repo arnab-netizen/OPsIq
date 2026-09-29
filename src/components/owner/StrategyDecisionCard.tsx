@@ -40,15 +40,34 @@ export interface StrategyNextStepRow {
   statusLabel: string;
 }
 
+/**
+ * The canonical next step when the decision's own step is NOT current (server-decided: its row is out of
+ * date, done, verified or superseded). The card then shows this step and says why.
+ */
+export interface StrategyReplacedStep {
+  replacedBecause: string;
+  /** The owner action gate holds the plan's step back (replacedBecause then says by what and what clears it). */
+  held?: boolean;
+  step: { title: string; description: string } | null;
+}
+
 export function StrategyDecisionCard({
   decision,
   caption,
   nextStepRow,
+  replacedStep = null,
+  openStep = null,
 }: {
   decision: StrategyDecision;
   caption: string;
   /** The persisted action carrying the primary step, when one exists. */
   nextStepRow: StrategyNextStepRow | null;
+  replacedStep?: StrategyReplacedStep | null;
+  /**
+   * While the decision's own step has no action row yet: the first open Strategy item that IS in the action
+   * list (server-decided), shown beside the decision's step.
+   */
+  openStep?: { title: string; description: string } | null;
 }) {
   // Conditions are listed under "Before you go ahead"; every other reason is a "why". For "Not yet"
   // the gap is already the detail line, the Cash line and the next step — not repeated as a "why".
@@ -129,8 +148,30 @@ export function StrategyDecisionCard({
         </div>
       )}
 
+      {replacedStep ? (
+        <div className="rounded-md bg-muted/40 p-3" data-testid="strategy-next-step" data-replaced="true">
+          <h3 className="text-xs uppercase text-muted-foreground font-normal">Your next step within Strategy</h3>
+          {replacedStep.step ? (
+            <>
+              <div className="font-semibold">{replacedStep.step.title}</div>
+              <p className="text-sm">{replacedStep.step.description}</p>
+            </>
+          ) : (
+            <div className="font-semibold">Nothing in Strategy is open right now.</div>
+          )}
+          {replacedStep.held ? (
+            <p className="text-xs text-muted-foreground mt-2" data-testid="strategy-decision-step-held">
+              The plan&rsquo;s own step, &ldquo;{decision.primaryStep.title}&rdquo;: {replacedStep.replacedBecause}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2" data-testid="strategy-decision-step-replaced">
+              The plan&rsquo;s own step, &ldquo;{decision.primaryStep.title}&rdquo;, is not your next step: {replacedStep.replacedBecause}
+            </p>
+          )}
+        </div>
+      ) : (
       <div className="rounded-md bg-muted/40 p-3" data-testid="strategy-next-step">
-        <h3 className="text-xs uppercase text-muted-foreground font-normal">Your next step</h3>
+        <h3 className="text-xs uppercase text-muted-foreground font-normal">Your next step within Strategy</h3>
         <div className="font-semibold">{decision.primaryStep.title}</div>
         <p className="text-sm">{decision.primaryStep.description}</p>
         {decision.primaryStep.options.length > 0 && (
@@ -145,7 +186,15 @@ export function StrategyDecisionCard({
             ? `In your action list below — ${nextStepRow.statusLabel.toLowerCase()}.`
             : "Evaluate this scenario again (under “Saved scenarios” below) to add this step to your action list."}
         </p>
+        {!nextStepRow && openStep && (
+          <div className="mt-3 border-t pt-2" data-testid="strategy-open-step">
+            <div className="text-xs uppercase text-muted-foreground">Open in your action list now</div>
+            <div className="font-semibold">{openStep.title}</div>
+            <p className="text-sm">{openStep.description}</p>
+          </div>
+        )}
       </div>
+      )}
     </section>
   );
 }

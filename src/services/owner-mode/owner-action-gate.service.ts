@@ -3,73 +3,98 @@
  *
  * The extreme hostile audit found the safety-gate spine ran only on the consulting
  * `Recommendation` promotion, while owner-mode domain actions (finance/cashflow/sales/
- * marketing/operations/strategy/sop) transitioned through their own status machine with
- * NO gate. This is the missing default-on gate for the owner's actual runtime flow.
+ * marketing/operations/strategy/sop/recovery/budget) transitioned through their own status machine
+ * with NO gate. This is the default-on gate for the owner's actual runtime flow — the FINAL,
+ * server-side enforcement on every MATERIAL transition (acting on / completing an action).
  *
- * It enforces — on a MATERIAL transition (acting on / completing an action) — using the
- * owner's own data (no dependency on the consulting Recommendation model):
- *   - owner gate opt-out (reused resolveOwnerGateMode — audited, owner-authorized only),
- *   - do-not-repeat by domain scope (an active blocking rule for "scope:<domain>"),
- *   - capacity for growth-sensitive domains (saturated/down/overdue equipment).
- * A block throws ConflictError (409, governed) and audits OWNER_GATE_PROMOTION_BLOCKED.
+ * The policy is pure and shared (domain/owner-mode/owner-action-gate-policy.ts): this service loads a
+ * business's current safety state (`loadOwnerGateConstraints` — opt-out, do-not-repeat memories,
+ * equipment capacity, the ONE current cash/finance reading, gross margin, attributed expired
+ * compliance) and evaluates the transition against it. The canonical owner decision evaluates its
+ * candidates against the SAME constraints (home.service.ts / owner-candidate-builder.ts), so it never
+ * tells the owner to do what this gate would refuse; this gate still re-checks at mutation time.
  *
- * Reuses resolveOwnerGateMode + assessFleetCapacity + the do-not-repeat rule table
- * (no new gate engine). Cash/margin owner-mode enforcement is a documented follow-on.
+ * A block audits OWNER_GATE_PROMOTION_BLOCKED and throws ConflictError (409, governed). An allowed
+ * transition returns its assessment; a margin abstention in it is recorded by the CALLER after its own
+ * mutation is validated and saved (recordOwnerGateAssessment) — never before, so a rejected or retried
+ * update leaves no row claiming an accepted transition.
  */
 
 import { ConflictError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { resolveOwnerGateMode, type PolicyDeps } from "@/services/owner-mode/gate-enforcement-policy";
-import { assessFleetCapacity, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
+import type { EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
+import type { FinancialHealthState } from "@/domain/owner-finance/cash-safety-gate";
+import { grossMarginPctFrom } from "@/domain/owner-finance/margin-safety-gate";
 import {
-  evaluateCashSafetyGate,
-  type FinancialHealthState,
-} from "@/domain/owner-finance/cash-safety-gate";
-import { evaluateMarginSafety, grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
-import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
-import { isExpired } from "@/domain/owner-mode/compliance-boundary";
+  appliesToBusiness,
+  CAPACITY_RECORD_FRESH_DAYS,
+  capacityConstraint,
+  evaluateOwnerActionGate,
+  OUT_OF_DATE_EVIDENCE_CONFIDENCE,
+  expiredComplianceFor,
+  MATERIAL_ACTION_STATUSES,
+  OWNER_MARGIN_ABSTENTION_CODE,
+  type OwnerGateConstraints,
+  type OwnerGateDoNotRepeatRule,
+} from "@/domain/owner-mode/owner-action-gate-policy";
+import { DNR_SCOPE_PREFIX, parseOwnerDnrKey } from "@/domain/owner-mode/do-not-repeat-scope";
+import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { ownerFindingIntent, type OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { financeSurvivalDriver } from "@/domain/owner-spine/owner-decision";
+import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
+import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
+import { loadOwnerDnrOverrides, type DnrOwnerOverrideDb } from "@/services/owner-mode/do-not-repeat.service";
 
-/** Material owner-action transitions that must pass the gate. */
-export const MATERIAL_ACTION_STATUSES: ReadonlySet<string> = new Set(["in_progress", "completed"]);
+export { MATERIAL_ACTION_STATUSES, OWNER_MARGIN_ABSTENTION_CODE };
 
-/** Domains whose actions consume physical capacity (growth-sensitive). */
-export const CAPACITY_SENSITIVE_DOMAINS: ReadonlySet<string> = new Set([
-  "marketing",
-  "sales",
-  "strategy",
-  "operations",
-]);
-
-interface ActionGateDb {
+interface ActionGateDb extends ProvisionalCashFinanceDb, DnrOwnerOverrideDb {
   clientAccount: PolicyDeps["db"]["clientAccount"];
+  ownerBusiness: {
+    findMany(args: { where: { workspaceId: string; isActive: true; isFixtureBusiness: false }; select: { id: true }; take: number }): Promise<Array<{ id: string }>>;
+  };
   ownerDoNotRepeatRule: {
-    findFirst(args: {
+    findMany(args: {
       where: Record<string, unknown>;
-      orderBy: { createdAt: "desc" };
-    }): Promise<{ changedContextExplanation: string | null } | null>;
+      select: { id: true; businessId: true; memoryKey: true; summary: true; reason: true; changedContextExplanation: true };
+    }): Promise<Array<{ id: string; businessId: string | null; memoryKey: string; summary?: string; reason?: string; changedContextExplanation: string | null }>>;
   };
   ownerEquipment: {
-    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>>;
+    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string; businessId: string | null; updatedAt?: Date | null }>>;
   };
   ownerFinanceCycle: {
-    findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { survivalState: true } }): Promise<{ survivalState: string } | null>;
+    findFirst(args: {
+      where: Record<string, unknown>;
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: Record<string, unknown>;
+    }): Promise<{
+      survivalState: string;
+      dataConfidenceScore?: number | null;
+      snapshot?: { periodStart?: Date; periodEnd: Date; supersededById: string | null } | null;
+      findings?: Array<{ code: string; severity?: string }>;
+    } | null>;
   };
   ownerCashflowCycle: {
-    findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { cashflowState: true } }): Promise<{ cashflowState: string } | null>;
+    findFirst(args: {
+      where: Record<string, unknown>;
+      orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
+      select: Record<string, unknown>;
+    }): Promise<{ cashflowState: string; dataConfidenceScore?: number | null; snapshot?: { periodStart?: Date; periodEnd: Date } | null } | null>;
   };
   ownerFinancialSnapshot: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+    findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true; dataConfidenceScore: true; periodEnd: true }>): Promise<{ revenue: number | null; costOfGoods: number | null; dataConfidenceScore?: number | null; periodEnd?: Date | null } | null>;
   };
   ownerComplianceItem: {
-    findMany(args: { where: Record<string, unknown>; select: { kind: true; name: true; expiresAt: true } }): Promise<Array<{ kind: string; name: string; expiresAt: Date | null }>>;
+    findMany(args: { where: Record<string, unknown>; select: { businessId: true; kind: true; name: true; expiresAt: true } }): Promise<Array<{ businessId: string | null; kind: string; name: string; expiresAt: Date | null }>>;
   };
 }
 
 /**
- * Business-scoped where (H1/H2 isolation): match rows for THIS business OR workspace-wide
- * (null business), so one business's data never blocks another. Falls back to workspace-only
- * when no businessId is supplied.
+ * Business-scoped read (H1/H2 isolation): rows for THIS business OR recorded with no business; a
+ * business-less row then applies only when this business is the workspace's sole real business
+ * (appliesToBusiness) — one business's data never blocks another, and null never means "every business".
  */
 function bizScope(workspaceId: string, businessId: string | null, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return businessId
@@ -77,24 +102,21 @@ function bizScope(workspaceId: string, businessId: string | null, extra: Record<
     : { workspaceId, ...extra };
 }
 
-/** Domains where pushing an action while gross margin is below the floor scales a loss.
- *  (Pricing/growth concentrate in sales/marketing; finance actions are not inherently pricing — L3.) */
-const MARGIN_SENSITIVE_DOMAINS: ReadonlySet<string> = new Set(["sales", "marketing"]);
+/** A 0..100 data-confidence score as 0..1 (null when absent). */
+function unitScore(v: number | null | undefined): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v / 100)) : null;
+}
 
-/** Map an owner domain to the recommendation sensitivity the cash gate keys on. */
-const DOMAIN_SENSITIVITY: Record<string, RecommendationSensitivity> = {
-  finance: RecommendationSensitivity.FINANCE_SENSITIVE,
-  cashflow: RecommendationSensitivity.FINANCE_SENSITIVE,
-  marketing: RecommendationSensitivity.GROWTH_SENSITIVE,
-  sales: RecommendationSensitivity.GROWTH_SENSITIVE,
-  strategy: RecommendationSensitivity.GROWTH_SENSITIVE,
-  operations: RecommendationSensitivity.GROWTH_SENSITIVE,
-  sop: RecommendationSensitivity.GENERAL,
-};
-
-const VALID_STATES: ReadonlySet<string> = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
-function asState(v: string | null | undefined): FinancialHealthState {
-  return v && VALID_STATES.has(v) ? (v as FinancialHealthState) : "SAFE";
+/**
+ * Confidence in the margin figure (0..1, null ⇒ unknown): the snapshot's data confidence, capped at
+ * OUT_OF_DATE_EVIDENCE_CONFIDENCE when its period ended more than the freshness window ago.
+ */
+export function marginConfidence(snap: { dataConfidenceScore?: number | null; periodEnd?: Date | null } | null, now: Date): number | null {
+  const base = unitScore(snap?.dataConfidenceScore);
+  const end = snap?.periodEnd instanceof Date ? snap.periodEnd.getTime() : null;
+  const outOfDate = end === null || now.getTime() - end > CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+  if (!outOfDate) return base;
+  return base === null ? OUT_OF_DATE_EVIDENCE_CONFIDENCE : Math.min(base, OUT_OF_DATE_EVIDENCE_CONFIDENCE);
 }
 
 export interface OwnerActionGateDeps {
@@ -107,6 +129,113 @@ async function resolveDefaultDeps(): Promise<OwnerActionGateDeps> {
   return { db: db as unknown as ActionGateDb };
 }
 
+/**
+ * A business's current safety state as the gate reads it. Also loaded by the canonical owner decision
+ * (the same constraints), so a step the decision elects is one this gate permits at that state.
+ */
+export async function loadOwnerGateConstraints(
+  workspaceId: string,
+  businessId: string | null,
+  injected?: OwnerActionGateDeps
+): Promise<OwnerGateConstraints> {
+  const deps = injected ?? (await resolveDefaultDeps());
+  const now = (deps.now ?? (() => new Date()))();
+  const mode = await resolveOwnerGateMode(workspaceId, { db: deps.db as unknown as PolicyDeps["db"], now: () => now });
+  const scope = businessId ? { workspaceId, businessId } : null;
+  // Current evidence only: a period that has not ended by `now` is never the current reading.
+  const cycleWhere = scope ? { ...scope, ...currentEvidenceWhere(now) } : null;
+  const [rules, fleet, finCycle, cashCycle, snap, complianceItems, realBusinesses, provisional, overrides] = await Promise.all([
+    deps.db.ownerDoNotRepeatRule.findMany({
+      where: bizScope(workspaceId, businessId, { memoryKey: { startsWith: DNR_SCOPE_PREFIX }, blocksRepetition: true, active: true }),
+      select: { id: true, businessId: true, memoryKey: true, summary: true, reason: true, changedContextExplanation: true },
+    }),
+    deps.db.ownerEquipment.findMany({
+      where: bizScope(workspaceId, businessId),
+      select: { name: true, businessId: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true, updatedAt: true },
+    }),
+    cycleWhere
+      ? deps.db.ownerFinanceCycle.findFirst({
+          where: cycleWhere,
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: {
+            survivalState: true, dataConfidenceScore: true,
+            snapshot: { select: { periodStart: true, periodEnd: true, supersededById: true } },
+            findings: { select: { code: true, severity: true } },
+          },
+        })
+      : Promise.resolve(null),
+    cycleWhere
+      ? deps.db.ownerCashflowCycle.findFirst({
+          where: cycleWhere,
+          orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+          select: { cashflowState: true, dataConfidenceScore: true, snapshot: { select: { periodStart: true, periodEnd: true } } },
+        })
+      : Promise.resolve(null),
+    scope
+      ? deps.db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { revenue: true, costOfGoods: true, dataConfidenceScore: true, periodEnd: true }, now))
+      : Promise.resolve(null),
+    deps.db.ownerComplianceItem.findMany({
+      where: bizScope(workspaceId, businessId, { status: "active" }),
+      select: { businessId: true, kind: true, name: true, expiresAt: true },
+    }),
+    deps.db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 }),
+    // The in-progress current period (provisional): may only tighten the cash/finance state.
+    scope ? loadProvisionalCashFinance(deps.db, scope, now) : Promise.resolve(null),
+    // This business's Owner overrides (Decision 3): lift a rule for Owner Mode of this business only.
+    loadOwnerDnrOverrides(deps.db, workspaceId, businessId, now),
+  ]);
+  const soleRealBusinessId = realBusinesses.length === 1 ? realBusinesses[0].id : null;
+  const applies = (rowBusinessId: string | null) => appliesToBusiness(rowBusinessId, businessId, soleRealBusinessId);
+
+  // Do-not-repeat memories attributable to this business, parsed through the ONE scope taxonomy, minus those
+  // lifted: by the rule's own recorded change, or by this business's Owner override (never another's).
+  const doNotRepeat: OwnerGateDoNotRepeatRule[] = [];
+  for (const r of rules) {
+    if (!applies(r.businessId)) continue;
+    if (r.changedContextExplanation && r.changedContextExplanation.trim()) continue;
+    if (overrides.has(r.id)) continue;
+    const parsed = parseOwnerDnrKey(r.memoryKey);
+    if (parsed) doNotRepeat.push({ id: r.id, ...parsed, memoryKey: r.memoryKey, summary: r.summary ?? null, reason: r.reason ?? null });
+  }
+
+  // The ONE current cash/finance reading (current-cash-finance-reading.ts): the current diagnosis cycles,
+  // arbitrated by evidence period; an amended-but-undiagnosed unsafe Finance reading still counts until
+  // it is re-diagnosed; figures that are not current are never safe. No reading at all → nothing to enforce.
+  const reading = currentCashFinanceReading(
+    cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot, confidence: unitScore(cashCycle.dataConfidenceScore) } : null,
+    finCycle
+      ? { state: finCycle.survivalState, snapshot: finCycle.snapshot, driver: financeSurvivalDriver(finCycle.findings), confidence: unitScore(finCycle.dataConfidenceScore) }
+      : null,
+    now.getTime(),
+    provisional
+  );
+  const basis = reading.conflicting && !reading.provisional
+    ? " (Cash flow and Finance disagree and neither is more current; the worse reading applies until they are reconciled)"
+    : "";
+
+  return {
+    optedOut: mode === "OPTED_OUT",
+    businessScoped: businessId !== null,
+    doNotRepeat,
+    capacity: capacityConstraint(fleet.filter((e) => applies(e.businessId)), now),
+    cash: {
+      gateState: (reading.gateState as FinancialHealthState | null) ?? null,
+      basis,
+      driver: reading.gateDriver,
+      confidence: reading.gateConfidence,
+      provisional: reading.provisional,
+      source: reading.gateSource,
+      // P2-8: each source's OWN in-progress reading — a card tightens by its own source's danger, never
+      // dropped just because the OTHER source is worse and wins the single overall gate decision above.
+      provisionalCashState: reading.provisionalCashState,
+      provisionalFinanceState: reading.provisionalFinanceState,
+    },
+    grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
+    grossMarginConfidence: marginConfidence(snap, now),
+    expiredCompliance: expiredComplianceFor(complianceItems, businessId, soleRealBusinessId, now),
+  };
+}
+
 export interface OwnerActionGateInput {
   workspaceId: string;
   businessId: string | null;
@@ -115,105 +244,81 @@ export interface OwnerActionGateInput {
   domain: string;
   /** Target status of the transition being applied. */
   toStatus: string;
+  /** The action's finding code — decides its intent (null when the action carries none). */
+  findingCode?: string | null;
+  /** The action's finding (matches an exact, finding-specific do-not-repeat memory). */
+  findingId?: string | null;
+  /**
+   * The action's intent when the caller resolves it from more than the code (Strategy: its step's class
+   * under the live decision; Budget: its decision type). Every caller supplies a code or an intent
+   * (src/__tests__/governance/owner-action-gate-callers.test.ts).
+   */
+  intent?: OwnerTargetIntent | null;
 }
 
-async function block(input: OwnerActionGateInput, reason: string, code: string): Promise<never> {
-  await emitAuditEvent({
-    workspaceId: input.workspaceId,
-    eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
-    actorType: "system",
-    entityType: "owner_action",
-    entityId: input.actionId,
-    payload: { domain: input.domain, toStatus: input.toStatus, code, errorName: "OwnerActionGateError" },
-  });
-  throw new ConflictError(reason);
+/** An allowed transition's assessment, for the caller to record after its mutation succeeds. */
+export interface OwnerGateAssessment {
+  workspaceId: string;
+  businessId: string | null;
+  actionId: string;
+  domain: string;
+  toStatus: string;
+  /** Data needed to assess margin (Owner-mode abstention); null when margin was assessed or not relevant. */
+  marginAbstention: readonly string[] | null;
+}
+
+/** The action's intent as the gate and the canonical decision classify it (null ⇒ unknown). */
+export function ownerActionGateIntent(input: Pick<OwnerActionGateInput, "intent" | "findingCode">): OwnerTargetIntent | null {
+  return input.intent ?? (input.findingCode ? ownerFindingIntent(input.findingCode) : null);
 }
 
 /**
- * Enforce the owner-mode safety gate on a material action transition. No-op for
- * non-material transitions (assigned/blocked/cancelled) and when the owner has an
- * active audited opt-out. Throws ConflictError (governed) on a safety block.
+ * Enforce the owner-mode safety gate on a material action transition. Non-material transitions
+ * (assigned/blocked/cancelled) and an active audited opt-out pass. Throws ConflictError (governed) on a
+ * safety block. Returns the assessment of an allowed transition.
  */
-export async function enforceOwnerActionGates(input: OwnerActionGateInput, injected?: OwnerActionGateDeps): Promise<void> {
-  if (!MATERIAL_ACTION_STATUSES.has(input.toStatus)) return;
-  const deps = injected ?? (await resolveDefaultDeps());
-  const now = (deps.now ?? (() => new Date()))();
-
-  const mode = await resolveOwnerGateMode(input.workspaceId, { db: deps.db as unknown as PolicyDeps["db"], now: () => now });
-  if (mode === "OPTED_OUT") return;
-
-  // 1. Do-not-repeat by domain scope (a failed-before decision class the owner marked).
-  const rule = await deps.db.ownerDoNotRepeatRule.findFirst({
-    where: bizScope(input.workspaceId, input.businessId, { memoryKey: { in: [`scope:${input.domain}`] }, blocksRepetition: true, active: true }),
-    orderBy: { createdAt: "desc" },
+export async function enforceOwnerActionGates(input: OwnerActionGateInput, injected?: OwnerActionGateDeps): Promise<OwnerGateAssessment> {
+  const allowed = (marginAbstention: readonly string[] | null): OwnerGateAssessment => ({
+    workspaceId: input.workspaceId, businessId: input.businessId, actionId: input.actionId, domain: input.domain, toStatus: input.toStatus, marginAbstention,
   });
-  if (rule && !(rule.changedContextExplanation && rule.changedContextExplanation.trim())) {
-    await block(input, `This ${input.domain} action repeats a decision marked do-not-repeat. Provide a changed-context reason to override.`, "DO_NOT_REPEAT_BLOCKED");
-  }
-
-  // 2. Capacity for growth-sensitive domains (don't act on growth while capacity is unsafe).
-  if (CAPACITY_SENSITIVE_DOMAINS.has(input.domain)) {
-    const fleet = await deps.db.ownerEquipment.findMany({
-      where: bizScope(input.workspaceId, input.businessId),
-      select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
+  if (!MATERIAL_ACTION_STATUSES.has(input.toStatus)) return allowed(null);
+  const constraints = await loadOwnerGateConstraints(input.workspaceId, input.businessId, injected);
+  const verdict = evaluateOwnerActionGate(constraints, { domain: input.domain, intent: ownerActionGateIntent(input), findingId: input.findingId ?? null, findingCode: input.findingCode ?? null });
+  if (!verdict.allowed) {
+    await emitAuditEvent({
+      workspaceId: input.workspaceId,
+      eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
+      actorType: "system",
+      entityType: "owner_action",
+      entityId: input.actionId,
+      payload: { domain: input.domain, businessId: input.businessId, toStatus: input.toStatus, code: verdict.code, codes: verdict.blocks.map((b) => b.code), errorName: "OwnerActionGateError" },
     });
-    const capacity = assessFleetCapacity(fleet, now);
-    if (capacity.status === "blocked" || capacity.status === "high_risk") {
-      await block(
-        input,
-        `Capacity is unsafe (${capacity.reason}${capacity.bottlenecks.length ? `: ${capacity.bottlenecks.join(", ")}` : ""}). Clear the bottleneck before advancing this ${input.domain} action.`,
-        "CAPACITY_BLOCKED"
-      );
-    }
+    // The first failing check is enforced (deterministic); every other check that holds it is named too, so
+    // clearing one never reveals a surprise second block.
+    const others = verdict.blocks.slice(1).map((b) => b.reason);
+    throw new ConflictError(others.length === 0 ? verdict.reason : `${verdict.reason} It is also held: ${others.join(" ")}`, { codes: verdict.blocks.map((b) => b.code) });
   }
+  return allowed(verdict.marginAbstention);
+}
 
-  // 3. Cash safety — block growth while cash is at-risk, and finance/spend actions while
-  //    cash is critical (reuses the proven evaluateCashSafetyGate on the owner's latest
-  //    finance survival + cashflow state for this business).
-  if (input.businessId) {
-    const sensitivity = DOMAIN_SENSITIVITY[input.domain] ?? RecommendationSensitivity.GENERAL;
-    const [finCycle, cashCycle] = await Promise.all([
-      deps.db.ownerFinanceCycle.findFirst({ where: { workspaceId: input.workspaceId, businessId: input.businessId }, orderBy: { createdAt: "desc" }, select: { survivalState: true } }),
-      deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId: input.workspaceId, businessId: input.businessId }, orderBy: { createdAt: "desc" }, select: { cashflowState: true } }),
-    ]);
-    // Only enforce when we actually have a measured state (avoid blocking on absent data).
-    if (finCycle || cashCycle) {
-      const result = evaluateCashSafetyGate(asState(cashCycle?.cashflowState), asState(finCycle?.survivalState), sensitivity);
-      if (!result.allowed) {
-        await block(input, `${result.reason} Resolve cash/finance survival before advancing this ${input.domain} action.`, "CASH_SAFETY_BLOCKED");
-      }
-    }
-
-    // 4. Margin safety — for pricing/growth-relevant domains, block when KNOWN gross margin
-    //    is below the floor (scaling a money-losing operation). Unknown margin is allowed
-    //    (no false block; deferred to the input-quality path), reusing evaluateMarginSafety.
-    if (MARGIN_SENSITIVE_DOMAINS.has(input.domain)) {
-      const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-        where: { workspaceId: input.workspaceId, businessId: input.businessId },
-        orderBy: { createdAt: "desc" },
-        select: { revenue: true, costOfGoods: true },
-      });
-      const grossMargin = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
-      const margin = evaluateMarginSafety(grossMargin, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
-      if (!margin.allowed) {
-        await block(input, `${margin.reason} Restore margin above the floor before advancing this ${input.domain} action.`, "MARGIN_SAFETY_BLOCKED");
-      }
-    }
-  }
-
-  // 5. Compliance boundary (EH-20) — an EXPIRED licence/permit/insurance/tax item is a
-  //    professional-review hard stop: defer material actions until it is renewed. (Owner
-  //    may override via the audited gate opt-out.) Reuses the pure isExpired rule.
-  const complianceItems = await deps.db.ownerComplianceItem.findMany({
-    where: bizScope(input.workspaceId, input.businessId, { status: "active" }),
-    select: { kind: true, name: true, expiresAt: true },
-  });
-  const expired = complianceItems.find((c) => isExpired(c.expiresAt, now));
-  if (expired) {
-    await block(
-      input,
-      `Professional-review required: "${expired.name}" (${expired.kind}) is expired. Renew it (or seek professional review) before advancing this ${input.domain} action.`,
-      "COMPLIANCE_BLOCKED"
-    );
-  }
+/**
+ * Record an allowed transition's Owner-mode margin abstention. Recorded with the action's own update, in the
+ * same transaction (applyGuardedActionTransition) — never before the write, never without it.
+ */
+export async function recordOwnerGateAssessment(assessment: OwnerGateAssessment, tx?: Parameters<typeof emitAuditEvent>[1]): Promise<void> {
+  if (!assessment.marginAbstention) return;
+  await emitAuditEvent({
+    workspaceId: assessment.workspaceId,
+    eventName: AUDIT_EVENTS.OWNER_GATE_ASSESSMENT_ABSTAINED,
+    actorType: "system",
+    entityType: "owner_action",
+    entityId: assessment.actionId,
+    payload: {
+      domain: assessment.domain,
+      businessId: assessment.businessId,
+      toStatus: assessment.toStatus,
+      code: OWNER_MARGIN_ABSTENTION_CODE,
+      requiredData: assessment.marginAbstention,
+    },
+  }, tx);
 }

@@ -9,7 +9,8 @@
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOutcome, type OutcomeSignals, type EvaluationVerdict, type FailureReason } from "@/domain/owner-mode/self-evaluation";
-import { recordDoNotRepeat, scopeKeyForImpactArea, type RecordDoNotRepeatInput } from "@/services/owner-mode/do-not-repeat.service";
+import { recordDoNotRepeat, type RecordDoNotRepeatInput } from "@/services/owner-mode/do-not-repeat.service";
+import { consultingScopeKey } from "@/domain/owner-mode/do-not-repeat-scope";
 import { deriveTrainingFromObservedFailure, type DeriveTrainingInput, type RuntimeFailureSignal } from "@/services/owner-mode/staff-training.service";
 import { triggerProcessReviewOnRepeatedFailure } from "@/services/owner-mode/process-review.service";
 
@@ -140,7 +141,10 @@ export async function recordSelfEvaluation(input: RecordSelfEvaluationInput, inj
   // M1 — a FAILED outcome with a domain writes a scope:<domain> do-not-repeat memory, giving
   // the owner-action gate's scope check a real writer (block = the rec itself was bad).
   if (verdict.result === "failed" && input.domain && input.businessId) {
-    const scopeKey = scopeKeyForImpactArea(input.domain);
+    // The key exactly as recorded before (consultingScopeKey — Formal Consulting Mode's promotion check
+    // matches it unchanged). Owner-mode readers resolve every spelling of an owner area through the one
+    // scope taxonomy (ownerScopeLookupKeys: scope:cash and scope:cashflow are the same Cash flow area).
+    const scopeKey = consultingScopeKey(input.domain);
     if (scopeKey) {
       const record = deps.recordCaution ?? recordDoNotRepeat;
       await record({

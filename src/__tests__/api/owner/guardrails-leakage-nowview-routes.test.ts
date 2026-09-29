@@ -24,11 +24,9 @@ const mocks = vi.hoisted(() => ({
   listLeakageEvents: vi.fn(),
   getLeakageSummary: vi.fn(),
   getOwnerNowView: vi.fn(),
-  // F3: the route additively merges in the Finance-diagnosis priority bridge. Mocked (resolving
-  // null, matching "no finance diagnosis" as the deterministic default) for the same DB-free
-  // route-contract isolation this file already gives every other now-view dependency.
-  getCockpitFinancePriority: vi.fn().mockResolvedValue(null),
-  getCockpitDomainPriority: vi.fn().mockResolvedValue(null),
+  // The route resolves the ONE canonical owner decision (owner-home service) and returns it beside
+  // Now View. Mocked for the same DB-free route-contract isolation as every other dependency.
+  getOwnerHome: vi.fn(),
 }));
 
 vi.mock("@/lib/canonical-route-enforcement", () => ({
@@ -58,12 +56,10 @@ vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
   getOwnerNowView: mocks.getOwnerNowView,
 }));
 
-vi.mock("@/services/owner-guidance/cockpit-finance-priority.service", () => ({
-  getCockpitFinancePriority: mocks.getCockpitFinancePriority,
-}));
-
-vi.mock("@/services/owner-guidance/cockpit-domain-priority.service", () => ({
-  getCockpitDomainPriority: mocks.getCockpitDomainPriority,
+vi.mock("@/services/owner-home/home.service", () => ({
+  getOwnerHome: mocks.getOwnerHome,
+  // The route resolves the decision with the gate constraints it was resolved with (none in these fixtures).
+  resolveOwnerHome: async (...args: unknown[]) => ({ home: await (mocks.getOwnerHome as (...a: unknown[]) => unknown)(...args), gate: null }),
 }));
 
 // ─── Route imports (after mocks) ─────────────────────────────────────────────
@@ -469,7 +465,16 @@ describe("[now-view] GET /api/owner/now-view — static enforcement", () => {
 
 // ─── 8. GET /api/owner/now-view — handler behaviour ──────────────────────────
 
+const CANONICAL_DECISION = { contractVersion: "owner-decision-v1", primaryCandidateId: "domain_action:finance:x" };
+
 describe("[now-view] GET /api/owner/now-view — handler", () => {
+  beforeEach(() => {
+    mocks.getOwnerHome.mockImplementation(async (_ws: string, businessId: string | null) => ({
+      selectedBusinessId: businessId ?? "biz-auto",
+      currentOwnerDecision: CANONICAL_DECISION,
+    }));
+  });
+
   it("declares OWNER_VIEW capability and requireWorkspace", () => {
     const opts = (nowViewGet as unknown as {
       __options?: { requireCapabilities?: string[]; requireWorkspace?: boolean };
@@ -478,10 +483,18 @@ describe("[now-view] GET /api/owner/now-view — handler", () => {
     expect(opts?.requireWorkspace).toBe(true);
   });
 
-  it("returns service result directly (no canonicalJson wrapper), plus the additive F3 finance-priority and BIV-03 domain-priority fields", async () => {
+  it("returns service result directly (no canonicalJson wrapper), plus the canonical owner decision (no retired finance/domain priority bridges)", async () => {
     mocks.getOwnerNowView.mockResolvedValue(SAMPLE_NOW_VIEW);
     const res = await nowViewGet(makeGetCtx(`https://x/api/owner/now-view`));
-    expect(res).toEqual({ ...SAMPLE_NOW_VIEW, financeTopPriority: null, domainTopPriority: null });
+    expect(res).toEqual({ ...SAMPLE_NOW_VIEW, ownerDecision: CANONICAL_DECISION });
+    expect(res).not.toHaveProperty("financeTopPriority");
+    expect(res).not.toHaveProperty("domainTopPriority");
+  });
+
+  it("resolves the canonical decision for the verified workspace only", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(SAMPLE_NOW_VIEW);
+    await nowViewGet(makeGetCtx(`https://x/api/owner/now-view?workspaceId=ws-ATTACKER`, "ws-REAL"));
+    expect(mocks.getOwnerHome).toHaveBeenCalledWith("ws-REAL", null);
   });
 
   it("calls getOwnerNowView with verified workspaceId", async () => {
@@ -496,10 +509,10 @@ describe("[now-view] GET /api/owner/now-view — handler", () => {
     expect(mocks.getOwnerNowView.mock.calls[0][1]).toBe("biz-77");
   });
 
-  it("passes null businessId when not in query", async () => {
+  it("with no businessId in the query, reads the business the canonical decision was resolved for (never workspace-wide)", async () => {
     mocks.getOwnerNowView.mockResolvedValue(SAMPLE_NOW_VIEW);
     await nowViewGet(makeGetCtx(`https://x/api/owner/now-view`));
-    expect(mocks.getOwnerNowView.mock.calls[0][1]).toBeNull();
+    expect(mocks.getOwnerNowView.mock.calls[0][1]).toBe("biz-auto");
   });
 
   it("workspace isolation: verifiedWorkspaceId used, not URL param", async () => {

@@ -12,13 +12,17 @@ import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
+import { getDomainOwnerSteps, selectStrategyLocalStep, type StrategyDecisionStepState } from "@/services/owner-home/owner-candidate-builder";
+import { evaluateOwnerActionGate } from "@/domain/owner-mode/owner-action-gate-policy";
+import { ownerGateHoldsText } from "@/domain/owner-spine/owner-decision";
+import { ownerStrategyStepIntent } from "@/domain/owner-spine/owner-imperatives";
 import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
 import type { StrategyDecision } from "@/domain/owner-strategy/decision";
-import { arbitrateStrategyActionRows, orderByDecisionFit, presentStoredStrategyFinding, withoutRetiredStrategyActions } from "@/domain/owner-strategy/action-arbitration";
+import { arbitrateStrategyActionRows, isStrategyDecisionStep, orderByDecisionFit, presentStoredStrategyFinding } from "@/domain/owner-strategy/action-arbitration";
 import type { StrategyScenarioSummary } from "@/domain/owner-strategy/presentation";
 import { currentStrategyDecision } from "./decision-view";
+import { CURRENT_STRATEGY_CYCLE_ORDER } from "@/services/owner-spine/current-diagnosis-cycle";
 
-const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
 
 export interface StrategyDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -35,6 +39,8 @@ export interface StrategyDashboardPayload {
     strategyState: string;
   } | null;
   recommendedNextAction: any | null;
+  /** Whether the decision's own primary step is the next step (it may be replaced by the canonical one). */
+  decisionStep: { state: StrategyDecisionStepState; replacedBecause: string | null };
   /** The current decision for the latest evaluation (derived on read, not persisted). */
   decision: StrategyDecision | null;
   missingCriticalData: string[];
@@ -77,7 +83,7 @@ export async function getStrategyDashboard(
     if (owned) selectedBusinessId = owned.id;
   }
   // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
-  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // and owner-home/home.service.ts for the same rule. With 0 businesses this falls
   // through to the existing empty-state return below; with 2+, it now also falls through
   // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
   // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
@@ -86,7 +92,7 @@ export async function getStrategyDashboard(
   if (!selectedBusinessId) {
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
-      latestCycle: null, domainScore: null, recommendedNextAction: null, decision: null, missingCriticalData: [],
+      latestCycle: null, domainScore: null, recommendedNextAction: null, decisionStep: { state: "not_listed", replacedBecause: null }, decision: null, missingCriticalData: [],
       scenarios: [], cycleHistory: [],
     };
   }
@@ -101,7 +107,7 @@ export async function getStrategyDashboard(
     }),
     db.ownerStrategyCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
       include: {
         snapshot: true,
         // Ranked after read: severity is a plain string, so a DB orderBy sorts it
@@ -203,12 +209,23 @@ export async function getStrategyDashboard(
       }
     : null;
 
-  // The persisted row carrying the decision's primary step (null when the latest cycle was
-  // evaluated before this step existed — the page then shows `decision.primaryStep` itself). Without
-  // a decision, fall back to the top open action, never a retired "Pursue"/"Size up".
-  const recommendedNextAction = decision
-    ? (arbitratedActions.find((a) => a.decisionFit === "primary" && !TERMINAL_STATUSES.has(a.status)) ?? null)
-    : (withoutRetiredStrategyActions(latestCycle?.actions ?? []).find((a: any) => !TERMINAL_STATUSES.has(a.status)) ?? null);
+  // The local next step is the first canonically ELIGIBLE Strategy item (the same builder and contract
+  // as the owner decision, possibly an explicit refresh target). The decision's own step is "current"
+  // only when its row is that item; otherwise the page says why not (selectStrategyLocalStep).
+  // A step the owner action gate holds back is "held" (by what, and what clears it) — never called done,
+  // verified or superseded; the decision's not-yet-listed step is checked against the same gate.
+  const steps = latestCycle ? await getDomainOwnerSteps(workspaceId, selectedBusinessId, "strategy") : null;
+  const heldRows = new Map((steps?.holds ?? []).map((h) => [h.sourceId, ownerGateHoldsText(h.blocks, steps!.gate)] as const));
+  const unlistedVerdict = decision && steps
+    ? evaluateOwnerActionGate(steps.gate, { domain: "strategy", intent: ownerStrategyStepIntent(decision.code, decision.primaryStep.findingCode), findingId: null, findingCode: decision.primaryStep.findingCode })
+    : null;
+  const { recommended: recommendedNextAction, decisionStep } = selectStrategyLocalStep(
+    decision !== null,
+    arbitratedActions,
+    steps?.eligible ?? [],
+    (row) => decision !== null && isStrategyDecisionStep(row, decision),
+    { rows: heldRows, unlistedStep: unlistedVerdict && !unlistedVerdict.allowed ? ownerGateHoldsText(unlistedVerdict.blocks, steps!.gate) : null }
+  );
 
   return {
     businesses: businessList,
@@ -218,6 +235,7 @@ export async function getStrategyDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
+    decisionStep,
     decision,
     // Missing inputs of the scenario the current evaluation used — not of whichever saved
     // scenario happens to have the latest assessment period.

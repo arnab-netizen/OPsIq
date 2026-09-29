@@ -9,7 +9,7 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
-import { ENGAGED_ACTION_STATUSES, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
+import { ENGAGED_ACTION_STATUSES, periodEndOf, completedEvidencePeriod, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -29,6 +29,8 @@ interface EngagedPriorAction {
   findingCode: string;
   recommendationCode: string;
   priorityScore: number;
+  /** The period of the cycle the action is attached to now (back-fill protection). */
+  cycle: { snapshot: { periodEnd: Date | string } | null } | null;
 }
 
 export async function runFinanceDiagnosis(
@@ -191,10 +193,16 @@ export async function runFinanceDiagnosis(
     // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
     const engagedPrior: EngagedPriorAction[] = await tx.ownerFinanceAction.findMany({
       where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
-      select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true },
+      select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true, cycle: { select: { snapshot: { select: { periodEnd: true } } } } },
     });
     const plannedWithCodes = plan.actions.map((a) => ({ ...a, recommendationCode: recByFinding[a.findingCode] ?? a.findingCode }));
-    const continuity = planWithContinuity(plannedWithCodes, engagedPrior);
+    // Back-fill: a diagnosis of an older period never takes over in-flight work attached to a newer
+      // period's cycle (action-continuity.ts "held").
+      const continuity = planWithContinuity(plannedWithCodes, engagedPrior, {
+        current: periodEndOf(snapshotRow.periodEnd),
+        currentCompleted: completedEvidencePeriod(snapshotRow as { periodEnd?: unknown; supersededById?: unknown }, new Date()),
+        of: (p) => periodEndOf(p.cycle?.snapshot?.periodEnd),
+      });
     carriedForwardIds = [];
     // Re-attach each carried action to this cycle (ranking and wording re-evaluated) so every reader
     // of the latest cycle sees the owner's in-flight work; audited in the same transaction. The

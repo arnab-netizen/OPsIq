@@ -25,8 +25,9 @@ describe("Owner Command Center home page — source file contract assertions", (
   it("src contains '/api/owner/command-center'", () => {
     expect(src).toContain("/api/owner/command-center");
   });
-  it("src contains 'recommendedNextAction'", () => {
-    expect(src).toContain("recommendedNextAction");
+  it("src renders the canonical owner decision (currentOwnerDecision + OwnerDecisionCard)", () => {
+    expect(src).toContain("currentOwnerDecision");
+    expect(src).toContain("OwnerDecisionCard");
   });
   it("src contains 'overallHealthScore'", () => {
     expect(src).toContain("overallHealthScore");
@@ -43,8 +44,9 @@ describe("Owner Command Center home page — source file contract assertions", (
   it("src contains '/owner/recovery'", () => {
     expect(src).toContain("/owner/recovery");
   });
-  it("src contains 'Do this next'", () => {
-    expect(src).toContain("Do this next");
+  it("src never elects its own next action ('Do this next' / recommendedNextAction are retired)", () => {
+    expect(src).not.toContain("Do this next");
+    expect(src).not.toContain("recommendedNextAction");
   });
   it("src does not contain '/diagnoses'", () => {
     expect(src).not.toContain("/diagnoses");
@@ -79,9 +81,9 @@ describe("Owner Command Center home page wiring", () => {
     expect(src).not.toContain("/verify");
   });
 
-  it("surfaces the business condition and the single next action", () => {
-    expect(src).toContain("recommendedNextAction");
-    expect(src).toContain("Do this next");
+  it("surfaces the business condition and the ONE canonical main target", () => {
+    expect(src).toContain("currentOwnerDecision");
+    expect(src).toContain("OwnerDecisionCard");
     expect(src).toContain("overallHealthScore");
     expect(src).toContain("survivalRiskScore");
     expect(src).toContain("Missing critical data"); // honesty banner

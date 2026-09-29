@@ -1,5 +1,7 @@
 "use client";
 
+import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -75,6 +77,29 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   blocked: "Blocked",
   cancelled: "Cancelled",
 };
+
+// P1-1/P2-2: the diagnosis button's label and title are derived from diagnosisTargetReason and the
+// target's own diagnosis state — never a fixed "Run finance diagnosis" string, and never permanently
+// disabled once diagnosed (a completed/amended evidence re-run is always available).
+function financeDiagnosisButtonLabel(dashboard: { diagnosisTargetReason?: string | null; latestSnapshotDiagnosis?: { current?: boolean } | null } | null): string {
+  const reason = dashboard?.diagnosisTargetReason ?? null;
+  const diagnosed = Boolean(dashboard?.latestSnapshotDiagnosis?.current);
+  if (reason === "provisional") return "Diagnose current period (provisional)";
+  if (reason === "amended" && !diagnosed) return "Re-run Finance diagnosis on corrected figures";
+  if (diagnosed) return "Re-run finance diagnosis";
+  return "Run finance diagnosis";
+}
+
+function financeDiagnosisButtonTitle(dashboard: {
+  latestSnapshotDiagnosis?: { current?: boolean; dependenciesChanged?: boolean } | null;
+} | null): string | undefined {
+  const diag = dashboard?.latestSnapshotDiagnosis;
+  if (!diag?.current) return undefined;
+  if (diag.dependenciesChanged) {
+    return "New evidence (bank balance or debt details) is available since this diagnosis ran. Re-running is recommended.";
+  }
+  return "These figures were already diagnosed. Re-run if something changed.";
+}
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -413,10 +438,12 @@ export default function OwnerFinancePage() {
   }
 
   async function runDiagnosis() {
-    if (!selected || !dashboard?.latestSnapshot) return;
+    const target = dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot;
+    if (!selected || !target) return;
     // See addSnapshot's comment on why the target business is captured before the await.
     const targetBusinessId = selected;
-    const snapshotId = dashboard.latestSnapshot.id;
+    // The in-progress period's snapshot when there is one (diagnosed as provisional), else the current one.
+    const snapshotId = target.id;
     setBusy(true);
     setError(null);
     try {
@@ -597,8 +624,8 @@ export default function OwnerFinancePage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add financial snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
-              Run finance diagnosis
+            <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy} title={financeDiagnosisButtonTitle(dashboard)}>
+              {financeDiagnosisButtonLabel(dashboard)}
             </Button>
           </div>
 
@@ -694,12 +721,16 @@ export default function OwnerFinancePage() {
             </form>
           )}
 
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.diagnosisTargetSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} provisionalSafetyImplemented />
+          <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
+
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="financial"
-              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              hasSnapshot={Boolean(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot)}
+              inProgressDiagnosis={dashboard?.diagnosisTargetReason === "provisional" && dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
               snapshotLabel="financial snapshot"
-              diagnosisLabel="Run finance diagnosis"
+              diagnosisLabel={financeDiagnosisButtonLabel(dashboard)}
             />
           ) : (
             <FinanceCycleView
@@ -707,6 +738,7 @@ export default function OwnerFinancePage() {
               score={score}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
+              businessId={dashboard.selectedBusinessId}
               history={dashboard.cycleHistory}
               busy={busy}
               editingAction={editingAction}
@@ -727,6 +759,7 @@ function FinanceCycleView({
   score,
   missing,
   recommended,
+  businessId,
   history,
   busy,
   editingAction,
@@ -739,6 +772,7 @@ function FinanceCycleView({
   score: any;
   missing: string[];
   recommended: any;
+  businessId: string | null;
   history: any[];
   busy: boolean;
   editingAction: { actionId: string; mode: "complete" | "verify" } | null;
@@ -783,9 +817,16 @@ function FinanceCycleView({
       </div>
 
       {(score?.dataConfidenceScore ?? cycle.dataConfidenceScore) < 30 && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
-          ⚠ Data confidence is critically low ({Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.
-        </div>
+        // Consistent with the canonical decision (shared reconciler): when Finance owns the main target or
+        // a supporting step, the issue needs attention now and only the score is provisional.
+        <DomainDataGapNotice
+          revision={cycle}
+          domain="finance"
+          domainLabel="Finance"
+          businessId={businessId}
+          missing={missing.map(humanizeMetricKey)}
+          fallback={`⚠ Data confidence is critically low (${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.`}
+        />
       )}
 
       {missing.length > 0 && (
@@ -796,7 +837,7 @@ function FinanceCycleView({
 
       {recommended && (
         <div className="border-t border-border pt-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Recommended next financial action</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Next step within Finance (local to this area — your overall main target is on Home)</div>
           <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           {recommended.evidenceRationale && (
@@ -805,9 +846,11 @@ function FinanceCycleView({
           {Array.isArray(recommended.evidence) && recommended.evidence.length > 0 && (
             <p className="text-xs text-muted-foreground">Based on: {recommended.evidence.join(" · ")}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 
@@ -846,8 +889,9 @@ function FinanceCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

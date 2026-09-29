@@ -12,13 +12,35 @@ import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
-import { ENGAGED_ACTION_STATUSES } from "@/domain/founder-recovery/action-continuity";
+import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
+import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
   selectedBusinessId: string | null;
   hasData: boolean;
   latestSnapshot: any | null;
+  /**
+   * The in-progress current period's snapshot (provisional — never the current effective snapshot above),
+   * shown and diagnosable, labelled as in progress; null when there is none.
+   */
+  inProgressSnapshot: any | null;
+  /** Where the snapshot the page diagnoses sits: "provisional" when it is the in-progress one. */
+  latestSnapshotPeriodState: EvidencePeriodState | null;
+  /**
+   * The snapshot the page's diagnosis button targets. Priority: (1) the current effective snapshot when it
+   * is an amended replacement awaiting its own diagnosis; (2) the current effective snapshot when it has
+   * never been diagnosed; (3) the current effective snapshot even when already diagnosed (re-run is always
+   * offered — see latestSnapshotDiagnosis); (4) the in-progress period's snapshot, only when there is no
+   * current effective snapshot at all.
+   */
+  diagnosisTargetSnapshot: any | null;
+  /** Why diagnosisTargetSnapshot was chosen — drives the button/CTA copy. Never affects the priority above. */
+  diagnosisTargetReason: "amended" | "completed" | "provisional" | null;
+  /** That snapshot's own diagnosis, when it was already diagnosed. Re-running it is always allowed. */
+  latestSnapshotDiagnosis: (SnapshotDiagnosisState & { dependenciesChanged: boolean }) | null;
   latestCycle: any | null;
   domainScore: {
     domain: "finance";
@@ -56,7 +78,7 @@ export async function getFinanceDashboard(
     if (owned) selectedBusinessId = owned.id;
   }
   // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
-  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // and owner-home/home.service.ts for the same rule. With 0 businesses this falls
   // through to the existing empty-state return below; with 2+, it now also falls through
   // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
   // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
@@ -65,6 +87,8 @@ export async function getFinanceDashboard(
   if (!selectedBusinessId) {
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
+      inProgressSnapshot: null, latestSnapshotPeriodState: null, diagnosisTargetSnapshot: null,
+      diagnosisTargetReason: null, latestSnapshotDiagnosis: null,
       latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
       cycleHistory: [],
     };
@@ -72,14 +96,15 @@ export async function getFinanceDashboard(
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
-  const [latestSnapshot, latestCycle, cycles] = await Promise.all([
-    db.ownerFinancialSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
-    }),
+  const dashboardNow = new Date();
+  const [latestSnapshot, inProgressSnapshot, latestCycle, cycles] = await Promise.all([
+    // Current effective snapshot (financial-snapshot-selection.ts); the diagnosis-bound one is latestCycle.snapshot.
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId }, undefined, dashboardNow)),
+    // The in-progress period's figures (provisional): shown, labelled and diagnosable — never current evidence.
+    db.ownerFinancialSnapshot.findFirst(inProgressFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId }, undefined, dashboardNow)),
     db.ownerFinanceCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(dashboardNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,
         // Ranked after read: severity is a plain string, so a DB orderBy sorts it
@@ -125,12 +150,12 @@ export async function getFinanceDashboard(
   // finished or cancelled.
   const carriedActions = latestCycle
     ? await db.ownerFinanceAction.findMany({
-        where: {
-          businessId: selectedBusinessId,
-          workspaceId,
-          cycleId: { not: latestCycle.id },
-          status: { in: [...ENGAGED_ACTION_STATUSES] },
-        },
+        where: dashboardPriorWorkWhere(
+          { businessId: selectedBusinessId, workspaceId },
+          latestCycle.id,
+          latestCycle.findings.map((f: { code: string }) => f.code),
+          dashboardNow
+        ),
         include: {
           verifications: { orderBy: { createdAt: "desc" } },
           ...baselineFindingInclude,
@@ -148,17 +173,11 @@ export async function getFinanceDashboard(
     ? {
         ...latestCycle,
         findings: rankOwnerFindingsBySeverity(latestCycle.findings),
-        actions: [
-          ...(await Promise.all(latestCycle.actions.map(withBaseline))),
-          ...(await Promise.all(
-            carriedActions.map(async (a: { verificationMetric: string; findingCode: string; finding: BaselineFindingRow | null; cycle: { sequenceNumber: number } }) => ({
-              ...(await withBaseline(a)),
-              carriedFromCycleSequence: a.cycle.sequenceNumber,
-              // false when the latest diagnosis no longer raises this finding (finish or cancel it).
-              stillFlaggedByLatestDiagnosis: latestCycle.findings.some((f: { code: string }) => f.code === a.findingCode),
-            }))
-          )),
-        ],
+        // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
+        // owner's engaged or completed work for the same key.
+        actions: await Promise.all(
+          dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
+        ),
       }
     : null;
 
@@ -173,19 +192,91 @@ export async function getFinanceDashboard(
       }
     : null;
 
-  const recommendedNextAction =
-    latestCycle && latestCycle.actions.length > 0 ? latestCycle.actions[0] : null;
+  // DOMAIN-LOCAL next step: the canonical eligible candidates (the SAME builder and eligibility contract
+  // the owner decision uses — verification timing, stale → refresh, supersession, survival issues)
+  // filtered to this domain. Never a completed, cancelled, verified, stale-replaced or superseded item,
+  // and never a second election: the owner's overall main target is the canonical owner decision.
+  const recommendedNextAction = latestCycle
+    ? presentDomainLocalStep(await getDomainLocalOwnerStep(workspaceId, selectedBusinessId, "finance"), latestCycleView?.actions ?? [])
+    : null;
+
+  // P1-1: the current effective snapshot (completed evidence — including an amended replacement) always
+  // outranks the in-progress provisional one as the diagnosis target. In-progress is the target only when
+  // there is no current effective snapshot at all (nothing completed has ever been entered). Re-diagnosing
+  // an already-diagnosed current snapshot is always offered (P2-2) rather than falling back to provisional.
+  const diagnosisTargetSnapshot = latestSnapshot ?? inProgressSnapshot ?? null;
+  const targetCycle = diagnosisTargetSnapshot
+    ? await db.ownerFinanceCycle.findFirst({
+        where: { businessId: selectedBusinessId, workspaceId, snapshotId: diagnosisTargetSnapshot.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, createdAt: true, survivalState: true },
+      })
+    : null;
+
+  const diagnosisTargetReason: FinanceDashboardPayload["diagnosisTargetReason"] =
+    diagnosisTargetSnapshot === null
+      ? null
+      : diagnosisTargetSnapshot === latestSnapshot
+        ? ((latestSnapshot as { version?: number } | null)?.version ?? 1) > 1 && !targetCycle
+          ? "amended"
+          : "completed"
+        : "provisional";
+
+  // Finance diagnosis dependency tracking: bank-balance enrichment (ownerCashflowSnapshot, ≤45-day
+  // freshness window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
+  // snapshot itself (diagnosis.service.ts). A newer eligible one arriving after the last cycle ran means
+  // the existing diagnosis was not computed from all currently-available evidence — recommend a re-run
+  // without claiming the snapshot itself is new data.
+  const dependenciesChanged = await (async () => {
+    if (!targetCycle || !diagnosisTargetSnapshot) return false;
+    const snapshotEnd = diagnosisTargetSnapshot.periodEnd instanceof Date
+      ? diagnosisTargetSnapshot.periodEnd
+      : new Date(diagnosisTargetSnapshot.periodEnd as string);
+    const freshnessFloor = new Date(snapshotEnd.getTime() - 45 * 86_400_000);
+    const [newerCashflow, newerIntake] = await Promise.all([
+      db.ownerCashflowSnapshot.findFirst({
+        where: {
+          workspaceId, businessId: selectedBusinessId,
+          periodEnd: { lte: snapshotEnd, gte: freshnessFloor },
+          createdAt: { gt: targetCycle.createdAt },
+        },
+        select: { id: true },
+      }),
+      diagnosisTargetSnapshot.totalDebtOutstanding == null || diagnosisTargetSnapshot.debtPayments == null
+        ? db.ownerDataIntake.findFirst({
+            where: {
+              workspaceId, businessId: selectedBusinessId, ownerConfirmed: true, targetDomain: "cash_debt",
+              confirmedAt: { gt: targetCycle.createdAt },
+            },
+            select: { id: true },
+          })
+        : null,
+    ]);
+    return Boolean(newerCashflow || newerIntake);
+  })();
 
   return {
     businesses: businessList,
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
+    inProgressSnapshot: inProgressSnapshot ?? null,
+    latestSnapshotPeriodState: diagnosisTargetSnapshot ? evidencePeriodState(diagnosisTargetSnapshot, dashboardNow) : null,
+    diagnosisTargetSnapshot,
+    diagnosisTargetReason,
+    latestSnapshotDiagnosis: (() => {
+      const base = snapshotDiagnosisState(diagnosisTargetSnapshot, targetCycle, targetCycle?.survivalState ?? null);
+      return base ? { ...base, dependenciesChanged } : null;
+    })(),
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
-    missingCriticalData: latestSnapshot
-      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
+    // From the diagnosis TARGET snapshot — the same snapshot diagnosisTargetSnapshot/the diagnosis
+    // button point at. Reading `latestCycle?.snapshot` instead would show a stale amended-and-
+    // superseded snapshot's missing-data list (the old diagnosis's own snapshot) while the button is
+    // about to diagnose the NEW undiagnosed replacement — this must always track the actual target.
+    missingCriticalData: diagnosisTargetSnapshot
+      ? (Array.isArray(diagnosisTargetSnapshot.missingCriticalData) ? (diagnosisTargetSnapshot.missingCriticalData as string[]) : [])
       : [],
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,

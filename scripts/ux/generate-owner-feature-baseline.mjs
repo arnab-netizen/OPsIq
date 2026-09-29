@@ -739,6 +739,9 @@ const NON_WORKFLOW_MUTATION_FAMILIES = [
   // Budget mutations proven NOT part of the shared FSM (see budget_actions above) -- override and
   // working-capital submission have no status/transition evidence of their own in source.
   { family: "budget_non_workflow", apiPrefixes: ["/api/owner/budget/override", "/api/owner/budget/working-capital"], uiPages: ["/owner/budget"] },
+  // Do-not-repeat rules: recording a rule and recording what has changed on one (the changed-context
+  // override, Cockpit → "Do-not-repeat rules") — a governed field write, not a status workflow.
+  { family: "do_not_repeat_rules", apiPrefixes: ["/api/owner/do-not-repeat"], uiPages: ["/owner/cockpit"] },
 ];
 
 function findFilesByKeywords(keywords, excludeKeywords = []) {

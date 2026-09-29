@@ -78,7 +78,7 @@ describe("Owner Finance page wiring", () => {
   });
 
   it("renders the required owner sections", () => {
-    for (const section of ["Findings", "Finance actions", "Recommended next financial action", "Diagnosis history"]) {
+    for (const section of ["Findings", "Finance actions", "Next step within Finance", "Diagnosis history"]) {
       expect(src, `page must render "${section}"`).toContain(section);
     }
     expect(src).toContain("Missing critical data"); // honesty banner

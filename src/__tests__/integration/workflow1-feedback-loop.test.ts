@@ -43,9 +43,16 @@ vi.mock("@/services/owner-strategy/diagnosis.service", () => ({
 }));
 
 // Mock the owner-action-gate so it doesn't block transitions in tests
+// (the real contract: an allowed transition returns its assessment; the caller records it after its write).
+const mockEnforceOwnerActionGates = vi.fn();
+const mockRecordOwnerGateAssessment = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/services/owner-mode/owner-action-gate.service", () => ({
-  enforceOwnerActionGates: vi.fn().mockResolvedValue(undefined),
+  enforceOwnerActionGates: (...a: unknown[]) => mockEnforceOwnerActionGates(...a),
+  recordOwnerGateAssessment: (...a: unknown[]) => mockRecordOwnerGateAssessment(...a),
 }));
+function allowedAssessment(input: { workspaceId: string; businessId: string | null; actionId: string; domain: string; toStatus: string }) {
+  return { workspaceId: input.workspaceId, businessId: input.businessId, actionId: input.actionId, domain: input.domain, toStatus: input.toStatus, marginAbstention: null };
+}
 
 // ---------------------------------------------------------------------------
 // DB mock factory
@@ -78,31 +85,41 @@ const BASE_VERIFICATION = {
 type TableMock = MockedFunction<(...args: unknown[]) => Promise<unknown>>;
 
 type DbMock = {
-  ownerFinanceAction: { findFirst: TableMock; update: TableMock };
+  ownerFinanceAction: { findFirst: TableMock; update: TableMock; updateMany: TableMock };
   ownerFinanceCycle: { findFirst: TableMock };
   ownerFinancialSnapshot: { findFirst: TableMock };
   ownerFinanceVerification: { create: TableMock };
-  ownerOperationsAction: { findFirst: TableMock; update: TableMock };
+  ownerOperationsAction: { findFirst: TableMock; update: TableMock; updateMany: TableMock };
   ownerOperationsSnapshot: { findFirst: TableMock };
   ownerOperationsVerification: { create: TableMock };
-  ownerSalesAction: { findFirst: TableMock; update: TableMock };
+  ownerSalesAction: { findFirst: TableMock; update: TableMock; updateMany: TableMock };
   ownerSalesSnapshot: { findFirst: TableMock };
   ownerSalesVerification: { create: TableMock };
-  ownerSopAction: { findFirst: TableMock; update: TableMock };
+  ownerSopAction: { findFirst: TableMock; update: TableMock; updateMany: TableMock };
   ownerSopSnapshot: { findFirst: TableMock };
   ownerSopVerification: { create: TableMock };
-  ownerStrategyAction: { findFirst: TableMock; update: TableMock };
+  ownerStrategyAction: { findFirst: TableMock; update: TableMock; updateMany: TableMock };
+  ownerStrategyCycle: { findFirst: TableMock };
   ownerStrategySnapshot: { findFirst: TableMock };
   ownerStrategyVerification: { create: TableMock };
 };
 
 function makeDbMock(): DbMock {
+  // The action services apply a transition with a compare-and-set (owner-action-transition.ts): updateMany
+  // on the validated status, then a re-read of the row — so the first read is the row as it was, later
+  // reads the row as written.
   const makeTable = (findFirstResult: unknown, updateResult?: unknown) => ({
-    findFirst: vi.fn().mockResolvedValue(findFirstResult),
+    findFirst: (() => {
+      let reads = 0;
+      return vi.fn().mockImplementation(async () => (reads++ === 0 ? findFirstResult : updateResult ?? findFirstResult));
+    })(),
     update: vi.fn().mockResolvedValue(updateResult ?? findFirstResult),
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     create: vi.fn().mockResolvedValue(BASE_VERIFICATION),
   });
-  return {
+  const mock = {
+    // The transition, its audit and the gate assessment commit in one transaction (the mock runs it inline).
+    $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(mock)),
     ownerFinanceAction: makeTable(BASE_ACTION, { ...BASE_ACTION, status: "completed" }),
     ownerFinanceCycle: { findFirst: vi.fn().mockResolvedValue({ snapshotId: "snap-1" }) },
     ownerFinancialSnapshot: { findFirst: vi.fn().mockResolvedValue(BASE_SNAPSHOT) },
@@ -121,9 +138,12 @@ function makeDbMock(): DbMock {
     ownerSopVerification: { create: vi.fn().mockResolvedValue(BASE_VERIFICATION) },
 
     ownerStrategyAction: makeTable(BASE_ACTION, { ...BASE_ACTION, status: "completed" }),
+    // The step's live-decision intent for the action gate reads the current evaluation (none here).
+    ownerStrategyCycle: { findFirst: vi.fn().mockResolvedValue(null) },
     ownerStrategySnapshot: { findFirst: vi.fn().mockResolvedValue(BASE_SNAPSHOT) },
     ownerStrategyVerification: { create: vi.fn().mockResolvedValue(BASE_VERIFICATION) },
-  } as unknown as DbMock;
+  };
+  return mock as unknown as DbMock;
 }
 
 let db: DbMock;
@@ -135,23 +155,6 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-describe("workflow1-feedback-loop — module contract assertions", () => {
-  it("mockEmitAuditEvent is a function", () => { expect(typeof mockEmitAuditEvent).toBe("function"); });
-  it("mockRunFinanceDiagnosis is a function", () => { expect(typeof mockRunFinanceDiagnosis).toBe("function"); });
-  it("mockRunOperationsDiagnosis is a function", () => { expect(typeof mockRunOperationsDiagnosis).toBe("function"); });
-  it("mockRunSalesDiagnosis is a function", () => { expect(typeof mockRunSalesDiagnosis).toBe("function"); });
-  it("mockRunSopDiagnosis is a function", () => { expect(typeof mockRunSopDiagnosis).toBe("function"); });
-  it("mockRunStrategyDiagnosis is a function", () => { expect(typeof mockRunStrategyDiagnosis).toBe("function"); });
-  it("BASE_ACTION is an object", () => { expect(typeof BASE_ACTION).toBe("object"); });
-  it("BASE_SNAPSHOT is an object", () => { expect(typeof BASE_SNAPSHOT).toBe("object"); });
-  it("BASE_VERIFICATION is an object", () => { expect(typeof BASE_VERIFICATION).toBe("object"); });
-  it("makeDbMock is a function", () => { expect(typeof makeDbMock).toBe("function"); });
-  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
-  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
-  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
-  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
-});
-
 // ---------------------------------------------------------------------------
 // Tests: Action completion → re-diagnosis
 // ---------------------------------------------------------------------------
@@ -160,6 +163,7 @@ describe("Workflow 1 — Action completion triggers re-diagnosis (Class A)", () 
   beforeEach(() => {
     db = makeDbMock();
     vi.clearAllMocks();
+    mockEnforceOwnerActionGates.mockImplementation(async (input: Parameters<typeof allowedAssessment>[0]) => allowedAssessment(input));
     mockRunFinanceDiagnosis.mockResolvedValue({ id: "new-finance-cycle-id" });
     mockRunOperationsDiagnosis.mockResolvedValue({ id: "new-operations-cycle-id" });
     mockRunSalesDiagnosis.mockResolvedValue({ id: "new-sales-cycle-id" });
@@ -234,6 +238,11 @@ describe("Workflow 1 — Action completion triggers re-diagnosis (Class A)", () 
     );
     const auditNames = mockEmitAuditEvent.mock.calls.map((c) => c[0].eventName);
     expect(auditNames).toContain("owner.strategy_action_completed");
+    // The gate saw the step with an explicit intent (no current evaluation here → the code's own class),
+    // and its assessment was recorded after the update was written.
+    expect(mockEnforceOwnerActionGates).toHaveBeenCalledWith(expect.objectContaining({ domain: "strategy", toStatus: "completed", intent: expect.any(String) }));
+    expect(mockRecordOwnerGateAssessment).toHaveBeenCalledTimes(1);
+    expect(db.ownerStrategyAction.updateMany.mock.invocationCallOrder[0]).toBeLessThan(mockRecordOwnerGateAssessment.mock.invocationCallOrder[0]);
     expect(mockCurrentStrategyScenarioId).toHaveBeenCalledWith("biz-1", "ws-1");
     expect(mockRunStrategyDiagnosis).toHaveBeenCalledWith("biz-1", "snap-1", "actor-1", "ws-1");
     expect(auditNames).toContain("owner.strategy_reassessment_triggered");
@@ -273,6 +282,7 @@ describe("Workflow 1 — Verification success triggers re-diagnosis (Class B)", 
   beforeEach(() => {
     db = makeDbMock();
     vi.clearAllMocks();
+    mockEnforceOwnerActionGates.mockImplementation(async (input: Parameters<typeof allowedAssessment>[0]) => allowedAssessment(input));
     mockRunFinanceDiagnosis.mockResolvedValue({ id: "new-finance-cycle-id" });
     mockRunOperationsDiagnosis.mockResolvedValue({ id: "new-operations-cycle-id" });
     mockRunSalesDiagnosis.mockResolvedValue({ id: "new-sales-cycle-id" });
@@ -414,6 +424,7 @@ describe("Workflow 1 — Workspace isolation enforced throughout", () => {
   beforeEach(() => {
     db = makeDbMock();
     vi.clearAllMocks();
+    mockEnforceOwnerActionGates.mockImplementation(async (input: Parameters<typeof allowedAssessment>[0]) => allowedAssessment(input));
   });
 
   it("action update: findFirst uses workspaceId, preventing cross-tenant access", async () => {

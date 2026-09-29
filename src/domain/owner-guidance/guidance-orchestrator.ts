@@ -53,6 +53,11 @@ export interface GuidanceContext {
   growthGatePassed: boolean;
   /** Whether cash survival (M4/M5) is safe. */
   cashSafe: boolean;
+  /**
+   * Exactly one of the two survival readings (cash check / Finance diagnosis) exists and it is safe: cash
+   * safety is only half-measured — a caution (WATCH), never a danger issue and never "OK".
+   */
+  cashHalfMeasured?: boolean;
   staffOverloaded: boolean;
   ownerOverloaded: boolean;
   /** Hard safety block — e.g. a required boundary is missing or guidance is unsafe to show. */
@@ -154,8 +159,8 @@ export function buildOwnerNowView(ctx: GuidanceContext): OwnerNowView {
   if (!ctx.growthGatePassed) {
     actionsToAvoid.push({
       id: "avoid_growth_before_gates",
-      avoid: "Do not pursue growth/expansion until cash, profit, capacity, workload and quality gates pass",
-      reason: "stabilization gates are not yet satisfied; growth now compounds risk",
+      avoid: "Do not scale demand (new acquisition spend, campaign expansion or extra volume) until cash, profit, capacity, workload and quality gates pass",
+      reason: "stabilization gates are not yet satisfied; scaling now compounds risk",
       businessFunction: [BusinessFunction.GROWTH_READINESS],
       triggeredBy: [IssueCategory.GROWTH_OPPORTUNITY],
     });
@@ -176,7 +181,7 @@ export function buildOwnerNowView(ctx: GuidanceContext): OwnerNowView {
     : ctx.dataConfidence;
 
   // Per-function status surface.
-  const cashDangerStatus = categoryStatus(ctx.issues, IssueCategory.CASH_DANGER);
+  const cashDangerStatus = maxStatus(categoryStatus(ctx.issues, IssueCategory.CASH_DANGER), ctx.cashHalfMeasured ? "WATCH" : "OK");
   const profitLeakStatus = categoryStatus(ctx.issues, IssueCategory.PROFIT_LEAK);
   const overloadStatus = categoryStatus(ctx.issues, IssueCategory.OVERLOAD);
   const staffOverloadStatus = maxStatus(overloadStatus, ctx.staffOverloaded ? "DANGER" : "OK");
@@ -265,7 +270,7 @@ function summarize(
   classification: GuidanceClassification
 ): string {
   const top = steps.topIssues[0];
-  const lead = top ? `Most urgent: ${top.headline} (${top.category}).` : "No active issues.";
+  const lead = top ? `Top operating signal: ${top.headline} (${top.category}).` : "No active operating signals.";
   const cash = ctx.cashSafe ? "" : " Cash survival is unsafe — stabilization before growth.";
   const data = ctx.missingCriticalData.length > 0
     ? ` Missing data capping confidence: ${ctx.missingCriticalData.join("; ")}.`

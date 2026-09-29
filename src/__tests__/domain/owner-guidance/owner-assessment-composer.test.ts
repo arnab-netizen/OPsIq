@@ -7,6 +7,7 @@ import type {
   CanonicalOwnerAssessment,
   CanonicalOwnerAssessmentAreaStatus,
 } from "@/domain/owner-guidance/owner-assessment-reconciliation";
+import type { OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
 import { GuidanceClassification } from "@/domain/owner-guidance/guidance-classification";
 import { IssueCategory, type BusinessIssue } from "@/domain/owner-guidance/issue-priority";
@@ -76,7 +77,7 @@ function baseAssessment(overrides: Partial<CanonicalOwnerAssessment> = {}): Cano
     confidenceCapped: false,
     guidanceClassification: GuidanceClassification.GUIDANCE_READY,
     missingData: [],
-    primaryIssue: null,
+    primaryConcernClass: null,
     urgentRisks: [],
     areaStatus: ALL_OK_AREA_STATUS,
     conditionDimensions: ALL_KNOWN_CONDITION_DIMENSIONS,
@@ -173,34 +174,41 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
     expect(result.confidenceLabel).toBe("Limited confidence");
   });
 
-  const CATEGORY_CASES: Array<[IssueCategory, string]> = [
-    [IssueCategory.CASH_DANGER, "Cash flow is the first issue to address."],
-    [IssueCategory.CUSTOMER_SERVICE_FAILURE, "Customer service or quality is the first issue to address."],
-    [IssueCategory.OVERLOAD, "Staff or owner workload is the first issue to address."],
-    [IssueCategory.PROFIT_LEAK, "Profitability is the first issue to address."],
-    [IssueCategory.CAPACITY_BOTTLENECK, "Capacity or supply constraints are the first issue to address."],
-    [IssueCategory.COMPLIANCE_SAFETY_RISK, "Compliance or safety is the first issue to address."],
-    [IssueCategory.BLOCKED_EXECUTION, "Work that cannot move forward is the first issue to address."],
-    [IssueCategory.PENDING_PROOF_OUTCOME, "Missing proof or an outcome check is the first issue to address."],
-    [IssueCategory.GROWTH_OPPORTUNITY, "Growth is the first opportunity to consider."],
-    [IssueCategory.PROCESS_IMPROVEMENT, "Process improvement is the first opportunity to consider."],
+  const CLASS_CASES: Array<[OwnerPriorityClass, string]> = [
+    ["SAFETY_COMPLIANCE", "Compliance or safety is the first issue to address."],
+    ["SURVIVAL_CASH", "Cash flow is the first issue to address."],
+    ["CUSTOMER_SERVICE_FAILURE", "Customer service or quality is the first issue to address."],
+    ["OVERLOAD_BLOCKING", "Staff or owner workload is the first issue to address."],
+    ["PROFIT_LOSS", "Profitability is the first issue to address."],
+    ["BLOCKED_EXECUTION", "Work that cannot move forward is the first issue to address."],
+    ["MISSING_CRITICAL_EVIDENCE", "Missing business information is the first issue to address."],
+    ["GROWTH_OPPORTUNITY", "Growth is the first opportunity to consider."],
+    ["PROCESS_OPTIMISATION", "Process improvement is the first opportunity to consider."],
   ];
 
-  it.each(CATEGORY_CASES)("12. IssueCategory %s maps to its approved plain-language primaryConcern", (category, expected) => {
-    const result = composeOwnerAssessment(baseAssessment({ primaryIssue: issue("i1", category) }));
+  it.each(CLASS_CASES)("12. canonical class %s maps to its approved plain-language primaryConcern", (cls, expected) => {
+    const result = composeOwnerAssessment(baseAssessment({ primaryConcernClass: cls }));
     expect(result.primaryConcern).toBe(expected);
   });
 
-  it("13. primaryIssue === null produces primaryConcern === null", () => {
-    const result = composeOwnerAssessment(baseAssessment({ primaryIssue: null }));
+  it("13. primaryConcernClass === null produces primaryConcern === null", () => {
+    const result = composeOwnerAssessment(baseAssessment({ primaryConcernClass: null }));
     expect(result.primaryConcern).toBeNull();
   });
 
-  it("14. composer uses primaryIssue and does not replace it with a more severe urgentRisk", () => {
-    const primaryIssue = issue("low-growth", IssueCategory.GROWTH_OPPORTUNITY, "LOW");
+  it("14. composer uses the canonical class and does not replace it with a more severe urgentRisk", () => {
     const urgentRisks = [issue("critical-cash", IssueCategory.CASH_DANGER, "CRITICAL")];
-    const result = composeOwnerAssessment(baseAssessment({ primaryIssue, urgentRisks }));
+    const result = composeOwnerAssessment(baseAssessment({ primaryConcernClass: "GROWTH_OPPORTUNITY", urgentRisks }));
     expect(result.primaryConcern).toBe("Growth is the first opportunity to consider.");
+  });
+
+  it("14b. health OK never contradicts an open problem main target (headline acknowledges it)", () => {
+    const problem = composeOwnerAssessment(baseAssessment({ health: "OK", primaryConcernClass: "SURVIVAL_CASH" }));
+    expect(problem.headline).toBe("No major problem is showing overall, but one open issue needs attention first.");
+    const opportunity = composeOwnerAssessment(baseAssessment({ health: "OK", primaryConcernClass: "GROWTH_OPPORTUNITY" }));
+    expect(opportunity.headline).toBe("No major problem is showing in the current evidence.");
+    const danger = composeOwnerAssessment(baseAssessment({ health: "DANGER", primaryConcernClass: "SURVIVAL_CASH" }));
+    expect(danger.headline).toBe("The business needs attention.");
   });
 
   it("15. AVAILABLE confidence labels: VERIFIED/STRONG/MODERATE", () => {
@@ -292,7 +300,7 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
     const assessment = baseAssessment({
       readiness: "LIMITED",
       health: "WATCH",
-      primaryIssue: issue("i1", IssueCategory.PROFIT_LEAK),
+      primaryConcernClass: "PROFIT_LOSS",
       missingData: ["latest cash position"],
     });
     const first = composeOwnerAssessment(assessment);
@@ -300,12 +308,13 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
     expect(first).toEqual(second);
   });
 
-  it("26. no returned string contains raw IssueCategory tokens", () => {
-    for (const [category] of CATEGORY_CASES) {
-      const result = composeOwnerAssessment(baseAssessment({ primaryIssue: issue("i1", category) }));
-      const haystack = narrativeStrings(result).join(" ");
-      for (const [rawCategory] of CATEGORY_CASES) {
-        expect(haystack).not.toContain(rawCategory);
+  it("26. no returned string contains raw priority-class or IssueCategory tokens", () => {
+    for (const [cls] of CLASS_CASES) {
+      for (const health of ["OK", "WATCH"] as const) {
+        const result = composeOwnerAssessment(baseAssessment({ health, primaryConcernClass: cls }));
+        const haystack = narrativeStrings(result).join(" ");
+        for (const [rawClass] of CLASS_CASES) expect(haystack).not.toContain(rawClass);
+        for (const rawCategory of Object.values(IssueCategory)) expect(haystack).not.toContain(rawCategory);
       }
     }
   });
@@ -325,13 +334,12 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
     const result = composeOwnerAssessment(
       baseAssessment({
         businessId: "biz-super-secret-uuid-1234",
-        primaryIssue: issue("issue-secret-uuid-5678", IssueCategory.CASH_DANGER),
+        primaryConcernClass: "SURVIVAL_CASH",
         urgentRisks: [issue("risk-secret-uuid-9999", IssueCategory.PROFIT_LEAK)],
       }),
     );
     const haystack = narrativeStrings(result).join(" ");
     expect(haystack).not.toContain("biz-super-secret-uuid-1234");
-    expect(haystack).not.toContain("issue-secret-uuid-5678");
     expect(haystack).not.toContain("risk-secret-uuid-9999");
   });
 

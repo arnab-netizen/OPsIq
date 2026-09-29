@@ -779,6 +779,49 @@ describe("[db] Business Risk — alert integration", () => {
     expect(alertAfter?.resolvedAt).toBeTruthy();
   });
 
+  it("[db] R10 P2-10: an overdue risk ACCEPTED with rationale is never re-alerted by the scheduled scan", async () => {
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-P2-10",
+      title: "Accepted overdue risk must not be re-alerted",
+      category: "MARKET",
+      likelihood: 100,
+      impact: 100,
+    });
+    const pastDate = new Date("2020-01-01T00:00:00Z");
+    await db.businessRiskEntry.update({ where: { id: risk.id }, data: { reviewDueDate: pastDate } });
+
+    // Baseline: an open overdue risk gets an alert.
+    const firstScan = await evaluateOverdueRiskAlerts(alertWorkspaceId, actor);
+    expect(firstScan.attempted).toBeGreaterThanOrEqual(1);
+    const overdueBefore = await db.alert.findFirst({ where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_overdue_${risk.id}` } });
+    expect(overdueBefore?.resolvedAt).toBeNull();
+
+    // Owner accepts the risk with a rationale — a governed lifecycle state, not an unresolved ignored risk.
+    await reviewRisk({
+      workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor,
+      newStatus: "ACCEPTED", acceptanceRationale: "Board reviewed; accepted at current exposure.",
+    });
+    const overdueAfterAccept = await db.alert.findFirst({ where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_overdue_${risk.id}` } });
+    expect(overdueAfterAccept?.resolvedAt).toBeTruthy();
+
+    // The scheduled scan runs again (reviewDueDate is still in the past) — it must NOT reactivate the
+    // resolved overdue alert just because time has continued to pass.
+    const secondScan = await evaluateOverdueRiskAlerts(alertWorkspaceId, actor);
+    const overdueAfterScan = await db.alert.findFirst({ where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_overdue_${risk.id}` } });
+    expect(overdueAfterScan?.resolvedAt).toBeTruthy();
+    expect(secondScan.reactivated).toBe(0);
+
+    // A real lifecycle change (reopened to MITIGATING — ACCEPTED's valid reopen path, which does NOT
+    // resolve alerts) DOES raise a genuine new alert once the risk is overdue again.
+    await reviewRisk({ workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor, newStatus: "MITIGATING" });
+    await db.businessRiskEntry.update({ where: { id: risk.id }, data: { reviewDueDate: pastDate } });
+    await evaluateOverdueRiskAlerts(alertWorkspaceId, actor);
+    const overdueAfterReopen = await db.alert.findFirst({ where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_overdue_${risk.id}` } });
+    expect(overdueAfterReopen?.resolvedAt).toBeNull();
+  });
+
   it("[db] 11. cross-workspace evaluator cannot affect another workspace", async () => {
     const foreignWorkspaceId = randomUUID();
     const pastDate = new Date("2020-01-01T00:00:00Z");

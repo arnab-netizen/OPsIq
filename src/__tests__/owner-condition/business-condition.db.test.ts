@@ -53,7 +53,11 @@ describe("[db] Owner Business Condition", () => {
     expect(res.domainsWired).toContain("finance");
     expect(res.profile).not.toBeNull();
     expect(res.profile!.domainScores.some((d) => d.domain === "finance")).toBe(true);
-    expect(res.profile!.recommendedNextAction).toBeTruthy();
+    // The profile no longer elects a next action; the ONE main target is the canonical decision.
+    expect(res.profile).not.toHaveProperty("recommendedNextAction");
+    expect(res.profile!.topActions.length).toBeGreaterThan(0);
+    const { getOwnerHome } = await import("@/services/owner-home/home.service");
+    expect((await getOwnerHome(workspaceId, businessId)).currentOwnerDecision?.primaryTarget).toBeTruthy();
     expect(res.profile!.overallHealthScore).toBeGreaterThanOrEqual(0);
     expect(res.profile!.overallHealthScore).toBeLessThanOrEqual(100);
 
@@ -78,7 +82,11 @@ describe("[db] Owner Business Condition", () => {
     expect(res.domainsWired).toContain("finance");
     expect(res.domainsWired).toContain("recovery");
     expect(res.profile!.domainScores.length).toBeGreaterThanOrEqual(2);
-    expect(res.profile!.recommendedNextAction).toBeTruthy();
+    // The profile no longer elects a next action; the ONE main target is the canonical decision.
+    expect(res.profile).not.toHaveProperty("recommendedNextAction");
+    expect(res.profile!.topActions.length).toBeGreaterThan(0);
+    const { getOwnerHome } = await import("@/services/owner-home/home.service");
+    expect((await getOwnerHome(workspaceId, businessId)).currentOwnerDecision?.primaryTarget).toBeTruthy();
 
     await db.ownerBusiness.delete({ where: { id: businessId } });
   });

@@ -5,7 +5,7 @@
  * control center. Reuses the pure composer + fleet capacity + attention summarizer.
  */
 
-import { buildOwnerControlCenter, type OwnerControlCenter } from "@/domain/owner-mode/owner-control-center";
+import { buildOwnerControlCenter, type ControlCenterMainTarget, type OwnerControlCenter } from "@/domain/owner-mode/owner-control-center";
 import { assessFleetCapacity, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
 import { summarizeOwnerAttention, type AttentionEventRecord } from "@/domain/owner-mode/owner-load";
 
@@ -37,6 +37,9 @@ export interface ControlCenterContext {
   ownerApprovalsRequired: number;
   approvalsAvoided?: number;
   nextBestAction?: string | null;
+  /** The canonical owner decision's main target (never vetoed by the panel; see buildOwnerControlCenter). */
+  mainTarget?: ControlCenterMainTarget | null;
+  supportingSteps?: ControlCenterMainTarget[];
 }
 
 /**
@@ -80,5 +83,7 @@ export async function getOwnerControlCenter(
     reassessmentsDue,
     approvalsAvoided: ctx.approvalsAvoided ?? 0,
     nextBestAction: ctx.nextBestAction ?? null,
+    mainTarget: ctx.mainTarget ?? null,
+    supportingSteps: ctx.supportingSteps ?? [],
   });
 }

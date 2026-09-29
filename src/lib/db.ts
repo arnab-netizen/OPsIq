@@ -2,11 +2,23 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
 import type { Prisma } from "@/generated/prisma/client";
 
+/** The extended Prisma client this module constructs (workspace enforcement + audit payload parsing). */
+type OpsDbClient = Awaited<ReturnType<typeof createPrismaClient>>;
+
 const globalForPrisma = globalThis as unknown as {
-  prisma: any | undefined;
-  prismaPromise: Promise<any> | undefined;
-  pgPool: any | undefined;
+  prisma: OpsDbClient | undefined;
+  prismaPromise: Promise<OpsDbClient> | undefined;
+  pgPool: RawPool | undefined;
 };
+
+/**
+ * The raw pg.Pool as this module uses it: the raw-query contract of withRawStatementTimeout() plus a
+ * one-shot query (heartbeat). node-postgres's Pool satisfies it (see createPrismaClient).
+ */
+export interface RawPool {
+  connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }>;
+  query: (text: string) => Promise<unknown>;
+}
 
 /**
  * Production pg.Pool connectionTimeoutMillis. Exported so callers of
@@ -81,7 +93,8 @@ async function createPrismaClient() {
       keepAliveInitialDelayMillis: 10000,
     });
     // Store pool reference so pingDatabase() can bypass Prisma's $extends() chain.
-    globalForPrisma.pgPool = pool;
+    // node-postgres's Pool/PoolClient overloads are wider than the raw-query contract (RawPool).
+    globalForPrisma.pgPool = pool as unknown as RawPool;
 
     // P0-15: keeps this function instance alive long enough for Vercel to drain idle
     // pool connections before the instance suspends, instead of the instance freezing
@@ -144,7 +157,7 @@ async function getDb() {
   return globalForPrisma.prisma;
 }
 
-let dbInitPromise: Promise<any> | null = null;
+let dbInitPromise: Promise<OpsDbClient> | null = null;
 
 export async function getDbInstance() {
   if (!dbInitPromise) {
@@ -159,11 +172,14 @@ export async function getDbInstance() {
  * Prisma client that shares this same pool) before returning it — same
  * initialization pattern already used by pingDatabase()/heartbeatPool().
  */
-export async function getRawPool() {
+export async function getRawPool(): Promise<RawPool> {
   if (!globalForPrisma.pgPool) {
     await getDbInstance();
   }
-  return globalForPrisma.pgPool;
+  const pool = globalForPrisma.pgPool;
+  // getDbInstance() constructs the pool before it resolves; a missing pool here is a broken init.
+  if (!pool) throw new Error("Database pool is not initialised");
+  return pool;
 }
 
 /**
@@ -613,7 +629,7 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
  */
 export async function heartbeatPool(): Promise<void> {
   if (!globalForPrisma.pgPool) return;
-  await (globalForPrisma.pgPool as any).query("SELECT 1");
+  await globalForPrisma.pgPool.query("SELECT 1");
 }
 
 // NOTE: Removed auto-initialization on module load
@@ -622,6 +638,10 @@ export async function heartbeatPool(): Promise<void> {
 // This allows middleware to import db.ts without triggering Prisma initialization
 
 // Export db as a lazy-loading proxy that auto-initializes on first access
+// The exported `db` is deliberately untyped at this one boundary: its members are resolved dynamically
+// (a model delegate or `$` method on the live client, or a deferred stand-in while it initializes), and
+// the codebase's call sites read rows through it without generated row types.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic Proxy boundary over the lazily created client (see above)
 export const db = new Proxy({} as any, {
   get(target, prop) {
     // If already initialized, return immediately (fast path)
@@ -631,7 +651,12 @@ export const db = new Proxy({} as any, {
 
     // Ensure initialization is in progress (auto-start if needed)
     if (!globalForPrisma.prismaPromise) {
-      globalForPrisma.prismaPromise = getDb();
+      const init = getDb();
+      // This auto-start is fire-and-forget: a property access alone (e.g. `db.user`) never awaits it.
+      // If initialization fails and no caller has awaited yet, the rejection must not surface as an
+      // unhandled rejection; every deferred method below still receives it through its own `.then`.
+      init.catch(() => undefined);
+      globalForPrisma.prismaPromise = init;
     }
 
     // Prisma's own top-level client methods ($queryRaw, $queryRawUnsafe,
@@ -650,7 +675,7 @@ export const db = new Proxy({} as any, {
     // callable deferred function closes this for every one-level call site
     // project-wide, not just the one that happened to be discovered first.
     if (typeof prop === "string" && prop.startsWith("$")) {
-      return function deferredTopLevelMethod(...args: any[]) {
+      return function deferredTopLevelMethod(...args: unknown[]) {
         return globalForPrisma.prismaPromise!.then(prisma => {
           const method = Reflect.get(prisma, prop);
           if (typeof method === "function") {
@@ -666,7 +691,7 @@ export const db = new Proxy({} as any, {
     return new Proxy({}, {
       get(modelTarget, modelProp) {
         // When accessing a method on the model (like findUnique), return a deferred function
-        return function deferredMethod(...args: any[]) {
+        return function deferredMethod(...args: unknown[]) {
           return globalForPrisma.prismaPromise!.then(prisma => {
             const model = Reflect.get(prisma, prop);
             const method = Reflect.get(model, modelProp);

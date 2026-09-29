@@ -27,7 +27,11 @@ describe("Owner Home page wiring — module contract assertions", () => {
   it("src contains '@/ui/primitives'", () => { expect(src).toContain('from "@/ui/primitives"'); });
   it("src contains businessHealthScore", () => { expect(src).toContain("businessHealthScore"); });
   it("src contains cashDanger", () => { expect(src).toContain("cashDanger"); });
-  it("src contains requiredActions", () => { expect(src).toContain("requiredActions"); });
+  it("src renders the canonical decision's attention order (no local requiredActions list)", () => {
+    expect(src).toContain("currentOwnerDecision");
+    expect(src).toContain("attention");
+    expect(src).not.toContain("requiredActions");
+  });
   it("src has no mutation method calls (POST/PATCH/PUT/DELETE)", () => { expect(src).not.toMatch(/method:\s*["'](POST|PATCH|PUT|DELETE)["']/); });
   it("home contains the /owner/home link", () => { expect(home).toContain("/owner/home"); });
   it("src contains max-w-md (mobile-first container)", () => { expect(src).toMatch(/max-w-md/); });
@@ -52,7 +56,8 @@ describe("Owner Home page wiring", () => {
     expect(src).toContain("Sales danger");
     expect(src).toContain("Operations danger");
     expect(src).toContain("Execution danger");
-    expect(src).toContain("Today&apos;s required actions");
+    expect(src).toContain("Everything open, in the order to handle it");
+    expect(src).toContain("OwnerDecisionCard");
     expect(src).toContain("Top risks");
     expect(src).toContain("Top opportunities");
     expect(src).toContain("Last verified improvement");
@@ -61,7 +66,7 @@ describe("Owner Home page wiring", () => {
   it("reads the summary fields from the payload", () => {
     expect(src).toContain("businessHealthScore");
     expect(src).toContain("cashDanger");
-    expect(src).toContain("requiredActions");
+    expect(src).toContain("currentOwnerDecision");
     expect(src).toContain("top3Risks");
     expect(src).toContain("top3Opportunities");
     expect(src).toContain("lastVerifiedImprovement");

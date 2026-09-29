@@ -3,11 +3,13 @@
  *
  * Read-only aggregation: reads every business in the workspace, resolves each
  * one's Owner Intelligence Spine `BusinessConditionProfile` via the proven
- * `getBusinessCondition`, and feeds them to the deterministic portfolio engine.
+ * `getBusinessCondition` and its ONE canonical owner decision via `getOwnerHome`, and feeds them
+ * to the deterministic portfolio engine (which never re-elects a business's main target).
  * Owns no table and mutates nothing — workspace ownership is enforced by the
  * underlying condition reads.
  */
 import { getBusinessCondition } from "@/services/owner-condition/business-condition.service";
+import { getOwnerHome } from "@/services/owner-home/home.service";
 import { buildPortfolioView, type PortfolioBusinessInput, type PortfolioView } from "@/domain/owner-portfolio";
 
 /**
@@ -26,7 +28,10 @@ export async function getPortfolio(workspaceId: string, opts: { now?: Date } = {
 
   const inputs: PortfolioBusinessInput[] = await Promise.all(
     businesses.map(async (b) => {
-      const condition = await getBusinessCondition(workspaceId, b.id, { now: opts.now });
+      const [condition, home] = await Promise.all([
+        getBusinessCondition(workspaceId, b.id, { now: opts.now }),
+        getOwnerHome(workspaceId, b.id, { now: opts.now }),
+      ]);
       return {
         businessId: b.id,
         name: b.name,
@@ -34,6 +39,7 @@ export async function getPortfolio(workspaceId: string, opts: { now?: Date } = {
         currency: b.currency,
         isActive: b.isActive,
         profile: condition.profile,
+        ownerDecision: home.currentOwnerDecision,
       };
     })
   );

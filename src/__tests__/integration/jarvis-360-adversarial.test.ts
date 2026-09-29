@@ -147,7 +147,8 @@ describe("Jarvis 360 — integrated flows", () => {
     });
     expect(arb.recommended).toBeNull(); // growth blocked
     expect(cc.needsOwnerAttention).toBe(true);
-    expect(cc.whatNotToDo.join(" ")).toMatch(/growth\/marketing/);
+    // Guardrails name the intent/lever they stop (scaling demand), never a domain ("growth/marketing").
+    expect(cc.whatNotToDo.join(" ")).toMatch(/Do not scale demand \(new acquisition spend, campaign expansion or extra volume\)/);
     expect(cc.criticalAlerts.some((a) => /insufficient/i.test(a))).toBe(true);
   });
 

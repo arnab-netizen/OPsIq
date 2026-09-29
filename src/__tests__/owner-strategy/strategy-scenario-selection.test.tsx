@@ -85,6 +85,8 @@ function installFetch() {
     vi.fn(async (req: string | URL, init?: RequestInit) => {
       const url = typeof req === "string" ? req : req.toString();
       if (url === "/api/owner/businesses") return jsonResponse({ businesses: [BIZ_A, BIZ_B] });
+      // The page's canonical main-target context (a read; no decision in this fixture).
+      if (url.startsWith("/api/owner/home?")) return jsonResponse({ currentOwnerDecision: null });
       if (url.startsWith("/api/owner/strategy/dashboard")) {
         const id = new URL(url, "http://t.local").searchParams.get("businessId")!;
         return jsonResponse(dashboardFor(id));
