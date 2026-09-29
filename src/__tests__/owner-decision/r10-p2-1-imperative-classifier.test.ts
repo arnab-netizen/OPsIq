@@ -79,6 +79,18 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     // hyphen, so both are now unconditional delimiters regardless of spacing.
     "No more delays—which caused a follow-up—occurred this quarter.",
     "No more delays--which were flagged--occurred this quarter.",
+    // Round-10 hostile-review fix: two Unicode dash-punctuation characters besides en/em dash are
+    // equally never word-internal — U+2015 HORIZONTAL BAR (the standard em-dash glyph in some
+    // locales/fonts) and U+2212 MINUS SIGN (common in text copied from typesetting tools) — and must
+    // be unconditional delimiters the same way en/em dash already are.
+    "No more delays―which were flagged―occurred this quarter.",
+    "No more delays−which were flagged−occurred this quarter.",
+    // Round-10 hostile-review fix: a single ASCII hyphen with whitespace on only ONE side (a typo
+    // pattern where a space is dropped on only one side of a dash) must still count as a delimiter —
+    // a genuine word-internal hyphen never has whitespace on EITHER side, so requiring it on at least
+    // one side (not both) is enough to keep "follow-up" excluded.
+    "No more delays -which were flagged- occurred this quarter.",
+    "No more delays- which were flagged -occurred this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
@@ -220,6 +232,36 @@ describe("R10 P2-1 round-9 hostile-review mutation proof: requiring whitespace o
   });
 
   it("a single word-internal hyphen ('follow-up') still correctly stays OUT of the delimiter set (round 8's own fix is preserved)", () => {
+    expect(isWholeBusinessImperative("Stop the campaign, which triggered a follow-up was flagged, before losses grow.")).toBe(true);
+  });
+});
+
+describe("R10 P2-1 round-10 hostile-review mutation proof: exempting only en/em dash (not every never-word-internal Unicode dash) and requiring whitespace on BOTH sides of a single hyphen reproduces the round-9 regression via other real dash conventions", () => {
+  it("mutation check: the round-9 regex (only [–—] exempt) does not treat U+2015 HORIZONTAL BAR as a delimiter, leaking the real verb", () => {
+    const clause = "delays―which were flagged―occurred this quarter";
+    const round9EmEnDashOnly = /,|[–—]|-{2,}|(?<=\s|^)-(?=\s|$)/;
+    // U+2015 is neither a comma, en/em dash, doubled hyphen, nor a whitespace-flanked single ASCII
+    // hyphen, so round 9's regex finds no delimiter here at all (proves the mutation reproduces the
+    // regression):
+    expect(round9EmEnDashOnly.test(clause)).toBe(false);
+    // The real classifier treats U+2015 as an unconditional delimiter (never genuinely word-internal):
+    expect(isWholeBusinessImperative("No more delays―which were flagged―occurred this quarter.")).toBe(false);
+  });
+
+  it("mutation check: the round-9 regex does not treat U+2212 MINUS SIGN as a delimiter either", () => {
+    const round9EmEnDashOnly = /,|[–—]|-{2,}|(?<=\s|^)-(?=\s|$)/;
+    expect(round9EmEnDashOnly.test("delays−which were flagged−occurred")).toBe(false);
+    expect(isWholeBusinessImperative("No more delays−which were flagged−occurred this quarter.")).toBe(false);
+  });
+
+  it("mutation check: the round-9 regex requires whitespace on BOTH sides of a single ASCII hyphen, so an asymmetrically-spaced hyphen aside is missed", () => {
+    const round9EmEnDashOnly = /,|[–—]|-{2,}|(?<=\s|^)-(?=\s|$)/;
+    // "delays -which" — the hyphen has whitespace before it but NOT after (no space before "which"):
+    expect(round9EmEnDashOnly.test("delays -which were flagged- occurred")).toBe(false);
+    expect(isWholeBusinessImperative("No more delays -which were flagged- occurred this quarter.")).toBe(false);
+  });
+
+  it("a single word-internal hyphen ('follow-up') still correctly stays OUT of the delimiter set (requiring whitespace on at least one side, not both, still excludes it)", () => {
     expect(isWholeBusinessImperative("Stop the campaign, which triggered a follow-up was flagged, before losses grow.")).toBe(true);
   });
 });

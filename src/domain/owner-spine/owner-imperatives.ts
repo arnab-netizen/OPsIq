@@ -435,7 +435,16 @@ function planClauseIsFactual(rest: string): boolean {
   // matched by excluding each delimiter position directly (an "unrolled loop": consume one character
   // only where a delimiter does not start) rather than a single negated character class, since the
   // delimiter kinds now have different recognition rules.
-  const ASIDE_DELIM = /,|[–—]|-{2,}|(?<=\s|^)-(?=\s|$)/;
+  // Hostile-review fix (round 10): round 9's Unicode-dash exemption only covered en/em dash ([–—]),
+  // leaving out two other dash-punctuation characters that are exactly as never-word-internal — U+2015
+  // HORIZONTAL BAR (the standard em-dash glyph in some locales/fonts) and U+2212 MINUS SIGN (common in
+  // text copied from typesetting tools) — which reproduced the identical unspaced-dash failure mode.
+  // Round 9 also required a single ASCII hyphen to be flanked by whitespace/boundary on BOTH sides,
+  // silently treating an asymmetrically-spaced hyphen ("delays -which were flagged- occurred", a typo
+  // pattern where a space is dropped on only one side) as no delimiter at all rather than as ambiguous —
+  // a genuine word-internal hyphen never has whitespace on EITHER side, so requiring it on at least one
+  // side is sufficient to exclude "follow-up" while accepting the asymmetric case.
+  const ASIDE_DELIM = /,|[–—―−]|-{2,}|(?<=\s|^)-|-(?=\s|$)/;
   const asideStripRe = new RegExp(`(?:${ASIDE_DELIM.source})\\s*(?:that|which|who|whose)\\b(?:(?!${ASIDE_DELIM.source})[\\s\\S])*(?=${ASIDE_DELIM.source})`, "gi");
   const withoutRelativeAsides = clause.replace(asideStripRe, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;

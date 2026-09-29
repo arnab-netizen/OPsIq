@@ -728,3 +728,70 @@ describe("R10 P2-9 round-9 hostile-review fix: finance_amended's category/busine
     expect(issues.find((i) => i.id === "finance_amended")?.category).toBe("CASH_DANGER"); // the real mapper does not mislabel it
   });
 });
+
+describe("R10 P2-9 round-10 hostile-review fix: finance_amended's category/businessFunction does not mislabel a cash-driven escalation on an exact severity TIE", () => {
+  it("financeProfitDriven + amended CRITICAL, stale cash reading ALSO CRITICAL (exact tie, not strictly worse) — category is CASH_DANGER, not PROFIT_LEAK", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "CRITICAL",
+      finAmendedLastKnown: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "finance",
+      financeProfitDriven: true,
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended).toBeDefined();
+    expect(amended?.severity).toBe("CRITICAL");
+    // The headline independently asserts cash is CRITICAL too — the category/businessFunction must
+    // not contradict that by staying pure-profit:
+    expect(amended?.headline).toMatch(/last cash check also showed CRITICAL/i);
+    expect(amended?.category).toBe("CASH_DANGER");
+    expect(amended?.businessFunction).toContain("CASH_FLOW");
+    expect(amended?.businessFunction).not.toContain("PROFITABILITY");
+  });
+
+  it("financeProfitDriven + amended AT_RISK (HIGH), stale cash ALSO AT_RISK (exact tie at HIGH) — same tie behavior at a lower severity", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "AT_RISK",
+      finAmendedLastKnown: "AT_RISK",
+      gateState: "AT_RISK", gateDriver: "unverified", gateSource: "finance",
+      financeProfitDriven: true,
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended?.severity).toBe("HIGH");
+    expect(amended?.category).toBe("CASH_DANGER");
+    expect(amended?.businessFunction).toContain("CASH_FLOW");
+  });
+
+  it("mutation check: a strict-greater-than comparison (round 9's own logic) leaves the tie case mislabeled as PROFIT_LEAK", () => {
+    const baseSevIdx = 3; // CRITICAL index in SEVERITY_ORDER = ["LOW","MEDIUM","HIGH","CRITICAL"]
+    const cashSevIdx = 3; // also CRITICAL — a tie
+    const round9StrictGreaterThan = cashSevIdx > baseSevIdx;
+    expect(round9StrictGreaterThan).toBe(false); // proves the mutation reproduces the regression: a tie is NOT ">"
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "CRITICAL",
+      finAmendedLastKnown: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "finance",
+      financeProfitDriven: true,
+    });
+    expect(issues.find((i) => i.id === "finance_amended")?.category).toBe("CASH_DANGER"); // the real mapper (>=) does not mislabel the tie
+  });
+
+  it("stale cash reading strictly SAFER than the amended state — category still stays PROFIT_LEAK (the >= fix does not overreach into the safer case)", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "AT_RISK",
+      finAmendedLastKnown: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "finance",
+      financeProfitDriven: true,
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended?.category).toBe("PROFIT_LEAK");
+    expect(amended?.businessFunction).toContain("PROFITABILITY");
+  });
+});

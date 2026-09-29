@@ -317,7 +317,15 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     // `financeProfitDriven` alone in that case, or a cash-driven escalation gets filed as a pure margin
     // problem with no CASH_FLOW tag at all, contradicting this file's own "never mislabel a cash-driven
     // danger as margin" principle (the same principle already enforced everywhere else in this file).
-    const cashDrivesSeverity = cashAlsoUnsafe && SEVERITY_ORDER.indexOf(cashSeverity(cashLastKnown)) > SEVERITY_ORDER.indexOf(baseSev);
+    // Hostile-review fix (round 10): round 9's comparison used strict `>`, so an exact severity TIE
+    // between the stale cash reading and the amended-Finance-derived baseSev reproduced the identical
+    // bug — cash is independently at the same severity as the escalation (not "safer", not silent), yet
+    // the strict inequality left `cashDrivesSeverity` false and the issue got filed as pure PROFIT_LEAK
+    // with the headline's own cash-is-CRITICAL sentence contradicted by a businessFunction that omits
+    // CASH_FLOW entirely. A tie is exactly as much "cash independently at this severity" as a strict
+    // win, so it must count the same way; only a stale cash reading that is genuinely BETTER than
+    // baseSev should leave the classification untouched.
+    const cashDrivesSeverity = cashAlsoUnsafe && SEVERITY_ORDER.indexOf(cashSeverity(cashLastKnown)) >= SEVERITY_ORDER.indexOf(baseSev);
     const sev = cashAlsoUnsafe ? worseSeverity(baseSev, cashSeverity(cashLastKnown)) : baseSev;
     const cashNote = cashAlsoUnsafe ? ` The last cash check also showed ${cashLastKnown}; that reading is out of date too.` : "";
     const isProfitIssue = financeProfitDriven && unsafeLastKnown && !cashDrivesSeverity;
