@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -200,16 +201,17 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
   ].filter(Boolean);
 
   // Evaluate KPI trends (improved or deteriorated)
-  const kpis = await db.kPI.findMany({
-    where: {
-      engagementId,
-      engagement: { workspaceId },
-    },
-    select: { target: true, currentValue: true, direction: true },
-  });
+  const kpis: Array<{ target: number | null; currentValue: number | null; direction: string }> =
+    await db.kPI.findMany({
+      where: {
+        engagementId,
+        engagement: { workspaceId },
+      },
+      select: { target: true, currentValue: true, direction: true },
+    });
 
   if (kpis.length > 0) {
-    const deterior = kpis.filter((k: any) => {
+    const deterior = kpis.filter((k) => {
       if (k.direction === "up" && k.currentValue !== null && k.target !== null) {
         return k.currentValue < k.target;
       } else if (k.direction === "down" && k.currentValue !== null && k.target !== null) {
@@ -320,7 +322,7 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
     select: { id: true },
   });
 
-  const actions = await db.action.findMany({
+  const actions: Array<{ id: string; status: string }> = await db.action.findMany({
     where: {
       engagementId,
       engagement: { workspaceId },
@@ -337,8 +339,8 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
   } else if (actions.length === 0) {
     recommendedPhase = "stabilization";
   } else {
-    const completedCount = actions.filter((a: any) => a.status === "completed").length;
-    const activeCount = actions.filter((a: any) => a.status !== "completed" && a.status !== "cancelled")
+    const completedCount = actions.filter((a) => a.status === "completed").length;
+    const activeCount = actions.filter((a) => a.status !== "completed" && a.status !== "cancelled")
       .length;
 
     if (activeCount > 0) {
@@ -621,7 +623,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
 
   // Persist results in a transaction. The re-ranking block was moved above; the remaining
   // in-tx work is bounded (tx.* updates + one emitAuditEvent), so 30s is sufficient.
-  const auditEventId = await db.$transaction(async (tx: any) => {
+  const auditEventId = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const auditPayload: Record<string, unknown> = {
       changeType: event.changeType,
       severity: event.severity,
@@ -727,7 +729,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         priorityImpact.recommendationPriorityShift === "escalate" ? priorityMap : deprioritizeMap;
 
       const updated = await Promise.all(
-        recs.map((r: any) =>
+        recs.map((r) =>
           tx.recommendation.update({
             where: { id: r.id },
             data: { priority: shiftMap[r.priority] || r.priority },

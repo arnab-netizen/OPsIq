@@ -6,7 +6,7 @@
  * S4: Audit event emission on transitions
  */
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { PrismaClient, BusinessConditionProfile } from "@/generated/prisma/client";
 import { randomUUID } from "crypto";
 import type { BusinessConditionProfileAssessment, ConditionTransition } from "../../domain/business-facts/business-condition-profile";
 
@@ -34,7 +34,7 @@ export async function createBusinessConditionProfile(
   prisma: PrismaClient,
   input: CreateProfileInput,
   userId?: string,
-): Promise<any> {
+): Promise<BusinessConditionProfile> {
   const { engagement_id, workspace_id, assessment, diagnosis_id, assessed_by_user_id } = input;
 
   // Verify engagement exists in workspace (workspace isolation)
@@ -147,7 +147,7 @@ export async function createUnassessedBusinessConditionProfile(
   prisma: PrismaClient,
   input: { engagement_id: string; workspace_id: string },
   userId?: string,
-): Promise<any> {
+): Promise<BusinessConditionProfile> {
   const { engagement_id, workspace_id } = input;
 
   const engagement = await prisma.engagement.findFirst({
@@ -233,7 +233,7 @@ export async function updateBusinessConditionProfile(
   prisma: PrismaClient,
   input: UpdateProfileInput,
   userId?: string,
-): Promise<any> {
+): Promise<BusinessConditionProfile> {
   const { profile_id, workspace_id, assessment, diagnosis_id, transition } = input;
 
   // Verify profile exists in workspace (workspace isolation - S3)
@@ -342,7 +342,7 @@ export async function getEffectiveBusinessConditionProfile(
   prisma: PrismaClient,
   engagement_id: string,
   workspace_id: string,
-): Promise<any | null> {
+): Promise<BusinessConditionProfile | null> {
   // Verify engagement exists in workspace
   const engagement = await prisma.engagement.findFirst({
     where: {
@@ -530,7 +530,7 @@ export async function getBusinessConditionProfileHistory(
   prisma: PrismaClient,
   engagement_id: string,
   workspace_id: string,
-): Promise<any[]> {
+): Promise<BusinessConditionProfile[]> {
   // Verify engagement exists in workspace
   const engagement = await prisma.engagement.findFirst({
     where: {
