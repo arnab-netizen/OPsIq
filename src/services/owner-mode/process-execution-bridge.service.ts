@@ -164,6 +164,102 @@ export async function persistProcessExecutionRoutes(
   return { created, updated, deduped };
 }
 
+/**
+ * Generated CASH_PROFIT data-request findings. Each one asks the owner for data; once the authoritative bridge
+ * stops emitting it, the request has been satisfied (or no longer applies) and the persisted task is obsolete.
+ */
+const RETIRABLE_DATA_GAP_FINDING_KEYS = ["PROFIT_DATA_INSUFFICIENT", "MISSING_UNIT_ECONOMICS"] as const;
+/** Only a task the owner has not touched. NEEDS_DATA / IN_PROGRESS / APPROVED / etc. are owner-driven and never auto-retired. */
+const RETIRABLE_STATUS = "PROPOSED";
+export const DATA_GAP_RETIRED_REASON = "SOURCE_FINDING_NO_LONGER_ACTIVE";
+
+export interface RetireResult { cancelled: number }
+
+/**
+ * Lifecycle reconciliation for generated data-gap tasks. persistProcessExecutionRoutes only ever visits routes
+ * that are CURRENT, so a task created for a route that has since disappeared is never touched and would stay in
+ * the owner's lifecycle forever. This retires such a task to the existing terminal status CANCELLED (row and
+ * history preserved, never deleted) when ALL hold: it is a CASH_PROFIT data-gap route of THIS business, it is
+ * still PROPOSED (the owner has not acted on it), and the authoritative current analysis no longer emits its
+ * taskKey. The persistence layer never judges whether data is sufficient — it only asks whether the current
+ * bridge still emits the task. `cashProfitEvaluated` must be true only when the caller actually computed the
+ * cash/profit layer for this business (otherwise absence proves nothing and nothing is retired).
+ * Compare-and-set on status + atomic system audit event; a repeat run finds nothing to do.
+ */
+export async function retireResolvedDataGapTasks(
+  workspaceId: string,
+  businessId: string,
+  analysis: ProcessExecutionBridgeAnalysis | null,
+  opts: { cashProfitEvaluated: boolean; triggeredByUserId?: string | null },
+  injected?: ProcessBridgeDeps,
+): Promise<RetireResult> {
+  if (!opts.cashProfitEvaluated || !analysis || !businessId) return { cancelled: 0 };
+  const deps = injected ?? (await resolveDefaultDeps());
+  const activeKeys = new Set(analysis.routes.filter((r) => r.workspaceId === workspaceId).map((r) => r.taskKey));
+  let candidates: TaskRow[];
+  try {
+    candidates = await deps.db.processExecutionTask.findMany({
+      where: {
+        workspaceId, businessId, isFixtureRecord: false,
+        sourceFamily: "CASH_PROFIT", executionRoute: "CREATE_MISSING_DATA_TASK",
+        sourceFindingKey: { in: [...RETIRABLE_DATA_GAP_FINDING_KEYS] },
+        status: RETIRABLE_STATUS,
+      },
+      take: 200,
+    });
+  } catch (e) {
+    if (e && typeof e === "object" && (e as { code?: string }).code === "P2021") return { cancelled: 0 };
+    throw e;
+  }
+  let cancelled = 0;
+  for (const t of candidates) {
+    if (activeKeys.has(t.taskKey)) continue;
+    const now = deps.now();
+    const applied = await deps.db.$transaction(async (tx) => {
+      const res = await tx.processExecutionTask.updateMany({
+        where: { id: t.id, workspaceId, businessId, status: RETIRABLE_STATUS },
+        data: { status: "CANCELLED", updatedAt: now },
+      });
+      if (res.count !== 1) return false; // lost a race to an owner action: never override it
+      await tx.auditEvent.create({
+        data: {
+          id: deps.uuid(), workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED,
+          // System reconciliation — never attributed to the owner as a rejection or any other owner action.
+          actorId: null, actorType: "system",
+          entityType: "process_execution_task", entityId: t.id,
+          payload: {
+            taskKey: t.taskKey, sourceFindingKey: t.sourceFindingKey, businessId,
+            action: "SYSTEM_RETIRE_RESOLVED_DATA_GAP", fromStatus: t.status, toStatus: "CANCELLED",
+            reason: DATA_GAP_RETIRED_REASON,
+            note: "The authoritative source finding is no longer active; the requested data is now sufficient or no longer applies.",
+            triggeredByUserId: opts.triggeredByUserId ?? null,
+          },
+          visibility: "internal", occurredAt: now,
+        },
+      });
+      return true;
+    });
+    if (applied) cancelled++;
+  }
+  return { cancelled };
+}
+
+/**
+ * Post-diagnosis re-evaluation (adaptive rule): after a Finance diagnosis changes the evidence, recompute the
+ * authoritative bridge for that business and retire generated data-gap tasks it no longer emits. Best-effort —
+ * a failure here never fails the diagnosis that triggered it.
+ */
+export async function reconcileDataGapTasksAfterDiagnosis(workspaceId: string, businessId: string, actorId: string | null): Promise<RetireResult> {
+  try {
+    const { getOwnerNowView } = await import("@/services/owner-guidance/owner-now-view.service");
+    const view = await getOwnerNowView(workspaceId, businessId);
+    return await retireResolvedDataGapTasks(workspaceId, businessId, view.processExecution, { cashProfitEvaluated: view.cashProfitProtection !== null, triggeredByUserId: actorId });
+  } catch (e) {
+    console.error("[process-execution] post-diagnosis data-gap reconciliation failed", e);
+    return { cancelled: 0 };
+  }
+}
+
 function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): Record<string, unknown> {
   return {
     workspaceId, businessId: r.businessId, taskKey: r.taskKey, sourceFamily: r.sourceFamily, sourceFindingKey: r.sourceFindingKey,

@@ -9,6 +9,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { runFinanceDiagnosisSchema } from "@/domain/owner-finance/validation";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
+import { reconcileDataGapTasksAfterDiagnosis } from "@/services/owner-mode/process-execution-bridge.service";
 import { checkDiagnosisRateLimit } from "@/middleware/rate-limit";
 import { checkPgRateLimit } from "@/infra/rate-limiter-pg";
 
@@ -48,6 +49,8 @@ export const POST = withCanonicalEnforcement(
       ctx.verifiedActorId,
       ctx.verifiedWorkspaceId
     );
+    // The diagnosis changed the evidence: retire generated data-gap tasks it has resolved (best-effort, own errors).
+    await reconcileDataGapTasksAfterDiagnosis(ctx.verifiedWorkspaceId, params.businessId, ctx.verifiedActorId);
     return canonicalJson(cycle, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

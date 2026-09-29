@@ -27,6 +27,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { db } from "@/lib/db";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
+import { reconcileDataGapTasksAfterDiagnosis } from "@/services/owner-mode/process-execution-bridge.service";
 import { listSalesSnapshots } from "@/services/owner-sales/snapshot.service";
 import { runSalesDiagnosis } from "@/services/owner-sales/diagnosis.service";
 import { listOperationsSnapshots } from "@/services/owner-operations/snapshot.service";
@@ -70,6 +71,8 @@ async function tryRunFinance(businessId: string, workspaceId: string, actorId: s
   try {
     await runFinanceDiagnosis(businessId, current.id, actorId, workspaceId);
     result.analyzed.push("finance");
+    // Evidence changed: retire generated data-gap tasks this diagnosis resolved (best-effort, own errors).
+    await reconcileDataGapTasksAfterDiagnosis(workspaceId, businessId, actorId);
   } catch (err) {
     result.failed.push({ domain: "finance", reason: err instanceof Error ? err.name : "UnknownError" });
   }
