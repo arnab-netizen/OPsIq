@@ -64,11 +64,37 @@ interface SignupResponse {
 }
 
 interface DiagnosisResponse {
-  id: string;
   engagementId: string;
-  diagnosisSummary?: string;
-  recommendations?: Array<{ id: string; title: string; priority: string }>;
-  actionPlan?: Array<{ title: string; priority: string }>;
+  engagementCode?: string;
+  answer?: {
+    status: "concluded" | "insufficient_evidence";
+    mainProblem: { code: string; headline: string };
+    firstStep: { title: string };
+  };
+}
+
+/** Error body fields this smoke prints when POST /api/diagnosis fails (all optional; absent → not printed). */
+type FlagMap = Record<string, string | boolean | undefined>;
+interface DiagnosisFailureBody {
+  error?: string;
+  correlationId?: string;
+  classification?: string;
+  stage?: string;
+  errorName?: string;
+  failingOperation?: string;
+  prismaCode?: string;
+  prismaClientVersion?: string;
+  safeMessage?: string;
+  prismaMeta?: unknown;
+  diagnostics?: {
+    routeWrapper?: string;
+    requireWorkspaceConfigured?: boolean;
+    ctxKeys?: FlagMap;
+    actorIdSource?: FlagMap;
+    workspaceIdSource?: FlagMap;
+    diagnosisServiceInputContext?: FlagMap;
+    errorDetails?: { errorName?: string; safeErrorMessage?: string; prismaCode?: string; prismaClientVersion?: string; prismaMeta?: unknown };
+  };
 }
 
 interface DashboardResponse {
@@ -244,7 +270,7 @@ async function smokeTest(): Promise<void> {
       }
 
       // Try to parse as JSON and extract diagnostic fields
-      let diagnosisDiagnostic: any = null;
+      let diagnosisDiagnostic: DiagnosisFailureBody | null = null;
       if (responseText) {
         try {
           diagnosisDiagnostic = JSON.parse(responseText);
@@ -338,8 +364,12 @@ async function smokeTest(): Promise<void> {
 
     console.log(`   ✓ Diagnosis created`);
     console.log(`   ✓ Engagement created: ${maskId(diagnosisData.engagementId)}`);
-    console.log(`   ✓ Recommendations: ${diagnosisData.recommendations?.length || 0}`);
-    console.log(`   ✓ Action plan: ${diagnosisData.actionPlan?.length || 0}\n`);
+    if (!diagnosisData.answer?.mainProblem?.headline || !diagnosisData.answer?.firstStep?.title) {
+      console.log("❌ DIAGNOSIS_ANSWER_MISSING");
+      process.exit(1);
+    }
+    console.log(`   ✓ Answer: ${diagnosisData.answer.status} (${diagnosisData.answer.mainProblem.code})`);
+    console.log(`   ✓ First step present\n`);
 
     // STEP 3: Get engagements
     console.log("3️⃣  GET /api/engagements (verify engagement)");
@@ -410,7 +440,7 @@ async function smokeTest(): Promise<void> {
 
     // Verify recommendations have source field indicating diagnosis
     const diagnosisRecommendations = recommendedActions.filter(
-      (r: any) => r.source === "diagnosis"
+      (r) => r.source === "diagnosis"
     );
 
     if (diagnosisRecommendations.length === 0) {

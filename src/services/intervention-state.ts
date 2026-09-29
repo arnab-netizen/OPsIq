@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -299,18 +301,39 @@ export async function initializeInterventionState(
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
-  if (engagement.interventionMode) {
+  // Initialization is recorded by the engagement's InterventionState row (engagementId is unique).
+  // Engagement.interventionMode cannot signal it: the column is NOT NULL DEFAULT 'recovery', so
+  // every freshly created engagement already carries a mode.
+  const existing = await db.interventionState.findUnique({
+    where: { engagementId: engagement.id },
+    select: { id: true },
+  });
+  if (existing) {
     throw new ValidationError("Intervention state already initialized for this engagement");
   }
 
-  const updated = await db.engagement.update({
-    where: { id: engagementId, workspaceId },
-    data: {
-      interventionMode: interventionMode as InterventionMode,
-      interventionPhase: "triage" as InterventionPhase,
-      version: { increment: 1 },
-    },
-  });
+  let updated;
+  try {
+    updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.interventionState.create({
+        data: { id: randomUUID(), engagementId: engagement.id, currentPhase: "triage" },
+      });
+      return tx.engagement.update({
+        where: { id: engagementId, workspaceId },
+        data: {
+          interventionMode: interventionMode as InterventionMode,
+          interventionPhase: "triage" as InterventionPhase,
+          version: { increment: 1 },
+        },
+      });
+    });
+  } catch (error) {
+    // A concurrent initialization won the unique engagementId race.
+    if ((error as { code?: string })?.code === "P2002") {
+      throw new ValidationError("Intervention state already initialized for this engagement");
+    }
+    throw error;
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.INTERVENTION_STATE_INITIALIZED,

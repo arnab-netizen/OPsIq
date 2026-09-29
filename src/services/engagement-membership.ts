@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -114,6 +115,7 @@ export async function addMember(
 
       const membership = await db.engagementMembership.create({
         data: {
+          id: randomUUID(), // EngagementMembership.id has no database default
           userId: input.userId,
           engagementId: input.engagementId,
           role: input.role,

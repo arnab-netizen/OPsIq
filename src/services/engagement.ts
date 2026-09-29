@@ -4,7 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ValidationError, PlanLimitError } from "@/infra/errors";
+import { NotFoundError, ValidationError, PlanLimitError, ConflictError } from "@/infra/errors";
 import { ClassifiedApiError, hasClassification, extractSafePrismaError } from "@/infra/classified-error";
 import {
   optimisticUpdate,
@@ -14,6 +14,7 @@ import {
 import { validateEngagementTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { initializeInterventionState } from "@/services/intervention-state";
+import { createUnassessedBusinessConditionProfile } from "@/services/business-condition/business-condition-profile.service";
 import { computeEngagementHealth, enforceEngagementHealth } from "@/services/engagement-health";
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
@@ -78,14 +79,17 @@ async function generateEngagementCode(workspaceId: string, clientId: string): Pr
   const seq = String(count + 1).padStart(3, "0");
   const code = `${prefix}-${seq}`;
 
-  // Ensure uniqueness
-  const existing = await db.engagement.findUnique({ where: { code, workspaceId } });
-  if (existing) {
-    const ts = Date.now().toString(36).toUpperCase().slice(-4);
-    return `${prefix}-${seq}-${ts}`;
+  // Engagement.code is unique across ALL workspaces, so availability must be checked against the
+  // global key (only existence is read — no other tenant's data). Clients in different workspaces
+  // can share a prefix and sequence (e.g. two "Acme"s → ACM-001).
+  const isTaken = async (candidate: string) =>
+    (await db.engagement.findUnique({ where: { code: candidate }, select: { id: true } })) !== null;
+  if (!(await isTaken(code))) return code;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = `${prefix}-${seq}-${randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+    if (!(await isTaken(candidate))) return candidate;
   }
-
-  return code;
+  throw new ConflictError("Could not allocate a unique engagement code. Please try again.");
 }
 
 // ─── Service ───────────────────────────────────────────────────────────────
@@ -135,27 +139,37 @@ export async function createEngagement(
     idempotencyKey,
     "engagement.create",
     async () => {
-      const engagement = await db.engagement.create({
-        data: {
-          id: randomUUID(),
-          updatedAt: new Date(),
-          code,
-          title: input.title,
-          clientId: input.clientId,
-          workspaceId: validatedWorkspaceId,
-          serviceTier: input.serviceTier,
-          engagementMode: input.engagementMode,
-          description: input.description ?? null,
-          startDate: input.startDate ? new Date(input.startDate) : null,
-          targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
-          ownerId: input.ownerId ?? null,
-          assignedConsultantId: input.assignedConsultantId ?? null,
-          parentEngagementId: input.parentEngagementId ?? null,
-          createdBy: actorId,
-          status: "draft",
-          healthStatus: "unknown",
-        },
-      });
+      // The code availability check above is not atomic with this insert; a concurrent create that
+      // takes the same code fails the unique index. Surface that as a safe, retryable conflict.
+      let engagement;
+      try {
+        engagement = await db.engagement.create({
+          data: {
+            id: randomUUID(),
+            updatedAt: new Date(),
+            code,
+            title: input.title,
+            clientId: input.clientId,
+            workspaceId: validatedWorkspaceId,
+            serviceTier: input.serviceTier,
+            engagementMode: input.engagementMode,
+            description: input.description ?? null,
+            startDate: input.startDate ? new Date(input.startDate) : null,
+            targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
+            ownerId: input.ownerId ?? null,
+            assignedConsultantId: input.assignedConsultantId ?? null,
+            parentEngagementId: input.parentEngagementId ?? null,
+            createdBy: actorId,
+            status: "draft",
+            healthStatus: "unknown",
+          },
+        });
+      } catch (error) {
+        if ((error as { code?: string })?.code === "P2002") {
+          throw new ConflictError("Another engagement was created at the same moment. Please try again.");
+        }
+        throw error;
+      }
 
       // Initialize intervention state for this engagement
       await initializeInterventionState(
@@ -163,6 +177,15 @@ export async function createEngagement(
         input.interventionMode,
         authContext,
         validatedWorkspaceId
+      );
+
+      // CLAUDE.md four-dimension rule: business condition must never be silently dropped, even at
+      // creation before any diagnosis has run. Writes the same honest "unknown" literal this
+      // function's own `healthStatus: "unknown"` above already uses, not a fabricated rating.
+      await createUnassessedBusinessConditionProfile(
+        db,
+        { engagement_id: engagement.id, workspace_id: validatedWorkspaceId },
+        actorId
       );
 
       return { id: engagement.id, code: engagement.code, title: engagement.title };

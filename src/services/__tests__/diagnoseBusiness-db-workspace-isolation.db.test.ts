@@ -5,13 +5,16 @@ import { diagnoseBusiness } from "@/services/diagnosis";
 import type { BusinessProblemInput } from "@/services/diagnosis";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from "@/__tests__/test-helpers/plan-entitlement";
 
 /**
  * Phase 3 Item 2 — diagnoseBusiness real-DB workspace-isolation proof (required lane).
  *
- * `diagnoseBusiness` is the owner's entry point (POST /api/diagnosis): it runs the diagnosis
- * engines and then, in a single DB transaction, persists a client, engagement, business-condition
- * profile, and the evidence → finding → recommendation → action value chain. Until now its ONLY
+ * `diagnoseBusiness` is the consultant quick-intake entry point (POST /api/diagnosis): it builds the
+ * evidence-grounded answer (src/domain/generic-diagnosis/answer.ts), creates the client and a
+ * governed engagement, and persists the submitted evidence → finding (only when a conclusion is
+ * supported) → recommendation → action chain. It writes no business-condition profile: a quick
+ * intake carries no human-factor evidence, and the profile schema has no "unknown" level. Until now its ONLY
  * test was the EXCLUDED `diagnosis.integration.test.ts` (vitest config excludes `*.integration.test.ts`),
  * so the full transaction had NEVER run in the required maintained lane. Phase 2 G5 fixed one
  * workspace-isolation defect on this path (`assessCondition` created `BusinessConditionProfile`
@@ -22,10 +25,10 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
  * This test closes that gap: it drives the REAL `diagnoseBusiness` service against the real database
  * (this file is `*.db.test.ts`, so it runs in the required `build-and-test` lane, NOT excluded) and
  * proves, end-to-end:
- *   1. diagnosis persists the expected records (engagement, client, condition profile, findings,
- *      recommendations, actions) — no owner-facing 500 from the transaction,
- *   2. workspaceId is supplied everywhere the tenant backstop requires it (Engagement,
- *      Recommendation, BusinessConditionProfile creates would otherwise throw
+ *   1. diagnosis persists the expected records (engagement, client, evidence, finding,
+ *      recommendations, action) — no 500 from the transaction,
+ *   2. workspaceId is supplied everywhere the tenant backstop requires it (Engagement and
+ *      Recommendation creates would otherwise throw
  *      "WORKSPACE ISOLATION VIOLATION"),
  *   3. every persisted record belongs to the caller's workspace,
  *   4. cross-workspace data is neither read nor written: a second workspace diagnosing the SAME
@@ -49,6 +52,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     // Populated by the diagnosis runs so afterAll can clean up FK-safely.
     let engagementAId = "";
     let engagementBId = "";
+    let plan: PlanEntitlementFixture | undefined;
 
     const authContextFor = (userId: string, workspaceId: string) =>
       ({
@@ -67,7 +71,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           workspaceId,
           capabilities: [],
         },
-        policy: null,
+        // The authorized policy (the route wrapper supplies it): workspace admin.
+        policy: {
+          userId,
+          roles: [{ role: "admin_or_portfolio_manager", scope: "workspace", scopeId: workspaceId }],
+          engagementMemberships: [],
+          workspaceRole: "admin",
+        },
       }) as unknown as CanonicalAuthContext;
 
     const problemFor = (name: string): BusinessProblemInput => ({
@@ -85,6 +95,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.user.create({ data: { id: userBId, email: `p3i2-b-${stamp}@test.local`, updatedAt: new Date() } });
       await db.workspace.create({ data: { id: workspaceAId, name: "P3I2 WS A", slug: `p3i2-a-${stamp}` } });
       await db.workspace.create({ data: { id: workspaceBId, name: "P3I2 WS B", slug: `p3i2-b-${stamp}` } });
+      for (const [userId, workspaceId] of [[userAId, workspaceAId], [userBId, workspaceBId]]) {
+        await db.workspaceMembership.create({ data: { userId, workspaceId, role: "admin", isActive: true } });
+        await db.userRoleAssignment.create({
+          data: { id: randomUUID(), userId, role: "admin_or_portfolio_manager", scope: "workspace", scopeId: workspaceId, isActive: true },
+        });
+      }
+      plan = await seedPlanEntitlement([workspaceAId, workspaceBId], ["create_engagement"]);
     });
 
     afterAll(async () => {
@@ -97,13 +114,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           await db.finding.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.evidence.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.businessConditionProfile.deleteMany({ where: { engagementId: { in: engagementIds } } });
+          await db.engagementMembership.deleteMany({ where: { engagementId: { in: engagementIds } } });
+          await db.interventionState.deleteMany({ where: { engagementId: { in: engagementIds } } });
         }
         // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
         await db.auditEvent.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+        await db.usageEvent.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
         if (engagementIds.length) {
           await db.engagement.deleteMany({ where: { id: { in: engagementIds } } });
         }
         await db.clientAccount.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+        await cleanupPlanEntitlement(plan);
+        await db.userRoleAssignment.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
+        await db.workspaceMembership.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
         await db.workspace.deleteMany({ where: { id: { in: workspaceIds } } });
         await db.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
       } catch {
@@ -111,7 +134,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       }
     });
 
-    it("[db] persists a workspace-scoped diagnosis with no owner-facing 500", async () => {
+    it("[db] persists a workspace-scoped diagnosis with no 500", async () => {
       const result = await diagnoseBusiness(
         problemFor(businessName),
         authContextFor(userAId, workspaceAId),
@@ -119,11 +142,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       );
       engagementAId = result.engagementId;
 
-      // 1. Diagnosis returned the expected persisted value chain.
+      // 1. Diagnosis returned a concluded answer (costs 15,000 > revenue 10,000).
       expect(result.engagementId).toBeTruthy();
-      expect(result.findings.length).toBeGreaterThan(0);
-      expect(result.recommendations.length).toBeGreaterThan(0);
-      expect(result.actionPlan.length).toBeGreaterThan(0);
+      expect(result.answer.status).toBe("concluded");
+      expect(result.answer.mainProblem.code).toBe("costs_exceed_revenue");
+      const steps = [result.answer.firstStep, ...result.answer.thenSteps];
 
       // 2 + 3. Engagement + client persisted and scoped to workspace A.
       const engagement = await db.engagement.findUnique({ where: { id: engagementAId } });
@@ -134,17 +157,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(client).not.toBeNull();
       expect(client?.workspaceId).toBe(workspaceAId);
 
-      // Business-condition profile persisted, current, and workspace-scoped (the G5 fix, re-proven
-      // through the full diagnoseBusiness path).
-      const profile = await db.businessConditionProfile.findFirst({
-        where: { engagementId: engagementAId, isCurrent: true },
-      });
-      expect(profile).not.toBeNull();
-      expect(profile?.workspaceId).toBe(workspaceAId);
+      // CLAUDE.md four-dimension rule: business condition is never silently dropped, even before
+      // any diagnosis has run — but a quick intake must not fabricate a rating either. Exactly one
+      // honest placeholder profile exists, scoped to workspace A, stating "unknown".
+      const profilesA = await db.businessConditionProfile.findMany({ where: { engagementId: engagementAId } });
+      expect(profilesA.length).toBe(1);
+      expect(profilesA[0].workspaceId).toBe(workspaceAId);
+      expect(profilesA[0].businessStatus).toBe("unknown");
 
       // Every persisted recommendation carries workspace A (the tenant backstop requires it on create).
       const recs = await db.recommendation.findMany({ where: { engagementId: engagementAId } });
-      expect(recs.length).toBe(result.recommendations.length);
+      expect(recs.length).toBe(steps.length);
       expect(recs.every((r) => r.workspaceId === workspaceAId)).toBe(true);
 
       // Findings / evidence / actions persisted under the workspace-A engagement (their tenancy is
@@ -152,9 +175,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const findings = await db.finding.findMany({ where: { engagementId: engagementAId } });
       const evidence = await db.evidence.findMany({ where: { engagementId: engagementAId } });
       const actions = await db.action.findMany({ where: { engagementId: engagementAId } });
-      expect(findings.length).toBe(result.findings.length);
-      expect(evidence.length).toBeGreaterThan(0);
-      expect(actions.length).toBe(result.actionPlan.length);
+      expect(findings.length).toBe(1);
+      expect(evidence.length).toBe(4); // revenue, costs, customers, problem statement
+      expect(actions.length).toBe(1); // the single first step
     });
 
     it("[db] isolates a second workspace diagnosing the SAME business (no cross-tenant reuse or leak)", async () => {
