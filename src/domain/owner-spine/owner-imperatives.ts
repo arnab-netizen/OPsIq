@@ -362,7 +362,16 @@ function planClauseIsFactual(rest: string): boolean {
   // defect — recognising a reduced relative clause without a pronoun requires part-of-speech tagging,
   // which is out of scope for this fixed, dependency-free regex classifier. See
   // r10-p2-1-imperative-classifier.test.ts for a documented (accepted, non-blocking) case.
-  const mainClauseOnly = clause.split(/\b(?:that|which|who|whose)\b/i)[0] ?? clause;
+  // Hostile-review fix (round 4): a NONRESTRICTIVE, comma-set-off relative clause interposed BEFORE the
+  // main verb ("No more delays, which were flagged, occurred this quarter.") reproduced the identical
+  // false-negative the naive first-occurrence split was meant to fix — taking everything before the
+  // pronoun ("No more delays, ") discarded the real main-clause verb ("occurred") that comes AFTER the
+  // aside closes, wrongly marking a plain factual report as non-factual. Comma-delimited relative-clause
+  // asides are removed first (wherever they sit in the clause), then the remaining first-occurrence split
+  // still handles a RESTRICTIVE relative clause with no surrounding commas (typically trailing, attached
+  // to an object, e.g. "the campaign that dropped conversions").
+  const withoutRelativeAsides = clause.replace(/,\s*(?:that|which|who|whose)\b[^,]*,/gi, "");
+  const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;
   return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }
 /** Whether a sentence opens as an instruction to the owner (an imperative verb not used as a noun or a past form). */

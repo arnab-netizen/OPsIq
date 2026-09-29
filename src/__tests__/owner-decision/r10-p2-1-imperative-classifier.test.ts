@@ -55,6 +55,11 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     "No more stock-outs worsened.",
     "No more stock-outs improved.",
     "No more delays climbed this quarter.",
+    // Round-4 hostile-review fix: a NONRESTRICTIVE, comma-set-off relative clause interposed BEFORE the
+    // main verb must not truncate away that verb — "No more delays, which were flagged, occurred this
+    // quarter." is still a plain factual report (the parenthetical aside on "delays" is not the sentence's
+    // own claim).
+    "No more delays, which were flagged, occurred this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
@@ -92,6 +97,17 @@ describe("R10 P2-1 round-3: documented limitation — a REDUCED relative clause 
     // which is out of scope for this dependency-free regex classifier (see the KNOWN LIMITATION comment
     // in planClauseIsFactual). This test documents current, accepted behavior — not a target to fix here.
     expect(isWholeBusinessImperative("Avoid initiatives having increased costs.")).toBe(false);
+  });
+});
+
+describe("R10 P2-1 round-4 hostile-review mutation proof: a naive first-occurrence split (with no comma-aside stripping) reproduces the false-negative on a subject-modifying nonrestrictive relative clause", () => {
+  it("mutation check: splitting at the first pronoun occurrence alone would discard the real main-clause verb that comes AFTER a comma-set-off aside", () => {
+    const clause = "delays, which were flagged, occurred this quarter";
+    const naiveMainClauseOnly = clause.split(/\b(?:that|which|who|whose)\b/i)[0] ?? clause;
+    // The buggy, naive split WOULD discard "occurred" (proves the mutation reproduces the regression):
+    expect(/\boccurred\b/i.test(naiveMainClauseOnly)).toBe(false);
+    // The real classifier strips the comma-set-off aside first, so "occurred" survives:
+    expect(isWholeBusinessImperative("No more delays, which were flagged, occurred this quarter.")).toBe(false);
   });
 });
 

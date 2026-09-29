@@ -41,6 +41,12 @@ function cashSeverity(state: string | null): CashFinanceNarrativeSeverity {
   return "MEDIUM";
 }
 
+const SEVERITY_ORDER: readonly CashFinanceNarrativeSeverity[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+/** The worse of two severities, each still derived from cashSeverity() — never a second, hand-rolled rule. */
+function worseSeverity(a: CashFinanceNarrativeSeverity, b: CashFinanceNarrativeSeverity): CashFinanceNarrativeSeverity {
+  return SEVERITY_ORDER.indexOf(a) >= SEVERITY_ORDER.indexOf(b) ? a : b;
+}
+
 export interface CashFinanceOwnerNarrativeInput {
   /** Cash flow's CURRENT state only (undefined/null when cash is not current). */
   cashState: string | null | undefined;
@@ -115,16 +121,22 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
   if (cashState && finState) {
     // Both CURRENT. Case F is the ONLY branch where an explicit current-conflict narrative may
     // appear; otherwise narrate the shared decision (gateState/gateDriver/gateSource) directly.
-    if (bothCurrentDisagree && !provisional) {
-      // Hostile-review fix (round 3): when provisional in-progress figures already decide gateState
-      // (the worse Case G reading below), the completed-state conflict here is about superseded data —
-      // narrating it here too would duplicate/contradict the in-progress narrative. Case F's explicit
-      // conflict framing only fires when nothing fresher already overrides the picture.
+    if (bothCurrentDisagree) {
+      // Hostile-review fix (round 4): a genuine current/current disagreement is NEVER silently
+      // dropped, even when provisional in-progress figures have since tightened gateState further —
+      // round 3's `&& !provisional` guard here fixed a duplicate/stale-looking narrative but at the
+      // cost of erasing real, required disagreement information (confirmed reachable via a real DB
+      // scenario). Case F always fires; when provisional is also true, an extra sentence says newer
+      // in-progress figures already exist (Case G, below, narrates them) — complementary, not
+      // contradictory, information.
+      const provisionalNote = provisional
+        ? " This period's in-progress figures have already moved further and may no longer match either."
+        : "";
       if (financeProfitDriven) {
         // Hostile-review fix (round 3): financeProfitDriven must not silently drop the "conflicting
         // evidence, neither current" framing its non-profit sibling gives below — the module's own
         // contract never silently resolves a genuine current/current disagreement.
-        const conflictNote = ` This disagrees with the other current reading (cash check: ${cashState}, finance diagnosis: ${finState}); neither can be shown to be more current — review both before acting.`;
+        const conflictNote = ` This disagrees with the other current reading (cash check: ${cashState}, finance diagnosis: ${finState}); neither can be shown to be more current — review both before acting.${provisionalNote}`;
         if (!SAFE_STATES.has(cashState)) {
           const sev = cashSeverity(cashState);
           issues.push({
@@ -137,8 +149,11 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
       } else {
         issues.push({
           id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
-          headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
+          // Hostile-review fix (round 4): severity now always derives from cashSeverity() per side (the
+          // worse of the two), never a hand-rolled CRITICAL/HIGH-only ternary that forbade the MEDIUM
+          // floor cashSeverity() otherwise allows for a non-AT_RISK/non-CRITICAL pair.
+          severity: worseSeverity(cashSeverity(cashState), cashSeverity(finState)),
+          headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.${provisionalNote}`,
           requiresOwnerAction: true,
         });
         financeIssueRaised = true;
@@ -155,9 +170,18 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
       if (gateDriver === "finance_profit") {
         // The enforced danger is profitability/financial survival, from Finance's own current
         // provenance — never relabelled CASH_DANGER because of a legacy supersession field.
-        pushFinanceProfitIssue(gateState, supersedeNote);
+        // Hostile-review fix (round 4): when provisional in-progress figures decide gateState, Case G
+        // (below) already narrates this exact value with the correct in-progress caveat — pushing this
+        // "settled" issue for the same value too would contradict it.
+        if (!provisional) {
+          pushFinanceProfitIssue(gateState, supersedeNote);
+        } else {
+          profitIssueRaised = true;
+          financeIssueRaised = true;
+        }
         // Independently-current second issue: cash's OWN current reading, if it is itself unsafe —
-        // decided from cashState alone, never from supersededSource.
+        // decided from cashState alone, never from supersededSource. Not gated on provisional: cash's
+        // own completed reading here is independent of whatever is deciding the gate.
         if (!SAFE_STATES.has(cashState)) {
           const cashSev = cashSeverity(cashState);
           issues.push({
@@ -167,16 +191,23 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
           });
         }
       } else if (gateDriver === "cash") {
-        // The enforced danger is cash/financial-survival cash risk, from Cash flow's own current reading.
-        issues.push({
-          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          severity: sev, headline: `Cash survival (cash check) is ${gateState}.${supersedeNote}`,
-          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
-        });
+        // The enforced danger is cash/financial-survival cash risk, from Cash flow's own current
+        // reading. Hostile-review fix (round 4): same provisional deferral as above — Case G already
+        // narrates this exact gateState value as in-progress; a "settled cash check" issue for the
+        // same value here too would contradict it.
+        if (!provisional) {
+          issues.push({
+            id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+            severity: sev, headline: `Cash survival (cash check) is ${gateState}.${supersedeNote}`,
+            requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
+          });
+        }
         // Independently-current second issue: Finance's OWN current reading, if it is itself unsafe —
         // decided from finState + financeProfitDriven, never from supersededSource. Profit-driven gets
         // its own PROFIT_LEAK issue; a non-profit-driven Finance danger still gets its own CASH_DANGER
-        // issue (never silently unrepresented, never mislabelled as a generic "margin" issue).
+        // issue (never silently unrepresented, never mislabelled as a generic "margin" issue). Not
+        // gated on provisional: Finance's own completed reading here is independent of what is driving
+        // the gate.
         if (!SAFE_STATES.has(finState)) {
           if (financeProfitDriven) {
             pushFinanceProfitIssue(finState, "");
@@ -190,36 +221,58 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
             financeIssueRaised = true;
           }
         }
-      } else {
-        // gateDriver "unverified" (or absent) while both sources are nonetheless current: name both,
-        // never inferring a specific cash/profit danger from a stale source.
+      } else if (gateDriver === "unverified") {
+        // Hostile-review fix (round 4): gateDriver === "unverified" is ALWAYS also caught by the
+        // unverifiedGate block below (the identical `gateState !== null && gateDriver === "unverified"`
+        // condition), which already narrates it correctly, including the provisional/in-progress
+        // wording — pushing a "settled" combined issue here too would contradict that narrative for
+        // the exact same reading.
+        financeIssueRaised = true;
+      } else if (!provisional) {
+        // gateDriver absent (null) while both sources are nonetheless current and unsafe: name it
+        // here, since no other narrative block covers this case.
         issues.push({
           id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
           severity: sev, headline: `Cash and financial survival is ${gateState}.${supersedeNote}`,
           requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
         });
         financeIssueRaised = true;
+      } else {
+        // gateDriver null AND provisional: Case G (below) narrates gateState directly.
+        financeIssueRaised = true;
       }
     }
   } else if (cashState || finState) {
-    // Exactly one CURRENT signal exists at all (the other has no reading whatsoever).
+    // Exactly one CURRENT signal exists at all (the other has no reading whatsoever). Hostile-review
+    // fix (round 4): when `provisional` is true here, this sole signal IS the in-progress data
+    // deciding gateState — Case G (below) already narrates it as in-progress; a "settled check" issue
+    // for the same value here too would contradict it.
     if (cashState && !SAFE_STATES.has(cashState)) {
-      const sev = cashSeverity(cashState);
-      issues.push({
-        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: sev, headline: `Cash survival (cash check) is ${cashState}; there is no current Finance diagnosis.`,
-        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
-      });
+      if (!provisional) {
+        const sev = cashSeverity(cashState);
+        issues.push({
+          id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+          severity: sev, headline: `Cash survival (cash check) is ${cashState}; there is no current Finance diagnosis.`,
+          requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
+        });
+      }
     } else if (finState && !SAFE_STATES.has(finState)) {
       if (financeProfitDriven) {
-        pushFinanceProfitIssue(finState, " There is no cash check yet.");
-      } else {
+        if (!provisional) {
+          pushFinanceProfitIssue(finState, " There is no cash check yet.");
+        } else {
+          profitIssueRaised = true;
+          financeIssueRaised = true;
+        }
+      } else if (!provisional) {
         const sev = cashSeverity(finState);
         issues.push({
           id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
           severity: sev, headline: `Financial survival (Finance diagnosis) is ${finState}; there is no cash check yet.`,
           requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
         });
+        financeIssueRaised = true;
+      } else {
         financeIssueRaised = true;
       }
     }

@@ -458,8 +458,14 @@ describe("R10 P2-9 round-3 hostile-review fix: bothCurrentDisagree + financeProf
   });
 });
 
-describe("R10 P2-9 round-3 hostile-review fix: provisional in-progress evidence supersedes the completed-state Case F conflict narrative (no overlapping/stale narratives)", () => {
-  it("both completed states current+disagreeing, but provisional in-progress figures already decide a worse gateState — only the in-progress narrative fires, not the stale completed-conflict one", () => {
+describe("R10 P2-9 round-4 hostile-review fix: a genuine current/current disagreement is never silently dropped, even when provisional in-progress figures also tighten gateState", () => {
+  // Round 3's `bothCurrentDisagree && !provisional` guard fixed a duplicate/stale-looking narrative but,
+  // per a round-4 hostile reviewer's REAL-DB reproduction (a genuine tied-freshness Cash-vs-Finance
+  // disagreement plus a worse in-progress Cash reading), it silently erased a genuine, required
+  // disagreement the module's own contract says must never be silently resolved. Case F now always
+  // fires; when provisional is also true it gets an extra note, and Case G (in-progress) fires
+  // alongside it as complementary — not contradictory — information.
+  it("both completed states current+disagreeing, AND provisional in-progress figures already decide a worse gateState — the disagreement is still named, alongside the in-progress narrative", () => {
     const issues = cashFinanceOwnerNarrative({
       ...base,
       cashState: "SAFE", finState: "CRITICAL",
@@ -467,9 +473,106 @@ describe("R10 P2-9 round-3 hostile-review fix: provisional in-progress evidence 
       bothCurrentDisagree: true,
       provisional: true,
     });
-    expect(issues.some((i) => /conflicting information/i.test(i.headline))).toBe(false);
+    const conflict = issues.find((i) => /conflicting information/i.test(i.headline));
+    expect(conflict).toBeDefined();
+    expect(conflict?.headline).toMatch(/in-progress figures have already moved further/i);
     const inProgress = issues.find((i) => i.id === "cash_in_progress");
     expect(inProgress).toBeDefined();
     expect(inProgress?.headline).toMatch(/in progress/i);
+    // Exactly one "cash"-id issue (the conflict one) — no separate, unqualified "settled" cash issue
+    // duplicating the same in-progress value.
+    expect(issues.filter((i) => i.id === "cash")).toHaveLength(1);
+  });
+
+  it("mutation check: reverting to round 3's `&& !provisional` guard would drop the conflict entirely on this input", () => {
+    const legacyGuardFires = true && !true; // bothCurrentDisagree && !provisional, both true here
+    expect(legacyGuardFires).toBe(false); // proves the retired guard would have skipped Case F entirely
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "SAFE", finState: "CRITICAL",
+      gateState: "INSOLVENT_RISK", gateDriver: "cash", gateSource: "cashflow",
+      bothCurrentDisagree: true,
+      provisional: true,
+    });
+    expect(issues.some((i) => /conflicting information/i.test(i.headline))).toBe(true); // the real mapper still names it
+  });
+});
+
+describe("R10 P2-9 round-4 hostile-review fix: gateState-driven 'settled' issues defer to Case G when provisional, instead of duplicating/contradicting it", () => {
+  it("both current, non-conflicting, gateDriver cash, provisional — no unqualified 'cash' issue duplicating cash_in_progress for the same value", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "AT_RISK", finState: "SAFE",
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      provisional: true,
+    });
+    expect(issues.some((i) => i.id === "cash" && !/in progress/i.test(i.headline))).toBe(false);
+    const inProgress = issues.find((i) => i.id === "cash_in_progress");
+    expect(inProgress).toBeDefined();
+    expect(inProgress?.headline).toContain("CRITICAL");
+  });
+
+  it("both current, non-conflicting, gateDriver finance_profit, provisional — no unqualified 'margin' issue duplicating cash_in_progress for the same value", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "SAFE", finState: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "finance_profit", gateSource: "finance",
+      financeProfitDriven: true,
+      provisional: true,
+    });
+    expect(issues.some((i) => i.id === "margin" && !/in progress/i.test(i.headline))).toBe(false);
+    const inProgress = issues.find((i) => i.id === "cash_in_progress");
+    expect(inProgress).toBeDefined();
+    expect(inProgress?.category).toBe("PROFIT_LEAK");
+  });
+
+  it("exactly one current signal (cash only), provisional — no unqualified 'cash' issue duplicating cash_in_progress", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "CRITICAL", finState: undefined,
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      provisional: true,
+    });
+    expect(issues.some((i) => i.id === "cash" && !/in progress/i.test(i.headline))).toBe(false);
+    expect(issues.find((i) => i.id === "cash_in_progress")).toBeDefined();
+  });
+
+  it("gateDriver unverified, both current, non-conflicting — no combined 'cash' settled issue duplicating cash_unverified", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "AT_RISK", finState: "AT_RISK",
+      gateState: "AT_RISK", gateDriver: "unverified", gateSource: "finance",
+    });
+    expect(issues.some((i) => i.id === "cash")).toBe(false);
+    expect(issues.find((i) => i.id === "cash_unverified")).toBeDefined();
+  });
+});
+
+describe("R10 P2-9 round-4 hostile-review fix: bothCurrentDisagree non-profit severity always derives from cashSeverity() (worst-of), never a hand-rolled CRITICAL/HIGH-only floor", () => {
+  it("two disagreeing current readings, neither AT_RISK nor CRITICAL/INSOLVENT_RISK — severity is the MEDIUM cashSeverity() gives, not a forced HIGH", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "WATCH", finState: "SAFE",
+      gateState: "WATCH", gateDriver: "cash", gateSource: "cashflow",
+      bothCurrentDisagree: true,
+    });
+    // Note: WATCH/SAFE are both in SAFE_STATES, but bothCurrentDisagree fires the conflict branch
+    // regardless of SAFE/unsafe (see Case F's own base test) — this exercises the severity computation
+    // itself, not whether SAFE states can disagree in practice.
+    const cash = issues.find((i) => i.id === "cash");
+    expect(cash?.severity).toBe("MEDIUM");
+  });
+
+  it("mutation check: the retired hand-rolled ternary would have forced HIGH instead of MEDIUM", () => {
+    const retiredTernary = (cashState: string, finState: string) =>
+      cashState === "CRITICAL" || cashState === "INSOLVENT_RISK" || finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "CRITICAL" : "HIGH";
+    expect(retiredTernary("WATCH", "SAFE")).toBe("HIGH"); // proves the old shape had the bug
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "WATCH", finState: "SAFE",
+      gateState: "WATCH", gateDriver: "cash", gateSource: "cashflow",
+      bothCurrentDisagree: true,
+    });
+    expect(issues.find((i) => i.id === "cash")?.severity).toBe("MEDIUM"); // the real mapper does not force HIGH
   });
 });
