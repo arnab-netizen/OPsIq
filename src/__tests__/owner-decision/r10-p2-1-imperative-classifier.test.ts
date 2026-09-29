@@ -30,6 +30,10 @@ describe("R10 P2-1: isWholeBusinessImperative — must classify as imperative", 
     // Round-3 hostile-review fix: the relative-clause split only covered "that"/"which"; "who"/"whose"
     // reproduced the same false-negative.
     "Avoid the plan whose costs increased.",
+    // Round-8 hostile-review fix: round 7's unification stopped an aside's content at ANY hyphen,
+    // including one glued inside a compound word with no surrounding whitespace ("follow-up") — a
+    // comma-opened aside containing a hyphenated word must not be truncated there.
+    "Stop the campaign, which triggered a follow-up was flagged, before losses grow.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(true);
   });
@@ -171,6 +175,31 @@ describe("R10 P2-1 round-7 hostile-review mutation proof: two same-delimiter-onl
     // The real classifier's unified delimiter regex strips it regardless of which delimiter opens/closes:
     expect(isWholeBusinessImperative("No more delays, which were flagged — occurred this quarter.")).toBe(false);
     expect(isWholeBusinessImperative("No more delays — which were flagged, occurred this quarter.")).toBe(false);
+  });
+});
+
+describe("R10 P2-1 round-8 hostile-review mutation proof: a single negated character class stops a comma-opened aside's content at a word-internal hyphen", () => {
+  it("mutation check: the round-7 negated-class regex truncates at 'follow-up''s own hyphen, leaking the aside's tail into mainClauseOnly", () => {
+    const clause = "the campaign, which triggered a follow-up was flagged, before losses grow";
+    const round7Regex = /[,\-–—]\s*(?:that|which|who|whose)\b[^,\-–—]*(?=[,\-–—])/gi;
+    const round7Stripped = clause.replace(round7Regex, "");
+    // The round-7 regex stops at the hyphen inside "follow-up", leaving "was flagged," in the string
+    // (proves the mutation reproduces the regression — a leaked PLAN_FINITE_VERB word):
+    expect(round7Stripped).toContain("was flagged");
+    // The real classifier's whitespace-aware delimiter recognises "follow-up"'s hyphen as NOT a
+    // delimiter (no surrounding whitespace), so the whole aside strips correctly and the genuine
+    // imperative survives:
+    expect(isWholeBusinessImperative("Stop the campaign, which triggered a follow-up was flagged, before losses grow.")).toBe(true);
+  });
+});
+
+describe("R10 P2-1 round-8: documented limitation — an abbreviation period (e.g., i.e., U.S., Inc.) is treated as a sentence-ending period", () => {
+  it("KNOWN LIMITATION, accepted and non-blocking: the top-level clause boundary truncates at an abbreviation's period, hiding the real main verb", () => {
+    // The top-level `rest.split(/[.;!?]/)[0]` boundary cannot distinguish an abbreviation's period from
+    // a genuine sentence end without part-of-speech/lexicon knowledge — the same limitation class as
+    // item 2 (semicolons nested inside an aside). Confirmed to have no production caller today (see the
+    // code comment in planClauseIsFactual). This test documents current, accepted behavior.
+    expect(isWholeBusinessImperative("No more delays, e.g. late shipments, occurred this quarter.")).toBe(true);
   });
 });
 

@@ -148,14 +148,20 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
         }
         if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, conflictNote);
       } else {
+        // Hostile-review fix (round 4): severity now always derives from cashSeverity() per side (the
+        // worse of the two), never a hand-rolled CRITICAL/HIGH-only ternary that forbade the MEDIUM
+        // floor cashSeverity() otherwise allows for a non-AT_RISK/non-CRITICAL pair.
+        const conflictSev = worseSeverity(cashSeverity(cashState), cashSeverity(finState));
         issues.push({
           id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-          // Hostile-review fix (round 4): severity now always derives from cashSeverity() per side (the
-          // worse of the two), never a hand-rolled CRITICAL/HIGH-only ternary that forbade the MEDIUM
-          // floor cashSeverity() otherwise allows for a non-AT_RISK/non-CRITICAL pair.
-          severity: worseSeverity(cashSeverity(cashState), cashSeverity(finState)),
+          severity: conflictSev,
           headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.${provisionalNote}`,
-          requiresOwnerAction: true,
+          // Hostile-review fix (round 8): follows the same CRITICAL||HIGH pattern every other issue in
+          // this file uses, instead of a hardcoded `true` — behaviorally unchanged today (bothCurrentDisagree
+          // requires exactly one side unsafe, so cashSeverity's worse-of-two here can only be HIGH or
+          // CRITICAL per cash-finance-conflict.ts's own resolution rule), but no longer a second,
+          // divergent rule for requiresOwnerAction.
+          requiresOwnerAction: conflictSev === "CRITICAL" || conflictSev === "HIGH",
         });
         financeIssueRaised = true;
       }
@@ -296,15 +302,25 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     // Case D/E: Finance amended. Last Finance result is named as last-known only; current state is
     // unverified; growth is not ready. Never assert the amended reading's severity as proven current.
     const unsafeLastKnown = !SAFE_STATES.has(finAmendedLastKnown);
-    const sev = cashSeverity(unsafeLastKnown ? finAmendedLastKnown : gateState ?? "AT_RISK");
+    // Hostile-review fix (round 8): a stale (not current) Cash reading can independently be WORSE than
+    // the amended Finance figure — severity previously came from finAmendedLastKnown alone, silently
+    // downgrading a CRITICAL danger to whatever the amended reading happened to be, and the stale cash
+    // fact was never mentioned at all once this branch suppressed the general cash_unverified narrative
+    // below. `cashLastKnown` is only ever populated when cash itself is NOT current (per its own field
+    // doc), so a currently-unsafe cashState is already narrated by its own branch elsewhere — this only
+    // needs to fold in the STALE cash reading, which nothing else in this function represents.
+    const cashAlsoUnsafe = !!cashLastKnown && !SAFE_STATES.has(cashLastKnown);
+    const baseState = unsafeLastKnown ? finAmendedLastKnown : gateState ?? "AT_RISK";
+    const sev = cashAlsoUnsafe ? worseSeverity(cashSeverity(baseState), cashSeverity(cashLastKnown)) : cashSeverity(baseState);
+    const cashNote = cashAlsoUnsafe ? ` The last cash check also showed ${cashLastKnown}; that reading is out of date too.` : "";
     issues.push({
       id: "finance_amended",
       category: financeProfitDriven && unsafeLastKnown ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
       businessFunction: [financeProfitDriven && unsafeLastKnown ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
       severity: sev,
       headline: unsafeLastKnown
-        ? `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed, so the current state is not proven either way — re-run the Finance diagnosis.`
-        : `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}, but its figures have since been amended and not analysed, and no current cash check confirms it — OpsIQ cannot treat cash as safe until the Finance diagnosis is re-run.`,
+        ? `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}${financeProfitDriven ? " (driven by profit and margin)" : ""}, but its figures have since been amended and not analysed, so the current state is not proven either way — re-run the Finance diagnosis.${cashNote}`
+        : `The last Finance diagnosis showed financial survival ${finAmendedLastKnown}, but its figures have since been amended and not analysed, and no current cash check confirms it — OpsIQ cannot treat cash as safe until the Finance diagnosis is re-run.${cashNote}`,
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
     });
   }

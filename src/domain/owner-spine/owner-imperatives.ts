@@ -412,7 +412,26 @@ function planClauseIsFactual(rest: string): boolean {
   //      correct either way). Confirmed to have no production caller today (`neutralizePlanImperatives`
   //      and the `reconcilePlan*` family built on it are not yet wired into any real plan-text surface),
   //      so this is a latent, not live, gap — re-review before wiring either function into a real caller.
-  const withoutRelativeAsides = clause.replace(/[,\-–—]\s*(?:that|which|who|whose)\b[^,\-–—]*(?=[,\-–—])/gi, "");
+  //   4. The top-level clause boundary (`rest.split(/[.;!?]/)[0]` above) treats a period inside an
+  //      ordinary abbreviation ("e.g.", "i.e.", "U.S.", "Inc.") as the sentence-ending period, truncating
+  //      the clause before the real main verb ever appears ("No more delays, e.g. late shipments,
+  //      occurred this quarter." is misclassified). Same root cause and same fix requirement as item 2
+  //      (distinguishing a genuine sentence boundary from punctuation nested inside the clause needs
+  //      parser-level knowledge, not a bigger regex) — latent, not live, for the same reason as item 3.
+  // Hostile-review fix (round 8): round 7's unification stopped the aside content at ANY hyphen
+  // character, including one glued inside a compound word with no surrounding whitespace ("follow-up")
+  // — so a comma-opened aside containing a hyphenated word truncated early and leaked the aside's own
+  // tail (which can contain a PLAN_FINITE_VERB word) into mainClauseOnly, wrongly flipping a genuine
+  // imperative to factual. A dash only counts as an aside delimiter when it is flanked by whitespace (or
+  // the clause boundary) on both sides — real dash punctuation is always written with surrounding
+  // spaces ("word — word"); a word-internal hyphen never has them. A comma is unconditionally a
+  // delimiter (a comma is never part of a word). The content between delimiters is matched by excluding
+  // each delimiter position directly (an "unrolled loop": consume one character only where a delimiter
+  // does not start) rather than a single negated character class, since the two delimiter kinds now have
+  // different recognition rules.
+  const ASIDE_DELIM = /,|(?<=\s|^)[-–—](?=\s|$)/;
+  const asideStripRe = new RegExp(`(?:${ASIDE_DELIM.source})\\s*(?:that|which|who|whose)\\b(?:(?!${ASIDE_DELIM.source})[\\s\\S])*(?=${ASIDE_DELIM.source})`, "gi");
+  const withoutRelativeAsides = clause.replace(asideStripRe, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;
   return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }

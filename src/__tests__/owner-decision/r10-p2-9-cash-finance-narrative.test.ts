@@ -632,3 +632,49 @@ describe("R10 P2-9 round-5 hostile-review fix: Case G's source label and surviva
     expect(issues.find((i) => i.id === "cash_in_progress")?.headline).not.toContain("Finance figures show cash survival");
   });
 });
+
+describe("R10 P2-9 round-8 hostile-review fix: finance_amended's severity/headline fold in a WORSE stale cash reading instead of understating the danger", () => {
+  it("stale cash CRITICAL + amended Finance AT_RISK — severity is CRITICAL (the worse of the two), and the stale cash fact is named, not dropped", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "CRITICAL",
+      finAmendedLastKnown: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "cashflow",
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended).toBeDefined();
+    // Must not be downgraded to the amended reading's own HIGH severity:
+    expect(amended?.severity).toBe("CRITICAL");
+    expect(amended?.requiresOwnerAction).toBe(true);
+    // The stale cash fact must be named somewhere in the headline, not silently dropped:
+    expect(amended?.headline).toContain("CRITICAL");
+    expect(amended?.headline).toMatch(/last cash check also showed CRITICAL/i);
+  });
+
+  it("mutation check: severity from finAmendedLastKnown alone would understate a worse stale cash reading as HIGH instead of CRITICAL", () => {
+    const retiredSeverityOnly = (finAmendedLastKnown: string) =>
+      finAmendedLastKnown === "CRITICAL" || finAmendedLastKnown === "INSOLVENT_RISK" ? "CRITICAL" : finAmendedLastKnown === "AT_RISK" ? "HIGH" : "MEDIUM";
+    expect(retiredSeverityOnly("AT_RISK")).toBe("HIGH"); // proves the old shape had the bug
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "CRITICAL",
+      finAmendedLastKnown: "AT_RISK",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "cashflow",
+    });
+    expect(issues.find((i) => i.id === "finance_amended")?.severity).toBe("CRITICAL"); // the real mapper does not understate it
+  });
+
+  it("stale cash SAFE (or absent) + amended Finance CRITICAL — unchanged from before, no spurious cash note", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      finAmendedLastKnown: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "unverified", gateSource: "finance",
+    });
+    const amended = issues.find((i) => i.id === "finance_amended");
+    expect(amended?.severity).toBe("CRITICAL");
+    expect(amended?.headline).not.toMatch(/last cash check also showed/i);
+  });
+});
