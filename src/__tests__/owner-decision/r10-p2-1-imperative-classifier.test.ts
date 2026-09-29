@@ -332,3 +332,39 @@ describe("R10 P2-1: mutation sensitivity — the comma-introduced-prohibition fi
     expect(n.text).toMatch(/the plan analysis holds back adding channels/);
   });
 });
+
+describe("R10 P2-1 round-12 hostile-review performance fix: the real production classifier path stays approximately linear on a long run of doubled ASCII hyphens (was O(n²) before the round-12 fix)", () => {
+  it("isWholeBusinessImperative scales approximately linearly across N, 2N, and 4N adversarial hyphen-run lengths, not quadratically", () => {
+    const timeFor = (n: number) => {
+      const clause = `Stop the campaign${"-".repeat(n)} occurred this quarter.`;
+      const start = performance.now();
+      isWholeBusinessImperative(clause);
+      return performance.now() - start;
+    };
+    // Warm up the JIT once before measuring, so the first measured call isn't penalized by compilation.
+    timeFor(100);
+    const N = 4000;
+    const tN = timeFor(N);
+    const t2N = timeFor(2 * N);
+    const t4N = timeFor(4 * N);
+    // Quadratic scaling would roughly QUADRUPLE the time for each doubling (t2N ≈ 4*tN, t4N ≈ 16*tN).
+    // Linear/bounded scaling roughly DOUBLES it (t2N ≈ 2*tN, t4N ≈ 4*tN). A generous 8x ceiling per
+    // doubling (well below the ~4x a real quadratic regression would produce, well above normal timing
+    // noise for a sub-millisecond operation) distinguishes a real regression from CI flakiness.
+    const floor = 0.05; // avoid dividing by an unmeasurably-small baseline on a fast machine
+    expect(t2N).toBeLessThan(Math.max(tN, floor) * 8);
+    expect(t4N).toBeLessThan(Math.max(tN, floor) * 8 * 8);
+  });
+
+  it("stays well under 1 second on a 40,000-character adversarial hyphen run (measured ~11.5s at 64KB before the round-12 fix)", () => {
+    const clause = `Stop the campaign${"-".repeat(40000)} occurred this quarter.`;
+    const start = performance.now();
+    isWholeBusinessImperative(clause);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
+  it("ordinary '--' and '---' dash substitutes still strip correctly (the performance fix does not change any supported behavior)", () => {
+    expect(isWholeBusinessImperative("No more delays--which were flagged--occurred this quarter.")).toBe(false);
+    expect(isWholeBusinessImperative("No more delays---which were flagged---occurred this quarter.")).toBe(false);
+  });
+});

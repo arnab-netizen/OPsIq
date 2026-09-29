@@ -409,15 +409,25 @@ function planClauseIsFactual(rest: string): boolean {
   //      REWRITTEN TEXT only converts the first "the plan analysis holds back ..." clause, leaving the
   //      second prohibition's own words unconverted inside the rewritten sentence — a display-text
   //      quality gap, not a classification defect (the caller-facing `imperative`/`heldBack` booleans are
-  //      correct either way). Confirmed to have no production caller today (`neutralizePlanImperatives`
-  //      and the `reconcilePlan*` family built on it are not yet wired into any real plan-text surface),
-  //      so this is a latent, not live, gap — re-review before wiring either function into a real caller.
+  //      correct either way). Hostile-review fix (round 11/12): this item and item 4 previously claimed
+  //      "no production caller today ... latent, not live" — that premise was false.
+  //      `reconcilePlanSummary`/`reconcilePlanCards`/`reconcilePlanProse`/`reconcilePlanGrowthGate`/
+  //      `planConstraintAsCondition`/`planNextActionText` are all live-called from
+  //      `src/app/(authenticated)/owner/page.tsx`. Correcting the claim only: this remains accepted,
+  //      non-blocking backlog (per the current release-gate rule for rare-construction display-text
+  //      wording gaps that do not affect the boolean classification and are not shown to affect a common
+  //      OpsIQ-generated plan-text pattern) — not re-litigated into a parser rewrite this round.
   //   4. The top-level clause boundary (`rest.split(/[.;!?]/)[0]` above) treats a period inside an
   //      ordinary abbreviation ("e.g.", "i.e.", "U.S.", "Inc.") as the sentence-ending period, truncating
   //      the clause before the real main verb ever appears ("No more delays, e.g. late shipments,
   //      occurred this quarter." is misclassified). Same root cause and same fix requirement as item 2
   //      (distinguishing a genuine sentence boundary from punctuation nested inside the clause needs
-  //      parser-level knowledge, not a bigger regex) — latent, not live, for the same reason as item 3.
+  //      parser-level knowledge, not a bigger regex). Also live via the callers named in item 3 (unlike
+  //      item 3, this one affects the boolean classification itself, not just display text) — but treated
+  //      as accepted, non-blocking BACKLOG per the current release-gate rule: no evidence this specific,
+  //      rare abbreviation-adjacent construction affects a common OpsIQ-generated plan-text pattern, and
+  //      closing it correctly needs the same parser-level knowledge item 1/2 need, not a bigger regex.
+  //      Re-review if real plan text is found to trigger this.
   // Hostile-review fix (round 8): round 7's unification stopped the aside content at ANY hyphen
   // character, including one glued inside a compound word with no surrounding whitespace ("follow-up")
   // — so a comma-opened aside containing a hyphenated word truncated early and leaked the aside's own
@@ -444,9 +454,25 @@ function planClauseIsFactual(rest: string): boolean {
   // pattern where a space is dropped on only one side) as no delimiter at all rather than as ambiguous —
   // a genuine word-internal hyphen never has whitespace on EITHER side, so requiring it on at least one
   // side is sufficient to exclude "follow-up" while accepting the asymmetric case.
-  const ASIDE_DELIM = /,|[–—―−]|-{2,}|(?<=\s|^)-|-(?=\s|$)/;
+  // Hostile-review fix (round 12): the `-{2,}` (2+ ASCII hyphens) branch, embedded inside a lookahead
+  // re-tested at every character position (the per-char "not a delimiter" exclusion and the closing
+  // lookahead), measured O(n²) on a long hyphen run — each of the O(n) positions inside the run paid an
+  // O(n) greedy-consumption cost to determine the match, compounding to ~11.5s at 64KB. Fixed at the
+  // actual production path (not merely capped in a benchmark) by collapsing any run of 2+ ASCII hyphens
+  // into a single em-dash sentinel BEFORE the delimiter pattern ever runs. A standalone, top-level
+  // `.replace(/-{2,}/g, ...)` is genuinely O(n): each match is found and consumed, and the scan advances
+  // past it and never re-visits the same span — this is the standard, unproblematic use of an unbounded
+  // quantifier; the quadratic cost came specifically from embedding the same quantifier inside a pattern
+  // that gets independently re-tested at every position via lookahead, which this removes entirely
+  // (`ASIDE_DELIM` no longer needs a `{2,}` branch at all, since any real run is now a single character
+  // by the time this pattern runs). This changes no observable behavior for classification purposes: a
+  // run of 2+ hyphens was already treated as one unconditional delimiter, identical to how an em dash is
+  // treated, and `planClauseIsFactual` never displays `clause`/`mainClauseOnly` — it only tests them
+  // against word-boundary verb regexes, which a hyphen-run-turned-em-dash does not affect either side of.
+  const normalizedClause = clause.replace(/-{2,}/g, "—");
+  const ASIDE_DELIM = /,|[–—―−]|(?<=\s|^)-|-(?=\s|$)/;
   const asideStripRe = new RegExp(`(?:${ASIDE_DELIM.source})\\s*(?:that|which|who|whose)\\b(?:(?!${ASIDE_DELIM.source})[\\s\\S])*(?=${ASIDE_DELIM.source})`, "gi");
-  const withoutRelativeAsides = clause.replace(asideStripRe, "");
+  const withoutRelativeAsides = normalizedClause.replace(asideStripRe, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;
   return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }
