@@ -115,17 +115,25 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
   if (cashState && finState) {
     // Both CURRENT. Case F is the ONLY branch where an explicit current-conflict narrative may
     // appear; otherwise narrate the shared decision (gateState/gateDriver/gateSource) directly.
-    if (bothCurrentDisagree) {
+    if (bothCurrentDisagree && !provisional) {
+      // Hostile-review fix (round 3): when provisional in-progress figures already decide gateState
+      // (the worse Case G reading below), the completed-state conflict here is about superseded data —
+      // narrating it here too would duplicate/contradict the in-progress narrative. Case F's explicit
+      // conflict framing only fires when nothing fresher already overrides the picture.
       if (financeProfitDriven) {
+        // Hostile-review fix (round 3): financeProfitDriven must not silently drop the "conflicting
+        // evidence, neither current" framing its non-profit sibling gives below — the module's own
+        // contract never silently resolves a genuine current/current disagreement.
+        const conflictNote = ` This disagrees with the other current reading (cash check: ${cashState}, finance diagnosis: ${finState}); neither can be shown to be more current — review both before acting.`;
         if (!SAFE_STATES.has(cashState)) {
           const sev = cashSeverity(cashState);
           issues.push({
             id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-            severity: sev, headline: `Cash survival (cash check) is ${cashState}.`,
+            severity: sev, headline: `Cash survival (cash check) is ${cashState}.${conflictNote}`,
             requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
           });
         }
-        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, "");
+        if (!SAFE_STATES.has(finState)) pushFinanceProfitIssue(finState, conflictNote);
       } else {
         issues.push({
           id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
@@ -255,7 +263,11 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
         ? "Only this period's in-progress cash and Finance figures are available (in progress — not a completed period); OpsIQ cannot treat cash as safe until a completed period is entered and diagnosed."
         : caseBHeadline
           ?? `${lastKnown ? `Last known (out of date): ${lastKnown}. ` : ""}Those figures are out of date, so OpsIQ cannot treat them as current; enter and diagnose current figures.`,
-      requiresOwnerAction: sev === "CRITICAL",
+      // Hostile-review fix (round 3): matches the CRITICAL||HIGH pattern every other issue in this file
+      // uses (see finance_amended immediately above) — the prior CRITICAL-only check left the fail-safe
+      // AT_RISK floor (cashSeverity("AT_RISK") -> "HIGH") without requiresOwnerAction even though the
+      // headline already tells the owner cash cannot be treated as safe.
+      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
     });
   }
   if (provisional && gateState && !SAFE_STATES.has(gateState) && gateDriver !== "unverified") {
@@ -271,11 +283,24 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     });
   }
   if (finState && !SAFE_STATES.has(finState) && !profitIssueRaised && !financeIssueRaised) {
-    issues.push({
-      id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
-      severity: finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM",
-      headline: "Profit/margin is below a safe level", requiresOwnerAction: false,
-    });
+    // Hostile-review fix (round 3): this trailing fallback (reached e.g. when a freshness tie-break lets
+    // a SAFE cash reading decide a SAFE gateState while Finance's own current reading is independently
+    // unsafe) used a hand-rolled severity ternary that diverged from cashSeverity() (silently downgrading
+    // a CRITICAL/INSOLVENT_RISK Finance reading to "HIGH"), hardcoded requiresOwnerAction: false, and
+    // always labelled the danger PROFIT_LEAK/"margin" regardless of whether Finance's own diagnosis is
+    // actually profit-driven — mirror the same financeProfitDriven branch used everywhere else in this
+    // file so severity, requiresOwnerAction, and category are never decided by a second, divergent rule.
+    if (financeProfitDriven) {
+      pushFinanceProfitIssue(finState, "");
+    } else {
+      const finSev = cashSeverity(finState);
+      issues.push({
+        id: "finance_survival", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+        severity: finSev, headline: `Financial survival (Finance diagnosis) is ${finState}.`,
+        requiresOwnerAction: finSev === "CRITICAL" || finSev === "HIGH",
+      });
+      financeIssueRaised = true;
+    }
   }
 
   return issues;

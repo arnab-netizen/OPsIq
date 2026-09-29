@@ -21,6 +21,15 @@ describe("R10 P2-1: isWholeBusinessImperative — must classify as imperative", 
     // sentence itself reports — the genuine imperative must still be recognised.
     "Stop the campaign that dropped conversions last quarter.",
     "Never resume marketing spend that resulted in the prior loss.",
+    // Round-3 hostile-review fix: PLAN_FINITE_VERB itself (is/are/was/...) can appear inside the SAME
+    // relative clause and was still scanning the full clause (unfixed by the round-2 fix, which only
+    // narrowed PLAN_FACTUAL_REPORTING_VERB) — reproducing the identical false-negative via a different
+    // word.
+    "Stop the campaign that is losing money.",
+    "Never resume the initiative that was unprofitable last quarter.",
+    // Round-3 hostile-review fix: the relative-clause split only covered "that"/"which"; "who"/"whose"
+    // reproduced the same false-negative.
+    "Avoid the plan whose costs increased.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(true);
   });
@@ -60,6 +69,29 @@ describe("R10 P2-1 round-2 hostile-review mutation proof: scanning the WHOLE cla
     expect(UNSCOPED_FACTUAL_REPORTING_VERB.test(clause)).toBe(true);
     // The real classifier does not, because it excludes the relative clause before scanning:
     expect(isWholeBusinessImperative("Stop the campaign that dropped conversions last quarter.")).toBe(true);
+  });
+});
+
+describe("R10 P2-1 round-3 hostile-review mutation proof: scanning the WHOLE clause (including relative clauses) for PLAN_FINITE_VERB reproduces the false-negative regression", () => {
+  it("mutation check: an unscoped whole-clause finite-verb scan wrongly disarms a genuine imperative containing a relative clause", () => {
+    const UNSCOPED_FINITE_VERB = /\b(?:is|are|was|were|has|have|had|did|does|been|being|will|would|could|should|fell|rose|grew|went|came|stayed|became|remained|seemed|showed|shows)\b/i;
+    const clause = "the campaign that is losing money";
+    // The buggy, unscoped whole-clause version WOULD misclassify this as factual (proves the mutation
+    // actually reproduces the regression, not merely asserts it):
+    expect(UNSCOPED_FINITE_VERB.test(clause)).toBe(true);
+    // The real classifier does not, because it excludes the relative clause before scanning:
+    expect(isWholeBusinessImperative("Stop the campaign that is losing money.")).toBe(true);
+  });
+});
+
+describe("R10 P2-1 round-3: documented limitation — a REDUCED relative clause (no that/which/who/whose) is not detected", () => {
+  it("KNOWN LIMITATION, accepted and non-blocking: a reporting verb inside a pronoun-less reduced relative clause still disarms the imperative", () => {
+    // "having increased costs" has no "that"/"which"/"who"/"whose" pronoun for the mainClauseOnly split
+    // to key off, so PLAN_FACTUAL_REPORTING_VERB's match on "increased" still marks the whole clause
+    // factual. Recognising a reduced relative clause without a pronoun needs part-of-speech tagging,
+    // which is out of scope for this dependency-free regex classifier (see the KNOWN LIMITATION comment
+    // in planClauseIsFactual). This test documents current, accepted behavior — not a target to fix here.
+    expect(isWholeBusinessImperative("Avoid initiatives having increased costs.")).toBe(false);
   });
 });
 

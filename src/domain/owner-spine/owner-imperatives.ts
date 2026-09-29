@@ -347,13 +347,23 @@ function planClauseIsFactual(rest: string): boolean {
   // a condition of the instruction, not a fact the sentence reports.
   const clause = (rest.split(/[.;!?]/)[0] ?? "").split(/\b(?:before|until|unless|while|when|whenever|if|because|after|since|once|as long as|so that)\b/i)[0] ?? "";
   const first = /^\s*([A-Za-z'’-]+)/.exec(clause)?.[1] ?? "";
-  // Hostile-review fix: PLAN_FACTUAL_REPORTING_VERB must NOT see inside a relative clause ("...that
-  // resulted in...", "...which dropped...") — that describes the OBJECT, not a fact the sentence itself
-  // reports, and would otherwise wrongly disarm a genuine imperative ("Stop the campaign that dropped
-  // conversions last quarter." is still an instruction to stop the campaign). PLAN_FINITE_VERB is left
-  // scanning the full clause (unchanged, pre-existing behavior) since no regression was found there.
-  const mainClauseOnly = clause.split(/\b(?:that|which)\b/i)[0] ?? clause;
-  return PLAN_FINITE_VERB.test(clause) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
+  // Hostile-review fix (round 2): neither PLAN_FACTUAL_REPORTING_VERB nor PLAN_FINITE_VERB may see inside
+  // a relative clause ("...that resulted in...", "...which dropped...", "...whose costs increased...")
+  // — that describes the OBJECT, not a fact the sentence itself reports, and would otherwise wrongly
+  // disarm a genuine imperative ("Stop the campaign that dropped conversions last quarter." and "Avoid
+  // the plan whose costs increased." are still instructions). Round 3 hostile review found the original
+  // round-2 fix only narrowed PLAN_FACTUAL_REPORTING_VERB to mainClauseOnly and left PLAN_FINITE_VERB
+  // scanning the full clause, so the identical false-negative survived via any of PLAN_FINITE_VERB's own
+  // words inside a relative clause ("Stop the campaign that IS losing money." — "is" inside the relative
+  // clause wrongly marked the whole sentence factual). Both checks now scan mainClauseOnly.
+  // KNOWN LIMITATION (documented per the ambiguity-resolution rule): the split only covers relative
+  // clauses introduced by "that"/"which"/"who"/"whose". A REDUCED relative clause with no pronoun at all
+  // ("Avoid initiatives having increased costs.") is not detected and can still reproduce the original
+  // defect — recognising a reduced relative clause without a pronoun requires part-of-speech tagging,
+  // which is out of scope for this fixed, dependency-free regex classifier. See
+  // r10-p2-1-imperative-classifier.test.ts for a documented (accepted, non-blocking) case.
+  const mainClauseOnly = clause.split(/\b(?:that|which|who|whose)\b/i)[0] ?? clause;
+  return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }
 /** Whether a sentence opens as an instruction to the owner (an imperative verb not used as a noun or a past form). */
 function opensWithImperative(body: string): boolean {

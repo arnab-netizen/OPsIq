@@ -380,3 +380,96 @@ describe("R10 P2-9 hostile-review fix: a non-profit-driven Finance danger is nev
     expect(issues.some((i) => i.id === "margin")).toBe(false); // the real mapper does not
   });
 });
+
+describe("R10 P2-9 round-3 hostile-review fix: trailing fallback uses cashSeverity()/requiresOwnerAction consistently, never a hand-rolled ternary", () => {
+  it("gateState SAFE (freshness tie-break picks cash) with finState independently CRITICAL, non-profit — a real CASH_DANGER finance_survival issue, CRITICAL severity, requiresOwnerAction true (not a downgraded 'margin' issue)", () => {
+    // Simulates a fresher CURRENT SAFE cash reading superseding a CURRENT unsafe Finance reading: both
+    // current, not disagreeing (or the disagreement already resolved elsewhere), gateState itself SAFE.
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "SAFE", finState: "CRITICAL",
+      gateState: "SAFE", gateDriver: "cash", gateSource: "cashflow",
+      financeProfitDriven: false,
+    });
+    const finance = issues.find((i) => i.id === "finance_survival");
+    expect(finance).toBeDefined();
+    expect(finance?.category).toBe("CASH_DANGER");
+    // Must match cashSeverity("CRITICAL") = "CRITICAL", never the old hand-rolled ternary's "HIGH":
+    expect(finance?.severity).toBe("CRITICAL");
+    expect(finance?.requiresOwnerAction).toBe(true);
+    expect(issues.some((i) => i.id === "margin")).toBe(false);
+  });
+
+  it("same scenario, profit-driven — routed through pushFinanceProfitIssue, CRITICAL severity, requiresOwnerAction true", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "SAFE", finState: "CRITICAL",
+      gateState: "SAFE", gateDriver: "cash", gateSource: "cashflow",
+      financeProfitDriven: true,
+    });
+    const margin = issues.find((i) => i.id === "margin");
+    expect(margin).toBeDefined();
+    expect(margin?.severity).toBe("CRITICAL");
+    expect(margin?.requiresOwnerAction).toBe(true);
+  });
+
+  it("mutation check: the retired hand-rolled ternary would have downgraded CRITICAL to HIGH and forced requiresOwnerAction false", () => {
+    const retiredTernarySeverity = (finState: string) => (finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM");
+    expect(retiredTernarySeverity("CRITICAL")).toBe("HIGH"); // proves the old shape had the bug
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "SAFE", finState: "CRITICAL",
+      gateState: "SAFE", gateDriver: "cash", gateSource: "cashflow",
+      financeProfitDriven: false,
+    });
+    const finance = issues.find((i) => i.id === "finance_survival");
+    expect(finance?.severity).toBe("CRITICAL"); // the real mapper does not downgrade it
+    expect(finance?.requiresOwnerAction).toBe(true);
+  });
+});
+
+describe("R10 P2-9 round-3 hostile-review fix: cash_unverified requiresOwnerAction follows the CRITICAL||HIGH pattern used everywhere else", () => {
+  it("AT_RISK unverified gate (cashSeverity -> HIGH) still requires owner action, matching finance_amended's sibling pattern", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      cashLastKnown: "SAFE", finStaleLastKnown: "AT_RISK",
+      gateState: "AT_RISK", gateDriver: "unverified", gateSource: "finance",
+    });
+    const unverified = issues.find((i) => i.id === "cash_unverified");
+    expect(unverified?.severity).toBe("HIGH");
+    expect(unverified?.requiresOwnerAction).toBe(true);
+  });
+});
+
+describe("R10 P2-9 round-3 hostile-review fix: bothCurrentDisagree + financeProfitDriven no longer silently drops the conflicting-evidence framing", () => {
+  it("profit-driven Case F still names the disagreement, on both the cash and the margin issue", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "AT_RISK", finState: "CRITICAL",
+      gateState: "CRITICAL", gateDriver: "finance_profit", gateSource: "finance",
+      financeProfitDriven: true,
+      bothCurrentDisagree: true,
+    });
+    const cash = issues.find((i) => i.id === "cash");
+    const margin = issues.find((i) => i.id === "margin");
+    expect(cash?.headline).toMatch(/neither can be shown to be more current/i);
+    expect(margin?.headline).toMatch(/neither can be shown to be more current/i);
+  });
+});
+
+describe("R10 P2-9 round-3 hostile-review fix: provisional in-progress evidence supersedes the completed-state Case F conflict narrative (no overlapping/stale narratives)", () => {
+  it("both completed states current+disagreeing, but provisional in-progress figures already decide a worse gateState — only the in-progress narrative fires, not the stale completed-conflict one", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: "SAFE", finState: "CRITICAL",
+      gateState: "INSOLVENT_RISK", gateDriver: "cash", gateSource: "cashflow",
+      bothCurrentDisagree: true,
+      provisional: true,
+    });
+    expect(issues.some((i) => /conflicting information/i.test(i.headline))).toBe(false);
+    const inProgress = issues.find((i) => i.id === "cash_in_progress");
+    expect(inProgress).toBeDefined();
+    expect(inProgress?.headline).toMatch(/in progress/i);
+  });
+});
