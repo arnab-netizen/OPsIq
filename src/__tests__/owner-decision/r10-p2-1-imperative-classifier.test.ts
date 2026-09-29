@@ -63,6 +63,8 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     // Round-5 hostile-review fix: two back-to-back comma-set-off asides sharing a boundary comma must
     // not starve the second aside of its leading comma.
     "No more delays, which were flagged, which were also logged, occurred this quarter.",
+    // Round-6 hostile-review fix: the same aside can be set off with en/em dashes instead of commas.
+    "No more delays — which were flagged — occurred this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
@@ -136,6 +138,38 @@ describe("R10 P2-1 round-5: documented limitation — a RESTRICTIVE relative cla
     // knowing where an unpunctuated clause ends, which needs part-of-speech tagging — out of scope for
     // this dependency-free regex classifier. This test documents current, accepted behavior.
     expect(isWholeBusinessImperative("No more delays that were flagged occurred this quarter.")).toBe(true);
+  });
+});
+
+describe("R10 P2-1 round-6 hostile-review mutation proof: an aside-strip regex without dash support reproduces the false-negative via em-dash delimiters", () => {
+  it("mutation check: stripping only comma-delimited asides leaves the dash-delimited aside's verb outside the strip, but the resumed main clause still carries the real verb", () => {
+    const clause = "delays — which were flagged — occurred this quarter";
+    const commaOnlyStrip = clause.replace(/,\s*(?:that|which|who|whose)\b[^,]*(?=,)/gi, "");
+    const naiveMainClauseOnly = commaOnlyStrip.split(/\b(?:that|which|who|whose)\b/i)[0] ?? commaOnlyStrip;
+    // The comma-only strip does nothing here (no commas), so the naive split still discards "occurred"
+    // (proves the mutation reproduces the regression):
+    expect(/\boccurred\b/i.test(naiveMainClauseOnly)).toBe(false);
+    // The real classifier also strips dash-delimited asides, so "occurred" survives:
+    expect(isWholeBusinessImperative("No more delays — which were flagged — occurred this quarter.")).toBe(false);
+  });
+});
+
+describe("R10 P2-1 round-6: documented limitations — semicolon-delimited asides and compound (multi-lead) prohibitions", () => {
+  it("KNOWN LIMITATION, accepted and non-blocking: a semicolon-delimited relative-clause aside is never stripped (the sentence-splitter treats ';' as a hard boundary first)", () => {
+    // A semicolon cannot standardly introduce a relative-clause aside in English (semicolons join
+    // independent clauses) — this construction is not organic business prose, unlike the comma/dash
+    // forms already fixed. Documents current, accepted behavior.
+    expect(isWholeBusinessImperative("No more delays; which were flagged; occurred this quarter.")).toBe(true);
+  });
+
+  it("KNOWN LIMITATION, accepted and non-blocking: a compound sentence with two prohibition leads classifies correctly but its REWRITTEN TEXT only converts the first clause", () => {
+    // Classification (imperative/heldBack) is correct either way — only the cosmetic rewritten text is
+    // affected, and callers that need the classification (not the reworded text) are unaffected.
+    const statement = "Do not add growth spend and never discount further until cash is safe.";
+    expect(isWholeBusinessImperative(statement)).toBe(true);
+    const n = neutralizePlanImperatives(statement);
+    expect(n.heldBack).toBe(true);
+    expect(n.text).toMatch(/the plan analysis holds back/i);
   });
 });
 

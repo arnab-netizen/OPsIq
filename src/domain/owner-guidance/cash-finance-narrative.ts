@@ -349,6 +349,14 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     // — reachable in production per current-cash-finance-reading.ts's own gateDriver/gateSource
     // derivation. `category`/`businessFunction` still correctly key off `profit` alone (a non-profit
     // Finance danger is still classified CASH_DANGER, matching every other issue in this file).
+    // CONTRACT (hostile-review finding, round 6): `category`/`businessFunction` (via `profit`) and the
+    // headline's label/noun (via `sourceIsFinance`) key off two different fields on purpose — but that
+    // only stays consistent because the one real producer, currentCashFinanceReading(), enforces
+    // `gateDriver === "finance_profit" ⟹ gateSource === "finance"` (a profit-driven reading can only
+    // ever be Finance's own reading). A caller violating that invariant (finance_profit paired with a
+    // non-finance gateSource) would produce a PROFIT_LEAK issue headlined "cash figures show cash
+    // survival" — see the `bothCurrentDisagree`/`unverified` invariant note above `unverifiedGate` for
+    // why this mapper accepts that risk rather than narrowing its plain input shape.
     const sourceIsFinance = gateSource === "finance";
     issues.push({
       id: "cash_in_progress", category: profit ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,

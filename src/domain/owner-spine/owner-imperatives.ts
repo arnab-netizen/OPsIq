@@ -375,15 +375,33 @@ function planClauseIsFactual(rest: string): boolean {
   // starved the second aside of its (shared) leading comma and left it unstripped, discarding the real
   // verb again. The closing comma is now only checked via a lookahead (never consumed), so it remains
   // available as the next aside's own leading comma.
-  // KNOWN LIMITATION (documented per the ambiguity-resolution rule, round 5): a RESTRICTIVE relative
-  // clause with NO surrounding commas at all, interposed BEFORE the real main verb ("No more delays
-  // that were flagged occurred this quarter."), is still not detected — nothing here can be used to
-  // decide where such an unpunctuated clause ends, short of part-of-speech tagging. This construction is
-  // also rare in organic business prose (writers overwhelmingly either set such an aside off with commas
-  // or restructure the sentence), unlike the trailing restrictive clause this module already handles
-  // correctly ("Stop the campaign that dropped conversions" — genuinely common phrasing). See
-  // r10-p2-1-imperative-classifier.test.ts for a documented (accepted, non-blocking) case.
-  const withoutRelativeAsides = clause.replace(/,\s*(?:that|which|who|whose)\b[^,]*(?=,)/gi, "");
+  // Hostile-review fix (round 6): a NONRESTRICTIVE relative-clause aside set off with EN/EM DASHES
+  // instead of commas ("No more delays — which were flagged — occurred this quarter.") is at least as
+  // common in business prose as the comma-set-off form round 4 fixed, and reproduced the identical
+  // defect via a different delimiter. Stripped the same way, using the dash character itself (not
+  // surrounding whitespace) as the delimiter so `[^-–—]*` naturally includes the space on either side.
+  // KNOWN LIMITATION (documented per the ambiguity-resolution rule, round 5, extended round 6): three
+  // related gaps remain, all requiring part-of-speech tagging (or a much larger parser) to close and
+  // out of scope for this fixed, dependency-free regex classifier — each is accepted, non-blocking, and
+  // covered by a documented test case in r10-p2-1-imperative-classifier.test.ts:
+  //   1. A RESTRICTIVE relative clause with NO surrounding delimiters at all, interposed BEFORE the
+  //      real main verb ("No more delays that were flagged occurred this quarter.") — rarer in organic
+  //      prose than the trailing restrictive clause this module already handles correctly ("Stop the
+  //      campaign that dropped conversions"), but real.
+  //   2. A relative-clause aside set off with SEMICOLONS is not stripped — the sentence-splitter
+  //      (`isWholeBusinessImperative`/`neutralizePlanImperatives`, below) treats `;` as a hard sentence
+  //      boundary before this function ever runs, so the real verb ends up in a separate fragment. This
+  //      is lower-risk in practice: a semicolon cannot standardly introduce a relative-clause aside in
+  //      English (semicolons join independent clauses), so this construction is not organic prose.
+  //   3. A compound sentence with TWO prohibition leads ("Do not add spend and never discount further
+  //      until cash is safe.") classifies correctly (still `imperative: true`, still held back) but the
+  //      REWRITTEN TEXT only converts the first "the plan analysis holds back ..." clause, leaving the
+  //      second prohibition's own words unconverted inside the rewritten sentence — a display-text
+  //      quality gap, not a classification defect (the caller-facing `imperative`/`heldBack` booleans are
+  //      correct either way).
+  const withoutRelativeAsides = clause
+    .replace(/,\s*(?:that|which|who|whose)\b[^,]*(?=,)/gi, "")
+    .replace(/[-–—]\s*(?:that|which|who|whose)\b[^-–—]*(?=[-–—])/gi, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;
   return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }
