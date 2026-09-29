@@ -380,7 +380,14 @@ function planClauseIsFactual(rest: string): boolean {
   // common in business prose as the comma-set-off form round 4 fixed, and reproduced the identical
   // defect via a different delimiter. Stripped the same way, using the dash character itself (not
   // surrounding whitespace) as the delimiter so `[^-–—]*` naturally includes the space on either side.
-  // KNOWN LIMITATION (documented per the ambiguity-resolution rule, round 5, extended round 6): three
+  // Hostile-review fix (round 7): the comma-pass and dash-pass above were two SEPARATE regexes, each
+  // requiring the SAME delimiter type on both sides of the aside — a MIXED-delimiter aside (opened with
+  // a comma, closed with a dash, or vice versa: "No more delays, which were flagged — occurred this
+  // quarter.") satisfied neither pattern and reproduced the identical defect. Replaced with ONE regex
+  // whose opening and closing delimiter can each independently be a comma or a dash, closing the mixed
+  // case without special-casing it (a genuine generalisation of the existing, already-tested logic, not
+  // a new heuristic).
+  // KNOWN LIMITATION (documented per the ambiguity-resolution rule, round 5, extended rounds 6-7): three
   // related gaps remain, all requiring part-of-speech tagging (or a much larger parser) to close and
   // out of scope for this fixed, dependency-free regex classifier — each is accepted, non-blocking, and
   // covered by a documented test case in r10-p2-1-imperative-classifier.test.ts:
@@ -388,20 +395,24 @@ function planClauseIsFactual(rest: string): boolean {
   //      real main verb ("No more delays that were flagged occurred this quarter.") — rarer in organic
   //      prose than the trailing restrictive clause this module already handles correctly ("Stop the
   //      campaign that dropped conversions"), but real.
-  //   2. A relative-clause aside set off with SEMICOLONS is not stripped — the sentence-splitter
-  //      (`isWholeBusinessImperative`/`neutralizePlanImperatives`, below) treats `;` as a hard sentence
-  //      boundary before this function ever runs, so the real verb ends up in a separate fragment. This
-  //      is lower-risk in practice: a semicolon cannot standardly introduce a relative-clause aside in
-  //      English (semicolons join independent clauses), so this construction is not organic prose.
+  //   2. The top-level clause boundary (`rest.split(/[.;!?]/)[0]` above) treats ANY semicolon as a hard
+  //      clause boundary, even one nested INSIDE an otherwise well-formed comma/dash aside used as
+  //      itemising punctuation ("No more delays — which were flagged; and reviewed — occurred this
+  //      quarter.") — round 6 under-stated this as merely "semicolons can't introduce a relative
+  //      clause"; the real mechanism is broader (any semicolon anywhere truncates the clause before the
+  //      aside-strip regex ever runs), though a genuine relative-clause aside built ENTIRELY from
+  //      semicolons remains independently non-organic English either way. Fixing this would require
+  //      distinguishing a sentence-ending semicolon from one nested inside an aside — the same
+  //      parser-level knowledge item 1 needs.
   //   3. A compound sentence with TWO prohibition leads ("Do not add spend and never discount further
   //      until cash is safe.") classifies correctly (still `imperative: true`, still held back) but the
   //      REWRITTEN TEXT only converts the first "the plan analysis holds back ..." clause, leaving the
   //      second prohibition's own words unconverted inside the rewritten sentence — a display-text
   //      quality gap, not a classification defect (the caller-facing `imperative`/`heldBack` booleans are
-  //      correct either way).
-  const withoutRelativeAsides = clause
-    .replace(/,\s*(?:that|which|who|whose)\b[^,]*(?=,)/gi, "")
-    .replace(/[-–—]\s*(?:that|which|who|whose)\b[^-–—]*(?=[-–—])/gi, "");
+  //      correct either way). Confirmed to have no production caller today (`neutralizePlanImperatives`
+  //      and the `reconcilePlan*` family built on it are not yet wired into any real plan-text surface),
+  //      so this is a latent, not live, gap — re-review before wiring either function into a real caller.
+  const withoutRelativeAsides = clause.replace(/[,\-–—]\s*(?:that|which|who|whose)\b[^,\-–—]*(?=[,\-–—])/gi, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;
   return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }

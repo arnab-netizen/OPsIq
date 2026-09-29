@@ -65,6 +65,10 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     "No more delays, which were flagged, which were also logged, occurred this quarter.",
     // Round-6 hostile-review fix: the same aside can be set off with en/em dashes instead of commas.
     "No more delays — which were flagged — occurred this quarter.",
+    // Round-7 hostile-review fix: a MIXED-delimiter aside (comma-opened, dash-closed, or vice versa)
+    // must strip the same way as a single-delimiter-type aside.
+    "No more delays, which were flagged — occurred this quarter.",
+    "No more delays — which were flagged, occurred this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
@@ -154,12 +158,35 @@ describe("R10 P2-1 round-6 hostile-review mutation proof: an aside-strip regex w
   });
 });
 
+describe("R10 P2-1 round-7 hostile-review mutation proof: two same-delimiter-only regexes (comma-only, dash-only) reproduce the false-negative on a MIXED-delimiter aside", () => {
+  it("mutation check: neither a comma-only nor a dash-only strip pass matches an aside opened with one delimiter and closed with the other", () => {
+    const clause = "delays, which were flagged — occurred this quarter";
+    const commaOnlyStrip = clause.replace(/,\s*(?:that|which|who|whose)\b[^,]*(?=,)/gi, "");
+    const dashOnlyStrip = clause.replace(/[-–—]\s*(?:that|which|who|whose)\b[^-–—]*(?=[-–—])/gi, "");
+    // Neither single-delimiter-type regex strips this mixed aside (proves the mutation reproduces the
+    // regression — the round-6 shape, running both passes in sequence, would have the same gap since
+    // the comma pass requires a closing comma and the dash pass requires a closing dash):
+    expect(/\boccurred\b/i.test(commaOnlyStrip.split(/\b(?:that|which|who|whose)\b/i)[0] ?? commaOnlyStrip)).toBe(false);
+    expect(/\boccurred\b/i.test(dashOnlyStrip.split(/\b(?:that|which|who|whose)\b/i)[0] ?? dashOnlyStrip)).toBe(false);
+    // The real classifier's unified delimiter regex strips it regardless of which delimiter opens/closes:
+    expect(isWholeBusinessImperative("No more delays, which were flagged — occurred this quarter.")).toBe(false);
+    expect(isWholeBusinessImperative("No more delays — which were flagged, occurred this quarter.")).toBe(false);
+  });
+});
+
 describe("R10 P2-1 round-6: documented limitations — semicolon-delimited asides and compound (multi-lead) prohibitions", () => {
   it("KNOWN LIMITATION, accepted and non-blocking: a semicolon-delimited relative-clause aside is never stripped (the sentence-splitter treats ';' as a hard boundary first)", () => {
     // A semicolon cannot standardly introduce a relative-clause aside in English (semicolons join
     // independent clauses) — this construction is not organic business prose, unlike the comma/dash
     // forms already fixed. Documents current, accepted behavior.
     expect(isWholeBusinessImperative("No more delays; which were flagged; occurred this quarter.")).toBe(true);
+  });
+
+  it("KNOWN LIMITATION, accepted and non-blocking, round 7 (broader mechanism than round 6's description): a semicolon nested INSIDE an otherwise well-formed dash aside still truncates the clause before the aside-strip regex ever runs", () => {
+    // The top-level clause boundary treats ANY semicolon as a hard stop, even one used as itemising
+    // punctuation inside an otherwise-correct dash aside — confirmed to have no production caller today
+    // (see the code comment in planClauseIsFactual), so this remains accepted, non-blocking.
+    expect(isWholeBusinessImperative("No more delays — which were flagged; and reviewed — occurred this quarter.")).toBe(true);
   });
 
   it("KNOWN LIMITATION, accepted and non-blocking: a compound sentence with two prohibition leads classifies correctly but its REWRITTEN TEXT only converts the first clause", () => {
