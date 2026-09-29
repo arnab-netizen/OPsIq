@@ -1022,4 +1022,177 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   test("step 70 — final: no new fatal errors from closure tests", () => {
     expect(fatalErrors()).toHaveLength(0);
   });
+
+  // ─── Steps 71-80: F-STARTUP-NO-HANDOFF real browser activation journey ───
+  //
+  // A dedicated session/idea (not E2E_PHASE5_SESSION_ID) so this journey does
+  // not depend on that fixture's own mutation history (e.g. step 60's idea
+  // revision, which would leave the shared idea superseded by this point).
+  // Setup through GO decision / blueprint / lifecycle status uses
+  // page.request, matching this file's established convention for every
+  // prior analysis/evidence/decision/blueprint step (11-28, 35-50) -- the
+  // same authenticated page context, not an out-of-band call. The
+  // activation action itself -- the one action this journey exists to prove
+  // -- is a real button click in the browser, never simulated via API.
+
+  let handoffSessionId: string;
+  let handoffIdeaId: string;
+  let handoffBusinessId: string;
+  const HANDOFF_BUSINESS_NAME = "E2E Activation Detailing Co";
+
+  test("step 71 — create dedicated session + idea for the activation journey", async () => {
+    const created = await page.request.post("/api/owner/startup/sessions", {
+      data: {
+        sessionLabel: "E2E Activation Journey Session",
+        intake: { location: "Australia", capitalAvailable: null, hoursPerWeekAvailable: null, riskTolerance: null, skills: [] },
+        ideas: [{ name: HANDOFF_BUSINESS_NAME, industry: "Automotive Services", structural: {} }],
+      },
+    });
+    expect(created.status()).toBe(201);
+    handoffSessionId = (await created.json()).sessionId;
+    expect(handoffSessionId).toBeTruthy();
+
+    const sessionRes = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    expect(sessionRes.status()).toBe(200);
+    handoffIdeaId = (await sessionRes.json()).session.ideas[0].id;
+    expect(handoffIdeaId).toBeTruthy();
+  });
+
+  test("step 72 — drive session through screening and the required lifecycle statuses up to APPROVED", async () => {
+    for (const status of ["CONTEXT_CAPTURE", "DISCOVERY", "IDEA_GENERATION", "SCREENING"]) {
+      const res = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status } });
+      expect(res.status()).toBe(200);
+    }
+
+    const screenRes = await page.request.post(
+      `/api/owner/startup/sessions/${handoffSessionId}/analysis`,
+      {
+        data: {
+          action: "SCREEN",
+          ideaId: handoffIdeaId,
+          profile: {
+            capitalAvailableCents: 5_000_000,
+            ownerHoursPerWeek: 20,
+            riskTolerance: "MEDIUM",
+            location: "Australia",
+            cashRunwayMonthsAvailable: 6,
+            minimumMonthlyIncomeNeededCents: 300_000,
+          },
+        },
+      }
+    );
+    expect(screenRes.status()).toBe(200);
+
+    for (const status of ["ECONOMICS_REVIEW", "READINESS_REVIEW", "OWNER_DECISION_REQUIRED"]) {
+      const res = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status } });
+      expect(res.status()).toBe(200);
+    }
+  });
+
+  test("step 73 — record GO decision and create the execution blueprint", async () => {
+    const decisionRes = await page.request.post(
+      `/api/owner/startup/sessions/${handoffSessionId}/decision`,
+      { data: { ideaId: handoffIdeaId, decisionType: "GO", rationale: "E2E activation journey approval" } }
+    );
+    expect(decisionRes.status()).toBe(201);
+    const ownerDecisionId = (await decisionRes.json()).ownerDecisionId;
+    expect(ownerDecisionId).toBeTruthy();
+
+    const approveRes = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
+      data: { status: "APPROVED" },
+    });
+    expect(approveRes.status()).toBe(200);
+
+    const bpRes = await page.request.post(
+      `/api/owner/startup/sessions/${handoffSessionId}/blueprint`,
+      {
+        data: {
+          ideaId: handoffIdeaId,
+          ownerDecisionId,
+          objectiveTitle: "Launch " + HANDOFF_BUSINESS_NAME,
+          objectiveDescription: "E2E activation journey execution blueprint",
+          targetMetricName: "monthly_revenue_cents",
+          targetValue: 500000,
+        },
+      }
+    );
+    expect(bpRes.status()).toBe(201);
+    const bpBody = await bpRes.json();
+    expect(bpBody.executionPlanId).toBeTruthy();
+  });
+
+  test("step 74 — Activate button is absent before status reaches EXECUTION_PLANNED (correct-state gating)", async () => {
+    await page.goto(`/owner/startup/${handoffSessionId}`);
+    await waitForPageReady(page);
+    await page.click("[data-testid='tab-blueprint']");
+    // Blueprint already exists at this point (created in step 73), so the
+    // real assertion is that the button is withheld purely on session
+    // status, not on blueprint existence.
+    await expect(page.locator("[data-testid='blueprint-id']")).toBeVisible();
+    await expect(page.locator("[data-testid='activate-business-btn']")).toHaveCount(0);
+  });
+
+  test("step 75 — transition to EXECUTION_PLANNED and the Activate button becomes visible", async () => {
+    const res = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
+      data: { status: "EXECUTION_PLANNED" },
+    });
+    expect(res.status()).toBe(200);
+
+    await page.reload();
+    await waitForPageReady(page);
+    await page.click("[data-testid='tab-blueprint']");
+    await expect(page.locator("[data-testid='activate-business-btn']")).toBeVisible();
+  });
+
+  test("step 76 — click Activate as Business and land on the resulting OwnerBusiness in Owner Mode", async () => {
+    await Promise.all([
+      page.waitForURL(/\/owner\/home\?businessId=[0-9a-f-]{36}/),
+      page.click("[data-testid='activate-business-btn']"),
+    ]);
+    const url = new URL(page.url());
+    handoffBusinessId = url.searchParams.get("businessId") ?? "";
+    expect(handoffBusinessId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("body")).toContainText(HANDOFF_BUSINESS_NAME);
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 77 — normal Owner Mode domain functionality operates against the new business (Finance opens without error)", async () => {
+    await page.goto(`/owner/finance?businessId=${handoffBusinessId}`);
+    await page.waitForLoadState("networkidle");
+    const body = await page.textContent("body");
+    expect(body).toBeTruthy();
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 78 — revisiting the session detail page shows the handoff link, not the Activate button (idempotent, no re-trigger surface)", async () => {
+    await page.goto(`/owner/startup/${handoffSessionId}`);
+    await waitForPageReady(page);
+    await page.click("[data-testid='tab-blueprint']");
+    await expect(page.locator("[data-testid='handoff-complete']")).toBeVisible();
+    const link = page.locator("[data-testid='handoff-business-link']");
+    await expect(link).toHaveAttribute("href", `/owner/home?businessId=${handoffBusinessId}`);
+    await expect(page.locator("[data-testid='activate-business-btn']")).toHaveCount(0);
+  });
+
+  test("step 79 — page reload preserves the same business link (persisted, not re-derived per-request)", async () => {
+    await page.reload();
+    await waitForPageReady(page);
+    await page.click("[data-testid='tab-blueprint']");
+    const link = page.locator("[data-testid='handoff-business-link']");
+    await expect(link).toHaveAttribute("href", `/owner/home?businessId=${handoffBusinessId}`);
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 80 — session-level GET confirms exactly one linked business across repeated reads (no duplicate created by revisit)", async () => {
+    const res1 = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    const res2 = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    const body1 = await res1.json();
+    const body2 = await res2.json();
+    expect(body1.session.businessId).toBe(handoffBusinessId);
+    expect(body2.session.businessId).toBe(handoffBusinessId);
+    expect(body1.session.status).toBe("ACTIVE");
+    expect(fatalErrors()).toHaveLength(0);
+  });
 });
