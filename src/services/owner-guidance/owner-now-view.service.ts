@@ -46,7 +46,7 @@ import { correctionExecutionStateFromTask } from "@/domain/owner-mode/effectiven
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
-import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
+import { buildCashProfitProtection, deriveFinanceCashProfitFacts, type CashProfitProtectionAnalysis, type CashRiskState, type FinanceCashProfitFacts, type FinanceReadingFacts } from "@/domain/owner-mode/cash-profit-protection";
 import { buildProcessExecutionBridge, computeCanStart, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
 import { buildBridgeExpansion } from "@/domain/owner-mode/process-execution-bridge-expansion";
 import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
@@ -92,7 +92,8 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date; supersededById?: string | null } | null; findings?: Array<{ code: string }> }
+type FinanceSnapshotFigures = NonNullable<FinanceReadingFacts["snapshot"]>;
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: ({ periodEnd: Date; supersededById?: string | null } & FinanceSnapshotFigures) | null; findings?: Array<{ code: string; sourceMetric?: string; sourceValue?: number | null; threshold?: number | null }> }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -876,7 +877,7 @@ export async function assembleGuidanceContext(
    * business (never ready).
    */
   gateInput?: OwnerGateConstraints | null
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; financeFacts: FinanceCashProfitFacts | null; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
@@ -903,7 +904,7 @@ export async function assembleGuidanceContext(
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
     cycleScope ? deps.db.ownerCashflowCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }) : none,
-    cycleScope ? deps.db.ownerFinanceCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true, severity: true } } } }) : none,
+    cycleScope ? deps.db.ownerFinanceCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true, revenue: true, fixedCosts: true, variableCosts: true, costOfGoods: true, rent: true, payroll: true, utilities: true, deliveryCost: true, marketingSpend: true, cashOnHand: true } }, findings: { select: { code: true, severity: true, sourceMetric: true, sourceValue: true, threshold: true } } } }) : none,
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -977,6 +978,10 @@ export async function assembleGuidanceContext(
   // unverified state applies).
   const cashState: string | undefined = cashFinanceResolution.cashCurrent ? cashFinanceResolution.cashState ?? undefined : undefined;
   const finState: string | undefined = cashFinanceResolution.financeCurrent ? cashFinanceResolution.financeState ?? undefined : undefined;
+  // Measured cash/profit facts are read ONLY from a Finance diagnosis that is current (not stale/amended/superseded).
+  const financeFacts = cashFinanceResolution.financeCurrent && fin
+    ? deriveFinanceCashProfitFacts({ findings: fin.findings, snapshot: fin.snapshot })
+    : null;
   const cashLastKnown = !cashFinanceResolution.cashCurrent ? cashFinanceResolution.cashState : null;
   const finStaleLastKnown = !cashFinanceResolution.financeCurrent ? cashFinanceResolution.financeState : null;
   const finAmendedLastKnown = cashFinanceResolution.financeAmendedLastKnown;
@@ -1041,7 +1046,14 @@ export async function assembleGuidanceContext(
 
   // Named, smallest-useful-first missing data — never a generic warning.
   const missingCriticalData: string[] = [];
-  if (!cash) missingCriticalData.push("latest cash position (cash on hand + obligations)");
+  // No Cash flow check yet. When the CURRENT Finance snapshot already carries cash on hand, that figure is
+  // measured and the owner is not asked for it again — only what the Cash flow check adds (what is due and
+  // expected) is named as missing. Without a measured cash figure the full cash position is requested.
+  if (!cash) {
+    missingCriticalData.push(financeFacts?.cashPositionMeasured
+      ? "cash obligations and expected inflows from a Cash flow check (your cash on hand is already measured from your Finance snapshot)"
+      : "latest cash position (cash on hand + obligations)");
+  }
   if (!fin) missingCriticalData.push("latest profit/margin figures");
   else if (finAmendedLastKnown) missingCriticalData.push("a Finance diagnosis of your amended figures (re-run the Finance diagnosis)");
   // Readings exist but none is current (out of date): the same unverified state the gate enforces.
@@ -1143,7 +1155,7 @@ export async function assembleGuidanceContext(
   return {
     ctx, state, ag,
     raw: {
-      cashState, finState,
+      cashState, finState, financeFacts,
       discountAmount: metric?.discountAmount ?? null, revenue: metric?.revenue ?? null,
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
@@ -2279,7 +2291,7 @@ export async function getOwnerNowView(
         // state→day/percent bucket constants as a metric implied a precision OpsIQ does not have (e.g. a
         // "CRITICAL" state rendered as "7 days runway"). Pass no measured figure and let the domain fire the
         // risk qualitatively from the categorical state (metricValue stays null — no false precision).
-        cashRunwayDays: null,
+        cashRunwayDays: cashFinanceEffectiveState != null && !SAFE_STATES.has(cashFinanceEffectiveState) ? raw.financeFacts?.cashRunwayDays ?? null : null,
         netMarginPct: null,
         // Arbitrated (see resolveCashFinanceSignal / cashFinanceEffectiveState above), never
         // raw.cashState directly -- using the raw, un-arbitrated cashflow-cycle reading here was
@@ -2297,7 +2309,13 @@ export async function getOwnerNowView(
         b2bUnderpricedCount: 0,
         overdueReceivableCount: 0,
         hasUnitEconomics: false,
-        financialDataComplete: raw.cashState != null && raw.finState != null,
+        // Profit is assessed from the CURRENT Finance diagnosis's own figures (revenue, costs, margin) — the
+        // Cash-flow cycle is a separate module and its absence is not a profit-data gap. A gap is named only
+        // when the current Finance snapshot genuinely lacks a figure the assessment needs.
+        financialDataComplete: raw.finState != null && (raw.financeFacts?.missingFinancialFields.length ?? 0) === 0,
+        missingFinancialFields: raw.finState != null ? raw.financeFacts?.missingFinancialFields ?? [] : [],
+        // Enrichment for an already-raised cash risk only (the arbitrated state still decides).
+        financeCashDaysOfCosts: raw.financeFacts?.cashDaysOfCosts ?? null,
         supportingProofIds: [],
         supportingOperationalEventIds: [],
         supportingFinancialSnapshotIds: [],

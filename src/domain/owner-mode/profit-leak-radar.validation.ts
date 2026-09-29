@@ -19,6 +19,7 @@ export const profitLeakSignalsBodySchema = z.strictObject({
   revenue: z.number().nullable().optional(),
   discountAmount: z.number().nullable().optional(),
   discountLeak: z.boolean().optional(),
+  discountMeasured: z.boolean().optional(),
   marginPct: z.number().nullable().optional(),
   marginSafe: z.boolean().nullable().optional(),
   lowMarginB2BAccount: z.boolean().optional(),
