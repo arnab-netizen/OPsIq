@@ -576,3 +576,59 @@ describe("R10 P2-9 round-4 hostile-review fix: bothCurrentDisagree non-profit se
     expect(issues.find((i) => i.id === "cash")?.severity).toBe("MEDIUM"); // the real mapper does not force HIGH
   });
 });
+
+describe("R10 P2-9 round-5 hostile-review fix: Case G's source label and survival-type noun always agree with each other (both keyed off gateSource, never off gateDriver's profit check alone)", () => {
+  it("gateDriver 'cash' with gateSource 'finance' (a non-profit-driven Finance-sourced reading) — 'Finance figures show financial survival', never the self-contradictory 'Finance figures show cash survival'", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "finance",
+      provisional: true,
+    });
+    const inProgress = issues.find((i) => i.id === "cash_in_progress");
+    expect(inProgress).toBeDefined();
+    expect(inProgress?.headline).toContain("Finance figures show financial survival");
+    expect(inProgress?.headline).not.toMatch(/Finance figures show cash survival/i);
+    // Category still keys off the profit check alone (gateDriver !== "finance_profit" here) — a
+    // non-profit-driven Finance danger is still classified CASH_DANGER, matching the rest of the file:
+    expect(inProgress?.category).toBe("CASH_DANGER");
+  });
+
+  it("gateDriver 'cash' with gateSource 'cashflow' — 'cash figures show cash survival', unchanged from before", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "cashflow",
+      provisional: true,
+    });
+    const inProgress = issues.find((i) => i.id === "cash_in_progress");
+    expect(inProgress?.headline).toContain("cash figures show cash survival");
+  });
+
+  it("gateDriver 'finance_profit' with gateSource 'finance' — 'Finance figures show financial survival', unchanged from before", () => {
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      gateState: "CRITICAL", gateDriver: "finance_profit", gateSource: "finance",
+      provisional: true,
+    });
+    const inProgress = issues.find((i) => i.id === "cash_in_progress");
+    expect(inProgress?.headline).toContain("Finance figures show financial survival");
+    expect(inProgress?.category).toBe("PROFIT_LEAK");
+  });
+
+  it("mutation check: keying the survival-type noun off gateDriver's profit check alone (the retired shape) would reproduce the mismatch", () => {
+    const retiredWording = (gateSource: string, gateDriver: string) => {
+      const profit = gateDriver === "finance_profit";
+      return `${gateSource === "finance" ? "Finance" : "cash"} figures show ${profit ? "financial" : "cash"} survival`;
+    };
+    expect(retiredWording("finance", "cash")).toBe("Finance figures show cash survival"); // proves the old shape had the bug
+    const issues = cashFinanceOwnerNarrative({
+      ...base,
+      cashState: undefined, finState: undefined,
+      gateState: "CRITICAL", gateDriver: "cash", gateSource: "finance",
+      provisional: true,
+    });
+    expect(issues.find((i) => i.id === "cash_in_progress")?.headline).not.toContain("Finance figures show cash survival");
+  });
+});

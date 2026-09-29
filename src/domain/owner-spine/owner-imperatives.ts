@@ -370,7 +370,20 @@ function planClauseIsFactual(rest: string): boolean {
   // asides are removed first (wherever they sit in the clause), then the remaining first-occurrence split
   // still handles a RESTRICTIVE relative clause with no surrounding commas (typically trailing, attached
   // to an object, e.g. "the campaign that dropped conversions").
-  const withoutRelativeAsides = clause.replace(/,\s*(?:that|which|who|whose)\b[^,]*,/gi, "");
+  // Hostile-review fix (round 5): the round-4 aside-strip regex consumed its OWN closing comma, so two
+  // back-to-back asides ("No more delays, which were flagged, which were also logged, occurred...")
+  // starved the second aside of its (shared) leading comma and left it unstripped, discarding the real
+  // verb again. The closing comma is now only checked via a lookahead (never consumed), so it remains
+  // available as the next aside's own leading comma.
+  // KNOWN LIMITATION (documented per the ambiguity-resolution rule, round 5): a RESTRICTIVE relative
+  // clause with NO surrounding commas at all, interposed BEFORE the real main verb ("No more delays
+  // that were flagged occurred this quarter."), is still not detected — nothing here can be used to
+  // decide where such an unpunctuated clause ends, short of part-of-speech tagging. This construction is
+  // also rare in organic business prose (writers overwhelmingly either set such an aside off with commas
+  // or restructure the sentence), unlike the trailing restrictive clause this module already handles
+  // correctly ("Stop the campaign that dropped conversions" — genuinely common phrasing). See
+  // r10-p2-1-imperative-classifier.test.ts for a documented (accepted, non-blocking) case.
+  const withoutRelativeAsides = clause.replace(/,\s*(?:that|which|who|whose)\b[^,]*(?=,)/gi, "");
   const mainClauseOnly = withoutRelativeAsides.split(/\b(?:that|which|who|whose)\b/i)[0] ?? withoutRelativeAsides;
   return PLAN_FINITE_VERB.test(mainClauseOnly) || PLAN_FACTUAL_REPORTING_VERB.test(mainClauseOnly) || /ed$/i.test(first);
 }

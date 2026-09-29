@@ -12,7 +12,8 @@
  * severity, or requiresOwnerAction:
  *   - `bothCurrentDisagree`: true only when both sources are CURRENT and genuinely disagree with no
  *     way to tell which is more current (Case F). A narration TRIGGER only — every branch it opens
- *     still gets its severity/category from `gateState`/`gateDriver`, never from this flag itself.
+ *     still gets its severity/category from `cashState`/`finState` (via `cashSeverity()`/
+ *     `worseSeverity()`) or `gateState`/`gateDriver` as appropriate, never from this flag itself.
  *   - `supersededSource`/`supersededState`: which earlier, now-stale reading to name in an extra
  *     context sentence. All branching in this module is driven by `gateDriver` alone
  *     ("cash" | "finance_profit" | "unverified"); these two fields are read only inside the
@@ -278,6 +279,18 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     }
   }
 
+  // CONTRACT (hostile-review finding, round 5): `bothCurrentDisagree` and `gateDriver === "unverified"`
+  // must never both be true on the same call — `unverifiedGate` below is checked independently of Case
+  // F above, so a caller violating this would produce two contradictory issues (a current-conflict
+  // narrative and an "figures are out of date" narrative) for one reading. This is not a hypothetical
+  // input to defend against at the mapper level: the one real producer, currentCashFinanceReading()
+  // (src/services/owner-spine/current-cash-finance-reading.ts), can only set `bothCurrentDisagree`
+  // when BOTH cashState/finState are current, and whenever both are current at least one of them
+  // always decides the gate — so `gateDriver` can only be "cash"/"finance_profit" in that case, never
+  // "unverified" (verified against real Postgres data by two independent hostile reviewers). Enforcing
+  // this in the mapper's own types/runtime would require accepting a narrower, less composable input
+  // shape than the rest of this module's plain boolean/nullable fields — out of scope for this fixed,
+  // narration-only mapper per the ambiguity-resolution rule.
   const unverifiedGate = gateState !== null && gateDriver === "unverified";
   if (finAmendedLastKnown && (!SAFE_STATES.has(finAmendedLastKnown) || unverifiedGate)) {
     // Case D/E: Finance amended. Last Finance result is named as last-known only; current state is
@@ -327,11 +340,21 @@ export function cashFinanceOwnerNarrative(input: CashFinanceOwnerNarrativeInput)
     // Case G: provisional unsafe tightens. Narrate as in-progress, low confidence — never completed evidence.
     const sev = cashSeverity(gateState);
     const profit = gateDriver === "finance_profit";
+    // Hostile-review fix (round 5): the source label ("Finance"/"cash" figures) and the survival-type
+    // noun ("financial"/"cash" survival) must agree with each other — both describe WHICH figures are
+    // in progress (gateSource), never whether Finance's own reading happens to be profit-driven
+    // (gateDriver). The prior code keyed the noun off `profit` alone, so a non-profit-driven Finance-
+    // sourced reading (gateDriver "cash" reached via `finance_profit`'s own profit check being false,
+    // with gateSource "finance") produced the self-contradictory "Finance figures show cash survival"
+    // — reachable in production per current-cash-finance-reading.ts's own gateDriver/gateSource
+    // derivation. `category`/`businessFunction` still correctly key off `profit` alone (a non-profit
+    // Finance danger is still classified CASH_DANGER, matching every other issue in this file).
+    const sourceIsFinance = gateSource === "finance";
     issues.push({
       id: "cash_in_progress", category: profit ? IssueCategory.PROFIT_LEAK : IssueCategory.CASH_DANGER,
       businessFunction: [profit ? BusinessFunction.PROFITABILITY : BusinessFunction.CASH_FLOW],
       severity: sev,
-      headline: `This period's in-progress ${gateSource === "finance" ? "Finance" : "cash"} figures show ${profit ? "financial survival" : "cash survival"} ${gateState} (in progress — not a completed period yet).`,
+      headline: `This period's in-progress ${sourceIsFinance ? "Finance" : "cash"} figures show ${sourceIsFinance ? "financial" : "cash"} survival ${gateState} (in progress — not a completed period yet).`,
       requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
     });
   }

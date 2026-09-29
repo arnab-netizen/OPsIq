@@ -60,6 +60,9 @@ describe("R10 P2-1: isWholeBusinessImperative — must NOT classify as imperativ
     // quarter." is still a plain factual report (the parenthetical aside on "delays" is not the sentence's
     // own claim).
     "No more delays, which were flagged, occurred this quarter.",
+    // Round-5 hostile-review fix: two back-to-back comma-set-off asides sharing a boundary comma must
+    // not starve the second aside of its leading comma.
+    "No more delays, which were flagged, which were also logged, occurred this quarter.",
   ])("%s", (statement) => {
     expect(isWholeBusinessImperative(statement)).toBe(false);
   });
@@ -108,6 +111,31 @@ describe("R10 P2-1 round-4 hostile-review mutation proof: a naive first-occurren
     expect(/\boccurred\b/i.test(naiveMainClauseOnly)).toBe(false);
     // The real classifier strips the comma-set-off aside first, so "occurred" survives:
     expect(isWholeBusinessImperative("No more delays, which were flagged, occurred this quarter.")).toBe(false);
+  });
+});
+
+describe("R10 P2-1 round-5 hostile-review mutation proof: a comma-consuming aside-strip regex starves a second, back-to-back aside of its shared leading comma", () => {
+  it("mutation check: consuming the closing comma (instead of a lookahead) leaves the second aside's own verb intact but unstripped, and the FIRST aside's own reporting verb ('flagged') would then leak into the scan", () => {
+    const clause = "delays, which were flagged, which were also logged, occurred this quarter";
+    const consumingRegex = /,\s*(?:that|which|who|whose)\b[^,]*,/gi;
+    const buggyResult = clause.replace(consumingRegex, "");
+    // The buggy, comma-consuming regex only strips the FIRST aside (the second aside's leading comma was
+    // already eaten as the first aside's closing comma), leaving "which were also logged" unstripped —
+    // proving the mutation reproduces the starvation:
+    expect(buggyResult).toContain("which were also logged");
+    // The real classifier (lookahead-based) strips both asides, so "occurred" is classified correctly:
+    expect(isWholeBusinessImperative("No more delays, which were flagged, which were also logged, occurred this quarter.")).toBe(false);
+  });
+});
+
+describe("R10 P2-1 round-5: documented limitation — a RESTRICTIVE relative clause with no surrounding commas, interposed before the main verb, is not detected", () => {
+  it("KNOWN LIMITATION, accepted and non-blocking: an unpunctuated relative clause before the real verb still disarms factual detection", () => {
+    // "delays that were flagged occurred" has no comma at all to bound the relative clause, so the
+    // first-occurrence split still discards "occurred". Distinguishing this from a genuine trailing
+    // restrictive clause ("the campaign that dropped conversions" — no content after it) requires
+    // knowing where an unpunctuated clause ends, which needs part-of-speech tagging — out of scope for
+    // this dependency-free regex classifier. This test documents current, accepted behavior.
+    expect(isWholeBusinessImperative("No more delays that were flagged occurred this quarter.")).toBe(true);
   });
 });
 
