@@ -1,5 +1,6 @@
 "use client";
 
+import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -21,6 +22,7 @@ import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 import { formatHumanDate } from "@/lib/format-human-date";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -530,8 +532,8 @@ export default function OwnerOperationsPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add operations snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
-              Run operations diagnosis
+            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run operations diagnosis" : "Run operations diagnosis"}
             </Button>
           </div>
 
@@ -613,10 +615,14 @@ export default function OwnerOperationsPage() {
           )}
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
+          <DomainMainTargetContext domain="operations" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
+
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="operations"
               hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              inProgressDiagnosis={dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
               snapshotLabel="operations snapshot"
               diagnosisLabel="Run operations diagnosis"
             />
@@ -624,6 +630,7 @@ export default function OwnerOperationsPage() {
             <OperationsCycleView
               cycle={cycle}
               score={score}
+              businessId={dashboard?.selectedBusinessId}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
               history={dashboard.cycleHistory}
@@ -644,6 +651,7 @@ export default function OwnerOperationsPage() {
 function OperationsCycleView({
   cycle,
   score,
+  businessId,
   missing,
   recommended,
   history,
@@ -656,6 +664,7 @@ function OperationsCycleView({
 }: {
   cycle: any;
   score: any;
+  businessId: string | null | undefined;
   missing: string[];
   recommended: any;
   history: any[];
@@ -702,9 +711,16 @@ function OperationsCycleView({
       </div>
 
       {dataConfidence < 30 && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
-          ⚠ Data confidence is critically low ({dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.
-        </div>
+        // Consistent with the canonical decision (shared reconciler): when Operations owns the main target
+        // or a supporting step, the issue needs attention now and only the score is provisional.
+        <DomainDataGapNotice
+          revision={cycle}
+          domain="operations"
+          domainLabel="Operations"
+          businessId={businessId}
+          missing={missing.map(humanizeMetricKey)}
+          fallback={`⚠ Data confidence is critically low (${dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.`}
+        />
       )}
 
       {missing.length > 0 && (
@@ -715,12 +731,14 @@ function OperationsCycleView({
 
       {recommended && (
         <div className="border-t border-border pt-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Recommended next operations action</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Next step within Operations (local to this area — your overall main target is on Home)</div>
           <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 
@@ -752,8 +770,9 @@ function OperationsCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

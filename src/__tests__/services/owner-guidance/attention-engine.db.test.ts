@@ -57,14 +57,21 @@ const ALL_WORKSPACES = [
 
 // ─── Seed helpers ─────────────────────────────────────────────────────────────
 
+/** One business per workspace: a trend compares ONE business's periods (never two businesses' periods). */
+const trendBusinessByWorkspace = new Map<string, string>();
+
 async function seedMetricSnapshot(workspaceId: string, data: {
   periodEnd: Date; revenue: number; grossProfit: number; netProfit: number;
   complaintCount?: number;
 }) {
-  const bizId = randomUUID();
-  await db.ownerBusiness.create({
-    data: { id: bizId, workspaceId, name: "Test business", businessType: "retail" },
-  });
+  let bizId = trendBusinessByWorkspace.get(workspaceId);
+  if (!bizId) {
+    bizId = randomUUID();
+    await db.ownerBusiness.create({
+      data: { id: bizId, workspaceId, name: "Test business", businessType: "retail" },
+    });
+    trendBusinessByWorkspace.set(workspaceId, bizId);
+  }
   return db.ownerMetricSnapshot.create({
     data: {
       id: randomUUID(), workspaceId, businessId: bizId,
@@ -83,6 +90,7 @@ afterAll(async () => {
   if (!SHOULD_RUN_DB_TESTS) return;
   await db.ownerMetricSnapshot.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
   await db.ownerBusiness.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
+  trendBusinessByWorkspace.clear();
   await db.ownerDoNotRepeatRule.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
   await db.escalation.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
   await db.auditEvent.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });

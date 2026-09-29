@@ -1,5 +1,6 @@
 "use client";
 
+import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -445,6 +446,8 @@ export default function OwnerStrategyPage() {
               load must never render "No scenario yet." next to the error banner above: that
               would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          <DomainMainTargetContext domain="strategy" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
+
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="space-y-6">
               {scenarioList}
@@ -460,6 +463,7 @@ export default function OwnerStrategyPage() {
               score={score}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
+              decisionStep={dashboard.decisionStep ?? null}
               decision={dashboard.decision ?? null}
               history={dashboard.cycleHistory}
               scenarioList={scenarioList}
@@ -544,6 +548,7 @@ function StrategyCycleView({
   score,
   missing,
   recommended,
+  decisionStep,
   decision,
   history,
   scenarioList,
@@ -556,6 +561,7 @@ function StrategyCycleView({
   score: any;
   missing: string[];
   recommended: any;
+  decisionStep: { state: "current" | "not_listed" | "replaced" | "held"; replacedBecause: string | null; openStep?: { title: string; description: string } | null } | null;
   decision: StrategyDecision | null;
   history: any[];
   busy: boolean;
@@ -573,7 +579,9 @@ function StrategyCycleView({
           <StrategyDecisionCard
             decision={decision}
             caption={caption}
-            nextStepRow={recommended ? { status: recommended.status, statusLabel: ACTION_STATUS_LABEL[recommended.status] ?? recommended.status } : null}
+            nextStepRow={decisionStep?.state === "current" && recommended ? { status: recommended.status, statusLabel: ACTION_STATUS_LABEL[recommended.status] ?? recommended.status } : null}
+            replacedStep={decisionStep?.state === "replaced" || decisionStep?.state === "held" ? { replacedBecause: decisionStep.replacedBecause ?? "", held: decisionStep.state === "held", step: recommended ? { title: recommended.title, description: recommended.description } : null } : null}
+            openStep={decisionStep?.state === "not_listed" ? decisionStep.openStep ?? null : null}
           />
           <Disclosure summary="Detailed scores">
             {decision.dimensions.profit.state === "unknown" ? (
@@ -608,12 +616,14 @@ function StrategyCycleView({
 
           {recommended && (
             <div className="border rounded-lg p-4 bg-card">
-              <div className="text-xs uppercase text-muted-foreground">Recommended next strategy action</div>
+              <div className="text-xs uppercase text-muted-foreground">Next step within Strategy (local to this area — your overall main target is on Home)</div>
               <div className="font-semibold">{recommended.title}</div>
               <p className="text-xs text-muted-foreground">{recommended.description}</p>
-              <p className="text-xs text-muted-foreground">
-                priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-              </p>
+              {recommended.localStepSource === "domain_action" && (
+                <p className="text-xs text-muted-foreground">
+                  priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+                </p>
+              )}
             </div>
           )}
         </>
@@ -671,7 +681,7 @@ function StrategyCycleView({
                     )}
                     {a.decisionFitNote && <div className="text-xs text-muted-foreground">{a.decisionFitNote}</div>}
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && !a.decisionFitNote && " — the latest diagnosis no longer flags this; finish or cancel it"}
                       </div>
                     )}

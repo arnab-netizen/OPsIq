@@ -182,7 +182,7 @@ describe("[db] Owner Recovery persistence", () => {
   // merely wired (a call that never fires would pass a static-source
   // check but not this).
   // ---------------------------------------------------------------------
-  it("[db] blocks a material recovery-action transition when a do-not-repeat rule is active for scope:recovery", async () => {
+  it("[db] a do-not-repeat memory of THIS finding blocks a material recovery-action transition; a broad scope:recovery rule never blocks protective recovery work", async () => {
     const workspaceId = ws();
     const business = await createBusiness(
       { name: "Gate Laundry", businessType: "laundry_local_service", currency: "INR" },
@@ -202,6 +202,9 @@ describe("[db] Owner Recovery persistence", () => {
       workspaceId
     );
 
+    // Policy 2: a broad area rule does not prove this repair repeats the failed tactic — protective recovery
+    // work (a repair of a measured loss) is not held back by it.
+    expect(action.findingId).toBeTruthy();
     await db.ownerDoNotRepeatRule.create({
       data: {
         workspaceId,
@@ -213,7 +216,23 @@ describe("[db] Owner Recovery persistence", () => {
         active: true,
       },
     });
+    const { enforceOwnerActionGates } = await import("@/services/owner-mode/owner-action-gate.service");
+    await expect(
+      enforceOwnerActionGates({ workspaceId, businessId: business.id, actionId: action.id, domain: "recovery", toStatus: "in_progress", findingCode: (await db.recoveryFinding.findUnique({ where: { id: action.findingId } }))?.code, findingId: action.findingId })
+    ).resolves.toBeDefined();
 
+    // An EXACT memory of this action's finding is a proven repeat: it blocks the transition.
+    await db.ownerDoNotRepeatRule.create({
+      data: {
+        workspaceId,
+        businessId: business.id,
+        memoryKey: `scope:recovery:finding:${action.findingId}`,
+        summary: "Do not repeat this exact recovery move",
+        reason: "This exact fix was tried before and failed for this business",
+        blocksRepetition: true,
+        active: true,
+      },
+    });
     await expect(
       updateRecoveryAction(action.id, { status: "in_progress", version: assigned.version }, actor, workspaceId)
     ).rejects.toThrow(/do-not-repeat/i);
@@ -245,7 +264,8 @@ describe("[db] Owner Recovery persistence", () => {
       data: {
         workspaceId,
         businessId: business.id,
-        memoryKey: "scope:recovery",
+        // An exact memory of this finding (which would otherwise block — see the test above).
+        memoryKey: `scope:recovery:finding:${action.findingId}`,
         summary: "Do not repeat this recovery move",
         reason: "Tried before and failed for this business",
         blocksRepetition: true,

@@ -11,12 +11,14 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 const {
   mockGetBusinessCondition,
+  mockGetOwnerHome,
   mockGetOwnerBlockMetrics,
   mockGetOwnerControlCenter,
   mockCanonicalJson,
   mockWithCanonical,
 } = vi.hoisted(() => ({
   mockGetBusinessCondition: vi.fn(),
+  mockGetOwnerHome: vi.fn(),
   mockGetOwnerBlockMetrics: vi.fn(),
   mockGetOwnerControlCenter: vi.fn(),
   mockCanonicalJson: vi.fn(),
@@ -25,6 +27,10 @@ const {
 
 vi.mock("@/services/owner-condition/business-condition.service", () => ({
   getBusinessCondition: mockGetBusinessCondition,
+}));
+
+vi.mock("@/services/owner-home/home.service", () => ({
+  getOwnerHome: mockGetOwnerHome,
 }));
 
 vi.mock("@/services/owner-mode/owner-control-center.service", () => ({
@@ -77,7 +83,13 @@ function makeCtx(overrides: Record<string, unknown> = {}): Record<string, unknow
 const MOCK_PROFILE = {
   dataSufficiencyStatus: "sufficient" as const,
   lowConfidenceDomains: [],
-  recommendedNextAction: { title: "Fix cash flow" },
+};
+
+// The ONE canonical owner decision (owner-home service) supplies the next best action.
+const MOCK_HOME = {
+  selectedBusinessId: null,
+  businesses: [],
+  currentOwnerDecision: { primaryTarget: { title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action", findingCode: "CF_LOW_RUNWAY" }, supportingSteps: [] },
 };
 
 const MOCK_BLOCKS = {
@@ -138,7 +150,8 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.resetAllMocks();
   allowAll();
-  mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE });
+  mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE, selectedBusinessId: null });
+  mockGetOwnerHome.mockResolvedValue(MOCK_HOME);
   mockGetOwnerBlockMetrics.mockResolvedValue(MOCK_BLOCKS);
   mockGetOwnerControlCenter.mockResolvedValue(MOCK_PANEL);
   mockCanonicalJson.mockImplementation((data: unknown, opts: { status: number }) => ({ body: data, status: opts?.status ?? 200 }));
@@ -207,7 +220,13 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
 
     it("passes verifiedWorkspaceId to getOwnerBlockMetrics", async () => {
       await controlCenterGet(makeCtx());
-      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_A);
+      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_A, undefined, { businessId: null, unscopedAttributable: false });
+    });
+
+    it("D-P2-3 — finance blocks are scoped to the SELECTED business (a business-less block counts only when it is the only business)", async () => {
+      mockGetOwnerHome.mockResolvedValue({ ...MOCK_HOME, selectedBusinessId: "biz-1", businesses: [{ id: "biz-1" }] });
+      await controlCenterGet(makeCtx());
+      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_A, undefined, { businessId: "biz-1", unscopedAttributable: true });
     });
 
     it("passes verifiedWorkspaceId to getOwnerControlCenter as first arg", async () => {
@@ -255,24 +274,41 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
 
   describe("null-profile fallback", () => {
     it("uses default dataSufficiencyStatus (caution) when profile is null", async () => {
-      mockGetBusinessCondition.mockResolvedValue({ profile: null });
+      mockGetBusinessCondition.mockResolvedValue({ profile: null, selectedBusinessId: null });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.dataSufficiencyStatus).toBe("caution");
     });
 
     it("uses empty lowConfidenceDomains when profile is null", async () => {
-      mockGetBusinessCondition.mockResolvedValue({ profile: null });
+      mockGetBusinessCondition.mockResolvedValue({ profile: null, selectedBusinessId: null });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.lowConfidenceDomains).toEqual([]);
     });
 
-    it("uses null nextBestAction when profile is null", async () => {
-      mockGetBusinessCondition.mockResolvedValue({ profile: null });
+    it("uses null nextBestAction when the canonical decision has no target", async () => {
+      mockGetOwnerHome.mockResolvedValue({ selectedBusinessId: null, businesses: [], currentOwnerDecision: { primaryTarget: null } });
       await controlCenterGet(makeCtx());
       const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
       expect(ccCtx.nextBestAction).toBeNull();
+    });
+
+    it("nextBestAction is the canonical decision's primary target, resolved for the verified workspace", async () => {
+      await controlCenterGet(makeCtx());
+      const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
+      expect(ccCtx.nextBestAction).toBe("Fix cash flow");
+      // The panel receives the canonical main target so its guardrails can never veto it.
+      expect(ccCtx.mainTarget).toEqual({ title: "Fix cash flow", priorityClass: "SURVIVAL_CASH", source: "domain_action", findingCode: "CF_LOW_RUNWAY" });
+      expect(mockGetOwnerHome).toHaveBeenCalledWith(WS_A, BIZ_ID);
+    });
+
+    it("never uses a decision for a different business than the condition profile", async () => {
+      mockGetBusinessCondition.mockResolvedValue({ profile: MOCK_PROFILE, selectedBusinessId: "biz-other" });
+      await controlCenterGet(makeCtx());
+      const ccCtx = mockGetOwnerControlCenter.mock.calls[0][1] as Record<string, unknown>;
+      expect(ccCtx.nextBestAction).toBeNull();
+      expect(ccCtx.mainTarget).toBeNull();
     });
   });
 
@@ -316,7 +352,7 @@ describe("GET /api/owner/control-center — non-DB mock tests", () => {
     it("uses verifiedWorkspaceId not a body/query workspace param for block metrics", async () => {
       const ctx = makeCtx({ verifiedWorkspaceId: WS_B });
       await controlCenterGet(ctx);
-      expect(mockGetOwnerBlockMetrics).toHaveBeenCalledWith(WS_B);
+      expect(mockGetOwnerBlockMetrics.mock.calls[0][0]).toBe(WS_B);
     });
 
     it("uses verifiedWorkspaceId not a body/query workspace param for control center service", async () => {

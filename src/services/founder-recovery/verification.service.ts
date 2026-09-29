@@ -94,7 +94,7 @@ export async function recordVerification(
   if (result.reachedTarget) {
     try {
       const latestSnapshot = await db.ownerMetricSnapshot.findFirst({
-        where: { businessId: action.businessId, workspaceId },
+        where: { businessId: action.businessId, workspaceId, periodEnd: { lte: new Date() } },
         orderBy: { periodEnd: "desc" },
         select: { id: true },
       });

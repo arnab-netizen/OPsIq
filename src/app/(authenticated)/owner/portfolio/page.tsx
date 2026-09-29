@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
-import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
 
@@ -110,7 +109,7 @@ export default function OwnerPortfolioPage() {
           <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Cross-business ranking</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-              <div>Most urgent: <strong>{byId(ranking.mostUrgentBusinessId)}</strong></div>
+              <div>Business needing attention first: <strong>{byId(ranking.mostUrgentBusinessId)}</strong> <span className="text-muted-foreground">(it has the most urgent thing needing action — not a judgement of its overall health)</span></div>
               <div>Highest profit opportunity: <strong>{byId(ranking.highestProfitOpportunityBusinessId)}</strong></div>
               <div>Highest cash risk: <strong>{byId(ranking.highestCashRiskBusinessId)}</strong></div>
               <div>Worst execution problem: <strong>{byId(ranking.worstExecutionProblemBusinessId)}</strong></div>
@@ -123,10 +122,10 @@ export default function OwnerPortfolioPage() {
               <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s top 3 priorities</div>
               <div className="space-y-2">
                 {view.top3Priorities.map((p: any, i: number) => (
-                  <div key={p.action?.id ?? i} className="border-b py-1">
-                    <div className="font-semibold">{i + 1}. {p.action?.title}</div>
+                  <div key={p.target?.candidateId ?? i} className="border-b py-1">
+                    <div className="font-semibold">{i + 1}. {p.target?.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.businessName} · {DOMAIN_LABEL[p.action?.domain] ?? p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
+                      {p.businessName}&apos;s main target · {p.target?.domainLabel ?? DOMAIN_LABEL[p.target?.domain] ?? p.target?.domain}
                     </div>
                   </div>
                 ))}

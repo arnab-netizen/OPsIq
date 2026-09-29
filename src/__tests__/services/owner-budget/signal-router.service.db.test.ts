@@ -112,6 +112,22 @@ describe("[db] Dynamic Budget cross-module signal router", () => {
     expect(cycles.length).toBeGreaterThan(0);
   });
 
+  it("[db] re-diagnosis never uses a superseded (amended-away) snapshot, even one with a later period", async () => {
+    const workspaceId = ws(); const businessId = await newBusiness(workspaceId);
+    const currentId = randomUUID();
+    const supersededId = randomUUID();
+    const base = { workspaceId, businessId, currency: "INR", costOfGoods: 250000, fixedCosts: 150000, cashOnHand: 400000, dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date() };
+    await db.ownerFinancialSnapshot.create({ data: { ...base, id: currentId, periodStart: new Date("2026-05-01"), periodEnd: new Date("2026-05-31"), revenue: 500000 } });
+    await db.ownerFinancialSnapshot.create({
+      data: { ...base, id: supersededId, periodStart: new Date("2026-06-01"), periodEnd: new Date("2026-06-30"), revenue: 900000, supersededById: currentId },
+    });
+    const reassessmentId = randomUUID();
+    const res = await routeReassessmentSignals({ businessId, workspaceId, actorId: actor, reassessmentId, signals: [sig("cash_runway_risk", "CRITICAL")] });
+    expect(res.reDiagnosisTriggered).toBe(true);
+    const cycles = await db.ownerFinanceCycle.findMany({ where: { workspaceId, businessId }, select: { snapshotId: true } });
+    expect(cycles.map((c) => c.snapshotId)).toEqual([currentId]);
+  });
+
   it("[db] no finance snapshot ⇒ no re-diagnosis, signals still routed (gap-safe)", async () => {
     const workspaceId = ws(); const businessId = await newBusiness(workspaceId);
     const reassessmentId = randomUUID();

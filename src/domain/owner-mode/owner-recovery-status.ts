@@ -32,7 +32,7 @@ export type RecoveryStatus = (typeof RECOVERY_STATUSES)[number];
 
 const NO_GUARANTEE = "Recovery is not guaranteed.";
 const UNCERTAINTY =
-  "OpsIQ shows the next governed recovery step based on current evidence. Stabilization is not proven until required evidence and reassessment pass; growth remains blocked until stabilization criteria are met.";
+  "OpsIQ shows the next governed recovery step based on current evidence. Stabilization is not proven until required evidence and reassessment pass.";
 
 const NO_MONEY = /[$£€]\s?\d|\b\d+(?:\.\d+)?\s?%|\bROI\b|\bMRR\b|guaranteed (recovery|success|profit)/i;
 const noMoney = (label: string) => z.string().refine((s) => !NO_MONEY.test(s), { message: `no fabricated money/guaranteed-outcome text in ${label}` });
@@ -166,7 +166,7 @@ export function mapRecoveryStatus(
     managerStaffActions: view.managerStaffActions,
     blockedUnsafeActions: view.blockedUnsafeActions.length
       ? view.blockedUnsafeActions
-      : ["Scale/growth/expansion stays blocked until stabilization is proven."],
+      : ["Scaling (acquisition spend, campaign expansion, new launches) stays blocked until stabilization is proven."],
     stabilizationGate: view.stabilizationGateStatus,
     thriveGate: view.thriveGateStatus,
     uncertaintyCaveat: UNCERTAINTY,

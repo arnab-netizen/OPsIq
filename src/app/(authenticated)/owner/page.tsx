@@ -9,7 +9,18 @@ import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { humanizeMetricKey } from "@/lib/metric-label";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import {
+  ownerImperativeContext,
+  planConstraintAsCondition,
+  planNextActionText,
+  reconcilePlanCards,
+  reconcilePlanGrowthGate,
+  reconcilePlanProse,
+  reconcilePlanSummary,
+} from "@/domain/owner-spine/owner-imperatives";
 import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -314,6 +325,10 @@ export default function OwnerCommandCenterPage() {
     const seq = ++requestSeq.current;
     setProfileLoading(true);
     setError(null);
+    // A (re)load — including a business switch — never keeps showing the previous load's data (the
+    // previous business's main target, plan or action) while this one is in flight or if it fails.
+    setData(null); setControl(null); setWbp(null); setGuidance(null);
+    setReadiness(null); setActionPlan(null); setPriorities(null);
     try {
       const qs = `?businessId=${businessId}`;
       const res = await api(`/api/owner/command-center${qs}`);
@@ -404,7 +419,12 @@ export default function OwnerCommandCenterPage() {
 
   const businessList: any[] = businesses;
   const profile = data?.profile ?? null;
-  const next = profile?.recommendedNextAction ?? null;
+  // The ONE canonical owner decision (owner-home service → Spine arbiter) — the same main target
+  // Home, Cockpit and Priorities show. Nothing on this page elects a different one.
+  const decision = (data?.currentOwnerDecision ?? null) as CurrentOwnerDecision | null;
+  // Plan analysis is a secondary system: beside the canonical decision its imperatives are restated
+  // as constraints on the main target (owner-imperatives.ts), never shown as separate orders.
+  const imperativeCtx = ownerImperativeContext(decision);
   const missing: string[] = profile?.missingCriticalData ?? [];
   const missingWithPriority: Array<{ field: string; priority: string }> = data?.missingInputsWithPriority ?? [];
 
@@ -414,7 +434,7 @@ export default function OwnerCommandCenterPage() {
       <div className="mb-6">
         <PageHeader
           title="Owner Command Center"
-          description="One business condition. One highest-impact next action. Evidence, not guesses."
+          description="One business condition. One main target. Evidence, not guesses."
         />
         <div className="mt-4 flex flex-wrap gap-2">
           {[
@@ -439,7 +459,7 @@ export default function OwnerCommandCenterPage() {
             { label: "Automation", href: "/owner/automation", domain: null },
             { label: "Growth Pricing", href: "/owner/growth-pricing", domain: null },
           ].map(({ label, href, domain }) => {
-            const isRecommended = domain !== null && next?.domain === domain;
+            const isRecommended = domain !== null && decision?.primaryDomain === domain;
             return (
               <Link key={href} href={href}>
                 <Button
@@ -480,9 +500,21 @@ export default function OwnerCommandCenterPage() {
             </h2>
           )}
 
-          {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} />}
+          {decision && (
+            <div className="mb-6 rounded-lg border bg-card p-4" data-testid="command-center-owner-decision">
+              <OwnerDecisionCard decision={decision} />
+            </div>
+          )}
 
-          {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
+          {/* Supporting plan analysis: the whole-business plan model runs its own analysis, so it is
+              collapsed behind one disclosure BELOW the canonical decision and never presented as a
+              competing "first" (hostile review A P1-1). */}
+          {(wbp?.supervisor?.found || priorities?.found || wbp?.found) && (
+          <Disclosure summary={decision ? "Supporting plan analysis (context for your main target above)" : "Supporting plan analysis"} className="mb-6" data-testid="command-center-plan-analysis">
+          <div className="p-3">
+          {wbp?.supervisor?.found && <SupervisorSummary summary={reconcilePlanSummary(wbp.supervisor, imperativeCtx)} />}
+
+          {priorities?.found && <PriorityCommandStrip cards={reconcilePlanCards(priorities.cards, imperativeCtx)} />}
 
           {wbp?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-whole-business-plan">
@@ -503,21 +535,22 @@ export default function OwnerCommandCenterPage() {
               </div>
 
               <div className="rounded-md border border-foreground/20 bg-foreground/5 p-3 mb-3" data-testid="wbp-top-priority">
-                <div className="text-xs uppercase text-muted-foreground">Top priority</div>
+                <div className="text-xs uppercase text-muted-foreground">Plan analysis focus (supporting context — your main target is shown above)</div>
                 <div className="text-lg font-semibold">{wbp.topPriority.label}</div>
                 <div className="text-xs text-muted-foreground">
-                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{String(wbp.dominantConstraint).replace(/_/g, " ")}</span>
+                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{String(wbp.dominantConstraint).replace(/_/g, " ").toLowerCase()}</span>
                 </div>
               </div>
 
               <div className="text-sm mb-3" data-testid="wbp-next-action">
-                <span className="font-medium">Next best action:</span> {wbp.nextBestAction}
+                <span className="font-medium">The plan analysis suggests:</span> {planNextActionText(wbp.nextBestAction, imperativeCtx)}
               </div>
 
+              {/* Beside a canonical decision the plan's stop list is restated as constraints on the main target. */}
               {wbp.doNotDo.length > 0 && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm mb-3" data-testid="wbp-do-not-do">
-                  <strong>What NOT to do / stop:</strong>
-                  <ul className="list-disc ml-5">{wbp.doNotDo.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                  <strong>{imperativeCtx.decisionPresent ? "Plan constraints:" : "What NOT to do / stop:"}</strong>
+                  <ul className="list-disc ml-5">{wbp.doNotDo.map((x: string, i: number) => <li key={i}>{planConstraintAsCondition(x, imperativeCtx)}</li>)}</ul>
                 </div>
               )}
 
@@ -544,11 +577,10 @@ export default function OwnerCommandCenterPage() {
 
               <div className="grid gap-3 sm:grid-cols-2 mb-3">
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-growth-gate">
-                  <strong>Growth / scale gate:</strong> {wbp.growth.scaleAllowed ? "scale allowed (capped pilot)" : "scale gated"}
-                  {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.map((c: string) => c.replace(/_/g, " ")).join(", ")}</span>}
+                  <strong>Growth / scale gate:</strong> {reconcilePlanGrowthGate(wbp.growth, imperativeCtx)}
                 </div>
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-arbitration">
-                  <strong>Cross-domain arbitration:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ")} wins; {wbp.arbitration.rejectedCount} conflicting move(s) rejected.
+                  <strong>Plan analysis constraint:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ").toLowerCase()}; {wbp.arbitration.rejectedCount} conflicting plan move(s) set aside.
                   {wbp.arbitration.ownerApprovalNeeded && " Owner approval needed."}
                 </div>
               </div>
@@ -571,11 +603,14 @@ export default function OwnerCommandCenterPage() {
 
               <Disclosure summary="Whole-business plan summary" data-testid="wbp-plan-detail">
                 <p className="text-sm mt-1 text-foreground">{wbp.plan.businessHealthSummary}</p>
-                <p className="text-xs mt-1"><strong>7-day:</strong> {wbp.plan.plan7Day}</p>
-                <p className="text-xs"><strong>30-day:</strong> {wbp.plan.plan30Day}</p>
-                <p className="text-xs"><strong>90-day:</strong> {wbp.plan.plan90Day}</p>
+                <p className="text-xs mt-1"><strong>7-day:</strong> {reconcilePlanProse(wbp.plan.plan7Day, imperativeCtx)}</p>
+                <p className="text-xs"><strong>30-day:</strong> {reconcilePlanProse(wbp.plan.plan30Day, imperativeCtx)}</p>
+                <p className="text-xs"><strong>90-day:</strong> {reconcilePlanProse(wbp.plan.plan90Day, imperativeCtx)}</p>
               </Disclosure>
             </section>
+          )}
+          </div>
+          </Disclosure>
           )}
 
           {readiness?.found && (
@@ -657,9 +692,10 @@ export default function OwnerCommandCenterPage() {
           )}
 
           {actionPlan?.found && actionPlan.assignment && (
+            <Disclosure summary="Plan action & proof (supporting analysis)" className="mb-6" data-testid="owner-action-plan-disclosure">
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-action-plan">
-              <div className="text-xs uppercase text-muted-foreground mb-2">Action &amp; proof</div>
-              <div className="text-sm font-medium mb-2" data-testid="action-title">{actionPlan.assignment.actionTitle}</div>
+              <div className="text-xs uppercase text-muted-foreground mb-2">Plan action &amp; proof (supporting analysis)</div>
+              <div className="text-sm font-medium mb-2" data-testid="action-title">{planNextActionText(actionPlan.assignment.actionTitle, imperativeCtx)}</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-md border p-2 text-sm" data-testid="action-responsible">
                   <strong>Who owns it:</strong> <span className="capitalize">{actionPlan.assignment.responsibleParty}</span>
@@ -681,6 +717,7 @@ export default function OwnerCommandCenterPage() {
                 </div>
               </div>
             </section>
+            </Disclosure>
           )}
 
           {profileLoading ? (
@@ -709,18 +746,6 @@ export default function OwnerCommandCenterPage() {
                   </Badge>
                   <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
-                {(() => {
-                  const topFindings: any[] = profile.topFindings ?? [];
-                  const driver = topFindings.find((f: any) => f.severity === "critical") ??
-                    topFindings.find((f: any) => f.severity === "high") ??
-                    topFindings[0];
-                  return driver ? (
-                    <div className="text-xs text-muted-foreground mt-2">
-                      <span className="font-medium">Primary driver:</span>{" "}
-                      <span>{DOMAIN_LABEL[driver.domain] ?? driver.domain}</span> — {driver.title}
-                    </div>
-                  ) : null;
-                })()}
                 <div className="text-xs text-muted-foreground mt-1">
                   Domains wired: {(data.domainsWired ?? []).map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ") || "none"}
                 </div>
@@ -748,18 +773,21 @@ export default function OwnerCommandCenterPage() {
                     </div>
                   )}
 
+                  {control.conditions?.length > 0 && (
+                    <div className="rounded-md border border-border bg-card p-3 text-sm space-y-1 mb-3" data-testid="control-conditions">
+                      <strong>How to carry out your next steps:</strong>
+                      <ul className="list-disc ml-5">
+                        {control.conditions.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
                   {control.whatNotToDo?.length > 0 && (
                     <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm space-y-1 mb-3">
                       <strong>What NOT to do now:</strong>
                       <ul className="list-disc ml-5">
                         {control.whatNotToDo.map((a: string, i: number) => <li key={i}>{a}</li>)}
                       </ul>
-                    </div>
-                  )}
-
-                  {control.nextBestAction && (
-                    <div className="text-sm mb-3">
-                      <span className="font-medium">Next best action:</span> {control.nextBestAction}
                     </div>
                   )}
 
@@ -822,40 +850,6 @@ export default function OwnerCommandCenterPage() {
                   <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
                 </div>
               )}
-
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground">Do this next</div>
-                {next ? (
-                  <>
-                    <div className="text-lg font-semibold">{next.title}</div>
-                    <p className="text-sm text-muted-foreground">{next.description}</p>
-                    {next.evidenceRationale && (
-                      <p className="text-xs text-muted-foreground mt-1 italic">
-                        Why: {next.evidenceRationale}
-                      </p>
-                    )}
-                    {next.evidence && next.evidence.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Based on: {next.evidence.map(humanizeEvidenceLine).join(" · ")}
-                      </p>
-                    )}
-                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
-                      <Badge variant="muted-accessible">{DOMAIN_LABEL[next.domain] ?? next.domain}</Badge>
-                      <span>priority {Math.round(next.priorityScore)}</span>
-                      <span>· impact {Math.round(next.expectedImpactScore)}</span>
-                      <span>· effort {Math.round(next.effortScore)}</span>
-                      <span>· verify via {humanizeMetricKey(next.verificationMetric)}</span>
-                    </div>
-                    {DOMAIN_LINK[next.domain] && (
-                      <Link href={DOMAIN_LINK[next.domain]} className="inline-block mt-3">
-                        <Button className="min-h-[44px]">Open {DOMAIN_LABEL[next.domain] ?? next.domain}</Button>
-                      </Link>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No outstanding action — keep verifying outcomes.</p>
-                )}
-              </section>
 
               <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-3">Domain scores</h2>

@@ -245,6 +245,8 @@ export const AUDIT_EVENTS = {
   OWNER_GATE_OPT_OUT_RECORDED: "owner.gate_opt_out_recorded",
   OWNER_GATE_OPT_OUT_CLEARED: "owner.gate_opt_out_cleared",
   OWNER_GATE_PROMOTION_BLOCKED: "owner.gate_promotion_blocked",
+  /** A gate could not assess an owner action (e.g. unknown margin) and did not block it: recorded, never silent. */
+  OWNER_GATE_ASSESSMENT_ABSTAINED: "owner.gate_assessment_abstained",
   // Jarvis 360 Slice 4 — owner load reduction / approval memory
   OWNER_APPROVAL_MEMORY_RECORDED: "owner.approval_memory_recorded",
   OWNER_APPROVAL_MEMORY_REUSED: "owner.approval_memory_reused",
@@ -262,6 +264,7 @@ export const AUDIT_EVENTS = {
   // Jarvis 360 Slice 12–14 — memory / self-eval / compliance
   OWNER_DO_NOT_REPEAT_BLOCKED: "owner.do_not_repeat_blocked",
   OWNER_DO_NOT_REPEAT_RECORDED: "owner.do_not_repeat_recorded",
+  OWNER_DO_NOT_REPEAT_CONTEXT_CHANGED: "owner.do_not_repeat_context_changed",
   OWNER_SELF_EVALUATION_RECORDED: "owner.self_evaluation_recorded",
   OWNER_COMPLIANCE_REVIEW_REQUIRED: "owner.compliance_review_required",
   // Jarvis 360 gap-closure — live owner-loop wiring
@@ -288,6 +291,11 @@ export const AUDIT_EVENTS = {
   RECOVERY_REASSESSMENT_TRIGGERED: "owner.recovery_reassessment_triggered",
   RECOVERY_OUTCOME_VERIFIED: "owner.recovery_outcome_verified",
   RECOVERY_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.recovery_verification_reassessment_triggered",
+
+  // Canonical owner decision (Owner Intelligence Spine) — recorded when the owner's main target,
+  // critical-issue set, confidence or funding gap materially changes; also the decision memory the
+  // resolver compares against for "what changed" (independent of which owner page was visited).
+  OWNER_DECISION_CHANGED: "owner.decision_changed",
 
   // Owner Finance (Module 2)
   OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
@@ -558,6 +566,8 @@ export const AUDIT_EVENTS = {
   OWNER_RESOURCE_RELEASED: "owner.resource_released",
   OWNER_BUSINESS_RISK_IDENTIFIED: "owner.business_risk_identified",
   OWNER_BUSINESS_RISK_STATUS_CHANGED: "owner.business_risk_status_changed",
+  /** A risk's recorded fields were edited without a status change (old → new values in the payload). */
+  OWNER_BUSINESS_RISK_UPDATED: "owner.business_risk_updated",
   OWNER_BUSINESS_RISK_RESOLVED: "owner.business_risk_resolved",
   OWNER_BUSINESS_RISK_REVIEW_COMPLETED: "owner.business_risk_review_completed",
   OWNER_BUSINESS_RISK_ACCEPTED: "owner.business_risk_accepted",
@@ -567,6 +577,7 @@ export const AUDIT_EVENTS = {
   OWNER_COMPLIANCE_REVIEW_COMPLETED: "owner.compliance_review_completed",
   OWNER_COMPLIANCE_BREACH_RECORDED: "owner.compliance_breach_recorded",
   OWNER_COMPLIANCE_TASK_LINKED: "owner.compliance_task_linked",
+  OWNER_COMPLIANCE_BUSINESS_ASSIGNED: "owner.compliance_business_assigned",
   OWNER_KPI_OWNERSHIP_ASSIGNED: "owner.kpi_ownership_assigned",
   OWNER_KPI_REVIEWED: "owner.kpi_reviewed",
   OWNER_DECISION_CONFIDENCE_RECORDED: "owner.decision_confidence_recorded",

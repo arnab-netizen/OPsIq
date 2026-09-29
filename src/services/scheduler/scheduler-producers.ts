@@ -31,7 +31,7 @@
  */
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN } from "@/infra/scheduler-handlers";
+import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
 import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mapping";
 
 const EMAIL_MAX_ATTEMPTS = 3;
@@ -150,4 +150,46 @@ export async function enqueueDueReassessmentScanTasks(): Promise<ProducerScanRes
   }
 
   return { candidatesFound: dueWorkspaces.length, enqueued };
+}
+
+/**
+ * Enqueue one risk-review-scan per workspace that has an open, overdue, non-fixture risk, or an
+ * unresolved "Risk review overdue" alert (whose risk may since have been resolved). Day-bucketed
+ * idempotency key, as above. The handler re-scopes to the task's own claimed workspaceId.
+ */
+export async function enqueueDueRiskReviewScanTasks(): Promise<ProducerScanResult> {
+  const scheduler = new DatabaseSchedulerProvider();
+  const now = new Date();
+
+  const [overdue, openAlerts] = await Promise.all([
+    db.businessRiskEntry.findMany({
+      where: { reviewDueDate: { lt: now }, status: { notIn: ["RESOLVED", "CLOSED"] }, isFixtureRecord: false },
+      select: { workspaceId: true },
+      distinct: ["workspaceId"],
+      take: MAX_ENQUEUE_PER_SCAN,
+    }),
+    db.alert.findMany({
+      where: { idempotencyKey: { startsWith: "risk_overdue_" }, resolvedAt: null },
+      select: { workspaceId: true },
+      distinct: ["workspaceId"],
+      take: MAX_ENQUEUE_PER_SCAN,
+    }),
+  ]);
+  const workspaceIds = [...new Set([...overdue, ...openAlerts].map((r: { workspaceId: string }) => r.workspaceId))].slice(0, MAX_ENQUEUE_PER_SCAN);
+
+  const dayBucket = now.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+
+  let enqueued = 0;
+  for (const workspaceId of workspaceIds) {
+    await scheduler.schedule({
+      taskName: TASK_NAME_RISK_REVIEW_SCAN,
+      scheduledFor: now,
+      maxAttempts: 3,
+      workspaceId,
+      idempotencyKey: `${TASK_NAME_RISK_REVIEW_SCAN}:${workspaceId}:${dayBucket}`,
+    });
+    enqueued++;
+  }
+
+  return { candidatesFound: workspaceIds.length, enqueued };
 }

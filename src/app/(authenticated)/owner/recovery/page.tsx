@@ -10,6 +10,7 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -317,8 +318,8 @@ export default function OwnerRecoveryPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add metric snapshot
             </Button>
-            <Button onClick={runCycle} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
-              Run diagnosis cycle
+            <Button onClick={runCycle} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run diagnosis cycle" : "Run diagnosis cycle"}
             </Button>
           </div>
 
@@ -349,9 +350,12 @@ export default function OwnerRecoveryPage() {
               load must never render "No metric snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard.latestSnapshot
+              {dashboard.latestSnapshotDiagnosis?.current
+                ? "These figures were already diagnosed. Their period is still in progress, so the result is provisional (see the note above) and there is no completed reading yet — it appears here once a completed period is diagnosed."
+                : dashboard.latestSnapshot
                 ? "Snapshot recorded. Click “Run diagnosis cycle” to generate findings and a recovery plan."
                 : "No metric snapshot yet. Add a snapshot, then run a diagnosis cycle."}
             </div>
@@ -440,8 +444,9 @@ function RecoveryCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     {a.carriedFromCycleSequence != null && (
-                      <div className="text-xs text-muted-foreground">Still open from cycle #{a.carriedFromCycleSequence}
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
                         {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground">

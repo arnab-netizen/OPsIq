@@ -173,8 +173,9 @@ export const businessConditionProfileSchema = z.object({
   lowConfidenceDomains: z.array(ownerDomainSchema).default([]),
   domainScores: z.array(domainScoreSchema).default([]),
   topFindings: z.array(ownerFindingSchema).default([]),
+  /** The domains' actions as persisted (unranked, informational). The owner's overall next action is
+   *  NOT part of this rollup: it is the canonical owner decision (owner-spine/owner-decision.ts). */
   topActions: z.array(ownerActionSchema).default([]),
-  recommendedNextAction: ownerActionSchema.optional(),
   missingCriticalData: z.array(z.string()).default([]),
   generatedAt: z.date(),
 });
@@ -249,9 +250,14 @@ export function calculateOwnerPriorityScore(input: OwnerPriorityInput): number {
 }
 
 /**
- * Rank actions by descending priority with a fully deterministic tie-break
- * (priority → expectedImpact → confidence → findingCode → title). Pure; does not
- * mutate the input array. Uses each action's stored `priorityScore`.
+ * DOMAIN-LOCAL ordering: rank one domain's own actions by descending priority with a deterministic
+ * tie-break (priority → expectedImpact → confidence → findingCode → title). Pure; does not mutate
+ * the input array. Uses each action's stored `priorityScore`.
+ *
+ * This is NOT the owner's overall priority. Across domains the score saturates at 100 and ties would
+ * fall to finding-code/title order; the single cross-domain election is
+ * `resolveOwnerDecision` (owner-spine/owner-decision.ts), which arbitrates by business class and
+ * severity first. Never use this to pick an overall "#1".
  */
 export function rankOwnerActions(actions: OwnerAction[]): OwnerAction[] {
   return [...actions].sort((a, b) => {
@@ -347,8 +353,8 @@ export interface BusinessConditionProfileInput {
 /**
  * Aggregate per-domain scores into one Business Condition Profile. Deterministic
  * and honest: with no domain scores every value is 0 (nothing invented), and
- * `missingCriticalData` is carried through (deduped) — never fabricated. The
- * recommended next action is the top-ranked owner action (or undefined).
+ * `missingCriticalData` is carried through (deduped) — never fabricated. It does NOT elect an
+ * overall next action: that is the single canonical owner decision (owner-spine/owner-decision.ts).
  */
 export function buildBusinessConditionProfile(
   input: BusinessConditionProfileInput
@@ -389,8 +395,6 @@ export function buildBusinessConditionProfile(
         : "sufficient";
 
   const topActions = input.topActions ?? [];
-  const ranked = rankOwnerActions(topActions);
-  const recommendedNextAction = ranked.length > 0 ? ranked[0] : undefined;
 
   // Carry missing-critical-data through deduped; never invent entries.
   const missingCriticalData = Array.from(new Set(input.missingCriticalData ?? []));
@@ -411,7 +415,6 @@ export function buildBusinessConditionProfile(
     domainScores: scores,
     topFindings: input.topFindings ?? [],
     topActions,
-    recommendedNextAction,
     missingCriticalData,
     generatedAt: input.now ?? new Date(),
   };

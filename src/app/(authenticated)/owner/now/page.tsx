@@ -6,6 +6,8 @@ import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from 
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
 
@@ -172,6 +174,10 @@ export default function OwnerNowViewPage() {
       />
 
       <BusinessContextSelector businesses={businesses} selectedId={activeBusinessId} onChange={onSwitchBusiness} />
+
+      {/* The ONE canonical owner decision (same object Home/Cockpit/Priorities render). The operating
+          signals below are Now View's context around it — they never name a different main target. */}
+      {data.ownerDecision && <OwnerDecisionCard decision={data.ownerDecision as CurrentOwnerDecision} detail="compact" />}
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
         Business selection scopes cash, finance, quality and retention signals below. Staff workload,
         supply/capacity, process-breakdown, and proof-risk signals are workspace-wide and do not change
@@ -195,14 +201,15 @@ export default function OwnerNowViewPage() {
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (
         <section style={{ background: "#fffbeb", padding: 16, borderRadius: 8 }}>
-          <h2 style={{ marginTop: 0 }}>Data needed first</h2>
+          <h2 style={{ marginTop: 0 }}>Data OpsIQ still needs</h2>
           <ul>{view.missingDataRequests.map((m: string, i: number) => <li key={i}>{m}</li>)}</ul>
         </section>
       )}
 
       <section>
-        <h2>Top {Math.min(steps.length, 3) || ""} actions now</h2>
-        {steps.length === 0 && <p>No urgent owner actions right now.</p>}
+        <h2>Operating signals to act on</h2>
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#6b7280" }}>Day-to-day signals from your operating data. Your main target is shown above; these support it and never replace it.</p>
+        {steps.length === 0 && <p>No urgent operating signals right now.</p>}
         {steps.map((s, i) => (
           <div key={i} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 12 }}>
             <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{s.exactStep}</p>
@@ -215,10 +222,17 @@ export default function OwnerNowViewPage() {
         ))}
       </section>
 
-      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.length > 0 && (
+      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.some((a: any) => a.conditionOn) && (
+        <section style={{ padding: 16, borderRadius: 8, border: "1px solid var(--border)" }} data-testid="now-step-conditions">
+          <h2 style={{ marginTop: 0 }}>How to carry out your next steps</h2>
+          <ul>{view.actionsToAvoid.filter((a: any) => a.conditionOn).map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
+        </section>
+      )}
+
+      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.some((a: any) => !a.conditionOn) && (
         <section style={{ background: "#fef2f2", padding: 16, borderRadius: 8 }}>
           <h2 style={{ marginTop: 0 }}>Do NOT do now</h2>
-          <ul>{view.actionsToAvoid.map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
+          <ul>{view.actionsToAvoid.filter((a: any) => !a.conditionOn).map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
         </section>
       )}
 
@@ -236,7 +250,7 @@ export default function OwnerNowViewPage() {
           <p>{beginner.whyItMatters}</p>
           <p>If ignored: {beginner.whatHappensIfIgnored}</p>
           {Array.isArray(beginner.whatToDoFirst) && (
-            <><p style={{ marginBottom: 4, fontWeight: 600 }}>Do first:</p>
+            <><p style={{ marginBottom: 4, fontWeight: 600 }}>{data.ownerDecision ? "Do first:" : "Operating signals to act on:"}</p>
             <ul>{beginner.whatToDoFirst.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul></>
           )}
           {Array.isArray(beginner.whatNotToDo) && (

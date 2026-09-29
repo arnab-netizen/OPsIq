@@ -215,7 +215,7 @@ export default function OwnerProcessIntelligencePage() {
       )}
       {!loading && !error && (
         <>
-          {/* PRIMARY FOCUS — the single most important thing, always visible (no owner overload). */}
+          {/* PROCESS FOCUS — this page's domain-local process finding; the overall main target is the canonical owner decision (Home). */}
           <ProcessIntelligencePanel data={pi} />
           <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>What to do about it</h2>
@@ -225,7 +225,7 @@ export default function OwnerProcessIntelligencePage() {
           {/* THE ACTION TO TAKE — the diagnosis converted into a single governed execution route (who acts,
               approval level, evidence to complete), so the owner does not re-key the finding into a form. */}
           <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>The action to take</h2>
+            <h2 style={{ margin: 0, fontSize: 16 }}>The process action to take (process area only)</h2>
             <ProcessExecutionBridgePanel data={bridge} onAction={(taskKey, action) => { if (!actionBusy) void runAction(taskKey, action); }} />
             {actionMessage && <p data-testid="bridge-action-message" style={{ margin: 0, fontSize: 12, color: "#374151" }}>{actionMessage}</p>}
           </section>

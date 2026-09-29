@@ -12,7 +12,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { isExpired, isExpiringSoon } from "@/domain/owner-mode/compliance-boundary";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 
 // ─── Status types ─────────────────────────────────────────────────────────────
@@ -216,6 +216,8 @@ export async function getComplianceReviewItems(
 export interface ComplianceDetail {
   id: string;
   workspaceId: string;
+  /** The business the obligation applies to; null when it was recorded with no business. */
+  businessId: string | null;
   kind: string;
   name: string;
   reference: string | null;
@@ -244,7 +246,7 @@ export interface ComplianceDetail {
 }
 
 interface ComplianceRow2 {
-  id: string; workspaceId: string; kind: string; name: string;
+  id: string; workspaceId: string; businessId: string | null; kind: string; name: string;
   reference: string | null; expiresAt: Date | null; status: string;
   jurisdiction: string | null; legalBasis: string | null; obligationOwner: string | null;
   evidenceValidityDays: number | null; recurrenceMonths: number | null;
@@ -261,6 +263,7 @@ function rowToDetail(
   return {
     id: r.id,
     workspaceId: r.workspaceId,
+    businessId: r.businessId,
     kind: r.kind,
     name: r.name,
     reference: r.reference,
@@ -355,8 +358,10 @@ export async function updateComplianceStatus(input: UpdateComplianceStatusInput)
   const now = new Date();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.ownerComplianceItem.update({
-      where: { id: input.itemId },
+    // Compare-and-set on the status the transition was validated against: a concurrent change in between
+    // must not be overwritten, nor audited as a transition from a status that no longer existed.
+    const res = await tx.ownerComplianceItem.updateMany({
+      where: { id: input.itemId, workspaceId: input.workspaceId, status: existing.status },
       data: {
         status: input.newStatus,
         reviewedAt: now,
@@ -365,6 +370,11 @@ export async function updateComplianceStatus(input: UpdateComplianceStatusInput)
         updatedAt: now,
       },
     });
+    if (res.count !== 1) {
+      throw new ConflictError("This compliance item was changed by another request. Reload and retry.", {
+        expectedStatus: existing.status,
+      });
+    }
 
     let eventName: AuditEventName = AUDIT_EVENTS.OWNER_COMPLIANCE_STATUS_CHANGED;
     if (input.newStatus === "breached") eventName = AUDIT_EVENTS.OWNER_COMPLIANCE_BREACH_RECORDED;
@@ -402,6 +412,72 @@ export async function updateComplianceStatus(input: UpdateComplianceStatusInput)
       idempotencyKey: `compliance-breach:${input.itemId}:${input.newStatus}`,
     });
   }
+
+  return getComplianceItem(input.workspaceId, input.itemId);
+}
+
+// ─── Business assignment ──────────────────────────────────────────────────────
+
+export interface AssignComplianceBusinessInput {
+  workspaceId: string;
+  itemId: string;
+  actorId: string;
+  businessId: string;
+}
+
+/**
+ * Assign an obligation recorded with NO business to the business it affects.
+ *
+ * In a multi-business workspace a business-less obligation is unattributed: it restricts no business
+ * (owner-action-gate-policy.ts appliesToBusiness) and each business's owner decision asks for it to be
+ * assigned. This is that assignment. Only null → business: reassigning an item that already names a
+ * business would silently lift a recorded restriction from one business and move it to another, so it is
+ * refused (a mis-recorded item is corrected by recording it again against the right business).
+ *   - the business must be a real (non-fixture), active business of the same workspace;
+ *   - the write is a compare-and-set on `businessId: null` (a concurrent assignment is a 409, never
+ *     overwritten) and the audit event (previousBusinessId → newBusinessId) is written in the same
+ *     transaction;
+ *   - the owner decision is resolved on read (getOwnerHome), so the next read reflects the assignment.
+ */
+export async function assignComplianceItemBusiness(input: AssignComplianceBusinessInput): Promise<ComplianceDetail> {
+  const existing = await db.ownerComplianceItem.findFirst({
+    where: { id: input.itemId, workspaceId: input.workspaceId },
+    select: { id: true, businessId: true, name: true },
+  });
+  if (!existing) throw new NotFoundError("OwnerComplianceItem", input.itemId);
+  if (existing.businessId !== null) {
+    if (existing.businessId === input.businessId) return getComplianceItem(input.workspaceId, input.itemId);
+    throw new ValidationError("This compliance item is already assigned to a business. Only an unassigned item can be assigned here.");
+  }
+  const business = await db.ownerBusiness.findFirst({
+    where: { id: input.businessId, workspaceId: input.workspaceId, isActive: true, isFixtureBusiness: false },
+    select: { id: true },
+  });
+  if (!business) throw new ValidationError("Choose an active business in this workspace.");
+
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.ownerComplianceItem.updateMany({
+      where: { id: input.itemId, workspaceId: input.workspaceId, businessId: null },
+      data: { businessId: business.id },
+    });
+    if (res.count !== 1) {
+      throw new ConflictError("This compliance item was assigned by another request. Reload to see its business.", {
+        itemId: input.itemId,
+      });
+    }
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_COMPLIANCE_BUSINESS_ASSIGNED,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        actorType: "user",
+        entityType: "OwnerComplianceItem",
+        entityId: input.itemId,
+        payload: { previousBusinessId: null, newBusinessId: business.id, name: existing.name },
+      },
+      tx,
+    );
+  });
 
   return getComplianceItem(input.workspaceId, input.itemId);
 }

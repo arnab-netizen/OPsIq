@@ -52,6 +52,10 @@ vi.mock("@/lib/db", () => ({
     ownerFinanceCycle: {
       findFirst: vi.fn().mockResolvedValue(null),
     },
+    // Health reads the shared cash/finance survival reading (both current cycles).
+    ownerCashflowCycle: {
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
   },
 
   getDbInstance: vi.fn().mockResolvedValue({}),

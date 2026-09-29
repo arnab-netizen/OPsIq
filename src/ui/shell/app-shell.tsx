@@ -6,6 +6,7 @@ import { AppHeader } from "./app-header";
 import { SidebarNav } from "./sidebar-nav";
 import { useDialogA11y } from "@/ui/primitives/use-dialog-a11y";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
+import { CapabilitiesProvider } from "@/context/capabilities-context";
 import { BusinessRecoveryBanner } from "@/components/owner/BusinessRecoveryBanner";
 
 interface AppShellProps {
@@ -100,7 +101,7 @@ export function AppShell({
           )}
 
           <main aria-hidden={drawerOpen || undefined} className="flex-1 overflow-y-auto p-6">
-            {children}
+            <CapabilitiesProvider capabilities={capabilities}>{children}</CapabilitiesProvider>
           </main>
         </div>
       </div>

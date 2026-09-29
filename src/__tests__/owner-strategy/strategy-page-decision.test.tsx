@@ -61,6 +61,8 @@ function dashboard(decisionInput: StrategySnapshotInput, findings: unknown[] = [
     missingCriticalData: [],
     domainScore: { domain: "strategy", healthScore: 30, riskScore: 55, opportunityScore: 60, dataConfidenceScore: 95, strategyState: "RISKY" },
     recommendedNextAction: actions.find((a) => a.decisionFit === "primary") ?? null,
+    // Server contract: the decision's own step is the next step while its row is canonically eligible.
+    decisionStep: { state: actions.some((a) => a.decisionFit === "primary") ? "current" : "not_listed", replacedBecause: null },
     decision,
     latestCycle: {
       id: "cycle-2",
@@ -141,7 +143,7 @@ describe("Strategy page — decision first", () => {
     expect(details.open).toBe(false);
     expect(within(details).getByText(/Attractiveness 30\/100/)).toBeTruthy();
     expect(card.textContent).not.toMatch(/\/100/);
-    expect(screen.queryByText("Recommended next strategy action")).toBeNull();
+    expect(screen.queryByText(/Next step within Strategy/)).toBeNull();
   });
 
   it("a carried Pursue is shown on hold with no Assign button; no Pursue/Size up command is recommended", async () => {

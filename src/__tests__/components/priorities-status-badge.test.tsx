@@ -1,7 +1,7 @@
 /**
  * /owner/priorities — status-badge regression.
  *
- * Root cause: the badge for Home's canonical top governed action (processExecution.topRoute) was
+ * Root cause: the badge for the current governed action (processExecution.topRoute) was
  * derived purely from severity (TIER_LABEL[tier]), independent of the item's actual execution
  * status. After Start Work, the action text correctly switched to "In progress — continue on
  * Home", but the badge kept reading "Needs attention" -- a visible contradiction on the same row.
@@ -12,7 +12,7 @@
  * states.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, waitFor, within } from "@testing-library/react";
 import OwnerPrioritiesPage from "@/app/(authenticated)/owner/priorities/page";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
 
@@ -58,7 +58,8 @@ describe("Priorities — status badge reflects the same execution status as the 
     render(<ActiveBusinessProvider><OwnerPrioritiesPage /></ActiveBusinessProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText("Add the missing operational data to routine capture")).toBeTruthy();
+      // The governed route is shown by its owner-visible summary, in the unranked "Governed work" section.
+      expect(within(screen.getByTestId("priorities-governed-work")).getByText("Capture unit cost per job.")).toBeTruthy();
     });
 
     expect(screen.getByText("Needs attention")).toBeTruthy();
@@ -73,7 +74,8 @@ describe("Priorities — status badge reflects the same execution status as the 
     render(<ActiveBusinessProvider><OwnerPrioritiesPage /></ActiveBusinessProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText("Add the missing operational data to routine capture")).toBeTruthy();
+      // The governed route is shown by its owner-visible summary, in the unranked "Governed work" section.
+      expect(within(screen.getByTestId("priorities-governed-work")).getByText("Capture unit cost per job.")).toBeTruthy();
     });
 
     expect(screen.getByText("In progress")).toBeTruthy();

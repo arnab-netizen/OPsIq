@@ -66,7 +66,7 @@ describe("Owner Budget & Profit Plan page", () => {
   it("renders the governed budget surface the owner can act on", async () => {
     mockFetch();
     const { container, queryByText } = renderWithProvider(<OwnerBudgetPlanPage />);
-    await waitFor(() => expect(container.textContent ?? "").toContain("Next best action"));
+    await waitFor(() => expect(container.textContent ?? "").toContain("Next budget action (this area only)"));
     const text = container.textContent ?? "";
     expect(text).toContain("Budget & Profit Plan");
     // Humanized labels are shown -- the raw enum values must never leak (G5).

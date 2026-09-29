@@ -7,6 +7,8 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import { ownerDecisionCandidateIdForEntity, ownerTargetHref, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -15,7 +17,7 @@ import { humanizeMetricKey } from "@/lib/metric-label";
 // "no data" / "unknown" surfaces are shown honestly.
 
 interface AlertSummary {
-  alerts: Array<{ id: string; message: string; severity: string; type: string }>;
+  alerts: Array<{ id: string; message: string; severity: string; type: string; entityType?: string | null; entityId?: string | null }>;
   unreadCount: number;
 }
 
@@ -50,16 +52,6 @@ const DANGER_LABEL: Record<string, string> = {
 const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
   score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
 
-const DOMAIN_LINK: Record<string, string> = {
-  finance: "/owner/finance",
-  cashflow: "/owner/cashflow",
-  sales: "/owner/sales",
-  operations: "/owner/operations",
-  sop: "/owner/execution",
-  marketing: "/owner/marketing",
-  strategy: "/owner/strategy",
-  recovery: "/owner/recovery",
-};
 // Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
 const DOMAIN_LABEL: Record<string, string> = {
   finance: "Finance",
@@ -79,17 +71,30 @@ async function api(path: string) {
   return data;
 }
 
-function DangerCard({ label, danger }: { label: string; danger: any }) {
+function DangerCard({ label, danger, testId }: { label: string; danger: any; testId?: string }) {
   const level = danger?.level ?? "unknown";
+  const levelLabel = DANGER_LABEL[level] ?? level;
+  // The server's danger contract decides everything shown: which evidence drives the reading, when it
+  // was captured, and whether it is current. A score is shown only for a current reading; an
+  // out-of-date one shows only its last-known level and which data to update.
+  const lastKnown = danger?.status === "last_known";
+  const conflicting = danger?.status === "conflicting";
+  // The in-progress current period's figures set this level: labelled as in progress, never as completed.
+  const inProgress = danger?.status === "in_progress";
+  const asOf = danger?.evidenceAsOf ? new Date(danger.evidenceAsOf).toISOString().slice(0, 10) : null;
   return (
-    <div className="border rounded-lg p-3 bg-card">
+    <div className="border rounded-lg p-3 bg-card" data-testid={testId}>
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-center gap-2">
-        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>{DANGER_LABEL[level] ?? level}</Badge>
-        <span className="text-sm text-muted-foreground">
-          {danger?.riskScore === null || danger?.riskScore === undefined ? "—" : `${Math.round(danger.riskScore)}/100`}
-        </span>
+      <div className="mt-1 flex items-center gap-2 flex-wrap">
+        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>
+          {conflicting ? "Signals disagree" : inProgress ? `In progress: ${levelLabel}` : lastKnown ? `Last flagged: ${levelLabel}${danger?.updateDataLabel ? ` — update ${danger.updateDataLabel} data` : ""}` : levelLabel}
+        </Badge>
+        {!lastKnown && !conflicting && typeof danger?.riskScore === "number" && (
+          <span className="text-sm text-muted-foreground">{Math.round(danger.riskScore)}/100</span>
+        )}
       </div>
+      {danger?.drivenBy && <p className="mt-1 text-xs text-muted-foreground" data-testid={testId ? `${testId}-driven-by` : undefined}>{danger.drivenBy}</p>}
+      {asOf && danger?.status !== "unknown" && <p className="mt-0.5 text-xs text-muted-foreground">Figures as of {asOf}</p>}
     </div>
   );
 }
@@ -125,7 +130,8 @@ export default function OwnerHomePage() {
   useEffect(() => {
     if (contextLoading) return;
     if (needsBusinessRecovery) return;
-    if (!activeBusinessId) { setData(null); setLoading(false); return; }
+    // Invalidate any in-flight load for the previous business so it can never commit afterwards.
+    if (!activeBusinessId) { ++requestSeq.current; setData(null); setLoading(false); return; }
     void load(activeBusinessId);
   }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
 
@@ -174,27 +180,6 @@ export default function OwnerHomePage() {
         </nav>
       </div>
 
-      {/* Alert summary — critical alerts and unread count */}
-      {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <span className="text-sm font-semibold text-destructive">
-              {alertSummary.unreadCount > 0 ? `${alertSummary.unreadCount} unread alert${alertSummary.unreadCount === 1 ? "" : "s"}` : "Critical alerts"}
-            </span>
-            <Link href="/owner/alerts" className="text-xs underline text-destructive">View all →</Link>
-          </div>
-          {alertSummary.alerts.length > 0 && (
-            <ul className="space-y-1">
-              {alertSummary.alerts.map((a) => (
-                <li key={a.id} className="text-xs text-destructive truncate">
-                  · {a.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
@@ -215,6 +200,47 @@ export default function OwnerHomePage() {
             />
           </div>
 
+          {data?.currentOwnerDecision && (
+            <div className="mb-5 rounded-lg border bg-card p-4" data-testid="home-owner-decision">
+              <OwnerDecisionCard decision={data.currentOwnerDecision as CurrentOwnerDecision} />
+            </div>
+          )}
+
+          {/* Notifications — never a second priority list. Critical alerts are notifications about a
+              risk or compliance breach; when that record is already in the canonical order it is
+              linked to its place there instead of being shown as a competing priority. */}
+          {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (() => {
+            const attention = (data?.currentOwnerDecision as CurrentOwnerDecision | undefined)?.attention ?? [];
+            const position = (a: { entityType?: string | null; entityId?: string | null }) => {
+              const id = ownerDecisionCandidateIdForEntity(a.entityType, a.entityId);
+              const i = id ? attention.findIndex((t) => t.candidateId === id) : -1;
+              return i;
+            };
+            return (
+              <div className="mb-5 rounded-lg border border-border bg-card p-3" data-testid="home-notifications">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    {alertSummary.unreadCount > 0 ? `Notifications · ${alertSummary.unreadCount} unread` : "Notifications"}
+                  </span>
+                  <Link href="/owner/alerts" className="text-xs underline">View all →</Link>
+                </div>
+                {alertSummary.alerts.length > 0 && (
+                  <ul className="space-y-1">
+                    {alertSummary.alerts.map((a) => {
+                      const i = position(a);
+                      return (
+                        <li key={a.id} className="text-xs text-muted-foreground" data-testid="home-notification">
+                          · {a.message}
+                          {(i === 0 || (i > 0 && data?.summary)) && <span data-testid="home-notification-linked"> — {i === 0 ? "this is your main target" : `item ${i + 1} in the order below`}</span>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
+
           {!data?.hasData || !s ? (
             <div className="border rounded-lg p-6 text-center text-muted-foreground">
               No business condition yet. Run a diagnosis in{" "}
@@ -231,50 +257,43 @@ export default function OwnerHomePage() {
                   </Badge>
                   {typeof s.dataConfidenceScore === "number" && (
                     <Badge variant="muted-accessible">
-                      confidence {Math.round(s.dataConfidenceScore)}/100
+                      data completeness {Math.round(s.dataConfidenceScore)}/100
                     </Badge>
                   )}
                 </div>
               </section>
 
               {/* Danger surfaces (money first, then execution) */}
-              <section className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <DangerCard label="Cash danger" danger={s.cashDanger} />
-                <DangerCard label="Sales danger" danger={s.salesDanger} />
-                <DangerCard label="Operations danger" danger={s.operationsDanger} />
-                <DangerCard label="Execution danger" danger={s.executionDanger} />
+              <section className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <DangerCard label="Cash danger" danger={s.cashDanger} testId="home-cash-danger" />
+                <DangerCard label="Financial danger" danger={s.financialDanger} testId="home-financial-danger" />
+                <DangerCard label="Sales danger" danger={s.salesDanger} testId="home-sales-danger" />
+                <DangerCard label="Operations danger" danger={s.operationsDanger} testId="home-operations-danger" />
+                <DangerCard label="Execution danger" danger={s.executionDanger} testId="home-execution-danger" />
               </section>
 
-              {/* Today's required actions */}
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s required actions</div>
-                {s.requiredActions.length === 0 ? (
+              {/* Today's open work — the canonical owner-attention order, rendered exactly as the server
+                  resolved it (main target first). This page never re-sorts or re-elects. */}
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card" data-testid="home-attention-order">
+                <div className="text-xs uppercase text-muted-foreground mb-2">Everything open, in the order to handle it</div>
+                {(data?.currentOwnerDecision?.attention ?? []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">No open actions from diagnosed domains — run a diagnosis in each domain to see required actions.</p>
                 ) : (
                   <div className="space-y-1">
-                    {s.requiredActions.map((a: any, i: number) => (
-                      DOMAIN_LINK[a.domain] ? (
-                        <Link
-                          key={`${a.domain}-${a.findingCode}-${i}`}
-                          href={DOMAIN_LINK[a.domain]}
-                          className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
-                        >
-                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
-                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted-accessible">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
-                            <span>priority {Math.round(a.priorityScore)}</span>
-                            <span>· impact {Math.round(a.expectedImpactScore)}</span>
-                          </div>
-                        </Link>
-                      ) : (
-                        <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
-                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
-                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted-accessible">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
-                            <span>priority {Math.round(a.priorityScore)}</span>
-                          </div>
+                    {(data.currentOwnerDecision as CurrentOwnerDecision).attention.map((a, i) => (
+                      <Link
+                        key={a.candidateId}
+                        href={i === 0 ? ownerTargetHref(a) : a.targetRoute}
+                        data-testid="home-attention-item"
+                        className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
+                      >
+                        <div className="font-semibold text-sm">{i + 1}. {a.title}{i === 0 ? " — main target" : ""}</div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
+                          <Badge variant="muted-accessible">{a.domainLabel}</Badge>
+                          {/* A refresh item's severity is what the out-of-date figures last showed, not a current reading. */}
+                          {a.severity && <span>{a.source === "evidence_refresh" ? `last flagged: ${a.severity}` : a.severity}</span>}
                         </div>
-                      )
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -284,7 +303,7 @@ export default function OwnerHomePage() {
               <div className="md:grid md:grid-cols-2 md:gap-4 space-y-5 md:space-y-0">
               {/* Top 3 risks */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="text-xs uppercase text-muted-foreground mb-2">Top risks</div>
+                <div className="text-xs uppercase text-muted-foreground mb-2">Top risks <span className="normal-case">(what was found — not an action order)</span></div>
                 {s.top3Risks.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No risks from diagnosed domains — run a domain diagnosis to surface risks.</p>
                 ) : (
@@ -295,7 +314,9 @@ export default function OwnerHomePage() {
                           <div className="text-sm font-medium">{r.title}</div>
                           <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[r.domain] ?? r.domain} · impact {Math.round(r.impactScore)}</div>
                         </div>
-                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default-accessible"}>{SEVERITY_LABEL[r.severity] ?? r.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default-accessible"} data-testid="home-top-risk-severity">
+                          {r.lastFlagged ? `Last flagged: ${SEVERITY_LABEL[r.severity] ?? r.severity} — figures need updating` : (SEVERITY_LABEL[r.severity] ?? r.severity)}
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -304,7 +325,7 @@ export default function OwnerHomePage() {
 
               {/* Top 3 opportunities */}
               <section className="border rounded-lg p-4 bg-card md:mt-0">
-                <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities</div>
+                <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities <span className="normal-case">(what was found — your main target decides what comes first)</span></div>
                 {s.top3Opportunities.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No opportunities from diagnosed domains — run a domain diagnosis to surface opportunities.</p>
                 ) : (
@@ -313,7 +334,7 @@ export default function OwnerHomePage() {
                       <div key={`${o.domain}-${o.code}`} className="flex justify-between items-start gap-2 border-b pb-2">
                         <div>
                           <div className="text-sm font-medium">{o.title}</div>
-                          <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[o.domain] ?? o.domain}</div>
+                          <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[o.domain] ?? o.domain}{o.lastFlagged ? " · last flagged — figures need updating" : ""}</div>
                         </div>
                         <Badge variant="success-accessible">impact {Math.round(o.impactScore)}</Badge>
                       </div>

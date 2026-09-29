@@ -89,14 +89,15 @@ export interface ArbitrableStrategyAction {
   status?: string;
 }
 
-function isPrimaryStep(a: ArbitrableStrategyAction, d: StrategyDecision): boolean {
+/** Whether a row carries the decision's own primary step (whatever the row's status). */
+export function isStrategyDecisionStep(a: ArbitrableStrategyAction, d: StrategyDecision): boolean {
   return a.recommendationCode === d.primaryStep.recommendationCode && a.findingCode === d.primaryStep.findingCode;
 }
 
 /** Fit of one action under the decision, ignoring duplicates (see arbitrateStrategyActionRows). */
 export function strategyActionFit(a: ArbitrableStrategyAction, d: StrategyDecision): StrategyActionFit {
   const code = a.recommendationCode ?? "";
-  if (isPrimaryStep(a, d)) return "primary";
+  if (isStrategyDecisionStep(a, d)) return "primary";
   if (RETIRED_STRATEGY_RECOMMENDATION_CODES.includes(code)) return d.code === "GO" ? "superseded" : "on_hold";
   if (d.prohibitedRecommendationCodes.includes(code)) return "on_hold";
   // The same advice as the primary step (same step for another finding, or another step for the

@@ -1,3 +1,4 @@
+import { NO_OWNER_GATE_CONSTRAINTS } from "@/domain/owner-mode/owner-action-gate-policy";
 import { describe, it, expect } from "vitest";
 import {
   getOwnerNowView,
@@ -8,8 +9,8 @@ import { IssueCategory } from "@/domain/owner-guidance/issue-priority";
 import { GuidanceClassification } from "@/domain/owner-guidance/guidance-classification";
 
 interface Rows {
-  cash?: { cashflowState: string; dataConfidenceScore: number; createdAt?: Date } | null;
-  fin?: { survivalState: string; dataConfidenceScore: number; createdAt?: Date } | null;
+  cash?: { cashflowState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date } } | null;
+  fin?: { survivalState: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: { periodEnd: Date; supersededById?: string | null } } | null;
   emp?: { overburdened: boolean; utilizationPct: number } | null;
   own?: { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number } | null;
   cap?: { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number } | null;
@@ -28,8 +29,9 @@ function fakeDeps(rows: Rows): { deps: GuidanceDeps; created: Record<string, unk
     uuid: () => "00000000-0000-0000-0000-000000000001",
     now: () => 1_900_000_000_000,
     db: {
-      ownerCashflowCycle: { findFirst: async () => rows.cash ?? null },
-      ownerFinanceCycle: { findFirst: async () => rows.fin ?? null },
+      // A reading with no stated period is for a completed period 10 days before the fake clock (current evidence).
+      ownerCashflowCycle: { findFirst: async () => (rows.cash ? { snapshot: { periodEnd: new Date(1_900_000_000_000 - 10 * 86_400_000) }, ...rows.cash } : null) },
+      ownerFinanceCycle: { findFirst: async () => (rows.fin ? { snapshot: { periodEnd: new Date(1_900_000_000_000 - 10 * 86_400_000), supersededById: null }, ...rows.fin } : null) },
       ownerEmployeeWorkloadSnapshot: { findFirst: async () => rows.emp ?? null },
       ownerWorkloadSnapshot: { findFirst: async () => rows.own ?? null },
       ownerCapacitySnapshot: { findFirst: async () => rows.cap ?? null },
@@ -49,8 +51,8 @@ function fakeDeps(rows: Rows): { deps: GuidanceDeps; created: Record<string, unk
 }
 
 const healthy: Rows = {
-  cash: { cashflowState: "SAFE", dataConfidenceScore: 0.9 },
-  fin: { survivalState: "SAFE", dataConfidenceScore: 0.9 },
+  cash: { cashflowState: "SAFE", dataConfidenceScore: 90 },
+  fin: { survivalState: "SAFE", dataConfidenceScore: 90 },
   cap: { growthSafe: true, expansionTriggered: false, bottleneckUtilization: 0.4 },
   metric: { complaintCount: 0, rewashCount: 0, refundAmount: 0, newCustomers: 10, repeatCustomers: 30, revenue: 100000 },
   supplier: { worstStockoutRisk: "NONE", riskScore: 0, supplyCutoffRisk: false, belowReorderCount: 0 },
@@ -77,8 +79,8 @@ describe("owner-now-view.service — module contract assertions", () => {
 describe("[module41] live signal assembly", () => {
   it("derives cash danger + growth block from unsafe states", async () => {
     const { deps } = fakeDeps({
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.8 },
-      fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.8 },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 80 },
+      fin: { survivalState: "AT_RISK", dataConfidenceScore: 80 },
       cap: { growthSafe: false, expansionTriggered: false, bottleneckUtilization: 0.9 },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
@@ -122,8 +124,8 @@ describe("[module41] live signal assembly", () => {
 
   it("archetype is resolved from businessType and shapes step wording", async () => {
     const { deps } = fakeDeps({
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.8 },
-      fin: { survivalState: "AT_RISK", dataConfidenceScore: 0.8 },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 80 },
+      fin: { survivalState: "AT_RISK", dataConfidenceScore: 80 },
       business: { businessType: "home_services_maintenance" },
     });
     const out = await getOwnerNowView("ws1", "biz1", deps);
@@ -204,7 +206,8 @@ describe("[module41] retention cohort → growth gate cross-domain wiring", () =
     deps.db.retentionCohort = {
       findMany: async () => [{ avgMonthlyChurn: 0.03, cohortMonth: "2026-06" }],
     };
-    const { ctx, state } = await assembleGuidanceContext("ws1", "biz1", deps);
+    // Round 9: growth readiness needs the owner action gate's constraints (a missing gate is never "ready").
+    const { ctx, state } = await assembleGuidanceContext("ws1", "biz1", deps, NO_OWNER_GATE_CONSTRAINTS);
     expect(state.churnRiskScore).toBeCloseTo(0.15, 5);
     expect(ctx.growthGatePassed).toBe(true); // healthy fixture: cashSafe=true, capacityGrowthSafe=true, supplierRiskHigh=false
     expect(ctx.issues.some((i) => i.id === "churn")).toBe(false);
@@ -234,12 +237,15 @@ describe("[module41] retention cohort → growth gate cross-domain wiring", () =
   });
 });
 
+/** A date N days before the fake clock (fakeDeps' now = 1_900_000_000_000) — inside the freshness window when N <= 45. */
+const daysBeforeClock = (n: number) => new Date(1_900_000_000_000 - n * 86_400_000);
+
 describe("[module41] Home same-business cash/finance conflict arbitration", () => {
   it("reproduces the human-test bug (same business: older AT_RISK cash + newer SAFE finance) — Home must not present the stale AT_RISK reading as current truth", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01") },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01") },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(true);
@@ -249,8 +255,8 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
   it("newer cash reading is unsafe, superseding an older SAFE finance diagnosis — uses the newer (unsafe) reading and names the superseded source", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 0.9, createdAt: new Date("2026-06-01") },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9, createdAt: new Date("2026-01-01") },
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90, createdAt: daysBeforeClock(10), snapshot: { periodEnd: daysBeforeClock(10) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, createdAt: daysBeforeClock(40), snapshot: { periodEnd: daysBeforeClock(40) } },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);
@@ -261,11 +267,45 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
     expect(cashIssue?.severity).toBe("CRITICAL");
   });
 
+  it("a Finance RE-DIAGNOSIS of old figures (newer cycle row, older evidence period) never supersedes a current CRITICAL cash reading", async () => {
+    // Completing/verifying a Finance action re-diagnoses from the SAME old snapshot: the cycle row is
+    // new, the evidence is not. Freshness is the evidence period, so the current cash danger stands.
+    const { deps } = fakeDeps({
+      ...healthy,
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90, createdAt: daysBeforeClock(5), snapshot: { periodEnd: daysBeforeClock(5) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, createdAt: daysBeforeClock(3), snapshot: { periodEnd: daysBeforeClock(10) } },
+    });
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(ctx.cashSafe).toBe(false);
+    expect(ctx.issues.find((i) => i.id === "cash")?.severity).toBe("CRITICAL");
+  });
+
+  it("an OUT-OF-DATE reading never supersedes: a newer-period but amended (superseded) Finance snapshot cannot hide current cash danger", async () => {
+    const { deps } = fakeDeps({
+      ...healthy,
+      cash: { cashflowState: "CRITICAL", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(10) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(2), supersededById: "newer-version" } },
+    });
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(ctx.cashSafe).toBe(false);
+  });
+
+  it("an OUT-OF-DATE reading (period older than the freshness window) never supersedes a current one", async () => {
+    const { deps } = fakeDeps({
+      ...healthy,
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(120) } },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90, snapshot: { periodEnd: daysBeforeClock(90) } },
+    });
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    // Neither reading can be shown to be current: fail safe, never "safe" by an old reading.
+    expect(ctx.cashSafe).toBe(false);
+  });
+
   it("disagreement with no timestamps: fails safe and surfaces an explicit conflicting-information headline, never silently picking one side", async () => {
     const { deps } = fakeDeps({
       ...healthy,
-      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 0.9 },
-      fin: { survivalState: "SAFE", dataConfidenceScore: 0.9 },
+      cash: { cashflowState: "AT_RISK", dataConfidenceScore: 90 },
+      fin: { survivalState: "SAFE", dataConfidenceScore: 90 },
     });
     const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
     expect(ctx.cashSafe).toBe(false);

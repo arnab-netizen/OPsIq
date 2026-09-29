@@ -14,6 +14,7 @@
  * unchanged). It never fabricates archetype assumptions for the generic fallback.
  */
 import type { BudgetArchetype, LaundryArchetypeSignals, HousekeepingArchetypeSignals } from "@/domain/owner-budget/archetype-packs";
+import { BUDGET_MARGIN_REPAIR_TITLES } from "@/domain/owner-budget/action-mapping";
 import type { WorkingCapitalAgeingResult } from "@/domain/owner-budget/working-capital-ageing";
 import type { BudgetGeneratedAction, BudgetSignal } from "@/domain/owner-budget/types";
 
@@ -73,7 +74,7 @@ export function assessArchetypeWorkingCapital(input: ArchetypeWorkingCapitalInpu
       if (b2bMargin !== null && b2bMargin < 10) {
         r.signals.push({ type: "laundry_b2b_payment_terms_risk", severity: "HIGH", message: `Laundry B2B margin ${b2bMargin.toFixed(1)}% AND overdue receivables — fix price AND payment terms, not only collection.` });
         r.actions.push({
-          title: "Reprice low-margin B2B laundry contract AND fix payment terms",
+          title: BUDGET_MARGIN_REPAIR_TITLES.REPRICE_B2B_LAUNDRY_AND_TERMS,
           accountableRole: "owner", decisionType: "INCREASE",
           requiredProof: "B2B kg price + cost + payment terms + receivables ageing",
           reviewInDays: 14,
@@ -129,7 +130,7 @@ export function assessArchetypeWorkingCapital(input: ArchetypeWorkingCapitalInpu
       const rm = num(h.recurringContractMarginPct);
       if (rm !== null && rm < 10) {
         r.actions.push({
-          title: "Reprice underpriced recurring contract AND fix payment terms",
+          title: BUDGET_MARGIN_REPAIR_TITLES.REPRICE_RECURRING_AND_TERMS,
           accountableRole: "owner", decisionType: "INCREASE",
           requiredProof: "Recurring contract price + per-contract margin + payment terms + receivables ageing",
           reviewInDays: 14,
