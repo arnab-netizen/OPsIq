@@ -14,6 +14,7 @@ import {
 import { validateEngagementTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { initializeInterventionState } from "@/services/intervention-state";
+import { createUnassessedBusinessConditionProfile } from "@/services/business-condition/business-condition-profile.service";
 import { computeEngagementHealth, enforceEngagementHealth } from "@/services/engagement-health";
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
@@ -176,6 +177,15 @@ export async function createEngagement(
         input.interventionMode,
         authContext,
         validatedWorkspaceId
+      );
+
+      // CLAUDE.md four-dimension rule: business condition must never be silently dropped, even at
+      // creation before any diagnosis has run. Writes the same honest "unknown" literal this
+      // function's own `healthStatus: "unknown"` above already uses, not a fabricated rating.
+      await createUnassessedBusinessConditionProfile(
+        db,
+        { engagement_id: engagement.id, workspace_id: validatedWorkspaceId },
+        actorId
       );
 
       return { id: engagement.id, code: engagement.code, title: engagement.title };

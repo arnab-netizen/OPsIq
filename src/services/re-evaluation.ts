@@ -173,7 +173,14 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
     where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
-  if (!current) {
+  // A profile whose businessStatus is the honest placeholder "unknown" (written when an engagement
+  // is created before any diagnosis has run — see createUnassessedBusinessConditionProfile) carries
+  // no real evidence, exactly like having no profile row at all. Without this check, its neutral
+  // placeholder severityScore would be read against these real-assessment thresholds below and
+  // fabricate a concrete rating (e.g. "distressed") from a value that was never meant to be compared
+  // on this scale — the opposite of the "unknown is valid, fabricated certainty is not" principle
+  // this placeholder exists to uphold.
+  if (!current || current.businessStatus === "unknown") {
     return {
       recommendedRating: "challenged" as BusinessConditionRating,
       reasoningFactors: ["no_assessment_available"],
@@ -405,7 +412,9 @@ async function evaluateHealthStatusImpact(
     where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
-  if (!condition) {
+  // Same "unknown" placeholder short-circuit as evaluateBusinessConditionImpact above: an
+  // unassessed profile is not evidence of any health status, healthy included.
+  if (!condition || condition.businessStatus === "unknown") {
     return { healthScore: 50, recommendedStatus: "unknown" as const };
   }
 
@@ -652,7 +661,16 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }
 
     // 2. Update business condition profile if changed
-    if (targets.businessConditionProfile && condition && condition.businessStatus !== businessConditionImpact.recommendedRating) {
+    // Never write back the "challenged" fallback rating: `evaluateBusinessConditionImpact` returns
+    // it only when there is genuinely no assessment to base a real rating on (no profile row, or
+    // the honest "unknown" placeholder row) — persisting it would silently replace an honest
+    // "unknown" with a fabricated concrete rating the moment a profile row happens to exist.
+    if (
+      targets.businessConditionProfile &&
+      condition &&
+      condition.businessStatus !== businessConditionImpact.recommendedRating &&
+      !businessConditionImpact.reasoningFactors.includes("no_assessment_available")
+    ) {
       auditPayload.businessConditionChange = {
         oldValue: condition.businessStatus,
         newValue: businessConditionImpact.recommendedRating,

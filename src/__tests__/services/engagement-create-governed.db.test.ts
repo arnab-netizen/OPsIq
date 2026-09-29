@@ -48,6 +48,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed engagement creation", () =>
   afterAll(async () => {
     try {
       await db.engagementMembership.deleteMany({ where: { engagementId: { in: engagementIds } } });
+      await db.businessConditionProfile.deleteMany({ where: { engagementId: { in: engagementIds } } });
       await db.interventionState.deleteMany({ where: { engagementId: { in: engagementIds } } });
       await db.auditEvent.deleteMany({ where: { workspaceId: { in: workspaces } } });
       await db.usageEvent.deleteMany({ where: { workspaceId: { in: workspaces } } });
@@ -77,6 +78,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed engagement creation", () =>
     // The requested mode replaces the column default, and initialization is recorded once.
     expect(rows.every((r) => r.interventionMode === "stabilization" && r.interventionPhase === "triage")).toBe(true);
     expect(await db.interventionState.count({ where: { engagementId: { in: engagementIds } } })).toBe(2);
+    // CLAUDE.md four-dimension rule: business condition is never silently dropped, even before any
+    // diagnosis has run. The placeholder profile states "unknown" honestly rather than fabricating
+    // a rating, and Engagement.healthStatus (written in the same createEngagement call) agrees.
+    const profiles = await db.businessConditionProfile.findMany({ where: { engagementId: { in: engagementIds } } });
+    expect(profiles.length).toBe(2);
+    expect(profiles.every((p) => p.businessStatus === "unknown" && p.urgencyLevel === "unknown" && p.isCurrent === true)).toBe(true);
+    expect(profiles.every((p) => p.cashPressureLevel === "unknown" && p.resilienceLevel === "unknown")).toBe(true);
+    expect(profiles.every((p) => p.conditionScore === 50 && p.ownerHealthScore === 50)).toBe(true);
+    expect(rows.every((r) => r.healthStatus === "unknown")).toBe(true);
   });
 
   it("[db] initializing intervention state twice is rejected", async () => {

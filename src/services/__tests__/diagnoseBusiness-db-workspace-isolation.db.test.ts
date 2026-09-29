@@ -113,6 +113,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           await db.recommendation.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.finding.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.evidence.deleteMany({ where: { engagementId: { in: engagementIds } } });
+          await db.businessConditionProfile.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.engagementMembership.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.interventionState.deleteMany({ where: { engagementId: { in: engagementIds } } });
         }
@@ -156,8 +157,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(client).not.toBeNull();
       expect(client?.workspaceId).toBe(workspaceAId);
 
-      // No business-condition profile is fabricated from a quick intake.
-      expect(await db.businessConditionProfile.count({ where: { engagementId: engagementAId } })).toBe(0);
+      // CLAUDE.md four-dimension rule: business condition is never silently dropped, even before
+      // any diagnosis has run — but a quick intake must not fabricate a rating either. Exactly one
+      // honest placeholder profile exists, scoped to workspace A, stating "unknown".
+      const profilesA = await db.businessConditionProfile.findMany({ where: { engagementId: engagementAId } });
+      expect(profilesA.length).toBe(1);
+      expect(profilesA[0].workspaceId).toBe(workspaceAId);
+      expect(profilesA[0].businessStatus).toBe("unknown");
 
       // Every persisted recommendation carries workspace A (the tenant backstop requires it on create).
       const recs = await db.recommendation.findMany({ where: { engagementId: engagementAId } });

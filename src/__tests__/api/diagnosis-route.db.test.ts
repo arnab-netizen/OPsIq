@@ -124,7 +124,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/diagnosis — permissions,
     }
   });
 
-  it("[db] consultant: 201 with one grounded answer; persists only submitted evidence, no condition profile", async () => {
+  it("[db] consultant: 201 with one grounded answer; persists only submitted evidence, condition profile stays honestly unassessed", async () => {
     const { POST } = await import("@/app/api/diagnosis/route");
     as(consultantA, wsA, "admin_or_portfolio_manager", "admin");
     const res = await POST(post(LOSS), params);
@@ -152,7 +152,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/diagnosis — permissions,
     );
     expect(recs.every((r) => r.isAiProposal && r.reliabilityLevel === "low" && r.workspaceId === wsA)).toBe(true);
     expect(await db.action.count({ where: { engagementId: body.engagementId } })).toBe(1);
-    expect(await db.businessConditionProfile.count({ where: { engagementId: body.engagementId } })).toBe(0);
+    // CLAUDE.md four-dimension rule: business condition is never silently dropped, even before any
+    // diagnosis has run — but it must never be fabricated from a quick intake either. Exactly one
+    // honest placeholder profile exists, stating "unknown" rather than a rating this intake never
+    // established.
+    const profiles = await db.businessConditionProfile.findMany({ where: { engagementId: body.engagementId } });
+    expect(profiles.length).toBe(1);
+    expect(profiles[0].businessStatus).toBe("unknown");
+    expect(profiles[0].urgencyLevel).toBe("unknown");
+    expect(profiles[0].isCurrent).toBe(true);
 
     // The consultant can open the engagement the diagnosis created.
     const membership = await db.engagementMembership.findFirst({ where: { engagementId: body.engagementId, userId: consultantA, isActive: true } });
