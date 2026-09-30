@@ -35,7 +35,7 @@ const RISK_IF_IGNORED_RISK: Record<string, string> = {
 export function buildExplanation(
   finding: OwnerFinding,
   action?: OwnerAction | null,
-  opts: { now?: Date; cycleMissingData?: readonly string[] } = {}
+  opts: { now?: Date } = {}
 ): ExplanationCard {
   const now = opts.now ?? new Date();
 
@@ -64,11 +64,7 @@ export function buildExplanation(
   const confidence = clampConfidence(action ? action.confidence : finding.confidence);
 
   // Honest data gaps: anything the finding flagged missing, plus a null source value.
-  // Also the cycle's own missing-critical-data list (snapshot.missingCriticalData) -- the same list
-  // the domain page shows as "Missing critical data" -- so a card can never say "No data gaps"
-  // while the cycle it was built from reports missing inputs.
   const dataGaps = [...(finding.missingData ?? [])];
-  for (const m of opts.cycleMissingData ?? []) if (!dataGaps.includes(m)) dataGaps.push(m);
   if (value === null && !dataGaps.includes(finding.sourceMetric)) dataGaps.push(finding.sourceMetric);
 
   return {
@@ -112,11 +108,28 @@ export function buildExplanation(
 export function buildExplanations(
   findings: OwnerFinding[],
   actions: OwnerAction[] = [],
-  opts: { now?: Date; cycleMissingData?: readonly string[] } = {}
+  opts: { now?: Date } = {}
 ): ExplanationCard[] {
   const actionByCode = new Map<string, OwnerAction>();
   for (const a of actions) if (!actionByCode.has(a.findingCode)) actionByCode.set(a.findingCode, a);
   return findings.map((f) => buildExplanation(f, actionByCode.get(f.code) ?? null, opts));
+}
+
+/**
+ * De-duplicated union of the finding-scoped gaps already carried by the cards -- the
+ * diagnosis-cycle view of what is still missing (the data-completeness finding carries these).
+ */
+export function cycleDataGapUnion(cards: ReadonlyArray<{ dataGaps?: readonly string[] | null }>): string[] {
+  const out: string[] = [];
+  for (const c of cards) for (const g of c.dataGaps ?? []) if (!out.includes(g)) out.push(g);
+  return out;
+}
+
+/** Card-level statement, explicit that it covers this finding only (not the whole diagnosis). */
+export function findingGapStatement(dataGaps: readonly string[] | null | undefined, label: (k: string) => string = (k) => k): string {
+  return dataGaps && dataGaps.length > 0
+    ? `Missing inputs for this finding: ${dataGaps.map(label).join(", ")}.`
+    : "No missing inputs for this finding.";
 }
 
 /** Categories the system must never invent (anti-hallucination allowlist, §18). */
