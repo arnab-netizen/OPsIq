@@ -32,7 +32,7 @@ import {
   type OwnerDataGroupView,
 } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
-import { confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
+import { blocksFirstRead, confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -226,6 +226,13 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
 
+      {state.canRunFirstDiagnosis && pct < 100 && (
+        <p className="mt-2 text-sm text-muted-foreground" data-testid="data-hub-first-read-ready">
+          Basic setup is complete and OpsIQ can give you a first read. The remaining starter items
+          are not needed for that read — adding them improves confidence and can unlock more decisions.
+        </p>
+      )}
+
       {pct >= 100 && (
         <p className="mt-2 text-sm text-muted-foreground">
           OpsIQ can give you a first read now. Add Money, Customers and Operations information to
@@ -358,7 +365,7 @@ function WaysToAdd() {
   );
 }
 
-function MissingCritical({ items }: { items: MissingMinimumView[] }) {
+function MissingCritical({ items, canRunFirstDiagnosis }: { items: MissingMinimumView[]; canRunFirstDiagnosis: boolean }) {
   if (items.length === 0) return null;
   return (
     <div
@@ -366,7 +373,9 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
       style={{ borderColor: "var(--destructive)" }}
       data-testid="data-hub-missing"
     >
-      <h2 className="text-lg font-semibold text-foreground">What is missing right now</h2>
+      <h2 className="text-lg font-semibold text-foreground">
+        {canRunFirstDiagnosis ? "What would improve confidence" : "What is missing right now"}
+      </h2>
       <ul className="mt-3 space-y-4">
         {items.map((item) => {
           const target = inputTargetForCategory(item.category);
@@ -374,9 +383,13 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
             <li key={item.category} className="border-b border-border pb-3 last:border-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-foreground">{item.label}</span>
-                <Badge variant={item.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
-                  {SEVERITY_LABEL[item.severity] ?? item.severity}
-                </Badge>
+                {blocksFirstRead(item.category) || !canRunFirstDiagnosis ? (
+                  <Badge variant={item.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
+                    {SEVERITY_LABEL[item.severity] ?? item.severity}
+                  </Badge>
+                ) : (
+                  <Badge variant="muted-accessible">Improves confidence</Badge>
+                )}
               </div>
               {/* Kept on the accessible token even though this container no longer carries a
                   tinted background (was needed against the old bg-destructive/5 fill, axe-verified
@@ -601,15 +614,15 @@ export default function OwnerDataHubPage() {
           )}
 
           {state && <ReadinessSummary state={state} />}
-          {state && <MissingCritical items={state.missingMinimum ?? []} />}
+          {state && <MissingCritical items={state.missingMinimum ?? []} canRunFirstDiagnosis={state.canRunFirstDiagnosis} />}
           {state && <NextAction state={state} />}
           <WaysToAdd />
 
           <div className="border-t border-border pt-6">
             <h2 className="text-sm font-semibold text-foreground">Everything OpsIQ can use</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              You do not need all of it. Items marked “Needed” are the ones holding back your first
-              assessment.
+              You do not need all of it. Items marked “Needed” are the starter minimum. Your first
+              assessment only requires revenue, expenses and cash/debt; the rest improves confidence.
             </p>
             {groups.length > 0 && (
               <div className="mt-4">

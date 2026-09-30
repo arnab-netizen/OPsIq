@@ -35,7 +35,7 @@ const RISK_IF_IGNORED_RISK: Record<string, string> = {
 export function buildExplanation(
   finding: OwnerFinding,
   action?: OwnerAction | null,
-  opts: { now?: Date } = {}
+  opts: { now?: Date; cycleMissingData?: readonly string[] } = {}
 ): ExplanationCard {
   const now = opts.now ?? new Date();
 
@@ -64,7 +64,11 @@ export function buildExplanation(
   const confidence = clampConfidence(action ? action.confidence : finding.confidence);
 
   // Honest data gaps: anything the finding flagged missing, plus a null source value.
+  // Also the cycle's own missing-critical-data list (snapshot.missingCriticalData) -- the same list
+  // the domain page shows as "Missing critical data" -- so a card can never say "No data gaps"
+  // while the cycle it was built from reports missing inputs.
   const dataGaps = [...(finding.missingData ?? [])];
+  for (const m of opts.cycleMissingData ?? []) if (!dataGaps.includes(m)) dataGaps.push(m);
   if (value === null && !dataGaps.includes(finding.sourceMetric)) dataGaps.push(finding.sourceMetric);
 
   return {
@@ -108,7 +112,7 @@ export function buildExplanation(
 export function buildExplanations(
   findings: OwnerFinding[],
   actions: OwnerAction[] = [],
-  opts: { now?: Date } = {}
+  opts: { now?: Date; cycleMissingData?: readonly string[] } = {}
 ): ExplanationCard[] {
   const actionByCode = new Map<string, OwnerAction>();
   for (const a of actions) if (!actionByCode.has(a.findingCode)) actionByCode.set(a.findingCode, a);

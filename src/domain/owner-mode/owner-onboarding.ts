@@ -150,6 +150,15 @@ export interface OnboardingState {
 /** Categories that unlock a limited first diagnosis (survival-grade financial read). */
 const FIRST_DIAGNOSIS_GATE: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
 
+/**
+ * True only for a missing category that actually blocks the first read. Any other missing
+ * starter-minimum category (e.g. equipment logs) improves confidence but does not stop the owner
+ * from acting on the financial read the gate categories already support.
+ */
+export function blocksFirstRead(category: OwnerInputCategory): boolean {
+  return FIRST_DIAGNOSIS_GATE.includes(category);
+}
+
 function severityOf(category: OwnerInputCategory): "critical" | "high" | "medium" {
   if (isCriticalCategory(category)) return "critical";
   const gain = INPUT_CATALOG[category].expectedConfidenceGain;
