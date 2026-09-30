@@ -14,6 +14,7 @@ export function PublicSiteHeader() {
         <Image src="/opsiq-logo.png" alt="OpsIQ home" width={1864} height={541} priority className="h-9 w-auto" />
       </Link>
       <nav aria-label="Primary" className="flex items-center gap-3">
+        <Link href="/tools/profit-margin-calculator" className="text-sm text-muted-foreground hover:text-foreground hover:underline">Calculators</Link>
         <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
           Sign in
         </Link>
