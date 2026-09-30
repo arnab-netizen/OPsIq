@@ -115,6 +115,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Process-Correction Execution Bridge 
   it("an owner-approval task cannot be completed by a non-owner, but can by the owner", async () => {
     const asMgr = await completeProcessTask({ workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "pc:c-owner", evidenceRefs: ["decision memo"] }, deps);
     expect(asMgr.ok).toBe(false);
+    // Owner-approval work is approval-first: not completable until approved and started.
+    const early = await completeProcessTask({ workspaceId: wsL, businessId: bizL, actorId: owner, actorRole: "owner", taskKey: "pc:c-owner", evidenceRefs: ["decision memo"], outcomeNotes: "approved" }, deps);
+    expect(early.ok).toBe(false);
+    await applyProcessExecutionAction({ workspaceId: wsL, actorId: owner, actorRole: "owner", taskKey: "pc:c-owner", action: "APPROVE" }, deps);
+    await applyProcessExecutionAction({ workspaceId: wsL, actorId: owner, actorRole: "owner", taskKey: "pc:c-owner", action: "START" }, deps);
     const asOwner = await completeProcessTask({ workspaceId: wsL, businessId: bizL, actorId: owner, actorRole: "owner", taskKey: "pc:c-owner", evidenceRefs: ["decision memo"], outcomeNotes: "approved" }, deps);
     expect(asOwner.ok).toBe(true);
     expect((await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-owner")!.status).toBe("COMPLETED");

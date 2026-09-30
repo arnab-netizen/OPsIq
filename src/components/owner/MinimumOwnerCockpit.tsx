@@ -19,6 +19,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge, Disclosure } from "@/ui/primitives";
+import { allowedProcessTaskActions, approveActionLabel } from "@/domain/owner-mode/process-execution-bridge";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
@@ -155,21 +156,7 @@ const PRIMARY_ACTIONS = ["APPROVE", "COMPLETE", "START"] as const;
 /** Interactive actions valid for a route, mirroring the server guardrails so the UI never OFFERS an
  *  impossible/unsafe transition. The server still re-checks every one. */
 export function allowedCockpitActions(r: BridgedRouteView): string[] {
-  const terminal = r.status === "COMPLETED" || r.status === "REJECTED" || r.status === "OUTCOME_RECORDED" || r.status === "OUTCOME_DISPUTED" || r.status === "OUTCOME_VERIFIED";
-  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
-  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
-  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
-  if (terminal) return ["REQUEST_REASSESSMENT"];
-  const out: string[] = [];
-  // Owner-approval work: approve first (PROPOSED/ACKNOWLEDGED → APPROVED), then start (APPROVED only).
-  const approvalFirst = r.approvalLevel === "OWNER_APPROVAL_REQUIRED";
-  if (approvalFirst ? r.status === "APPROVED" : ["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
-  if (approvalFirst && ["PROPOSED", "ACKNOWLEDGED"].includes(r.status)) out.push("APPROVE");
-  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
-  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
-  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
-  out.push("REQUEST_REASSESSMENT");
-  return out;
+  return allowedProcessTaskActions(r);
 }
 
 export interface CockpitActionInput {
@@ -1280,7 +1267,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                   <button type="button" data-testid={`cockpit-action-${dominantPrimaryAction}`} data-cockpit-priority="primary" disabled={busy}
                     onClick={() => clickAction(dominantPrimaryAction!)}
                     className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">
-                    {ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
+                    {dominantPrimaryAction! === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
                   </button>
                 )}
               </div>
@@ -1295,14 +1282,14 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="primary" disabled={busy}
                       onClick={() => clickAction(a)}
                       className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                   {secondaryVisible.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="secondary" disabled={busy}
                       onClick={() => clickAction(a)}
                       className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                 </div>
@@ -1316,7 +1303,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} disabled={busy}
                       onClick={() => clickAction(a)}
                       className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                 </div>

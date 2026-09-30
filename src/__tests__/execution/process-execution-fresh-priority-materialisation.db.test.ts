@@ -74,6 +74,13 @@ vi.mock("@/services/auth", () => ({
   })),
 }));
 
+/** Owner-approval work is approval-first: approve before START. Other tasks start directly (unchanged). */
+async function approveIfRequired(POST: (req: Request, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>, top: { taskKey: string; approvalLevel?: string }) {
+  if (top.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return;
+  const approved = await POST(makePostRequest({ taskKey: top.taskKey, action: "APPROVE" }) as never, { params: Promise.resolve({}) });
+  expect(approved.status).toBe(200);
+}
+
 function makePostRequest(body: unknown): NextRequest {
   return new NextRequest("https://example.com/api/owner/process-execution", {
     method: "POST",
@@ -180,6 +187,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(before).toBeNull();
 
       const { POST } = await import("@/app/api/owner/process-execution/route");
+      await approveIfRequired(POST as never, top!);
       const response = await POST(makePostRequest({ taskKey: top!.taskKey, action: "START" }), { params: Promise.resolve({}) });
       const body = await response.json();
       expect(response.status).toBe(200);
@@ -198,6 +206,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(await db.processExecutionTask.findFirst({ where: { workspaceId, taskKey: top.taskKey } })).toBeNull();
 
       const { POST } = await import("@/app/api/owner/process-execution/route");
+      if (top.approvalLevel === "OWNER_APPROVAL_REQUIRED") {
+        // Approval-first: approve then start (each materialises the fresh task) before completing.
+        await approveIfRequired(POST as never, top);
+        expect((await POST(makePostRequest({ taskKey: top.taskKey, action: "START" }), { params: Promise.resolve({}) })).status).toBe(200);
+      }
       const response = await POST(
         makePostRequest({ taskKey: top.taskKey, action: "COMPLETE", evidenceRefs: ["confirmed cash position with the bookkeeper"] }),
         { params: Promise.resolve({}) },
@@ -217,6 +230,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const topA = viewA.processExecution!.topRoute!;
 
       const { POST } = await import("@/app/api/owner/process-execution/route");
+      await approveIfRequired(POST as never, topA);
       const response = await POST(makePostRequest({ taskKey: topA.taskKey, action: "START" }), { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
 
@@ -236,6 +250,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const top = cockpitView.processExecution!.topRoute!;
 
       const { POST } = await import("@/app/api/owner/process-execution/route");
+      await approveIfRequired(POST as never, top);
       const startRes = await POST(makePostRequest({ taskKey: top.taskKey, action: "START" }), { params: Promise.resolve({}) });
       expect(startRes.status).toBe(200);
 
@@ -257,6 +272,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const top = cockpitView.processExecution!.topRoute!;
 
       const { POST } = await import("@/app/api/owner/process-execution/route");
+      await approveIfRequired(POST as never, top);
       const r1 = await POST(makePostRequest({ taskKey: top.taskKey, action: "START" }), { params: Promise.resolve({}) });
       expect(r1.status).toBe(200);
 

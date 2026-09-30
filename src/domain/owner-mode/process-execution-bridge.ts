@@ -108,6 +108,39 @@ export function computeCanStart(executionRoute: ExecutionRoute, status: string, 
   return STARTABLE_STATUSES.has(status);
 }
 
+/**
+ * The ONE affordance policy for interactive ProcessExecutionTask actions (both owner UI surfaces render
+ * from this; the server guards in process-execution-bridge.service.ts enforce the same rules and remain
+ * authoritative). Owner-approval work is approval-first: PROPOSED/ACKNOWLEDGED/BLOCKED/NEEDS_DATA →
+ * APPROVE → APPROVED → START → IN_PROGRESS. Pausing (block / needs-data), progress and completion are
+ * only valid once work is IN_PROGRESS; a paused task resumes through an explicit owner re-approval.
+ */
+export function allowedProcessTaskActions(r: { status: string; approvalLevel: string; executionRoute: ExecutionRoute | string }): string[] {
+  const terminal = ["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"].includes(r.status);
+  const nonActionable = NON_ACTIONABLE_ROUTES.has(r.executionRoute as ExecutionRoute);
+  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
+  const approvalFirst = r.approvalLevel === "OWNER_APPROVAL_REQUIRED";
+  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
+  if (terminal) return ["REQUEST_REASSESSMENT"];
+  const inProgress = r.status === "IN_PROGRESS";
+  const out: string[] = [];
+  if (approvalFirst ? r.status === "APPROVED" : STARTABLE_STATUSES.has(r.status)) out.push("START");
+  if (approvalFirst && ["PROPOSED", "ACKNOWLEDGED", "BLOCKED", "NEEDS_DATA"].includes(r.status)) out.push("APPROVE");
+  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
+  out.push("SUBMIT_EVIDENCE");
+  if (!approvalFirst || inProgress) out.push("COMPLETE");
+  out.push("REJECT");
+  if (approvalFirst ? inProgress : r.status !== "BLOCKED") out.push("MARK_BLOCKED");
+  if (approvalFirst && inProgress) out.push("REQUEST_MISSING_DATA");
+  out.push("REQUEST_REASSESSMENT");
+  return out;
+}
+
+/** Owner-facing label for APPROVE: a paused (blocked / needs-data) task is resumed by re-approving. */
+export function approveActionLabel(status: string): string {
+  return status === "BLOCKED" || status === "NEEDS_DATA" ? "Approve to resume" : "Approve";
+}
+
 /** Approval level → bridge approval, honestly. STAFF-floor operational work is safe/reversible (AUTO_ALLOWED).
  *  Exported so the PASS 23 expansion bridges (workload/capability/SOP/training/effectiveness) map approval the
  *  same way — one governed translation, never a second interpretation. */

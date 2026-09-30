@@ -191,6 +191,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Real public business shadow run", ()
     const tasks = await getPersistedProcessTasks(ws.A);
     const top = [...tasks].sort((a, b) => a.priorityRank - b.priorityRank)[0];
     expect(top.executionRoute).toBe("CREATE_CORRECTION_TASK");
+    // Owner-approval work is approval-first: approve and start before it can be completed.
+    if (top.approvalLevel === "OWNER_APPROVAL_REQUIRED") {
+      await applyProcessExecutionAction({ workspaceId: ws.A, actorId: owner, actorRole: "owner", taskKey: top.taskKey, action: "APPROVE", businessId: biz.A }, deps, reassessDeps);
+      await applyProcessExecutionAction({ workspaceId: ws.A, actorId: owner, actorRole: "owner", taskKey: top.taskKey, action: "START", businessId: biz.A }, deps, reassessDeps);
+    }
     const noEv = await applyProcessExecutionAction({ workspaceId: ws.A, actorId: owner, actorRole: "owner", taskKey: top.taskKey, action: "COMPLETE", businessId: biz.A, evidenceRefs: [] }, deps, reassessDeps);
     expect(noEv.ok).toBe(false);
     if (!noEv.ok) expect(noEv.code).toBe("EVIDENCE_REQUIRED");
