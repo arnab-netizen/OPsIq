@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { verifyOutcome } from "@/domain/founder-recovery/verification";
 import { VerificationEvidenceText, verificationGoalText } from "@/components/owner/VerificationEvidenceText";
-import { buildExplanation } from "@/domain/owner-trust";
+import { buildExplanation, cycleDataGapUnion, findingGapStatement } from "@/domain/owner-trust";
 import type { OwnerFinding } from "@/domain/owner-spine/contracts";
 import { blocksFirstRead, computeOnboardingState } from "@/domain/owner-mode/owner-onboarding";
 
@@ -34,18 +34,27 @@ describe("C: verification direction (classification unchanged, wording explicit)
   });
 });
 
-describe("D: data gaps in the explanation card", () => {
+describe("D: finding-scoped gaps vs diagnosis-cycle gaps", () => {
+  const cards = (gaps: string[][]) => gaps.map((g) => ({ dataGaps: g }));
   const f: OwnerFinding = {
     domain: "finance", code: "FIN_X", title: "t", summary: "s", sourceMetric: "netMarginPct", sourceValue: 5, threshold: 10,
     severity: "high", confidence: 0.8, impactScore: 50, urgencyScore: 50, findingType: "risk", evidence: [], missingData: [],
   };
-  it("D1 cycle reports missing critical data -> card lists it (so 'No data gaps' cannot render)", () => {
-    const card = buildExplanation(f, null, { cycleMissingData: ["cashBalance"] });
-    expect(card.dataGaps).toEqual(["cashBalance"]);
-  });
-  it("D2 nothing missing -> no gaps", () => {
-    expect(buildExplanation(f, null, { cycleMissingData: [] }).dataGaps).toEqual([]);
+  it("T1 complete findings stay finding-complete while the cycle union surfaces the diagnosis gaps", () => {
     expect(buildExplanation(f, null).dataGaps).toEqual([]);
+    const c = cards([[], [], ["receivables", "payables"]]);
+    expect(cycleDataGapUnion(c)).toEqual(["receivables", "payables"]);
+    expect(findingGapStatement([])).toBe("No missing inputs for this finding.");
+    expect(findingGapStatement([])).not.toContain("No data gaps");
+  });
+  it("T2 complete cycle -> empty union, no warning", () => {
+    expect(cycleDataGapUnion(cards([[], []]))).toEqual([]);
+  });
+  it("T3 finding-specific missing input is stated on the card and in the union", () => {
+    const card = buildExplanation({ ...f, missingData: ["cashOnHand"] }, null);
+    expect(card.dataGaps).toEqual(["cashOnHand"]);
+    expect(findingGapStatement(card.dataGaps)).toBe("Missing inputs for this finding: cashOnHand.");
+    expect(cycleDataGapUnion([card, { dataGaps: [] }])).toContain("cashOnHand");
   });
 });
 

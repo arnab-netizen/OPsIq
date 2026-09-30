@@ -6,6 +6,7 @@ import { Badge, Button, Select, Disclosure, CardDashboardSkeleton, PageHeader, P
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { cycleDataGapUnion, findingGapStatement } from "@/domain/owner-trust/explainability";
 import { findingTypeLabel, eventNameLabel, entityTypeLabel } from "@/lib/audit-label";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -215,6 +216,12 @@ export default function OwnerTrustPage() {
                 )}
               </div>
 
+              {cycleDataGapUnion(cards ?? []).length > 0 && (
+                <p className="text-sm text-foreground border-l-2 pl-3" style={{ borderColor: "var(--warning-text)" }} data-testid="trust-cycle-data-gaps">
+                  This diagnosis is still missing some inputs: {cycleDataGapUnion(cards ?? []).map(humanizeMetricKey).join(", ")}.
+                </p>
+              )}
+
               {(cards ?? []).length === 0 ? (
                 <div className="border rounded-lg p-8 text-center text-muted-foreground">
                   This diagnosis cycle produced no findings to explain.
@@ -290,9 +297,7 @@ export default function OwnerTrustPage() {
                         <div className="text-xs uppercase text-muted-foreground">Data integrity</div>
                         <p className="text-xs">
                           {c.hasInventedValues === false ? "No values invented." : ""}
-                          {Array.isArray(c.dataGaps) && c.dataGaps.length > 0
-                            ? ` Missing data: ${c.dataGaps.map(humanizeMetricKey).join(", ")}.`
-                            : " No data gaps."}
+                          {" "}{findingGapStatement(c.dataGaps, humanizeMetricKey)}
                         </p>
                       </div>
                     </div>
