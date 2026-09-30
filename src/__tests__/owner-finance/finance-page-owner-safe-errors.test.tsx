@@ -372,7 +372,7 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
     installFetchMock();
     const { container } = renderPage();
 
-    await screen.findByText("FINANCE_A_ACTION");
+    await screen.findAllByText("FINANCE_A_ACTION");
     expect(container.querySelector(".text-destructive")).toBeNull();
 
     // A successful mutation (runDiagnosis, no diagnosisFailure configured) triggers this page's
@@ -380,7 +380,7 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
     fireEvent.click(screen.getByText("Run finance diagnosis"));
 
     await waitFor(() => screen.getByTestId("finance-page-error"));
-    expect(screen.getByText("FINANCE_A_ACTION")).toBeInTheDocument();
+    expect(screen.getAllByText("FINANCE_A_ACTION").length).toBeGreaterThan(0);
     expect(screen.queryByText(/No businesses yet/)).not.toBeInTheDocument();
   });
 

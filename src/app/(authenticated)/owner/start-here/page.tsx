@@ -100,7 +100,7 @@ export default function StartHerePage() {
       const computed = computeStartHereSteps({
         businessBasicsComplete: true,
         canRunFirstDiagnosis: onboarding.canRunFirstDiagnosis === true,
-        missingMinimum: onboarding.missingMinimum ?? [],
+        missingMinimum: onboarding.missingMinimum ?? [], suppliedCategories: onboarding.suppliedCategories ?? [],
         requirements: onboarding.requirements,
         hasEngagedAPriority,
       });

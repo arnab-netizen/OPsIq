@@ -161,8 +161,10 @@ export function allowedCockpitActions(r: BridgedRouteView): string[] {
   if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
   if (terminal) return ["REQUEST_REASSESSMENT"];
   const out: string[] = [];
-  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
-  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
+  // Owner-approval work: approve first (PROPOSED/ACKNOWLEDGED → APPROVED), then start (APPROVED only).
+  const approvalFirst = r.approvalLevel === "OWNER_APPROVAL_REQUIRED";
+  if (approvalFirst ? r.status === "APPROVED" : ["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
+  if (approvalFirst && ["PROPOSED", "ACKNOWLEDGED"].includes(r.status)) out.push("APPROVE");
   if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
   out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
   if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");

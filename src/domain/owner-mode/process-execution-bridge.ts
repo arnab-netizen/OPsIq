@@ -101,8 +101,11 @@ const NON_ACTIONABLE_ROUTES = new Set<ExecutionRoute>(["MONITOR_ONLY", "BLOCK_UN
 const STARTABLE_STATUSES = new Set<string>(["PROPOSED", "NEEDS_DATA", "BLOCKED"]);
 
 /** Whether the owner can start this route now — pure domain, no DB required. */
-export function computeCanStart(executionRoute: ExecutionRoute, status: string): boolean {
-  return !NON_ACTIONABLE_ROUTES.has(executionRoute) && STARTABLE_STATUSES.has(status);
+export function computeCanStart(executionRoute: ExecutionRoute, status: string, approvalLevel?: string): boolean {
+  if (NON_ACTIONABLE_ROUTES.has(executionRoute)) return false;
+  // Owner-approval work is approved first: it becomes startable only once APPROVED (mirrors the server START guard).
+  if (approvalLevel === "OWNER_APPROVAL_REQUIRED") return status === "APPROVED";
+  return STARTABLE_STATUSES.has(status);
 }
 
 /** Approval level → bridge approval, honestly. STAFF-floor operational work is safe/reversible (AUTO_ALLOWED).
@@ -193,7 +196,7 @@ function bridgeCorrection(c: ProcessCorrection, businessId: string | null): Brid
     severity: c.severity,
     priorityRank: c.priorityRank,
     status: "PROPOSED",
-    canStart: computeCanStart(route, "PROPOSED"),
+    canStart: computeCanStart(route, "PROPOSED", approvalLevel),
   };
 }
 
@@ -224,7 +227,7 @@ function bridgeCashSignal(s: CashProfitSignal, rank: number, businessId: string 
     severity: s.severity,
     priorityRank: 100 + rank, // cash signals rank after the top process corrections unless critical (see sort)
     status: "PROPOSED",
-    canStart: computeCanStart(route, "PROPOSED"),
+    canStart: computeCanStart(route, "PROPOSED", approvalLevel),
   };
 }
 
@@ -319,7 +322,7 @@ export function buildProcessExecutionBridge(
   );
   // Recompute canStart after sort so any caller-applied status overrides take effect correctly.
   for (const r of routes) {
-    r.canStart = computeCanStart(r.executionRoute, r.status);
+    r.canStart = computeCanStart(r.executionRoute, r.status, r.approvalLevel);
   }
   // The top action the owner acts on is the most severe ACTIONABLE route (monitor-only never leads).
   const topRoute = routes.find((r) => r.executionRoute !== "MONITOR_ONLY") ?? routes[0] ?? null;

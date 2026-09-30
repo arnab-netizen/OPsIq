@@ -39,6 +39,8 @@ export interface StartHereInput {
   /** From OnboardingState.canRunFirstDiagnosis — the real "enough for a first read" signal. */
   canRunFirstDiagnosis: boolean;
   missingMinimum: MissingMinimum[];
+  /** Categories the owner has actually supplied (OnboardingState via /api/owner/onboarding). */
+  suppliedCategories: readonly OwnerInputCategory[];
   requirements: ProfileInputRequirements;
   /** Whether the owner has acted on at least one task/priority (status moved past PROPOSED). */
   hasEngagedAPriority: boolean;
@@ -48,8 +50,9 @@ function categoryComplete(category: OwnerInputCategory, input: StartHereInput): 
   const applicable =
     input.requirements.minimumRequired.includes(category) || input.requirements.recommended.includes(category);
   if (!applicable) return { complete: true, applicable: false };
-  const missing = input.missingMinimum.some((m) => m.category === category);
-  return { complete: !missing, applicable: true };
+  // Complete only when the category was actually supplied. Absence from `missingMinimum` is not
+  // evidence: a recommended (non-minimum) category never appears there even when nothing was added.
+  return { complete: input.suppliedCategories.includes(category), applicable: true };
 }
 
 export function computeStartHereSteps(input: StartHereInput): StartHereStep[] {

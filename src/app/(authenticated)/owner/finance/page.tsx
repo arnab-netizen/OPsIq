@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { FindingCard } from "@/components/owner/FindingCard";
+import { FindingCard, sureLabel } from "@/components/owner/FindingCard";
 import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import {
   CompletionActionForm,
@@ -640,14 +640,15 @@ export default function OwnerFinancePage() {
                 Financial snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input name="periodStart" label="Period start" type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} />
-                <Input name="periodEnd" label="Period end" type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} />
+                <Input name="periodStart" label="These numbers cover: from" hint="First day of the month or period you are entering." type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} />
+                <Input name="periodEnd" label="These numbers cover: to" hint="Last day of that period." type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} />
                 <Select
                   name="businessModel"
-                  label="Business model"
+                  label="Business model (optional)"
+                  hint="Optional — leave blank if unsure. OpsIQ will not guess it."
                   defaultValue={snapshotDraft?.businessModel ?? ""}
                   options={[
-                    { value: "", label: "—" },
+                    { value: "", label: "Skip — not sure" },
                     { value: "service", label: "Service" },
                     { value: "inventory", label: "Inventory / retail" },
                     { value: "hybrid", label: "Hybrid" },
@@ -655,10 +656,10 @@ export default function OwnerFinancePage() {
                 />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Quick financial picture</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  These four numbers are enough for a first read. Estimates are fine — you can
-                  refine them later.
+                <h3 className="text-sm font-semibold text-foreground">Start with your basic numbers</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground" data-testid="quick-financial-picture">
+                  Quick financial picture: these four numbers are enough for a first read. Estimates are fine — you can
+                  refine them later. Everything below is optional; leaving it blank only limits how complete the analysis is.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {QUICK_FIELD_NAMES.map((name) => {
@@ -788,6 +789,50 @@ function FinanceCycleView({
   const verifyTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   return (
     <div className="flex flex-col gap-5">
+      {/* Answer first — presentation over data this cycle already returned (survival state, the
+          existing recommendedNextAction and its evidenceRationale, data confidence, missing
+          inputs). No new ranking or generated explanation: a section with no real backing data is
+          omitted rather than filled. Scores stay below as supporting detail. */}
+      <section data-testid="finance-answer-first" className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What needs attention</div>
+          <p className="mt-1 text-sm text-foreground">
+            Your financial position reads <strong>{SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? "unclear"}</strong>
+            {cycle.findings.length > 0
+              ? `, with ${cycle.findings.length} ${cycle.findings.length === 1 ? "finding" : "findings"} below. Each shows the measured number it is based on.`
+              : ". OpsIQ found nothing that needs attention from the numbers you entered."}
+          </p>
+        </div>
+        {recommended?.evidenceRationale && (
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Why this matters</div>
+            <p className="mt-1 text-sm text-foreground">{humanizeEvidenceLine(String(recommended.evidenceRationale))}</p>
+          </div>
+        )}
+        {recommended && (
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What to do first</div>
+            <p className="mt-1 text-sm font-medium text-foreground">{recommended.title}</p>
+            {recommended.description && <p className="text-sm text-muted-foreground">{humanizeEvidenceLine(String(recommended.description))}</p>}
+          </div>
+        )}
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">How sure OpsIQ is</div>
+          <p className="mt-1 text-sm text-foreground">
+            {sureLabel(Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0))} — this reading rests on{" "}
+            {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0)}% of the information OpsIQ looks for.
+          </p>
+        </div>
+        {missing.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What is still missing</div>
+            <p className="mt-1 text-sm text-foreground">
+              OpsIQ can assess what you entered. These would make the diagnosis more complete:{" "}
+              {missing.map(humanizeMetricKey).join(", ")}.
+            </p>
+          </div>
+        )}
+      </section>
       <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
         <div className="flex flex-wrap items-baseline gap-2.5">
           <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
@@ -835,18 +880,14 @@ function FinanceCycleView({
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
+          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — what you entered can still be assessed; adding these makes the diagnosis more complete.
         </div>
       )}
 
       {recommended && (
         <div className="border-t border-border pt-4">
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Next step within Finance (local to this area — your overall main target is on Home)</div>
-          <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
-          <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          {recommended.evidenceRationale && (
-            <p className="text-xs text-muted-foreground italic">Why: {recommended.evidenceRationale}</p>
-          )}
+          <p className="mt-1 text-xs text-muted-foreground">The step, and why, are summarized at the top of this diagnosis.</p>
           {Array.isArray(recommended.evidence) && recommended.evidence.length > 0 && (
             <p className="text-xs text-muted-foreground">Based on: {recommended.evidence.join(" · ")}</p>
           )}
@@ -879,7 +920,10 @@ function FinanceCycleView({
       </section>
 
       <section className="border-t border-border pt-4">
-        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Finance actions ({cycle.actions.length})</h2>
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Finance recommendations ({cycle.actions.length})</h2>
+        <p className="text-xs text-muted-foreground mb-3" data-testid="finance-recommendations-note">
+          These are Finance recommendations. Execution progress for governed work is tracked on Home.
+        </p>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
             const latestVerification = a.verifications?.[0];
@@ -902,7 +946,7 @@ function FinanceCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
+                  <Badge variant="muted-accessible">Recommendation status: <span>{ACTION_STATUS_LABEL[a.status] ?? a.status}</span></Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">

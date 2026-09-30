@@ -2365,7 +2365,7 @@ export async function getOwnerNowView(
           const s = statusByKey.get(r.taskKey);
           if (s) {
             r.status = s;
-            r.canStart = computeCanStart(r.executionRoute, s);
+            r.canStart = computeCanStart(r.executionRoute, s, r.approvalLevel);
           }
         }
         const TERMINAL = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);

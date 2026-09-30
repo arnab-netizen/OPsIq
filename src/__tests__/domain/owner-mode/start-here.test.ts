@@ -22,6 +22,7 @@ function baseInput(over: Partial<StartHereInput> = {}): StartHereInput {
     businessBasicsComplete: true,
     canRunFirstDiagnosis: false,
     missingMinimum: [],
+    suppliedCategories: [],
     requirements,
     hasEngagedAPriority: false,
     ...over,
@@ -55,7 +56,7 @@ describe("computeStartHereSteps", () => {
   });
 
   it("all applicable steps complete + at least one priority engaged: nextStartHereStep is null", () => {
-    const steps = computeStartHereSteps(baseInput({ canRunFirstDiagnosis: true, hasEngagedAPriority: true }));
+    const steps = computeStartHereSteps(baseInput({ canRunFirstDiagnosis: true, hasEngagedAPriority: true, suppliedCategories: ["customer_count", "sops_checklists"] }));
     expect(nextStartHereStep(steps)).toBeNull();
   });
 
@@ -73,9 +74,8 @@ describe("computeStartHereSteps", () => {
   });
 
   it("isStartHereMature is true once money is complete AND at least one of customers/operations is complete", () => {
-    // Only operations ("sops_checklists") is missing — customers is NOT in missingMinimum, so it
-    // resolves complete, satisfying the "at least one of customers/operations" condition.
-    const stepsWithCustomers = computeStartHereSteps(baseInput({ canRunFirstDiagnosis: true, missingMinimum: [missing("sops_checklists")] }));
+    // Only customers has actually been supplied; operations is still missing.
+    const stepsWithCustomers = computeStartHereSteps(baseInput({ canRunFirstDiagnosis: true, suppliedCategories: ["customer_count"], missingMinimum: [missing("sops_checklists")] }));
     expect(stepsWithCustomers.find((s) => s.id === "customers")?.complete).toBe(true);
     expect(isStartHereMature(stepsWithCustomers)).toBe(true);
   });
@@ -86,5 +86,28 @@ describe("computeStartHereSteps", () => {
       requirements: { minimumRequired: ["revenue_sales", "expenses", "cash_debt"], recommended: [], optional: ["customer_count", "sops_checklists"] },
     }));
     expect(isStartHereMature(steps)).toBe(true);
+  });
+});
+
+describe("computeStartHereSteps — completion requires the category to be actually supplied", () => {
+  it("B1/B4: applicable customer + operations steps with nothing supplied are incomplete even when absent from missingMinimum", () => {
+    const steps = computeStartHereSteps(baseInput({ canRunFirstDiagnosis: true, missingMinimum: [], suppliedCategories: ["revenue_sales", "expenses", "cash_debt"] }));
+    expect(steps.find((s) => s.id === "customers")).toMatchObject({ applicable: true, complete: false });
+    expect(steps.find((s) => s.id === "operations")).toMatchObject({ applicable: true, complete: false });
+  });
+
+  it("B2/B4: supplied customer_count / sops_checklists complete their steps", () => {
+    const steps = computeStartHereSteps(baseInput({ canRunFirstDiagnosis: true, suppliedCategories: ["customer_count", "sops_checklists"] }));
+    expect(steps.find((s) => s.id === "customers")?.complete).toBe(true);
+    expect(steps.find((s) => s.id === "operations")?.complete).toBe(true);
+  });
+
+  it("B3: a not-applicable step stays 'not needed', not falsely incomplete", () => {
+    const steps = computeStartHereSteps(baseInput({
+      suppliedCategories: [],
+      requirements: { minimumRequired: ["revenue_sales", "expenses", "cash_debt"], recommended: [], optional: ["customer_count", "sops_checklists"] },
+    }));
+    expect(steps.find((s) => s.id === "customers")).toMatchObject({ applicable: false, complete: true });
+    expect(steps.find((s) => s.id === "operations")).toMatchObject({ applicable: false, complete: true });
   });
 });

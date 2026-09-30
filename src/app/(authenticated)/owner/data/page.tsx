@@ -32,7 +32,7 @@ import {
   type OwnerDataGroupView,
 } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
-import { blocksFirstRead, confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
+import { blocksFirstRead, confidenceDisplayPhrase, FIRST_DIAGNOSIS_GATE } from "@/domain/owner-mode/owner-onboarding";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -196,6 +196,8 @@ function BusinessTypeEditor({ business, onUpdated }: { business: BusinessLite; o
 
 /** What OpsIQ knows so far: the confidence badge and essential-items progress. */
 function ReadinessSummary({ state }: { state: OnboardingView }) {
+  const suppliedSet = new Set(state.suppliedCategories ?? []);
+  const firstReadSupplied = FIRST_DIAGNOSIS_GATE.filter((c) => suppliedSet.has(c)).length;
   const pct =
     state.minimumRequiredCount > 0
       ? Math.round((state.minimumSuppliedCount / state.minimumRequiredCount) * 100)
@@ -211,8 +213,17 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
       </div>
 
       <p className="mt-2 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">First-read essentials: </span>
+        {firstReadSupplied} of {FIRST_DIAGNOSIS_GATE.length} added (revenue, expenses, cash and debt).
+        {firstReadSupplied === FIRST_DIAGNOSIS_GATE.length
+          ? " OpsIQ can run your first read."
+          : " These three unlock your first read."}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground" data-testid="data-hub-starter-profile">
+        <span className="font-medium text-foreground">Additional starter and profile evidence: </span>
         {state.minimumSuppliedCount} of {state.minimumRequiredCount} starter items added
-        {state.minimumRequiredCount > 0 ? ` (${pct}% of the starter minimum)` : ""}.
+        {state.minimumRequiredCount > 0 ? ` (${pct}% of the starter set for your business type)` : ""}. This improves
+        confidence; it is not what unlocks the first read.
       </p>
 
       <div
@@ -221,7 +232,7 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Starter items added"
+        aria-label="Starter and profile items added"
       >
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
@@ -280,7 +291,7 @@ function NextAction({ state }: { state: OnboardingView }) {
             OpsIQ does not yet have enough reliable business information for a trustworthy first
             assessment.
           </p>
-          <p className="mt-1 text-muted-foreground">Add the items marked “Needed” above and this will unlock.</p>
+          <p className="mt-1 text-muted-foreground">Add the items marked “Needed for first read” above and this will unlock.</p>
         </div>
       )}
 
@@ -305,58 +316,57 @@ function NextAction({ state }: { state: OnboardingView }) {
   );
 }
 
-/** Only rendered once a business exists — every card here is always actionable. */
+/** Only rendered once a business exists — one recommended first path, then secondary methods. */
 function WaysToAdd() {
-  const cards = [
+  const secondary = [
     {
       href: "/owner/manual-entry",
-      title: "Enter data yourself",
-      body: "Short forms for revenue, costs, staff and customers. Works on a phone.",
-      available: true,
+      title: "Add other business information",
+      body: "Short forms for costs, staff and customers. Optional — works on a phone.",
     },
     {
       href: "/owner/intake",
-      title: "Paste in spreadsheet or CSV data",
-      // Was two separate cards ("Upload a spreadsheet or CSV" and "Upload documents") pointing at
-      // the identical /owner/intake href -- the second implied an invoice/statement/PDF could be
-      // uploaded and processed directly, which /owner/intake does not support: its only input is a
-      // pasted-CSV-text textarea (no <input type="file">, no OCR/PDF parsing anywhere in the app).
-      // Merged into one accurate card: the numbers behind those documents are still a supported
-      // source, entered as CSV rows, not the documents themselves. "Upload" (implying a file
-      // picker/drag-drop) was also corrected in the title itself -- the destination's own actual
-      // mechanism is pasting text, never a file upload; see /owner/intake/page.tsx for the same
-      // correction applied to its own heading, button, and guidance text.
-      body: "We validate every row and show the errors. Nothing counts until you confirm it. Works for numbers you take from spreadsheets, bank/POS exports, invoices, statements or supplier paperwork — paste them in as CSV rows.",
-      available: true,
+      title: "Paste spreadsheet or CSV data",
+      // The numbers behind spreadsheets, bank/POS exports or invoices can be pasted as CSV rows
+      // (the intake page has no file picker / OCR). Nothing counts until the owner confirms it.
+      body: "Already have your numbers in a spreadsheet? Paste them in as rows. We check every row and nothing counts until you confirm it.",
     },
     {
       href: "/owner/onboarding",
       title: "Guided setup",
       body: "Step-by-step: what OpsIQ needs, in order, with your progress saved.",
-      available: true,
     },
   ];
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground">Ways to add data</h2>
-      {/* A same-size bordered-box grid here read as a generic "features" tile layout -- the same
-          divided-list treatment already used for "What is missing right now" just below (and for
-          every other list in this app) fits an owner deciding between a small number of concrete
-          next actions better than a symmetric card grid designed for browsing many options. */}
-      <ul className="mt-3">
-        {cards.map((card) => (
-          <li key={card.title} className="border-b border-border py-3.5 first:pt-0 last:border-0 last:pb-0">
+      <h2 className="text-lg font-semibold text-foreground">Start with your basic numbers</h2>
+      <Link
+        href="/owner/finance"
+        data-testid="data-hub-primary-path"
+        className="mt-3 block rounded-lg border-2 border-primary/40 bg-primary/5 p-4 hover:bg-primary/10"
+      >
+        <p className="font-medium text-foreground">Enter my basic numbers →</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Four numbers are enough for your first read: revenue, fixed costs, variable costs and cash on hand.
+          Estimates are fine. You do not need everything — anything you leave blank is reported as missing,
+          never invented, and you can add more later to make the analysis more complete.
+        </p>
+      </Link>
+      <h3 className="mt-5 text-sm font-semibold text-foreground">Other ways to add information (optional)</h3>
+      <ul className="mt-2" data-testid="data-hub-secondary-paths">
+        {secondary.map((card) => (
+          <li key={card.title} className="border-b border-border py-3 first:pt-0 last:border-0 last:pb-0">
             <Link href={card.href} className="group block">
               <p className="font-medium text-foreground group-hover:text-[var(--primary-text)]">{card.title} →</p>
               <p className="mt-0.5 text-sm text-muted-foreground">{card.body}</p>
             </Link>
           </li>
         ))}
-        <li className="border-b border-border py-3.5 last:border-0 last:pb-0" data-testid="data-hub-integrations">
+        <li className="border-b border-border py-3 last:border-0 last:pb-0" data-testid="data-hub-integrations">
           <p className="font-medium text-muted-foreground">Connect accounting, banking or POS</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Not available yet. Use manual entry or upload for now — we will tell you here when
+            Not available yet. Use the options above for now — we will tell you here when
             connections are ready.
           </p>
         </li>
@@ -383,7 +393,7 @@ function MissingCritical({ items, canRunFirstDiagnosis }: { items: MissingMinimu
             <li key={item.category} className="border-b border-border pb-3 last:border-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-foreground">{item.label}</span>
-                {blocksFirstRead(item.category) || !canRunFirstDiagnosis ? (
+                {blocksFirstRead(item.category) ? (
                   <Badge variant={item.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
                     {SEVERITY_LABEL[item.severity] ?? item.severity}
                   </Badge>
@@ -474,7 +484,13 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-foreground">{cat.label}</span>
-                    <Badge variant={STATUS_VARIANT[cat.status]}>{STATUS_LABEL[cat.status]}</Badge>
+                    {cat.status === "missing_required" && !blocksFirstRead(cat.category) ? (
+                      <Badge variant="muted-accessible">Starter item · improves confidence</Badge>
+                    ) : (
+                      <Badge variant={STATUS_VARIANT[cat.status]}>
+                        {cat.status === "missing_required" ? "Needed for first read" : STATUS_LABEL[cat.status]}
+                      </Badge>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{cat.why}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -621,7 +637,7 @@ export default function OwnerDataHubPage() {
           <div className="border-t border-border pt-6">
             <h2 className="text-sm font-semibold text-foreground">Everything OpsIQ can use</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              You do not need all of it. Items marked “Needed” are the starter minimum. Your first
+              You do not need all of it. Items marked “Needed for first read” are the essentials. Other starter items only improve confidence. Your first
               assessment only requires revenue, expenses and cash/debt; the rest improves confidence.
             </p>
             {groups.length > 0 && (

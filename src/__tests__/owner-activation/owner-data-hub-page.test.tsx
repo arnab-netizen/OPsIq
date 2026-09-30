@@ -118,6 +118,81 @@ describe("page heading (shared PageHeader primitive)", () => {
   });
 });
 
+describe("first-read gate vs starter/profile evidence (A1-A3)", () => {
+  const withEquipment = {
+    ...ONBOARDING,
+    suppliedCategories: [],
+    requirements: {
+      minimumRequired: ["revenue_sales", "expenses", "cash_debt", "equipment_logs"],
+      recommended: [],
+      optional: [],
+    },
+    minimumSuppliedCount: 0,
+    minimumRequiredCount: 4,
+    missingMinimum: [
+      { category: "revenue_sales", label: "Revenue records", severity: "critical", why: "w", decisionAffected: "d" },
+      { category: "equipment_logs", label: "Machine / equipment logs", severity: "critical", why: "w2", decisionAffected: "d2" },
+    ],
+  };
+  function mock() {
+    fetchMock.mockImplementation((url: string) =>
+      url.includes("/api/owner/businesses")
+        ? json({ businesses: [{ id: "b1", name: "Test Co", currency: "GBP" }] })
+        : json(withEquipment),
+    );
+  }
+
+  it("A1: non-gate equipment evidence is never labelled as blocking the first read", async () => {
+    mock();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
+    const items = Array.from(screen.getByTestId("data-hub-missing").querySelectorAll("li"));
+    const equipment = items.find((li) => li.textContent!.includes("Machine / equipment logs"))!;
+    expect(equipment.textContent).toContain("Improves confidence");
+    expect(equipment.textContent).not.toMatch(/Urgent/);
+    const group = screen.getByTestId("data-hub-group-operations").textContent!;
+    expect(group).not.toMatch(/Needed for first read/);
+  });
+
+  it("A2: missing revenue stays clearly blocking", async () => {
+    mock();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
+    const items = Array.from(screen.getByTestId("data-hub-missing").querySelectorAll("li"));
+    expect(items.find((li) => li.textContent!.includes("Revenue records"))!.textContent).toContain("Urgent");
+  });
+
+  it("A3: first-read essentials and starter/profile evidence are presented separately", async () => {
+    mock();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
+    const band = screen.getByTestId("data-hub-readiness").textContent!;
+    expect(band).toContain("First-read essentials: 0 of 3 added");
+    expect(screen.getByTestId("data-hub-starter-profile").textContent).toContain("0 of 4 starter items added");
+  });
+});
+
+describe("one obvious first-value path (F1, F4-F6)", () => {
+  it("leads with one primary path to the Finance quick snapshot; manual entry and CSV stay available but secondary", async () => {
+    mockWithBusiness();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("data-hub-primary-path")).toBeTruthy());
+    const primary = screen.getByTestId("data-hub-primary-path");
+    expect(primary.getAttribute("href")).toBe("/owner/finance");
+    expect(primary.textContent).toContain("Enter my basic numbers");
+    expect(primary.textContent).toMatch(/four numbers are enough/i);
+    expect(primary.textContent).toMatch(/never invented/i);
+    const secondary = screen.getByTestId("data-hub-secondary-paths");
+    const hrefs = Array.from(secondary.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/owner/manual-entry");
+    expect(hrefs).toContain("/owner/intake");
+    expect(secondary.textContent).toContain("Add other business information");
+    expect(secondary.textContent).toContain("Paste spreadsheet or CSV data");
+    // Exactly one primary path.
+    expect(document.querySelectorAll('[data-testid="data-hub-primary-path"]')).toHaveLength(1);
+  });
+});
+
 describe("with a business", () => {
   it("renders real readiness counts from the onboarding contract", async () => {
     mockWithBusiness();
@@ -125,6 +200,7 @@ describe("with a business", () => {
     await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
     const band = screen.getByTestId("data-hub-readiness");
     expect(band.textContent).toContain("1 of 3 starter items added");
+    expect(band.textContent).toContain("First-read essentials: 1 of 3 added");
     expect(band.querySelector('[role="progressbar"]')!.getAttribute("aria-valuenow")).toBe("33");
     // Plain-language phrase, never the raw "low" enum token.
     expect(band.textContent).toContain("Early days");
