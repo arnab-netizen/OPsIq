@@ -97,7 +97,9 @@ export async function getCycleExplanations(
     (cycle.findings ?? []).map((f: any) => rowToFinding(domain === "strategy" ? presentStoredStrategyFinding(f) : f, domain))
   );
   const actions = (cycle.actions ?? []).map((a: any) => rowToAction(a, domain));
-  const explanations = buildExplanations(findings, actions);
+  const rawMissing = cycle.snapshot?.missingCriticalData;
+  const cycleMissingData = Array.isArray(rawMissing) ? rawMissing.filter((m: unknown): m is string => typeof m === "string") : [];
+  const explanations = buildExplanations(findings, actions, { cycleMissingData });
   return {
     domain,
     cycleId,

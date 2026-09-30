@@ -14,6 +14,13 @@ function evidenceNumber(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) ? String(v) : "not recorded";
 }
 
+/** Plain-language goal for the stored target direction; never a raw "up"/"down" that reads as movement. */
+export function verificationGoalText(targetDirection: string): string {
+  if (targetDirection === "up") return "Goal: higher is better";
+  if (targetDirection === "down") return "Goal: lower is better";
+  return "Goal: not recorded";
+}
+
 /**
  * Before/after line for a recorded verification. States where the baseline came from
  * (measured vs owner-reported, with the measured value when they differ) so owner-typed
@@ -31,7 +38,7 @@ export function VerificationEvidenceText({ verification }: { verification: Verif
   else provenance = "baseline source not recorded";
   return (
     <span className="text-muted-foreground">
-      before {evidenceNumber(beforeValue)} → after {evidenceNumber(afterValue)} ({targetDirection}) · {provenance} · after
+      before {evidenceNumber(beforeValue)} → after {evidenceNumber(afterValue)} · {verificationGoalText(targetDirection)} · {provenance} · after
       value owner-reported
     </span>
   );

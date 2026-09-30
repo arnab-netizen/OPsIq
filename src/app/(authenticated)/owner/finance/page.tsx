@@ -799,9 +799,9 @@ function FinanceCycleView({
         </div>
         <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
           {[
-            ["Health", score?.healthScore ?? cycle.overallHealthScore],
-            ["Risk", score?.riskScore ?? cycle.survivalRiskScore],
-            ["Opportunity", score?.opportunityScore ?? cycle.growthOpportunityScore],
+            ["Health score", score?.healthScore ?? cycle.overallHealthScore],
+            ["Risk score (lower is better)", score?.riskScore ?? cycle.survivalRiskScore],
+            ["Opportunity score", score?.opportunityScore ?? cycle.growthOpportunityScore],
           ].map(([label, value]) => (
             <div key={label as string}>
               <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
@@ -811,6 +811,10 @@ function FinanceCycleView({
             </div>
           ))}
         </div>
+        <p className="mt-3 text-sm text-muted-foreground" data-testid="finance-score-explainer">
+          The status badge reflects the most serious single warning sign (such as thin margin or low cash). The scores blend many
+          signals, so a low risk score does not mean the status is safe. Act on the findings below, not on one number.
+        </p>
         <p className="mt-3 text-sm text-muted-foreground">
           Data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100 — how much of this reading rests on real, supplied numbers.
         </p>

@@ -235,9 +235,9 @@ export default function StartHerePage() {
 
       {!next && (
         <div className="mt-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--success-text)" }}>
-          <p className="text-sm font-medium text-foreground">Setup is complete.</p>
+          <p className="text-sm font-medium text-foreground">Basic setup is complete.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            You can always come back here, or improve OpsIQ&rsquo;s understanding further at any time.
+            OpsIQ can give you a first read. Adding more evidence (see My Business) improves confidence and can unlock additional decisions.
           </p>
         </div>
       )}
