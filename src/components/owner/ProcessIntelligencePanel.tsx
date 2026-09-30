@@ -9,6 +9,7 @@
  * DATA_INSUFFICIENT renders honestly. No fraud/negligence wording; no hidden staff score.
  */
 
+import { allowedProcessTaskActions, approveActionLabel } from "@/domain/owner-mode/process-execution-bridge";
 import type { ReactNode } from "react";
 import { Badge } from "@/ui/primitives";
 
@@ -973,19 +974,7 @@ const FAMILY_LABEL: Record<string, string> = {
 /** Which interactive actions are valid for the top route, from its status + approval + route (mirrors the
  *  server guardrails so the UI never OFFERS an impossible/unsafe transition; the server still re-checks). */
 function allowedBridgeActions(r: BridgedRouteView): string[] {
-  const terminal = r.status === "COMPLETED" || r.status === "REJECTED";
-  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
-  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
-  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
-  if (terminal) return ["REQUEST_REASSESSMENT"];
-  const out: string[] = [];
-  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
-  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
-  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
-  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
-  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
-  out.push("REQUEST_REASSESSMENT");
-  return out;
+  return allowedProcessTaskActions(r);
 }
 const ACTION_LABEL: Record<string, string> = {
   START: "Start", APPROVE: "Approve", DELEGATE: "Delegate", SUBMIT_EVIDENCE: "Submit evidence", COMPLETE: "Complete",
@@ -1059,7 +1048,7 @@ export function ProcessExecutionBridgePanel({ data, onAction }: { data: ProcessE
               onClick={() => onAction(top.taskKey, a)}
               style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #d1d5db", background: a === "COMPLETE" || a === "APPROVE" ? "#111827" : "#fff", color: a === "COMPLETE" || a === "APPROVE" ? "#fff" : "#111827", cursor: "pointer" }}
             >
-              {ACTION_LABEL[a] ?? a}
+              {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
             </button>
           ))}
         </div>

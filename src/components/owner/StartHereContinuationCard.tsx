@@ -36,6 +36,7 @@ export function StartHereContinuationCard({ businessId }: { businessId: string |
           businessBasicsComplete: true,
           canRunFirstDiagnosis: onboarding.canRunFirstDiagnosis === true,
           missingMinimum: onboarding.missingMinimum ?? [],
+          suppliedCategories: onboarding.suppliedCategories ?? [],
           requirements: onboarding.requirements,
           hasEngagedAPriority: tasks.some((t) => t.status && t.status !== "PROPOSED"),
         });

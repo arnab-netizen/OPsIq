@@ -93,7 +93,8 @@ function ownLookup<T>(map: Record<string, T>, key: string | undefined): T | unde
   return key !== undefined && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
 }
 
-function sureLabel(confidencePct: number): string {
+/** Plain-language confidence phrase, shared so every owner surface words confidence the same way. */
+export function sureLabel(confidencePct: number): string {
   return confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
 }
 

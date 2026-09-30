@@ -423,6 +423,9 @@ export async function completeProcessTask(
   const task = await deps.db.processExecutionTask.findFirst({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey } });
   if (!task) return { ok: false, reason: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" };
   if (task.status === "COMPLETED") return { ok: false, reason: "Task is already completed.", code: "INVALID_TRANSITION" };
+  if (isApprovalFirst(task) && task.status !== "IN_PROGRESS") {
+    return { ok: false, reason: "An owner-approval task must be approved and started before it can be completed.", code: "INVALID_TRANSITION" };
+  }
   const route = task.executionRoute as ExecutionRoute;
   if (NON_COMPLETABLE_ROUTES.has(route)) return { ok: false, reason: `A ${route} route cannot be completed — it is not an actionable task.`, code: "NEVER_AUTO" };
   if (task.approvalLevel === "OWNER_APPROVAL_REQUIRED" && input.actorRole !== "owner") {
@@ -532,6 +535,11 @@ export type ProcessActionResult =
   | { ok: true; taskId: string; status: string; reassessmentId?: string | null; outcomeId?: string | null; progressRecordId?: string | null; verificationClassification?: string | null; selfVerified?: boolean }
   | { ok: false; reason: string; code: ProcessActionCode };
 
+/** Owner-approval work is approval-first: it may only start, progress, pause or complete after the owner approved it. */
+function isApprovalFirst(task: TaskRow): boolean {
+  return task.approvalLevel === "OWNER_APPROVAL_REQUIRED";
+}
+
 /** True when this task's material decision is owner-only (owner-approval or an unsafe/never-auto action). */
 function isOwnerOnly(task: TaskRow): boolean {
   return task.approvalLevel === "OWNER_APPROVAL_REQUIRED" || task.approvalLevel === "NEVER_AUTO";
@@ -598,7 +606,7 @@ export async function applyProcessExecutionAction(
   // ── Phase 3: RECORD_PROGRESS ─────────────────────────────────────────────
   if (input.action === "RECORD_PROGRESS") {
     const NON_PROGRESS_STATUSES: ReadonlySet<string> = new Set(["PROPOSED", "REJECTED", "OUTCOME_VERIFIED", "CANCELLED"]);
-    if (NON_PROGRESS_STATUSES.has(task.status)) {
+    if (NON_PROGRESS_STATUSES.has(task.status) || (isApprovalFirst(task) && task.status !== "IN_PROGRESS")) {
       return { ok: false, reason: `Cannot record progress on a task with status ${task.status}.`, code: "INVALID_TRANSITION" };
     }
     const refs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
@@ -792,7 +800,16 @@ export async function applyProcessExecutionAction(
 
   switch (input.action) {
     case "START": {
-      if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+      // Owner-approval work is approved BEFORE it starts (PROPOSED → APPROVED → IN_PROGRESS); START
+      // from any pre-approval status would let work begin without the owner's approval.
+      if (task.approvalLevel === "OWNER_APPROVAL_REQUIRED") {
+        if (task.status !== "APPROVED") {
+          // Pre-start states genuinely need (re-)approval; any other status (in progress, completed, rejected,
+          // outcome states, cancelled) is simply not a startable transition.
+          if (["PROPOSED", "ACKNOWLEDGED", "BLOCKED", "NEEDS_DATA"].includes(task.status)) return { ok: false, reason: "This task requires owner approval before it can be started.", code: "OWNER_APPROVAL_REQUIRED" };
+          return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+        }
+      } else if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
       // G3: Startup execution gate — every STARTUP_MODE task must have all three link fields populated.
       // Missing links fail CLOSED — they indicate a misconfigured or bypassed blueprint creation.
       if (task.sourceFamily === "STARTUP_MODE") {
@@ -835,7 +852,7 @@ export async function applyProcessExecutionAction(
     case "APPROVE":
       if (task.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return { ok: false, reason: "Only an owner-approval task can be approved.", code: "INVALID_TRANSITION" };
       if (input.actorRole !== "owner") return { ok: false, reason: "This action cannot be automated — only the owner can approve it.", code: "OWNER_APPROVAL_REQUIRED" };
-      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot approve a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+      if (!["PROPOSED", "ACKNOWLEDGED", "BLOCKED", "NEEDS_DATA"].includes(task.status)) return { ok: false, reason: `Cannot approve a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
       nextStatus = "APPROVED"; break;
     case "REJECT":
       if (isOwnerOnly(task) && input.actorRole !== "owner") return { ok: false, reason: "Only the owner can reject this owner-controlled task.", code: "OWNER_APPROVAL_REQUIRED" };
@@ -883,13 +900,16 @@ export async function applyProcessExecutionAction(
       const refs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
       if (refs.length === 0) return { ok: false, reason: "No evidence supplied.", code: "EVIDENCE_REQUIRED" };
       data.evidenceRefs = [...task.evidenceRefs, ...refs];
-      if (task.status === "PROPOSED") nextStatus = "IN_PROGRESS";
+      // Evidence never starts owner-approval work; it only appends. Other tasks keep PROPOSED → IN_PROGRESS.
+      if (task.status === "PROPOSED" && !isApprovalFirst(task)) nextStatus = "IN_PROGRESS";
       break;
     }
     case "MARK_BLOCKED":
+      if (isApprovalFirst(task) && task.status !== "IN_PROGRESS") return { ok: false, reason: "An owner-approval task can only be paused once work is in progress.", code: "INVALID_TRANSITION" };
       if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to block a task.", code: "MISSING_INPUT" };
       nextStatus = "BLOCKED"; data.notes = input.reason.trim(); break;
     case "REQUEST_MISSING_DATA":
+      if (isApprovalFirst(task) && task.status !== "IN_PROGRESS") return { ok: false, reason: "An owner-approval task can only be paused once work is in progress.", code: "INVALID_TRANSITION" };
       nextStatus = "NEEDS_DATA"; break;
   }
 

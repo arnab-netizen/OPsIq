@@ -148,7 +148,7 @@ export interface OnboardingState {
 }
 
 /** Categories that unlock a limited first diagnosis (survival-grade financial read). */
-const FIRST_DIAGNOSIS_GATE: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
+export const FIRST_DIAGNOSIS_GATE: readonly OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
 
 /**
  * True only for a missing category that actually blocks the first read. Any other missing

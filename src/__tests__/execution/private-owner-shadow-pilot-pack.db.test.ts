@@ -168,6 +168,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Private owner shadow pilot pack", ()
     const tasks = await getPersistedProcessTasks(ws.C);
     const top = [...tasks].sort((a, b) => a.priorityRank - b.priorityRank)[0];
     expect(top.executionRoute).toBe("CREATE_CORRECTION_TASK");
+    // Owner-approval work is approval-first: approve and start before it can be completed.
+    if (top.approvalLevel === "OWNER_APPROVAL_REQUIRED") {
+      await applyProcessExecutionAction({ workspaceId: ws.C, actorId: owner, actorRole: "owner", taskKey: top.taskKey, action: "APPROVE", businessId: biz.C }, deps, reassessDeps);
+      await applyProcessExecutionAction({ workspaceId: ws.C, actorId: owner, actorRole: "owner", taskKey: top.taskKey, action: "START", businessId: biz.C }, deps, reassessDeps);
+    }
     const noEvidence = await applyProcessExecutionAction({ workspaceId: ws.C, actorId: owner, actorRole: "owner", taskKey: top.taskKey, action: "COMPLETE", businessId: biz.C, evidenceRefs: [] }, deps, reassessDeps);
     expect(noEvidence.ok).toBe(false);
     if (!noEvidence.ok) expect(noEvidence.code).toBe("EVIDENCE_REQUIRED");

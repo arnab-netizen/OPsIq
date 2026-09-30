@@ -166,7 +166,7 @@ export default function OwnerHomePage() {
             { label: "Sales", href: "/owner/sales" },
             { label: "Operations", href: "/owner/operations" },
             { label: "Execution", href: "/owner/execution" },
-            { label: "Data Intake", href: "/owner/intake" },
+            { label: "Add business data", href: "/owner/intake" },
             { label: "Approvals", href: "/owner/approvals" },
             { label: "Learning", href: "/owner/learning" },
             { label: "Delegation", href: "/owner/tasks" },

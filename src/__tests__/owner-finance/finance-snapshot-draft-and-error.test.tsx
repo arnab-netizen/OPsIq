@@ -85,7 +85,7 @@ afterEach(() => {
 async function openSnapshotForm() {
   await waitFor(() => expect(screen.getByText("+ Add financial snapshot").closest("button")).not.toBeDisabled());
   fireEvent.click(screen.getByText("+ Add financial snapshot"));
-  await waitFor(() => expect(screen.getByLabelText("Period start")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByLabelText("These numbers cover: from")).toBeInTheDocument());
 }
 
 async function flushDebounce() {
@@ -139,8 +139,8 @@ describe("Money 'Add financial snapshot' draft persistence (P0-D)", () => {
     installFetchMock([BIZ_A], BIZ_A.id);
     renderPage();
     await openSnapshotForm();
-    fireEvent.change(screen.getByLabelText("Period start"), { target: { value: "2026-01-01" } });
-    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: "2026-01-31" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: from"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: to"), { target: { value: "2026-01-31" } });
     fireEvent.change(screen.getByLabelText("Revenue"), { target: { value: "42" } });
     await flushDebounce();
     expect(window.localStorage.getItem(`opsiq:finance-draft:${BIZ_A.id}`)).not.toBeNull();
@@ -155,8 +155,8 @@ describe("Money 'Add financial snapshot' draft persistence (P0-D)", () => {
     installFetchMock([BIZ_A], BIZ_A.id);
     renderPage();
     await openSnapshotForm();
-    fireEvent.change(screen.getByLabelText("Period start"), { target: { value: "2026-01-01" } });
-    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: "2026-01-31" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: from"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: to"), { target: { value: "2026-01-31" } });
     fireEvent.change(screen.getByLabelText("Revenue"), { target: { value: "42" } });
     await flushDebounce();
 
@@ -190,8 +190,8 @@ describe("Money 'Add financial snapshot' save-failure UX (P0-E)", () => {
     installFetchMock([BIZ_A], BIZ_A.id);
     renderPage();
     await openSnapshotForm();
-    fireEvent.change(screen.getByLabelText("Period start"), { target: { value: "2026-01-01" } });
-    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: "2026-01-31" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: from"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: to"), { target: { value: "2026-01-31" } });
     fireEvent.click(screen.getByText("Save snapshot"));
 
     const banner = await waitFor(() => screen.getByTestId("snapshot-save-error"));
@@ -204,8 +204,8 @@ describe("Money 'Add financial snapshot' save-failure UX (P0-E)", () => {
     installFetchMock([BIZ_A], BIZ_A.id);
     renderPage();
     await openSnapshotForm();
-    fireEvent.change(screen.getByLabelText("Period start"), { target: { value: "2026-01-01" } });
-    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: "2026-01-31" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: from"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: to"), { target: { value: "2026-01-31" } });
     fireEvent.click(screen.getByText("Save snapshot"));
 
     const banner = await waitFor(() => screen.getByTestId("snapshot-save-error"));
@@ -221,15 +221,15 @@ describe("Money 'Add financial snapshot' save-failure UX (P0-E)", () => {
     installFetchMock([BIZ_A], BIZ_A.id);
     renderPage();
     await openSnapshotForm();
-    fireEvent.change(screen.getByLabelText("Period start"), { target: { value: "2026-02-01" } });
-    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: "2026-02-28" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: from"), { target: { value: "2026-02-01" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: to"), { target: { value: "2026-02-28" } });
     fireEvent.change(screen.getByLabelText("Revenue"), { target: { value: "5000" } });
     fireEvent.change(screen.getByLabelText("Fixed costs"), { target: { value: "1200" } });
     fireEvent.click(screen.getByText("Save snapshot"));
     await waitFor(() => expect(screen.getByTestId("snapshot-save-error")).toBeInTheDocument());
 
-    expect((screen.getByLabelText("Period start") as HTMLInputElement).value).toBe("2026-02-01");
-    expect((screen.getByLabelText("Period end") as HTMLInputElement).value).toBe("2026-02-28");
+    expect((screen.getByLabelText("These numbers cover: from") as HTMLInputElement).value).toBe("2026-02-01");
+    expect((screen.getByLabelText("These numbers cover: to") as HTMLInputElement).value).toBe("2026-02-28");
     expect((screen.getByLabelText("Revenue") as HTMLInputElement).value).toBe("5000");
     expect((screen.getByLabelText("Fixed costs") as HTMLInputElement).value).toBe("1200");
   });
@@ -239,8 +239,8 @@ describe("Money 'Add financial snapshot' save-failure UX (P0-E)", () => {
     installFetchMock([BIZ_A], BIZ_A.id);
     renderPage();
     await openSnapshotForm();
-    fireEvent.change(screen.getByLabelText("Period start"), { target: { value: "2026-01-01" } });
-    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: "2026-01-31" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: from"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("These numbers cover: to"), { target: { value: "2026-01-31" } });
     fireEvent.click(screen.getByText("Save snapshot"));
     await waitFor(() => expect(screen.getByTestId("snapshot-save-error")).toBeInTheDocument());
 

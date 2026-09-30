@@ -59,17 +59,17 @@ describe("Owner Data Intake page", () => {
   it("humanizes internal field identifiers in the candidate preview table and error list, without leaking the raw camelCase token", async () => {
     mockFetch();
     const { container, findByText, getByLabelText } = renderWithProvider(<OwnerIntakePage />);
-    await waitFor(() => expect(container.textContent ?? "").toContain("Data Intake"));
+    await waitFor(() => expect(container.textContent ?? "").toContain("Add business data"));
 
-    fireEvent.click(await findByText("+ Paste data"));
-    fireEvent.change(getByLabelText("Target domain"), { target: { value: "finance" } });
-    fireEvent.change(getByLabelText("Source"), { target: { value: "csv_upload" } });
+    fireEvent.click(await findByText("+ Paste spreadsheet data"));
+    fireEvent.change(getByLabelText("What kind of data is this?"), { target: { value: "finance" } });
+    fireEvent.change(getByLabelText("Where did this data come from?"), { target: { value: "csv_upload" } });
     fireEvent.change(container.querySelector("#intake-csv-text")!, {
       target: { value: "periodStart,periodEnd,currency,cashOnHand\n2026-05-01,2026-05-31,INR,1000" },
     });
-    fireEvent.click(await findByText("Validate + normalize"));
+    fireEvent.click(await findByText("Check and review"));
 
-    await findByText("Candidate — review before confirming");
+    await findByText("Review before adding");
     const text = container.textContent ?? "";
 
     // Real field label (authored on the finance IntakeFieldSpec) and the generic humanizer
@@ -124,7 +124,7 @@ describe("Owner Data Intake page", () => {
       },
     ]);
     const { container, findByText } = renderWithProvider(<OwnerIntakePage />);
-    await findByText("Intake history (2)");
+    await findByText("Previously added data (2)");
     const text = container.textContent ?? "";
 
     // Real canonical labels from domain/owner-mode/input-catalog.ts's INPUT_CATALOG.
@@ -147,7 +147,7 @@ describe("Owner Data Intake page", () => {
       },
     ]);
     const { container, findByText } = renderWithProvider(<OwnerIntakePage />);
-    await findByText("Intake history (1)");
+    await findByText("Previously added data (1)");
     const text = container.textContent ?? "";
     expect(text).toContain("Finance");
   });
@@ -165,7 +165,7 @@ describe("Owner Data Intake page", () => {
       },
     ]);
     const { container, findByText } = renderWithProvider(<OwnerIntakePage />);
-    await findByText("Intake history (1)");
+    await findByText("Previously added data (1)");
     const text = container.textContent ?? "";
     expect(text).toContain("Some future category");
     expect(text).not.toContain("some_future_category");

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge, Button, Select, Disclosure, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
-import { humanizeMetricKey } from "@/lib/metric-label";
+import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { cycleDataGapUnion, findingGapStatement } from "@/domain/owner-trust/explainability";
 import { findingTypeLabel, eventNameLabel, entityTypeLabel } from "@/lib/audit-label";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -231,7 +231,7 @@ export default function OwnerTrustPage() {
                   <section key={c.findingCode} className="border rounded-lg p-4 bg-card space-y-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="font-bold">{c.whatWasDetected}</div>
+                        <div className="font-bold">{humanizeEvidenceLine(String(c.whatWasDetected ?? ""))}</div>
                         <div className="text-xs text-muted-foreground">
                           {DOMAIN_LABEL[c.domain] ?? c.domain} · {findingTypeLabel(c.findingType)}
                         </div>
@@ -247,6 +247,12 @@ export default function OwnerTrustPage() {
                           <p>
                             <span className="font-medium text-foreground">Finding code: </span>
                             <code className="select-all">{typeof c.findingCode === "string" && c.findingCode ? c.findingCode : "—"}</code>
+                          </p>
+                          <p>
+                            <span className="font-medium text-foreground">Metric keys: </span>
+                            <code className="select-all">
+                              {[c.sourceDataUsed?.metric, c.verification?.metric].filter((k) => typeof k === "string" && k).join(", ") || "—"}
+                            </code>
                           </p>
                         </Disclosure>
                       </div>
@@ -264,32 +270,32 @@ export default function OwnerTrustPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div>
                         <div className="text-xs uppercase text-muted-foreground">Why it matters</div>
-                        <p>{c.whyItMatters}</p>
+                        <p>{humanizeEvidenceLine(String(c.whyItMatters ?? ""))}</p>
                       </div>
                       <div>
                         <div className="text-xs uppercase text-muted-foreground">Risk if ignored</div>
-                        <p>{c.riskIfIgnored}</p>
+                        <p>{humanizeEvidenceLine(String(c.riskIfIgnored ?? ""))}</p>
                       </div>
                       <div>
                         <div className="text-xs uppercase text-muted-foreground">Source data used</div>
                         <p>
-                          <strong>{c.sourceDataUsed?.metric ? humanizeMetricKey(c.sourceDataUsed.metric) : c.sourceDataUsed?.metric}</strong>: {c.sourceDataUsed?.valueLabel}
-                          {c.sourceDataUsed?.thresholdLabel ? ` (threshold ${c.sourceDataUsed.thresholdLabel})` : ""}
+                          <strong>{c.sourceDataUsed?.metric ? humanizeMetricKey(c.sourceDataUsed.metric) : c.sourceDataUsed?.metric}</strong>: {humanizeEvidenceLine(String(c.sourceDataUsed?.valueLabel ?? ""))}
+                          {c.sourceDataUsed?.thresholdLabel ? ` (threshold ${humanizeEvidenceLine(String(c.sourceDataUsed.thresholdLabel))})` : ""}
                         </p>
                         {Array.isArray(c.sourceDataUsed?.evidence) && c.sourceDataUsed.evidence.length > 0 && (
                           <ul className="list-disc list-inside text-xs text-muted-foreground mt-1">
-                            {c.sourceDataUsed.evidence.map((ev: string, i: number) => <li key={i}>{ev}</li>)}
+                            {c.sourceDataUsed.evidence.map((ev: string, i: number) => <li key={i}>{humanizeEvidenceLine(String(ev))}</li>)}
                           </ul>
                         )}
                       </div>
                       <div>
                         <div className="text-xs uppercase text-muted-foreground">Calculation used</div>
-                        <p>{c.calculationUsed}</p>
+                        <p>{humanizeEvidenceLine(String(c.calculationUsed ?? ""))}</p>
                       </div>
                       <div>
                         <div className="text-xs uppercase text-muted-foreground">Verification method</div>
                         <p>
-                          {c.verification?.method || "—"}
+                          {c.verification?.method ? humanizeEvidenceLine(String(c.verification.method)) : "—"}
                           {c.verification?.metric ? ` (metric: ${humanizeMetricKey(c.verification.metric)})` : ""}
                         </p>
                       </div>

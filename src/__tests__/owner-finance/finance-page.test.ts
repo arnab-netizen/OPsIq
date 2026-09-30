@@ -78,12 +78,42 @@ describe("Owner Finance page wiring", () => {
   });
 
   it("renders the required owner sections", () => {
-    for (const section of ["Findings", "Finance actions", "Next step within Finance", "Diagnosis history"]) {
+    for (const section of ["Findings", "Finance recommendations", "Next step within Finance", "Diagnosis history"]) {
       expect(src, `page must render "${section}"`).toContain(section);
     }
     expect(src).toContain("Missing critical data"); // honesty banner
     expect(src).toContain("survivalState");
     expect(src).toContain("dataConfidenceScore");
+  });
+
+  it("D1-D3: labels rows as recommendation status and points governed execution progress to Home", () => {
+    expect(src).toContain("Recommendation status: ");
+    expect(src).toContain("These are Finance recommendations. Execution progress for governed work is tracked on Home.");
+    // No synthetic linkage to the Home execution table.
+    expect(src).not.toMatch(/processExecutionTask|process-execution/);
+  });
+
+  it("F2-F4: keeps the four-number quick picture default, optional sections collapsed, business model optional", () => {
+    expect(src).toContain('const QUICK_FIELD_NAMES = ["revenue", "fixedCosts", "variableCosts", "cashOnHand"]');
+    expect(src).toContain('<Disclosure summary="Improve the analysis (optional)">');
+    expect(src).toContain('<Disclosure summary="Advanced detail (optional)">');
+    expect(src).toContain("Start with your basic numbers");
+    expect(src).toContain('label="Business model (optional)"');
+    expect(src).toContain("OpsIQ will not guess it");
+    expect(src).toContain('label="These numbers cover: from"');
+    // The empty option still submits "" — no invented default business model.
+    expect(src).toContain('{ value: "", label: "Skip — not sure" }');
+  });
+
+  it("G1-G8: answer-first summary is built only from returned cycle data (no new ranking, no generated text)", () => {
+    for (const heading of ["What needs attention", "Why this matters", "What to do first", "How sure OpsIQ is", "What is still missing"]) {
+      expect(src, heading).toContain(heading);
+    }
+    expect(src).toContain("recommended?.evidenceRationale"); // Why only when a real rationale exists
+    expect(src).toContain("recommended.title"); // existing recommendedNextAction, not a new elector
+    expect(src).toContain("OpsIQ can assess what you entered");
+    expect(src).not.toMatch(/openai|anthropic|llm|generateText/i);
+    expect(src).not.toMatch(/findings\.(sort|reduce)|\.sort\(/); // no local re-ranking
   });
 
   it("drives action status via the finance API (no version field; uses status machine)", () => {
