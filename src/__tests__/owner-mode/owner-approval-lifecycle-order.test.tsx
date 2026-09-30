@@ -70,6 +70,19 @@ describe("server: owner-approval task is approval-first", () => {
     expect((await harness(task({ status: "ACKNOWLEDGED" })).run("RECORD_PROGRESS")).ok).toBe(false);
   });
 
+  it("START error classification: pre-start states need approval; every other status is an invalid transition (no mutation)", async () => {
+    for (const status of ["PROPOSED", "ACKNOWLEDGED", "BLOCKED", "NEEDS_DATA"]) {
+      const h = harness(task({ status }));
+      expect(code(await h.run("START")), status).toBe("OWNER_APPROVAL_REQUIRED");
+      expect(h.updateMany, status).not.toHaveBeenCalled();
+    }
+    for (const status of ["IN_PROGRESS", "COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED", "CANCELLED"]) {
+      const h = harness(task({ status }));
+      expect(code(await h.run("START")), status).toBe("INVALID_TRANSITION");
+      expect(h.updateMany, status).not.toHaveBeenCalled();
+    }
+  });
+
   it("C3/C4: APPROVED — START → IN_PROGRESS; APPROVE, COMPLETE, RECORD_PROGRESS refused", async () => {
     expect(await harness(task({ status: "APPROVED" })).run("START")).toMatchObject({ ok: true, status: "IN_PROGRESS" });
     expect(code(await harness(task({ status: "APPROVED" })).run("APPROVE"))).toBe("INVALID_TRANSITION");

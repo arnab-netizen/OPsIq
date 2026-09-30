@@ -803,7 +803,12 @@ export async function applyProcessExecutionAction(
       // Owner-approval work is approved BEFORE it starts (PROPOSED → APPROVED → IN_PROGRESS); START
       // from any pre-approval status would let work begin without the owner's approval.
       if (task.approvalLevel === "OWNER_APPROVAL_REQUIRED") {
-        if (task.status !== "APPROVED") return { ok: false, reason: "This task requires owner approval before it can be started.", code: "OWNER_APPROVAL_REQUIRED" };
+        if (task.status !== "APPROVED") {
+          // Pre-start states genuinely need (re-)approval; any other status (in progress, completed, rejected,
+          // outcome states, cancelled) is simply not a startable transition.
+          if (["PROPOSED", "ACKNOWLEDGED", "BLOCKED", "NEEDS_DATA"].includes(task.status)) return { ok: false, reason: "This task requires owner approval before it can be started.", code: "OWNER_APPROVAL_REQUIRED" };
+          return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+        }
       } else if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
       // G3: Startup execution gate — every STARTUP_MODE task must have all three link fields populated.
       // Missing links fail CLOSED — they indicate a misconfigured or bypassed blueprint creation.
