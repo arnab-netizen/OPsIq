@@ -290,6 +290,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const top = cockpitView.processExecution!.topRoute!;
 
       const { POST } = await import("@/app/api/owner/process-execution/route");
+      // Owner-approval work is approval-first: approve, start, then complete.
+      await approveIfRequired(POST as never, top);
+      const startRes = await POST(makePostRequest({ taskKey: top.taskKey, action: "START" }), { params: Promise.resolve({}) });
+      expect(startRes.status).toBe(200);
       const completeRes = await POST(
         makePostRequest({ taskKey: top.taskKey, action: "COMPLETE", evidenceRefs: ["confirmed with bookkeeper"] }),
         { params: Promise.resolve({}) },
@@ -437,6 +441,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         const top = cockpitView.processExecution!.topRoute!;
 
         const { POST } = await import("@/app/api/owner/process-execution/route");
+        // Owner-approval work is approval-first: approve, start, then complete.
+        await approveIfRequired(POST as never, top);
+        const startRes = await POST(makePostRequest({ taskKey: top.taskKey, action: "START" }), { params: Promise.resolve({}) });
+        expect(startRes.status).toBe(200);
         const completeRes = await POST(
           makePostRequest({ taskKey: top.taskKey, action: "COMPLETE", evidenceRefs: ["confirmed with bookkeeper"] }),
           { params: Promise.resolve({}) },
