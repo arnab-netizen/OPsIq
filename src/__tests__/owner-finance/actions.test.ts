@@ -12,7 +12,7 @@ import {
   GENERIC_FINANCE_THRESHOLDS,
   type FinancialSnapshotInput,
 } from "@/domain/owner-finance";
-import { buildFinanceRecommendation } from "@/domain/owner-finance";
+import { buildFinanceRecommendation, buildFinanceEvidenceRationale, attachCurrentFinanceEvidenceRationale, recommendationToOwnerAction } from "@/domain/owner-finance";
 import type { OwnerFinding } from "@/domain/owner-spine/contracts";
 import {
   ownerActionSchema,
@@ -307,5 +307,162 @@ describe("owner-finance/recommendations — existing-data verification wording",
       expect(text).toBe("Next period, work out your fixed costs as a % of sales again. Target: below the limit that triggered this advice.");
       expect(text).not.toMatch(/null|undefined|NaN|Infinity/);
     }
+  });
+});
+
+describe("owner-finance/actions — canonical evidence rationale (read-time, finding-specific)", () => {
+  const base = { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" };
+  const loss = (cashOnHand: number): FinancialSnapshotInput => ({
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand,
+    receivables: 0, payables: 0, discountAmount: 0, refundAmount: 0, loanEmiDebtPayments: 0,
+    ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
+  });
+  const pressured: FinancialSnapshotInput = {
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000,
+    receivables: 40000, payables: 50000, discountAmount: 15000, refundAmount: 5000,
+    loanEmiDebtPayments: 40000, ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
+  };
+  const inputs: FinancialSnapshotInput[] = [
+    pressured, loss(3000), loss(10000), loss(22000), loss(20000),
+    { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 40000, cashOnHand: 400000, receivables: 0, payables: 0 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 20000, salaryPayroll: 50000, cashOnHand: 400000, totalDebtOutstanding: 1100000 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 120000, cashOnHand: 400000 },
+    { ...base, revenue: 100000 },
+    { ...base, currency: "??", revenue: 100000, costOfGoodsOrServices: 20000, cashOnHand: 400000 },
+  ];
+  const findings = inputs.flatMap((i) => diagnoseFinanceSnapshot(i, { now: NOW }).findings);
+  const find = (code: string, input: FinancialSnapshotInput) => {
+    const f = diagnoseFinanceSnapshot(input, { now: NOW }).findings.find((x) => x.code === code);
+    expect(f, `finding ${code} should be produced`).toBeDefined();
+    return f!;
+  };
+  const rationale = (f: OwnerFinding) => buildFinanceEvidenceRationale({ findingCode: f.code, sourceMetric: f.sourceMetric, sourceValue: f.sourceValue, threshold: f.threshold });
+  const RAW_KEYS = /grossMarginPct|netMarginPct|fixedCostBurdenPct|payrollBurdenPct|debtServicePressurePct|receivablesPressurePct|payablesPressurePct|discountLeakagePct|refundReworkLeakagePct|costLeakageRatioPct|cashRunwayDays|cashDaysOfCosts|dataConfidenceScore|revenueQualityScore|totalDebtOutstanding/;
+
+  it("every real emitted finding gets a rationale with no raw keys, 'threshold:' or null/NaN words", () => {
+    const codes = new Set(findings.map((f) => f.code));
+    for (const code of ["FIN_HIGH_FIXED_COST_BURDEN", "FIN_HIGH_PAYROLL_BURDEN", "FIN_HIGH_DEBT_PRESSURE", "FIN_HIGH_RECEIVABLES", "FIN_HIGH_PAYABLES", "FIN_DISCOUNT_LEAKAGE", "FIN_REFUND_REWORK_LEAKAGE", "FIN_BELOW_BREAK_EVEN", "FIN_INSOLVENT_RUNWAY", "FIN_LOW_RUNWAY", "FIN_LOW_ABSOLUTE_CASH", "FIN_MISSING_CRITICAL_DATA", "FIN_INVALID_CURRENCY", "FIN_NEGATIVE_NET_MARGIN", "FIN_NEGATIVE_GROSS_MARGIN", "FIN_OPP_MARGIN_IMPROVEMENT", "FIN_OPP_RECEIVABLES_COLLECTION", "FIN_OPP_LEAKAGE_REDUCTION", "FIN_OPP_REVENUE_QUALITY", "FIN_OPP_DATA_QUALITY", "FIN_OPP_DEBT_REDUCTION", "FIN_OPP_BREAK_EVEN_RECOVERY", "FIN_NOTABLE_OUTSTANDING_DEBT"]) {
+      expect(codes.has(code), `${code} should occur in the sweep`).toBe(true);
+    }
+    for (const f of findings) {
+      const text = rationale(f);
+      expect(text, `${f.code} should have a rationale`).not.toBeNull();
+      expect(text).not.toMatch(RAW_KEYS);
+      expect(text).not.toMatch(/threshold:|\bnull\b|undefined|NaN|Infinity/);
+    }
+  });
+
+  it("percent, days and score formatting", () => {
+    expect(rationale(find("FIN_HIGH_FIXED_COST_BURDEN", pressured))).toBe("Your fixed costs are 60% of your sales. OpsIQ flags this when they are above 50%.");
+    expect(rationale(find("FIN_LOW_ABSOLUTE_CASH", inputs[5]))).toBe("Your available cash would cover about 10 days of your total costs. OpsIQ flags this when it is below 14 days.");
+    expect(rationale(find("FIN_OPP_REVENUE_QUALITY", pressured))).toMatch(/revenue quality score is 60 out of 100, where higher is better\. OpsIQ flags this finding when the score is below 80\./);
+    expect(rationale(find("FIN_OPP_DATA_QUALITY", pressured))).toMatch(/confidence in this diagnosis is \d+ out of 100/);
+    expect(rationale(find("FIN_MISSING_CRITICAL_DATA", inputs[9]))).toMatch(/confidence in this diagnosis is \d+ out of 100/);
+  });
+
+  it("does not use 'overdue' for total receivables, and uses a deterministic en-US format", () => {
+    expect(rationale(find("FIN_HIGH_RECEIVABLES", pressured))).toBe("The money customers owe you is 40% of your sales. OpsIQ flags this when it is above 30%.");
+    expect(buildFinanceEvidenceRationale({ findingCode: "FIN_LOW_RUNWAY", sourceMetric: "cashRunwayDays", sourceValue: 7.123, threshold: 30 })).toContain("about 7.1 days");
+    expect(buildFinanceEvidenceRationale({ findingCode: "FIN_HIGH_FIXED_COST_BURDEN", sourceMetric: "fixedCostBurdenPct", sourceValue: 61.1, threshold: 55 })).toBe(
+      "Your fixed costs are 61.1% of your sales. OpsIQ flags this when they are above 55%."
+    );
+  });
+
+  it("runway: each band uses its own threshold, never calls it safe or a target; staged at the 30-day boundary", () => {
+    const ins = rationale(find("FIN_INSOLVENT_RUNWAY", loss(3000)))!;
+    expect(ins).toMatch(/about [\d.]+ days\. OpsIQ treats less than 7 days as an emergency\./);
+    const crit = rationale(find("FIN_LOW_RUNWAY", loss(10000)))!;
+    const boundary = find("FIN_LOW_RUNWAY", loss(20000));
+    expect(boundary.sourceValue).toBe(30);
+    expect(boundary.threshold).toBe(45); // no longer the critical (<30) band
+    const at30 = rationale(boundary)!;
+    expect(crit).toContain("below 30 days");
+    expect(at30).toContain("about 30 days");
+    expect(at30).toContain("below 45 days");
+    for (const t of [ins, crit, at30]) expect(t).not.toMatch(/safe|target|Target/i);
+  });
+
+  it("refund/rework never prints the umbrella costLeakageRatioPct threshold", () => {
+    const f = find("FIN_REFUND_REWORK_LEAKAGE", pressured);
+    expect(f.threshold).toBe(15);
+    expect(rationale(f)).toBe("Refunds, redone work and complaint-related costs are 5% of your sales.");
+  });
+
+  it("opportunity reference thresholds are never printed (receivables, leakage) and 100 is never a data-quality target", () => {
+    const r = find("FIN_OPP_RECEIVABLES_COLLECTION", pressured);
+    expect(r.threshold).toBe(30);
+    expect(rationale(r)).toBe("The money customers owe you is 40% of your sales.");
+    const l = find("FIN_OPP_LEAKAGE_REDUCTION", pressured);
+    expect(l.threshold).toBe(15);
+    expect(rationale(l)).toBe("Discounts, refunds, redone work and complaint-related costs together are 20% of your sales.");
+    const d = find("FIN_OPP_DATA_QUALITY", pressured);
+    expect(d.threshold).toBe(100);
+    expect(rationale(d)).not.toMatch(/target|threshold/i);
+    expect(rationale(d)!.replace("out of 100", "")).not.toContain("100");
+  });
+
+  it("monetary findings never expose naked money values", () => {
+    for (const code of ["FIN_BELOW_BREAK_EVEN", "FIN_OPP_BREAK_EVEN_RECOVERY"]) {
+      const f = find(code, pressured);
+      expect(typeof f.sourceValue).toBe("number");
+      const text = rationale(f)!;
+      expect(text).toBe("Your sales this period are below your break-even amount \u2014 the level of sales needed to cover your costs.");
+      expect(text).not.toMatch(/\d/);
+    }
+    const debt = find("FIN_NOTABLE_OUTSTANDING_DEBT", inputs[7]);
+    expect(rationale(debt)).not.toMatch(/\d/);
+    expect(rationale(debt)).toContain("no monthly repayment amount");
+  });
+
+  it("an unknown code, a mismatched metric or unusable values never fall back to raw metric names", () => {
+    const ok = { findingCode: "FIN_HIGH_FIXED_COST_BURDEN", sourceMetric: "fixedCostBurdenPct", sourceValue: 61.1, threshold: 55 };
+    expect(buildFinanceEvidenceRationale({ ...ok, findingCode: "FIN_NOT_A_THING" })).toBeNull();
+    expect(buildFinanceEvidenceRationale({ ...ok, sourceMetric: "somethingElse" })).toBeNull();
+    for (const sourceValue of [null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(buildFinanceEvidenceRationale({ ...ok, sourceValue })).toBeNull();
+    }
+    for (const threshold of [null, undefined, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const t = buildFinanceEvidenceRationale({ ...ok, threshold })!;
+      expect(t).toBe("Your fixed costs are 61.1% of your sales.");
+    }
+    expect(buildFinanceEvidenceRationale({ findingCode: "FIN_OPP_DATA_QUALITY", sourceMetric: "dataConfidenceScore", sourceValue: null, threshold: 100 })).not.toMatch(/null|undefined|NaN|\d/);
+  });
+
+  it("the in-memory planner uses the same canonical builder and ranking/priority are unaffected", () => {
+    const diagnosis = diagnoseFinanceSnapshot(pressured, { now: NOW });
+    const planned = planFinanceActionsFromDiagnosis(diagnosis);
+    const fixed = planned.actions.find((a) => a.findingCode === "FIN_HIGH_FIXED_COST_BURDEN")!;
+    expect(fixed.evidenceRationale).toBe("Your fixed costs are 60% of your sales. OpsIQ flags this when they are above 50%.");
+    for (const a of planned.actions) {
+      const f = diagnosis.findings.find((x) => x.code === a.findingCode)!;
+      expect(a.evidenceRationale).toBe(rationale(f) ?? undefined);
+    }
+    // Rationale wording does not feed ranking: re-planning with the rationale stripped yields the same order and scores.
+    const stripped = planned.recommendations.map((r) => recommendationToOwnerAction(r, diagnosis.metrics.financialRiskScore));
+    const key = (a: { findingCode: string; priorityScore: number; expectedImpactScore: number; effortScore: number; confidence: number; status: string }) =>
+      [a.findingCode, a.priorityScore, a.expectedImpactScore, a.effortScore, a.confidence, a.status].join("|");
+    expect(planned.actions.map(key).sort()).toEqual(stripped.map(key).sort());
+    expect(planned.recommendedNextAction).toBe(planned.actions[0]);
+  });
+
+  it("read time: persisted rows (no stored rationale) get the CURRENT finding's rationale; baseline findingId is untouched", () => {
+    const current = [{ code: "FIN_HIGH_FIXED_COST_BURDEN", sourceMetric: "fixedCostBurdenPct", sourceValue: 61.1, threshold: 55 }];
+    // An engaged action carried from an older cycle keeps its ORIGINAL findingId (the baseline) and a stale baseline finding.
+    const row = { id: "a1", findingCode: "FIN_HIGH_FIXED_COST_BURDEN", findingId: "old-finding", finding: { sourceValue: 70, threshold: 55 }, status: "in_progress" };
+    const [out] = attachCurrentFinanceEvidenceRationale([row], current);
+    expect(out.evidenceRationale).toBe("Your fixed costs are 61.1% of your sales. OpsIQ flags this when they are above 55%.");
+    expect(out.evidenceRationale).not.toContain("70");
+    expect(out.findingId).toBe("old-finding");
+    expect(out.finding).toEqual({ sourceValue: 70, threshold: 55 });
+    expect(row).not.toHaveProperty("evidenceRationale"); // input row not mutated
+    expect({ ...out, evidenceRationale: undefined }).toEqual({ ...row, evidenceRationale: undefined });
+  });
+
+  it("read time: with no matching current finding no rationale is invented", () => {
+    const rows = [{ id: "a1", findingCode: "FIN_DISCOUNT_LEAKAGE", findingId: "old" }, { id: "a2" }];
+    const out = attachCurrentFinanceEvidenceRationale(rows, [{ code: "FIN_HIGH_FIXED_COST_BURDEN", sourceMetric: "fixedCostBurdenPct", sourceValue: 61.1, threshold: 55 }]);
+    expect(out[0]).not.toHaveProperty("evidenceRationale");
+    expect(out[1]).not.toHaveProperty("evidenceRationale");
   });
 });
