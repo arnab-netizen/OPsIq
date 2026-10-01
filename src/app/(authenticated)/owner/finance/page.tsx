@@ -813,7 +813,24 @@ function FinanceCycleView({
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What to do first</div>
             <p className="mt-1 text-sm font-medium text-foreground">{recommended.title}</p>
-            {recommended.description && <p className="text-sm text-muted-foreground">{humanizeEvidenceLine(String(recommended.description))}</p>}
+          </div>
+        )}
+        {recommended && (recommended.description || recommended.expectedTimeframeDays > 0 || recommended.verificationMethod) && (
+          // Existing recommendation fields only (description, expectedTimeframeDays, verificationMethod):
+          // nothing is computed or invented, and a field the recommendation does not carry is omitted.
+          <div data-testid="finance-how-to-fix">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">How to fix this</div>
+            <ol className="mt-1 space-y-2 text-sm text-foreground">
+              {recommended.description && (
+                <li><span className="font-medium">1. Do this</span><p className="text-muted-foreground">{humanizeEvidenceLine(String(recommended.description))}</p></li>
+              )}
+              {recommended.expectedTimeframeDays > 0 && (
+                <li><span className="font-medium">2. Do it within</span><p className="text-muted-foreground">Try to do this within {recommended.expectedTimeframeDays} days.</p></li>
+              )}
+              {recommended.verificationMethod && (
+                <li><span className="font-medium">3. Check if it worked</span><p className="text-muted-foreground">{humanizeEvidenceLine(String(recommended.verificationMethod))}</p></li>
+              )}
+            </ol>
           </div>
         )}
         <div>
