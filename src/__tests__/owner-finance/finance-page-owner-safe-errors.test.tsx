@@ -384,6 +384,47 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
     expect(screen.queryByText(/No businesses yet/)).not.toBeInTheDocument();
   });
 
+  it("how to fix this: shows the existing recommendation's description, timeframe and verification method in plain language", async () => {
+    const fx = populatedFixture("A");
+    fx.recommendedNextAction = {
+      ...fx.recommendedNextAction,
+      title: "Build at least 2 weeks of operating cash",
+      description: "Postpone unnecessary spending and collect money customers already owe you.",
+      expectedTimeframeDays: 14,
+      verificationMethod: "Re-measure cashDaysOfCosts next period; target above 14 days.",
+    } as typeof fx.recommendedNextAction;
+    dashboardFixtureOverride = fx;
+    installFetchMock();
+    renderPage();
+
+    const box = await screen.findByTestId("finance-how-to-fix");
+    expect(box.textContent).toContain("How to start fixing this");
+    expect(box.textContent).toContain("Do this");
+    expect(box.textContent).toContain("Postpone unnecessary spending and collect money customers already owe you.");
+    expect(box.textContent).toContain("Do it within");
+    expect(box.textContent).toContain("Try to do this within 14 days.");
+    expect(box.textContent).toContain("How to check");
+    expect(box.textContent).toContain("Re-measure cash days of costs next period; target above 14 days.");
+    // No raw metric key in the owner-facing section.
+    expect(box.textContent).not.toContain("cashDaysOfCosts");
+    // The recommendation title stays under "What to do first" (not duplicated here).
+    expect(screen.getByTestId("finance-answer-first").textContent).toContain("What to do first");
+  });
+
+  it("how to fix this: omits lines the recommendation does not carry (nothing invented)", async () => {
+    const fx = populatedFixture("A");
+    fx.recommendedNextAction = { ...fx.recommendedNextAction, description: "Only a description exists." } as typeof fx.recommendedNextAction;
+    dashboardFixtureOverride = fx;
+    installFetchMock();
+    renderPage();
+
+    const box = await screen.findByTestId("finance-how-to-fix");
+    expect(box.textContent).toContain("Only a description exists.");
+    expect(box.textContent).not.toContain("Do it within");
+    expect(box.textContent).not.toContain("How to check");
+    expect(box.textContent).toContain("1. Do this"); // numbering stays contiguous when optional lines are omitted
+  });
+
   it("6. a subsequent successful load clears the error and renders fresh data", async () => {
     dashboardBusinesses = [BIZ_A, BIZ_B];
     dashboardFailure = { kind: "http", status: 500, body: { error: "boom" } };
