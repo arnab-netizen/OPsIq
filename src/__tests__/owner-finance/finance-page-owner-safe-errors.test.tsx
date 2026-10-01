@@ -398,12 +398,12 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
     renderPage();
 
     const box = await screen.findByTestId("finance-how-to-fix");
-    expect(box.textContent).toContain("How to fix this");
+    expect(box.textContent).toContain("How to start fixing this");
     expect(box.textContent).toContain("Do this");
     expect(box.textContent).toContain("Postpone unnecessary spending and collect money customers already owe you.");
     expect(box.textContent).toContain("Do it within");
     expect(box.textContent).toContain("Try to do this within 14 days.");
-    expect(box.textContent).toContain("Check if it worked");
+    expect(box.textContent).toContain("How to check");
     expect(box.textContent).toContain("Re-measure cash days of costs next period; target above 14 days.");
     // No raw metric key in the owner-facing section.
     expect(box.textContent).not.toContain("cashDaysOfCosts");
@@ -421,7 +421,8 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
     const box = await screen.findByTestId("finance-how-to-fix");
     expect(box.textContent).toContain("Only a description exists.");
     expect(box.textContent).not.toContain("Do it within");
-    expect(box.textContent).not.toContain("Check if it worked");
+    expect(box.textContent).not.toContain("How to check");
+    expect(box.textContent).toContain("1. Do this"); // numbering stays contiguous when optional lines are omitted
   });
 
   it("6. a subsequent successful load clears the error and renders fresh data", async () => {
