@@ -13,7 +13,7 @@ import Link from "next/link";
 import { Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import {
-  computeStartHereSteps,
+  computeStartHereSteps, hasEngagedPriorityForBusiness,
   nextStartHereStep,
   type StartHereStep,
 } from "@/domain/owner-mode/start-here";
@@ -89,14 +89,14 @@ export default function StartHerePage() {
     try {
       const [onboarding, processExecution] = await Promise.all([
         api(`/api/owner/onboarding?businessId=${businessId}`),
-        api(`/api/owner/process-execution`),
+        api(`/api/owner/process-execution?businessId=${encodeURIComponent(businessId)}`),
       ]);
       if (onboarding.found === false) {
         setSteps(null);
         return;
       }
       const tasks: any[] = processExecution?.tasks ?? [];
-      const hasEngagedAPriority = tasks.some((t) => t.status && t.status !== "PROPOSED");
+      const hasEngagedAPriority = hasEngagedPriorityForBusiness(tasks, businessId);
       const computed = computeStartHereSteps({
         businessBasicsComplete: true,
         canRunFirstDiagnosis: onboarding.canRunFirstDiagnosis === true,
