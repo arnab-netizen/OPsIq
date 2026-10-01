@@ -134,14 +134,54 @@ export function calculateProfitCash(input: ProfitCashInputs, hadInvalid = false)
   };
 }
 
-/** Whole dollars, with cents only for non-zero amounts under $1 so a small gap never shows as "-$0". */
-export function formatUsd(n: number): string {
+export const CURRENCIES = [
+  { code: "USD", name: "US dollar" },
+  { code: "EUR", name: "Euro" },
+  { code: "GBP", name: "British pound" },
+  { code: "INR", name: "Indian rupee" },
+  { code: "AUD", name: "Australian dollar" },
+  { code: "CAD", name: "Canadian dollar" },
+  { code: "NZD", name: "New Zealand dollar" },
+  { code: "SGD", name: "Singapore dollar" },
+  { code: "AED", name: "UAE dirham" },
+  { code: "ZAR", name: "South African rand" },
+  { code: "CHF", name: "Swiss franc" },
+  { code: "JPY", name: "Japanese yen" },
+] as const;
+
+export type CurrencyCode = (typeof CURRENCIES)[number]["code"];
+export const DEFAULT_CURRENCY: CurrencyCode = "USD";
+
+/** Unknown or tampered values fall back to the default instead of throwing in Intl. */
+export function normalizeCurrency(code: string): CurrencyCode {
+  return CURRENCIES.find((c) => c.code === code)?.code ?? DEFAULT_CURRENCY;
+}
+
+function moneyFormatter(currency: CurrencyCode, digits: number): Intl.NumberFormat {
+  // Indian digit grouping (1,00,000) for rupees; every other currency uses en-US grouping.
+  return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
+    style: "currency",
+    currency,
+    currencyDisplay: "symbol", // keeps A$, CA$ and NZ$ distinguishable from US$
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+const tidy = (text: string): string => text.replace(/\u00a0/g, " ");
+
+/** Whole units, with cents only for non-zero amounts under 1 so a small gap never shows as "-$0". */
+export function formatMoney(n: number, currency: CurrencyCode = DEFAULT_CURRENCY): string {
   const abs = Math.abs(n);
   const cents = Math.round(abs * 100);
   const digits = cents > 0 && cents < 100 ? 2 : 0;
-  const text = abs.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   const shownAsZero = Number(abs.toFixed(digits)) === 0;
-  return `${n < 0 && !shownAsZero ? "-" : ""}$${text}`;
+  return `${n < 0 && !shownAsZero ? "-" : ""}${tidy(moneyFormatter(currency, digits).format(abs))}`;
+}
+
+/** US dollars; kept for callers that do not choose a currency. */
+export function formatUsd(n: number): string {
+  return formatMoney(n, "USD");
 }
 
 /** Percent text. null is "n/a"; absurd magnitudes are bounded; never "-0.0%". */
@@ -164,9 +204,9 @@ export function formatCoverRatio(ratio: number | null): string {
   return `${text}x`;
 }
 
-/** Price text with thousands separators, consistent with the other figures. */
-export function formatPrice(price: number): string {
-  return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** Price text with thousands separators and two decimals (none for yen), consistent with the other figures. */
+export function formatPrice(price: number, currency: CurrencyCode = DEFAULT_CURRENCY): string {
+  return tidy(moneyFormatter(currency, currency === "JPY" ? 0 : 2).format(price));
 }
 
 /**
