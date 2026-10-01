@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Button } from "@/ui/primitives";
 import {
   computeStartHereSteps,
+  hasEngagedPriorityForBusiness,
   nextStartHereStep,
   isStartHereMature,
 } from "@/domain/owner-mode/start-here";
@@ -27,7 +28,7 @@ export function StartHereContinuationCard({ businessId }: { businessId: string |
     let cancelled = false;
     Promise.all([
       fetch(`/api/owner/onboarding?businessId=${businessId}`).then((r) => (r.ok ? r.json() : null)),
-      fetch(`/api/owner/process-execution`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/owner/process-execution?businessId=${encodeURIComponent(businessId)}`).then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([onboarding, processExecution]: [any, any]) => {
         if (cancelled || !onboarding || onboarding.found === false) return;
@@ -38,7 +39,7 @@ export function StartHereContinuationCard({ businessId }: { businessId: string |
           missingMinimum: onboarding.missingMinimum ?? [],
           suppliedCategories: onboarding.suppliedCategories ?? [],
           requirements: onboarding.requirements,
-          hasEngagedAPriority: tasks.some((t) => t.status && t.status !== "PROPOSED"),
+          hasEngagedAPriority: hasEngagedPriorityForBusiness(tasks, businessId),
         });
         if (isStartHereMature(steps)) return; // setup mature: no continuation card
         const n = nextStartHereStep(steps);

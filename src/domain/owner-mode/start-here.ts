@@ -55,6 +55,20 @@ function categoryComplete(category: OwnerInputCategory, input: StartHereInput): 
   return { complete: input.suppliedCategories.includes(category), applicable: true };
 }
 
+/**
+ * Whether the owner has acted on (moved past PROPOSED) a priority of THIS business. Start Here is a
+ * per-business setup checklist, so only a task stamped with the selected businessId counts: another
+ * business's task, and a workspace-level task (businessId null) acted on elsewhere, must never make a
+ * new business's "Review your first priorities" step look complete.
+ */
+export function hasEngagedPriorityForBusiness(
+  tasks: ReadonlyArray<{ businessId?: string | null; status?: string | null }>,
+  businessId: string | null,
+): boolean {
+  if (!businessId) return false;
+  return tasks.some((t) => t.businessId === businessId && Boolean(t.status) && t.status !== "PROPOSED");
+}
+
 export function computeStartHereSteps(input: StartHereInput): StartHereStep[] {
   const customers = categoryComplete("customer_count", input);
   const operations = categoryComplete("sops_checklists", input);

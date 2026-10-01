@@ -4,7 +4,7 @@
  * "not applicable" rather than a false incomplete, and that maturity/next-step logic behaves.
  */
 import { describe, it, expect } from "vitest";
-import { computeStartHereSteps, nextStartHereStep, isStartHereMature, type StartHereInput } from "@/domain/owner-mode/start-here";
+import { computeStartHereSteps, hasEngagedPriorityForBusiness, nextStartHereStep, isStartHereMature, type StartHereInput } from "@/domain/owner-mode/start-here";
 import type { MissingMinimum, ProfileInputRequirements } from "@/domain/owner-mode/owner-onboarding";
 
 const missing = (category: string): MissingMinimum => ({
@@ -109,5 +109,26 @@ describe("computeStartHereSteps — completion requires the category to be actua
     }));
     expect(steps.find((s) => s.id === "customers")).toMatchObject({ applicable: false, complete: true });
     expect(steps.find((s) => s.id === "operations")).toMatchObject({ applicable: false, complete: true });
+  });
+});
+
+describe("hasEngagedPriorityForBusiness — per-business priority engagement (MP2-1)", () => {
+  it("MP2-1A: another business's engaged task never counts", () => {
+    expect(hasEngagedPriorityForBusiness([{ businessId: "biz-old", status: "IN_PROGRESS" }], "biz-new")).toBe(false);
+  });
+  it("MP2-1B: a workspace-level (businessId null) engaged task never counts", () => {
+    expect(hasEngagedPriorityForBusiness([{ businessId: null, status: "IN_PROGRESS" }, { status: "APPROVED" }], "biz-new")).toBe(false);
+  });
+  it("MP2-1C: a PROPOSED (or status-less) task of the selected business does not count", () => {
+    expect(hasEngagedPriorityForBusiness([{ businessId: "biz-new", status: "PROPOSED" }, { businessId: "biz-new", status: null }], "biz-new")).toBe(false);
+  });
+  it("MP2-1D/E: any selected-business task past PROPOSED counts (approved, in progress, rejected, ...)", () => {
+    for (const status of ["APPROVED", "IN_PROGRESS", "REJECTED", "COMPLETED"]) {
+      expect(hasEngagedPriorityForBusiness([{ businessId: "biz-new", status }], "biz-new"), status).toBe(true);
+    }
+  });
+  it("no active business → false; empty list → false", () => {
+    expect(hasEngagedPriorityForBusiness([{ businessId: "biz-new", status: "APPROVED" }], null)).toBe(false);
+    expect(hasEngagedPriorityForBusiness([], "biz-new")).toBe(false);
   });
 });
