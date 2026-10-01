@@ -9,6 +9,7 @@ import {
   diagnoseFinanceSnapshot,
   planFinanceActionsFromDiagnosis,
   buildFinanceRecommendations,
+  GENERIC_FINANCE_THRESHOLDS,
   type FinancialSnapshotInput,
 } from "@/domain/owner-finance";
 import { buildFinanceRecommendation } from "@/domain/owner-finance";
@@ -223,8 +224,8 @@ describe("owner-finance/recommendations — existing-data verification wording",
     const { finding, rec } = recFor(code, lossMaking(cash));
     expect(finding.threshold).not.toBeNull();
     expect(rec.verificationMethod).toContain(`Current: ${finding.sourceValue} days.`);
-    expect(rec.verificationMethod).toContain(`Target: at least ${finding.threshold} days.`);
-    expect(rec.verificationMethod).not.toMatch(/cashRunwayDays|null|undefined|NaN/);
+    expect(rec.verificationMethod).toContain(`Next milestone: at least ${finding.threshold} days.`);
+    expect(rec.verificationMethod).not.toMatch(/Target:|cashRunwayDays|null|undefined|NaN/);
   });
 
   it("FIN_LOW_RUNWAY uses a different threshold in each severity band (never hard-coded)", () => {
@@ -232,6 +233,16 @@ describe("owner-finance/recommendations — existing-data verification wording",
     const b = recFor("FIN_LOW_RUNWAY", lossMaking(22000));
     expect(a.finding.threshold).not.toBe(b.finding.threshold);
     expect(a.rec.verificationMethod).not.toBe(b.rec.verificationMethod);
+  });
+
+  it("runway bands are staged: at the critical boundary the next band applies, hence 'Next milestone' copy", () => {
+    // Cash of 20000 gives a runway exactly at the critical threshold (30 days) for this loss.
+    const { finding, rec } = recFor("FIN_LOW_RUNWAY", lossMaking(20000));
+    expect(finding.sourceValue).toBe(GENERIC_FINANCE_THRESHOLDS.criticalCashRunwayDays);
+    // No longer in the critical (<30) band; still in the low-runway (<45) band.
+    expect(finding.threshold).toBe(GENERIC_FINANCE_THRESHOLDS.lowCashRunwayDays);
+    expect(finding.threshold).not.toBe(finding.sourceValue);
+    expect(rec.verificationMethod).toContain(`Next milestone: at least ${GENERIC_FINANCE_THRESHOLDS.lowCashRunwayDays} days.`);
   });
 
   it("FIN_LOW_ABSOLUTE_CASH shows actual days of costs and the stored 14-day threshold", () => {

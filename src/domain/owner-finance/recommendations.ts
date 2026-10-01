@@ -152,8 +152,10 @@ function formatOwnerNumber(n: number | null | undefined): string | null {
  * Dynamic "How to check" wording, explicitly allowlisted by finding code. Each entry is
  * only used when the finding's own sourceMetric matches `metric` and both sourceValue and
  * threshold are finite; otherwise the template's static verificationMethod is kept.
- * The threshold is the boundary of THAT finding (the finding fires when the metric is
- * below it for `atLeast`, above it for `orLower`), so reaching it clears the finding.
+ * The threshold is the boundary of THAT rule branch/band (the finding fires when the metric
+ * is below it for "at least", above it for "or lower"), so crossing it clears that branch.
+ * For runway findings the thresholds are intermediate (7 -> 30 -> 45 days): crossing one
+ * may expose the next runway band, so that copy says "Next milestone", not "Target".
  * Opportunity findings that carry a reference/umbrella/monetary threshold are
  * deliberately NOT listed here.
  */
@@ -164,12 +166,12 @@ const DYNAMIC_VERIFICATION: Record<
   FIN_INSOLVENT_RUNWAY: {
     metric: "cashRunwayDays",
     build: (c, t) =>
-      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Target: at least ${t} days.`,
+      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
   },
   FIN_LOW_RUNWAY: {
     metric: "cashRunwayDays",
     build: (c, t) =>
-      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Target: at least ${t} days.`,
+      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
   },
   FIN_LOW_ABSOLUTE_CASH: {
     metric: "cashDaysOfCosts",
