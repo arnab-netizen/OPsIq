@@ -9,8 +9,11 @@ import {
   diagnoseFinanceSnapshot,
   planFinanceActionsFromDiagnosis,
   buildFinanceRecommendations,
+  GENERIC_FINANCE_THRESHOLDS,
   type FinancialSnapshotInput,
 } from "@/domain/owner-finance";
+import { buildFinanceRecommendation } from "@/domain/owner-finance";
+import type { OwnerFinding } from "@/domain/owner-spine/contracts";
 import {
   ownerActionSchema,
   OWNER_ACTION_STATUSES,
@@ -189,5 +192,120 @@ describe("owner-finance planner — empties & immutability", () => {
     expect(recs.map((r) => r.findingCode)).toEqual(
       diagnosis.findings.filter((f) => recs.some((r) => r.findingCode === f.code)).map((f) => f.code)
     );
+  });
+});
+
+describe("owner-finance/recommendations — existing-data verification wording", () => {
+  const base = { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" };
+  const recFor = (code: string, input: FinancialSnapshotInput) => {
+    const d = diagnoseFinanceSnapshot(input, { now: NOW });
+    const finding = d.findings.find((f) => f.code === code);
+    expect(finding, `finding ${code} should be produced`).toBeDefined();
+    const rec = buildFinanceRecommendation(finding!)!;
+    return { finding: finding!, rec };
+  };
+  // Loss-making business with a controllable cash balance (runway = cash / daily burn).
+  const lossMaking = (cashOnHand: number): FinancialSnapshotInput => ({
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand,
+    receivables: 0, payables: 0, discountAmount: 0, refundAmount: 0, loanEmiDebtPayments: 0,
+    ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
+  });
+  const pressured: FinancialSnapshotInput = {
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000,
+    receivables: 40000, payables: 50000, discountAmount: 15000, refundAmount: 5000,
+    loanEmiDebtPayments: 0, ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
+  };
+
+  it.each([
+    ["FIN_INSOLVENT_RUNWAY", 3000],
+    ["FIN_LOW_RUNWAY", 10000], // critical band
+    ["FIN_LOW_RUNWAY", 22000], // "getting short" band — different threshold, same code
+  ])("%s (cash %i) shows the finding's own current value and threshold in days", (code, cash) => {
+    const { finding, rec } = recFor(code, lossMaking(cash));
+    expect(finding.threshold).not.toBeNull();
+    expect(rec.verificationMethod).toContain(`Current: ${finding.sourceValue} days.`);
+    expect(rec.verificationMethod).toContain(`Next milestone: at least ${finding.threshold} days.`);
+    expect(rec.verificationMethod).not.toMatch(/Target:|cashRunwayDays|null|undefined|NaN/);
+  });
+
+  it("FIN_LOW_RUNWAY uses a different threshold in each severity band (never hard-coded)", () => {
+    const a = recFor("FIN_LOW_RUNWAY", lossMaking(10000));
+    const b = recFor("FIN_LOW_RUNWAY", lossMaking(22000));
+    expect(a.finding.threshold).not.toBe(b.finding.threshold);
+    expect(a.rec.verificationMethod).not.toBe(b.rec.verificationMethod);
+  });
+
+  it("runway bands are staged: at the critical boundary the next band applies, hence 'Next milestone' copy", () => {
+    // Cash of 20000 gives a runway exactly at the critical threshold (30 days) for this loss.
+    const { finding, rec } = recFor("FIN_LOW_RUNWAY", lossMaking(20000));
+    expect(finding.sourceValue).toBe(GENERIC_FINANCE_THRESHOLDS.criticalCashRunwayDays);
+    // No longer in the critical (<30) band; still in the low-runway (<45) band.
+    expect(finding.threshold).toBe(GENERIC_FINANCE_THRESHOLDS.lowCashRunwayDays);
+    expect(finding.threshold).not.toBe(finding.sourceValue);
+    expect(rec.verificationMethod).toContain(`Next milestone: at least ${GENERIC_FINANCE_THRESHOLDS.lowCashRunwayDays} days.`);
+  });
+
+  it("FIN_LOW_ABSOLUTE_CASH shows actual days of costs and the stored 14-day threshold", () => {
+    const { rec } = recFor("FIN_LOW_ABSOLUTE_CASH", { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000 });
+    expect(rec.verificationMethod).toBe(
+      "Next month, check how many days of your costs your cash would cover. Current: 10 days. Target: at least 14 days."
+    );
+  });
+
+  it.each([
+    ["FIN_HIGH_FIXED_COST_BURDEN", "Next period, work out your fixed costs as a % of sales again. Current: 60%. Target: 50% or lower."],
+    ["FIN_HIGH_RECEIVABLES", "Next period, work out the money customers owe you as a % of sales again. Current: 40%. Target: 30% or lower."],
+    ["FIN_HIGH_PAYABLES", "Next period, work out the money you owe suppliers as a % of sales again. Current: 50%. Target: 40% or lower."],
+    ["FIN_DISCOUNT_LEAKAGE", "Next period, work out discounts as a % of sales again. Current: 15%. Target: 10% or lower."],
+  ])("%s shows actual current % and actual threshold %", (code, expected) => {
+    expect(recFor(code, pressured).rec.verificationMethod).toBe(expected);
+  });
+
+  it("FIN_OPP_MARGIN_IMPROVEMENT uses the healthy net-margin target", () => {
+    const { finding, rec } = recFor("FIN_OPP_MARGIN_IMPROVEMENT", { ...base, revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 40000, cashOnHand: 400000, receivables: 0, payables: 0 });
+    expect(rec.verificationMethod).toContain(`Current: ${finding.sourceValue}%.`);
+    expect(rec.verificationMethod).toContain(`Target: at least ${finding.threshold}%.`);
+  });
+
+  it("opportunity safety guard: FIN_OPP_RECEIVABLES_COLLECTION keeps 'lower than this period' (stored threshold is not the target)", () => {
+    const { finding, rec } = recFor("FIN_OPP_RECEIVABLES_COLLECTION", pressured);
+    expect(finding.threshold).toBe(30);
+    expect(rec.verificationMethod).toContain("Target: lower than this period.");
+    expect(rec.verificationMethod).not.toMatch(/30|Current:/);
+  });
+
+  it("opportunity safety guard: FIN_OPP_LEAKAGE_REDUCTION keeps 'lower than this period'", () => {
+    const { finding, rec } = recFor("FIN_OPP_LEAKAGE_REDUCTION", pressured);
+    expect(finding.threshold).toBe(15);
+    expect(rec.verificationMethod).toContain("Target: lower than this period.");
+    expect(rec.verificationMethod).not.toMatch(/15|Current:/);
+  });
+
+  it("refund/rework safety guard: umbrella costLeakageRatioPct threshold is not shown as the refundReworkLeakagePct target", () => {
+    const { finding, rec } = recFor("FIN_REFUND_REWORK_LEAKAGE", pressured);
+    expect(finding.sourceMetric).toBe("refundReworkLeakagePct");
+    expect(finding.threshold).toBe(15);
+    expect(rec.verificationMethod).toContain("Target: lower than this period.");
+    expect(rec.verificationMethod).not.toMatch(/15|Current:/);
+  });
+
+  it("monetary break-even findings are not given dynamic amounts", () => {
+    const { rec } = recFor("FIN_BELOW_BREAK_EVEN", pressured);
+    expect(rec.verificationMethod).toContain("Target: sales at or above it.");
+    expect(rec.verificationMethod).not.toMatch(/\d/);
+  });
+
+  it("no invention: null/non-finite values or a mismatched metric fall back to the static wording", () => {
+    const mk = (over: Partial<OwnerFinding>): OwnerFinding => ({
+      domain: "finance", code: "FIN_HIGH_FIXED_COST_BURDEN", title: "t", summary: "s",
+      sourceMetric: "fixedCostBurdenPct", sourceValue: 60, threshold: 50, severity: "high",
+      confidence: 1, impactScore: 50, urgencyScore: 50, findingType: "risk", evidence: [],
+      missingData: [], verificationMetric: "fixedCostBurdenPct", ...over,
+    } as OwnerFinding);
+    for (const over of [{ sourceValue: null }, { threshold: null }, { sourceValue: Number.NaN }, { threshold: Number.POSITIVE_INFINITY }, { sourceMetric: "somethingElse" }]) {
+      const text = buildFinanceRecommendation(mk(over as Partial<OwnerFinding>))!.verificationMethod;
+      expect(text).toBe("Next period, work out your fixed costs as a % of sales again. Target: below the limit that triggered this advice.");
+      expect(text).not.toMatch(/null|undefined|NaN|Infinity/);
+    }
   });
 });

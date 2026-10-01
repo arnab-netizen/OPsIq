@@ -9,7 +9,7 @@
  */
 import type { OwnerFinding, OwnerSeverity } from "@/domain/owner-spine/contracts";
 import { clampScore, clampConfidence } from "@/domain/owner-spine/contracts";
-import { IMPORTANT_FIELD_LABELS } from "./data-confidence";
+import { IMPORTANT_FIELD_LABELS, displayLabelForField } from "./data-confidence";
 
 export interface FinanceRecommendation {
   recommendationCode: string;
@@ -140,6 +140,103 @@ function buildDataQualityOwnerAction(missingFields: string[], currentConfidence:
   }
 
   return parts.join(" ");
+}
+
+/** Format an existing finite number for owner copy (no new arithmetic); null if not usable. */
+function formatOwnerNumber(n: number | null | undefined): string | null {
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  return n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+}
+
+/**
+ * Dynamic "How to check" wording, explicitly allowlisted by finding code. Each entry is
+ * only used when the finding's own sourceMetric matches `metric` and both sourceValue and
+ * threshold are finite; otherwise the template's static verificationMethod is kept.
+ * The threshold is the boundary of THAT rule branch/band (the finding fires when the metric
+ * is below it for "at least", above it for "or lower"), so crossing it clears that branch.
+ * For runway findings the thresholds are intermediate (7 -> 30 -> 45 days): crossing one
+ * may expose the next runway band, so that copy says "Next milestone", not "Target".
+ * Opportunity findings that carry a reference/umbrella/monetary threshold are
+ * deliberately NOT listed here.
+ */
+const DYNAMIC_VERIFICATION: Record<
+  string,
+  { metric: string; build: (current: string, target: string) => string }
+> = {
+  FIN_INSOLVENT_RUNWAY: {
+    metric: "cashRunwayDays",
+    build: (c, t) =>
+      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
+  },
+  FIN_LOW_RUNWAY: {
+    metric: "cashRunwayDays",
+    build: (c, t) =>
+      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
+  },
+  FIN_LOW_ABSOLUTE_CASH: {
+    metric: "cashDaysOfCosts",
+    build: (c, t) =>
+      `Next month, check how many days of your costs your cash would cover. Current: ${c} days. Target: at least ${t} days.`,
+  },
+  FIN_HIGH_FIXED_COST_BURDEN: {
+    metric: "fixedCostBurdenPct",
+    build: (c, t) =>
+      `Next period, work out your fixed costs as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_HIGH_RECEIVABLES: {
+    metric: "receivablesPressurePct",
+    build: (c, t) =>
+      `Next period, work out the money customers owe you as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_HIGH_PAYABLES: {
+    metric: "payablesPressurePct",
+    build: (c, t) =>
+      `Next period, work out the money you owe suppliers as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_DISCOUNT_LEAKAGE: {
+    metric: "discountLeakagePct",
+    build: (c, t) =>
+      `Next period, work out discounts as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_OPP_MARGIN_IMPROVEMENT: {
+    metric: "netMarginPct",
+    build: (c, t) =>
+      `Next period, work out net margin again (profit left after all costs, as a % of sales). Current: ${c}%. Target: at least ${t}%.`,
+  },
+};
+
+function buildDynamicVerification(finding: OwnerFinding): string | null {
+  const entry = DYNAMIC_VERIFICATION[finding.code];
+  if (!entry || finding.sourceMetric !== entry.metric) return null;
+  const current = formatOwnerNumber(finding.sourceValue);
+  const target = formatOwnerNumber(finding.threshold);
+  if (current === null || target === null) return null;
+  return entry.build(current, target);
+}
+
+/**
+ * Owner-facing labels for the exact critical inputs named in finding.missingData.
+ * Keys without a known display label are dropped (never shown as raw keys).
+ */
+function criticalMissingLabels(missingData: string[]): string[] {
+  return missingData.map((f) => ({ f, label: displayLabelForField(f) })).filter((x) => x.label !== x.f).map((x) => x.label);
+}
+
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
+
+function buildMissingCriticalOwnerAction(missingData: string[]): string | null {
+  const labels = criticalMissingLabels(missingData);
+  if (labels.length === 0) return null;
+  return `Enter ${joinLabels(labels)} so OpsIQ has the minimum financial information needed for a trustworthy diagnosis.`;
+}
+
+function buildMissingCriticalVerification(missingData: string[]): string | null {
+  const labels = criticalMissingLabels(missingData);
+  if (labels.length === 0) return null;
+  return `On your next finance snapshot, confirm that ${joinLabels(labels)} ${labels.length === 1 ? "has" : "have"} been entered and that diagnosis confidence is higher.`;
 }
 
 /**
@@ -293,8 +390,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_IMPROVE_DATA_QUALITY",
     category: "improve_data_quality",
     title: "Provide missing financial inputs",
-    requiredOwnerAction: "Enter the listed missing inputs to raise diagnosis confidence.",
-    verificationMethod: "Re-measure dataConfidenceScore next snapshot; target higher.",
+    requiredOwnerAction: "Enter the missing financial inputs so OpsIQ has the minimum information needed for a trustworthy diagnosis.",
+    verificationMethod: "On your next finance snapshot, confirm the missing information has been entered and that diagnosis confidence is higher.",
     expectedTimeframeDays: 7,
     effortScore: 20,
     ownerRole: "owner",
@@ -364,7 +461,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     category: "improve_data_quality",
     title: "Improve data completeness",
     requiredOwnerAction: "Supply the missing/stale inputs to sharpen the diagnosis.",
-    verificationMethod: "Re-measure dataConfidenceScore next snapshot; target higher.",
+    verificationMethod: "On your next finance snapshot, check that diagnosis confidence is higher after adding the missing information.",
     expectedTimeframeDays: 7,
     effortScore: 20,
     ownerRole: "owner",
@@ -388,10 +485,20 @@ export function buildFinanceRecommendation(finding: OwnerFinding): FinanceRecomm
 
   // FIN_OPP_DATA_QUALITY: build a prioritised, context-aware action from the
   // missingData field keys so the owner knows exactly which inputs to enter first.
-  const requiredOwnerAction =
+  let requiredOwnerAction =
     finding.code === "FIN_OPP_DATA_QUALITY" && finding.missingData.length > 0
       ? buildDataQualityOwnerAction(finding.missingData, finding.sourceValue ?? null)
       : tpl.requiredOwnerAction;
+  let verificationMethod = tpl.verificationMethod;
+
+  // FIN_MISSING_CRITICAL_DATA: name exactly the critical inputs the finding reports missing.
+  if (finding.code === "FIN_MISSING_CRITICAL_DATA") {
+    requiredOwnerAction = buildMissingCriticalOwnerAction(finding.missingData) ?? requiredOwnerAction;
+    verificationMethod = buildMissingCriticalVerification(finding.missingData) ?? verificationMethod;
+  }
+
+  // Allowlisted findings: show the real current value and the finding's own target.
+  verificationMethod = buildDynamicVerification(finding) ?? verificationMethod;
 
   return {
     recommendationCode: tpl.recommendationCode,
@@ -406,7 +513,7 @@ export function buildFinanceRecommendation(finding: OwnerFinding): FinanceRecomm
     confidence: clampConfidence(finding.confidence),
     requiredOwnerAction,
     verificationMetric: finding.verificationMetric ?? finding.sourceMetric,
-    verificationMethod: tpl.verificationMethod,
+    verificationMethod,
     expectedTimeframeDays: tpl.expectedTimeframeDays,
     effortScore: clampScore(tpl.effortScore),
     ownerRole: tpl.ownerRole,
