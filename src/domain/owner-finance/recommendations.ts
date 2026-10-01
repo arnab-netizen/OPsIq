@@ -45,17 +45,17 @@ interface FinanceRecTemplate {
 
 /** What each IMPORTANT_FIELD unlocks in the current engine (for actionable guidance text). */
 const DATA_QUALITY_FIELD_UNLOCKS: Record<string, string> = {
-  receivables: "receivables-pressure and short-term liquidity signals",
-  payables: "net working capital and vendor-obligation risk signals",
-  discountAmount: "discount-driven margin-leakage signals",
-  refundAmount: "quality-driven margin-leakage signals",
-  costOfGoodsOrServices: "gross margin and contribution margin calculations",
-  loanEmiDebtPayments: "debt-service pressure calculation",
-  salaryPayroll: "payroll burden assessment",
-  fixedCosts: "fixed cost burden and break-even calculation",
-  ownerWithdrawals: "owner cash-drain analysis",
-  orderCount: "per-order profitability analysis",
-  customerCount: "per-customer revenue analysis",
+  receivables: "a clearer view of how much customer debt is tying up your cash",
+  payables: "a clearer view of what you owe suppliers and the pressure this puts on cash",
+  discountAmount: "whether discounts are eating into your profit",
+  refundAmount: "whether refunds and quality problems are eating into your profit",
+  costOfGoodsOrServices: "how much profit is left after the direct cost of what you sell",
+  loanEmiDebtPayments: "how much of your sales are being used for loan repayments",
+  salaryPayroll: "how much of your sales are being used for payroll",
+  fixedCosts: "how heavily fixed costs are weighing on the business and where break-even sits",
+  ownerWithdrawals: "whether owner withdrawals are putting pressure on business cash",
+  orderCount: "how much profit the business makes per order",
+  customerCount: "how much profit the business makes per customer",
 };
 
 /** Confidence added per IMPORTANT_FIELD supplied (mirrors calculateDataConfidence penalty). */
@@ -116,7 +116,7 @@ function buildDataQualityOwnerAction(missingFields: string[], currentConfidence:
     conf < SURVIVAL_STATE_CONFIDENCE_GATE && projectedConf >= SURVIVAL_STATE_CONFIDENCE_GATE;
   if (crossesGate) {
     parts.push(
-      `Adding ${topCount === 1 ? "this field" : "these two fields"} raises your diagnosis confidence from ${conf} to ${projectedConf} — meeting the ${SURVIVAL_STATE_CONFIDENCE_GATE}-confidence threshold for a fully-graded Safe/Watch assessment.`
+      `Adding ${topCount === 1 ? "this field" : "these two fields"} raises your diagnosis confidence from ${conf} to ${projectedConf}, which gives OpsIQ enough information to make a fuller Safe/Watch assessment.`
     );
   } else {
     parts.push(`This raises your diagnosis confidence from ${conf} to ${projectedConf}.`);
@@ -183,7 +183,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_PRESERVE_CASH_NOW",
     category: "preserve_cash",
     title: "Preserve cash immediately",
-    requiredOwnerAction: "Your cash is very close to running out. Stop or postpone spending that is not essential, ask customers who owe you money to pay as soon as possible, and find ways to bring cash in quickly.",
+    requiredOwnerAction: "Your cash is very close to running out. Stop or postpone spending that is not essential. If customers owe you money, ask them to pay as soon as possible. Find ways to bring cash in quickly.",
     verificationMethod: "Check cash runway again (how many days your cash will last at your current spending). Target: above the danger level that triggered this advice.",
     expectedTimeframeDays: 7,
     effortScore: 50,
@@ -193,7 +193,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_EXTEND_RUNWAY",
     category: "preserve_cash",
     title: "Extend cash runway",
-    requiredOwnerAction: "Spend less each month and ask customers who owe you money to pay sooner, so your cash lasts more days.",
+    requiredOwnerAction: "Spend less each month and, if customers owe you money, ask them to pay sooner, so your cash lasts more days.",
     verificationMethod: "Check cash runway again (how many days your cash will last at your current spending). Target: above the limit that triggered this advice.",
     expectedTimeframeDays: 14,
     effortScore: 50,
@@ -203,7 +203,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_PROTECT_LIQUID_CASH",
     category: "preserve_cash",
     title: "Build at least 2 weeks of operating cash in liquid reserves",
-    requiredOwnerAction: "Postpone spending you can do without, ask customers to pay what they owe you sooner, and build up the cash you hold (cash in hand plus bank) until it would cover at least 14 days of all your running costs.",
+    requiredOwnerAction: "Postpone spending you can do without. If customers owe you money, ask them to pay sooner. Build up the cash you hold (cash in hand plus bank) until it would cover at least 14 days of all your running costs.",
     verificationMethod: "Next month, work out how many days of your costs your cash would cover. Target: more than 14 days.",
     expectedTimeframeDays: 14,
     effortScore: 45,

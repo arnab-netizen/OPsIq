@@ -197,6 +197,14 @@ describe("Section 7A — Trinity-like partial data", () => {
     // Should mention a specific confidence number (e.g., "from 60 to 70")
     expect(action).toMatch(/\d+/);
   });
+
+  it("action text uses plain wording (no internal jargon)", () => {
+    const diag = diagnoseFinanceSnapshot(trinity, { now: new Date("2026-08-12T00:00:00.000Z") });
+    const recs = buildFinanceRecommendations(diag.opportunityFindings);
+    const dqRec = recs.find((r) => r.recommendationCode === "FINREC_IMPROVE_DATA_QUALITY");
+    const action = dqRec?.requiredOwnerAction ?? "";
+    expect(action).not.toMatch(/receivables-pressure|net working capital|vendor-obligation|margin-leakage|debt-service|payroll burden|fully-graded|-confidence threshold/);
+  });
 });
 
 // --------------------------------------------------------------------------
