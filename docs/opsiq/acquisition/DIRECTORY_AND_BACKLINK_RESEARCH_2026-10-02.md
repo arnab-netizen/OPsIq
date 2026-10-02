@@ -34,3 +34,20 @@ Classification rule held: none is marked QUALIFIED until the directory's own rul
 - **Beta cohort from public threads: BLOCKED from the container.** `reddit.com` fetch is refused, and two search queries ("profitable but no cash", "we're profitable but cash flow slow-paying customers") returned only advice articles from accountants and lenders, not owners describing their own situation. No cohort row was recorded because none could be evidenced. Handed to the browser as H10.
 - **First-party directory rules: BLOCKED.** betalist.com, uneed.best and peerpush.net all return EGRESS_BLOCKED. The directory table above stays at "QUALIFICATION UNVERIFIED". Handed to the browser as H11.
 - **Observed (usable as problem language, not as cohort evidence):** the advice articles repeat the same owner pain points: slow-paying customers on 30 to 90 day terms, inconsistent payment terms across clients making cash hard to forecast, and payroll or rent falling due before invoices are paid. This supports the problem framing of Resource #1 and the calculator's 30-day check. It is not evidence that any specific person wants OpsIQ.
+
+## Update: curator-style backlink queries (2026-10-02, later)
+
+Two searches aimed at curators (small-business-development-centre and library resource pages) instead of calculator competitors. Search snippets only; every candidate page fetch was refused (EGRESS_BLOCKED), so no page was opened and **nothing below is verified as a prospect**.
+
+| Candidate (from search results) | Type | What the snippet suggests | Status |
+|---|---|---|---|
+| smithtonpl.org, "Business & Financial Information" | Public library resource page | Curated business and finance resource list | UNVERIFIED: does it list third-party tools, is it maintained, is there a suggestion route? UNKNOWN |
+| libguides.qnl.qa (two guides) | University/national-library research guides | Entrepreneurship and business guides | UNVERIFIED; likely region-specific and academic, fit doubtful |
+| merchantsbank.com, "Business Resources" | Bank resource page | Business resource list | UNVERIFIED; commercial site, may not link out |
+| financialtools.smeda.org | Government SME agency tools | The agency's own tools | Competitor-style (hosts its own calculators), poor fit |
+| score.org | Non-profit mentoring | Mentor and template resources | UNVERIFIED; unlikely to link third-party tools |
+
+- **Observed:** curators of the kind sought (libraries, development centres, bank resource pages) do exist in results.
+- **Inference:** they are the right category to try. Whether any is maintained, accepts third-party tool suggestions, and would consider a free calculator from an unestablished site is UNKNOWN. A page that lists tools without a suggestion route or contact is not a prospect.
+- **Not done:** no outreach drafted or sent. Per the mission, outreach is approval-gated; once prospects are verified, personalised messages will be prepared for owner approval.
+- Browser verification is handed off as H12.
