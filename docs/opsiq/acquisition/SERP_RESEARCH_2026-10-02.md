@@ -12,5 +12,5 @@ All search volumes: **VOLUME UNKNOWN**. This is a first pass, not a validation. 
 ## Consequences for the next-resource decision
 
 - Resource B (target-margin pricing): the formula answer already exists everywhere. Do not write a generic article. Only proceed if a full SERP read finds the overhead-inclusive worked example missing.
-- Resource A (margin vs markup): tool-dominated SERP. Prefer strengthening the calculator page (already in PR #566's FAQ) over a separate article; a separate article risks cannibalising the calculator page.
-- The cluster that fits OpsIQ best on this evidence is profit-but-no-cash, which Resource #1 already targets. Its blocker is distribution and indexing, not content volume.
+- Resource A (margin vs markup): tool-dominated SERP. INFERENCE: prefer strengthening the calculator page (its FAQ already covers margin vs markup, merged in PR #566) over a separate article, which risks cannibalising the calculator page.
+- INFERENCE: the cluster that fits OpsIQ best on this evidence is profit-but-no-cash, which Resource #1 already targets. Its blocker looks like distribution and indexing rather than content volume; the indexing state is UNKNOWN until Search Console is read (H1/H2).
