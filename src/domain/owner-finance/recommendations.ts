@@ -9,7 +9,7 @@
  */
 import type { OwnerFinding, OwnerSeverity } from "@/domain/owner-spine/contracts";
 import { clampScore, clampConfidence } from "@/domain/owner-spine/contracts";
-import { IMPORTANT_FIELD_LABELS } from "./data-confidence";
+import { IMPORTANT_FIELD_LABELS, displayLabelForField } from "./data-confidence";
 
 export interface FinanceRecommendation {
   recommendationCode: string;
@@ -45,17 +45,17 @@ interface FinanceRecTemplate {
 
 /** What each IMPORTANT_FIELD unlocks in the current engine (for actionable guidance text). */
 const DATA_QUALITY_FIELD_UNLOCKS: Record<string, string> = {
-  receivables: "receivables-pressure and short-term liquidity signals",
-  payables: "net working capital and vendor-obligation risk signals",
-  discountAmount: "discount-driven margin-leakage signals",
-  refundAmount: "quality-driven margin-leakage signals",
-  costOfGoodsOrServices: "gross margin and contribution margin calculations",
-  loanEmiDebtPayments: "debt-service pressure calculation",
-  salaryPayroll: "payroll burden assessment",
-  fixedCosts: "fixed cost burden and break-even calculation",
-  ownerWithdrawals: "owner cash-drain analysis",
-  orderCount: "per-order profitability analysis",
-  customerCount: "per-customer revenue analysis",
+  receivables: "a clearer view of how much customer debt is tying up your cash",
+  payables: "a clearer view of what you owe suppliers and the pressure this puts on cash",
+  discountAmount: "whether discounts are eating into your profit",
+  refundAmount: "whether refunds and quality problems are eating into your profit",
+  costOfGoodsOrServices: "how much profit is left after the direct cost of what you sell",
+  loanEmiDebtPayments: "how much of your sales are being used for loan repayments",
+  salaryPayroll: "how much of your sales are being used for payroll",
+  fixedCosts: "how heavily fixed costs are weighing on the business and where break-even sits",
+  ownerWithdrawals: "whether owner withdrawals are putting pressure on business cash",
+  orderCount: "how much profit the business makes per order",
+  customerCount: "how much profit the business makes per customer",
 };
 
 /** Confidence added per IMPORTANT_FIELD supplied (mirrors calculateDataConfidence penalty). */
@@ -116,7 +116,7 @@ function buildDataQualityOwnerAction(missingFields: string[], currentConfidence:
     conf < SURVIVAL_STATE_CONFIDENCE_GATE && projectedConf >= SURVIVAL_STATE_CONFIDENCE_GATE;
   if (crossesGate) {
     parts.push(
-      `Adding ${topCount === 1 ? "this field" : "these two fields"} raises your diagnosis confidence from ${conf} to ${projectedConf} — meeting the ${SURVIVAL_STATE_CONFIDENCE_GATE}-confidence threshold for a fully-graded Safe/Watch assessment.`
+      `Adding ${topCount === 1 ? "this field" : "these two fields"} raises your diagnosis confidence from ${conf} to ${projectedConf}, which gives OpsIQ enough information to make a fuller Safe/Watch assessment.`
     );
   } else {
     parts.push(`This raises your diagnosis confidence from ${conf} to ${projectedConf}.`);
@@ -142,6 +142,103 @@ function buildDataQualityOwnerAction(missingFields: string[], currentConfidence:
   return parts.join(" ");
 }
 
+/** Format an existing finite number for owner copy (no new arithmetic); null if not usable. */
+function formatOwnerNumber(n: number | null | undefined): string | null {
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  return n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+}
+
+/**
+ * Dynamic "How to check" wording, explicitly allowlisted by finding code. Each entry is
+ * only used when the finding's own sourceMetric matches `metric` and both sourceValue and
+ * threshold are finite; otherwise the template's static verificationMethod is kept.
+ * The threshold is the boundary of THAT rule branch/band (the finding fires when the metric
+ * is below it for "at least", above it for "or lower"), so crossing it clears that branch.
+ * For runway findings the thresholds are intermediate (7 -> 30 -> 45 days): crossing one
+ * may expose the next runway band, so that copy says "Next milestone", not "Target".
+ * Opportunity findings that carry a reference/umbrella/monetary threshold are
+ * deliberately NOT listed here.
+ */
+const DYNAMIC_VERIFICATION: Record<
+  string,
+  { metric: string; build: (current: string, target: string) => string }
+> = {
+  FIN_INSOLVENT_RUNWAY: {
+    metric: "cashRunwayDays",
+    build: (c, t) =>
+      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
+  },
+  FIN_LOW_RUNWAY: {
+    metric: "cashRunwayDays",
+    build: (c, t) =>
+      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
+  },
+  FIN_LOW_ABSOLUTE_CASH: {
+    metric: "cashDaysOfCosts",
+    build: (c, t) =>
+      `Next month, check how many days of your costs your cash would cover. Current: ${c} days. Target: at least ${t} days.`,
+  },
+  FIN_HIGH_FIXED_COST_BURDEN: {
+    metric: "fixedCostBurdenPct",
+    build: (c, t) =>
+      `Next period, work out your fixed costs as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_HIGH_RECEIVABLES: {
+    metric: "receivablesPressurePct",
+    build: (c, t) =>
+      `Next period, work out the money customers owe you as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_HIGH_PAYABLES: {
+    metric: "payablesPressurePct",
+    build: (c, t) =>
+      `Next period, work out the money you owe suppliers as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_DISCOUNT_LEAKAGE: {
+    metric: "discountLeakagePct",
+    build: (c, t) =>
+      `Next period, work out discounts as a % of sales again. Current: ${c}%. Target: ${t}% or lower.`,
+  },
+  FIN_OPP_MARGIN_IMPROVEMENT: {
+    metric: "netMarginPct",
+    build: (c, t) =>
+      `Next period, work out net margin again (profit left after all costs, as a % of sales). Current: ${c}%. Target: at least ${t}%.`,
+  },
+};
+
+function buildDynamicVerification(finding: OwnerFinding): string | null {
+  const entry = DYNAMIC_VERIFICATION[finding.code];
+  if (!entry || finding.sourceMetric !== entry.metric) return null;
+  const current = formatOwnerNumber(finding.sourceValue);
+  const target = formatOwnerNumber(finding.threshold);
+  if (current === null || target === null) return null;
+  return entry.build(current, target);
+}
+
+/**
+ * Owner-facing labels for the exact critical inputs named in finding.missingData.
+ * Keys without a known display label are dropped (never shown as raw keys).
+ */
+function criticalMissingLabels(missingData: string[]): string[] {
+  return missingData.map((f) => ({ f, label: displayLabelForField(f) })).filter((x) => x.label !== x.f).map((x) => x.label);
+}
+
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
+
+function buildMissingCriticalOwnerAction(missingData: string[]): string | null {
+  const labels = criticalMissingLabels(missingData);
+  if (labels.length === 0) return null;
+  return `Enter ${joinLabels(labels)} so OpsIQ has the minimum financial information needed for a trustworthy diagnosis.`;
+}
+
+function buildMissingCriticalVerification(missingData: string[]): string | null {
+  const labels = criticalMissingLabels(missingData);
+  if (labels.length === 0) return null;
+  return `On your next finance snapshot, confirm that ${joinLabels(labels)} ${labels.length === 1 ? "has" : "have"} been entered and that diagnosis confidence is higher.`;
+}
+
 /**
  * Finding code → recommendation template. Categories include the required set:
  * stop/reduce leakage, collect receivables, reduce debt pressure, reduce fixed
@@ -153,8 +250,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_IMPROVE_MARGIN",
     category: "improve_margin",
     title: "Make each sale profitable",
-    requiredOwnerAction: "Reprice or cut direct (COGS) costs so gross margin is positive.",
-    verificationMethod: "Re-measure grossMarginPct next period; target > 0%.",
+    requiredOwnerAction: "Raise your prices, or lower what it costs you to make or deliver what you sell, so your sales bring in more than the direct cost of what you sell.",
+    verificationMethod: "Next period, work out gross margin again (sales minus the direct cost of what you sold, as a % of sales). Target: above 0%.",
     expectedTimeframeDays: 30,
     effortScore: 60,
     ownerRole: "owner",
@@ -163,8 +260,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_IMPROVE_MARGIN",
     category: "improve_margin",
     title: "Return the business to net profit",
-    requiredOwnerAction: "Cut total costs and/or raise revenue to make net margin positive.",
-    verificationMethod: "Re-measure netMarginPct next period; target > 0%.",
+    requiredOwnerAction: "Your costs are currently higher than your sales. Increase your sales, cut your costs, or do both, until what you earn is more than what you spend.",
+    verificationMethod: "Next period, work out net margin again (profit left after all costs, as a % of sales). Target: above 0%.",
     expectedTimeframeDays: 30,
     effortScore: 70,
     ownerRole: "owner",
@@ -173,8 +270,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_REACH_BREAK_EVEN",
     category: "reach_break_even",
     title: "Reach break-even",
-    requiredOwnerAction: "Increase revenue or reduce fixed costs to reach the break-even revenue.",
-    verificationMethod: "Compare next-period revenue against breakEvenRevenue.",
+    requiredOwnerAction: "Your sales are below the amount you need just to cover your costs (your break-even amount). Increase sales or reduce fixed costs until sales reach that amount.",
+    verificationMethod: "Next period, compare your total sales with your break-even amount (the sales needed to cover your costs). Target: sales at or above it.",
     expectedTimeframeDays: 30,
     effortScore: 60,
     ownerRole: "owner",
@@ -183,8 +280,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_PRESERVE_CASH_NOW",
     category: "preserve_cash",
     title: "Preserve cash immediately",
-    requiredOwnerAction: "Defer non-critical spend, accelerate collections, and raise cash now.",
-    verificationMethod: "Re-measure cashRunwayDays; target above the insolvency threshold.",
+    requiredOwnerAction: "Your cash is very close to running out. Stop or postpone spending that is not essential. If customers owe you money, ask them to pay as soon as possible. Find ways to bring cash in quickly.",
+    verificationMethod: "Check cash runway again (how many days your cash will last at your current spending). Target: above the danger level that triggered this advice.",
     expectedTimeframeDays: 7,
     effortScore: 50,
     ownerRole: "owner",
@@ -193,8 +290,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_EXTEND_RUNWAY",
     category: "preserve_cash",
     title: "Extend cash runway",
-    requiredOwnerAction: "Reduce burn and accelerate collections to extend runway.",
-    verificationMethod: "Re-measure cashRunwayDays; target above the low-runway threshold.",
+    requiredOwnerAction: "Spend less each month and, if customers owe you money, ask them to pay sooner, so your cash lasts more days.",
+    verificationMethod: "Check cash runway again (how many days your cash will last at your current spending). Target: above the limit that triggered this advice.",
     expectedTimeframeDays: 14,
     effortScore: 50,
     ownerRole: "owner",
@@ -203,8 +300,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_PROTECT_LIQUID_CASH",
     category: "preserve_cash",
     title: "Build at least 2 weeks of operating cash in liquid reserves",
-    requiredOwnerAction: "Postpone all discretionary spend, accelerate pending collections, and build liquid reserves (cash + bank) to cover at least 14 days of total operating costs.",
-    verificationMethod: "Re-measure cashDaysOfCosts next month; target above 14 days.",
+    requiredOwnerAction: "Postpone spending you can do without. If customers owe you money, ask them to pay sooner. Build up the cash you hold (cash in hand plus bank) until it would cover at least 14 days of all your running costs.",
+    verificationMethod: "Next month, work out how many days of your costs your cash would cover. Target: more than 14 days.",
     expectedTimeframeDays: 14,
     effortScore: 45,
     ownerRole: "owner",
@@ -213,8 +310,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_REDUCE_FIXED_COST",
     category: "reduce_fixed_cost_burden",
     title: "Right-size fixed costs",
-    requiredOwnerAction: "Renegotiate rent/contracts or reduce fixed overheads.",
-    verificationMethod: "Re-measure fixedCostBurdenPct next period; target below threshold.",
+    requiredOwnerAction: "Review the costs that stay broadly the same even when sales change, such as rent and ongoing contracts. Ask for better terms where possible and reduce fixed costs you can safely do without.",
+    verificationMethod: "Next period, work out your fixed costs as a % of sales again. Target: below the limit that triggered this advice.",
     expectedTimeframeDays: 45,
     effortScore: 60,
     ownerRole: "owner",
@@ -243,8 +340,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_COLLECT_RECEIVABLES",
     category: "collect_receivables",
     title: "Collect overdue receivables",
-    requiredOwnerAction: "Run a focused collection drive on overdue accounts.",
-    verificationMethod: "Re-measure receivablesPressurePct next period; target below threshold.",
+    requiredOwnerAction: "Make a list of customers who still owe you money. Contact them and ask when they can pay.",
+    verificationMethod: "Next period, work out the money customers owe you as a % of your sales again. Target: below the limit that triggered this advice.",
     expectedTimeframeDays: 14,
     effortScore: 30,
     ownerRole: "owner",
@@ -253,8 +350,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_MANAGE_PAYABLES",
     category: "manage_payables",
     title: "Sequence and renegotiate payables",
-    requiredOwnerAction: "Negotiate vendor terms and sequence payments by criticality.",
-    verificationMethod: "Re-measure payablesPressurePct next period; target below threshold.",
+    requiredOwnerAction: "Ask suppliers whether they can give you longer to pay. Review the supplier bills you owe and decide which are most important to keeping normal business operations running.",
+    verificationMethod: "Next period, work out the money you owe suppliers as a % of your sales again. Target: below the limit that triggered this advice.",
     expectedTimeframeDays: 21,
     effortScore: 35,
     ownerRole: "owner",
@@ -263,8 +360,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_REDUCE_LEAKAGE",
     category: "stop_reduce_leakage",
     title: "Tighten discounting",
-    requiredOwnerAction: "Tighten discount policy and require approval above a cap.",
-    verificationMethod: "Re-measure discountLeakagePct next period; target below threshold.",
+    requiredOwnerAction: "Decide the biggest discount your staff may give without asking you, and require your approval before anyone goes above it.",
+    verificationMethod: "Next period, work out the discounts you gave as a % of your sales again. Target: below the limit that triggered this advice.",
     expectedTimeframeDays: 21,
     effortScore: 30,
     ownerRole: "owner",
@@ -273,8 +370,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_REDUCE_LEAKAGE",
     category: "stop_reduce_leakage",
     title: "Cut refunds and rework",
-    requiredOwnerAction: "Fix the root causes of refunds/rework to recover margin.",
-    verificationMethod: "Re-measure refundReworkLeakagePct next period; target lower.",
+    requiredOwnerAction: "Go through your recent refunds and redone work. Write down why each one happened, then start fixing the reason that appears most often.",
+    verificationMethod: "Next period, work out refunds, redone work and complaint-related costs as a % of your sales again. Target: lower than this period.",
     expectedTimeframeDays: 30,
     effortScore: 45,
     ownerRole: "owner",
@@ -283,8 +380,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_FIX_CURRENCY",
     category: "improve_data_quality",
     title: "Set a valid reporting currency",
-    requiredOwnerAction: "Set a valid 3–8 letter currency code on the snapshot.",
-    verificationMethod: "Confirm currencyValid is true on the next snapshot.",
+    requiredOwnerAction: "Enter your currency as a letter code, such as INR or USD (3 to 8 letters), in your finance snapshot.",
+    verificationMethod: "On your next finance snapshot, confirm OpsIQ accepts the currency as valid.",
     expectedTimeframeDays: 3,
     effortScore: 10,
     ownerRole: "owner",
@@ -293,8 +390,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_IMPROVE_DATA_QUALITY",
     category: "improve_data_quality",
     title: "Provide missing financial inputs",
-    requiredOwnerAction: "Enter the listed missing inputs to raise diagnosis confidence.",
-    verificationMethod: "Re-measure dataConfidenceScore next snapshot; target higher.",
+    requiredOwnerAction: "Enter the missing financial inputs so OpsIQ has the minimum information needed for a trustworthy diagnosis.",
+    verificationMethod: "On your next finance snapshot, confirm the missing information has been entered and that diagnosis confidence is higher.",
     expectedTimeframeDays: 7,
     effortScore: 20,
     ownerRole: "owner",
@@ -303,8 +400,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_IMPROVE_MARGIN",
     category: "improve_margin",
     title: "Lift net margin toward the healthy bar",
-    requiredOwnerAction: "Apply targeted pricing/cost actions to raise net margin.",
-    verificationMethod: "Re-measure netMarginPct next period; target the healthy bar.",
+    requiredOwnerAction: "Review what you charge and what it costs you to deliver each sale. Raise prices or lower costs where a sale is not leaving enough profit.",
+    verificationMethod: "Next period, work out net margin again (profit left after all costs, as a % of sales). Target: reach the healthy level OpsIQ compares you against.",
     expectedTimeframeDays: 45,
     effortScore: 55,
     ownerRole: "owner",
@@ -313,8 +410,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_REACH_BREAK_EVEN",
     category: "reach_break_even",
     title: "Close the gap to break-even",
-    requiredOwnerAction: "Increase revenue or cut fixed costs to close the break-even gap.",
-    verificationMethod: "Compare next-period revenue against breakEvenRevenue.",
+    requiredOwnerAction: "Your sales are below the amount needed to cover your costs. Increase sales or reduce fixed costs until you close that gap.",
+    verificationMethod: "Next period, compare your total sales with your break-even amount. Target: sales at or above it.",
     expectedTimeframeDays: 30,
     effortScore: 55,
     ownerRole: "owner",
@@ -323,8 +420,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_COLLECT_RECEIVABLES",
     category: "collect_receivables",
     title: "Convert receivables to cash",
-    requiredOwnerAction: "Run a collection push on outstanding receivables.",
-    verificationMethod: "Re-measure receivablesPressurePct next period; target lower.",
+    requiredOwnerAction: "Make a list of customers who still owe you money. Contact them and ask when they can pay.",
+    verificationMethod: "Next period, work out the money customers owe you as a % of your sales again. Target: lower than this period.",
     expectedTimeframeDays: 14,
     effortScore: 30,
     ownerRole: "owner",
@@ -343,8 +440,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_REDUCE_LEAKAGE",
     category: "stop_reduce_leakage",
     title: "Recover margin from cost leakage",
-    requiredOwnerAction: "Tighten discounts and reduce refunds/rework to recover margin.",
-    verificationMethod: "Re-measure costLeakageRatioPct next period; target lower.",
+    requiredOwnerAction: "Give fewer discounts, and reduce refunds and redone work, so you keep more of what you sell.",
+    verificationMethod: "Next period, work out discounts, refunds, redone work and complaint-related costs together as a % of your sales again. Target: lower than this period.",
     expectedTimeframeDays: 30,
     effortScore: 35,
     ownerRole: "owner",
@@ -364,7 +461,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     category: "improve_data_quality",
     title: "Improve data completeness",
     requiredOwnerAction: "Supply the missing/stale inputs to sharpen the diagnosis.",
-    verificationMethod: "Re-measure dataConfidenceScore next snapshot; target higher.",
+    verificationMethod: "On your next finance snapshot, check that diagnosis confidence is higher after adding the missing information.",
     expectedTimeframeDays: 7,
     effortScore: 20,
     ownerRole: "owner",
@@ -373,9 +470,8 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_ENTER_DEBT_REPAYMENT",
     category: "reduce_debt_pressure",
     title: "Enter monthly loan repayment amount",
-    requiredOwnerAction:
-      "Enter the monthly EMI or debt repayment amount in the finance snapshot. If there is no fixed monthly repayment schedule (e.g. a family loan with flexible terms), enter 0 explicitly so debt-service pressure can be correctly computed as zero.",
-    verificationMethod: "Confirm debtServicePressurePct is non-null on the next snapshot.",
+    requiredOwnerAction: "Enter your monthly loan repayment (the fixed amount you pay each month, often called an EMI) in the finance snapshot. If there is no fixed monthly repayment schedule, enter 0 explicitly so OpsIQ can correctly treat your monthly repayment as zero.",
+    verificationMethod: "On your next finance snapshot, confirm OpsIQ can work out your debt repayment pressure (monthly repayments compared with your sales).",
     expectedTimeframeDays: 7,
     effortScore: 10,
     ownerRole: "owner",
@@ -389,10 +485,20 @@ export function buildFinanceRecommendation(finding: OwnerFinding): FinanceRecomm
 
   // FIN_OPP_DATA_QUALITY: build a prioritised, context-aware action from the
   // missingData field keys so the owner knows exactly which inputs to enter first.
-  const requiredOwnerAction =
+  let requiredOwnerAction =
     finding.code === "FIN_OPP_DATA_QUALITY" && finding.missingData.length > 0
       ? buildDataQualityOwnerAction(finding.missingData, finding.sourceValue ?? null)
       : tpl.requiredOwnerAction;
+  let verificationMethod = tpl.verificationMethod;
+
+  // FIN_MISSING_CRITICAL_DATA: name exactly the critical inputs the finding reports missing.
+  if (finding.code === "FIN_MISSING_CRITICAL_DATA") {
+    requiredOwnerAction = buildMissingCriticalOwnerAction(finding.missingData) ?? requiredOwnerAction;
+    verificationMethod = buildMissingCriticalVerification(finding.missingData) ?? verificationMethod;
+  }
+
+  // Allowlisted findings: show the real current value and the finding's own target.
+  verificationMethod = buildDynamicVerification(finding) ?? verificationMethod;
 
   return {
     recommendationCode: tpl.recommendationCode,
@@ -407,7 +513,7 @@ export function buildFinanceRecommendation(finding: OwnerFinding): FinanceRecomm
     confidence: clampConfidence(finding.confidence),
     requiredOwnerAction,
     verificationMetric: finding.verificationMetric ?? finding.sourceMetric,
-    verificationMethod: tpl.verificationMethod,
+    verificationMethod,
     expectedTimeframeDays: tpl.expectedTimeframeDays,
     effortScore: clampScore(tpl.effortScore),
     ownerRole: tpl.ownerRole,

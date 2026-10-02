@@ -19,6 +19,7 @@
  *
  * "Reached its target" reuses the single existing definition, `extractReachedTargetFromVerification`.
  */
+import { buildFinanceEvidenceRationale } from "@/domain/owner-finance/actions";
 import { extractReachedTargetFromVerification } from "@/domain/owner-finance/outcome-signals";
 import { isExpired } from "@/domain/owner-mode/compliance-boundary";
 import {
@@ -129,9 +130,17 @@ function exclusionFor(action: any, ctx: DomainCandidateContext, findingCode: str
 export function domainActionToCandidate(action: any, ctx: DomainCandidateContext): OwnerDecisionCandidate {
   const finding = action.findingId ? ctx.findingsById.get(action.findingId) ?? null : null;
   const findingCode = String(action.findingCode ?? finding?.code ?? "UNKNOWN");
+  // Finance only: its persisted actions carry no rationale, so the plain-language "why" is derived at read
+  // time from the RESOLVED finding (the current diagnosis's, via the continuity alias, never an older baseline
+  // finding) with the one canonical builder. The raw finding evidence is kept as provenance.
+  const financeRationale =
+    ctx.domain === "finance" && finding && String(finding.code) === findingCode
+      ? buildFinanceEvidenceRationale({ findingCode, sourceMetric: String(finding.sourceMetric ?? ""), sourceValue: finding.sourceValue ?? null, threshold: finding.threshold ?? null })
+      : null;
   const evidence = [
     ...stringArray(finding?.evidence),
     ...(typeof action.evidenceRationale === "string" && action.evidenceRationale ? [action.evidenceRationale] : []),
+    ...(financeRationale && financeRationale !== action.evidenceRationale ? [financeRationale] : []),
   ];
   return {
     candidateId: `domain_action:${ctx.domain}:${action.id}`,

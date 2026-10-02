@@ -49,6 +49,45 @@ describe("domain action eligibility", () => {
   });
 });
 
+describe("Finance evidence rationale on candidates (derived at read time from the resolved finding)", () => {
+  const currentFinding = { id: "f-new", code: "FIN_HIGH_FIXED_COST_BURDEN", sourceMetric: "fixedCostBurdenPct", sourceValue: 61.1, threshold: 55, severity: "high", evidence: ["fixedCostBurdenPct = 61.1% > 55%"], missingData: [] };
+  const row = (over: Record<string, unknown> = {}) => action({ findingCode: "FIN_HIGH_FIXED_COST_BURDEN", findingId: "f-new", ...over });
+  const fin = (findings: Array<[string, unknown]>) => ({ ...base, domain: "finance" as const, findingsById: new Map<string, unknown>(findings) });
+
+  it("adds the plain-language rationale and keeps the raw evidence, without touching ranking inputs", () => {
+    const withFinding = domainActionToCandidate(row(), fin([["f-new", currentFinding]]));
+    const noCode = domainActionToCandidate(row(), fin([["f-new", { ...currentFinding, code: undefined }]]));
+    expect(withFinding.evidence).toEqual(["fixedCostBurdenPct = 61.1% > 55%", "Your fixed costs are 61.1% of your sales. OpsIQ flags this when they are above 55%."]);
+    // Everything except the added evidence line is identical to the un-enriched candidate.
+    expect({ ...withFinding, evidence: [] }).toEqual({ ...noCode, evidence: [] });
+    expect(noCode.evidence).toEqual(["fixedCostBurdenPct = 61.1% > 55%"]);
+  });
+
+  it("continuity: an engaged action keeping its OLD findingId is described by the CURRENT finding via the alias, not the baseline", () => {
+    const baseline = { ...currentFinding, id: "f-old", sourceValue: 70 };
+    // Alias (see followEngagedWork): the old findingId resolves to the current cycle's finding for that code.
+    const withAlias = domainActionToCandidate(row({ findingId: "f-old", status: "in_progress" }), fin([["f-new", currentFinding], ["f-old", currentFinding]]));
+    expect(withAlias.evidence.at(-1)).toContain("61.1%");
+    expect(withAlias.evidence.join(" ")).not.toContain("70%");
+    expect(withAlias.findingId).toBe("f-old"); // baseline identifier is not rewritten
+    // Without an alias the old baseline finding is not part of the current findings, so nothing stale is described.
+    const noAlias = domainActionToCandidate(row({ findingId: "f-old", status: "in_progress" }), fin([["f-new", currentFinding]]));
+    expect(noAlias.evidence).toEqual([]);
+    expect(baseline.sourceValue).toBe(70);
+  });
+
+  it("a finding whose code does not match the action is never used", () => {
+    const c = domainActionToCandidate(row(), fin([["f-new", { ...currentFinding, code: "FIN_HIGH_PAYABLES" }]]));
+    expect(c.evidence).not.toContain("Your fixed costs are 61.1% of your sales. OpsIQ flags this when they are above 55%.");
+  });
+
+  it("non-Finance candidates are unchanged", () => {
+    const f = { ...currentFinding, code: "FIN_DISCOUNT_LEAKAGE" };
+    const c = domainActionToCandidate(action({ findingId: "f1" }), { ...base, domain: "cashflow" as const, findingsById: new Map<string, unknown>([["f1", { ...f, sourceMetric: "discountLeakagePct", sourceValue: 12, threshold: 10 }]]) });
+    expect(c.evidence).toEqual(["fixedCostBurdenPct = 61.1% > 55%"]);
+  });
+});
+
 describe("recovery", () => {
   it("severity follows the finding (or the action priority), class follows the finding code", () => {
     const c = recoveryActionToCandidate({ id: "r1", priority: "high", effort: "low", confidence: 0.8, status: "proposed", title: "Fix quality", finding: { code: "QUALITY_FAILURE", severity: "critical" }, verifications: [] }, { ...base, domain: "recovery" });
