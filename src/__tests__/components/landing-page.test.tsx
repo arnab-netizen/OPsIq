@@ -172,3 +172,33 @@ describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
     expect(container.textContent ?? "").not.toMatch(/being prepared|coming soon/i);
   });
 });
+
+describe("LandingPage — P1 conversion clarity", () => {
+  it("states the audience near the hero, using the public positioning wording", () => {
+    const { getByTestId } = render(<LandingPage />);
+    expect(getByTestId("landing-audience").textContent).toMatch(/small and mid-size service business owners/i);
+  });
+
+  it("states the beta is free, controlled and by invitation, with no timeline or instant-access promise", () => {
+    const { container } = render(<LandingPage />);
+    const text = container.textContent ?? "";
+    expect(text).toMatch(/free controlled beta/i);
+    expect(text).toMatch(/access by invitation/i);
+    expect(text).not.toMatch(/instant|within \d+|immediately/i);
+  });
+
+  it("explains what the owner brings, what OpsIQ does, and what they get", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const text = getByTestId("landing-input-output").textContent ?? "";
+    for (const label of ["You bring", "OpsIQ does", "You get"]) expect(text).toMatch(new RegExp(label));
+    expect(text).toMatch(/recommended action/i);
+    expect(text).toMatch(/outcome you verify/i);
+  });
+
+  it("has exactly three short differentiation statements and no brand or consultant-replacement claim", () => {
+    const { getByTestId, container } = render(<LandingPage />);
+    const items = getByTestId("landing-differentiation").querySelectorAll("li");
+    expect(items).toHaveLength(3);
+    expect(container.textContent ?? "").not.toMatch(/replaces? (your )?consultant|vs\.? |better than/i);
+  });
+});

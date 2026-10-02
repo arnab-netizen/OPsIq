@@ -53,6 +53,38 @@ const HOW_IT_WORKS = [
   },
 ];
 
+/** Input -> output: each line maps to shipped behavior described elsewhere on this page. */
+const INPUT_OUTPUT = [
+  {
+    label: "You bring",
+    body: "The business numbers you already track for Money, Sales, or Operations.",
+  },
+  {
+    label: "OpsIQ does",
+    body: "Checks the evidence, finds what needs attention, ranks it, and explains why.",
+  },
+  {
+    label: "You get",
+    body: "A finding, its priority and reason, a recommended action, and a record of the outcome you verify.",
+  },
+];
+
+/** Differentiation: short, current-product statements only. No brands, no consultant-replacement claim. */
+const DIFFERENTIATORS = [
+  {
+    title: "Not another dashboard",
+    body: "OpsIQ helps decide what deserves attention first, not just display numbers.",
+  },
+  {
+    title: "Not generic AI advice",
+    body: "Recommendations are tied to structured evidence and visible missing information.",
+  },
+  {
+    title: "Not a task tracker",
+    body: "OpsIQ helps decide which action matters before the work is tracked.",
+  },
+];
+
 /** Trust concepts — each one describes real, shipped behavior, not a generic claim. */
 const TRUST_POINTS = [
   {
@@ -90,7 +122,7 @@ export default function LandingPage() {
       <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:py-16">
         <div className="text-center lg:text-left">
           <p className="mb-4 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-            Free beta &middot; no credit card required
+            Free controlled beta &middot; no credit card &middot; access by invitation
           </p>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Diagnose your business. Know your next move.
@@ -99,7 +131,11 @@ export default function LandingPage() {
             OpsIQ reads your business numbers, tells you what needs attention and why, and gives
             you an ordered plan for what to do next — then keeps track of what actually happened.
           </p>
-          <div className="mt-10 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
+          <p className="mt-4 text-sm font-medium text-foreground" data-testid="landing-audience">
+            Built for small and mid-size service business owners who need to know what deserves
+            attention first.
+          </p>
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
             <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
             <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
               Sign in
@@ -171,29 +207,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem -> outcome: one compact bridge, not a full section, so a visitor who skims past
-          the hero still gets "why should I care" before "how it works". */}
-      <section className="mx-auto w-full max-w-4xl px-6 py-10">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="rounded-lg border border-border bg-background p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Without a diagnosis
-            </p>
-            <p className="mt-2 text-sm text-foreground">
-              Owners find out about a problem when it&rsquo;s already urgent — a slow month that was
-              really a cash-survival risk three months in the making.
-            </p>
-          </div>
-          <div className="rounded-lg border border-border bg-background p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              With OpsIQ
-            </p>
-            <p className="mt-2 text-sm text-foreground">
-              The same signal is surfaced, ranked by real urgency, and turned into one clear,
-              owned next action — instead of staying buried in the numbers.
-            </p>
-          </div>
-        </div>
+      {/* Input -> output, plus three short differentiators. Replaces the earlier
+          "without/with a diagnosis" bridge so the page does not get longer. */}
+      <section className="mx-auto w-full max-w-4xl px-6 py-10" data-testid="landing-input-output">
+        <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          What you bring, and what you get
+        </h2>
+        <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {INPUT_OUTPUT.map((item) => (
+            <div key={item.label} className="rounded-lg border border-border bg-background p-5">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</dt>
+              <dd className="mt-2 text-sm text-foreground">{item.body}</dd>
+            </div>
+          ))}
+        </dl>
+        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="landing-differentiation">
+          {DIFFERENTIATORS.map((item) => (
+            <li key={item.title} className="border-l-2 py-1 pl-4" style={{ borderColor: "var(--accent-ink)" }}>
+              <p className="text-sm font-semibold">{item.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Why now: independent context, clearly separated from OpsIQ's own interpretation. */}
