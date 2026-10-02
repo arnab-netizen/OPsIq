@@ -1,0 +1,57 @@
+# Directory, backlink and IndexNow research, first pass (2026-10-02)
+
+Method: three WebSearch queries plus a repository read. Search snippets only; no directory site was opened, no account created, nothing submitted. Third-party blog and aggregator claims below are SECONDARY and must be re-checked on each directory's own page before any submission.
+
+## Directories (all submissions are external publication: owner account and approval needed)
+
+| Directory | Status | Evidence (secondary) | Fit for OpsIQ |
+|---|---|---|---|
+| BetaList | NOT SUBMITTED, QUALIFICATION UNVERIFIED | Aggregator posts say free submissions wait about 2 months, paid priority about $130, and the site targets beta / pre-launch products | INFERENCE: plausible, since OpsIQ is a free, invite-only controlled beta. UNKNOWN until betalist.com's own rules confirm that an invite-only beta is accepted |
+| Uneed | NOT SUBMITTED, QUALIFICATION UNVERIFIED | Free; all fields required: name, live URL, 60-char tagline, 250-char description, 512 px square logo, 2-3 screenshots, pricing model | Product-launch directory for indie makers; fit unknown |
+| PeerPush | NOT SUBMITTED, QUALIFICATION UNVERIFIED | Free and paid listings (paid for faster publication) | Same |
+| SaaSHub | NOT SUBMITTED, QUALIFICATION UNVERIFIED | No eligibility detail found | UNKNOWN whether a private or invite-only product qualifies. No claim made either way |
+| G2 | NOT RESEARCHED, QUALIFICATION UNVERIFIED | Not researched this pass | UNKNOWN. A review-based marketplace may be a poor fit for a private beta (INFERENCE only); no classification until G2's own rules are read |
+
+Classification rule held: none is marked QUALIFIED until the directory's own rules are read. Directory count is not a KPI.
+
+## Backlink prospects (resource pages)
+
+- **Observed:** the searches for "free small business calculators" roundups returned vendor tool hubs (Upmetrics, Wave, SoloBizKit, Business Initiative, Phoenix Strategy, invoicer.ai, NAB, Countingup). These are the calculator's competitors and publish their own tools. They are not independent pages that list third-party tools.
+- **Inference:** none is a credible link prospect from this pass. The search found competitors, not curators.
+- **UNKNOWN:** whether independent roundup or curated "tools for small business" pages exist that link to third-party calculators. That needs a different query set (library and university business guides, small-business-development-centre resource pages, accountant resource lists) and a page-by-page check that each page is maintained and has a contact route. Not started.
+- No outreach drafted; none sent.
+
+## IndexNow feasibility (repository read)
+
+- **Observed:** static files in `public/` are served (`public/llms.txt` exists) and `middleware.ts` passes every request through, so an IndexNow key file at `/<key>.txt` would be served.
+- **Observed:** deploys go through Vercel's Git integration. There is no existing deploy hook that could submit URLs.
+- **Inference:** the smallest safe design is a `public/<key>.txt` key file plus a manually triggered (`workflow_dispatch`) script that POSTs an explicit URL list to the IndexNow endpoint after a production deploy is live. A key must be public by design, so it is not a secret. Submit only added, updated or deleted URLs.
+- **Limits:** IndexNow is read by Bing, Yandex, Naver, Seznam and others; Google does not use it, and the calculator's open problem is Google indexing. A submission is DISCOVERY REQUESTED, never INDEXED. Bing Webmaster Tools (BROWSER_HANDOFF H3) is a prerequisite for seeing any result.
+- **Decision:** feasible but low priority. #566 and #572 were merged on 2026-10-02, so build only after Bing is verified, as its own PR.
+
+## Update: beta-cohort and first-party directory checks (2026-10-02, later)
+
+- **Beta cohort from public threads: BLOCKED from the container.** `reddit.com` fetch is refused, and two search queries ("profitable but no cash", "we're profitable but cash flow slow-paying customers") returned only advice articles from accountants and lenders, not owners describing their own situation. No cohort row was recorded because none could be evidenced. Handed to the browser as H10.
+- **First-party directory rules: BLOCKED.** betalist.com, uneed.best and peerpush.net all return EGRESS_BLOCKED. The directory table above stays at "QUALIFICATION UNVERIFIED". Handed to the browser as H11.
+- **Observed (usable as problem language, not as cohort evidence):** the advice articles repeat the same owner pain points: slow-paying customers on 30 to 90 day terms, inconsistent payment terms across clients making cash hard to forecast, and payroll or rent falling due before invoices are paid. This supports the problem framing of Resource #1 and the calculator's 30-day check. It is not evidence that any specific person wants OpsIQ.
+
+## Update: curator-style backlink queries (2026-10-02, later)
+
+Two searches aimed at curators (small-business-development-centre and library resource pages) instead of calculator competitors. Search snippets only; every candidate page fetch was refused (EGRESS_BLOCKED), so no page was opened and **nothing below is verified as a prospect**.
+
+| Candidate (from search results) | Type | What the snippet suggests | Status |
+|---|---|---|---|
+| smithtonpl.org, "Business & Financial Information" | Public library resource page | Curated business and finance resource list | UNVERIFIED_CANDIDATE: does it list third-party tools, is it maintained, is there a suggestion route? UNKNOWN |
+| libguides.qnl.qa (two guides) | University/national-library research guides | Entrepreneurship and business guides | UNVERIFIED_CANDIDATE; likely region-specific and academic, fit doubtful |
+| merchantsbank.com, "Business Resources" | Bank resource page | Business resource list | UNVERIFIED_CANDIDATE; commercial site, may not link out |
+| financialtools.smeda.org | Government SME agency tools | The agency's own tools | Competitor-style (hosts its own calculators), poor fit |
+| score.org | Non-profit mentoring | Mentor and template resources | UNVERIFIED_CANDIDATE; unlikely to link third-party tools |
+
+- **Observed:** curators of the kind sought (libraries, development centres, bank resource pages) do exist in results.
+- **Inference:** they are the right category to try. Whether any is maintained, accepts third-party tool suggestions, and would consider a free calculator from an unestablished site is UNKNOWN. A page that lists tools without a suggestion route or contact is not a prospect.
+- **Not done:** no outreach drafted or sent. Per the mission, outreach is approval-gated; once prospects are verified, personalised messages will be prepared for owner approval.
+- Browser verification is handed off as H12.
+
+### Prospect gate (owner rule, 2026-10-02)
+
+A candidate stays `UNVERIFIED_CANDIDATE`, and nobody is contacted, until first-party or browser verification shows all five: (1) the page exists; (2) it is current enough to matter; (3) it actually lists or recommends external tools or resources; (4) OpsIQ's calculator is contextually relevant to it; (5) a legitimate suggestion or contact route exists. Only then does it become a `VERIFIED_PROSPECT`, and outreach is still approval-gated.
