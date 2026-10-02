@@ -137,3 +137,38 @@ describe("LandingPage — structure and CTAs", () => {
     }
   });
 });
+
+describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
+  it("states the PwC population, caveat, and no endorsement", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const text = getByTestId("landing-why-now").textContent ?? "";
+    expect(text).toMatch(/767 US operations and\s*supply-chain leaders/i);
+    expect(text).toMatch(/not of all\s*businesses/i);
+    expect(text).toMatch(/not reviewed or endorsed OpsIQ/i);
+    expect(text).toMatch(/OpsIQ.s interpretation/i);
+  });
+
+  it("uses exactly two PwC-derived facts and never implies PwC recommends/validates OpsIQ", () => {
+    const { getByTestId, container } = render(<LandingPage />);
+    expect(getByTestId("landing-why-now").querySelectorAll("li")).toHaveLength(2);
+    expect(container.textContent ?? "").not.toMatch(/PwC (predicts|recommends|validates|proves|says businesses need)/i);
+  });
+
+  it("links to the owned research article", () => {
+    const { container } = render(<LandingPage />);
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/resources/future-of-business-decision-making-2026-operations-research");
+  });
+
+  it("shows the Evidence → Diagnose → Prioritize → Act → Verify order", () => {
+    const { container } = render(<LandingPage />);
+    const titles = Array.from(container.querySelectorAll("li h3")).map((h) => h.textContent);
+    expect(titles.slice(0, 5)).toEqual(["Evidence", "Diagnose", "Prioritize", "Act", "Verify"]);
+  });
+
+  it("omits any real-product media placeholder until real assets exist", () => {
+    const { queryByTestId, container } = render(<LandingPage />);
+    expect(queryByTestId("landing-real-product")).toBeNull();
+    expect(container.textContent ?? "").not.toMatch(/being prepared|coming soon/i);
+  });
+});
