@@ -28,3 +28,9 @@ Classification rule held: none is marked QUALIFIED until the directory's own rul
 - **Inference:** the smallest safe design is a `public/<key>.txt` key file plus a manually triggered (`workflow_dispatch`) script that POSTs an explicit URL list to the IndexNow endpoint after a production deploy is live. A key must be public by design, so it is not a secret. Submit only added, updated or deleted URLs.
 - **Limits:** IndexNow is read by Bing, Yandex, Naver, Seznam and others; Google does not use it, and the calculator's open problem is Google indexing. A submission is DISCOVERY REQUESTED, never INDEXED. Bing Webmaster Tools (BROWSER_HANDOFF H3) is a prerequisite for seeing any result.
 - **Decision:** feasible but low priority. Build after #566 and #572 are merged and Bing is verified, as its own PR.
+
+## Update: beta-cohort and first-party directory checks (2026-10-02, later)
+
+- **Beta cohort from public threads: BLOCKED from the container.** `reddit.com` fetch is refused, and two search queries ("profitable but no cash", "we're profitable but cash flow slow-paying customers") returned only advice articles from accountants and lenders, not owners describing their own situation. No cohort row was recorded because none could be evidenced. Handed to the browser as H10.
+- **First-party directory rules: BLOCKED.** betalist.com, uneed.best and peerpush.net all return EGRESS_BLOCKED. The directory table above stays at "QUALIFICATION UNVERIFIED". Handed to the browser as H11.
+- **Observed (usable as problem language, not as cohort evidence):** the advice articles repeat the same owner pain points: slow-paying customers on 30 to 90 day terms, inconsistent payment terms across clients making cash hard to forecast, and payroll or rent falling due before invoices are paid. This supports the problem framing of Resource #1 and the calculator's 30-day check. It is not evidence that any specific person wants OpsIQ.
