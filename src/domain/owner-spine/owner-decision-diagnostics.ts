@@ -11,8 +11,17 @@
  * - Pure: no I/O, no clock, no persistence, no logging. Inputs are never mutated or reordered.
  * - Privacy: the report carries only domains, classes, severities, finding codes, candidate ids and
  *   numbers. Titles, explanations, evidence and any other free text are never copied.
- * - Population: candidates with `exclusion === null` (the ones that compete). Pass the set you want
- *   measured; excluded candidates are only counted.
+ * - Population is EXPLICIT and carried on every report (`report.population`):
+ *   - "canonical-ranked": `analyzeCanonicalOwnerDecisionCandidateSet` runs the production
+ *     `canonicalEligibility` (scope filter, stale-evidence replacement, safety-gate holds and blocker
+ *     targets) and analyzes its `ranked` list — exactly the population `resolveOwnerDecision` ranks. No
+ *     eligibility or gate logic is re-implemented here. Only this report has
+ *     `exactCanonicalPopulation: true`.
+ *   - "eligible-input": `analyzeOwnerDecisionCandidateSet(candidates, { population: "eligible-input" })`
+ *     only filters the supplied array by `exclusion === null`. It does NOT model scope, stale
+ *     replacement, gate holds or synthesized targets, so it is NOT the production contest unless the
+ *     caller already passed the exact canonical ranked list. Its report says so
+ *     (`exactCanonicalPopulation: false`).
  * - Scores are read through `clampScore` / `clampConfidence`, exactly as the comparator reads them, so
  *   "saturated" means "the comparator sees 100" (clampScore rounds, so 99.6 is seen as 100).
  *
@@ -20,8 +29,10 @@
  */
 import { clampConfidence, clampScore } from "./contracts";
 import {
+  canonicalEligibility,
   compareOwnerCandidatesWithFactor,
   isEligibleOwnerCandidate,
+  rankOwnerCandidates,
   type OwnerDecisionCandidate,
   type OwnerPrecedenceFactor,
 } from "./owner-decision";
@@ -112,7 +123,39 @@ export interface OwnerDecisionSaturationReport {
   buckets: Record<PriorityScoreBucket, number>;
 }
 
+/** Which candidate population a report describes. */
+export type OwnerDecisionDiagnosticsPopulation = "canonical-ranked" | "eligible-input";
+
+/**
+ * How the canonical comparator population was derived from the raw input (canonical analysis only).
+ * Counts only; every figure comes from the production `canonicalEligibility` result.
+ */
+export interface CanonicalPopulationTrace {
+  rawCount: number;
+  /** Raw candidates for another business/workspace (dropped by the scope filter). */
+  outOfScopeCount: number;
+  /** In-scope candidates carrying a lifecycle exclusion on input (completed, cancelled, ...). */
+  excludedOnInputCount: number;
+  /** Candidates excluded because their evidence is stale (replaced by an explicit refresh target). */
+  staleReplacedCount: number;
+  /** Candidates the owner action gate holds (never ranked; the blocker is elected instead). */
+  heldBySafetyGateCount: number;
+  /** Ranked candidates that were not in the raw input (refresh targets and safety-gate blockers). */
+  synthesizedCount: number;
+  synthesizedBySource: Record<string, number>;
+  /** Exact number of candidates entering the comparator. */
+  rankedCount: number;
+}
+
 export interface OwnerDecisionCandidateSetReport {
+  /** The population this report describes. Never infer "the production contest" without checking it. */
+  population: OwnerDecisionDiagnosticsPopulation;
+  /** True only when the population is the exact `resolveOwnerDecision` ranked list. */
+  exactCanonicalPopulation: boolean;
+  /** Present only for canonical-ranked reports. */
+  populationTrace: CanonicalPopulationTrace | null;
+  /** First candidate in comparator order within the analyzed population (null when empty). */
+  topRankedCandidateId: string | null;
   totalCandidates: number;
   eligibleCandidates: number;
   excludedCandidates: number;
@@ -169,10 +212,52 @@ function allEqual<T>(values: readonly T[]): boolean {
 }
 
 /**
- * Analyze one candidate set. Deterministic: the same input always yields an identical report, and the
- * input array and its candidates are left untouched.
+ * Analyze a GENERAL candidate set: only the supplied candidates with `exclusion === null`. The caller
+ * must state the population explicitly; the report is labelled `eligible-input` and
+ * `exactCanonicalPopulation: false`. For the production contest use
+ * `analyzeCanonicalOwnerDecisionCandidateSet`. Deterministic; inputs are never mutated or reordered.
  */
-export function analyzeOwnerDecisionCandidateSet(candidates: readonly OwnerDecisionCandidate[]): OwnerDecisionCandidateSetReport {
+export function analyzeOwnerDecisionCandidateSet(
+  candidates: readonly OwnerDecisionCandidate[],
+  options: { population: "eligible-input" }
+): OwnerDecisionCandidateSetReport {
+  return analyzeCandidates(candidates, options.population, null);
+}
+
+/**
+ * Analyze the EXACT population `resolveOwnerDecision` ranks: the production `canonicalEligibility(...).ranked`
+ * for the same candidates and scope (business, workspace, optional owner-gate constraints). Reuses that
+ * existing pure function — no eligibility, stale-replacement or safety-gate logic lives here.
+ */
+export function analyzeCanonicalOwnerDecisionCandidateSet(
+  candidates: readonly OwnerDecisionCandidate[],
+  scope: Parameters<typeof canonicalEligibility>[1]
+): OwnerDecisionCandidateSetReport {
+  const { processed, ranked, holds } = canonicalEligibility(candidates, scope);
+  const rawIds = new Set(candidates.map((c) => c.candidateId));
+  const synthesized = ranked.filter((c) => !rawIds.has(c.candidateId));
+  const synthesizedBySource: Record<string, number> = {};
+  for (const c of synthesized) increment(synthesizedBySource, c.source);
+  const rawExclusion = new Map(candidates.map((c) => [c.candidateId, c.exclusion]));
+  const trace: CanonicalPopulationTrace = {
+    rawCount: candidates.length,
+    outOfScopeCount: candidates.length - processed.length,
+    excludedOnInputCount: processed.filter((c) => rawExclusion.get(c.candidateId) !== null).length,
+    // Stale replacement is applied by canonicalEligibility: a candidate eligible on input but excluded after.
+    staleReplacedCount: processed.filter((c) => c.exclusion === "stale_evidence" && rawExclusion.get(c.candidateId) === null).length,
+    heldBySafetyGateCount: holds.length,
+    synthesizedCount: synthesized.length,
+    synthesizedBySource: sortedKeys(synthesizedBySource),
+    rankedCount: ranked.length,
+  };
+  return analyzeCandidates(ranked, "canonical-ranked", trace);
+}
+
+function analyzeCandidates(
+  candidates: readonly OwnerDecisionCandidate[],
+  population: OwnerDecisionDiagnosticsPopulation,
+  populationTrace: CanonicalPopulationTrace | null
+): OwnerDecisionCandidateSetReport {
   const eligible = candidates.filter(isEligibleOwnerCandidate);
 
   const byDomain: Record<string, number> = {};
@@ -243,6 +328,10 @@ export function analyzeOwnerDecisionCandidateSet(candidates: readonly OwnerDecis
   }
 
   return {
+    population,
+    exactCanonicalPopulation: population === "canonical-ranked",
+    populationTrace,
+    topRankedCandidateId: rankOwnerCandidates(eligible)[0]?.candidateId ?? null,
     totalCandidates: candidates.length,
     eligibleCandidates: eligible.length,
     excludedCandidates: candidates.length - eligible.length,
@@ -264,6 +353,12 @@ export function analyzeOwnerDecisionCandidateSet(candidates: readonly OwnerDecis
 
 export interface OwnerDecisionMeasurementSummary {
   candidateSets: number;
+  /** Sets whose population is the exact canonical comparator population. */
+  canonicalPopulationSets: number;
+  /** Sets that only filtered the supplied array (NOT the exact production contest). */
+  eligibleInputPopulationSets: number;
+  /** True only when every summarized set is an exact canonical population. */
+  allExactCanonical: boolean;
   totalCandidates: number;
   eligibleCandidates: number;
   ceilingCount: number;
@@ -309,8 +404,12 @@ export function summarizeOwnerDecisionReports(reports: readonly OwnerDecisionCan
       }
     }
   }
+  const canonicalSets = reports.filter((r) => r.exactCanonicalPopulation).length;
   return {
     candidateSets: reports.length,
+    canonicalPopulationSets: canonicalSets,
+    eligibleInputPopulationSets: reports.length - canonicalSets,
+    allExactCanonical: reports.length > 0 && canonicalSets === reports.length,
     totalCandidates,
     eligibleCandidates: eligible,
     ceilingCount: ceiling,
