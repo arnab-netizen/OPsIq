@@ -299,13 +299,13 @@ describe("population contract", () => {
     expect(r.populationTrace).toBeNull();
   });
   it("the canonical analyzer labels itself canonical-ranked with a population trace", () => {
-    const r = analyzeCanonicalOwnerDecisionCandidateSet(set, { businessId: "biz-1", workspaceId: "ws-1" });
+    const r = analyzeCanonicalOwnerDecisionCandidateSet(set, { businessId: "biz-1", workspaceId: "ws-1", gate: null });
     expect(r.population).toBe("canonical-ranked");
     expect(r.exactCanonicalPopulation).toBe(true);
     expect(r.populationTrace?.rankedCount).toBe(1);
   });
   it("the measurement summary distinguishes exact-canonical from eligible-input sets", () => {
-    const scope = { businessId: "biz-1", workspaceId: "ws-1" };
+    const scope = { businessId: "biz-1", workspaceId: "ws-1", gate: null };
     const mixed = summarizeOwnerDecisionReports([analyzeCanonicalOwnerDecisionCandidateSet(set, scope), analyzeOwnerDecisionCandidateSet(set, ELIGIBLE)]);
     expect(mixed.canonicalPopulationSets).toBe(1);
     expect(mixed.eligibleInputPopulationSets).toBe(1);
@@ -318,7 +318,7 @@ describe("population contract", () => {
 describe("exact canonical population (hostile fixture)", () => {
   // 5 raw candidates → 4 ranked: one completed (excluded), one growth step held by the capacity gate, one
   // stale finance finding replaced by a synthesized refresh target, plus a synthesized capacity blocker.
-  const scope = { businessId: "biz-1", workspaceId: "ws-1" };
+  const scope = { businessId: "biz-1", workspaceId: "ws-1", gate: null };
   const CAPACITY_DOWN: OwnerGateConstraints = { ...NO_OWNER_GATE_CONSTRAINTS, capacity: { status: "blocked", reason: "Oven: down", bottlenecks: ["Oven"], confidence: null } };
   const raw = [
     cand("done", { findingCode: "SALES_OPP_WINBACK", domain: "sales", exclusion: "completed" }),
@@ -327,7 +327,7 @@ describe("exact canonical population (hostile fixture)", () => {
     cand("cf", { findingCode: "CF_LOW_RUNWAY", domain: "cashflow", priorityClass: "SURVIVAL_CASH", severity: "critical", priorityScore: 100 }),
     cand("ops", { findingCode: "OPS_OPP_CLOSE_SOP_GAP", domain: "operations", priorityClass: "PROCESS_OPTIMISATION", severity: "medium", priorityScore: 70 }),
   ];
-  const gatedScope = { ...scope, gate: CAPACITY_DOWN };
+  const gatedScope = { businessId: "biz-1", workspaceId: "ws-1", gate: CAPACITY_DOWN };
   const production = canonicalEligibility(raw, gatedScope);
   const report = analyzeCanonicalOwnerDecisionCandidateSet(raw, gatedScope);
   const ids = (cs: readonly OwnerDecisionCandidate[]) => cs.map((c) => c.candidateId).sort();
@@ -417,7 +417,7 @@ describe("exact canonical population (hostile fixture)", () => {
 describe("no duplicate canonical logic", () => {
   const src = readFileSync(join(process.cwd(), "src/domain/owner-spine/owner-decision-diagnostics.ts"), "utf8");
   it("derives the population from production's canonicalEligibility and re-implements no eligibility or gate logic", () => {
-    expect(src).toMatch(/canonicalEligibility\(candidates, scope\)/);
+    expect(src).toMatch(/canonicalEligibility\(candidates, \{ businessId: scope.businessId, workspaceId: scope.workspaceId, gate: scope.gate \}\)/);
     for (const forbidden of ["evaluateOwnerActionGate", "buildGateBlockerTargets", "buildRefreshTargets", "held_by_safety_gate", "stale_evidence\" as const", "NO_OWNER_GATE_CONSTRAINTS"]) {
       expect(src, forbidden).not.toContain(forbidden);
     }

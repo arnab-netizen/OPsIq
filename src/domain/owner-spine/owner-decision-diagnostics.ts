@@ -27,6 +27,7 @@
  *
  * Fixture or test statistics produced with this helper say nothing about real-customer incidence.
  */
+import type { OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 import { clampConfidence, clampScore } from "./contracts";
 import {
   canonicalEligibility,
@@ -231,9 +232,14 @@ export function analyzeOwnerDecisionCandidateSet(
  */
 export function analyzeCanonicalOwnerDecisionCandidateSet(
   candidates: readonly OwnerDecisionCandidate[],
-  scope: Parameters<typeof canonicalEligibility>[1]
+  /**
+   * `gate` is REQUIRED so the caller states the safety state explicitly (governance: every canonical
+   * resolution passes the owner action-gate constraints). Pass the same constraints production resolves
+   * with; `null` means "model no safety state" (no action is held, no blocker is synthesized).
+   */
+  scope: { businessId: string; workspaceId: string; gate: OwnerGateConstraints | null }
 ): OwnerDecisionCandidateSetReport {
-  const { processed, ranked, holds } = canonicalEligibility(candidates, scope);
+  const { processed, ranked, holds } = canonicalEligibility(candidates, { businessId: scope.businessId, workspaceId: scope.workspaceId, gate: scope.gate });
   const rawIds = new Set(candidates.map((c) => c.candidateId));
   const synthesized = ranked.filter((c) => !rawIds.has(c.candidateId));
   const synthesizedBySource: Record<string, number> = {};
