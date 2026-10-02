@@ -166,12 +166,12 @@ const DYNAMIC_VERIFICATION: Record<
   FIN_INSOLVENT_RUNWAY: {
     metric: "cashRunwayDays",
     build: (c, t) =>
-      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
+      `Check cash runway again (how many days your cash on hand would last at your current rate of loss). Current: ${c} days. Next milestone: at least ${t} days.`,
   },
   FIN_LOW_RUNWAY: {
     metric: "cashRunwayDays",
     build: (c, t) =>
-      `Check cash runway again (how many days your cash will last at your current spending). Current: ${c} days. Next milestone: at least ${t} days.`,
+      `Check cash runway again (how many days your cash on hand would last at your current rate of loss). Current: ${c} days. Next milestone: at least ${t} days.`,
   },
   FIN_LOW_ABSOLUTE_CASH: {
     metric: "cashDaysOfCosts",
@@ -251,7 +251,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     category: "improve_margin",
     title: "Make each sale profitable",
     requiredOwnerAction: "Raise your prices, or lower what it costs you to make or deliver what you sell, so your sales bring in more than the direct cost of what you sell.",
-    verificationMethod: "Next period, work out gross margin again (sales minus the direct cost of what you sold, as a % of sales). Target: above 0%.",
+    verificationMethod: "Next period, work out gross margin again (sales minus the direct cost of what you sold, as a % of sales). This warning clears at 0% or higher.",
     expectedTimeframeDays: 30,
     effortScore: 60,
     ownerRole: "owner",
@@ -261,7 +261,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     category: "improve_margin",
     title: "Return the business to net profit",
     requiredOwnerAction: "Your costs are currently higher than your sales. Increase your sales, cut your costs, or do both, until what you earn is more than what you spend.",
-    verificationMethod: "Next period, work out net margin again (profit left after all costs, as a % of sales). Target: above 0%.",
+    verificationMethod: "Next period, work out net margin again (profit left after all costs, as a % of sales). This warning clears at 0% or higher.",
     expectedTimeframeDays: 30,
     effortScore: 70,
     ownerRole: "owner",
@@ -281,7 +281,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     category: "preserve_cash",
     title: "Preserve cash immediately",
     requiredOwnerAction: "Your cash is very close to running out. Stop or postpone spending that is not essential. If customers owe you money, ask them to pay as soon as possible. Find ways to bring cash in quickly.",
-    verificationMethod: "Check cash runway again (how many days your cash will last at your current spending). Target: above the danger level that triggered this advice.",
+    verificationMethod: "Check cash runway again (how many days your cash on hand would last at your current rate of loss). Aim to move beyond the emergency boundary that triggered this advice.",
     expectedTimeframeDays: 7,
     effortScore: 50,
     ownerRole: "owner",
@@ -291,7 +291,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     category: "preserve_cash",
     title: "Extend cash runway",
     requiredOwnerAction: "Spend less each month and, if customers owe you money, ask them to pay sooner, so your cash lasts more days.",
-    verificationMethod: "Check cash runway again (how many days your cash will last at your current spending). Target: above the limit that triggered this advice.",
+    verificationMethod: "Check cash runway again (how many days your cash on hand would last at your current rate of loss). Aim to move beyond the runway boundary that triggered this advice.",
     expectedTimeframeDays: 14,
     effortScore: 50,
     ownerRole: "owner",
@@ -339,7 +339,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
   FIN_HIGH_RECEIVABLES: {
     recommendationCode: "FINREC_COLLECT_RECEIVABLES",
     category: "collect_receivables",
-    title: "Collect overdue receivables",
+    title: "Collect money customers owe you",
     requiredOwnerAction: "Make a list of customers who still owe you money. Contact them and ask when they can pay.",
     verificationMethod: "Next period, work out the money customers owe you as a % of your sales again. Target: below the limit that triggered this advice.",
     expectedTimeframeDays: 14,
