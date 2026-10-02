@@ -54,6 +54,8 @@ You don't need new software for this — a P&L and a rough sense of what's owed 
 
 If your profit number looks fine but this comparison looks tight, that gap is worth investigating specifically — not a sign your profit number is wrong.
 
+If you would rather not build this in a spreadsheet, our free [profit margin and cash check calculator](/tools/profit-margin-calculator) takes the same inputs (revenue, costs, cash, what is owed to you and what is due) and shows your margin and the 30-day gap in one step. It runs in your browser.
+
 ## A worked example
 
 **SIMPLIFIED ILLUSTRATIVE EXAMPLE — NOT A REAL CUSTOMER.** One month, one small service business. (Dollar figures are illustrative — the same logic applies in your own currency.)
