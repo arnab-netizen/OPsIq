@@ -30,9 +30,11 @@ export interface PortfolioBusinessSummary {
   currency: string | null;
   hasData: boolean;
   overallHealthScore: number;
-  survivalRiskScore: number;
+  /** null = NOT MEASURED (no recovery/finance/cashflow evidence); distinct from a measured 0. */
+  survivalRiskScore: number | null;
   growthOpportunityScore: number;
-  executionRiskScore: number;
+  /** null = NOT MEASURED (no operations/sop evidence); distinct from a measured 0. */
+  executionRiskScore: number | null;
   dataConfidenceScore: number;
   // Per-domain health (null when the business has no cycle in that domain).
   financialScore: number | null;

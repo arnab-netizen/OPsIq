@@ -362,11 +362,15 @@ export interface BusinessConditionResult {
  * the existing risk-badge semantics used across the owner UI (>=70 critical, >=40 elevated). Pure.
  */
 export function computeReassessmentCadence(
-  survivalRiskScore: number,
-  executionRiskScore: number,
+  survivalRiskScore: number | null,
+  executionRiskScore: number | null,
   dataSufficiency?: "sufficient" | "caution" | "insufficient"
 ): { days: number; reason: string } {
-  const risk = Math.max(survivalRiskScore, executionRiskScore);
+  // null = NOT MEASURED (no applicable domain supplied evidence). It contributes no risk, but it is also
+  // never evidence of safety: only a business with BOTH categories measured can earn the relaxed cadence.
+  const measured = [survivalRiskScore, executionRiskScore].filter((v): v is number => v !== null);
+  const risk = measured.length > 0 ? Math.max(...measured) : 0;
+  const fullyMeasured = measured.length === 2;
   if (risk >= 70) {
     return { days: 7, reason: "High survival/execution risk — weekly cash, complaint and capacity review until the condition stabilises." };
   }
@@ -382,6 +386,9 @@ export function computeReassessmentCadence(
   }
   if (risk >= 40) {
     return { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." };
+  }
+  if (!fullyMeasured) {
+    return { days: 14, reason: "Survival or execution risk has not been measured yet, so stability is not confirmed — fortnightly review until it is." };
   }
   return { days: 30, reason: "Stable condition — monthly review cadence." };
 }

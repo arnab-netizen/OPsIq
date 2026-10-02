@@ -159,9 +159,17 @@ export const businessConditionProfileSchema = z.object({
   businessId: z.string().optional(),
   workspaceId: z.string().optional(),
   overallHealthScore: scoreSchema,
-  survivalRiskScore: scoreSchema,
+  /**
+   * Max risk across SURVIVAL_DOMAINS (recovery, finance, cashflow) only. `null` = NOT MEASURED: none of
+   * those domains has supplied evidence. NOT MEASURED is distinct from a measured 0 and is never derived
+   * from any other domain's risk.
+   */
+  survivalRiskScore: scoreSchema.nullable(),
   growthOpportunityScore: scoreSchema,
-  executionRiskScore: scoreSchema,
+  /**
+   * Max risk across EXECUTION_DOMAINS (operations, sop) only. `null` = NOT MEASURED (see survivalRiskScore).
+   */
+  executionRiskScore: scoreSchema.nullable(),
   dataConfidenceScore: scoreSchema,
   /**
    * Jarvis 360 Slice 1 — the WORST domain data-confidence (not the average), so a
@@ -352,7 +360,7 @@ export interface BusinessConditionProfileInput {
 
 /**
  * Aggregate per-domain scores into one Business Condition Profile. Deterministic
- * and honest: with no domain scores every value is 0 (nothing invented), and
+ * and honest: with no domain scores every value is 0 (nothing invented) except survival/execution risk, which are NOT MEASURED (null) unless an applicable domain is present, and
  * `missingCriticalData` is carried through (deduped) — never fabricated. It does NOT elect an
  * overall next action: that is the single canonical owner decision (owner-spine/owner-decision.ts).
  */
@@ -370,13 +378,10 @@ export function buildBusinessConditionProfile(
     .map((s) => s.riskScore);
 
   const overallHealthScore = clampScore(average(scores.map((s) => s.healthScore)));
-  const survivalRiskScore = clampScore(
-    survivalRiskValues.length > 0 ? maxOf(survivalRiskValues) : maxOf(scores.map((s) => s.riskScore))
-  );
+  // NOT MEASURED (null) when no applicable domain is present — never borrowed from an unrelated domain.
+  const survivalRiskScore = survivalRiskValues.length > 0 ? clampScore(maxOf(survivalRiskValues)) : null;
   const growthOpportunityScore = clampScore(maxOf(scores.map((s) => s.opportunityScore)));
-  const executionRiskScore = clampScore(
-    executionRiskValues.length > 0 ? maxOf(executionRiskValues) : average(scores.map((s) => s.riskScore))
-  );
+  const executionRiskScore = executionRiskValues.length > 0 ? clampScore(maxOf(executionRiskValues)) : null;
   const dataConfidenceScore = clampScore(average(scores.map((s) => s.dataConfidenceScore)));
 
   // Slice 1: surface the WORST domain confidence so a single stale/missing domain
