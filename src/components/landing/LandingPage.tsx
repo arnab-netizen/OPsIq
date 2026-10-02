@@ -32,6 +32,10 @@ const secondaryCta =
 /** "How OpsIQ works" — the real loop: every domain diagnosis follows this order today. */
 const HOW_IT_WORKS = [
   {
+    title: "Evidence",
+    body: "Start from the numbers you already track. Each finding shows the metric and value behind it, and missing data is shown as a gap.",
+  },
+  {
     title: "Diagnose",
     body: "Run a structured diagnosis on Money, Sales, or Operations from the numbers you already track.",
   },
@@ -67,6 +71,13 @@ const TRUST_POINTS = [
     title: "Outcomes stay honest",
     body: "A verified outcome is recorded separately from the original recommendation — never blended together.",
   },
+];
+
+/** PwC-derived facts. Population caveat is part of the wording; see docs/opsiq/marketing/PUBLIC_POSITIONING_EVIDENCE.md. */
+const WHY_NOW_FACTS = [
+  "89% said their technology investments had not fully delivered expected results.",
+  "87% said poor data quality had affected their organization\u2019s ability to achieve value from digital initiatives.",
+  "PwC says success should be measured through operational and financial business outcomes, rather than adoption alone.",
 ];
 
 export default function LandingPage() {
@@ -186,12 +197,62 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Real-product media slot. No screenshot is shown until real, fictional-data captures exist
+          (see docs/opsiq/marketing/PRODUCT_DEMO_CAPTURE.md). */}
+      <section className="mx-auto w-full max-w-4xl px-6 py-8" data-testid="landing-real-product">
+        <div className="rounded-xl border border-dashed border-border p-6 text-center">
+          <h2 className="font-display text-lg font-semibold">The real product</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Screenshots of the live product, using fictional data, are being prepared. Until
+            then, the example above shows the same decision loop in text.
+          </p>
+        </div>
+      </section>
+
+      {/* Why now: independent context, clearly separated from OpsIQ's own interpretation. */}
+      <section className="mx-auto w-full max-w-4xl px-6 py-12" data-testid="landing-why-now">
+        <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          Why this matters now
+        </h2>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          PwC&rsquo;s 2026 Digital Trends in Operations Survey asked 767 US operations and
+          supply-chain leaders about technology investment.
+        </p>
+        <ul className="mt-6 grid grid-cols-1 gap-4">
+          {WHY_NOW_FACTS.map((fact) => (
+            <li key={fact} className="border-l-2 py-1 pl-5 text-sm text-foreground" style={{ borderColor: "var(--accent-ink)" }}>
+              {fact}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-xs text-muted-foreground">
+          These are the views of the surveyed US operations and supply-chain leaders, not of all
+          businesses or of owner-led companies. PwC is cited as independent context only and has
+          not reviewed or endorsed OpsIQ.
+        </p>
+        <div className="mt-6 rounded-lg border border-border bg-background p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            OpsIQ&rsquo;s interpretation
+          </p>
+          <p className="mt-2 text-sm text-foreground">
+            Owning a tool is not the same as getting a result. Decisions need clear evidence,
+            an order of priority, an owned action, and a check on what actually happened. That is
+            what OpsIQ is built to do today.
+          </p>
+          <p className="mt-3 text-sm">
+            <Link href="/resources/future-of-business-decision-making-2026-operations-research" className="text-[var(--primary-text)] hover:underline">
+              Read the research notes &rarr;
+            </Link>
+          </p>
+        </div>
+      </section>
+
       {/* How OpsIQ works — the real loop, in order. Four short steps, not a feature grid. */}
       <section className="mx-auto w-full max-w-6xl px-6 py-12">
         <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
           How OpsIQ works
         </h2>
-        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
           {HOW_IT_WORKS.map((item, i) => (
             <li key={item.title} className="rounded-lg border border-border bg-background p-6 text-left shadow-sm">
               <span className="font-display text-sm font-semibold text-muted-foreground">
