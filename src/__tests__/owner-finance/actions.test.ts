@@ -5,6 +5,8 @@
  * inputs are not mutated.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   diagnoseFinanceSnapshot,
   planFinanceActionsFromDiagnosis,
@@ -464,5 +466,78 @@ describe("owner-finance/actions — canonical evidence rationale (read-time, fin
     const out = attachCurrentFinanceEvidenceRationale(rows, [{ code: "FIN_HIGH_FIXED_COST_BURDEN", sourceMetric: "fixedCostBurdenPct", sourceValue: 61.1, threshold: 55 }]);
     expect(out[0]).not.toHaveProperty("evidenceRationale");
     expect(out[1]).not.toHaveProperty("evidenceRationale");
+  });
+});
+
+describe("owner-finance/recommendations — final semantic copy cleanup", () => {
+  const base = { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" };
+  const lossMaking = (cashOnHand: number): FinancialSnapshotInput => ({
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand,
+    receivables: 0, payables: 0, discountAmount: 0, refundAmount: 0, loanEmiDebtPayments: 0,
+    ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
+  });
+  const findingFor = (code: string, input: FinancialSnapshotInput) =>
+    diagnoseFinanceSnapshot(input, { now: NOW }).findings.find((f) => f.code === code);
+  const mkRunway = (code: string, over: Partial<OwnerFinding>): OwnerFinding => ({
+    domain: "finance", code, title: "t", summary: "s", sourceMetric: "cashRunwayDays", sourceValue: 5,
+    threshold: 7, severity: "critical", confidence: 1, impactScore: 50, urgencyScore: 50,
+    findingType: "risk", evidence: [], missingData: [], verificationMetric: "cashRunwayDays", ...over,
+  } as OwnerFinding);
+
+  it.each([
+    ["FIN_NEGATIVE_GROSS_MARGIN", { revenue: 100000, costOfGoodsOrServices: 120000, fixedCosts: 0 }, { revenue: 100000, costOfGoodsOrServices: 100000, fixedCosts: 0 }],
+    ["FIN_NEGATIVE_NET_MARGIN", { revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 60000 }, { revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 50000 }],
+  ])("%s: wording states the 0%% boundary and exactly 0 does not fire the rule", (code, losing, breakEven) => {
+    const mk = (o: object): FinancialSnapshotInput => ({ ...base, cashOnHand: 400000, receivables: 0, payables: 0, orderCount: 10, customerCount: 5, ...o } as FinancialSnapshotInput);
+    const finding = findingFor(code, mk(losing));
+    expect(finding, "negative margin should fire").toBeDefined();
+    const text = buildFinanceRecommendation(finding!)!.verificationMethod;
+    expect(text).toContain("This warning clears at 0% or higher.");
+    expect(text).not.toContain("above 0%");
+    expect(findingFor(code, mk(breakEven))).toBeUndefined();
+  });
+
+  it("FIN_HIGH_RECEIVABLES title does not claim receivables are overdue", () => {
+    const finding = findingFor("FIN_HIGH_RECEIVABLES", { ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000, receivables: 40000, payables: 0, orderCount: 10, customerCount: 5 });
+    const rec = buildFinanceRecommendation(finding!)!;
+    expect(rec.title).toBe("Collect money customers owe you");
+    expect(rec.title.toLowerCase()).not.toContain("overdue");
+  });
+
+  it("Cashflow's genuine overdue-receivables terminology is unchanged", () => {
+    const rec = readFileSync(join(process.cwd(), "src/domain/owner-cashflow/recommendations.ts"), "utf8");
+    const opp = readFileSync(join(process.cwd(), "src/domain/owner-cashflow/opportunity-rules.ts"), "utf8");
+    expect(rec).toContain('title: "Collect overdue receivables"');
+    expect(rec).toContain('title: "Convert overdue receivables to cash"');
+    expect(opp).toContain('title: "Collect overdue receivables to free cash"');
+  });
+
+  it.each([
+    ["FIN_INSOLVENT_RUNWAY", 3000],
+    ["FIN_LOW_RUNWAY", 10000],
+    ["FIN_LOW_RUNWAY", 22000],
+  ])("%s (cash %i) dynamic wording uses rate of loss, keeps current value and Next milestone", (code, cash) => {
+    const finding = findingFor(code, lossMaking(cash))!;
+    const text = buildFinanceRecommendation(finding)!.verificationMethod;
+    expect(text).toContain("current rate of loss");
+    expect(text).not.toContain("current spending");
+    expect(text).toContain(`Current: ${finding.sourceValue} days.`);
+    expect(text).toContain(`Next milestone: at least ${finding.threshold} days.`);
+  });
+
+  it.each(["FIN_INSOLVENT_RUNWAY", "FIN_LOW_RUNWAY"])("%s static fallback is truthful and invents no numbers", (code) => {
+    for (const over of [{ sourceValue: null }, { threshold: null }, { sourceValue: Number.NaN }]) {
+      const text = buildFinanceRecommendation(mkRunway(code, over as Partial<OwnerFinding>))!.verificationMethod;
+      expect(text).toContain("current rate of loss");
+      expect(text).not.toContain("current spending");
+      expect(text).not.toMatch(/\b(7|30|45)\b|null|undefined|NaN/);
+    }
+  });
+
+  it("FIN_LOW_ABSOLUTE_CASH still measures days of costs, not rate of loss", () => {
+    const finding = findingFor("FIN_LOW_ABSOLUTE_CASH", { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000 })!;
+    const text = buildFinanceRecommendation(finding)!.verificationMethod;
+    expect(text).toContain("days of your costs");
+    expect(text).not.toContain("rate of loss");
   });
 });

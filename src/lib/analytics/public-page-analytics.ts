@@ -13,7 +13,15 @@
  */
 
 /** Exact public pages whose visits are counted. */
-const PUBLIC_EXACT_PATHS = new Set(["/", "/about", "/beta", "/privacy", "/terms", "/resources"]);
+const PUBLIC_EXACT_PATHS = new Set([
+  "/",
+  "/about",
+  "/beta",
+  "/privacy",
+  "/terms",
+  "/resources",
+  "/tools/profit-margin-calculator",
+]);
 
 /** Public path prefixes whose sub-pages are counted (resource articles). */
 const PUBLIC_PATH_PREFIXES = ["/resources/"];
