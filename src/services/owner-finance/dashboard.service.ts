@@ -10,6 +10,7 @@
  */
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
+import { attachCurrentFinanceEvidenceRationale } from "@/domain/owner-finance/actions";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
 import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
@@ -175,8 +176,14 @@ export async function getFinanceDashboard(
         findings: rankOwnerFindingsBySeverity(latestCycle.findings),
         // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
         // owner's engaged or completed work for the same key.
-        actions: await Promise.all(
-          dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
+        // `evidenceRationale` is not persisted: it is derived here, at read time, from the CURRENT diagnosis's
+        // finding for each action's findingCode (never from the action's own, possibly older, baseline
+        // findingId, which is left untouched). An action whose finding is no longer raised gets none.
+        actions: attachCurrentFinanceEvidenceRationale(
+          await Promise.all(
+            dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
+          ),
+          latestCycle.findings
         ),
       }
     : null;
