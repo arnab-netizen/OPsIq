@@ -148,9 +148,9 @@ describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
     expect(text).toMatch(/OpsIQ.s interpretation/i);
   });
 
-  it("uses at most three PwC-derived facts and never implies PwC recommends/validates OpsIQ", () => {
+  it("uses exactly two PwC-derived facts and never implies PwC recommends/validates OpsIQ", () => {
     const { getByTestId, container } = render(<LandingPage />);
-    expect(getByTestId("landing-why-now").querySelectorAll("li")).toHaveLength(3);
+    expect(getByTestId("landing-why-now").querySelectorAll("li")).toHaveLength(2);
     expect(container.textContent ?? "").not.toMatch(/PwC (predicts|recommends|validates|proves|says businesses need)/i);
   });
 
@@ -166,10 +166,9 @@ describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
     expect(titles.slice(0, 5)).toEqual(["Evidence", "Diagnose", "Prioritize", "Act", "Verify"]);
   });
 
-  it("keeps the real-product slot as a text fallback with no invented screenshot", () => {
-    const { getByTestId } = render(<LandingPage />);
-    const slot = getByTestId("landing-real-product");
-    expect(slot.querySelector("img")).toBeNull();
-    expect(slot.textContent).toMatch(/fictional data/i);
+  it("omits any real-product media placeholder until real assets exist", () => {
+    const { queryByTestId, container } = render(<LandingPage />);
+    expect(queryByTestId("landing-real-product")).toBeNull();
+    expect(container.textContent ?? "").not.toMatch(/being prepared|coming soon/i);
   });
 });

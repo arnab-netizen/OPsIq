@@ -6,7 +6,7 @@ author: OpsIQ
 authorType: organization
 status: published
 ---
-Many businesses have bought more technology than they have turned into better decisions. PwC's 2026 operations research looks at that gap. This note summarises what it reports, what it does not show, and where OpsIQ's own view begins. Each statement is labelled as **PwC fact**, **OpsIQ interpretation**, **current capability** or **future direction**.
+Technology investment does not automatically translate into the outcomes organizations expect. PwC's 2026 operations research examines several reasons for that gap. This note summarises what it reports, what it does not show, and where OpsIQ's own view begins. Each statement is labelled as **PwC fact**, **OpsIQ interpretation**, **current capability** or **future direction**.
 
 ## What PwC reports
 
@@ -30,9 +30,9 @@ Many businesses have bought more technology than they have turned into better de
 
 **PwC fact.** PwC says data quality and reliability are important to scaling successfully, and that connecting workflows end-to-end can improve performance. In "How digital and data leaders are redefining operations" (20 July 2026) it recommends focusing on better data rather than perfect data.
 
-**OpsIQ interpretation.** Owner-led businesses rarely have clean, connected systems. The practical lesson is not to wait for perfect data. It is to be explicit about what the data shows and what is missing.
+**OpsIQ interpretation.** Owner-led businesses may have to make decisions with incomplete or disconnected information. The practical lesson is not to wait for perfect data. It is to be explicit about what the data shows and what is missing.
 
-**Current capability.** Every OpsIQ finding shows the metric and value behind it. When required information is missing, OpsIQ shows the gap instead of hiding it.
+**Current capability.** OpsIQ findings are tied to the evidence used to produce them, and missing required information is shown rather than silently filled in.
 
 ## Measuring actual results
 

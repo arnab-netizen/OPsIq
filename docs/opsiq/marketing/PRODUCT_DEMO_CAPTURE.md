@@ -1,7 +1,7 @@
 # Current OpsIQ product demo capture plan
 
-Replaces the legacy Rebilix plan in `docs/product-hunt/`. No media has been captured yet; the homepage carries a
-labelled slot that must stay a text fallback until real, safe assets exist.
+Replaces the legacy Rebilix plan in `docs/product-hunt/`. No media has been captured yet; the homepage omits any real-product
+media section until real, safe assets exist.
 
 ## Rules
 - **Fictional data only.** Use a throwaway demo account and clearly fictional business numbers (e.g. "Riverside Bakery (example business)").

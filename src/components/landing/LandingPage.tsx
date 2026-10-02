@@ -77,7 +77,6 @@ const TRUST_POINTS = [
 const WHY_NOW_FACTS = [
   "89% said their technology investments had not fully delivered expected results.",
   "87% said poor data quality had affected their organization\u2019s ability to achieve value from digital initiatives.",
-  "PwC says success should be measured through operational and financial business outcomes, rather than adoption alone.",
 ];
 
 export default function LandingPage() {
@@ -194,18 +193,6 @@ export default function LandingPage() {
               owned next action — instead of staying buried in the numbers.
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* Real-product media slot. No screenshot is shown until real, fictional-data captures exist
-          (see docs/opsiq/marketing/PRODUCT_DEMO_CAPTURE.md). */}
-      <section className="mx-auto w-full max-w-4xl px-6 py-8" data-testid="landing-real-product">
-        <div className="rounded-xl border border-dashed border-border p-6 text-center">
-          <h2 className="font-display text-lg font-semibold">The real product</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Screenshots of the live product, using fictional data, are being prepared. Until
-            then, the example above shows the same decision loop in text.
-          </p>
         </div>
       </section>
 
