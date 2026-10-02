@@ -178,9 +178,9 @@ export default function OwnerPortfolioPage() {
                     <tr key={b.businessId} className="border-b">
                       <td className="py-1 pr-3 font-medium">{b.name}{!b.hasData && <span className="text-muted-foreground"> (no data)</span>}</td>
                       <td className="py-1 px-2"><Badge variant={HEALTH_VARIANT(b.overallHealthScore)}>{score(b.overallHealthScore)}</Badge></td>
-                      <td className="py-1 px-2"><Badge variant={RISK_VARIANT(b.survivalRiskScore)}>{score(b.survivalRiskScore)}</Badge></td>
+                      <td className="py-1 px-2">{b.survivalRiskScore === null || b.survivalRiskScore === undefined ? <span className="text-muted-foreground" title="Not measured yet">n/m</span> : <Badge variant={RISK_VARIANT(b.survivalRiskScore)}>{score(b.survivalRiskScore)}</Badge>}</td>
                       <td className="py-1 px-2">{score(b.growthOpportunityScore)}</td>
-                      <td className="py-1 px-2"><Badge variant={RISK_VARIANT(b.executionRiskScore)}>{score(b.executionRiskScore)}</Badge></td>
+                      <td className="py-1 px-2">{b.executionRiskScore === null || b.executionRiskScore === undefined ? <span className="text-muted-foreground" title="Not measured yet">n/m</span> : <Badge variant={RISK_VARIANT(b.executionRiskScore)}>{score(b.executionRiskScore)}</Badge>}</td>
                       <td className="py-1 px-2">{score(b.financialScore)}</td>
                       <td className="py-1 px-2">{score(b.salesScore)}</td>
                       <td className="py-1 px-2">{score(b.operationsScore)}</td>

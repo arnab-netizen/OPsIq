@@ -737,13 +737,21 @@ export default function OwnerCommandCenterPage() {
                   <Badge variant={HEALTH_VARIANT(profile.overallHealthScore)}>
                     Health {Math.round(profile.overallHealthScore)}/100
                   </Badge>
-                  <Badge variant={RISK_VARIANT(profile.survivalRiskScore)}>
-                    Survival risk {Math.round(profile.survivalRiskScore)}/100
-                  </Badge>
+                  {profile.survivalRiskScore === null ? (
+                    <Badge variant="muted-accessible">Survival risk not measured yet</Badge>
+                  ) : (
+                    <Badge variant={RISK_VARIANT(profile.survivalRiskScore)}>
+                      Survival risk {Math.round(profile.survivalRiskScore)}/100
+                    </Badge>
+                  )}
                   <Badge variant="default-accessible">Growth opportunity {Math.round(profile.growthOpportunityScore)}/100</Badge>
-                  <Badge variant={RISK_VARIANT(profile.executionRiskScore)}>
-                    Execution risk {Math.round(profile.executionRiskScore)}/100
-                  </Badge>
+                  {profile.executionRiskScore === null ? (
+                    <Badge variant="muted-accessible">Execution risk not measured yet</Badge>
+                  ) : (
+                    <Badge variant={RISK_VARIANT(profile.executionRiskScore)}>
+                      Execution risk {Math.round(profile.executionRiskScore)}/100
+                    </Badge>
+                  )}
                   <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">

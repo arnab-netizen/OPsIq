@@ -43,9 +43,9 @@ export function toBusinessSummary(input: PortfolioBusinessInput): PortfolioBusin
     currency: input.currency ?? null,
     hasData: p !== null,
     overallHealthScore: p ? clampScore(p.overallHealthScore) : 0,
-    survivalRiskScore: p ? clampScore(p.survivalRiskScore) : 0,
+    survivalRiskScore: p && p.survivalRiskScore !== null ? clampScore(p.survivalRiskScore) : null,
     growthOpportunityScore: p ? clampScore(p.growthOpportunityScore) : 0,
-    executionRiskScore: p ? clampScore(p.executionRiskScore) : 0,
+    executionRiskScore: p && p.executionRiskScore !== null ? clampScore(p.executionRiskScore) : null,
     dataConfidenceScore: p ? clampScore(p.dataConfidenceScore) : 0,
     financialScore: domainHealth(input, "finance"),
     salesScore: domainHealth(input, "sales"),
@@ -103,7 +103,10 @@ export function buildPortfolioView(
     // Same tie-break as the arbiter: a target on CURRENT figures precedes a refresh of out-of-date ones.
     const cur = Number(b.mainTarget !== null && b.mainTarget.source !== "evidence_refresh") - Number(a.mainTarget !== null && a.mainTarget.source !== "evidence_refresh");
     if (cur !== 0) return cur;
-    if (b.survivalRiskScore !== a.survivalRiskScore) return b.survivalRiskScore - a.survivalRiskScore;
+    // NOT MEASURED sorts after any measured survival risk (it is neither safe nor urgent evidence).
+    const sb = b.survivalRiskScore ?? -1;
+    const sa = a.survivalRiskScore ?? -1;
+    if (sb !== sa) return sb - sa;
     if (a.overallHealthScore !== b.overallHealthScore) return a.overallHealthScore - b.overallHealthScore;
     if (a.name !== b.name) return a.name < b.name ? -1 : 1;
     return a.businessId < b.businessId ? -1 : a.businessId > b.businessId ? 1 : 0;
@@ -128,7 +131,8 @@ export function buildPortfolioView(
     }),
     worstExecutionProblemBusinessId: maxByBusiness(withData, (s) => s.executionRiskScore),
     bestGrowthCandidateBusinessId: maxByBusiness(
-      withData.filter((s) => s.survivalRiskScore < t.safeInvestmentSurvivalRiskBar),
+      // Unmeasured survival risk is not evidence of safety: such a business is never a "safe" candidate.
+      withData.filter((s) => s.survivalRiskScore !== null && s.survivalRiskScore < t.safeInvestmentSurvivalRiskBar),
       (s) => s.growthOpportunityScore
     ),
   };
@@ -144,7 +148,7 @@ export function buildPortfolioView(
   // Risk alerts (deterministic, ordered by score desc within type, businessId asc tie-break).
   const riskAlerts: PortfolioRiskAlert[] = [];
   for (const s of withData) {
-    if (s.survivalRiskScore >= t.survivalRiskAlertScore) {
+    if (s.survivalRiskScore !== null && s.survivalRiskScore >= t.survivalRiskAlertScore) {
       riskAlerts.push({ businessId: s.businessId, businessName: s.name, type: "survival_risk", message: `Survival risk is ${s.survivalRiskScore}/100`, score: s.survivalRiskScore });
     }
     const input = inputs.find((i) => i.businessId === s.businessId)!;
@@ -152,7 +156,7 @@ export function buildPortfolioView(
     if (cashRisk !== null && cashRisk >= t.cashRiskAlertScore) {
       riskAlerts.push({ businessId: s.businessId, businessName: s.name, type: "cash_risk", message: `Cashflow risk is ${cashRisk}/100`, score: cashRisk });
     }
-    if (s.executionRiskScore >= t.executionRiskAlertScore) {
+    if (s.executionRiskScore !== null && s.executionRiskScore >= t.executionRiskAlertScore) {
       riskAlerts.push({ businessId: s.businessId, businessName: s.name, type: "execution_risk", message: `Execution risk is ${s.executionRiskScore}/100`, score: s.executionRiskScore });
     }
   }
@@ -163,7 +167,7 @@ export function buildPortfolioView(
   const candidateId = ranking.bestGrowthCandidateBusinessId;
   if (candidateId) {
     const c = withData.find((s) => s.businessId === candidateId)!;
-    if (c.growthOpportunityScore >= t.minInvestmentOpportunityScore) {
+    if (c.survivalRiskScore !== null && c.growthOpportunityScore >= t.minInvestmentOpportunityScore) {
       investmentRecommendation = {
         businessId: c.businessId,
         businessName: c.name,
