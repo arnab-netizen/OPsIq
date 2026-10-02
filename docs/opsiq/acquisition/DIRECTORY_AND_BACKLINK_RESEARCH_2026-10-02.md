@@ -41,13 +41,17 @@ Two searches aimed at curators (small-business-development-centre and library re
 
 | Candidate (from search results) | Type | What the snippet suggests | Status |
 |---|---|---|---|
-| smithtonpl.org, "Business & Financial Information" | Public library resource page | Curated business and finance resource list | UNVERIFIED: does it list third-party tools, is it maintained, is there a suggestion route? UNKNOWN |
-| libguides.qnl.qa (two guides) | University/national-library research guides | Entrepreneurship and business guides | UNVERIFIED; likely region-specific and academic, fit doubtful |
-| merchantsbank.com, "Business Resources" | Bank resource page | Business resource list | UNVERIFIED; commercial site, may not link out |
+| smithtonpl.org, "Business & Financial Information" | Public library resource page | Curated business and finance resource list | UNVERIFIED_CANDIDATE: does it list third-party tools, is it maintained, is there a suggestion route? UNKNOWN |
+| libguides.qnl.qa (two guides) | University/national-library research guides | Entrepreneurship and business guides | UNVERIFIED_CANDIDATE; likely region-specific and academic, fit doubtful |
+| merchantsbank.com, "Business Resources" | Bank resource page | Business resource list | UNVERIFIED_CANDIDATE; commercial site, may not link out |
 | financialtools.smeda.org | Government SME agency tools | The agency's own tools | Competitor-style (hosts its own calculators), poor fit |
-| score.org | Non-profit mentoring | Mentor and template resources | UNVERIFIED; unlikely to link third-party tools |
+| score.org | Non-profit mentoring | Mentor and template resources | UNVERIFIED_CANDIDATE; unlikely to link third-party tools |
 
 - **Observed:** curators of the kind sought (libraries, development centres, bank resource pages) do exist in results.
 - **Inference:** they are the right category to try. Whether any is maintained, accepts third-party tool suggestions, and would consider a free calculator from an unestablished site is UNKNOWN. A page that lists tools without a suggestion route or contact is not a prospect.
 - **Not done:** no outreach drafted or sent. Per the mission, outreach is approval-gated; once prospects are verified, personalised messages will be prepared for owner approval.
 - Browser verification is handed off as H12.
+
+### Prospect gate (owner rule, 2026-10-02)
+
+A candidate stays `UNVERIFIED_CANDIDATE`, and nobody is contacted, until first-party or browser verification shows all five: (1) the page exists; (2) it is current enough to matter; (3) it actually lists or recommends external tools or resources; (4) OpsIQ's calculator is contextually relevant to it; (5) a legitimate suggestion or contact route exists. Only then does it become a `VERIFIED_PROSPECT`, and outreach is still approval-gated.
