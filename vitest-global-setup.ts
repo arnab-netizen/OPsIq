@@ -43,6 +43,16 @@ async function setup() {
   }
   console.log(`  → Test database target: ${resolution.target}`);
 
+  // Remote-test identity (runtime layer of the production-isolation guard). The opt-in means "a remote
+  // NON-PRODUCTION database": read the connected database's own identity (read-only session) and refuse production
+  // or an unreadable identity BEFORE any DB access, keepalive, startup write or test. Loopback targets need no probe.
+  if (resolution.mode === "db") {
+    const { remoteDatabaseVariables, verifyRemoteTestDatabaseIdentity } = await import("./src/infra/test-database-guard");
+    const { readDatabaseIdentity } = await import("./src/infra/pg-database-identity-reader");
+    await verifyRemoteTestDatabaseIdentity(remoteDatabaseVariables(process.env), process.env, readDatabaseIdentity);
+    console.log("  → Remote test database identity: non-production verified (or loopback)");
+  }
+
   // Strip pgbouncer pooler suffix for Neon URLs in test environments.
   // pgbouncer transaction mode releases Neon connections after each transaction, letting Neon
   // compute suspend between test queries. Direct connections let pg.Pool's TCP keepAlive work.
@@ -69,7 +79,9 @@ async function setup() {
     console.log("  → Wrote guarded database URL(s) to .env.test for test worker propagation");
   }
 
-  console.log("  → Database URL:", (process.env.DATABASE_URL || "not set").replace(/:[^@]*@/, ":***@"));
+  // Never print the URL, host or database name: even credential-masked, it identifies the target (and was copied
+  // verbatim into signed Stage 7 evidence). The sanitized target class is logged above.
+  console.log(`  → Database URL: ${process.env.DATABASE_URL ? "configured (not printed)" : "not set"}`);
 
   console.log("  → Generating Prisma client...");
   try {

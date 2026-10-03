@@ -336,8 +336,12 @@ jobs:
           # interpolated into a run body, and never echoed.
           PROBE_BASE_URL: ${{ env.PROBE_BASE_URL }}
           CLOSURE_SUBJECT_SHA: ${{ github.sha }}
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-          DATABASE_DIRECT_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          # The production database URL reaches ONLY LANE_C probes (S7-I2 migration status; the audit/boundary
+          # probes). LANE_E commands (vitest simulations, runbook recovery) declare no production input and never
+          # receive it: a historical LANE_E vitest capture printed the production endpoint host because this was
+          # supplied to every observation command. Lane-conditional, so a simulation can never open production.
+          DATABASE_URL: ${{ steps.contract.outputs.lane == 'LANE_C' && secrets.PRODUCTION_DATABASE_URL || '' }}
+          DATABASE_DIRECT_URL: ${{ steps.contract.outputs.lane == 'LANE_C' && secrets.PRODUCTION_DATABASE_URL || '' }}
           PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
           PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
           # Stage 7 boundary/audit fixtures — see the preflight step. S7-I4 and S7-I5

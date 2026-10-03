@@ -37,6 +37,15 @@ jobs:
 
       - run: npx prisma generate
 
+      # Fail-closed identity preflight (src/infra/production-db-identity.ts). A mislabeled secret that points at
+      # PRODUCTION must stop HERE, before any test, migration or reset touches it. Static check (known production
+      # endpoint) then a read-only in-database identity read. Prints variable names and refusal codes only —
+      # never a URL, host, user or password.
+      # This workflow runs `prisma db push --force-reset --accept-data-loss`: the URL-text check above is not an
+      # identity check, so the production identity is verified here before anything destructive runs.
+      - name: Assert test database is not production (identity preflight)
+        run: npx tsx scripts/assert-non-production-database.ts DATABASE_URL DATABASE_URL_TEST
+
       - name: MIGRATION_REPLAY_STRICT - Test clean migration replay
         shell: bash
         run: |

@@ -67,6 +67,7 @@ import {
   DEFAULT_SIGNING_KEY_ID,
   buildEvidenceArtifact,
   scanForSecrets,
+  scanForConnectionStrings,
   validateEvidenceArtifact,
   resolveCaptureAuthorization,
   resolveControlPlaneSubject,
@@ -250,6 +251,13 @@ if (rawObservation.trim().length === 0) {
 const leaked = scanForSecrets(rawObservation);
 if (leaked.length > 0) {
   refuse(3, `the observation matches secret pattern(s): ${leaked.join(', ')}. Configuration evidence records presence booleans only, never values. Nothing was written.`);
+}
+
+// Prospective refusal (not a validator rule — historical signed artifacts are untouched): a credential-MASKED connection
+// string still names the target host/database, contradicting the artifact's "no connection string" attestation.
+const connectionStrings = scanForConnectionStrings(rawObservation);
+if (connectionStrings.length > 0) {
+  refuse(3, `the observation contains a database connection string (${connectionStrings.join(', ')}) — even with credentials masked it names the target. Record presence booleans or a sanitized target class instead. Nothing was written.`);
 }
 
 // ─── OPTION A authorization gate ─────────────────────────────────────────────
