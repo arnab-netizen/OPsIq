@@ -132,7 +132,7 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">How sure OpsIQ is:</span> {sureLabel(confidencePct)} ({confidencePct}% confidence)
+        <span className="font-medium text-foreground">How sure OpsIQ is:</span> {sureLabel(confidencePct)} (evidence strength {confidencePct}/100 — a heuristic rating, not a probability)
         {finding.verificationMetric && <> — verify by re-checking {humanizeMetricKey(finding.verificationMetric)}</>}
       </p>
     </div>

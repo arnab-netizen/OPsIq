@@ -610,7 +610,7 @@ function SopCycleView({
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · evidence strength {Math.round((f.confidence ?? 0) * 100)}/100 (heuristic, not a probability)
               </p>
               {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                 <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>

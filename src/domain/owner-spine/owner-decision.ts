@@ -19,6 +19,12 @@
  * The 0–100 priority score saturates (raw product reaches ~300), so ties at 100 are routine; they are
  * decided by business class and severity, never by alphabetical finding code or title.
  *
+ * SCORE COMPARABILITY (owner-spine/score-semantics.ts): the raw `priorityScore` of different domains is NOT a
+ * universal ranking and is NOT sufficient to elect the owner-wide #1 action. Heterogeneous domain scores are
+ * reconciled by semantic class and severity first; priority, impact, confidence and effort are only the
+ * SUBORDINATE tie-breaks (stages 3–4 above, canonical-tie-break-only). Cross-domain election belongs solely to
+ * `resolveOwnerDecision`; `rankOwnerActions` is domain-local.
+ *
  * Pure: no DB, no I/O, no clock reads (the caller supplies `now`). Nothing is invented: missing data
  * is reported as missing, confidence is capped when evidence is insufficient, and an owner with no
  * diagnosed domain gets honest "add data" guidance instead of a fabricated target.

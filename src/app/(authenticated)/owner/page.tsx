@@ -757,6 +757,9 @@ export default function OwnerCommandCenterPage() {
                 <div className="text-xs text-muted-foreground mt-1">
                   Domains wired: {(data.domainsWired ?? []).map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ") || "none"}
                 </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  These are heuristic 0–100 readings, not probabilities. Health averages each area&apos;s own score; the risk figures show the highest single area in their group; growth opportunity is the highest single area. Scores from different areas are not directly comparable.
+                </div>
               </section>
 
               {control && (

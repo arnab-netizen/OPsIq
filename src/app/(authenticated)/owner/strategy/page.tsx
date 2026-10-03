@@ -652,7 +652,7 @@ function StrategyCycleView({
                 <p className="text-xs">
                   <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} ={" "}
                   {f.sourceValue == null ? (ownLookup(FINDING_NULL_VALUE_LABEL, f.code) ?? "not entered") : String(f.sourceValue)}
-                  {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                  {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · evidence strength {Math.round((f.confidence ?? 0) * 100)}/100 (heuristic, not a probability)
                 </p>
                 {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                   <p className="text-xs"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
