@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import Link from "next/link";
 import { Badge } from "@/ui/primitives";
 import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
@@ -112,6 +112,27 @@ const WHY_NOW_FACTS = [
   "87% said poor data quality had affected their organization\u2019s ability to achieve value from digital initiatives.",
 ];
 
+const PROOF_ALT =
+  "OpsIQ Owner Home for a fictional demo business, showing the main business target (build at least two weeks of operating cash), the recommended action, and the first reason it comes first.";
+
+// Same screen, two captures (art direction): desktop 1440px, and a real 390px-viewport capture for mobile.
+const { props: proofDesktop } = getImageProps({
+  src: "/marketing/opsiq-owner-priority-demo.png",
+  alt: PROOF_ALT,
+  width: 1440,
+  height: 632,
+  quality: 90,
+  sizes: "(min-width: 1152px) 1104px, 100vw",
+});
+const { props: proofMobile } = getImageProps({
+  src: "/marketing/opsiq-owner-priority-demo-mobile.png",
+  alt: PROOF_ALT,
+  width: 1170,
+  height: 1506,
+  quality: 90,
+  sizes: "100vw",
+});
+
 export default function LandingPage() {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -208,9 +229,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Real-product proof: one unedited screenshot (cropped, not altered) of the shipped Owner Home,
+      {/* Real-product proof: one unaltered screenshot of the shipped Owner Home (rectangular crop only),
           using a fictional demo business. Image-led on purpose; the surrounding copy stays minimal.
-          Below 640px the same image is shown cropped to its content area so the text stays legible. */}
+          Art direction: below 640px the same screen, captured at a real 390px viewport, is used so the
+          text stays readable; desktop keeps the original capture. */}
       <section className="mx-auto w-full max-w-6xl px-6 py-6" data-testid="landing-real-product">
         <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
           See what OpsIQ gives an owner
@@ -220,16 +242,11 @@ export default function LandingPage() {
           why it matters, and the next action.
         </p>
         <figure className="mt-5">
-          <div className="aspect-[920/292] overflow-hidden rounded-xl border border-border shadow-sm sm:aspect-auto">
-            <Image
-              src="/marketing/opsiq-owner-priority-demo.png"
-              alt="OpsIQ Owner Home for a fictional demo business, showing the main business target (build at least two weeks of operating cash), the recommended action, and the first reason it comes first."
-              width={1440}
-              height={632}
-              quality={90}
-              sizes="(min-width: 1152px) 1104px, (min-width: 640px) 100vw, 160vw"
-              className="-ml-[41.3%] -mt-[37%] h-auto w-[156.5%] max-w-none sm:m-0 sm:w-full sm:max-w-full"
-            />
+          <div className="aspect-[1170/1506] overflow-hidden rounded-xl border border-border bg-background shadow-sm sm:aspect-[1440/632]">
+            <picture>
+              <source media="(max-width: 639px)" srcSet={proofMobile.srcSet} sizes="100vw" />
+              <img {...proofDesktop} alt={PROOF_ALT} className="h-full w-full object-cover object-top" />
+            </picture>
           </div>
           <figcaption className="mt-3 text-center text-sm font-medium text-foreground">
             Fictional demo business &middot; no customer data
