@@ -182,13 +182,15 @@ describe("LandingPage content", () => {
   it("introduces no Product Hunt copy or asset dependency", () => {
     const { container } = render(<LandingPage />);
     expect(container.textContent ?? "").not.toMatch(/product hunt/i);
-    // The only image the landing page renders is the real OpsIQ brand logo (header) -- no
-    // Product-Hunt-specific badge/screenshot asset, and no script tags.
+    // The landing page renders exactly two images: the real OpsIQ brand logo (header) and the one
+    // real-product screenshot (fictional demo data). No Product-Hunt-specific badge/screenshot
+    // asset, and no script tags.
     const imgs = container.querySelectorAll("img");
-    expect(imgs.length).toBe(1);
+    expect(imgs.length).toBe(2);
     // The logo is an image-only link to "/" -- its alt text is the link's sole accessible
     // name, so it must describe the destination ("home"), not just restate the brand.
     expect(imgs[0].getAttribute("alt")).toBe("OpsIQ home");
+    expect(imgs[1].getAttribute("src") ?? "").toContain("opsiq-owner-priority-demo.png");
     expect(container.querySelectorAll("script").length).toBe(0);
   });
 });

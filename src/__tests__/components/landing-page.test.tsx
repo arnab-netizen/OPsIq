@@ -165,12 +165,6 @@ describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
     const titles = Array.from(container.querySelectorAll("li h3")).map((h) => h.textContent);
     expect(titles.slice(0, 5)).toEqual(["Evidence", "Diagnose", "Prioritize", "Act", "Verify"]);
   });
-
-  it("omits any real-product media placeholder until real assets exist", () => {
-    const { queryByTestId, container } = render(<LandingPage />);
-    expect(queryByTestId("landing-real-product")).toBeNull();
-    expect(container.textContent ?? "").not.toMatch(/being prepared|coming soon/i);
-  });
 });
 
 describe("LandingPage — P1 conversion clarity", () => {
@@ -200,5 +194,32 @@ describe("LandingPage — P1 conversion clarity", () => {
     const items = getByTestId("landing-differentiation").querySelectorAll("li");
     expect(items).toHaveLength(3);
     expect(container.textContent ?? "").not.toMatch(/replaces? (your )?consultant|vs\.? |better than/i);
+  });
+});
+
+describe("LandingPage — real-product proof block", () => {
+  it("shows exactly one real-product screenshot with meaningful alt text", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const imgs = getByTestId("landing-real-product").querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    const alt = imgs[0].getAttribute("alt") ?? "";
+    expect(alt).toMatch(/fictional demo business/i);
+    expect(alt).toMatch(/recommended action/i);
+    expect(imgs[0].getAttribute("src") ?? "").toContain("opsiq-owner-priority-demo.png");
+  });
+
+  it("discloses visibly that the screen uses a fictional demo business", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const text = getByTestId("landing-real-product").textContent ?? "";
+    expect(text).toMatch(/Fictional demo business · no customer data/);
+    expect(text).toMatch(/fictional demo data/i);
+  });
+
+  it("keeps the protected elements: headline, Riverside example, PwC section, loop, input/output", () => {
+    const { container, getByTestId } = render(<LandingPage />);
+    expect(container.textContent ?? "").toMatch(/Diagnose your business\. Know your next move\./);
+    expect(getByTestId("landing-product-proof").textContent).toMatch(/Riverside Bakery/);
+    expect(getByTestId("landing-why-now")).toBeTruthy();
+    expect(getByTestId("landing-input-output")).toBeTruthy();
   });
 });
