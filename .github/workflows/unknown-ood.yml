@@ -53,7 +53,7 @@ jobs:
             if(d.count!==110||pass!==110){console.error("OOD DB not 110/110:",d.count,pass);process.exit(1);}
             console.log("OOD DB 110/110 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: ood-db-ledger, path: OPSIQ_UNKNOWN_OOD_PACK.run.json, retention-days: 7 }
 
@@ -142,7 +142,7 @@ jobs:
         run: npx playwright test tests/browser/23-ood-desktop.spec.ts --project=chromium
       - name: OOD mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/24-ood-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ood-browser-shard-${{ matrix.shard }}

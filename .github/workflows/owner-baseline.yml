@@ -83,7 +83,7 @@ jobs:
           cat artifacts/pre-training-baseline/laundry-kolkata-baseline.json 2>/dev/null || echo "NO_ARTIFACT"
           echo "BASELINE_ARTIFACT_END"
           echo "APPLOG_BEGIN"; tail -30 /tmp/app.log || true; echo "APPLOG_END"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: pre-training-baseline

@@ -54,7 +54,7 @@ jobs:
             if(d.count!==150||pass!==150){console.error("UTR DB not 150/150:",d.count,pass);process.exit(1);}
             console.log("UTR DB 150/150 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: utr-db-ledger
@@ -146,7 +146,7 @@ jobs:
         run: npx playwright test tests/browser/39-crisis-desktop.spec.ts --project=chromium
       - name: Crisis mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/40-crisis-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: utr-browser-shard-${{ matrix.shard }}
