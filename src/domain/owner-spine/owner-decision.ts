@@ -46,6 +46,12 @@ import {
   type OwnerDomain,
   type OwnerSeverity,
 } from "./contracts";
+import {
+  isEvidenceRequestTarget,
+  isRecordedFactTarget,
+  resolveOwnerAdvicePolicy,
+  type OwnerAdvicePolicy,
+} from "./owner-advice-policy";
 import { evaluateOwnerActionGate, NO_OWNER_GATE_CONSTRAINTS, type OwnerGateBlock, type OwnerGateBlockCode, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 
 // --- Business-semantic priority classes ---------------------------------------------------------
@@ -515,6 +521,12 @@ export interface CurrentOwnerDecision {
    */
   conditions: string[];
   missingInformation: string[];
+  /**
+   * What OpsIQ may CLAIM or RECOMMEND from the elected target, given its evidence (owner-advice-policy.ts). The
+   * ONE advice policy: owner surfaces read it and never invent their own act / do-not-act / abstain semantics. It
+   * composes the facts above (confidence, missingInformation, reassessmentTrigger) and never changes who wins.
+   */
+  advicePolicy: OwnerAdvicePolicy;
   /**
    * What changed, derived ONLY from persisted mutation facts inside the recent window (new diagnoses,
    * action completions/verifications, risk/compliance transitions, attribution changes). Reading the
@@ -1067,12 +1079,6 @@ function blockerConfidence(code: OwnerGateBlockCode, gate: OwnerGateConstraints,
 }
 
 /**
- * Gate targets that rest on recorded control records, not on diagnosed domain data (the business-wide
- * data-sufficiency cap does not apply; their own confidence is still source-derived — see blockerConfidence).
- */
-const RECORDED_FACT_GATE_CODES: ReadonlySet<string> = new Set(["GATE_COMPLIANCE_EXPIRED", "GATE_CAPACITY_UNSAFE"]);
-
-/**
  * One explicit "clear this blocker" target per gate blocker that holds eligible work and that no eligible
  * item already addresses — for EVERY check that holds a step, not only its first (clearing one blocker never
  * reveals a hidden second one).
@@ -1268,9 +1274,11 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   for (const d of input.provisionalDomains ?? []) {
     // Only Cash flow and Finance in-progress figures feed a safety check (they may tighten it); other domains'
     // in-progress figures are not used at all until the period ends.
+    // With no completed period to rest on, never claim advice rests on one.
+    const rests = hasEvidence ? " Advice rests on the latest completed period." : " Add figures for a completed period so OpsIQ can advise.";
     pushMissing(d === "cashflow" || d === "finance"
-      ? `${ownerDomainLabel(d)} figures for the current period are still in progress: OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth, until the period ends. Advice rests on the latest completed period.`
-      : `${ownerDomainLabel(d)} figures for the current period are still in progress, so they are not used until the period ends. Advice rests on the latest completed period.`);
+      ? `${ownerDomainLabel(d)} figures for the current period are still in progress: OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth, until the period ends.${rests}`
+      : `${ownerDomainLabel(d)} figures for the current period are still in progress, so they are not used until the period ends.${rests}`);
   }
 
   // Confidence: the primary's own evidence confidence, capped by business-wide data sufficiency.
@@ -1278,16 +1286,13 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   let score = primary ? Math.round(clampConfidence(primary.confidence) * 100) : 0;
   let capped = false;
   const primaryIsRefresh = primary?.source === "evidence_refresh";
-  const primaryIsDataRequest = primary?.priorityClass === "MISSING_CRITICAL_EVIDENCE" || primaryIsRefresh;
+  const primaryIsDataRequest = primary !== null && isEvidenceRequestTarget(primary);
   // Recorded control facts (a compliance breach, an owner-recorded risk) do not depend on domain
   // data completeness, so business-wide data sufficiency never caps them.
   // A safety-gate blocker resting on a recorded fact (an expired obligation, recorded capacity) is not capped
   // as provisional either; one resting on data-derived readings (cash, margin, a do-not-repeat hold on
   // diagnosed work) is capped like the evidence it rests on (its own confidence is source-derived).
-  const primaryIsRecordedFact = primary !== null && (
-    primary.source === "compliance_item" || primary.source === "business_risk" ||
-    (primary.source === "safety_gate" && RECORDED_FACT_GATE_CODES.has(primary.findingCode))
-  );
+  const primaryIsRecordedFact = primary !== null && isRecordedFactTarget(primary);
   if (primary && !primaryIsDataRequest && !primaryIsRecordedFact) {
     // The reason is stated whenever data is short — also when the score was already at or below the cap.
     if (input.dataSufficiency.status === "insufficient") {
@@ -1433,6 +1438,26 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
       ? `Check again when new data is added, ${cadence}.`
       : "Check again as soon as you add your business numbers.";
 
+  const advicePolicy = resolveOwnerAdvicePolicy({
+    state,
+    primary: primary
+      ? { source: primary.source, priorityClass: primary.priorityClass, findingCode: primary.findingCode, domain: primary.domain, missingData: primary.missingData }
+      : null,
+    intent: primary ? ownerTargetIntent(primary) : null,
+    primaryDomainLabel: primary ? ownerDomainLabel(primary.domain) : "",
+    dataSufficiency: {
+      status: input.dataSufficiency.status,
+      lowConfidenceDomains: input.dataSufficiency.lowConfidenceDomains,
+      missingCriticalData: input.dataSufficiency.missingCriticalData,
+    },
+    staleDomains: input.staleDomains,
+    gateCashProvisional:
+      primary?.source === "safety_gate" && (primary.findingCode === "GATE_CASH_UNSAFE" || primary.findingCode === "GATE_PROFIT_UNSAFE") && input.gate?.cash.provisional === true,
+    gateCashConflicting: input.gate?.cash.conflicting === true,
+    missingInformation,
+    reassessmentTrigger,
+  });
+
   const generatedAt = input.now.toISOString();
   const primaryTarget = primary ? toTarget(primary) : null;
   const attention = ranked.map(toTarget);
@@ -1455,6 +1480,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whatNotToDo,
     conditions,
     missingInformation,
+    advicePolicy,
     whatChanged: describeOwnerChanges(input.changeFacts),
     whatChangedWindowDays: OWNER_WHAT_CHANGED_WINDOW_DAYS,
     reassessmentTrigger,

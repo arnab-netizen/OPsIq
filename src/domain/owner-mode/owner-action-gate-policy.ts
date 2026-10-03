@@ -143,6 +143,8 @@ export interface OwnerGateConstraints {
     confidence?: number | null;
     /** The in-progress current period's figures decide gateState (label as in progress). */
     provisional?: boolean;
+    /** Cash flow and Finance disagree and neither is more current: the worse reading is enforced as a fail-safe (advice policy: conflict requires resolution). */
+    conflicting?: boolean;
     /** The source whose figures decide gateState (routes a refresh to the right source). */
     source?: "cashflow" | "finance" | null;
     /**
