@@ -84,6 +84,9 @@ const KNOWN_PREFIXES: Array<{
 
 // Scripts exempt from the mutation guard (explicitly classified as safe)
 const EXEMPT_SCRIPTS: Record<string, { reason: string }> = {
+  "assert-non-production-database.ts": {
+    reason: "READ_ONLY identity preflight — one read-only SELECT of the connected database identity; refuses production; makes no HTTP calls and never mutates",
+  },
   "smoke-owner-recovery-runtime.ts": {
     reason: "DB_DIRECT — guards against non-localhost DATABASE_URL, not an HTTP mutation script",
   },

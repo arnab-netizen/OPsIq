@@ -223,6 +223,35 @@ export const REDACTION_PATTERNS = Object.freeze([
 export const REDACTION_SCANNER_ID = `evidence-redaction-scan@${REDACTION_PATTERNS.length}`;
 
 /**
+ * Database connection strings, INCLUDING credential-masked ones. Deliberately NOT part of REDACTION_PATTERNS:
+ * the validator requires every artifact's `redaction_attestation.scanner` / `patterns_checked` to equal the current
+ * scanner, so adding a pattern there would invalidate every historical signed artifact. This check runs at CAPTURE
+ * time only (scripts/capture-evidence.mjs), so it is prospective — it refuses to write a NEW artifact and leaves
+ * every existing one untouched.
+ *
+ * Why it exists: the attestation states "no ... connection string appears in this artifact", but a captured test
+ * log line such as `Database URL: postgresql:***@<host>/<db>?sslmode=require` is a connection string with only the
+ * credentials masked — it still names the target (host and database). The credentialed-URL pattern above does not
+ * match it (no `//`, no user), so the statement was broader than what the scanner enforced. Presence-only evidence
+ * records booleans or a sanitized target class, never a connection string.
+ */
+export const CONNECTION_STRING_PATTERNS = Object.freeze([
+  // credentialed OR credential-masked: `scheme://user:pw@host`, `scheme:***@host`, `scheme://:@host`
+  { id: 'database_connection_string_masked_or_credentialed', test: (t) => /\b(?:postgres|postgresql|mysql|mongodb(?:\+srv)?|redis|amqp):(?:\/\/)?[^\s"'@]*@[^\s"'/?]+/i.test(t) },
+  // credential-free: `postgresql://host[:port]/db` still names the target
+  { id: 'database_connection_string_without_credentials', test: (t) => /\b(?:postgres|postgresql):\/\/[^\s"'/@]+/i.test(t) },
+]);
+
+/**
+ * @param {string} text
+ * @returns {string[]} ids of the connection-string shapes found — never the matched text.
+ */
+export function scanForConnectionStrings(text) {
+  if (typeof text !== 'string' || text.length === 0) return [];
+  return CONNECTION_STRING_PATTERNS.filter((pattern) => pattern.test(text)).map((pattern) => pattern.id);
+}
+
+/**
  * @param {string} text
  * @returns {string[]} ids of patterns that matched — never the matched text, so a
  *   secret cannot leak into a validator log while being reported.

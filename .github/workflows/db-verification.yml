@@ -196,6 +196,21 @@ jobs:
       - name: Verify rolldown native binding
         run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown binding present')"
 
+      # Fail-closed identity preflight (src/infra/production-db-identity.ts). A mislabeled secret that points at
+      # PRODUCTION must stop HERE, before any test, migration or reset touches it. Static check (known production
+      # endpoint) then a read-only in-database identity read. Prints variable names and refusal codes only —
+      # never a URL, host, user or password.
+      - name: Assert Neon databases are not production (identity preflight)
+        run: npx tsx scripts/assert-non-production-database.ts DATABASE_URL TEST_DATABASE_URL MIGRATION_DATABASE_URL
+        env:
+          # Every variable that can reach a database below: the DB test suite (DATABASE_URL / TEST_DATABASE_URL =
+          # secrets.TEST_DATABASE_URL) and migrate status (MIGRATION_DATABASE_URL). Prisma generate / validate
+          # below do NOT connect (schema-only; verified against an unreachable loopback) and receive a loopback
+          # placeholder, not a secret, so no secret reaches a database without passing this preflight.
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
       # Safety gate: MIGRATION_DATABASE_URL must NOT be a pooler URL.
       # Prisma migrate status requires a direct connection.
       # If the secret contains '-pooler', stop here before touching any DB.
@@ -227,13 +242,13 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
 
       - name: Prisma validate
         id: validate
         run: npx prisma validate
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
 
       # Read-only status check. Shows applied and pending migrations. No mutations.
       - name: Prisma migrate status (read-only)

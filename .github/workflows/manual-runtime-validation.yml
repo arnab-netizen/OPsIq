@@ -34,6 +34,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fail-closed identity preflight (src/infra/production-db-identity.ts). A mislabeled secret that points at
+      # PRODUCTION must stop HERE, before any test, migration or reset touches it. Static check (known production
+      # endpoint) then a read-only in-database identity read. Prints variable names and refusal codes only —
+      # never a URL, host, user or password.
+      # This workflow runs `prisma migrate deploy` against DATABASE_URL (a generically named secret).
+      - name: Assert database is not production (identity preflight)
+        run: npx tsx scripts/assert-non-production-database.ts DATABASE_URL DATABASE_URL_TEST?
+
       - name: Validate Prisma schema
         run: npx prisma validate
 
