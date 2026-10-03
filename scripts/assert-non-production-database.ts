@@ -8,11 +8,11 @@
  * A trailing `?` marks a variable as optional (skipped when unset); any other named variable must be set.
  * Loopback URLs (a runner's own throwaway Postgres) pass without a connection. Every remote URL must (1) be a
  * well-formed postgres URL with a plain hostname and not a known production endpoint (static, no connection),
- * then (2) report a non-production identity inside the database (read-only session). Production or an unreadable
+ * then (2) positively match the approved OpsIQ TEST branch inside the database (read-only session). Production, unknown, unrelated or unreadable
  * identity fails closed.
  *
  * Output is generic by design: it never prints a URL, host, user, password or database name — only variable names
- * and the refusal codes REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION / REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE.
+ * and the refusal codes REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION / REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED / REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE.
  * This script reads a database only to learn its identity; it writes nothing.
  */
 import { pathToFileURL } from "node:url";
@@ -74,7 +74,7 @@ export async function assertNonProductionDatabases(
     for (const variable of remote) {
       try {
         await verifyRemoteTestDatabaseIdentity([variable], env, readIdentity);
-        lines.push(`✓ ${variable.name}: remote database reports a non-production identity`);
+        lines.push(`✓ ${variable.name}: remote database is the approved OpsIQ test database`);
       } catch (e) {
         ok = false;
         const message = e instanceof Error ? e.message.replace(/^\[test-database-guard\] REFUSED: /, "") : "REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE";

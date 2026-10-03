@@ -50,7 +50,7 @@ async function setup() {
     const { remoteDatabaseVariables, verifyRemoteTestDatabaseIdentity } = await import("./src/infra/test-database-guard");
     const { readDatabaseIdentity } = await import("./src/infra/pg-database-identity-reader");
     await verifyRemoteTestDatabaseIdentity(remoteDatabaseVariables(process.env), process.env, readDatabaseIdentity);
-    console.log("  → Remote test database identity: non-production verified (or loopback)");
+    console.log("  → Remote test database identity: approved OpsIQ test branch verified (or loopback)");
   }
 
   // Strip pgbouncer pooler suffix for Neon URLs in test environments.

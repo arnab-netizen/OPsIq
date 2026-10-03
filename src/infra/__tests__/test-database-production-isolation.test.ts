@@ -26,6 +26,7 @@ import {
   classifyDatabaseIdentity,
   classifyRemoteDatabaseUrl,
   effectiveDatabaseHostname,
+  APPROVED_TEST_NEON_BRANCH_IDS,
 } from "@/infra/production-db-identity";
 
 const PROD_ENDPOINT = PRODUCTION_DB_ENDPOINT_IDS[0];
@@ -86,15 +87,15 @@ describe("4. a legitimate remote TEST database still works", () => {
     expect(resolveTestDatabase({ ...REMOTE_OPT_IN, DATABASE_URL: TEST_URL, TEST_DATABASE_URL: TEST_URL }).target).toBe("remote-test-opt-in");
   });
 
-  it("passes the runtime identity layer when the database reports a non-production identity", async () => {
-    const reader: DatabaseIdentityReader = async () => ({ endpoint_id: "ep-test-sandbox-aa11bb22", project_id: "proj-test", branch_id: "br-test-branch" });
+  it("passes the runtime identity layer when the database reports the approved TEST branch", async () => {
+    const reader: DatabaseIdentityReader = async () => ({ endpoint_id: "ep-test-sandbox-aa11bb22", project_id: "proj-test", branch_id: APPROVED_TEST_NEON_BRANCH_IDS[0] });
     await expect(
       verifyRemoteTestDatabaseIdentity(remoteDatabaseVariables({ DATABASE_URL: TEST_URL }), {}, reader)
     ).resolves.toBeUndefined();
   });
 
-  it("a test BRANCH of the production project is not production (different branch id and endpoint)", () => {
-    expect(classifyDatabaseIdentity({ endpointId: "ep-test-branch-cc33dd44", projectId: "any-project", branchId: "br-disposable-xyz" })).toBe("non-production");
+  it("a different branch of the production project is not production but is NOT authorized either", () => {
+    expect(classifyDatabaseIdentity({ endpointId: "ep-test-branch-cc33dd44", projectId: "any-project", branchId: "br-disposable-xyz" })).toBe("not-authorized");
   });
 });
 
@@ -230,7 +231,7 @@ describe("runtime identity layer (hostname-independent)", () => {
   });
 
   it("checks every distinct remote variable, never a loopback one", async () => {
-    const reader = vi.fn(async (url: string) => (url === TEST_URL ? { endpoint_id: "ep-test-sandbox-aa11bb22", project_id: "p", branch_id: "br-t" } : { endpoint_id: PROD_ENDPOINT }));
+    const reader = vi.fn(async (url: string) => (url === TEST_URL ? { endpoint_id: "ep-test-sandbox-aa11bb22", project_id: "p", branch_id: APPROVED_TEST_NEON_BRANCH_IDS[0] } : { endpoint_id: PROD_ENDPOINT }));
     const vars = remoteDatabaseVariables({ DATABASE_URL: LOCAL, TEST_DATABASE_URL: TEST_URL, DATABASE_URL_TEST: PROD_URL });
     expect(vars.map((v) => v.name)).toEqual(["TEST_DATABASE_URL", "DATABASE_URL_TEST"]);
     await expect(verifyRemoteTestDatabaseIdentity(vars, {}, reader)).rejects.toThrow(/DATABASE_URL_TEST/);

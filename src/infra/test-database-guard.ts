@@ -69,6 +69,7 @@ export class TestDatabaseGuardError extends Error {
 
 /** Sanitized refusal reasons for the remote-test identity layers (no URL, host, user or password). */
 export const REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION = "REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION";
+export const REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED = "REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED";
 export const REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE = "REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE";
 
 export interface TestDatabaseResolution {
@@ -158,8 +159,8 @@ export function remoteDatabaseVariables(env: DatabaseEnv, names: readonly string
 }
 
 /**
- * Runtime layer: for each remote database variable, read the connected database's own identity and refuse
- * production (by endpoint OR branch) or an identity that cannot be read. Runs before any DB test or Prisma
+ * Runtime layer: for each remote database variable, read the connected database's own identity and require
+ * that it POSITIVELY matches the approved OpsIQ test branch (production, unknown, unrelated or unreadable are refused). Runs before any DB test or Prisma
  * mutation. A read failure is "unverifiable" — fail closed. Never includes URL, host, user or password in an error.
  */
 export async function verifyRemoteTestDatabaseIdentity(
@@ -180,6 +181,9 @@ export async function verifyRemoteTestDatabaseIdentity(
     }
     if (verdict === "unverifiable") {
       throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE} (${name}): the database reports no readable identity.`);
+    }
+    if (verdict !== "authorized") {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED} (${name}): the database is not the approved OpsIQ test database.`);
     }
   }
 }

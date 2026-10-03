@@ -93,6 +93,29 @@ describe("each secret-database workflow preflights exactly the variables its dat
     expect(idx).toBeLessThan(firstDb);
   });
 
+  it.each(expectations)("%s#%s: every database secret used after the preflight was preflighted", (file, jobId) => {
+    const job = jobsOf(file)[jobId];
+    const steps = job.steps ?? [];
+    const pre = preflightIndex(steps);
+    const refs = (v: unknown) => JSON.stringify(v ?? "").match(new RegExp(DB_SECRET.source, "g")) ?? [];
+    // job-level env is visible to the preflight step too
+    const preflighted = new Set([...refs(job.env), ...refs(steps[pre].env)]);
+    expect(preflighted.size).toBeGreaterThan(0);
+    for (const step of steps.slice(pre + 1)) {
+      for (const ref of refs({ env: step.env, run: step.run })) {
+        expect(preflighted.has(ref), `${step.name ?? step.id}: ${ref} reaches a step without being preflighted`).toBe(true);
+      }
+    }
+  });
+
+  it("LANE_A: Prisma generate / validate (schema-only, no connection) receive a loopback placeholder, not a secret", () => {
+    const steps = jobsOf("db-verification.yml")["lane-a-neon-verify"].steps ?? [];
+    for (const name of ["Generate Prisma client", "Prisma validate"]) {
+      const step = steps.find((x) => x.name === name);
+      expect(String((step?.env as Record<string, unknown>)?.DATABASE_URL), name).toMatch(/^postgresql:\/\/placeholder:placeholder@127\.0\.0\.1:/);
+    }
+  });
+
   it("LANE_A preflight receives the same secrets the test suite and migrate status receive (no variable substitution)", () => {
     const steps = jobsOf("db-verification.yml")["lane-a-neon-verify"].steps ?? [];
     const env = (steps[preflightIndex(steps)].env ?? {}) as Record<string, string>;
@@ -227,6 +250,30 @@ describe("the preflight itself is wired the way the workflows invoke it", () => 
     expect(src).not.toMatch(/console\.(log|error)\([^)]*\b(value|url|host|password)\b/);
     for (const f of ["db-verification.yml", "phase-1-db-tests.yml", "manual-runtime-validation.yml", "migrate-neon-test.yml"]) {
       expect(text(f), f).toContain("npx tsx scripts/assert-non-production-database.ts");
+    }
+  });
+});
+
+describe("remote test DB access requires POSITIVE test-branch authorization, not merely the opt-in", () => {
+  const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+
+  it("the guard refuses every verdict except `authorized` and the identity module authorizes only the approved branch", () => {
+    const guard = read("src/infra/test-database-guard.ts");
+    expect(guard).toContain('verdict !== "authorized"');
+    expect(guard).toContain("REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED");
+    const id = read("src/infra/production-db-identity.ts");
+    expect(id).toMatch(/identity\.branchId && APPROVED_TEST_NEON_BRANCH_IDS\.includes\(identity\.branchId\)\) return "authorized"/);
+    expect(id.match(/return "authorized"/g)).toHaveLength(1);
+  });
+
+  it("every path that accepts the opt-in reaches positive verification (global setup + preflight CLI)", () => {
+    expect(read("vitest-global-setup.ts")).toContain("verifyRemoteTestDatabaseIdentity(");
+    expect(read("scripts/assert-non-production-database.ts")).toContain("verifyRemoteTestDatabaseIdentity(");
+  });
+
+  it("no workflow can define or override the approved test identity (not an env var, not a dispatch input)", () => {
+    for (const f of files) {
+      expect(text(f), f).not.toMatch(/APPROVED_TEST|OPSIQ_PRODUCTION_DB_IDENTITIES/);
     }
   });
 });

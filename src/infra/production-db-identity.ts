@@ -15,7 +15,7 @@
  *    on the endpoint id (first DNS label, with the `-pooler` / `-<compute binding>` suffixes ignored), so
  *    the pooler, the direct host, a compute host, upper case, a trailing dot and a percent-encoded hostname
  *    (pg decodes it; `new URL` does not for non-special schemes) all resolve to the same identity.
- * 2. RUNTIME (read-only): Neon exposes the connected endpoint/project/branch inside the database
+ * 2. RUNTIME (read-only, POSITIVE authorization): Neon exposes the connected endpoint/project/branch inside the database
  *    (`neon.endpoint_id`, `neon.project_id`, `neon.branch_id`). A connection that is on the production
  *    endpoint OR the production branch is production regardless of what hostname reached it (another endpoint
  *    on the production branch has a different hostname). A remote database whose identity cannot be read is
@@ -33,6 +33,15 @@ export const PRODUCTION_DB_ENDPOINT_IDS: readonly string[] = ["ep-empty-sky-ay1e
 
 /** Production Neon branch id. A test branch of the same project has a different branch id and is not production. */
 export const PRODUCTION_NEON_BRANCH_IDS: readonly string[] = ["br-purple-boat-ayjn6zl6"];
+
+/**
+ * The ONLY Neon branch an OpsIQ remote test / test-migration database may be on (project "Test", its single branch).
+ * Authorization is POSITIVE: the connected database's runtime branch id must be present and equal to one of these.
+ * It is a source constant on purpose — not an environment variable and not a workflow input — so neither a dispatch
+ * input nor a secret value can redefine what "approved" means; changing it is a reviewed code change. Not secret
+ * (infrastructure id); never printed in failure output.
+ */
+export const APPROVED_TEST_NEON_BRANCH_IDS: readonly string[] = ["br-late-sunset-anv7mhut"];
 
 export const PRODUCTION_DB_IDENTITIES_ENV = "OPSIQ_PRODUCTION_DB_IDENTITIES";
 
@@ -112,7 +121,7 @@ export const DATABASE_IDENTITY_SQL =
   "current_setting('neon.project_id', true) AS project_id, " +
   "current_setting('neon.branch_id', true) AS branch_id";
 
-export type DatabaseIdentityVerdict = "production" | "non-production" | "unverifiable";
+export type DatabaseIdentityVerdict = "production" | "authorized" | "not-authorized" | "unverifiable";
 
 function clean(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : null;
@@ -123,13 +132,19 @@ export function databaseIdentityFromRow(row: Record<string, unknown> | undefined
 }
 
 /**
- * Production when the connected endpoint or branch is a production one. Non-production only when an identity
- * WAS read and none of it is production. No readable identity at all is unverifiable (refused by callers).
+ * Positive authorization. Order matters:
+ *  1. production endpoint or branch (denylist, defense in depth)            → "production"
+ *  2. no identity readable at all                                           → "unverifiable"
+ *  3. runtime branch id PRESENT and in APPROVED_TEST_NEON_BRANCH_IDS        → "authorized"
+ *  4. anything else (unknown / unrelated / rotated-production branch, a project id or endpoint id without the
+ *     approved branch, a missing branch id)                                 → "not-authorized"
+ * A project id or endpoint id alone never authorizes. Callers refuse every verdict except "authorized".
  */
 export function classifyDatabaseIdentity(identity: DatabaseIdentity, env: DatabaseEnv = {}): DatabaseIdentityVerdict {
   const { endpoints, branches } = productionIdentities(env);
   if (identity.endpointId && endpoints.includes(identity.endpointId)) return "production";
   if (identity.branchId && branches.includes(identity.branchId)) return "production";
-  if (identity.endpointId || identity.projectId || identity.branchId) return "non-production";
-  return "unverifiable";
+  if (!identity.endpointId && !identity.projectId && !identity.branchId) return "unverifiable";
+  if (identity.branchId && APPROVED_TEST_NEON_BRANCH_IDS.includes(identity.branchId)) return "authorized";
+  return "not-authorized";
 }

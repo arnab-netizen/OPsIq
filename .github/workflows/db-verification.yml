@@ -203,7 +203,10 @@ jobs:
       - name: Assert Neon databases are not production (identity preflight)
         run: npx tsx scripts/assert-non-production-database.ts DATABASE_URL TEST_DATABASE_URL MIGRATION_DATABASE_URL
         env:
-          # Mirrors exactly what the DB test suite and migrate status below receive.
+          # Every variable that can reach a database below: the DB test suite (DATABASE_URL / TEST_DATABASE_URL =
+          # secrets.TEST_DATABASE_URL) and migrate status (MIGRATION_DATABASE_URL). Prisma generate / validate
+          # below do NOT connect (schema-only; verified against an unreachable loopback) and receive a loopback
+          # placeholder, not a secret, so no secret reaches a database without passing this preflight.
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
@@ -239,13 +242,13 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
 
       - name: Prisma validate
         id: validate
         run: npx prisma validate
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
 
       # Read-only status check. Shows applied and pending migrations. No mutations.
       - name: Prisma migrate status (read-only)

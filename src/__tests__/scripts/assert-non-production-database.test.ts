@@ -4,12 +4,12 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { assertNonProductionDatabases } from "../../../scripts/assert-non-production-database";
-import { PRODUCTION_DB_ENDPOINT_IDS } from "@/infra/production-db-identity";
+import { APPROVED_TEST_NEON_BRANCH_IDS, PRODUCTION_DB_ENDPOINT_IDS } from "@/infra/production-db-identity";
 
 const PROD = `postgresql://synthuser:synthpass@${PRODUCTION_DB_ENDPOINT_IDS[0]}-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require`;
 const TEST = "postgresql://testuser:testpass@ep-test-sandbox-aa11bb22.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require";
 const LOCAL = "postgresql://postgres:postgres@localhost:5432/opsiq_test";
-const nonProd = vi.fn(async () => ({ endpoint_id: "ep-test-sandbox-aa11bb22", project_id: "p", branch_id: "br-t" }));
+const nonProd = vi.fn(async () => ({ endpoint_id: "ep-test-sandbox-aa11bb22", project_id: "p", branch_id: APPROVED_TEST_NEON_BRANCH_IDS[0] }));
 
 const LEAK = ["synthuser", "synthpass", "testuser", "testpass", "neon.tech", "neondb", "ep-test-sandbox", "ep-empty-sky", "postgresql://"];
 const noLeak = (lines: string[]) => {
@@ -24,7 +24,7 @@ describe("assertNonProductionDatabases", () => {
     expect(reader).not.toHaveBeenCalled();
   });
 
-  it("passes a remote database whose own identity is non-production", async () => {
+  it("passes a remote database whose own identity is the approved test branch", async () => {
     const r = await assertNonProductionDatabases(["TEST_DATABASE_URL"], { TEST_DATABASE_URL: TEST }, nonProd);
     expect(r.ok).toBe(true);
     expect(nonProd).toHaveBeenCalledTimes(1);
