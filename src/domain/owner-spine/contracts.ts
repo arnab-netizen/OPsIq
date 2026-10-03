@@ -71,6 +71,10 @@ export const targetDirectionSchema = z.enum(TARGET_DIRECTIONS);
 
 // --- Reusable field schemas --------------------------------------------------
 
+// Every `*Score` below is a bounded 0–100 integer HEURISTIC and every `confidence` a 0–1 evidence-sufficiency
+// heuristic: none is a probability or a calibrated cross-domain magnitude. Meaning, direction and the widest
+// legal comparison scope of each are declared in ./score-semantics.ts (and the architecture contract doc).
+
 const scoreSchema = z.number().min(0).max(100);
 const confidenceSchema = z.number().min(0).max(1);
 
@@ -358,6 +362,12 @@ export interface BusinessConditionProfileInput {
   now?: Date;
 }
 
+/**
+ * Rollup semantics (see score-semantics.ts BUSINESS_CONDITION_ROLLUP_AUDIT): these are fixed DISPLAY/PROFILE
+ * rollups, not calibrated cross-domain measurements. overallHealthScore/dataConfidenceScore are equal-weight
+ * averages of uncalibrated domain scales; survival/execution risk are worst-of (max) over their declared domain
+ * families only; growthOpportunityScore is a raw max across all domains' own opportunity scales.
+ */
 /**
  * Aggregate per-domain scores into one Business Condition Profile. Deterministic
  * and honest: with no domain scores every value is 0 (nothing invented) except survival/execution risk, which are NOT MEASURED (null) unless an applicable domain is present, and

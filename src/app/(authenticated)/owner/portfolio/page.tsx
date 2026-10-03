@@ -108,6 +108,7 @@ export default function OwnerPortfolioPage() {
 
           <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Cross-business ranking</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Each line below orders businesses by one heuristic OpsIQ score. It shows which business scores highest on that score, not a measured amount, and it is not a probability.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>Business needing attention first: <strong>{byId(ranking.mostUrgentBusinessId)}</strong> <span className="text-muted-foreground">(it has the most urgent thing needing action — not a judgement of its overall health)</span></div>
               <div>Highest profit opportunity: <strong>{byId(ranking.highestProfitOpportunityBusinessId)}</strong></div>
