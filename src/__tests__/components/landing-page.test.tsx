@@ -223,3 +223,15 @@ describe("LandingPage — real-product proof block", () => {
     expect(getByTestId("landing-input-output")).toBeTruthy();
   });
 });
+
+describe("LandingPage — real-product proof art direction", () => {
+  it("uses the dedicated mobile capture as a <picture> source while keeping the desktop image and disclosure", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const block = getByTestId("landing-real-product");
+    const source = block.querySelector("picture source");
+    expect(source?.getAttribute("media")).toBe("(max-width: 639px)");
+    expect(decodeURIComponent(source?.getAttribute("srcset") ?? "")).toContain("opsiq-owner-priority-demo-mobile.png");
+    expect(decodeURIComponent(block.querySelector("img")?.getAttribute("src") ?? "")).toContain("opsiq-owner-priority-demo.png");
+    expect(block.textContent).toMatch(/Fictional demo business · no customer data/);
+  });
+});
