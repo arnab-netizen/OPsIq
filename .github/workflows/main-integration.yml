@@ -258,7 +258,7 @@ jobs:
 
       - name: Upload coverage (if generated)
         if: always()
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage/coverage-final.json
           fail_ci_if_error: false
