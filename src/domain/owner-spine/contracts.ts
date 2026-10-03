@@ -196,6 +196,8 @@ export type BusinessConditionProfile = z.infer<typeof businessConditionProfileSc
 // --- Deterministic helpers ---------------------------------------------------
 
 /** Slice 1 — data-confidence thresholds for the command-center sufficiency status. */
+// Provenance: INTERNAL_PRODUCT_POLICY (low confidence) — deliberate status boundaries with no recorded rationale or external
+// source for 70/40; see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values unchanged.
 export const DATA_CONFIDENCE_CAUTION = 70;
 export const DATA_CONFIDENCE_INSUFFICIENT = 40;
 

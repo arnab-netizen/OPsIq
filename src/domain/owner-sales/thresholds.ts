@@ -31,6 +31,8 @@ export interface SalesThresholds {
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_SALES_THRESHOLDS: SalesThresholds = {
   lowConversionPct: 15,
   criticalConversionPct: 5,

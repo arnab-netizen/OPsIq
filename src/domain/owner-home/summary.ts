@@ -91,6 +91,8 @@ export interface OwnerHomeSummaryInput {
 }
 
 /** Band a domain risk score (or null) into a danger level. Null → "unknown". */
+// Provenance: LEGACY_OR_UNKNOWN — no origin or external standard is recorded for the 20/40/60/80 bands (see
+// docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md). Display-only; values unchanged.
 export function dangerLevel(riskScore: number | null): DangerLevel {
   if (riskScore === null) return "unknown";
   const r = clampScore(riskScore);

@@ -33,6 +33,8 @@ export interface FinanceThresholds {
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_FINANCE_THRESHOLDS: FinanceThresholds = {
   lowCashRunwayDays: 45,
   criticalCashRunwayDays: 30,
