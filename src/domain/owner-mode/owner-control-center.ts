@@ -8,6 +8,7 @@
 
 import type { AttentionSummary } from "@/domain/owner-mode/owner-load";
 import type { OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
+import type { OwnerAdvicePolicy } from "@/domain/owner-spine/owner-advice-policy";
 import { ownerImperativeContext, partitionReconciled, quoteTitles, reconcileOwnerProhibition, type ReconciledProhibition } from "@/domain/owner-spine/owner-imperatives";
 
 /** A canonical decision target, as far as the panel's guardrails need it. */
@@ -38,9 +39,16 @@ export interface ControlCenterInputs {
   mainTarget?: ControlCenterMainTarget | null;
   /** The canonical decision's supporting steps (never vetoed either). */
   supportingSteps?: ControlCenterMainTarget[];
+  /**
+   * The canonical decision's advice policy (owner-advice-policy.ts). The panel reads it so it never states a different
+   * "act / do not act" semantics from the decision beside it; it never overrides it.
+   */
+  advicePolicy?: OwnerAdvicePolicy | null;
 }
 
 export interface OwnerControlCenter {
+  /** The canonical decision's advice policy, passed through unchanged (null when no decision was supplied). */
+  advicePolicy: OwnerAdvicePolicy | null;
   attention: AttentionSummary;
   criticalAlerts: string[];
   whatNotToDo: string[];
@@ -73,7 +81,9 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   // canonical main target or a supporting step; a refresh (data-request) target rewrites nothing.
   const ctx = ownerImperativeContext(i.mainTarget ? { primaryTarget: i.mainTarget, supportingSteps: i.supportingSteps ?? [] } : null);
   if (i.dataSufficiencyStatus === "insufficient") {
-    criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).`);
+    // A recorded fact (compliance breach, recorded risk, recorded safety block) is not made uncertain by data gaps elsewhere.
+    const recordedFactNote = i.advicePolicy?.mode === "RECORDED_FACT" ? " The recorded issue below is a fact and is unaffected." : "";
+    criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).${recordedFactNote}`);
     // The canonical arbiter already accounted for missing data (confidence caps, data-request
     // targets); the guardrail applies to OTHER material decisions, never to an action main target.
     guardrails.push(
@@ -129,6 +139,7 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   const needsOwnerAttention = ownerActionsToday > 0 || criticalAlerts.length > 0;
 
   return {
+    advicePolicy: i.advicePolicy ?? null,
     attention: i.attention,
     criticalAlerts,
     whatNotToDo,

@@ -9,9 +9,20 @@
  */
 import Link from "next/link";
 import { Badge, Disclosure } from "@/ui/primitives";
+import type { OwnerAdviceMode } from "@/domain/owner-spine/owner-advice-policy";
 import { OWNER_WHAT_CHANGED_WINDOW_DAYS, ownerTargetHref, type CurrentOwnerDecision, type OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
 type Detail = "full" | "compact";
+
+/**
+ * Modes where "N confidence" would misdescribe the target: a request for data or a refresh is about the evidence, not
+ * advice OpsIQ is confident in. The label comes from the canonical advice policy (never decided here).
+ */
+const POLICY_BADGE_LABEL: Partial<Record<OwnerAdviceMode, string>> = {
+  REFRESH_REQUIRED: "Confirm the figures first",
+  EVIDENCE_REQUIRED: "Needs your information",
+  CONFLICT_REQUIRES_RESOLUTION: "Figures disagree",
+};
 
 const SEVERITY_LABEL: Record<string, string> = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const SEVERITY_VARIANT = (s: string | null): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
@@ -49,11 +60,14 @@ export function OwnerDecisionCard({
   heading?: string;
 }) {
   const p = decision.primaryTarget;
+  const policy = decision.advicePolicy;
+  const policyBadge = policy ? POLICY_BADGE_LABEL[policy.mode] : undefined;
   return (
     <section
       data-testid="owner-decision"
       data-owner-decision-state={decision.state}
       data-primary-candidate-id={decision.primaryCandidateId ?? ""}
+      data-owner-advice-mode={policy?.mode ?? ""}
       className="flex flex-col gap-3 border-l-2 py-1 pl-5"
       style={{ borderColor: "var(--accent-ink)" }}
     >
@@ -68,7 +82,7 @@ export function OwnerDecisionCard({
         {(p || decision.state === "NO_EVIDENCE") && (
           <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
             <span data-testid="owner-decision-confidence">
-              {p && decision.confidence.level === "insufficient" ? "Very low confidence" : CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level}
+              {policyBadge ?? (p && decision.confidence.level === "insufficient" ? "Very low confidence" : CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level)}
             </span>
           </Badge>
         )}
@@ -103,11 +117,29 @@ export function OwnerDecisionCard({
               : "None of your diagnosed areas has an open action right now."}
           </strong>
           {decision.whatToDoFirst && <p className="mt-1.5 text-sm text-muted-foreground">{decision.whatToDoFirst}</p>}
+          {policy && policy.mode !== "SUPPORTED" && decision.state === "NO_OPEN_ACTIONS" && (
+            // "Nothing open" is only a claim when the evidence supports it: stale or missing evidence is never read as resolved.
+            <p data-testid="owner-decision-empty-policy" className="mt-1.5 text-sm text-muted-foreground">
+              {policy.ownerStatement} {policy.nextEvidenceAction}
+            </p>
+          )}
           <p className="mt-2 text-sm">
             <Link href="/owner/data" className="text-[var(--primary-text)] underline">
               {decision.state === "NO_EVIDENCE" ? "Add your business information" : "Add your latest figures so OpsIQ can re-check"}
             </Link>
           </p>
+        </div>
+      )}
+
+      {policy && policy.mode !== "SUPPORTED" && (
+        <div data-testid="owner-decision-advice-policy" className="flex flex-col gap-1">
+          <p className="m-0 text-sm text-foreground">{policy.ownerStatement}</p>
+          {policy.nextEvidenceAction && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{policy.nextEvidenceAction}</p>}
+          {!policy.canMakeMaterialCommitment && policy.canAct && policy.mode !== "REFRESH_REQUIRED" && policy.mode !== "EVIDENCE_REQUIRED" && (
+            <p data-testid="owner-decision-no-commitment" className="m-0 text-sm text-muted-foreground">
+              OpsIQ does not support committing money, capacity or a plan on this evidence yet.
+            </p>
+          )}
         </div>
       )}
 
