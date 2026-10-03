@@ -54,7 +54,7 @@ jobs:
             if(d.count!==300||pass!==300){console.error("DOP DB not 300/300:",d.count,pass);process.exit(1);}
             console.log("DOP DB 300/300 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dop-db-ledger
@@ -146,7 +146,7 @@ jobs:
         run: npx playwright test tests/browser/27-daily-ops-desktop.spec.ts --project=chromium
       - name: Daily Ops mobile shard ${{ matrix.shard }}/3
         run: npx playwright test tests/browser/28-daily-ops-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dop-browser-shard-${{ matrix.shard }}

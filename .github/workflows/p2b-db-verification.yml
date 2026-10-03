@@ -114,7 +114,7 @@ jobs:
       # Step 7.5: Upload full test logs for diagnosis
       - name: Upload P2B DB test logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: p2b-db-test-logs
           path: artifacts/p2b-db/

@@ -160,7 +160,7 @@ jobs:
       # for this storage target (see header comment).
       - name: Upload backup artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opsiq-production-backup-${{ github.run_id }}
           path: backup-output/
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opsiq-production-backup-FAILED-${{ github.run_id }}
           path: backup-output/
