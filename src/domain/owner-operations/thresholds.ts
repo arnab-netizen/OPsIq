@@ -35,6 +35,8 @@ export interface OperationsThresholds {
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_OPERATIONS_THRESHOLDS: OperationsThresholds = {
   lowCompletionRatePct: 85,
   criticalCompletionRatePct: 70,
