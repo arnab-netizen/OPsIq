@@ -70,11 +70,27 @@ describe("A: minimum setup vs. all evidence", () => {
     const equipment = s.missingMinimum.find((m) => m.category === "equipment_logs");
     expect(equipment).toBeDefined();
     expect(s.minimumComplete).toBe(false);
-    expect(blocksFirstRead(equipment!.category)).toBe(false);
+    expect(blocksFirstRead(equipment!.category, s.firstRead)).toBe(false);
   });
-  it("A2 categories that gate the first read still block", () => {
-    for (const c of ["revenue_sales", "expenses", "cash_debt"] as const) expect(blocksFirstRead(c)).toBe(true);
-    expect(blocksFirstRead("equipment_logs")).toBe(false);
+  it("A2 categories that explain a still-missing critical fact block; others never do", () => {
+    const none = computeOnboardingState({
+      profileType: "laundry_local_service",
+      ownerRole: "owner_operated",
+      businessName: "B",
+      suppliedCategories: [],
+    });
+    for (const c of ["revenue_sales", "expenses", "fixed_costs", "payroll", "cash_debt"] as const) expect(blocksFirstRead(c, none.firstRead)).toBe(true);
+    expect(blocksFirstRead("equipment_logs", none.firstRead)).toBe(false);
+  });
+  it("A3 any ONE cost category satisfies the cost fact — no cost category blocks once one is known", () => {
+    const s = computeOnboardingState({
+      profileType: "laundry_local_service",
+      ownerRole: "owner_operated",
+      businessName: "B",
+      suppliedCategories: ["revenue_sales", "fixed_costs", "cash_debt"],
+    });
+    expect(s.canRunFirstDiagnosis).toBe(true);
+    for (const c of ["expenses", "fixed_costs", "payroll"] as const) expect(blocksFirstRead(c, s.firstRead)).toBe(false);
   });
 });
 

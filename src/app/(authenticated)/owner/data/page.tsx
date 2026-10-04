@@ -32,9 +32,21 @@ import {
   type OwnerDataGroupView,
 } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
-import { blocksFirstRead, confidenceDisplayPhrase, FIRST_DIAGNOSIS_GATE } from "@/domain/owner-mode/owner-onboarding";
+import { blocksFirstRead, confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
+import type { FirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
+import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
 
 const FETCH_TIMEOUT_MS = 10_000;
+
+/** Used only for a payload from before `firstRead` existed: nothing is flagged as blocking. */
+const NO_FIRST_READ_BLOCKERS: FirstReadSufficiency = {
+  sufficient: true,
+  revenueKnown: true,
+  costKnown: true,
+  cashKnown: true,
+  missing: [],
+  basis: "completed",
+};
 
 interface BusinessLite {
   id: string;
@@ -65,6 +77,8 @@ interface OnboardingView {
   minimumComplete: boolean;
   confidenceBeforeDiagnosis: string;
   canRunFirstDiagnosis: boolean;
+  /** Canonical first-read sufficiency (absent only on a payload from before it existed). */
+  firstRead?: FirstReadSufficiency;
   firstAction: string;
   whatNotToDo: string[];
   nextBestUpload: OwnerInputCategory | null;
@@ -196,8 +210,6 @@ function BusinessTypeEditor({ business, onUpdated }: { business: BusinessLite; o
 
 /** What OpsIQ knows so far: the confidence badge and essential-items progress. */
 function ReadinessSummary({ state }: { state: OnboardingView }) {
-  const suppliedSet = new Set(state.suppliedCategories ?? []);
-  const firstReadSupplied = FIRST_DIAGNOSIS_GATE.filter((c) => suppliedSet.has(c)).length;
   const pct =
     state.minimumRequiredCount > 0
       ? Math.round((state.minimumSuppliedCount / state.minimumRequiredCount) * 100)
@@ -206,18 +218,17 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
   return (
     <div data-testid="data-hub-readiness">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">How well OpsIQ knows your business</h2>
+        <h2 className="text-lg font-semibold text-foreground">What OpsIQ knows so far</h2>
         <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
           {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
         </Badge>
       </div>
 
-      <p className="mt-2 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">First-read essentials: </span>
-        {firstReadSupplied} of {FIRST_DIAGNOSIS_GATE.length} added (revenue, expenses, cash and debt).
-        {firstReadSupplied === FIRST_DIAGNOSIS_GATE.length
-          ? " OpsIQ can run your first read."
-          : " These three unlock your first read."}
+      <p className="mt-2 text-sm text-muted-foreground" data-testid="data-hub-first-read-ready">
+        <span className="font-medium text-foreground">Enough for a first read. </span>
+        You have given OpsIQ revenue, a cost figure and cash
+        {state.firstRead?.basis === "provisional" ? " for a month that is still in progress, so the read is provisional" : ""}.
+        That is a rough financial picture — it does not mean OpsIQ knows the whole business.
       </p>
       <p className="mt-1 text-sm text-muted-foreground" data-testid="data-hub-starter-profile">
         <span className="font-medium text-foreground">Additional starter and profile evidence: </span>
@@ -236,89 +247,53 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
       >
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
-
-      {state.canRunFirstDiagnosis && pct < 100 && (
-        <p className="mt-2 text-sm text-muted-foreground" data-testid="data-hub-first-read-ready">
-          Basic setup is complete and OpsIQ can give you a first read. The remaining starter items
-          are not needed for that read — adding them improves confidence and can unlock more decisions.
-        </p>
-      )}
-
-      {pct >= 100 && (
-        <p className="mt-2 text-sm text-muted-foreground">
-          OpsIQ can give you a first read now. Add Money, Customers and Operations information to
-          make the advice more reliable.
-        </p>
-      )}
     </div>
   );
 }
 
-/** The one thing to do next, given what OpsIQ knows and what is still missing. */
+/**
+ * After the first read is possible: the CTA, then ONE next best question — never a list of every
+ * missing category. Everything else stays behind "Add more detail".
+ */
 function NextAction({ state }: { state: OnboardingView }) {
+  const next = state.nextBestUpload ? state.missingMinimum.find((m) => m.category === state.nextBestUpload) ?? null : null;
+  const target = next ? inputTargetForCategory(next.category) : null;
   return (
     <div className="border-t border-border pt-5" data-testid="data-hub-next-action">
       <h2 className="text-lg font-semibold text-foreground">What to do next</h2>
-
-      {state.canRunFirstDiagnosis ? (
-        <div
-          className="mt-3 border-l-2 pl-4 py-0.5 text-sm text-foreground"
-          style={{ borderColor: "var(--success-text)" }}
-        >
-          <p className="font-medium">OpsIQ has enough to run a first assessment.</p>
-          <p className="mt-1 text-muted-foreground">
-            It will be limited to what you have supplied so far, and it will say so.
-          </p>
-          {/*
-            F2: this page is owner-only (nav-gated, requiresOwner), and a self-serve owner never
-            holds CAPABILITIES.ENGAGEMENT_CREATE (the consultant/admin-only capability
-            `POST /api/diagnosis` requires — see policies/capability-check.ts's
-            INTERNAL_ONLY_CAPABILITIES). Linking to /diagnosis here always 403s. /owner/finance's
-            "+ Add financial snapshot" -> "Run finance diagnosis" is the real, working owner
-            first-diagnosis flow.
-          */}
-          <Link href="/owner/finance" className="mt-2 inline-block font-medium underline hover:no-underline">
-            Run my first assessment →
+      <div className="mt-3 border-l-2 pl-4 py-0.5 text-sm text-foreground" style={{ borderColor: "var(--success-text)" }}>
+        <p className="font-medium">OpsIQ has enough to run a first assessment.</p>
+        <p className="mt-1 text-muted-foreground">It will be limited to what you have supplied so far, and it will say so.</p>
+        {/*
+          F2: this page is owner-only and a self-serve owner never holds CAPABILITIES.ENGAGEMENT_CREATE,
+          so /diagnosis would 403. /owner/finance is the real, working owner first-diagnosis flow.
+        */}
+        <Link href="/owner/finance" className="mt-2 inline-block font-medium underline hover:no-underline">
+          Run my first assessment →
+        </Link>
+      </div>
+      {next && target && (
+        <div className="mt-4 text-sm" data-testid="data-hub-next-question">
+          <p className="font-medium text-foreground">One thing would make this more reliable</p>
+          <p className="mt-1 text-foreground">{next.label}</p>
+          <p className="mt-1 text-muted-foreground">{next.why}</p>
+          <Link href={target.href} className="mt-2 inline-block font-medium text-[var(--primary-text)] underline hover:no-underline">
+            {target.actionLabel} {next.label.toLowerCase()} →
           </Link>
-        </div>
-      ) : (
-        <div
-          className="mt-3 border-l-2 pl-4 py-0.5 text-sm text-foreground"
-          style={{ borderColor: "var(--warning-text)" }}
-          data-testid="data-hub-insufficient"
-        >
-          <p className="font-medium">
-            OpsIQ does not yet have enough reliable business information for a trustworthy first
-            assessment.
-          </p>
-          <p className="mt-1 text-muted-foreground">Add the items marked “Needed for first read” above and this will unlock.</p>
-        </div>
-      )}
-
-      {state.firstAction && (
-        <p className="mt-3 text-sm text-foreground">
-          <span className="font-medium">Next setup step: </span>
-          {state.firstAction}
-        </p>
-      )}
-
-      {state.whatNotToDo.length > 0 && (
-        <div className="mt-3 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Hold off on this until the data is in:</p>
-          <ul className="mt-1 list-disc pl-5">
-            {state.whatNotToDo.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
         </div>
       )}
     </div>
   );
 }
 
-/** Only rendered once a business exists — one recommended first path, then secondary methods. */
-function WaysToAdd() {
+/** Secondary methods only — the primary path is the quick financial picture above. */
+function OtherWaysToAdd() {
   const secondary = [
+    {
+      href: "/owner/finance",
+      title: "Enter the full money picture",
+      body: "Every financial field, including receivables, payables and loans.",
+    },
     {
       href: "/owner/manual-entry",
       title: "Add other business information",
@@ -339,21 +314,8 @@ function WaysToAdd() {
   ];
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-foreground">Start with your basic numbers</h2>
-      <Link
-        href="/owner/finance"
-        data-testid="data-hub-primary-path"
-        className="mt-3 block rounded-lg border-2 border-primary/40 bg-primary/5 p-4 hover:bg-primary/10"
-      >
-        <p className="font-medium text-foreground">Enter my basic numbers →</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Four numbers are enough for your first read: revenue, fixed costs, variable costs and cash on hand.
-          Estimates are fine. You do not need everything — anything you leave blank is reported as missing,
-          never invented, and you can add more later to make the analysis more complete.
-        </p>
-      </Link>
-      <h3 className="mt-5 text-sm font-semibold text-foreground">Other ways to add information (optional)</h3>
+    <details data-testid="data-hub-other-ways">
+      <summary className="cursor-pointer text-sm font-semibold text-foreground">Other ways to add information</summary>
       <ul className="mt-2" data-testid="data-hub-secondary-paths">
         {secondary.map((card) => (
           <li key={card.title} className="border-b border-border py-3 first:pt-0 last:border-0 last:pb-0">
@@ -371,11 +333,11 @@ function WaysToAdd() {
           </p>
         </li>
       </ul>
-    </div>
+    </details>
   );
 }
 
-function MissingCritical({ items, canRunFirstDiagnosis }: { items: MissingMinimumView[]; canRunFirstDiagnosis: boolean }) {
+function MissingCritical({ items, canRunFirstDiagnosis, firstRead }: { items: MissingMinimumView[]; canRunFirstDiagnosis: boolean; firstRead: FirstReadSufficiency }) {
   if (items.length === 0) return null;
   return (
     <div
@@ -393,7 +355,7 @@ function MissingCritical({ items, canRunFirstDiagnosis }: { items: MissingMinimu
             <li key={item.category} className="border-b border-border pb-3 last:border-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-foreground">{item.label}</span>
-                {blocksFirstRead(item.category) ? (
+                {blocksFirstRead(item.category, firstRead) ? (
                   <Badge variant={item.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
                     {SEVERITY_LABEL[item.severity] ?? item.severity}
                   </Badge>
@@ -432,7 +394,7 @@ const GROUP_PAGE: Partial<Record<OwnerDataGroupView["id"], string>> = {
   operations: "/owner/operations",
 };
 
-function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
+function CategoryGroups({ groups, firstRead }: { groups: OwnerDataGroupView[]; firstRead: FirstReadSufficiency }) {
   return (
     <div className="flex flex-col">
       {groups.map((group) => {
@@ -484,7 +446,7 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-foreground">{cat.label}</span>
-                    {cat.status === "missing_required" && !blocksFirstRead(cat.category) ? (
+                    {cat.status === "missing_required" && !blocksFirstRead(cat.category, firstRead) ? (
                       <Badge variant="muted-accessible">Starter item · improves confidence</Badge>
                     ) : (
                       <Badge variant={STATUS_VARIANT[cat.status]}>
@@ -583,6 +545,20 @@ export default function OwnerDataHubPage() {
     [businesses, selected],
   );
 
+  const businessSettings = selectedBusiness ? (
+    <details data-testid="data-hub-business-settings">
+      <summary className="cursor-pointer text-sm font-semibold text-foreground">Business settings</summary>
+      <div className="mt-2">
+        <BusinessTypeEditor
+          business={selectedBusiness}
+          onUpdated={() => {
+            void load();
+          }}
+        />
+      </div>
+    </details>
+  ) : null;
+
   const hasBusiness = businesses.length > 0;
 
   return (
@@ -590,7 +566,7 @@ export default function OwnerDataHubPage() {
       <header>
         <PageHeader
           title="My Business"
-          description="This is where you tell OpsIQ about your business and keep its information up to date. The more real information you add, the more specific its findings become — and it will always tell you what is still missing."
+          description="Tell OpsIQ the basics and it will do the rest. You can add more detail whenever you like — it will always say what is still missing."
         />
       </header>
 
@@ -616,51 +592,70 @@ export default function OwnerDataHubPage() {
               selectedId={selected}
               onChange={(businessId) => setActiveBusinessId(businessId)}
             />
-            {selectedBusiness && (
-              <BusinessTypeEditor
-                business={selectedBusiness}
-                onUpdated={() => {
-                  void load();
-                }}
-              />
-            )}
           </div>
           {selectedBusiness?.currency && (
             <p className="-mt-4 text-sm text-muted-foreground">Reporting currency: {selectedBusiness.currency}</p>
           )}
 
-          {state && <ReadinessSummary state={state} />}
-          {state && <MissingCritical items={state.missingMinimum ?? []} canRunFirstDiagnosis={state.canRunFirstDiagnosis} />}
-          {state && <NextAction state={state} />}
-          <WaysToAdd />
-
-          <div className="border-t border-border pt-6">
-            <h2 className="text-sm font-semibold text-foreground">Everything OpsIQ can use</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              You do not need all of it. Items marked “Needed for first read” are the essentials. Other starter items only improve confidence. Your first
-              assessment only requires revenue, expenses and cash/debt; the rest improves confidence.
-            </p>
-            {groups.length > 0 && (
-              <div className="mt-4">
-                <CategoryGroups groups={groups} />
-              </div>
-            )}
-            <h3 className="mt-6 text-sm font-semibold text-foreground">Go further into one area</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Full pages for money, customers, operations and the rest of your business.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-              <Link href="/owner/finance" className="text-primary underline-offset-2 hover:underline">Money</Link>
-              <Link href="/owner/customers" className="text-primary underline-offset-2 hover:underline">Customers</Link>
-              <Link href="/owner/operations" className="text-primary underline-offset-2 hover:underline">Operations</Link>
-              <Link href="/owner/inventory" className="text-primary underline-offset-2 hover:underline">Inventory</Link>
-              <Link href="/owner/procurement" className="text-primary underline-offset-2 hover:underline">Procurement</Link>
-              <Link href="/owner/vendor" className="text-primary underline-offset-2 hover:underline">Vendors</Link>
-              <Link href="/owner/goals" className="text-primary underline-offset-2 hover:underline">Goals</Link>
-              <Link href="/owner/risks" className="text-primary underline-offset-2 hover:underline">Risk</Link>
-              <Link href="/owner/compliance" className="text-primary underline-offset-2 hover:underline">Compliance</Link>
+          {/* Before the first read: ONE dominant path. No category catalog, no checklist, no peers. */}
+          {selectedBusiness && state && !state.canRunFirstDiagnosis && (
+            <div className="space-y-4" data-testid="data-hub-quick-start">
+              <QuickFinancialPicture
+                key={selectedBusiness.id}
+                businessId={selectedBusiness.id}
+                currency={selectedBusiness.currency}
+                onSaved={() => void loadState(selectedBusiness.id)}
+              />
+              {state.firstRead && state.firstRead.basis !== "none" && state.firstRead.missing.length > 0 && (
+                <p className="text-sm text-muted-foreground" data-testid="data-hub-existing-partial">
+                  OpsIQ already holds some saved numbers but still needs {describeMissingFirstReadFacts(state.firstRead.missing)}.{" "}
+                  <Link href="/owner/finance" className="underline">Add it on the Money page</Link>.
+                </p>
+              )}
+              <OtherWaysToAdd />
+              {businessSettings}
             </div>
-          </div>
+          )}
+
+          {/* After the first read is possible: what is known, ONE next question, then optional detail. */}
+          {state && state.canRunFirstDiagnosis && (
+            <>
+              <ReadinessSummary state={state} />
+              <NextAction state={state} />
+              <OtherWaysToAdd />
+              {businessSettings}
+              <details className="border-t border-border pt-6" data-testid="data-hub-more-detail">
+                <summary className="cursor-pointer text-sm font-semibold text-foreground">Add more detail</summary>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  You do not need all of it. Everything here only improves how reliable OpsIQ&rsquo;s advice is.
+                </p>
+                <div className="mt-4">
+                  <MissingCritical
+                    items={state.missingMinimum ?? []}
+                    canRunFirstDiagnosis={state.canRunFirstDiagnosis}
+                    firstRead={state.firstRead ?? NO_FIRST_READ_BLOCKERS}
+                  />
+                </div>
+                {groups.length > 0 && (
+                  <div className="mt-4">
+                    <CategoryGroups groups={groups} firstRead={state.firstRead ?? NO_FIRST_READ_BLOCKERS} />
+                  </div>
+                )}
+                <h3 className="mt-6 text-sm font-semibold text-foreground">Go further into one area</h3>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                  <Link href="/owner/finance" className="text-primary underline-offset-2 hover:underline">Money</Link>
+                  <Link href="/owner/customers" className="text-primary underline-offset-2 hover:underline">Customers</Link>
+                  <Link href="/owner/operations" className="text-primary underline-offset-2 hover:underline">Operations</Link>
+                  <Link href="/owner/inventory" className="text-primary underline-offset-2 hover:underline">Inventory</Link>
+                  <Link href="/owner/procurement" className="text-primary underline-offset-2 hover:underline">Procurement</Link>
+                  <Link href="/owner/vendor" className="text-primary underline-offset-2 hover:underline">Vendors</Link>
+                  <Link href="/owner/goals" className="text-primary underline-offset-2 hover:underline">Goals</Link>
+                  <Link href="/owner/risks" className="text-primary underline-offset-2 hover:underline">Risk</Link>
+                  <Link href="/owner/compliance" className="text-primary underline-offset-2 hover:underline">Compliance</Link>
+                </div>
+              </details>
+            </>
+          )}
         </div>
       )}
       <div className="mt-8 border-t border-border pt-4">

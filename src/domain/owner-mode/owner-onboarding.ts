@@ -22,6 +22,13 @@ import {
   isCriticalCategory,
 } from "@/domain/owner-mode/input-catalog";
 import type { Confidence } from "@/services/owner-mode/owner-domain-ingestion";
+import {
+  FIRST_READ_FACT_CATEGORIES,
+  FIRST_READ_FACT_LABEL,
+  firstReadSufficiencyFromCategories,
+  type FirstReadFact,
+  type FirstReadSufficiency,
+} from "@/domain/owner-finance/first-read-sufficiency";
 import { type SmbArchetype, SMB_ARCHETYPES, SMB_ARCHETYPE_CONFIG } from "@/domain/owner-mode/smb-archetype";
 
 /**
@@ -46,7 +53,11 @@ export interface ProfileInputRequirements {
   optional: OwnerInputCategory[];
 }
 
-/** Categories every business needs for a first survival-grade read (never fewer than these). */
+/**
+ * The STARTER-MINIMUM evidence categories every business profile needs for a well-founded picture.
+ * This is profile/confidence evidence, NOT the first-read gate: whether a first read is possible is
+ * decided only by the canonical `FirstReadSufficiency` (first-read-sufficiency.ts).
+ */
 const UNIVERSAL_MINIMUM: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
 
 function uniq<T>(xs: T[]): T[] {
@@ -92,6 +103,12 @@ export interface OnboardingInput {
   suppliedCategories: OwnerInputCategory[];
   /** For multi-location: number of branches the owner operates. */
   branchCount?: number;
+  /**
+   * The canonical first-read sufficiency (first-read-sufficiency.ts), computed from the real Finance
+   * snapshot. When omitted (callers that only know category presence) it is derived from
+   * `suppliedCategories` through the same rule — the gate is never a separate category list.
+   */
+  firstRead?: FirstReadSufficiency;
 }
 
 export type OnboardingStepId =
@@ -130,8 +147,10 @@ export interface OnboardingState {
   missingMinimum: MissingMinimum[];
   /** HONEST confidence available before diagnosis — never "high" while a critical category is missing. */
   confidenceBeforeDiagnosis: Confidence;
-  /** A limited first diagnosis is allowed once the universal financial minimum is present. */
+  /** A limited first diagnosis is allowed once the canonical first-read sufficiency is met. */
   canRunFirstDiagnosis: boolean;
+  /** The canonical first-read sufficiency this state's gate is derived from (one rule, no copies). */
+  firstRead: FirstReadSufficiency;
   minimumComplete: boolean;
   /** Cautious, data-aware first action — collect the dominant missing input first if data is weak. */
   firstAction: string;
@@ -147,16 +166,22 @@ export interface OnboardingState {
   multiLocation: boolean;
 }
 
-/** Categories that unlock a limited first diagnosis (survival-grade financial read). */
-export const FIRST_DIAGNOSIS_GATE: readonly OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
-
 /**
- * True only for a missing category that actually blocks the first read. Any other missing
- * starter-minimum category (e.g. equipment logs) improves confidence but does not stop the owner
- * from acting on the financial read the gate categories already support.
+ * True only for a missing category that actually blocks the first read under the CANONICAL contract
+ * (`firstRead`): the category explains a fact the engine still lacks. A cost category blocks only while
+ * NO cost component is known (any one satisfies it), so supplying fixed costs never leaves "Expenses"
+ * flagged as blocking. Any other missing starter-minimum category improves confidence but does not stop
+ * the owner from acting on the financial read the critical facts already support.
  */
-export function blocksFirstRead(category: OwnerInputCategory): boolean {
-  return FIRST_DIAGNOSIS_GATE.includes(category);
+export function blocksFirstRead(category: OwnerInputCategory, firstRead: FirstReadSufficiency): boolean {
+  return firstRead.missing.some((fact) => FIRST_READ_FACT_CATEGORIES[fact].includes(category));
+}
+
+/** Owner-facing sentence naming what the first read still needs ("revenue, one cost figure and cash available"). */
+export function describeMissingFirstReadFacts(missing: readonly FirstReadFact[]): string {
+  const labels = missing.map((f) => FIRST_READ_FACT_LABEL[f]);
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
 }
 
 function severityOf(category: OwnerInputCategory): "critical" | "high" | "medium" {
@@ -192,7 +217,8 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
 
   // Confidence before diagnosis — DERIVED, never inflated.
   const anyCriticalMissing = requirements.minimumRequired.some((c) => isCriticalCategory(c) && !supplied.has(c));
-  const firstGateMet = FIRST_DIAGNOSIS_GATE.every((c) => supplied.has(c));
+  const firstRead = input.firstRead ?? firstReadSufficiencyFromCategories(supplied);
+  const firstGateMet = firstRead.sufficient;
   const minRatio = requirements.minimumRequired.length === 0 ? 1 : minimumSuppliedCount / requirements.minimumRequired.length;
   let confidenceBeforeDiagnosis: Confidence;
   if (!firstGateMet || minimumSuppliedCount === 0) confidenceBeforeDiagnosis = "none";
@@ -217,8 +243,7 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
   // Cautious first action.
   let firstAction: string;
   if (!canRunFirstDiagnosis) {
-    const need = FIRST_DIAGNOSIS_GATE.filter((c) => !supplied.has(c)).map((c) => INPUT_CATALOG[c].label);
-    firstAction = `Enter your ${need.join(", ")} so OpsIQ can run a first survival-grade read. No strong action yet — the numbers come first.`;
+    firstAction = `Enter your ${describeMissingFirstReadFacts(firstRead.missing)} so OpsIQ can run a first read. Rough estimates are fine. No strong action yet — the numbers come first.`;
   } else if (confidenceBeforeDiagnosis !== "high" && nextBestUpload) {
     firstAction = `Run the limited first diagnosis, then add ${INPUT_CATALOG[nextBestUpload].label} before acting on anything risky — confidence is ${confidenceBeforeDiagnosis}, so treat the first read as directional.`;
   } else {
@@ -286,6 +311,7 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     missingMinimum,
     confidenceBeforeDiagnosis,
     canRunFirstDiagnosis,
+    firstRead,
     minimumComplete,
     firstAction,
     whatNotToDo,

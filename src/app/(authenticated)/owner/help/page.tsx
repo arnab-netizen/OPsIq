@@ -43,7 +43,7 @@ const SECTIONS: HelpSection[] = [
       {
         question: "I only have a few numbers, not a full set of books. Can I still use this?",
         answer:
-          "Yes. Enter what you have first — even just cash on hand and revenue gives you a first read. You can add more detail later (sales breakdown, costs, money owed to and by you) to make the picture more accurate; nothing is required all at once.",
+          "Yes. Enter what you have first — rough estimates are fine. Revenue, any one cost figure and the cash you have available give you a first read. You can add more detail later (sales breakdown, other costs, money owed to and by you) to make the picture more accurate; nothing is required all at once.",
       },
     ],
   },

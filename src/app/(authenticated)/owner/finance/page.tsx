@@ -658,7 +658,7 @@ export default function OwnerFinancePage() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Start with your basic numbers</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground" data-testid="quick-financial-picture">
-                  Quick financial picture: these four numbers are enough for a first read. Estimates are fine — you can
+                  Quick financial picture: revenue, at least one cost (fixed or variable) and cash are enough for a first read. Estimates are fine — you can
                   refine them later. Everything below is optional; leaving it blank only limits how complete the analysis is.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">

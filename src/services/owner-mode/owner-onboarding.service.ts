@@ -18,6 +18,12 @@ import {
 import { resolveSmbArchetype } from "@/domain/owner-mode/smb-archetype";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { intakeDomainToCategory } from "@/domain/owner-mode/input-record-parser";
+import {
+  firstReadSufficiencyFromSnapshots,
+  type FirstReadSufficiency,
+} from "@/domain/owner-finance/first-read-sufficiency";
+import { inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { evidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
 /**
  * Categories readiness reads directly from a REAL financial snapshot (`rows.finance` /
@@ -108,6 +114,25 @@ export function rowsToSuppliedCategories(rows: OwnerDomainRows): OwnerInputCateg
   return Array.from(out);
 }
 
+/**
+ * The canonical first-read sufficiency for one workspace+business, from the real Finance snapshots:
+ * the current effective (completed-period) snapshot, else the in-progress one — labelled provisional,
+ * never promoted to completed evidence. Shared by onboarding, input guidance and readiness so every
+ * surface answers "is the first read possible?" identically.
+ */
+export async function loadFirstReadSufficiency(
+  deps: Pick<OwnerOnboardingDeps, "db" | "workspaceId" | "businessId" | "now">,
+  rows: OwnerDomainRows
+): Promise<FirstReadSufficiency> {
+  const { db, workspaceId, businessId, now } = deps;
+  const inProgress = await db.ownerFinancialSnapshot.findFirst(
+    inProgressFinancialSnapshotQuery({ workspaceId, businessId }, undefined, now)
+  );
+  // Re-check the row's own period: only a snapshot that is genuinely in progress is provisional evidence.
+  const provisional = inProgress && evidencePeriodState(inProgress, now) === "provisional" ? inProgress : null;
+  return firstReadSufficiencyFromSnapshots({ completed: rows.finance, provisional });
+}
+
 export interface OwnerOnboardingResult extends OnboardingState {
   workspaceId: string;
   businessId: string;
@@ -137,8 +162,10 @@ export async function getOwnerOnboardingState(deps: OwnerOnboardingDeps): Promis
   // operatingModel text (mapOperatingModelToRole's own /multi|branch/ check), never from businessType.
   const role = mapOperatingModelToRole(business.operatingModel, false);
   const supplied = rowsToSuppliedCategories(rows);
+  const firstRead = await loadFirstReadSufficiency(deps, rows);
 
   const state = computeOnboardingState({
+    firstRead,
     businessName: business.name ?? "",
     profileType,
     ownerRole: role,
