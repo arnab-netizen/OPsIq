@@ -891,7 +891,7 @@ function FinanceCycleView({
           domainLabel="Finance"
           businessId={businessId}
           missing={missing.map(humanizeMetricKey)}
-          fallback={`⚠ Data confidence is critically low (${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.`}
+          fallback={`⚠ Data confidence is critically low (${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results are not yet reliable; confirm them with the missing critical information below before relying on them.`}
         />
       )}
 

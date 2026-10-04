@@ -62,7 +62,7 @@ describe("Command Center plan analysis beside the canonical decision", () => {
   it("the Command Center page passes the plan analysis through the shared reconciler (never raw)", () => {
     const src = readFileSync(join(process.cwd(), "src/app/(authenticated)/owner/page.tsx"), "utf8");
     expect(src).toMatch(/<SupervisorSummary summary=\{reconcilePlanSummary\(wbp\.supervisor, imperativeCtx\)\} \/>/);
-    expect(src).toMatch(/<PriorityCommandStrip cards=\{reconcilePlanCards\(priorities\.cards, imperativeCtx\)\} \/>/);
+    expect(src).toMatch(/<PriorityCommandStrip cards=\{reconcilePlanCards\(priorities\.cards, imperativeCtx\)\}( advicePolicy=\{decision\?\.advicePolicy \?\? null\})? \/>/);
     expect(src).toMatch(/planConstraintAsCondition\(x, imperativeCtx\)/);
     expect(src).toMatch(/reconcilePlanGrowthGate\(wbp\.growth, imperativeCtx\)/);
     expect(src).not.toMatch(/wbp\.growth\.scaleAllowed \? "scale allowed/);

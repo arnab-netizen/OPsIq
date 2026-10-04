@@ -86,20 +86,22 @@ policy text explains why. Narrowing the numeric cap is recorded as a behavior-ch
 
 | # | Finding | Class | Status |
 |---|---|---|---|
-| C1 | Control center says "do not make material decisions" while the gate/decision let a growth step proceed | REAL_DEFECT | Mitigated: policy withholds commitment for growth/plan targets (`canMakeMaterialCommitment=false`, card line). **Gate not changed** (candidate) |
+| C1 | Control center says "do not make material decisions" while the gate/decision let a growth step proceed | REAL_DEFECT | **Wording consistent**: the Control Center's commitment statement now comes from the canonical policy; the policy withholds commitment for growth/plan targets (card line). **The action gate itself is unchanged and does not enforce `canMakeMaterialCommitment`** (candidate) |
 | C2 | Business-wide missing data caps an unrelated, well-supported current target (numeric cap) | REAL_DEFECT (scope) | Policy distinguishes target-relevant vs unrelated (`CAUTION` + explanation). **Numeric cap unchanged** (pinned by tests; candidate) |
 | C3 | A data-request target shown as "High confidence" | REAL_DEFECT | **Fixed** (card shows "Needs your information" / "Confirm the figures first") |
-| C4 | High-confidence label beside stale evidence elsewhere; margin gate wording on stale figures is present tense | AMBIGUOUS / REAL (wording) | Policy adds the "other areas out of date" reason; margin gate wording left (candidate) |
-| C5 | Now View / assessment / priority strip say "blocked / limited / safe to act" beside the card | REAL_DEFECT | Not changed (candidate: delegate to the policy) |
+| C4 | High-confidence label beside stale evidence elsewhere; margin gate wording on stale figures is present tense | AMBIGUOUS / REAL (wording) | **Margin wording FIXED** (policy block reason, hold text and blocker title distinguish last-known out-of-date margin from a current measurement; tests prove the hold, code and floor are unchanged; margin has no provisional path because its source is the current effective completed snapshot). "Other areas out of date" reason added to the policy |
+| C5 | Priority strip said "safe to act" / "strong actions are paused"; Now View / Command Center said "Ready / Blocked" / "Strong recommendations are paused" beside the card | REAL_DEFECT | **FIXED** (tested): strip notes are evidence descriptions and, when the policy withholds a commitment, the strip says it is not approval; Now View labels are scoped to "Guidance …" with a scope line that defers to the main target's advice status; Command Center checklist wording no longer pauses/permits. The assessment composer's "Limited confidence / Not enough evidence" is evidence description and is unchanged |
 | C6 | Low confidence only changes a badge; growth/plan step unqualified | AMBIGUOUS | **Mitigated** (statement + no-commitment line from the policy) |
 | C7 | Missing evidence read as no risk (danger cards read 0, portfolio growth candidate) | REAL_DEFECT | Not changed (candidate; portfolio/danger-band behavior is frozen) |
 | C8 | Provisional-only wording; "nothing open" with stale evidence | REAL_DEFECT (wording) | **Fixed** |
 | C9 | Different cutoffs/labels for the same score (75/80, 70, 30/45/60) | REAL_DEFECT (consistency) | Not changed (thresholds frozen; see provenance doc) |
 | C10 | Percent/probability-style confidence wording outside the owner spine | AMBIGUOUS | Policy text is test-asserted free of percent/probability wording; other surfaces unchanged |
-| C11 | Control center and decision read different sufficiency inputs | REAL_DEFECT | Policy passed through the control-center payload; sufficiency source unchanged (candidate) |
+| C11 | Control center and decision read different sufficiency inputs | REAL_DEFECT | **Partly fixed**: the Control Center's owner-wide commitment wording is derived only from the decision's `advicePolicy` (or, only when no decision exists for the selected business, a sufficiency-only policy resolved by the same module); sufficiency is disclosed as data quality. The *sufficiency value itself* is still read from the profile (a different computation from the decision's) — candidate |
 | C12 | Per-target confidence lost for supporting steps / lists | design gap | Not changed |
 
 ## 8. Behavior changes in this slice, and candidates left for later
+
+**Implemented in the amendment (copy / presentation / additive only):** priority-strip notes and scope line; Now View guidance labels and scope line; Command Center checklist wording; Control Center commitment wording from the policy (`ownerMaterialCommitmentGuard`); margin-gate wording for out-of-date figures (additive `grossMarginOutOfDate`); finance/operations data-gap fallback wording; a governance test that no surface outside the policy asserts owner-wide action permission from confidence.
 
 **Implemented (copy / presentation / additive field only; no number, rank or threshold changes):**
 1. `CurrentOwnerDecision.advicePolicy` (additive, deterministic, no persistence).
@@ -116,3 +118,12 @@ policy text explains why. Narrowing the numeric cap is recorded as a behavior-ch
 - *Cashflow danger flagged 60 days ago:* `REFRESH_REQUIRED` — "last flagged: Critical"; "Update the Cashflow figures and re-run its diagnosis." Never "your cash runs out".
 - *No sales, cost or cash data:* `EVIDENCE_REQUIRED` — "Add your business numbers (sales, costs and cash), then re-run OpsIQ."
 - *Cash and Finance disagree with no way to tell which is newer:* `CONFLICT_REQUIRES_RESOLUTION` — "Confirm which figures are authoritative: update the older of Cash flow and Finance, then re-run both."
+
+## 10. What the policy does and does not do
+
+- **Material recommendation abstention: YES.** What OpsIQ *claims or recommends* from the canonical decision is governed by `advicePolicy`; the card, strip, Now View scope line and Control Center all read it.
+- **Material execution enforcement: OUT OF SCOPE.** `canMakeMaterialCommitment` is not enforced by the action gate or any workflow transition. The existing gates (cash, margin, capacity, compliance, do-not-repeat) are unchanged and do not consult the policy; wiring execution controls to it is a later governed-execution slice.
+
+## 11. Single-source rule (tested)
+
+Outside `owner-advice-policy.ts`, no owner-facing code may say "safe to act", "actions/recommendations are paused", or the owner-wide "Do not make material decisions" statement, and none may map a confidence value to a go/no-go phrase (`owner-advice-surfaces.test.ts`). Legitimate local evidence descriptions, workflow statuses and safety gates are not restricted.

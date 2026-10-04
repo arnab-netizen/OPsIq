@@ -334,3 +334,65 @@ export function resolveOwnerAdvicePolicy(input: OwnerAdvicePolicyInput): OwnerAd
           : `Add the missing ${label} information, then re-run.`,
   };
 }
+
+/**
+ * The material-commitment statement for owner-wide guardrails (the Control Center), derived ONLY from the canonical policy.
+ * `prohibition` is the "do not" wording; `condition` is the same limit phrased as how to carry out the main target. Null
+ * when the policy permits a commitment (SUPPORTED, RECORDED_FACT, or a CAUTION that allows it): data-quality disclosure is
+ * informational and never prohibits by itself.
+ */
+export function ownerMaterialCommitmentGuard(policy: OwnerAdvicePolicy): { prohibition: string; condition: string } | null {
+  switch (policy.mode) {
+    case "EVIDENCE_REQUIRED":
+      return {
+        prohibition: "Do not make material decisions until the missing data is provided.",
+        condition: "hold other material decisions until the missing data is provided.",
+      };
+    case "REFRESH_REQUIRED":
+      return {
+        prohibition: "Do not make material decisions on out-of-date figures until they are confirmed.",
+        condition: "hold other material decisions until the out-of-date figures are confirmed.",
+      };
+    case "CONFLICT_REQUIRES_RESOLUTION":
+      return {
+        prohibition: "Do not make material decisions until the conflicting cash and finance figures are reconciled.",
+        condition: "hold other material decisions until the conflicting cash and finance figures are reconciled.",
+      };
+    case "PROVISIONAL":
+      return {
+        prohibition: "Do not commit money, capacity or a plan on provisional figures until the missing information is supplied.",
+        condition: "hold commitments of money, capacity or a plan until the missing information is supplied.",
+      };
+    case "CAUTION":
+      return policy.canMakeMaterialCommitment
+        ? null
+        : {
+            prohibition: "Do not commit money, capacity or a plan on this evidence until the incomplete information is supplied.",
+            condition: "hold commitments of money, capacity or a plan until the incomplete information is supplied.",
+          };
+    case "SUPPORTED":
+    case "RECORDED_FACT":
+      return null;
+  }
+}
+
+/**
+ * Only when NO canonical decision exists for the selected business (nothing to qualify): a sufficiency-only policy, so the
+ * Control Center never keeps a separate permission rule. Insufficient data cannot support material decisions; otherwise there
+ * is nothing to say.
+ */
+export function sufficiencyOnlyAdvicePolicy(status: "sufficient" | "caution" | "insufficient", reassessmentTrigger = ""): OwnerAdvicePolicy | null {
+  if (status !== "insufficient") return null;
+  return resolveOwnerAdvicePolicy({
+    state: "NO_OPEN_ACTIONS",
+    primary: null,
+    intent: null,
+    primaryDomainLabel: "",
+    dataSufficiency: { status, lowConfidenceDomains: [], missingCriticalData: [] },
+    staleDomains: [],
+    gateCashProvisional: false,
+    gateCashConflicting: false,
+    missingInformation: [],
+    reassessmentTrigger,
+  });
+}

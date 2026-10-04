@@ -719,7 +719,7 @@ function OperationsCycleView({
           domainLabel="Operations"
           businessId={businessId}
           missing={missing.map(humanizeMetricKey)}
-          fallback={`⚠ Data confidence is critically low (${dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.`}
+          fallback={`⚠ Data confidence is critically low (${dataConfidence}/100). Diagnosis results are not yet reliable; confirm them with the missing critical inputs below before relying on them.`}
         />
       )}
 

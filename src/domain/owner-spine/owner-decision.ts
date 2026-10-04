@@ -995,7 +995,9 @@ export function ownerGateHoldText(code: OwnerGateBlockCode, gate: OwnerGateConst
         return ["the cash safety limit", "Stabilise cash"];
       }
       case "MARGIN_SAFETY_BLOCKED":
-        return ["the gross-margin safety floor", "Restore gross margin above the floor"];
+        return gate.grossMarginOutOfDate
+          ? ["the gross-margin safety floor (the last recorded margin is from out-of-date figures)", "Confirm your current gross margin and keep it above the floor"]
+          : ["the gross-margin safety floor", "Restore gross margin above the floor"];
       case "CAPACITY_BLOCKED":
         return ["the capacity limit", "Clear the capacity bottleneck"];
       case "DO_NOT_REPEAT_BLOCKED":
@@ -1033,7 +1035,9 @@ function gateBlockerTitle(code: OwnerGateBlockCode, gate: OwnerGateConstraints, 
       return "Stabilise cash before advancing the work it holds back";
     }
     case "MARGIN_SAFETY_BLOCKED":
-      return "Restore gross margin above the safety floor before scaling sales or marketing";
+      return gate.grossMarginOutOfDate
+        ? "Confirm your current gross margin (the last figures are out of date) before scaling sales or marketing"
+        : "Restore gross margin above the safety floor before scaling sales or marketing";
     case "CAPACITY_BLOCKED":
       return `Clear the capacity bottleneck${gate.capacity.bottlenecks.length ? ` (${gate.capacity.bottlenecks.join(", ")})` : ""} before taking on more work`;
     case "DO_NOT_REPEAT_BLOCKED":
