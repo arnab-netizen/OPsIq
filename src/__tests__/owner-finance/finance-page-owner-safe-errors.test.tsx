@@ -377,7 +377,8 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
 
     // A successful mutation (runDiagnosis, no diagnosisFailure configured) triggers this page's
     // own authoritative reload -- that reload's dashboard GET is the one that fails.
-    fireEvent.click(screen.getByText("Run finance diagnosis"));
+    // (The button row appears once the canonical first-read gate has resolved for the business.)
+    fireEvent.click(await screen.findByText("Run finance diagnosis"));
 
     await waitFor(() => screen.getByTestId("finance-page-error"));
     expect(screen.getAllByText("FINANCE_A_ACTION").length).toBeGreaterThan(0);

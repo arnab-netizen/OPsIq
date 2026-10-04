@@ -33,6 +33,8 @@ const NOT_READY = {
 };
 
 const calls = () => fetchMock.mock.calls.map((c) => ({ url: String(c[0]), method: (c[1] as RequestInit | undefined)?.method ?? "GET", body: (c[1] as RequestInit | undefined)?.body as string | undefined }));
+/** Everything except the read-only saved-periods lookup the component makes on mount. */
+const writes = () => calls().filter((c) => c.method !== "GET");
 const posts = (suffix: string) => calls().filter((c) => c.method === "POST" && c.url.endsWith(suffix));
 
 beforeEach(() => {
@@ -105,7 +107,7 @@ describe("field semantics and truthful feedback (6–8)", () => {
     mountComponent();
     expect(primary().disabled).toBe(true);
     submit();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(writes()).toEqual([]);
   });
   it("partial evidence (D: revenue + cash) names exactly what is missing and does not save or diagnose", () => {
     mountComponent();
@@ -113,7 +115,7 @@ describe("field semantics and truthful feedback (6–8)", () => {
     expect(screen.getByTestId("quick-feedback").textContent).toMatch(/Still needed for a first read: one cost figure/);
     expect(primary().disabled).toBe(true);
     submit();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(writes()).toEqual([]);
   });
   it("invalid number → clear inline error, nothing sent", () => {
     mountComponent();
@@ -177,7 +179,7 @@ describe("one action: save → diagnose → route (6, 9, 10, 12, 13)", () => {
     type("revenue", "5"); type("variableCosts", "5"); type("cashOnHand", "5");
     fireEvent.click(primary());
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/owner/finance"));
-    expect(calls().map((c) => `${c.method} ${c.url}`)).toEqual([
+    expect(writes().map((c) => `${c.method} ${c.url}`)).toEqual([
       "POST /api/owner/finance/businesses/b1/snapshots",
       "POST /api/owner/finance/businesses/b1/diagnoses",
     ]);

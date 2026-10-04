@@ -482,7 +482,10 @@ export default function OwnerCommandCenterPage() {
 
       {businessList.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link> to create one.
+          <p>Set up your first business to get started.</p>
+          <Link href="/owner/data" data-testid="owner-empty-setup-cta" className="mt-3 inline-block font-medium underline">
+            Set up your first business →
+          </Link>
         </div>
       ) : (
         <>

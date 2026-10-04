@@ -53,6 +53,20 @@ The 20 categories are an *evidence taxonomy* (what kind of record). The first-re
 
 Before the first read the 20-category catalog, missing-items list and readiness bar are **not rendered**.
 
+### 4a. Route convergence (PR #586 amendment)
+
+There may be many detailed data-entry tools, but one obvious low-effort first-input experience. `QuickFinancialPicture` is the ONE implementation and is hosted by both pre-first-read surfaces:
+
+- **My Business** (`/owner/data`) — dominant before the first read.
+- **Money** (`/owner/finance`, reachable directly from the sidebar) — when the selected business has no diagnosis yet **and** the canonical gate (`canRunFirstDiagnosis` from `/api/owner/onboarding`, the same value My Business reads) says the first read is not possible, Money shows the shared quick start first. The legacy "+ Add financial snapshot" / "Run finance diagnosis" controls are not shown; "Enter full financial detail instead" reveals the unchanged full snapshot form as a secondary option. Once first-read evidence exists (or a diagnosis exists), Money is the normal full view. An unreadable gate falls back to the normal view (no capability is withdrawn). On Money the completion callback reloads the page in place.
+- **Owner home with no business** now says "Set up your first business" and links to `/owner/data` (it previously said "Start in Finance").
+- **Help** separates the two: My Business = fastest first input; Money = full financial detail, saved snapshots and history.
+- **Start Here** keeps its money step on `/owner/data`. Money stays in the sidebar.
+
+**Existing incomplete snapshot.** The quick path never POSTs a duplicate period and never clones saved numbers. It reads the business's saved snapshot periods; a period that already holds a snapshot is disabled ("already saved"), the default moves to the first free period, and typing the same custom dates is refused inline. If a saved snapshot is still missing a critical fact, a notice says exactly what is missing, that the saved numbers are left as they are, and points to Guided setup (the existing path that amends that period) or a different period here. No new endpoint, no migration.
+
+**Known second implementation (pre-existing, not removed).** `/owner/onboarding` ("Guided setup") has its own `EssentialNumbersForm` (5 fields including a bank balance that feeds a Cashflow record, amend-on-409, and an inline first-result card). It is a secondary route (Home "See full setup guidance", My Business "Other ways"), not the first-run path, and it already gates on the canonical `canRunFirstDiagnosis`. It was kept because converting it would drop the bank-balance wiring and inline result; folding it into `QuickFinancialPicture` is a candidate follow-up.
+
 ## 5. Progressive evidence gathering
 
 After a first read is possible, My Business says **"Enough for a first read"** and explicitly *"does not mean OpsIQ knows the whole business"*. It then asks **one** next question ("One thing would make this more reliable" — `nextBestUpload` from the existing onboarding infrastructure) and keeps the full missing list and category groups behind **"Add more detail"**. No "100% / complete / ready" claim is made from the financial picture alone.
@@ -99,11 +113,19 @@ Existing business, no snapshot, shortest legitimate path to a first diagnosis.
 ## 11. Known limitations
 
 - Period dates come from the device calendar (no authoritative business timezone).
-- The Finance page still opens its full form behind "+ Add financial snapshot"; the quick path lives on My Business.
+- Money and My Business share the quick path; the full snapshot form stays available behind "Enter full financial detail instead" (pre-first-read) or "+ Add financial snapshot" (after).
+- Guided setup keeps its own pre-existing essential-numbers form (see 4a).
 - A first-time owner whose evidence is incomplete cannot save a partial snapshot from the quick path (they get precise feedback, or use the full Finance form). Completing a partial snapshot in place would require the amendment flow.
 - An owner whose cash exists only in a cash-flow record (no snapshot `cashOnHand`) is now told cash is still needed for the first read — Finance diagnosis reads `cashOnHand` from the snapshot.
-- DB-backed suites and a real-browser run were not executed in this environment (no local PostgreSQL; the configured DB variables point at a remote database and were deliberately not used).
+- Real-browser evidence was captured against a local throwaway Postgres and `next dev` (not the Vercel preview, which needs credentials not available here); screenshots show the Next.js dev indicator overlay, which is not part of the product.
 
 ## 12. Real-world validation metrics (to measure with real owners)
 
 Time from landing to first diagnosis; time to first input; number of fields touched; abandonment before first read; quick-path completion rate; diagnosis-retry rate after save; share of first reads on provisional vs completed periods; routine-update time when little changed.
+
+## 13. Real-browser acceptance (PR #586 amendment)
+
+`tests/browser/owner-minimum-effort-first-input.spec.ts` — real Chromium, local loopback Postgres only (same safety guard as the other owner browser specs), screenshots in `docs/opsiq/evidence/owner-minimum-effort-input/`.
+
+- Desktop 1440: owner empty state → My Business; four visible fields; optional detail collapsed; no category wall; default period "Last month"; partial entry names the missing fact; fixed-only, variable-only and known-zero become eligible; invalid number is an inline error; fast double click creates exactly one snapshot and a diagnosis and lands on Money; sidebar → Money for a no-data business shows the same quick start with the full form secondary.
+- Mobile 390 (touch, 2× DPR): no horizontal scroll at any step; all four inputs inside the viewport, single column, stacked; labels ≥ 12 px; period radios usable; provisional note, inline error and partial feedback do not overflow; optional disclosure usable; CTA fully visible; full journey completes without zoom.

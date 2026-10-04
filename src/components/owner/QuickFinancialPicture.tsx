@@ -22,6 +22,7 @@ import {
   type QuickEntryDraft,
 } from "@/domain/owner-finance/quick-entry";
 import { describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
+import { firstReadSufficiencyFromRow, type CriticalFinanceRow } from "@/domain/owner-finance/first-read-sufficiency";
 import {
   quickReportingPeriods,
   retryDiagnosis,
@@ -49,6 +50,14 @@ const api: QuickStartApi = async (path, init) => {
   }
 };
 
+/** A saved snapshot as the governed list endpoint returns it (only what the quick path needs). */
+interface SavedSnapshot extends CriticalFinanceRow {
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+const day = (v: string | undefined) => (v ?? "").slice(0, 10);
+
 type Phase =
   | { kind: "idle" }
   | { kind: "working" }
@@ -59,16 +68,25 @@ export function QuickFinancialPicture({
   businessId,
   currency,
   onSaved,
+  onFirstRead,
+  omitMoneyLink,
 }: {
   businessId: string;
   currency: string | null | undefined;
   /** Called after any successful save so the host can refresh its readiness view. */
   onSaved?: () => void;
+  /**
+   * Called once the first read has been produced. Default: navigate to the Money page, where it is
+   * shown. A host that already IS that page passes a reload instead (a same-route push is a no-op).
+   */
+  onFirstRead?: () => void;
+  /** Hosts that are the Money page omit the "full money picture" link (it would point at itself). */
+  omitMoneyLink?: boolean;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<QuickEntryDraft>({});
   const periods = useMemo(() => quickReportingPeriods(new Date()), []);
-  const [periodId, setPeriodId] = useState<string>(periods[0]?.id ?? "custom");
+  const [periodChoice, setPeriodChoice] = useState<string>(periods[0]?.id ?? "custom");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -83,12 +101,45 @@ export function QuickFinancialPicture({
     return () => { mounted.current = false; };
   }, []);
 
+  // Periods that already hold a saved snapshot for this business. The quick path never POSTs a
+  // duplicate period (that would 409) and never clones saved numbers: those periods are simply
+  // unavailable here. A failed lookup degrades to "none known" — the server still refuses a duplicate.
+  const [saved, setSaved] = useState<SavedSnapshot[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/owner/finance/businesses/${encodeURIComponent(businessId)}/snapshots`);
+        if (!res?.ok) return;
+        const body = await res.json().catch(() => null);
+        const list = (Array.isArray(body) ? body : body?.snapshots) as SavedSnapshot[] | undefined;
+        if (!cancelled && Array.isArray(list)) setSaved(list);
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [businessId]);
+  const takenKey = (start: string, end: string) => saved.some((s) => day(s.periodStart) === start && day(s.periodEnd) === end);
+  // The effective period: the owner's choice, unless that quick period turns out to be saved already —
+  // then the first free one (never silently a taken one); with none free, the owner chooses dates.
+  const chosen = periods.find((p) => p.id === periodChoice);
+  const periodId =
+    chosen && takenKey(chosen.start, chosen.end)
+      ? periods.find((p) => !takenKey(p.start, p.end))?.id ?? "custom"
+      : periodChoice;
+  const incompleteSaved = saved
+    .map((s) => ({ s, suff: firstReadSufficiencyFromRow(s) }))
+    .filter((x) => !x.suff.sufficient)
+    .map((x) => ({ start: day(x.s.periodStart), end: day(x.s.periodEnd), missing: x.suff.missing }));
+
   const assessment = useMemo(() => assessQuickEntry(draft), [draft]);
   const period =
     periodId === "custom"
       ? { start: customStart, end: customEnd, provisional: false }
       : periods.find((p) => p.id === periodId) ?? null;
-  const periodValid = Boolean(period && period.start && period.end && period.end >= period.start);
+  const periodTaken = Boolean(period && takenKey(period.start, period.end));
+  const periodValid = Boolean(period && period.start && period.end && period.end >= period.start) && !periodTaken;
   const hasErrors = Object.keys(assessment.errors).length > 0;
   const sufficient = assessment.sufficiency?.sufficient === true;
   const currencyMissing = !(currency ?? "").trim();
@@ -99,7 +150,8 @@ export function QuickFinancialPicture({
     if (!mounted.current) return;
     if (result.status === "diagnosed") {
       onSaved?.();
-      router.push("/owner/finance");
+      if (onFirstRead) onFirstRead();
+      else router.push("/owner/finance");
       return;
     }
     if (result.status === "diagnosis_failed") {
@@ -179,6 +231,13 @@ export function QuickFinancialPicture({
         </p>
       ) : (
         <>
+          {incompleteSaved.length > 0 && (
+            <p className="mt-3 rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="quick-incomplete-saved">
+              You already have saved numbers for {incompleteSaved[0].start} to {incompleteSaved[0].end}, but OpsIQ still needs{" "}
+              {describeMissingFirstReadFacts(incompleteSaved[0].missing)}. Those saved numbers are left as they are — to complete them, use{" "}
+              <Link href="/owner/onboarding" className="underline">Guided setup</Link>, or give a different period here.
+            </p>
+          )}
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {QUICK_ENTRY_FIELDS.map((f) => (
               <Input
@@ -206,12 +265,12 @@ export function QuickFinancialPicture({
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               {periods.map((p) => (
                 <label key={p.id} className="flex items-center gap-1.5">
-                  <input type="radio" name="period" checked={periodId === p.id} onChange={() => setPeriodId(p.id)} />
-                  {p.label}
+                  <input type="radio" name="period" checked={periodId === p.id} disabled={takenKey(p.start, p.end)} onChange={() => setPeriodChoice(p.id)} />
+                  {p.label}{takenKey(p.start, p.end) ? " (already saved)" : ""}
                 </label>
               ))}
               <label className="flex items-center gap-1.5">
-                <input type="radio" name="period" checked={periodId === "custom"} onChange={() => setPeriodId("custom")} />
+                <input type="radio" name="period" checked={periodId === "custom"} onChange={() => setPeriodChoice("custom")} />
                 Choose dates
               </label>
             </div>
@@ -220,6 +279,11 @@ export function QuickFinancialPicture({
                 <Input name="periodStart" label="From" type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
                 <Input name="periodEnd" label="To" type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
               </div>
+            )}
+            {periodTaken && (
+              <p role="alert" className="mt-1 text-xs text-destructive" data-testid="quick-period-taken">
+                Numbers for that period are already saved. Pick a different period.
+              </p>
             )}
             {period?.provisional && (
               <p className="mt-1 text-xs text-muted-foreground" data-testid="quick-provisional-note">
@@ -249,7 +313,7 @@ export function QuickFinancialPicture({
             </Button>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
-            This is enough for a first read, not a full picture of your business — OpsIQ will tell you what would make it more reliable.
+            A first read is a rough picture, not the whole business — OpsIQ will tell you what would make it more reliable.
           </p>
         </>
       )}
@@ -257,7 +321,7 @@ export function QuickFinancialPicture({
       <details className="mt-4 text-sm" data-testid="quick-more-detail">
         <summary className="cursor-pointer font-medium text-foreground">Add more detail (optional)</summary>
         <ul className="mt-2 space-y-1 text-muted-foreground">
-          <li><Link href="/owner/finance" className="underline">Enter the full money picture</Link></li>
+          {!omitMoneyLink && <li><Link href="/owner/finance" className="underline">Enter the full money picture</Link></li>}
           <li><Link href="/owner/manual-entry" className="underline">Add other business information</Link></li>
           <li><Link href="/owner/intake" className="underline">Paste spreadsheet or CSV rows</Link></li>
         </ul>
