@@ -30,6 +30,7 @@
  * diagnosed domain gets honest "add data" guidance instead of a fabricated target.
  */
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { describeVerifiedActionLine } from "./owner-outcome-policy";
 import {
   ownerImperativeContext,
   ownerLeverKey,
@@ -825,7 +826,7 @@ export function describeOwnerChanges(facts: OwnerChangeFacts): OwnerDecisionChan
     work.push(
       e.kind === "ACTION_COMPLETED"
         ? { kind: "ACTION_COMPLETED", message: `Completed: "${e.title}".` }
-        : { kind: "ACTION_VERIFIED", message: `Verified: "${e.title}" reached its target.` }
+        : { kind: "ACTION_VERIFIED", message: describeVerifiedActionLine(e.title) }
     );
   }
   for (const d of [...facts.newlyStaleDomains].sort()) {

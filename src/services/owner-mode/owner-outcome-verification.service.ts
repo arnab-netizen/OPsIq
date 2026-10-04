@@ -181,6 +181,12 @@ export function classifyOutcomeVerification(
     return "INSUFFICIENT_EVIDENCE";
   }
 
+  // Rule 2b — an external event interfered: the movement cannot be credited to (or held against) the
+  // action, whatever the owner reported (the flag was recorded but previously never consulted).
+  if (outcome.externalEventFlag) {
+    return "NO_MEASURABLE_IMPACT";
+  }
+
   // Rule 3 — outcome made things worse
   if (outcomeStatus === "made_worse") {
     return "NEGATIVE_IMPACT";

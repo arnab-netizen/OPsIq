@@ -353,12 +353,12 @@ const CONDITION_FIELD_ORDER: (keyof DerivedBusinessConditionSignals)[] = [
 ];
 
 const VERIFICATION_CLASS_LABEL: Record<string, string> = {
-  SUCCESS: "Verified: Success",
-  PARTIAL_SUCCESS: "Verified: Partial success",
-  NO_MEASURABLE_IMPACT: "Verified: No measurable impact",
-  FAILURE: "Verified: Failure",
-  NEGATIVE_IMPACT: "Verified: Negative impact",
-  INCONCLUSIVE: "Verified: Inconclusive",
+  SUCCESS: "Result recorded: Success",
+  PARTIAL_SUCCESS: "Result recorded: Partial success",
+  NO_MEASURABLE_IMPACT: "Result recorded: No measurable impact",
+  FAILURE: "Result recorded: Failure",
+  NEGATIVE_IMPACT: "Result recorded: Negative impact",
+  INCONCLUSIVE: "Result recorded: Inconclusive",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };
