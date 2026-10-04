@@ -22,7 +22,7 @@ export type FirstReadFact = "revenue" | "costs" | "cashOnHand";
 export const FIRST_READ_FACT_LABEL: Record<FirstReadFact, string> = {
   revenue: "revenue",
   costs: "one cost figure",
-  cashOnHand: "cash available",
+  cashOnHand: "cash in hand (enter 0 if none)",
 };
 
 /**

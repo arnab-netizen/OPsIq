@@ -177,7 +177,7 @@ export function blocksFirstRead(category: OwnerInputCategory, firstRead: FirstRe
   return firstRead.missing.some((fact) => FIRST_READ_FACT_CATEGORIES[fact].includes(category));
 }
 
-/** Owner-facing sentence naming what the first read still needs ("revenue, one cost figure and cash available"). */
+/** Owner-facing sentence naming what the first read still needs ("revenue, one cost figure and cash in hand (enter 0 if none)"). */
 export function describeMissingFirstReadFacts(missing: readonly FirstReadFact[]): string {
   const labels = missing.map((f) => FIRST_READ_FACT_LABEL[f]);
   if (labels.length <= 1) return labels.join("");

@@ -18,11 +18,29 @@ import {
   type FirstReadSufficiency,
 } from "@/domain/owner-finance/first-read-sufficiency";
 
+/**
+ * The ONE owner-facing meaning of the Finance `cashOnHand` field: PHYSICAL cash the business holds
+ * outside the bank (till, safe, petty cash). Bank money is a separate fact (`bankBalance`, a Cashflow
+ * snapshot value the Finance diagnosis adds to `cashOnHand` as total liquid funds), so telling an owner
+ * to put "cash and bank" here would double-count once a real bank balance is also recorded. Every
+ * surface that asks for `cashOnHand` (quick start, Money's full form, Guided setup) reads this.
+ */
+export const CASH_IN_HAND_COPY = {
+  label: "Cash in hand",
+  hint: "Physical cash the business holds outside the bank (till, safe). Don't include money in the bank. If there is none, enter 0.",
+} as const;
+
+/** The separate bank figure (written to Cashflow, never to the Finance snapshot). */
+export const BANK_BALANCE_COPY = {
+  label: "Money in the bank",
+  hint: "Bank balance right now, across all accounts. Optional. If you already track this in Cashflow for this month, enter it only there or only here — never both, or it is counted twice.",
+} as const;
+
 export const QUICK_ENTRY_FIELDS = [
   { name: "revenue", label: "Revenue", hint: "Roughly how much you sold in the period." },
   { name: "fixedCosts", label: "Fixed costs", hint: "Costs that stay about the same each month, like rent and wages." },
   { name: "variableCosts", label: "Variable / direct costs", hint: "Costs that rise and fall with sales, like materials or delivery." },
-  { name: "cashOnHand", label: "Cash available", hint: "Cash and bank balance you could use today." },
+  { name: "cashOnHand", label: CASH_IN_HAND_COPY.label, hint: CASH_IN_HAND_COPY.hint },
 ] as const;
 
 export type QuickEntryFieldName = (typeof QUICK_ENTRY_FIELDS)[number]["name"];

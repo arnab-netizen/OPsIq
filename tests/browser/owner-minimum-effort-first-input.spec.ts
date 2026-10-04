@@ -67,6 +67,24 @@ async function createBusinessViaUi(page: Page, name: string, currency: string) {
 const fill = (page: Page, name: string, v: string) => page.locator(`[data-testid="quick-financial-picture-form"] input[name="${name}"]`).fill(v);
 const clear = async (page: Page) => { for (const n of ["revenue", "fixedCosts", "variableCosts", "cashOnHand"]) await fill(page, n, ""); };
 const cta = (page: Page) => page.getByTestId("quick-primary-action");
+const CASH_HINT = /Physical cash the business holds outside the bank/;
+const BANK_INCLUSIVE = /cash and bank|bank (balance )?(and|\+|or) (till|cash)|bank balance you could use/i;
+async function assertCashCopy(page: Page, scope = page.locator("body")) {
+  await expect(scope.getByText(CASH_HINT).first()).toBeVisible();
+  await expect(scope.getByText(/Don't include money in the bank/).first()).toBeVisible();
+  await expect(scope.getByText(/enter 0/i).first()).toBeVisible();
+  expect(await scope.innerText()).not.toMatch(BANK_INCLUSIVE);
+}
+async function createBusinessViaApi(page: Page, name: string, businessType: string, currency: string) {
+  const res = await page.request.post("/api/owner/recovery/businesses", { data: { name, businessType, currency, b2cSupported: true, b2bSupported: false } });
+  expect(res.status()).toBe(201);
+  return (await res.json()).id as string;
+}
+const gfill = (page: Page, name: string, v: string) => page.locator(`[data-testid="onboarding-essential-numbers"] input[name="${name}"]`).fill(v);
+const gcta = (page: Page) => page.getByRole("button", { name: "See my first result" });
+const cashflowCount = (businessName: string) =>
+  db(async (c) => Number((await c.query(
+    "SELECT count(*) FROM owner_cashflow_snapshots s JOIN owner_businesses b ON b.id = s.business_id WHERE b.name = $1", [businessName])).rows[0].count));
 const snapshotCount = (businessName: string) =>
   db(async (c) => Number((await c.query(
     "SELECT count(*) FROM owner_financial_snapshots s JOIN owner_businesses b ON b.id = s.business_id WHERE b.name = $1", [businessName])).rows[0].count));
@@ -133,6 +151,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await assertQuickPathCore(page);
     // currency is inherited, not asked
     await expect(page.locator('[data-testid="quick-financial-picture-form"]')).toContainText("(GBP)");
+    await assertCashCopy(page, page.getByTestId("quick-financial-picture-form"));
     // no 20-category wall, no domain/source/category choice before first value
     const body = await page.locator("body").innerText();
     expect(body).not.toMatch(/Needed for first read|Knows:|Nothing recorded yet|Everything OpsIQ can use|Starter item/);
@@ -209,15 +228,55 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await assertQuickPathCore(page);
     await expect(page.getByText("+ Add financial snapshot")).toHaveCount(0);
     await expect(page.locator('input[name="periodStart"]')).toHaveCount(0);
+    await assertCashCopy(page, page.getByTestId("quick-financial-picture-form"));
     await shot(page, "desktop-5-money-route-quick-start");
     // full detail still reachable but secondary
     await page.getByTestId("finance-full-detail-toggle").click();
     await expect(page.locator('input[name="periodStart"]')).toBeVisible();
     await expect(page.getByText("Improve the analysis (optional)")).toBeVisible();
+    // the detailed form teaches the SAME cash meaning as quick start and Guided setup
+    await expect(page.locator('form:has(input[name="periodStart"])').getByText(CASH_HINT)).toBeVisible();
+    expect(await page.locator('form:has(input[name="periodStart"])').innerText()).not.toMatch(BANK_INCLUSIVE);
     await page.getByText("Improve the analysis (optional)").click();
     await expect(page.locator('input[name="receivables"]')).toBeVisible();
     await shot(page, "desktop-6-money-full-detail-secondary");
     expect(await snapshotCount(bizB)).toBe(0);
+
+    // ── Guided setup (desktop): same canonical gate, separate bank balance → Cashflow ──
+    const bizG = `Guided Cafe ${rand}`;
+    const typeA = await db(async (c) => (await c.query("SELECT business_type FROM owner_businesses WHERE name=$1", [bizA])).rows[0].business_type as string);
+    const gId = await createBusinessViaApi(page, bizG, typeA, "GBP");
+    await page.goto("/owner/onboarding", { waitUntil: "networkidle" });
+    await page.locator('select[name="businessSelector"]').selectOption(gId);
+    const guided = page.getByTestId("onboarding-essential-numbers");
+    await expect(guided).toBeVisible({ timeout: 15000 });
+    await assertCashCopy(page, guided);
+    await expect(guided.getByText(/^Money in the bank \(GBP\)/)).toBeVisible();
+    await expect(gcta(page)).toBeDisabled(); // all blank
+    await shot(page, "desktop-7-guided-setup-blank");
+    await gfill(page, "revenue", "20000"); await gfill(page, "cashOnHand", "3000");
+    await expect(page.getByTestId("onboarding-first-read-feedback")).toContainText("Still needed for a first read: one cost figure");
+    await expect(gcta(page)).toBeDisabled();
+    await gfill(page, "cashOnHand", ""); await gfill(page, "fixedCosts", "7000");
+    await expect(page.getByTestId("onboarding-first-read-feedback")).toContainText("cash in hand");
+    await expect(gcta(page)).toBeDisabled();
+    await gfill(page, "bankBalance", "5000"); // bank balance alone does not satisfy cash in hand
+    await expect(gcta(page)).toBeDisabled();
+    await shot(page, "desktop-8-guided-setup-partial");
+    expect(await snapshotCount(bizG), "nothing saved while incomplete").toBe(0);
+    await gfill(page, "cashOnHand", "0"); // known zero is valid
+    await expect(gcta(page)).toBeEnabled();
+    await gcta(page).click();
+    await expect(page.getByTestId("onboarding-first-result")).toBeVisible({ timeout: 30000 });
+    expect(await snapshotCount(bizG)).toBe(1);
+    expect(await cashflowCount(bizG), "bank balance went to Cashflow").toBe(1);
+    const gRow = await db(async (c) => (await c.query(
+      "SELECT s.revenue, s.fixed_costs, s.cash_on_hand FROM owner_financial_snapshots s JOIN owner_businesses b ON b.id=s.business_id WHERE b.name=$1", [bizG])).rows[0]);
+    expect(gRow).toMatchObject({ revenue: 20000, fixed_costs: 7000, cash_on_hand: 0 });
+    const cfRow = await db(async (c) => (await c.query(
+      "SELECT s.bank_balance FROM owner_cashflow_snapshots s JOIN owner_businesses b ON b.id=s.business_id WHERE b.name=$1", [bizG])).rows[0]);
+    expect(cfRow.bank_balance).toBe(5000);
+    await shot(page, "desktop-9-guided-setup-first-result");
     await ctx.close();
   });
 
@@ -234,6 +293,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     const form = page.getByTestId("quick-financial-picture-form");
     await expect(form).toBeVisible();
     await assertQuickPathCore(page);
+    await assertCashCopy(page, form);
     await assertNoHorizontalScroll(page, "My Business (mobile)");
     await shot(page, "mobile-1-my-business-quick-start");
 
@@ -285,6 +345,36 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await assertNoHorizontalScroll(page, "Money result (mobile)");
     expect(await snapshotCount(bizB)).toBe(1);
     await shot(page, "mobile-5-first-read-on-money");
+
+    // ── Guided setup (mobile) ──
+    const bizH = `Guided Mobile ${rand}`;
+    const typeB = await db(async (c) => (await c.query("SELECT business_type FROM owner_businesses WHERE name=$1", [bizB])).rows[0].business_type as string);
+    const hId = await createBusinessViaApi(page, bizH, typeB, "INR");
+    await page.goto("/owner/onboarding", { waitUntil: "networkidle" });
+    await page.locator('select[name="businessSelector"]').selectOption(hId);
+    const guided = page.getByTestId("onboarding-essential-numbers");
+    await expect(guided).toBeVisible({ timeout: 15000 });
+    await assertCashCopy(page, guided);
+    await assertNoHorizontalScroll(page, "Guided setup (mobile)");
+    const gBoxes = await guided.locator('input[type="text"]').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, w: r.width }; }));
+    expect(gBoxes).toHaveLength(5);
+    for (const b of gBoxes) { expect(b.l).toBeGreaterThanOrEqual(0); expect(b.r).toBeLessThanOrEqual(390); expect(b.w).toBeGreaterThan(150); }
+    expect(new Set(gBoxes.map((b) => Math.round(b.l))).size, "Guided setup: single column on mobile").toBe(1);
+    await shot(page, "mobile-8-guided-setup-blank");
+    await gfill(page, "revenue", "100"); await gfill(page, "cashOnHand", "50");
+    await expect(page.getByTestId("onboarding-first-read-feedback")).toContainText("one cost figure");
+    await expect(gcta(page)).toBeDisabled();
+    await assertNoHorizontalScroll(page, "Guided setup partial (mobile)");
+    await shot(page, "mobile-9-guided-setup-partial");
+    await gfill(page, "variableCosts", "30");
+    await gcta(page).scrollIntoViewIfNeeded();
+    await expect(gcta(page)).toBeEnabled();
+    await gcta(page).click();
+    await expect(page.getByTestId("onboarding-first-result")).toBeVisible({ timeout: 30000 });
+    await assertNoHorizontalScroll(page, "Guided setup first result (mobile)");
+    expect(await snapshotCount(bizH)).toBe(1);
+    expect(await cashflowCount(bizH)).toBe(0); // no bank balance entered → Cashflow untouched
+    await shot(page, "mobile-10-guided-setup-first-result");
     await ctx.close();
   });
 
@@ -305,6 +395,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await expect(page.getByTestId("finance-quick-start")).toBeVisible({ timeout: 15000 });
     await assertQuickPathCore(page);
     await assertNoHorizontalScroll(page, "Money pre-first-read (mobile)");
+    await assertCashCopy(page, page.getByTestId("quick-financial-picture-form"));
     await shot(page, "mobile-7-money-route-quick-start");
     await ctx.close();
   });

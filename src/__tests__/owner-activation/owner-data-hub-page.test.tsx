@@ -179,7 +179,7 @@ describe("before the first read: one dominant quick-start path", () => {
     );
     renderPage();
     const note = await screen.findByTestId("data-hub-existing-partial");
-    expect(note.textContent).toMatch(/still needs cash available/);
+    expect(note.textContent).toMatch(/still needs cash in hand/);
   });
 });
 

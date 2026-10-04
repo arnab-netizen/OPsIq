@@ -98,7 +98,7 @@ describe("canonical first-read sufficiency — cases A–J", () => {
   it("the readiness copy names exactly the missing facts, in the owner's words", () => {
     const s = computeOnboardingState({ ...base, suppliedCategories: [], firstRead: evaluateFirstReadSufficiency({ revenue: 5, cashOnHand: 5 }) });
     expect(s.firstAction).toMatch(/one cost figure/);
-    expect(s.firstAction).not.toMatch(/revenue|cash available/);
+    expect(s.firstAction).not.toMatch(/revenue|cash in hand/);
   });
 });
 

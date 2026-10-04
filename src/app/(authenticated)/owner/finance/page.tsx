@@ -24,6 +24,7 @@ import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
+import { CASH_IN_HAND_COPY } from "@/domain/owner-finance/quick-entry";
 import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -137,7 +138,7 @@ const FINANCE_FIELDS: Array<{ name: string; label: string; hint: string }> = [
   { name: "complaintCost", label: "Complaint cost", hint: "Cost of resolving customer complaints beyond a refund (e.g. replacement, goodwill). Leave blank if none." },
   { name: "loanEmiDebtPayments", label: "Loan / EMI payments", hint: "Loan or EMI payments you made this period. Leave blank if you have no loans." },
   { name: "totalDebtOutstanding", label: "Total debt outstanding", hint: "The total amount you still owe across all loans right now." },
-  { name: "cashOnHand", label: "Cash on hand", hint: "Cash and bank balance you could use today. Example: 20000." },
+  { name: "cashOnHand", label: CASH_IN_HAND_COPY.label, hint: CASH_IN_HAND_COPY.hint },
   { name: "receivables", label: "Receivables", hint: "Money customers owe you that isn't overdue yet — accountants call this accounts receivable." },
   { name: "receivablesOverdue", label: "Receivables overdue", hint: "Of the money customers owe you, how much is now overdue." },
   { name: "payables", label: "Payables", hint: "Money you owe suppliers that isn't overdue yet — accountants call this accounts payable." },

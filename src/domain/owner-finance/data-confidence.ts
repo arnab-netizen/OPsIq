@@ -161,7 +161,7 @@ export function missingInputPriority(field: string): MissingInputPriority {
 const DB_FIELD_DISPLAY_LABELS: Record<string, string> = {
   revenue: "Revenue",
   costs: "Costs (any cost component)",
-  cashOnHand: "Cash on Hand",
+  cashOnHand: "Cash in hand",
   costOfGoods: "Cost of Goods Sold",
   fixedCosts: "Fixed Costs",
   payroll: "Payroll / Salary",
