@@ -16,6 +16,7 @@ import { ConflictError, NotFoundError } from "@/infra/errors";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
+import { cashSemanticsForSnapshot } from "@/domain/owner-finance/liquidity";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
 /** Map the validated API input to the engine input shape (refund/rework/complaint merged). */
@@ -91,6 +92,8 @@ export function rowToFinanceInput(row: any): FinancialSnapshotInput {
     orderCount: row.orderCount ?? undefined,
     customerCount: row.customerCount ?? undefined,
     notes: row.notes ?? undefined,
+    // Which meaning of cashOnHand the row carries (physical-only vs pre-#586 "cash and bank").
+    cashSemantics: cashSemanticsForSnapshot(row.createdAt),
   };
 }
 

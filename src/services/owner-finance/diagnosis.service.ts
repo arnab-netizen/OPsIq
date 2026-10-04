@@ -19,6 +19,7 @@ import { diagnoseFinanceSnapshot } from "@/domain/owner-finance/diagnosis";
 import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
+import { loadUsableBankBalance } from "./liquidity.service";
 import { getFinancialSnapshot, rowToFinanceInput } from "./snapshot.service";
 import { getFinanceEffectivenessMap } from "./effectiveness.service";
 
@@ -49,29 +50,14 @@ export async function runFinanceDiagnosis(
     ? snapshotRow.periodEnd
     : new Date(snapshotRow.periodEnd as string);
 
-  // DEFECT 1: Enrich engine input with bank balance from a compatible cashflow snapshot.
-  // At-or-before semantics: only a cashflow snapshot whose periodEnd ≤ finance snapshot periodEnd
-  // may enrich it (future cashflow must never influence a past diagnosis).
-  // Freshness window: ≤ 45 days before the finance snapshot periodEnd.
-  // Fail-closed: absent/stale/future cashflow → bankBalance stays undefined (not zero).
-  const cashflowRow = await db.ownerCashflowSnapshot.findFirst({
-    where: { workspaceId, businessId, periodEnd: { lte: snapshotEnd } },
-    orderBy: { periodEnd: "desc" },
-    select: { bankBalance: true, periodEnd: true },
-  });
+  // DEFECT 1: Enrich engine input with the bank balance from a compatible cashflow snapshot via the
+  // liquidity contract (at-or-before, fresh, fail-closed: absent/stale/future → undefined, never 0).
+  const usableBank = await loadUsableBankBalance(workspaceId, businessId, snapshotEnd);
 
   const input = rowToFinanceInput(snapshotRow);
 
-  if (cashflowRow?.bankBalance != null && Number.isFinite(cashflowRow.bankBalance)) {
-    const cfEnd = cashflowRow.periodEnd instanceof Date
-      ? cashflowRow.periodEnd
-      : new Date(cashflowRow.periodEnd as string);
-    // ageDays is always ≥ 0 here because cfEnd ≤ snapshotEnd (enforced by the query filter)
-    const ageDays = (snapshotEnd.getTime() - cfEnd.getTime()) / 86_400_000;
-    if (ageDays <= 45) {
-      input.bankBalance = cashflowRow.bankBalance;
-    }
-  }
+  // The single usability rule (at-or-before, ≤ window, fail-closed) lives in the liquidity contract.
+  if (usableBank !== undefined) input.bankBalance = usableBank;
 
   // DEFECT 2: When the snapshot has no industryTemplate, resolve one from the canonical
   // business profile (precedence: explicit snapshot override > business-type mapping > generic).

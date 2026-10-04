@@ -15,6 +15,7 @@ import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 import {
   createBudgetPeriod,
   recordSpendEntry,
@@ -65,6 +66,7 @@ async function seedHealthyFinance(workspaceId: string, businessId: string) {
       updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 /** Drive the business into a defensive posture that generates cash-protection actions. */

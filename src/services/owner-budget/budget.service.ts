@@ -14,6 +14,8 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
+import { loadUsableBankBalance } from "@/services/owner-finance/liquidity.service";
+import { resolveLiquidity } from "@/domain/owner-finance/liquidity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { toAuditActor } from "@/domain/owner-budget/system-actor";
@@ -368,7 +370,7 @@ export async function updateSpendReconciliation(
 }
 
 /** Rolling 13-week cash forecast (base / downside / cash-stress) for the business. */
-export async function getBudgetForecast(workspaceId: string, businessId: string): Promise<ForecastResult & { hasData: boolean }> {
+export async function getBudgetForecast(workspaceId: string, businessId: string): Promise<ForecastResult & { hasData: boolean; liquidityComplete: boolean }> {
   await getBusiness(businessId, workspaceId);
   const period = await db.budgetPeriod.findFirst({ where: { workspaceId, businessId, status: "active" }, orderBy: { createdAt: "desc" } });
   // Current (never amended/superseded) version only, deterministic order.
@@ -379,7 +381,18 @@ export async function getBudgetForecast(workspaceId: string, businessId: string)
   const obligations = committed.map((s: any) => ({ label: s.label, amount: s.amount, dueInDays: s.dueInDays as number, kind: (s.obligationKind as any) ?? "other" }));
 
   const WEEKS_PER_MONTH = 4.345;
-  const cashOnHand = snap?.cashOnHand ?? 0;
+  // Starting cash is total liquid funds on the shared basis (cash in hand + usable bank balance). When the
+  // position is incomplete the forecast starts from the known cash in hand (a lower bound) and says so.
+  let cashOnHand = 0;
+  let liquidityComplete = false;
+  if (snap) {
+    const fin = rowToFinanceInput(snap);
+    const bank = await loadUsableBankBalance(workspaceId, businessId, snap.periodEnd);
+    if (bank !== undefined) fin.bankBalance = bank;
+    const liquidity = resolveLiquidity(fin);
+    liquidityComplete = liquidity.status === "COMPLETE";
+    cashOnHand = liquidity.totalLiquidFunds ?? liquidity.physicalCash ?? liquidity.bankCash ?? 0;
+  }
   const monthlyRevenue = snap?.revenue ?? 0;
   const monthlyOutflow = (snap?.costOfGoods ?? 0) + (snap?.fixedCosts ?? 0) + (snap?.variableCosts ?? 0);
   const reserveRequired = Math.max(0, period?.statutoryReserveRequired ?? 0, period?.cashReserveTarget ?? 0);
@@ -391,7 +404,7 @@ export async function getBudgetForecast(workspaceId: string, businessId: string)
     obligations,
     reserveRequired,
   });
-  return { ...forecast, hasData: snap !== null };
+  return { ...forecast, hasData: snap !== null, liquidityComplete };
 }
 
 // ---------------------------------------------------------------------------
@@ -425,6 +438,9 @@ async function assembleAssessment(
     const snap = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }));
     if (snap) {
       finance = rowToFinanceInput(snap);
+      // Same liquidity basis as the Finance diagnosis: enrich with the usable bank balance (unknown stays unknown).
+      const bank = await loadUsableBankBalance(workspaceId, businessId, snap.periodEnd);
+      if (bank !== undefined) finance.bankBalance = bank;
     } else {
       finance = {
         periodStart: period?.periodStart?.toISOString() ?? new Date(0).toISOString(),

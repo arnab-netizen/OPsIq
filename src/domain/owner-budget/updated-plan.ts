@@ -17,6 +17,7 @@ import {
   type PlanDecisionType,
   type UpdatedOwnerPlan,
 } from "@/domain/owner-budget/types";
+import { resolveLiquidity } from "@/domain/owner-finance/liquidity";
 import { classifyBudgetMode } from "@/domain/owner-budget/mode-classifier";
 import { rankCapitalAllocation } from "@/domain/owner-budget/capital-allocation";
 import { assessWorkingCapital } from "@/domain/owner-budget/working-capital";
@@ -247,7 +248,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
   // ---- Working capital / revenue assurance / vendor control (Sections 12, 20, 22) ----
   const f = input.assessment.finance;
   const wc = assessWorkingCapital({
-    cashOnHand: f.cashOnHand ?? null,
+    cashOnHand: resolveLiquidity(f).totalLiquidFunds,
     receivables: f.receivables ?? null,
     receivablesOverdue: f.receivablesOverdue ?? null,
     payables: f.payables ?? null,

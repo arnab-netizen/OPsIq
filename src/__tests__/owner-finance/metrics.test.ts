@@ -56,7 +56,7 @@ function profitable(): FinancialSnapshotInput {
     salaryPayroll: 20000,
     utilities: 5000,
     marketingSpend: 5000,
-    cashOnHand: 200000,
+    cashOnHand: 200000, bankBalance: 0,
     orderCount: 1000,
     customerCount: 800,
   };
@@ -119,7 +119,7 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
   it("missing costs → netProfit null, 'costs' listed missing", () => {
     const m = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 100000, cashOnHand: 50000,
+      revenue: 100000, cashOnHand: 50000, bankBalance: 0,
     });
     expect(m.netProfit).toBeNull();
     expect(m.missingRequiredInputs).toContain("costs");
@@ -128,7 +128,7 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
   it("high fixed cost burden → not SAFE", () => {
     const m = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 100000, fixedCosts: 60000, variableCosts: 10000, cashOnHand: 100000,
+      revenue: 100000, fixedCosts: 60000, variableCosts: 10000, cashOnHand: 100000, bankBalance: 0,
     });
     expect(m.fixedCostBurdenPct).toBe(60);
     expect(m.survivalState).not.toBe("SAFE");
@@ -143,7 +143,7 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
   it("low cash runway → CRITICAL or worse", () => {
     const m = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 20000,
+      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 20000, bankBalance: 0,
     });
     expect(m.cashRunwayDays).toBe(20); // 20000 / (30000 loss / 30 days)
     expect(stateRank(m.survivalState)).toBeGreaterThanOrEqual(stateRank("CRITICAL"));
@@ -152,7 +152,7 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
   it("insolvent runway → INSOLVENT_RISK", () => {
     const m = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000,
+      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000, bankBalance: 0,
     });
     expect(m.cashRunwayDays!).toBeLessThan(7);
     expect(m.survivalState).toBe("INSOLVENT_RISK");
@@ -173,7 +173,7 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
   it("break-even not reached → below break-even and not SAFE", () => {
     const m = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 30000, fixedCosts: 40000, variableCosts: 6000, cashOnHand: 100000,
+      revenue: 30000, fixedCosts: 40000, variableCosts: 6000, cashOnHand: 100000, bankBalance: 0,
     });
     expect(m.breakEvenRevenue).toBe(50000); // 40000 / 0.8
     expect(stateRank(m.survivalState)).toBeGreaterThanOrEqual(stateRank("AT_RISK"));
@@ -185,7 +185,7 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
     const atRisk = computeFinancialMetrics({ ...profitable(), loanEmiDebtPayments: 30000 }, { now: NOW });
     const critical = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 20000,
+      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 20000, bankBalance: 0,
     }, { now: NOW });
     expect(stateRank(safe.survivalState)).toBe(stateRank("SAFE"));
     expect(stateRank(watch.survivalState)).toBeGreaterThanOrEqual(stateRank("WATCH"));
@@ -199,7 +199,7 @@ describe("owner-finance — business model & industry adaptability", () => {
   it("industry template changes the fixed-cost-burden bar (service vs inventory)", () => {
     const input = {
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 100000, fixedCosts: 52000, variableCosts: 10000, cashOnHand: 100000,
+      revenue: 100000, fixedCosts: 52000, variableCosts: 10000, cashOnHand: 100000, bankBalance: 0,
     };
     const generic = computeFinancialMetrics({ ...input, businessModel: "inventory" });
     const laundry = computeFinancialMetrics({
@@ -271,7 +271,7 @@ describe("owner-finance — invariants", () => {
     profitable(),
     { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" }, // empty
     { ...profitable(), revenue: 0 },
-    { ...profitable(), revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 1000 },
+    { ...profitable(), revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 1000, bankBalance: 0 },
   ];
 
   it("all composite scores stay within 0..100", () => {
@@ -337,7 +337,7 @@ describe("owner-finance — onboarding cost-field mapping honesty (regression)",
       ...base,
       revenue: 100000,
       fixedCosts: 30000,
-      cashOnHand: 50000,
+      cashOnHand: 50000, bankBalance: 0,
     };
     // The semantically equivalent entry through Finance's own "Add snapshot" form —
     // same concept, same field, same schema. Must produce byte-identical metrics.
@@ -363,12 +363,12 @@ describe("owner-finance — onboarding cost-field mapping honesty (regression)",
     // Correct: rent+wages reported as fixedCosts (what onboarding posts today), plus a
     // genuine variable cost, exactly as a fuller Finance-surface entry would look.
     const correct: FinancialSnapshotInput = {
-      ...base, revenue, fixedCosts: rentAndWages, variableCosts: trueVariableCosts, cashOnHand: 1,
+      ...base, revenue, fixedCosts: rentAndWages, variableCosts: trueVariableCosts, cashOnHand: 1, bankBalance: 0,
     };
     // The old defect: rent+wages folded into variableCosts alongside the real variable
     // cost, with nothing left to represent fixed costs at all.
     const oldDefect: FinancialSnapshotInput = {
-      ...base, revenue, variableCosts: rentAndWages + trueVariableCosts, cashOnHand: 1,
+      ...base, revenue, variableCosts: rentAndWages + trueVariableCosts, cashOnHand: 1, bankBalance: 0,
     };
 
     // Contribution margin: correct subtracts only the true $20k variable cost (80%
@@ -390,8 +390,8 @@ describe("owner-finance — onboarding cost-field mapping honesty (regression)",
   });
 
   it("either fixedCosts or variableCosts alone still satisfies the diagnosis engine's cost-info gate", () => {
-    const fixedOnly: FinancialSnapshotInput = { ...base, revenue: 100000, fixedCosts: 20000, cashOnHand: 1 };
-    const variableOnly: FinancialSnapshotInput = { ...base, revenue: 100000, variableCosts: 20000, cashOnHand: 1 };
+    const fixedOnly: FinancialSnapshotInput = { ...base, revenue: 100000, fixedCosts: 20000, cashOnHand: 1, bankBalance: 0 };
+    const variableOnly: FinancialSnapshotInput = { ...base, revenue: 100000, variableCosts: 20000, cashOnHand: 1, bankBalance: 0 };
     // netProfit requires totalCosts to be non-null, which is the same "has cost info"
     // condition the diagnosis engine's readiness gate depends on.
     expect(netProfit(fixedOnly)).not.toBeNull();
@@ -423,7 +423,7 @@ describe("owner-finance — onboarding period-field mapping honesty (regression)
     revenue: 200000,
     fixedCosts: 150000,
     variableCosts: 100000,
-    cashOnHand: 50000,
+    cashOnHand: 50000, bankBalance: 0,
   };
 
   it("a real ~30-day period (what onboarding now posts) and an equivalent Finance-surface month produce identical period-dependent metrics", () => {

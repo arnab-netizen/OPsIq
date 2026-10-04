@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createBudgetPeriod, recordSpendEntry, reassessBudget, getBudgetGuidance } from "@/services/owner-budget/budget.service";
 import { createVendor, verifyVendorBank, closeFundedInitiative, getInitiativeOutcomes } from "@/services/owner-budget/vendor.service";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const ws = () => randomUUID();
@@ -50,6 +51,7 @@ async function setup(workspaceId: string) {
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, b.id);
   const period = await createBudgetPeriod(b.id, { label: "P", periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", approvedBudget: 100000 }, actor, workspaceId);
   return { businessId: b.id, periodId: period.id };
 }

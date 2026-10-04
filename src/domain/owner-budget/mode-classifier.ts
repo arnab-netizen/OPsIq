@@ -7,6 +7,7 @@
  * never revenue alone. Reuses owner-finance metrics; invents no values.
  */
 
+import { resolveLiquidity } from "@/domain/owner-finance/liquidity";
 import { cashRunwayDays, cashDaysOfCosts, netMarginPct } from "@/domain/owner-finance/metrics";
 import {
   type BudgetAssessmentInput,
@@ -40,7 +41,9 @@ function deriveConfidence(input: BudgetAssessmentInput): BudgetConfidenceLevel {
 function computeCashPosture(input: BudgetAssessmentInput): CashPosture {
   const f = input.finance;
   const horizon = input.horizonDays ?? 30;
-  const cashOnHand = typeof f.cashOnHand === "number" ? f.cashOnHand : null;
+  // Total liquid funds on the shared basis; null while the position is incomplete (cash in hand alone is
+  // not the business's total cash, so no reserve/free-cash claim is made from it).
+  const cashOnHand = resolveLiquidity(f).totalLiquidFunds;
   const reserve = Math.max(0, input.statutoryReserveRequired ?? 0, input.cashReserveTarget ?? 0);
   const obligations = input.obligations ?? [];
   const dueInHorizon = obligations

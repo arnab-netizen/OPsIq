@@ -25,6 +25,7 @@ const periodStart = new Date(periodEnd.getTime() - 30 * DAY); // 31-day period
 const SNAPSHOT_INPUT: FinancialSnapshotInput = {
   periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), currency: "INR",
   revenue: 180000, fixedCosts: 110000, variableCosts: 60000, cashOnHand: 40000,
+  bankBalance: 0, // the owner reported no bank money, so total liquid funds is known (40000)
 };
 const diagnosis = diagnoseFinanceSnapshot(SNAPSHOT_INPUT, { now: new Date(NOW) });
 
