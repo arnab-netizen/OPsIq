@@ -75,7 +75,7 @@ describe("Owner Data Intake page", () => {
     // Real field label (authored on the finance IntakeFieldSpec) and the generic humanizer
     // fallback both render in place of the raw identifiers.
     expect(text).toContain("Period start");
-    expect(text).toContain("Cash on hand");
+    expect(text).toContain("Cash in hand (not the bank)");
     expect(text).not.toContain("cashOnHand");
     expect(text).not.toContain("periodStart");
   });

@@ -22,10 +22,22 @@ export function isValidCurrency(currency: string | undefined | null): boolean {
 }
 
 /**
- * Critical inputs: without these, a financial diagnosis is largely guesswork.
- * "Has cost info" is satisfied by any direct cost component.
+ * The fields of a snapshot that decide whether it carries the critical evidence for a useful diagnosis.
+ * `missingCriticalFinanceInputs` needs only these, so snapshot-row adapters (first-read sufficiency) can
+ * call it without fabricating a period or currency.
  */
-export function missingCriticalFinanceInputs(input: FinancialSnapshotInput): string[] {
+export type CriticalFinanceFields = Pick<
+  FinancialSnapshotInput,
+  "revenue" | "costOfGoodsOrServices" | "fixedCosts" | "variableCosts" | "rent" | "salaryPayroll" | "utilities" | "cashOnHand"
+>;
+
+/**
+ * Critical inputs: without these, a financial diagnosis is largely guesswork.
+ * "Has cost info" is satisfied by any direct cost component. This is the ONE authoritative rule —
+ * first-read sufficiency (first-read-sufficiency.ts) consumes it rather than restating it.
+ * A known zero is present evidence; only a missing/non-finite value is missing.
+ */
+export function missingCriticalFinanceInputs(input: CriticalFinanceFields): string[] {
   const missing: string[] = [];
   if (!present(input.revenue)) missing.push("revenue");
   const hasCost =
@@ -149,7 +161,7 @@ export function missingInputPriority(field: string): MissingInputPriority {
 const DB_FIELD_DISPLAY_LABELS: Record<string, string> = {
   revenue: "Revenue",
   costs: "Costs (any cost component)",
-  cashOnHand: "Cash on Hand",
+  cashOnHand: "Cash in hand",
   costOfGoods: "Cost of Goods Sold",
   fixedCosts: "Fixed Costs",
   payroll: "Payroll / Salary",

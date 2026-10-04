@@ -50,6 +50,7 @@ const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]
   "src/services/owner-mode/opportunity-decision.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-mode/owner-action-gate.service.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
   "src/services/owner-mode/owner-db-providers.ts": ["CURRENT_EFFECTIVE"],
+  "src/services/owner-mode/owner-onboarding.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-mode/owner-progress.service.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-spine/provisional-cash-finance.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-trust/trust.service.ts": ["DIAGNOSIS_BOUND"],

@@ -104,13 +104,15 @@ function setupFetch(opts: { existingCashflowSnapshot?: { bankBalance: number | n
   return calls;
 }
 
-async function fillAndSubmit(fields: { revenue?: string; cashOnHand?: string; bankBalance?: string }) {
+async function fillAndSubmit(fields: { revenue?: string; fixedCosts?: string; variableCosts?: string; cashOnHand?: string; bankBalance?: string }) {
   const form = await waitFor(() => screen.getByTestId("onboarding-essential-numbers"));
   const setField = (name: string, value: string) => {
     const input = form.querySelector(`input[name="${name}"]`) as HTMLInputElement;
     fireEvent.change(input, { target: { value } });
   };
   if (fields.revenue) setField("revenue", fields.revenue);
+  if (fields.fixedCosts) setField("fixedCosts", fields.fixedCosts);
+  if (fields.variableCosts) setField("variableCosts", fields.variableCosts);
   if (fields.cashOnHand) setField("cashOnHand", fields.cashOnHand);
   if (fields.bankBalance) setField("bankBalance", fields.bankBalance);
   fireEvent.click(screen.getByText("See my first result"));
@@ -125,7 +127,7 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
   it("E. physical cash only: posts cashOnHand to Finance, never calls Cashflow", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", cashOnHand: "3000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "3000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
 
@@ -135,16 +137,17 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
     expect(calls.find((c) => c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBeUndefined();
   });
 
-  it("F. bank balance only: never puts it on the Finance snapshot, creates a minimal Cashflow snapshot instead", async () => {
+  it("F. bank balance with a known 0 cash in hand: never puts the bank figure on the Finance snapshot, creates a minimal Cashflow snapshot instead", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
 
     const financePost = calls.find((c) => c.method === "POST" && c.url.endsWith("/finance/businesses/b1/snapshots"))!;
     expect("bankBalance" in (financePost.body as Record<string, unknown>)).toBe(false);
-    expect((financePost.body as Record<string, unknown>).cashOnHand).toBeUndefined();
+    // the bank figure is NOT folded into cash in hand: that stays the owner's own known 0
+    expect((financePost.body as Record<string, unknown>).cashOnHand).toBe(0);
 
     const cashflowPost = calls.find((c) => c.method === "POST" && c.url.endsWith("/cashflow/businesses/b1/snapshots"))!;
     expect(cashflowPost).toBeDefined();
@@ -157,7 +160,7 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
   it("G. both physical cash and bank balance: each lands in its own domain, neither is dropped", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", cashOnHand: "3000", bankBalance: "5000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "3000", bankBalance: "5000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
 
@@ -169,16 +172,13 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
     expect((cashflowPost.body as Record<string, unknown>).bankBalance).toBe(5000);
   });
 
-  it("H. neither cash field filled: no cash value on Finance, Cashflow is never called", async () => {
+  it("H. cash in hand left blank: blocked by the canonical gate — nothing is saved, Cashflow is never called", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000" });
 
-    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
-
-    const financePost = calls.find((c) => c.method === "POST" && c.url.endsWith("/finance/businesses/b1/snapshots"))!;
-    expect((financePost.body as Record<string, unknown>).cashOnHand).toBeUndefined();
-    expect(calls.find((c) => c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBeUndefined();
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+    expect((screen.getByText("See my first result") as HTMLButtonElement).disabled).toBe(true);
   });
 });
 
@@ -186,7 +186,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
   it("A. no existing snapshot + bank balance: plain create succeeds, no conflict path taken, no warning", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
     expect(calls.find((c) => c.method === "GET" && c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBeUndefined();
@@ -196,7 +196,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
   it("B. existing snapshot with the SAME bank balance: genuinely idempotent, proceeds with no warning", async () => {
     const calls = setupFetch({ existingCashflowSnapshot: { bankBalance: 5000 } });
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
     // The conflict was resolved by reading the existing value back, not assumed.
@@ -209,7 +209,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
   it("C. existing snapshot with a DIFFERENT bank balance: never silently proceeds as if the new number was saved", async () => {
     const calls = setupFetch({ existingCashflowSnapshot: { bankBalance: 100000 } });
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", bankBalance: "70000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "70000" });
 
     // The first result still renders (finance data was saved correctly) --
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
@@ -225,7 +225,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
   it("D. existing snapshot for the period with NO bank balance on it: still flagged, not silently treated as a match", async () => {
     setupFetch({ existingCashflowSnapshot: { bankBalance: null } });
     render(<OwnerOnboardingPage />);
-    await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
+    await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
     const warning = screen.getByTestId("onboarding-bank-balance-warning");

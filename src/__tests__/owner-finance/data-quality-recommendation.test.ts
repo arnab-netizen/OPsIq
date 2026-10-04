@@ -596,17 +596,17 @@ describe("FIN_MISSING_CRITICAL_DATA — names exactly the missing critical input
     const { finding, rec } = critical({ ...base, revenue: 100000 });
     expect(finding.missingData).toEqual(["costs", "cashOnHand"]);
     expect(rec.requiredOwnerAction).toBe(
-      "Enter Costs (any cost component) and Cash on Hand so OpsIQ has the minimum financial information needed for a trustworthy diagnosis."
+      "Enter Costs (any cost component) and Cash in hand so OpsIQ has the minimum financial information needed for a trustworthy diagnosis."
     );
     expect(rec.requiredOwnerAction).not.toContain("Revenue");
     expect(`${rec.requiredOwnerAction} ${rec.verificationMethod}`).not.toMatch(/cashOnHand|dataConfidenceScore/);
-    expect(rec.verificationMethod).toContain("Costs (any cost component) and Cash on Hand have been entered");
+    expect(rec.verificationMethod).toContain("Costs (any cost component) and Cash in hand have been entered");
   });
 
   it("only revenue missing → names only Revenue", () => {
     const { rec } = critical({ ...base, costOfGoodsOrServices: 1000, cashOnHand: 5000 });
     expect(rec.requiredOwnerAction).toMatch(/^Enter Revenue so OpsIQ/);
-    expect(rec.requiredOwnerAction).not.toMatch(/Costs|Cash on Hand/);
+    expect(rec.requiredOwnerAction).not.toMatch(/Costs|Cash in hand/);
     expect(rec.verificationMethod).toContain("Revenue has been entered");
   });
 

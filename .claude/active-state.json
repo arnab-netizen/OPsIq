@@ -7,6 +7,7 @@
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
   "active_bundle": "factory-stage-7-closure",
   "active_branch": "claude/owner-operational-completion",
+  "owner_minimum_effort_input": "IMPLEMENTED_PENDING_REVIEW — branch claude/owner-minimum-effort-input from main 6c6c8f33; canonical first-read sufficiency + one-screen quick path; no migration; doc: docs/opsiq/product/OWNER_MINIMUM_EFFORT_INPUT.md; not merged",
   "owner_operational_completion_progress": {
     "CAT2_atomicity_sweep_owner_mode": "COMPLETE — owner-action-outcome.service + owner-approval-resolution.service (both paths) wrapped in $transaction; AuditClient exported; OwnerLoadDeps.auditClient added for tx propagation; 5 DB atomicity tests pass, committed d89ee55e",
     "S7_I11_failure_scenarios": "COMPLETE — 17-test consolidated evidence file covering all 9 S7-I11 scenarios (DB unavailable, provider unavailable, malformed input, duplicate request, stale approval, concurrent action, downstream timeout, invalid authorization, cross-tenant); committed f1d5a40b",

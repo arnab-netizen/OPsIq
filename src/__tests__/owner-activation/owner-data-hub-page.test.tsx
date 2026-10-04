@@ -13,6 +13,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const routerPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush, replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
+}));
+
 import OwnerDataHubPage from "@/app/(authenticated)/owner/data/page";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
 
@@ -112,177 +117,146 @@ describe("page heading (shared PageHeader primitive)", () => {
     await screen.findByRole("heading", { level: 1, name: "My Business" });
     expect(
       screen.getByText(
-        "This is where you tell OpsIQ about your business and keep its information up to date. The more real information you add, the more specific its findings become — and it will always tell you what is still missing."
+        "Tell OpsIQ the basics and it will do the rest. You can add more detail whenever you like — it will always say what is still missing."
       )
     ).toBeTruthy();
   });
 });
 
-describe("first-read gate vs starter/profile evidence (A1-A3)", () => {
-  const withEquipment = {
+const FIRST_READ_MET = {
+  sufficient: true,
+  revenueKnown: true,
+  costKnown: true,
+  cashKnown: true,
+  missing: [],
+  basis: "completed",
+};
+
+describe("before the first read: one dominant quick-start path", () => {
+  it("shows the quick financial picture and NONE of the category taxonomy", async () => {
+    mockWithBusiness();
+    const { container } = renderPage();
+    await waitFor(() => expect(screen.getByTestId("quick-financial-picture-form")).toBeTruthy());
+    expect(screen.getByTestId("data-hub-quick-start")).toBeTruthy();
+    // No readiness band, missing-items list or category groups compete with the quick path.
+    for (const id of ["data-hub-readiness", "data-hub-missing", "data-hub-group-money", "data-hub-group-operations", "data-hub-next-action", "data-hub-more-detail"]) {
+      expect(container.querySelector(`[data-testid="${id}"]`)).toBeNull();
+    }
+    expect(container.textContent).not.toMatch(/Needed for first read/);
+  });
+
+  it("shows exactly four numeric quick fields, no textarea, one primary action", async () => {
+    mockWithBusiness();
+    const { container } = renderPage();
+    const form = await screen.findByTestId("quick-financial-picture-form");
+    const textInputs = form.querySelectorAll('input[type="text"]');
+    expect(textInputs).toHaveLength(4);
+    expect(form.querySelector("textarea")).toBeNull();
+    expect(form.querySelectorAll('[data-testid="quick-primary-action"]')).toHaveLength(1);
+    // Currency is the business's own — shown, never asked.
+    expect(form.textContent).toContain("(GBP)");
+    expect(container.querySelector('input[name="currency"]')).toBeNull();
+  });
+
+  it("keeps manual entry, CSV and guided setup available but collapsed and secondary", async () => {
+    mockWithBusiness();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("data-hub-other-ways")).toBeTruthy());
+    const other = screen.getByTestId("data-hub-other-ways") as HTMLDetailsElement;
+    expect(other.open).toBe(false);
+    const hrefs = Array.from(other.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/owner/manual-entry");
+    expect(hrefs).toContain("/owner/intake");
+    expect(hrefs).toContain("/owner/onboarding");
+    expect(screen.getByTestId("data-hub-integrations").textContent).toMatch(/not available yet/i);
+  });
+
+  it("is honest about saved-but-incomplete numbers without showing a checklist", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      url.includes("/api/owner/businesses")
+        ? json({ businesses: [{ id: "b1", name: "Test Co", currency: "GBP" }] })
+        : json({ ...ONBOARDING, firstRead: { ...FIRST_READ_MET, sufficient: false, cashKnown: false, missing: ["cashOnHand"] } }),
+    );
+    renderPage();
+    const note = await screen.findByTestId("data-hub-existing-partial");
+    expect(note.textContent).toMatch(/still needs cash in hand/);
+  });
+});
+
+describe("after the first read is possible", () => {
+  const READY = {
     ...ONBOARDING,
-    suppliedCategories: [],
+    canRunFirstDiagnosis: true,
+    firstRead: FIRST_READ_MET,
+    suppliedCategories: ["revenue_sales", "fixed_costs", "cash_debt"],
     requirements: {
       minimumRequired: ["revenue_sales", "expenses", "cash_debt", "equipment_logs"],
       recommended: [],
       optional: [],
     },
-    minimumSuppliedCount: 0,
+    minimumSuppliedCount: 2,
     minimumRequiredCount: 4,
     missingMinimum: [
-      { category: "revenue_sales", label: "Revenue records", severity: "critical", why: "w", decisionAffected: "d" },
+      { category: "expenses", label: "Expense records", severity: "critical", why: "w", decisionAffected: "d" },
       { category: "equipment_logs", label: "Machine / equipment logs", severity: "critical", why: "w2", decisionAffected: "d2" },
     ],
+    nextBestUpload: "equipment_logs",
   };
-  function mock() {
+  function mockReady() {
     fetchMock.mockImplementation((url: string) =>
       url.includes("/api/owner/businesses")
         ? json({ businesses: [{ id: "b1", name: "Test Co", currency: "GBP" }] })
-        : json(withEquipment),
+        : json(READY),
     );
   }
 
-  it("A1: non-gate equipment evidence is never labelled as blocking the first read", async () => {
-    mock();
+  it("says enough for a first read WITHOUT claiming the whole business is known", async () => {
+    mockReady();
     renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
-    const items = Array.from(screen.getByTestId("data-hub-missing").querySelectorAll("li"));
-    const equipment = items.find((li) => li.textContent!.includes("Machine / equipment logs"))!;
-    expect(equipment.textContent).toContain("Improves confidence");
-    expect(equipment.textContent).not.toMatch(/Urgent/);
-    const group = screen.getByTestId("data-hub-group-operations").textContent!;
-    expect(group).not.toMatch(/Needed for first read/);
+    const band = (await screen.findByTestId("data-hub-readiness")).textContent!;
+    expect(band).toContain("Enough for a first read");
+    expect(band).toMatch(/does not mean OpsIQ knows the whole business/);
+    expect(band).not.toMatch(/100%|setup complete|fully set up/i);
+    expect(screen.getByTestId("data-hub-starter-profile").textContent).toContain("2 of 4 starter items added");
   });
 
-  it("A2: missing revenue stays clearly blocking", async () => {
-    mock();
+  it("asks ONE next question prominently, not a list of every missing category", async () => {
+    mockReady();
     renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
-    const items = Array.from(screen.getByTestId("data-hub-missing").querySelectorAll("li"));
-    expect(items.find((li) => li.textContent!.includes("Revenue records"))!.textContent).toContain("Urgent");
+    const next = await screen.findByTestId("data-hub-next-question");
+    expect(next.textContent).toContain("One thing would make this more reliable");
+    expect(next.textContent).toContain("Machine / equipment logs");
+    expect(next.textContent).not.toContain("Expense records");
   });
 
-  it("A3: first-read essentials and starter/profile evidence are presented separately", async () => {
-    mock();
+  it("keeps the full detail behind 'Add more detail' and never labels non-blocking items as blocking", async () => {
+    mockReady();
     renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
-    const band = screen.getByTestId("data-hub-readiness").textContent!;
-    expect(band).toContain("First-read essentials: 0 of 3 added");
-    expect(screen.getByTestId("data-hub-starter-profile").textContent).toContain("0 of 4 starter items added");
+    const more = (await screen.findByTestId("data-hub-more-detail")) as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    const missing = more.querySelector('[data-testid="data-hub-missing"]')!;
+    // Fixed-cost evidence satisfies the cost fact, so "Expense records" must not read as blocking.
+    for (const li of Array.from(missing.querySelectorAll("li"))) {
+      expect(li.textContent).toContain("Improves confidence");
+      expect(li.textContent).not.toMatch(/Urgent/);
+    }
+    expect(more.querySelector('[data-testid="data-hub-group-money"]')).toBeTruthy();
+    expect(more.textContent).not.toMatch(/Needed for first read/);
   });
-});
 
-describe("one obvious first-value path (F1, F4-F6)", () => {
-  it("leads with one primary path to the Finance quick snapshot; manual entry and CSV stay available but secondary", async () => {
-    mockWithBusiness();
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-primary-path")).toBeTruthy());
-    const primary = screen.getByTestId("data-hub-primary-path");
-    expect(primary.getAttribute("href")).toBe("/owner/finance");
-    expect(primary.textContent).toContain("Enter my basic numbers");
-    expect(primary.textContent).toMatch(/four numbers are enough/i);
-    expect(primary.textContent).toMatch(/never invented/i);
-    const secondary = screen.getByTestId("data-hub-secondary-paths");
-    const hrefs = Array.from(secondary.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toContain("/owner/manual-entry");
-    expect(hrefs).toContain("/owner/intake");
-    expect(secondary.textContent).toContain("Add other business information");
-    expect(secondary.textContent).toContain("Paste spreadsheet or CSV data");
-    // Exactly one primary path.
-    expect(document.querySelectorAll('[data-testid="data-hub-primary-path"]')).toHaveLength(1);
+  it("offers the first assessment once the gate opens, through the working Finance flow", async () => {
+    mockReady();
+    const { container } = renderPage();
+    await screen.findByTestId("data-hub-readiness");
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    // F2: /diagnosis requires CAPABILITIES.ENGAGEMENT_CREATE, which a self-serve owner never holds.
+    expect(hrefs).toContain("/owner/finance");
+    expect(hrefs).not.toContain("/diagnosis");
+    expect(container.querySelector('[data-testid="quick-financial-picture-form"]')).toBeNull();
   });
 });
 
 describe("with a business", () => {
-  it("renders real readiness counts from the onboarding contract", async () => {
-    mockWithBusiness();
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
-    const band = screen.getByTestId("data-hub-readiness");
-    expect(band.textContent).toContain("1 of 3 starter items added");
-    expect(band.textContent).toContain("First-read essentials: 1 of 3 added");
-    expect(band.querySelector('[role="progressbar"]')!.getAttribute("aria-valuenow")).toBe("33");
-    // Plain-language phrase, never the raw "low" enum token.
-    expect(band.textContent).toContain("Early days");
-    expect(band.textContent).not.toMatch(/\blow\b/i);
-  });
-
-  it("states plainly that there is not enough data for a trustworthy first assessment", async () => {
-    mockWithBusiness();
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-insufficient")).toBeTruthy());
-    expect(screen.getByTestId("data-hub-insufficient").textContent).toMatch(
-      /does not yet have enough reliable business information for a trustworthy first assessment/i,
-    );
-  });
-
-  it("shows what is missing, why, and which decision it affects", async () => {
-    mockWithBusiness();
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
-    const missing = screen.getByTestId("data-hub-missing");
-    expect(missing.textContent).toContain("Expense records");
-    expect(missing.textContent).toContain("know if work is actually profitable");
-    expect(missing.textContent).toContain("margin, cost control");
-    // F1: "Expense records" is financial-snapshot-backed — the readiness engine reads it exclusively
-    // from a real OwnerFinancialSnapshot, so the CTA must point at the real structured entry point
-    // (/owner/finance's "+ Add financial snapshot" form), never manual-entry or a generic upload.
-    expect(missing.querySelector("a")!.getAttribute("href")).toBe("/owner/finance");
-  });
-
-  it("renders all four category groups summarized as what's known / what's missing, not raw counts", async () => {
-    mockWithBusiness();
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-group-money")).toBeTruthy());
-    for (const group of ["money", "people", "customers", "operations"]) {
-      expect(screen.getByTestId(`data-hub-group-${group}`)).toBeTruthy();
-    }
-    // One supplied category (revenue_sales) sits in Money — named plainly, not as a raw count.
-    const money = screen.getByTestId("data-hub-group-money").textContent!;
-    expect(money).toContain("Knows: Revenue / sales records");
-    expect(money).toContain("Missing:");
-    // Nothing supplied in People — says so in plain language rather than "0 of 4 added".
-    expect(screen.getByTestId("data-hub-group-people").textContent).toContain("Nothing recorded yet");
-  });
-
-  it("links to both existing intake surfaces without duplicating them", async () => {
-    mockWithBusiness();
-    const { container } = renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
-    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href") ?? "");
-    expect(hrefs).toContain("/owner/manual-entry");
-    expect(hrefs).toContain("/owner/intake");
-    expect(hrefs).toContain("/owner/onboarding");
-    // The hub does not host its own upload form.
-    expect(container.querySelector('input[type="file"]')).toBeNull();
-  });
-
-  it("is honest that integrations are not available rather than rendering a dead control", async () => {
-    mockWithBusiness();
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-integrations")).toBeTruthy());
-    const card = screen.getByTestId("data-hub-integrations");
-    expect(card.textContent).toMatch(/not available yet/i);
-    expect(card.querySelector("a")).toBeNull();
-  });
-
-  it("offers the first assessment only once the gate opens", async () => {
-    fetchMock.mockImplementation((url: string) =>
-      url.includes("/api/owner/businesses")
-        ? json({ businesses: [{ id: "b1", name: "Test Co" }] })
-        : json({ ...ONBOARDING, canRunFirstDiagnosis: true, missingMinimum: [] }),
-    );
-    const { container } = renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
-    expect(container.querySelector('[data-testid="data-hub-insufficient"]')).toBeNull();
-    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    // F2: /diagnosis requires CAPABILITIES.ENGAGEMENT_CREATE, which a self-serve owner (the only
-    // audience for this owner-only page) never holds — it always 403s for them. /owner/finance is
-    // their real, working first-diagnosis flow.
-    expect(hrefs).toContain("/owner/finance");
-    expect(hrefs).not.toContain("/diagnosis");
-  });
-
   it("surfaces an error without crashing when the onboarding call fails", async () => {
     fetchMock.mockImplementation((url: string) =>
       url.includes("/api/owner/businesses")

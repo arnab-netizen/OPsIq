@@ -23,6 +23,8 @@ import { formatHumanDate } from "@/lib/format-human-date";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
+import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
+import { CASH_IN_HAND_COPY } from "@/domain/owner-finance/quick-entry";
 import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -136,7 +138,7 @@ const FINANCE_FIELDS: Array<{ name: string; label: string; hint: string }> = [
   { name: "complaintCost", label: "Complaint cost", hint: "Cost of resolving customer complaints beyond a refund (e.g. replacement, goodwill). Leave blank if none." },
   { name: "loanEmiDebtPayments", label: "Loan / EMI payments", hint: "Loan or EMI payments you made this period. Leave blank if you have no loans." },
   { name: "totalDebtOutstanding", label: "Total debt outstanding", hint: "The total amount you still owe across all loans right now." },
-  { name: "cashOnHand", label: "Cash on hand", hint: "Cash and bank balance you could use today. Example: 20000." },
+  { name: "cashOnHand", label: CASH_IN_HAND_COPY.label, hint: CASH_IN_HAND_COPY.hint },
   { name: "receivables", label: "Receivables", hint: "Money customers owe you that isn't overdue yet — accountants call this accounts receivable." },
   { name: "receivablesOverdue", label: "Receivables overdue", hint: "Of the money customers owe you, how much is now overdue." },
   { name: "payables", label: "Payables", hint: "Money you owe suppliers that isn't overdue yet — accountants call this accounts payable." },
@@ -249,6 +251,9 @@ export default function OwnerFinancePage() {
   // business's state and re-anchor the shared activeBusinessId back to the stale one -- see
   // UX-04A Section J item 1.
   const loadGenerationRef = useRef(0);
+  // The canonical first-read gate (the SAME `canRunFirstDiagnosis` /api/owner/onboarding gives My
+  // Business — one rule, never recomputed here). Null until resolved for the selected business.
+  const [firstReadGate, setFirstReadGate] = useState<{ businessId: string; canRun: boolean } | null>(null);
   // UX-04B hostile-audit correction: the generation guard above closes the STALE-RESPONSE race
   // (an old load() resolving late), but a SECOND, distinct race survived it -- a business-scoped
   // MUTATION (addSnapshot/runDiagnosis/updateAction/verifyAction) started for business A can
@@ -344,6 +349,21 @@ export default function OwnerFinancePage() {
     void load(activeBusinessId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business, not on every `load` identity change
   }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const businessId = selected;
+    let cancelled = false;
+    api(`/api/owner/onboarding?businessId=${encodeURIComponent(businessId)}`)
+      .then((d) => {
+        // An unknown business or an unreadable gate falls back to the full existing Money view.
+        if (!cancelled) setFirstReadGate({ businessId, canRun: d?.found === false ? true : d?.canRunFirstDiagnosis !== false });
+      })
+      .catch(() => {
+        if (!cancelled) setFirstReadGate({ businessId, canRun: true });
+      });
+    return () => { cancelled = true; };
+  }, [selected, dashboard]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -561,6 +581,10 @@ export default function OwnerFinancePage() {
   // Read once per render for the currently-open form's initial mount -- see the `key={selected}`
   // on the snapshot <form> below, which remounts (and so re-reads this) whenever business
   // switches, so an in-progress draft never leaks across businesses.
+  // Pre-first-read: no diagnosis exists yet AND the canonical gate says the first read is not possible.
+  // Money then offers the shared quick path first; the full snapshot form stays reachable but secondary.
+  const gateKnown = Boolean(selected && firstReadGate && firstReadGate.businessId === selected);
+  const preFirstRead = gateKnown && !dashboard?.hasData && firstReadGate?.canRun === false;
   const snapshotDraft: FinanceDraft | null = selected && showSnapshotForm ? readFinanceDraft(selected) : null;
 
   return (
@@ -621,13 +645,34 @@ export default function OwnerFinancePage() {
               selectedId={selected}
               onChange={handleBusinessSelect}
             />
-            <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
-              + Add financial snapshot
-            </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy} title={financeDiagnosisButtonTitle(dashboard)}>
-              {financeDiagnosisButtonLabel(dashboard)}
-            </Button>
+            {gateKnown && !preFirstRead && (
+              <>
+                <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
+                  + Add financial snapshot
+                </Button>
+                <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy} title={financeDiagnosisButtonTitle(dashboard)}>
+                  {financeDiagnosisButtonLabel(dashboard)}
+                </Button>
+              </>
+            )}
+            {preFirstRead && (
+              <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected} data-testid="finance-full-detail-toggle">
+                {showSnapshotForm ? "Hide full financial detail" : "Enter full financial detail instead"}
+              </Button>
+            )}
           </div>
+
+          {preFirstRead && selected && (
+            <div className="mb-6" data-testid="finance-quick-start">
+              <QuickFinancialPicture
+                key={selected}
+                businessId={selected}
+                currency={currentBusiness?.currency}
+                omitMoneyLink
+                onFirstRead={() => { void load(selected); }}
+              />
+            </div>
+          )}
 
           {showSnapshotForm && (
             <form
@@ -658,7 +703,7 @@ export default function OwnerFinancePage() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Start with your basic numbers</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground" data-testid="quick-financial-picture">
-                  Quick financial picture: these four numbers are enough for a first read. Estimates are fine — you can
+                  Quick financial picture: revenue, at least one cost (fixed or variable) and cash are enough for a first read. Estimates are fine — you can
                   refine them later. Everything below is optional; leaving it blank only limits how complete the analysis is.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -725,7 +770,7 @@ export default function OwnerFinancePage() {
           <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.diagnosisTargetSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} provisionalSafetyImplemented />
           <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
-          {!dashboard?.hasData ? (
+          {preFirstRead ? null : !dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="financial"
               hasSnapshot={Boolean(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot)}

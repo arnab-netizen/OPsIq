@@ -1,14 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { displayLabelForField } from "@/domain/owner-finance";
-import { confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
+import { confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
+import {
+  BANK_BALANCE_COPY,
+  QUICK_ENTRY_FIELDS,
+  assessQuickEntry,
+  parseQuickAmount,
+  type QuickEntryDraft,
+} from "@/domain/owner-finance/quick-entry";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
@@ -109,12 +117,17 @@ function confidencePhrase(score: number): string {
 }
 
 /**
- * "Essential numbers" — the smallest form that can produce a real first result. Posts directly to
- * the same governed snapshot endpoint /owner/finance's own "Add snapshot" form uses
- * (POST /api/owner/finance/businesses/[businessId]/snapshots) — this is not a second data model,
- * just three of that same form's ~20 fields, all of which stay optional at the API. Immediately
- * follows with a diagnosis run on the snapshot just created, so entering numbers and seeing a
- * first result is one action, not a form followed by an unexplained dashboard (Phase 7).
+ * "Essential numbers" — Guided setup's presentation of the first financial picture. The FOUR core Finance
+ * inputs (revenue, fixed costs, variable costs, cash in hand) are NOT defined here: their field
+ * definitions, blank/zero/invalid parsing and the first-read sufficiency all come from the shared
+ * quick-entry domain (`@/domain/owner-finance/quick-entry` → the canonical
+ * `evaluateFirstReadSufficiency`), exactly as in `QuickFinancialPicture`. This form therefore cannot save
+ * or diagnose until revenue, at least one cost and cash in hand are KNOWN (a known 0 counts).
+ *
+ * What this route adds (GUIDED_SETUP_EXTENSION): a separate optional bank balance that is written to a
+ * Cashflow snapshot (never to the Finance snapshot, and never counted as cash in hand), and amend-on-409
+ * for a same-period Finance snapshot through the governed amendment endpoint. Entering numbers and seeing
+ * a first result is one action (Phase 7).
  */
 function EssentialNumbersForm({
   businessId,
@@ -126,44 +139,33 @@ function EssentialNumbersForm({
   onResult: (cycle: any, bankBalanceWarning?: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveFailure, setSaveFailure] = useState<string | null>(null);
+  const [draft, setDraft] = useState<QuickEntryDraft>({});
+  const [bankText, setBankText] = useState("");
+  // Synchronous guard: two fast submits must not both pass a state-based `busy` check.
+  const inFlight = useRef(false);
+
+  const assessment = useMemo(() => assessQuickEntry(draft), [draft]);
+  const bank = parseQuickAmount(bankText);
+  const hasErrors = Object.keys(assessment.errors).length > 0 || bank.kind === "invalid";
+  const sufficient = assessment.sufficiency?.sufficient === true;
+  const disabled = busy || hasErrors || !sufficient;
+  const feedback = hasErrors || assessment.nothingEntered
+    ? null
+    : sufficient
+      ? "That's enough for a first read."
+      : `Still needed for a first read: ${describeMissingFirstReadFacts(assessment.sufficiency?.missing ?? [])}. A rough estimate is fine; zero is fine if it is truly zero.`;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // The canonical gate is enforced HERE, not left to the diagnosis engine to abstain after saving.
+    if (inFlight.current || disabled) return;
+    inFlight.current = true;
     setBusy(true);
-    setError(null);
-    const fd = new FormData(e.currentTarget);
-    const num = (name: string): number | undefined => {
-      const raw = fd.get(name);
-      if (typeof raw !== "string" || raw.trim() === "") return undefined;
-      const n = Number(raw);
-      return Number.isFinite(n) && n >= 0 ? n : undefined;
-    };
-    const fields = {
-      revenue: num("revenue"),
-      // Fixed and variable costs are genuinely different finance-engine concepts
-      // (src/domain/owner-finance/metrics.ts: contributionMarginPct and breakEvenRevenue
-      // read only variableCostsTotal; fixedCostBurdenPct reads only fixedCostsTotal) and
-      // must never be collapsed into one field just to satisfy a readiness check --
-      // labeling "rent, wages" (fixed) as variableCosts silently corrupts contribution
-      // margin and break-even for every onboarding user. Each field maps to its real
-      // counterpart, matching exactly what src/app/owner/finance's own "Add snapshot"
-      // form posts for the same concepts, so onboarding and Finance always agree.
-      // Either one alone still satisfies the diagnosis engine's "has cost info" gate
-      // (src/domain/owner-finance/data-confidence.ts hasCost) and its own readiness
-      // category (owner-onboarding.service.ts: fixedCosts -> "fixed_costs",
-      // variableCosts -> "expenses"), so a first result is still one field away.
-      fixedCosts: num("fixedCosts"),
-      variableCosts: num("variableCosts"),
-      // cashOnHand means physical cash only on the finance snapshot (see the doc comment on
-      // FinancialSnapshotInput.bankBalance in src/domain/owner-finance/types.ts: bankBalance is
-      // "never persisted on the finance snapshot itself" -- it is enriched at diagnosis time from
-      // a separate OwnerCashflowSnapshot). The finance create/amend schemas
-      // (src/domain/owner-finance/validation.ts) don't even accept a bankBalance field, so it must
-      // never be folded in here.
-      cashOnHand: num("cashOnHand"),
-    };
-    const bankBalance = num("bankBalance");
+    setSaveFailure(null);
+    // Known values only (blank = unknown and omitted; a known 0 is kept) — from the shared parser.
+    const fields = { ...assessment.values };
+    const bankBalance = bank.kind === "value" ? bank.value : undefined;
     const periodStart = lastFullMonthStart();
     const periodEnd = lastFullMonthEnd();
     try {
@@ -250,9 +252,11 @@ function EssentialNumbersForm({
       });
       onResult(cycle, bankBalanceWarning);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save that. Please try again.");
+      // Governed owner-safe message — never the raw exception text.
+      setSaveFailure(classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
+      inFlight.current = false;
     }
   }
 
@@ -260,89 +264,57 @@ function EssentialNumbersForm({
     <section className="rounded-md border border-border bg-card p-5" data-testid="onboarding-essential-numbers">
       <h2 className="text-base font-semibold text-foreground">Essential numbers</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        A few numbers are enough for a first, real result. An estimate is fine for all of them —
-        you can refine them later in Money. It&rsquo;s fine to fill in just one cost number if
-        that&rsquo;s all you have right now.
+        A few numbers are enough for a first, real result: revenue, any one cost, and your cash in hand.
+        An estimate is fine for all of them — you can refine them later in Money.
       </p>
-      <form onSubmit={submit} className="mt-4 flex flex-col gap-4 max-w-lg">
+      <form onSubmit={submit} noValidate className="mt-4 flex flex-col gap-4 max-w-lg">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {QUICK_ENTRY_FIELDS.map((f) => (
+            <label key={f.name} className="flex flex-col gap-1 text-sm text-foreground">
+              <span>{f.label} ({currency})</span>
+              <input
+                name={f.name}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={draft[f.name] ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
+                aria-invalid={assessment.errors[f.name] ? true : undefined}
+                className="w-full rounded-md border border-border p-2 text-sm"
+                placeholder="Blank = don't know"
+              />
+              {assessment.errors[f.name] ? (
+                <span role="alert" className="text-xs text-destructive">{assessment.errors[f.name]}</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">{f.hint}</span>
+              )}
+            </label>
+          ))}
+        </div>
         <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Average monthly sales ({currency})</span>
+          <span>{BANK_BALANCE_COPY.label} ({currency}) — optional</span>
           <input
-            name="revenue"
-            type="number"
-            min={0}
-            step="any"
+            name="bankBalance"
+            type="text"
             inputMode="decimal"
+            autoComplete="off"
+            value={bankText}
+            onChange={(e) => setBankText(e.target.value)}
+            aria-invalid={bank.kind === "invalid" ? true : undefined}
             className="w-full rounded-md border border-border p-2 text-sm"
-            placeholder="e.g. 15000"
+            placeholder="e.g. 6000"
           />
-          <span className="text-xs text-muted-foreground">Total sales in a typical month, before costs.</span>
+          {bank.kind === "invalid" ? (
+            <span role="alert" className="text-xs text-destructive">{bank.message}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">{BANK_BALANCE_COPY.hint}</span>
+          )}
         </label>
-        {/* Paired by concept (fixed vs. variable cost, physical cash vs. bank balance) rather than
-            one field per row -- a deliberate grouping, not a decorative grid. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Fixed monthly costs ({currency})</span>
-            <input
-              name="fixedCosts"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 7000"
-            />
-            <span className="text-xs text-muted-foreground">Rent, wages, and other costs that stay the same whether sales go up or down.</span>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Variable monthly costs ({currency})</span>
-            <input
-              name="variableCosts"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 5000"
-            />
-            <span className="text-xs text-muted-foreground">Cost of goods, delivery, and other costs that rise and fall with how much you sell.</span>
-          </label>
+        <div aria-live="polite" className="min-h-5 text-sm text-foreground" data-testid="onboarding-first-read-feedback">
+          {feedback}
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Cash in the till ({currency})</span>
-            <input
-              name="cashOnHand"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 3000"
-            />
-            <span className="text-xs text-muted-foreground">
-              Physical cash you have right now — notes and coins, not what&rsquo;s in the bank.
-            </span>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Money in the bank ({currency})</span>
-            <input
-              name="bankBalance"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 6000"
-            />
-            <span className="text-xs text-muted-foreground">
-              Bank balance right now, across all accounts. (If you already track this in
-              Cashflow for this month, enter it only there or only here — never both.)
-            </span>
-          </label>
-        </div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={busy} className="min-h-[44px] self-start">
+        {saveFailure && <p role="alert" className="text-sm text-destructive">{saveFailure}</p>}
+        <Button type="submit" disabled={disabled} className="min-h-[44px] self-start">
           {busy ? "Working on it…" : "See my first result"}
         </Button>
       </form>

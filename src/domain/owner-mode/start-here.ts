@@ -90,7 +90,7 @@ export function computeStartHereSteps(input: StartHereInput): StartHereStep[] {
       ifSkipped: "OpsIQ can't tell you whether the business is financially safe yet.",
       complete: input.canRunFirstDiagnosis,
       applicable: true,
-      href: "/owner/finance",
+      href: "/owner/data",
     },
     {
       id: "customers",

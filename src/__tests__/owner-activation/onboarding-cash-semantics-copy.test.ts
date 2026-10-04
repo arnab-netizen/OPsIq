@@ -34,9 +34,12 @@ describe("onboarding cash-on-hand copy warns against double-counting bank balanc
     expect(src).not.toContain("What&rsquo;s in the business bank account and till today.");
   });
 
-  it("explicitly warns against entering the same bank balance in both Cash on hand and Cashflow", () => {
+  it("explicitly warns against entering the same bank balance in both Cash in hand and Cashflow (shared copy)", () => {
     const src = onboardingSource();
-    expect(src).toMatch(/never both|counted twice|only there or only here/i);
-    expect(src).toMatch(/Cashflow/);
+    // The bank-balance copy is defined once in the shared quick-entry domain and rendered here.
+    expect(src).toContain("BANK_BALANCE_COPY");
+    const shared = readFileSync(join(process.cwd(), "src/domain/owner-finance/quick-entry.ts"), "utf8");
+    expect(shared).toMatch(/never both|counted twice|only there or only here/i);
+    expect(shared).toMatch(/Cashflow/);
   });
 });
