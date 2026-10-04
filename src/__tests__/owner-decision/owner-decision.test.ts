@@ -287,7 +287,7 @@ describe("what changed — only persisted mutation facts, never read-time memory
       { kind: "ACTION_COMPLETED", title: "Old", at: new Date("2026-08-01T00:00:00.000Z") },
       { kind: "ACTION_VERIFIED", title: "Chase invoices", at: new Date("2026-09-20T00:00:00.000Z") },
     ] }));
-    expect(ch).toEqual([{ kind: "ACTION_VERIFIED", message: 'Verified: "Chase invoices" reached its target.' }]);
+    expect(ch).toEqual([{ kind: "ACTION_VERIFIED", message: '"Chase invoices" reached its verification target; confirm with new business evidence.' }]);
   });
 
   it("a re-diagnosis of the SAME snapshot is a new calculation, not new data (no EVIDENCE_UPDATED, no transitions)", () => {

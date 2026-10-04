@@ -1276,7 +1276,7 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?
       whatNotToDo: whatNotToDo.length > 0 ? whatNotToDo : ["Do not take on risk you cannot measure yet"],
       proofToCollect: ownerDecision.evidence.slice(0, 4),
       howToKnowItWorked: primary
-        ? `${primary.title} is marked done and verified on the next check`
+        ? `${primary.title} is done and its result is measured against fresh figures on the next check`
         : "OpsIQ can name a main target from your numbers",
       ifIgnoredConsequence: primary
         ? primary.source === "evidence_refresh"
@@ -1345,6 +1345,7 @@ const VERIFICATION_CLASS_LABELS: Record<string, string> = {
   FAILURE: "Did not work",
   NEGATIVE_IMPACT: "Made things worse",
   INCONCLUSIVE: "Inconclusive",
+  EXTERNAL_EVENT_INTERFERENCE: "External event interfered",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };

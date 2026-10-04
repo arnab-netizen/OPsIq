@@ -263,7 +263,7 @@ export default function OwnerTasksPage() {
                     <Link href="/owner/cockpit" className="font-display text-[1.05rem] font-semibold text-foreground hover:underline">
                       {item.ownerVisibleSummary}
                     </Link>
-                    <Badge variant={isTerminal ? "destructive-accessible" : item.status === "COMPLETED" || item.status.startsWith("OUTCOME") ? "success-accessible" : "default-accessible"}>
+                    <Badge variant={isTerminal ? "destructive-accessible" : item.status === "COMPLETED" || (item.status.startsWith("OUTCOME") && item.status !== "OUTCOME_DISPUTED") ? "success-accessible" : "default-accessible"}>
                       {OWNER_WORK_STATUS_LABELS[item.status] ?? item.status}
                     </Badge>
                   </div>
