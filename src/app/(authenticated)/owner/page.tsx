@@ -514,7 +514,7 @@ export default function OwnerCommandCenterPage() {
           <div className="p-3">
           {wbp?.supervisor?.found && <SupervisorSummary summary={reconcilePlanSummary(wbp.supervisor, imperativeCtx)} />}
 
-          {priorities?.found && <PriorityCommandStrip cards={reconcilePlanCards(priorities.cards, imperativeCtx)} />}
+          {priorities?.found && <PriorityCommandStrip cards={reconcilePlanCards(priorities.cards, imperativeCtx)} advicePolicy={decision?.advicePolicy ?? null} />}
 
           {wbp?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-whole-business-plan">
@@ -668,7 +668,7 @@ export default function OwnerCommandCenterPage() {
               </div>
               {!guidance.canProceedWithStrongRecommendation && (
                 <p className="text-xs text-[var(--warning-text)] mb-2" data-testid="guidance-must-wait">
-                  Strong recommendations are paused until the critical data below is supplied.
+                  OpsIQ needs the critical information below before this checklist can be firm. Whether you can commit money, capacity or a plan is stated in your main target&apos;s advice status.
                 </p>
               )}
               {guidance.missingBySeverity.length > 0 && (

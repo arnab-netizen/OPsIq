@@ -111,10 +111,14 @@ function unitScore(v: number | null | undefined): number | null {
  * Confidence in the margin figure (0..1, null ⇒ unknown): the snapshot's data confidence, capped at
  * OUT_OF_DATE_EVIDENCE_CONFIDENCE when its period ended more than the freshness window ago.
  */
+export function marginOutOfDate(snap: { periodEnd?: Date | null } | null, now: Date): boolean {
+  const end = snap?.periodEnd instanceof Date ? snap.periodEnd.getTime() : null;
+  return end === null || now.getTime() - end > CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+}
+
 export function marginConfidence(snap: { dataConfidenceScore?: number | null; periodEnd?: Date | null } | null, now: Date): number | null {
   const base = unitScore(snap?.dataConfidenceScore);
-  const end = snap?.periodEnd instanceof Date ? snap.periodEnd.getTime() : null;
-  const outOfDate = end === null || now.getTime() - end > CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+  const outOfDate = marginOutOfDate(snap, now);
   if (!outOfDate) return base;
   return base === null ? OUT_OF_DATE_EVIDENCE_CONFIDENCE : Math.min(base, OUT_OF_DATE_EVIDENCE_CONFIDENCE);
 }
@@ -224,6 +228,7 @@ export async function loadOwnerGateConstraints(
       driver: reading.gateDriver,
       confidence: reading.gateConfidence,
       provisional: reading.provisional,
+      conflicting: reading.conflicting && !reading.provisional,
       source: reading.gateSource,
       // P2-8: each source's OWN in-progress reading — a card tightens by its own source's danger, never
       // dropped just because the OTHER source is worse and wins the single overall gate decision above.
@@ -232,6 +237,7 @@ export async function loadOwnerGateConstraints(
     },
     grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
     grossMarginConfidence: marginConfidence(snap, now),
+    grossMarginOutOfDate: marginOutOfDate(snap, now),
     expiredCompliance: expiredComplianceFor(complianceItems, businessId, soleRealBusinessId, now),
   };
 }

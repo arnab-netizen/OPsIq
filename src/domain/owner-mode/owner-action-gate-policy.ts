@@ -143,6 +143,8 @@ export interface OwnerGateConstraints {
     confidence?: number | null;
     /** The in-progress current period's figures decide gateState (label as in progress). */
     provisional?: boolean;
+    /** Cash flow and Finance disagree and neither is more current: the worse reading is enforced as a fail-safe (advice policy: conflict requires resolution). */
+    conflicting?: boolean;
     /** The source whose figures decide gateState (routes a refresh to the right source). */
     source?: "cashflow" | "finance" | null;
     /**
@@ -161,6 +163,12 @@ export interface OwnerGateConstraints {
    * its period ended more than the freshness window ago (out-of-date figures are never high confidence).
    */
   grossMarginConfidence?: number | null;
+  /**
+   * The margin figure rests on an out-of-date (or undated) completed snapshot: it is the LAST-KNOWN margin, not a current
+   * measurement. Wording only: the hold itself is unchanged. (The margin source is the current effective completed snapshot;
+   * in-progress margin readings are not used.)
+   */
+  grossMarginOutOfDate?: boolean;
   /** The first expired obligation that applies to this business (attributed), or null. */
   expiredCompliance: { name: string; kind: string } | null;
 }
@@ -330,9 +338,13 @@ export function evaluateOwnerActionGate(c: OwnerGateConstraints, s: OwnerGateSub
     if (c.businessScoped && pricingSensitive) {
       const m = evaluateMarginSafety(c.grossMarginPct, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
       if (m.outcome === MarginSafetyOutcome.BLOCKED_BELOW_FLOOR) {
+        const shown = Math.round((c.grossMarginPct ?? 0) * 10) / 10;
         blocks.push({
           code: "MARGIN_SAFETY_BLOCKED",
-          reason: `Gross margin is ${Math.round((c.grossMarginPct ?? 0) * 10) / 10}%, below the ${DEFAULT_MARGIN_FLOOR_PCT}% safety floor. This ${area} step waits until margin is restored above the floor.`,
+          // Out-of-date figures are never worded as a current measurement; the hold is unchanged.
+          reason: c.grossMarginOutOfDate
+            ? `Your last recorded gross margin (from out-of-date figures) was ${shown}%, below the ${DEFAULT_MARGIN_FLOOR_PCT}% safety floor. This ${area} step stays on hold until current margin figures are confirmed and above the floor.`
+            : `Gross margin is ${shown}%, below the ${DEFAULT_MARGIN_FLOOR_PCT}% safety floor. This ${area} step waits until margin is restored above the floor.`,
         });
       }
     }
