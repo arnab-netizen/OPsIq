@@ -101,6 +101,16 @@ const RULES = [
       p === 'src/services/consulting/consulting-engagement.service.ts' ||
       p === 'src/services/integration-fabric/connector-registry.service.ts' ||
       p === 'src/services/integration-fabric/integration-event.service.ts' },
+  // PR #585 amendment: the outcome-verification / learning-candidate write path (optimistic lock, audit in the
+  // same transaction, reassessment and learning side effects) is only exercised by DB-backed tests
+  // (owner-action-outcome.db.test.ts, phase3-execution-lifecycle.db.test.ts, solo-owner-verify-outcome.db.test.ts).
+  // A change to these named services previously classified APPLICATION_NON_DB and skipped DB verification.
+  // Named exactly, not a broader directory rule.
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      p === 'src/services/owner-mode/owner-outcome-verification.service.ts' ||
+      p === 'src/services/owner-mode/owner-action-outcome.service.ts' ||
+      p === 'src/services/owner-mode/process-execution-bridge.service.ts' ||
+      p === 'src/services/owner-mode/reassessment-event.service.ts' },
 
   // ---- Tier 4: security / auth / tenancy / entitlement ----
   { tier: TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT, test: (p) =>

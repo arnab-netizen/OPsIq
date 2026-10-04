@@ -186,6 +186,43 @@ describe("observation windows, provenance, disputes, external events", () => {
   });
 });
 
+describe("unknown direction fails closed", () => {
+  const unknown = (over: Partial<OwnerOutcomeInput> = {}) => input({ direction: "unknown", baselineValue: 20, afterValue: 10, targetValue: 12, ...over });
+  it("1/4. unknown direction is never judged up: no IMPROVED/WORSENED, no target attainment, inconclusive", () => {
+    const a = assessOwnerOutcome(unknown());
+    expect(a.direction).toBe("unknown");
+    expect(a.measurementResult).toBe("CHANGED_DIRECTION_UNKNOWN");
+    expect(a.targetAttainment).toBe("UNKNOWN");
+    expect(a.verificationStatus).toBe("inconclusive");
+    expect(a.issueResolution).toBe("NOT_YET_REASSESSED");
+    const s = ownerOutcomeLoopState(a);
+    expect(s.code).toBe("NEEDS_DIRECTION");
+    expect(s.reading).toBe("OpsIQ has the before and after values, but the intended direction for this metric was not recorded, so target attainment cannot be verified.");
+  });
+  it("up and down are judged correctly", () => {
+    const up = assessOwnerOutcome(input({ direction: "up", baselineValue: 10, afterValue: 20, targetValue: 18 }));
+    expect([up.measurementResult, up.targetAttainment]).toEqual(["IMPROVED", "REACHED"]);
+    const down = assessOwnerOutcome(input({ direction: "down", baselineValue: 20, afterValue: 10, targetValue: 12 }));
+    expect([down.measurementResult, down.targetAttainment]).toEqual(["IMPROVED", "REACHED"]);
+  });
+  it("5. unknown direction is never learning-eligible, even if a gate result is supplied", () => {
+    const a = assessOwnerOutcome(unknown({ learningGate: { status: "ELIGIBLE_VERIFIED_SUCCESS", eligible: true } }));
+    expect(a.learningEligibility).toBe("NOT_ELIGIBLE");
+    expect(a.learningBlockers.join(" ")).toContain("direction");
+  });
+  it("equality with the target is direction-independent", () => {
+    expect(assessOwnerOutcome(unknown({ afterValue: 12 })).targetAttainment).toBe("REACHED");
+  });
+  it("adapters never default to up", () => {
+    const base = { domain: "operations" as const, actionId: "t1", taskStatus: "OUTCOME_RECORDED", completedAt: DONE, now: NOW, outcome: { outcomeStatus: "worked", beforeValue: 20, afterValue: 10 } };
+    expect(processOutcomeToOutcomeInput(base).direction).toBe("unknown");
+    expect(processOutcomeToOutcomeInput({ ...base, direction: "down" }).direction).toBe("down");
+    const row = { domain: "sales" as const, action: { id: "s1", status: "completed", completedAt: DONE }, verification: { status: "verified_improved", beforeValue: 1, afterValue: 2 }, now: NOW };
+    expect(domainActionToOutcomeInput(row).direction).toBe("unknown");
+    expect(domainActionToOutcomeInput({ ...row, verification: { ...row.verification, targetDirection: "down" } }).direction).toBe("down");
+  });
+});
+
 describe("causation and learning stay separate", () => {
   it("18/19. verified improvement is not causal effectiveness; adjudication is never reported stronger than plausible", () => {
     expect(assessOwnerOutcome(input({ afterValue: 31 })).causalAttribution).toBe("NOT_ASSESSED");
@@ -193,8 +230,16 @@ describe("causation and learning stay separate", () => {
     expect(assessOwnerOutcome(input({ afterValue: 31, causalAssessment: "correlation_only" })).causalAttribution).toBe("INSUFFICIENT_EVIDENCE");
     expect(assessOwnerOutcome(input({ afterValue: 31, causalAssessment: "external_event_dominant" })).causalAttribution).toBe("CONFOUNDED");
   });
-  it("20. learning eligibility is a separate field and only exists where a learning loop already does", () => {
-    expect(assessOwnerOutcome(input({ afterValue: 31 })).learningEligibility).toBe("ELIGIBLE_PER_EXISTING_GOVERNANCE");
+  it("20. learning eligibility is a separate field; without an actual gate result it is only PENDING_GOVERNANCE", () => {
+    const pending = assessOwnerOutcome(input({ afterValue: 31 }));
+    expect(pending.learningEligibility).toBe("PENDING_GOVERNANCE");
+    expect(pending.learningBlockers.join(" ")).toContain("learning gate has not been run");
+    const confirmed = assessOwnerOutcome(input({ afterValue: 31, learningGate: { status: "ELIGIBLE_VERIFIED_SUCCESS", eligible: true } }));
+    expect(confirmed.learningEligibility).toBe("ELIGIBLE_CONFIRMED_BY_GATE");
+    const blocked = assessOwnerOutcome(input({ afterValue: 31, learningGate: { status: "BLOCKED_NO_PROOF", eligible: false } }));
+    expect(blocked.learningEligibility).toBe("NOT_ELIGIBLE");
+    // A gate "yes" never overrides a hard blocker the contract already sees.
+    expect(assessOwnerOutcome(input({ afterValue: 31, disputed: true, learningGate: { status: "ELIGIBLE_VERIFIED_SUCCESS", eligible: true } })).learningEligibility).toBe("NOT_ELIGIBLE");
     expect(assessOwnerOutcome(input({ afterValue: 31, domain: "sales", learningLoop: "NONE" })).learningEligibility).toBe("NO_LEARNING_LOOP");
     expect(learningLoopForDomain("finance")).toBe("FINANCE_BRIDGE");
     for (const d of ["recovery", "cashflow", "sales", "operations", "marketing", "sop", "strategy", "customer"] as const) {
@@ -232,13 +277,13 @@ describe("adapters", () => {
     const self = processOutcomeToOutcomeInput({ ...base, outcome: { outcomeStatus: "worked", beforeValue: 1, afterValue: 2, verificationClassification: "SUCCESS", verifiedByActorId: "u1", verifiedAt: LATER, selfVerified: true } });
     expect(assessOwnerOutcome(self).selfVerified).toBe(true);
   });
-  it("System B classifier: a flagged external event is never SUCCESS (the flag was previously ignored)", () => {
+  it("System B classifier: a flagged external event is its own class, never SUCCESS or no-measurable-impact", () => {
     const row = {
       id: "o1", workspaceId: "w", businessId: "b", outcomeStatus: "worked", ownerReportedResult: "better", actualMetricName: null,
       beforeValue: null, afterValue: null, measurementPeriodEnd: null, evidenceQuality: "moderate", externalEventFlag: true,
       observationWindowDays: null, verificationClassification: null, taskKey: null, createdAt: DONE,
     } satisfies OutcomeRowForClassification;
-    expect(classifyOutcomeVerification(row, null, NOW)).toBe("NO_MEASURABLE_IMPACT");
+    expect(classifyOutcomeVerification(row, null, NOW)).toBe("EXTERNAL_EVENT_INTERFERENCE");
     expect(classifyOutcomeVerification({ ...row, externalEventFlag: false }, null, NOW)).toBe("SUCCESS");
   });
 });

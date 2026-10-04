@@ -12,6 +12,8 @@
  */
 import type {
   OutcomeAfterProvenance,
+  OutcomeDirection,
+  OutcomeLearningGateResult,
   OutcomeBaselineProvenance,
   OutcomeEvidenceQuality,
   OutcomeExecutionStatus,
@@ -56,6 +58,11 @@ function asDate(v: unknown): Date | null {
   return null;
 }
 
+/** Direction is taken only from a recorded "up"/"down"; anything else is "unknown" (never defaulted to "up"). */
+function directionOf(v: unknown): OutcomeDirection {
+  return v === "up" || v === "down" ? v : "unknown";
+}
+
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
@@ -92,13 +99,14 @@ export interface DomainActionRowFacts {
   } | null;
   newerDiagnosis?: OutcomeNewerDiagnosisFact | null;
   externalEvent?: boolean;
+  learningGate?: OutcomeLearningGateResult | null;
   now: Date;
 }
 
 /** System A → canonical input. */
 export function domainActionToOutcomeInput(f: DomainActionRowFacts): OwnerOutcomeInput {
   const v = f.verification ?? null;
-  const direction: "up" | "down" = (v?.targetDirection ?? f.action.direction) === "down" ? "down" : "up";
+  const direction = directionOf(v?.targetDirection ?? f.action.direction);
   const baselineProvenance: OutcomeBaselineProvenance =
     v?.baselineSource === "MEASURED" ? "MEASURED" : v?.baselineSource === "OWNER_REPORTED" ? "OWNER_REPORTED" : num(f.action.baselineValue) !== null && !v ? "MEASURED" : "UNKNOWN";
   const baselineValue = v ? num(v.beforeValue) : num(f.action.baselineValue);
@@ -130,6 +138,7 @@ export function domainActionToOutcomeInput(f: DomainActionRowFacts): OwnerOutcom
     causalAssessment: null,
     newerDiagnosis: f.newerDiagnosis ?? null,
     learningLoop: learningLoopForDomain(f.domain),
+    learningGate: f.learningGate ?? null,
     now: f.now,
   };
 }
@@ -155,7 +164,9 @@ export interface ProcessOutcomeRowFacts {
     selfVerified?: boolean;
   };
   task?: { targetValue?: number | null; verificationWindowDays?: number | null } | null;
-  direction?: "up" | "down";
+  /** Recorded target direction. ProcessExecutionTask / OwnerActionOutcome persist none today, so callers pass undefined. */
+  direction?: "up" | "down" | null;
+  learningGate?: OutcomeLearningGateResult | null;
   newerDiagnosis?: OutcomeNewerDiagnosisFact | null;
   now: Date;
 }
@@ -185,7 +196,7 @@ export function processOutcomeToOutcomeInput(f: ProcessOutcomeRowFacts): OwnerOu
     afterValue: after,
     afterProvenance: after === null ? (o.outcomeStatus ? "NARRATIVE_ONLY" : "NONE") : "OWNER_ENTERED",
     afterMeasuredAt: periodEnd,
-    direction: f.direction ?? "up",
+    direction: directionOf(f.direction),
     targetValue: num(f.task?.targetValue),
     windowDays: window,
     disputed: f.taskStatus === "OUTCOME_DISPUTED",
@@ -196,6 +207,7 @@ export function processOutcomeToOutcomeInput(f: ProcessOutcomeRowFacts): OwnerOu
     causalAssessment: null,
     newerDiagnosis: f.newerDiagnosis ?? null,
     learningLoop: "PROCESS_EXECUTION_GATE",
+    learningGate: f.learningGate ?? null,
     recordedEvidenceQuality: quality,
     now: f.now,
   };

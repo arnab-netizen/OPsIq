@@ -55,7 +55,7 @@ verifier rules) that this contract **adapts**, not merges: `domainActionToOutcom
 | Cashflow / Sales / Operations / Marketing / SOP | PARTIAL | none | owner-typed | no | only on `reachedTarget` | none |
 | Strategy | PARTIAL (+ separate startup `FundedInitiativeOutcome` budget loop) | none | owner-typed | no | only on `reachedTarget` | none on the action path |
 | Customer | NO_VERIFICATION_LOOP | — | — | — | — | — |
-| Process-execution (B) | FULL for task flow | `verifiedByActorId`, `selfVerified` | recorder-typed | code present, **no production writer** | reassessment event on every terminal class | gate (inputs hard-coded favourable — reported) |
+| Process-execution (B) | **PARTIAL_LOOP** (was reported FULL; corrected) | `verifiedByActorId`, `selfVerified` | recorder-typed | code present, **no production writer** | reassessment event on every terminal class | **none reachable**: the gate needs six facts none of which is persisted, so no candidate is created (fails closed) |
 
 ## 4. Rules the contract enforces
 
@@ -76,12 +76,22 @@ verifier rules) that this contract **adapts**, not merges: `domainActionToOutcom
   `observationWindowDays`) and are anchored differently; the adapter anchors at completion and takes the first
   recorded value. There is no universal replacement.
 * **External event / dispute.** Both force `inconclusive`, block attribution and block learning, and are never read as
-  success or failure.
+  success or failure. An external event is *not* "no measurable impact": a before/after change may be measurable while
+  attribution is lost. Process outcomes persist it as the class `EXTERNAL_EVENT_INTERFERENCE` (gate status
+  `ATTRIBUTION_UNCLEAR`), shown to the owner as "External event interfered" with a warning (never green) badge.
 * **Causation.** Never inferred from before/after. An existing causal adjudication is mapped, never stronger than
   `PLAUSIBLE`; otherwise `NOT_ASSESSED`.
-* **Learning firewall.** `learningEligibility` is reported only; it states `ELIGIBLE_PER_EXISTING_GOVERNANCE` only
-  where a loop exists (Finance bridge, process-execution gate) and nothing blocks. `MIN_SAMPLE`, priors,
-  `MAX_MODIFIER`, scoring and candidate promotion are untouched.
+* **Direction is never defaulted.** `direction = up | down | unknown`. `unknown` is the result of any missing or
+  unrecognised value (adapters, process classifier). With `unknown`: no `IMPROVED`/`WORSENED` (a changed value is
+  `CHANGED_DIRECTION_UNKNOWN`), target attainment is `UNKNOWN` (only exact equality with the target is
+  direction-independent), status is `inconclusive`, learning is `NOT_ELIGIBLE`, and the owner is told: *OpsIQ has the
+  before and after values, but the intended direction for this metric was not recorded, so target attainment cannot be
+  verified.* Metric names are not used to guess direction (`verification-direction.ts` is a form default, not proof).
+* **Learning eligibility is not asserted by a pure assessment.** States: `ELIGIBLE_CONFIRMED_BY_GATE` (only when an
+  actual `determineLearningEligibility` result is passed in and says eligible), `PENDING_GOVERNANCE` ("potentially
+  eligible for learning review" — the gate has not run), `NOT_ELIGIBLE`, `NO_LEARNING_LOOP`. Hard blockers (dispute,
+  external event, unknown direction, no baseline, open window, no conclusive comparison) always win over a gate "yes".
+  `MIN_SAMPLE`, priors, `MAX_MODIFIER`, scoring and candidate promotion are untouched.
 
 ## 5. Owner-facing loop states
 
@@ -92,18 +102,43 @@ Still open. Each carries a plain reading and a concrete next step; only "New dia
 
 ## 6. Changes made
 
-* New pure contract + adapters + tests (above).
+* New pure contract + adapters + tests.
 * `ACTION_VERIFIED` line: `Verified: "X" reached its target.` → `"X" reached its verification target; confirm with new business evidence.`
-  The event is still emitted only when the owner-entered after-value meets a numeric target; the old wording read as
-  independent proof.
-* `classifyOutcomeVerification` Rule 2b: a recorded `externalEventFlag` now yields `NO_MEASURABLE_IMPACT`
-  (previously the flag was stored but never consulted, so a flagged "worked" became `SUCCESS`). This only
-  *reduces* learning/"verified success" outcomes.
-* Wording: cockpit classification labels no longer prefix FAILURE/NEGATIVE/INCONCLUSIVE with "Verified:"; Owner Now
-  "marked done and verified" → "done and its result is measured against fresh figures"; a disputed process outcome is no
-  longer shown with the green success badge on Priorities/Tasks.
-* Canonical ranking and `exclusionFor` are unchanged: completed-unverified actions already leave the election while
-  survival issues re-raise `survival_reading`.
+* `classifyOutcomeVerification` (PR #585 amendment):
+  * Rule 2b: a recorded `externalEventFlag` **or** outcome status `external_event_interference` → new class
+    `EXTERNAL_EVENT_INTERFERENCE` (previously the flag was ignored, and the status was folded into
+    `NO_MEASURABLE_IMPACT`). Terminal, reassessment still fires, never learning-eligible.
+  * Rules 6b/7/9 are direction-aware via optional `task.targetDirection`; with no direction a numeric target judgment
+    fails closed to `INCONCLUSIVE` and the old higher-is-better assumption is gone.
+* `determineAndCreateLearningCandidate` no longer invents `ACCEPTED` proof, `ACCEPTABLE` quality, `LIKELY`
+  attribution, `NOT_REQUIRED` approval, `NONE` AI-mutation or `ESTIMATED_FROM_OWNER_INPUT` profit. It builds the gate
+  input only from supplied facts (`process-learning-gate-inputs.ts`) and returns without a write when any is unproven.
+  `determineLearningEligibility` itself is unchanged.
+* Wording: cockpit/Now View label the new class "External event interfered"; cockpit no longer prefixes
+  failure/inconclusive with "Verified:"; disputed process outcomes are not green on Priorities/Tasks.
+* CI classifier: the four DB-backed outcome/reassessment services are now `DB_RUNTIME` (named, not a directory rule), so
+  a change to them can no longer skip DB verification.
+* Canonical ranking and `exclusionFor` are unchanged.
+
+### Process-execution learning-gate fact sources
+
+| Gate input | Source today |
+|---|---|
+| proof status / proofRequired | NONE (task holds free-text `evidenceRefs` only) |
+| implementation quality | NONE (not persisted against a task) |
+| attribution status | NONE (causal-attribution unwired; `causalAttributionId` never populated) |
+| profit impact (required, confidence) | NONE |
+| owner learning approval | NONE (lives on a candidate this path never creates) |
+| AI mutation status | NONE |
+
+Every `NONE` fails closed. Process-execution outcomes therefore cannot become learning candidates until a governed
+source exists for each fact.
+
+### Direction persistence
+
+`ProcessExecutionTask` and `OwnerActionOutcome` persist no target direction (only `targetMetricName`/`targetValue`).
+`DIRECTION_PERSISTENCE_REQUIRED=YES` for a complete long-term fix; no migration is made here and the safe behaviour
+above applies until then. Per-domain verification rows already persist `targetDirection`.
 
 ## 7. Known limitations (reported, not changed — each needs persistence or a policy decision)
 
@@ -111,8 +146,8 @@ Still open. Each carries a plain reading and a concrete next step; only "New dia
 2. Seven of eight System A verification tables record no verifier identity; no domain records independence.
 3. A failed/inconclusive/disputed System A verification triggers no re-diagnosis (only `reachedTarget` does).
 4. Only Finance has a learning loop; the other domains have no outcome signal.
-5. `determineAndCreateLearningCandidate` passes hard-coded favourable proof/quality/attribution inputs and sets
-   `learningCandidateId` to the outcome id (no `ControlledLearningCandidate` row); `Rule 9` ignores metric direction;
+5. If gate facts ever become available, `determineAndCreateLearningCandidate` still records `learningCandidateId` as
+   the outcome id (no `ControlledLearningCandidate` row) — to be replaced when real sources exist;
    `observationWindowDays`/`verificationWindowDays` have no production writer; causal-attribution, failure-adjudication,
    evidence-verification and reassessment domain modules are unwired. Changing these alters learning behaviour and is out
    of scope for this contract.

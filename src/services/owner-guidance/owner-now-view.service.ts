@@ -1345,6 +1345,7 @@ const VERIFICATION_CLASS_LABELS: Record<string, string> = {
   FAILURE: "Did not work",
   NEGATIVE_IMPACT: "Made things worse",
   INCONCLUSIVE: "Inconclusive",
+  EXTERNAL_EVENT_INTERFERENCE: "External event interfered",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };

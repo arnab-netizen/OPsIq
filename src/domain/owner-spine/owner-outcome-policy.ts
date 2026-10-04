@@ -27,7 +27,10 @@ import type { OwnerDomain } from "./contracts";
 
 export type OutcomeExecutionStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED" | "CANCELLED";
 export type OutcomeObservationStatus = "NOT_STARTED" | "WINDOW_OPEN" | "READY_TO_MEASURE" | "MISSING_AFTER_EVIDENCE" | "MEASURED";
-export type OutcomeMeasurementResult = "IMPROVED" | "UNCHANGED" | "WORSENED" | "NOT_MEASURABLE" | "DISPUTED" | "EXTERNALLY_CONFOUNDED";
+/** `CHANGED_DIRECTION_UNKNOWN`: before and after differ but the intended direction was not recorded, so no judgment of better/worse is made. */
+export type OutcomeMeasurementResult = "IMPROVED" | "UNCHANGED" | "WORSENED" | "CHANGED_DIRECTION_UNKNOWN" | "NOT_MEASURABLE" | "DISPUTED" | "EXTERNALLY_CONFOUNDED";
+/** "unknown" is never defaulted to "up": a metric whose intended direction was not recorded cannot be judged better or worse. */
+export type OutcomeDirection = "up" | "down" | "unknown";
 export type OutcomeTargetAttainment = "REACHED" | "NOT_REACHED" | "NO_TARGET" | "UNKNOWN";
 export type OutcomeIssueResolution = "RESOLVED" | "STILL_OPEN" | "WORSENED" | "NOT_YET_REASSESSED" | "INCONCLUSIVE";
 export type OutcomeCausalAttribution = "NOT_ASSESSED" | "PLAUSIBLE" | "CONFOUNDED" | "DISPUTED" | "INSUFFICIENT_EVIDENCE";
@@ -37,7 +40,17 @@ export type OutcomeVerifierKind = "NONE" | "INDEPENDENT" | "SELF" | "AI" | "UNKN
 export type OutcomeEvidenceQuality = "strong" | "moderate" | "weak" | "anecdotal" | "none";
 /** Which existing learning loop (if any) the domain feeds. This policy never adds one. */
 export type OutcomeLearningLoop = "FINANCE_BRIDGE" | "PROCESS_EXECUTION_GATE" | "NONE";
-export type OutcomeLearningEligibility = "ELIGIBLE_PER_EXISTING_GOVERNANCE" | "NOT_ELIGIBLE" | "NO_LEARNING_LOOP";
+/**
+ * `ELIGIBLE_CONFIRMED_BY_GATE` requires an actual learning-gate result supplied by the caller. Without one the
+ * best a pure assessment can say is `PENDING_GOVERNANCE` ("potentially eligible for learning review").
+ */
+export type OutcomeLearningEligibility = "ELIGIBLE_CONFIRMED_BY_GATE" | "PENDING_GOVERNANCE" | "NOT_ELIGIBLE" | "NO_LEARNING_LOOP";
+
+/** The result of the authoritative learning gate (`determineLearningEligibility`), passed in — never computed here. */
+export interface OutcomeLearningGateResult {
+  status: string;
+  eligible: boolean;
+}
 
 export const OUTCOME_AFTER_PROVENANCE_INDEPENDENT: readonly OutcomeAfterProvenance[] = [
   "AUTHORITATIVE_SNAPSHOT",
@@ -69,7 +82,7 @@ export interface OwnerOutcomeInput {
   afterValue: number | null;
   afterProvenance: OutcomeAfterProvenance;
   afterMeasuredAt: Date | null;
-  direction: "up" | "down";
+  direction: OutcomeDirection;
   targetValue: number | null;
   /** Observation window in days, anchored at completion. Null = no window recorded (not "no waiting needed"). */
   windowDays: number | null;
@@ -85,6 +98,8 @@ export interface OwnerOutcomeInput {
   causalAssessment?: "likely_caused" | "plausible_contributor" | "correlation_only" | "confounded" | "external_event_dominant" | "insufficient_evidence" | "not_assessed" | null;
   newerDiagnosis: OutcomeNewerDiagnosisFact | null;
   learningLoop: OutcomeLearningLoop;
+  /** Actual learning-gate result, when the caller ran the gate with real inputs. Absent = governance not yet consulted. */
+  learningGate?: OutcomeLearningGateResult | null;
   /** Evidence quality the source row already carries (process-execution outcomes); derived when absent. */
   recordedEvidenceQuality?: OutcomeEvidenceQuality | null;
   now: Date;
@@ -101,7 +116,7 @@ export interface OwnerOutcomeAssessment {
   baselineProvenance: OutcomeBaselineProvenance;
   afterValue: number | null;
   afterProvenance: OutcomeAfterProvenance;
-  direction: "up" | "down";
+  direction: OutcomeDirection;
   targetValue: number | null;
   targetAttainment: OutcomeTargetAttainment;
   measurementResult: OutcomeMeasurementResult;
@@ -198,13 +213,23 @@ export function assessOwnerOutcome(input: OwnerOutcomeInput): OwnerOutcomeAssess
   const baselineUsable = input.baselineValue !== null && input.baselineProvenance !== "UNKNOWN";
   const afterUsable = input.afterValue !== null && input.afterProvenance !== "NARRATIVE_ONLY" && input.afterProvenance !== "NONE";
 
-  const compared = verifyOutcome({
-    baselineValue: baselineUsable ? input.baselineValue : null,
-    targetValue: input.targetValue,
-    afterValue: afterUsable ? input.afterValue : null,
-    direction: input.direction,
-    disputed: input.disputed,
-  });
+  const directionKnown = input.direction === "up" || input.direction === "down";
+  // Direction is never guessed: with an unknown direction the shared directional comparison is not run.
+  const compared = directionKnown
+    ? verifyOutcome({
+        baselineValue: baselineUsable ? input.baselineValue : null,
+        targetValue: input.targetValue,
+        afterValue: afterUsable ? input.afterValue : null,
+        direction: input.direction as "up" | "down",
+        disputed: input.disputed,
+      })
+    : {
+        status: (input.disputed ? "disputed" : "inconclusive") as VerificationStatus,
+        actualMovement: null as number | null,
+        // Equality with the target is direction-independent; anything else cannot be judged.
+        reachedTarget: afterUsable && input.targetValue !== null && input.afterValue === input.targetValue,
+        reason: "Intended direction was not recorded.",
+      };
 
   let observationStatus: OutcomeObservationStatus;
   if (!completed) observationStatus = "NOT_STARTED";
@@ -218,14 +243,16 @@ export function assessOwnerOutcome(input: OwnerOutcomeInput): OwnerOutcomeAssess
   else if (observationStatus !== "MEASURED" || !baselineUsable || !afterUsable) measurementResult = "NOT_MEASURABLE";
   else {
     const move = (input.afterValue as number) - (input.baselineValue as number);
-    const better = input.direction === "up" ? move > 0 : move < 0;
-    measurementResult = move === 0 ? "UNCHANGED" : better ? "IMPROVED" : "WORSENED";
+    if (move === 0) measurementResult = "UNCHANGED";
+    else if (!directionKnown) measurementResult = "CHANGED_DIRECTION_UNKNOWN";
+    else measurementResult = (input.direction === "up" ? move > 0 : move < 0) ? "IMPROVED" : "WORSENED";
   }
 
-  const comparable = measurementResult === "IMPROVED" || measurementResult === "UNCHANGED" || measurementResult === "WORSENED";
+  const comparable = measurementResult === "IMPROVED" || measurementResult === "UNCHANGED" || measurementResult === "WORSENED" || measurementResult === "CHANGED_DIRECTION_UNKNOWN";
   let targetAttainment: OutcomeTargetAttainment;
   if (!comparable) targetAttainment = "UNKNOWN";
   else if (input.targetValue === null) targetAttainment = "NO_TARGET";
+  else if (!directionKnown) targetAttainment = compared.reachedTarget ? "REACHED" : "UNKNOWN";
   else targetAttainment = compared.reachedTarget ? "REACHED" : "NOT_REACHED";
 
   // Spine vocabulary: a window that is still open (or a missing completion) is simply unverified.
@@ -247,12 +274,25 @@ export function assessOwnerOutcome(input: OwnerOutcomeInput): OwnerOutcomeAssess
   const learningBlockers: string[] = [];
   if (input.learningLoop === "NONE") learningBlockers.push("This domain has no outcome-learning loop.");
   if (verificationStatus !== "verified_improved" && verificationStatus !== "verified_not_improved") learningBlockers.push("No conclusive verified comparison.");
+  if (!directionKnown) learningBlockers.push("The intended direction of the metric was not recorded.");
   if (input.disputed) learningBlockers.push("The outcome is disputed.");
   if (input.externalEvent) learningBlockers.push("An external event interfered; the result is not attributable.");
   if (!baselineUsable) learningBlockers.push("No usable baseline.");
   if (windowOpen) learningBlockers.push("The observation window is still open.");
-  const learningEligibility: OutcomeLearningEligibility =
-    input.learningLoop === "NONE" ? "NO_LEARNING_LOOP" : learningBlockers.length === 0 ? "ELIGIBLE_PER_EXISTING_GOVERNANCE" : "NOT_ELIGIBLE";
+  let learningEligibility: OutcomeLearningEligibility;
+  if (input.learningLoop === "NONE") learningEligibility = "NO_LEARNING_LOOP";
+  else if (learningBlockers.length > 0) learningEligibility = "NOT_ELIGIBLE";
+  else if (input.learningGate) {
+    if (input.learningGate.eligible) learningEligibility = "ELIGIBLE_CONFIRMED_BY_GATE";
+    else {
+      learningEligibility = "NOT_ELIGIBLE";
+      learningBlockers.push(`Learning gate: ${input.learningGate.status}.`);
+    }
+  } else {
+    // A conclusive comparison makes this *potentially* eligible for learning review; it is not eligibility.
+    learningEligibility = "PENDING_GOVERNANCE";
+    learningBlockers.push("The learning gate has not been run with real inputs.");
+  }
 
   const base: OwnerOutcomeAssessment = {
     domain: input.domain,
@@ -296,6 +336,7 @@ export type OwnerOutcomeLoopStateCode =
   | "NEEDS_AFTER_DATA"
   | "IMPROVED_TARGET_MISSED"
   | "TARGET_REACHED"
+  | "NEEDS_DIRECTION"
   | "NO_MEASURABLE_IMPROVEMENT"
   | "MADE_WORSE"
   | "DISPUTED"
@@ -347,6 +388,9 @@ export function ownerOutcomeLoopState(a: OwnerOutcomeAssessment, windowEndsAt?: 
   if (a.observationStatus === "READY_TO_MEASURE" || a.observationStatus === "MISSING_AFTER_EVIDENCE" || a.measurementResult === "NOT_MEASURABLE") {
     const reason = a.baselineProvenance === "UNKNOWN" || a.baselineValue === null ? "there is no usable before value" : "there is no after value yet";
     return make("NEEDS_AFTER_DATA", "Needs after-data", `The action is done but ${reason}, so the result is unknown.`, `Record ${a.baselineValue === null || a.baselineProvenance === "UNKNOWN" ? "a before value and " : ""}the current ${metric} from a recorded source.`);
+  }
+  if (a.measurementResult === "CHANGED_DIRECTION_UNKNOWN") {
+    return make("NEEDS_DIRECTION", "Needs direction", "OpsIQ has the before and after values, but the intended direction for this metric was not recorded, so target attainment cannot be verified.", `Record whether ${metric} should go up or down, then re-check it.`);
   }
   if (a.measurementResult === "WORSENED") {
     return make("MADE_WORSE", "Made worse", `${metric} moved the wrong way. This stays visible and goes back into review.`, "Review whether to stop, reverse or change the action, and re-check the diagnosis.");

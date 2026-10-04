@@ -359,6 +359,7 @@ const VERIFICATION_CLASS_LABEL: Record<string, string> = {
   FAILURE: "Result recorded: Failure",
   NEGATIVE_IMPACT: "Result recorded: Negative impact",
   INCONCLUSIVE: "Result recorded: Inconclusive",
+  EXTERNAL_EVENT_INTERFERENCE: "External event interfered — not credited to the action",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };
@@ -366,7 +367,7 @@ const VERIFICATION_CLASS_LABEL: Record<string, string> = {
 const VERIFICATION_CLASS_VARIANT = (c: string): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
   c === "SUCCESS" ? "default-accessible"
   : c === "FAILURE" || c === "NEGATIVE_IMPACT" ? "destructive-accessible"
-  : c === "PARTIAL_SUCCESS" ? "warning-accessible"
+  : c === "PARTIAL_SUCCESS" || c === "EXTERNAL_EVENT_INTERFERENCE" ? "warning-accessible"
   : "muted-accessible";
 
 const OUTCOME_STATUS_OPTIONS: { value: string; label: string }[] = [

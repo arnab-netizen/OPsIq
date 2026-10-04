@@ -20,17 +20,8 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import {
-  determineLearningEligibility,
-  isLearningEligible,
-  OutcomeStatus as GateOutcomeStatus,
-  AttributionStatus,
-  ImplementationQualityStatus,
-  ProfitImpactConfidence,
-  ProofGateStatus,
-  OwnerLearningApproval,
-  AiMutationAttemptStatus,
-} from "@/domain/execution/learning-gate";
+import { determineLearningEligibility, isLearningEligible } from "@/domain/execution/learning-gate";
+import { buildProcessLearningGateInput, type ProcessLearningFacts } from "@/domain/execution/process-learning-gate-inputs";
 import { createReassessmentEvent } from "@/services/owner-mode/reassessment-event.service";
 import { hasEligibleIndependentVerifier } from "@/services/workspace/verifier-eligibility.service";
 
@@ -43,6 +34,7 @@ export type OwnerOutcomeVerificationClass =
   | "FAILURE"
   | "NEGATIVE_IMPACT"
   | "INCONCLUSIVE"
+  | "EXTERNAL_EVENT_INTERFERENCE"
   | "OBSERVATION_WINDOW_OPEN"
   | "INSUFFICIENT_EVIDENCE";
 
@@ -62,6 +54,7 @@ const TERMINAL_VERIFIED_CLASSES = new Set<OwnerOutcomeVerificationClass>([
   "FAILURE",
   "NEGATIVE_IMPACT",
   "INCONCLUSIVE",
+  "EXTERNAL_EVENT_INTERFERENCE",
 ]);
 
 // ─── Row shape (minimal — only fields used by classification and verification) ─
@@ -90,6 +83,11 @@ export interface TaskRowForClassification {
   workspaceId: string;
   taskKey: string;
   targetValue: number | null;
+  /**
+   * Intended direction of the target metric. ProcessExecutionTask persists none today, so this is absent in
+   * production and the classifier fails closed on numeric target judgments (never defaults to "higher is better").
+   */
+  targetDirection?: "up" | "down" | null;
   verificationWindowDays: number | null;
   outcomeRecordedAt: Date | null;
   // actorId of the outcome recorder — derived from completedByUserId
@@ -181,10 +179,10 @@ export function classifyOutcomeVerification(
     return "INSUFFICIENT_EVIDENCE";
   }
 
-  // Rule 2b — an external event interfered: the movement cannot be credited to (or held against) the
-  // action, whatever the owner reported (the flag was recorded but previously never consulted).
-  if (outcome.externalEventFlag) {
-    return "NO_MEASURABLE_IMPACT";
+  // Rule 2b — an external event interfered. A before/after change may well be measurable; what is lost is
+  // attribution, so this is its own class (never "no measurable impact", never success or failure).
+  if (outcome.externalEventFlag || outcomeStatus === "external_event_interference") {
+    return "EXTERNAL_EVENT_INTERFERENCE";
   }
 
   // Rule 3 — outcome made things worse
@@ -198,7 +196,7 @@ export function classifyOutcomeVerification(
   }
 
   // Rule 5 — unmeasurable or externally interfered
-  if (outcomeStatus === "not_measurable" || outcomeStatus === "external_event_interference") {
+  if (outcomeStatus === "not_measurable") {
     return "NO_MEASURABLE_IMPACT";
   }
 
@@ -207,14 +205,28 @@ export function classifyOutcomeVerification(
     return "INCONCLUSIVE";
   }
 
-  // Rule 7 — metric-based partial success (improvement < 20% of target delta)
+  // Rule 6b — a numeric target judgment needs the intended direction. It is never defaulted to "higher is
+  // better"; without it the result cannot be called a success, so it fails closed.
+  const direction = task?.targetDirection === "up" || task?.targetDirection === "down" ? task.targetDirection : null;
   if (
+    outcomeStatus === "worked" &&
+    outcome.afterValue != null &&
+    task?.targetValue != null &&
+    direction === null
+  ) {
+    return "INCONCLUSIVE";
+  }
+
+  // Rule 7 — metric-based partial success (direction-aware: improvement < 20% of the target delta)
+  if (
+    direction !== null &&
     outcome.beforeValue != null &&
     outcome.afterValue != null &&
     task?.targetValue != null
   ) {
-    const actualImprovement = outcome.afterValue - outcome.beforeValue;
-    const targetImprovement = task.targetValue - outcome.beforeValue;
+    const sign = direction === "up" ? 1 : -1;
+    const actualImprovement = sign * (outcome.afterValue - outcome.beforeValue);
+    const targetImprovement = sign * (task.targetValue - outcome.beforeValue);
     if (targetImprovement > 0 && actualImprovement / targetImprovement < 0.2) {
       return "PARTIAL_SUCCESS";
     }
@@ -228,9 +240,10 @@ export function classifyOutcomeVerification(
   // Rule 9 — success: worked with optional metric validation
   if (outcomeStatus === "worked") {
     if (
+      direction !== null &&
       outcome.afterValue != null &&
       task?.targetValue != null &&
-      outcome.afterValue < task.targetValue
+      (direction === "up" ? outcome.afterValue < task.targetValue : outcome.afterValue > task.targetValue)
     ) {
       return "PARTIAL_SUCCESS";
     }
@@ -550,34 +563,16 @@ export async function determineAndCreateLearningCandidate(
   workspaceId: string,
   outcomeId: string,
   verificationClassification: OwnerOutcomeVerificationClass,
-  actorId: string
+  actorId: string,
+  facts: Omit<ProcessLearningFacts, "classification"> = {}
 ): Promise<string | null> {
-  // Map classification to learning gate's OutcomeStatus
-  const outcomeStatusMap: Partial<Record<OwnerOutcomeVerificationClass, GateOutcomeStatus>> = {
-    SUCCESS: GateOutcomeStatus.VERIFIED_SUCCESS,
-    PARTIAL_SUCCESS: GateOutcomeStatus.PARTIAL_SUCCESS,
-    FAILURE: GateOutcomeStatus.VERIFIED_FAILURE,
-    NEGATIVE_IMPACT: GateOutcomeStatus.VERIFIED_FAILURE,
-    NO_MEASURABLE_IMPACT: GateOutcomeStatus.INSUFFICIENT_DATA,
-    INCONCLUSIVE: GateOutcomeStatus.INSUFFICIENT_DATA,
-    OBSERVATION_WINDOW_OPEN: GateOutcomeStatus.MEASUREMENT_WINDOW_OPEN,
-    INSUFFICIENT_EVIDENCE: GateOutcomeStatus.INSUFFICIENT_DATA,
-  };
+  // Fail closed: every gate input must come from a real governed fact. None of proof status, implementation
+  // quality, attribution, profit impact, owner approval or AI-mutation status is persisted for process-execution
+  // outcomes today (see PROCESS_LEARNING_GATE_FACT_SOURCES), so no favourable default is ever supplied.
+  const built = buildProcessLearningGateInput({ ...facts, classification: verificationClassification });
+  if (!built.ok) return null;
 
-  const mappedOutcomeStatus = outcomeStatusMap[verificationClassification];
-  if (!mappedOutcomeStatus) return null;
-
-  const eligibility = determineLearningEligibility({
-    proofStatus: ProofGateStatus.ACCEPTED,
-    proofRequired: false,
-    implementationQuality: ImplementationQualityStatus.ACCEPTABLE,
-    outcomeStatus: mappedOutcomeStatus,
-    attributionStatus: AttributionStatus.LIKELY,
-    profitImpactRequired: false,
-    profitImpactConfidence: ProfitImpactConfidence.ESTIMATED_FROM_OWNER_INPUT,
-    ownerLearningApproval: OwnerLearningApproval.NOT_REQUIRED,
-    aiMutationAttempt: AiMutationAttemptStatus.NONE,
-  });
+  const eligibility = determineLearningEligibility(built.input);
 
   if (!isLearningEligible(eligibility)) return null;
 
