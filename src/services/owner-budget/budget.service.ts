@@ -13,8 +13,7 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { getBusiness } from "@/services/founder-recovery/business.service";
-import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
-import { loadUsableBankBalance } from "@/services/owner-finance/liquidity.service";
+import { loadFinanceEngineInput } from "@/services/owner-finance/liquidity.service";
 import { resolveLiquidity } from "@/domain/owner-finance/liquidity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -386,10 +385,7 @@ export async function getBudgetForecast(workspaceId: string, businessId: string)
   let cashOnHand = 0;
   let liquidityComplete = false;
   if (snap) {
-    const fin = rowToFinanceInput(snap);
-    const bank = await loadUsableBankBalance(workspaceId, businessId, snap.periodEnd);
-    if (bank !== undefined) fin.bankBalance = bank;
-    const liquidity = resolveLiquidity(fin);
+    const liquidity = resolveLiquidity(await loadFinanceEngineInput(snap, workspaceId));
     liquidityComplete = liquidity.status === "COMPLETE";
     cashOnHand = liquidity.totalLiquidFunds ?? liquidity.physicalCash ?? liquidity.bankCash ?? 0;
   }
@@ -437,10 +433,8 @@ async function assembleAssessment(
   } else {
     const snap = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }));
     if (snap) {
-      finance = rowToFinanceInput(snap);
-      // Same liquidity basis as the Finance diagnosis: enrich with the usable bank balance (unknown stays unknown).
-      const bank = await loadUsableBankBalance(workspaceId, businessId, snap.periodEnd);
-      if (bank !== undefined) finance.bankBalance = bank;
+      // Same liquidity basis as the Finance diagnosis (lineage-resolved semantics + usable bank; unknown stays unknown).
+      finance = await loadFinanceEngineInput(snap, workspaceId);
     } else {
       finance = {
         periodStart: period?.periodStart?.toISOString() ?? new Date(0).toISOString(),

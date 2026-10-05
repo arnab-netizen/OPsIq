@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { BudgetCashForecast } from "@/components/owner/BudgetCashForecast";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
@@ -391,29 +392,7 @@ export default function OwnerBudgetPlanPage() {
               </section>
 
               {/* 5: Forecast */}
-              {forecast?.hasData && (
-                <section className="border rounded-lg p-4 bg-card">
-                  <h2 className="font-bold mb-2">Cash forecast</h2>
-                  <div className="flex flex-wrap gap-2 text-sm">
-                    <Badge variant="muted-accessible">7-day {Math.round(forecast.sevenDayCash)}</Badge>
-                    <Badge variant="muted-accessible">30-day {Math.round(forecast.thirtyDayCash)}</Badge>
-                    <Badge variant="muted-accessible">90-day {Math.round(forecast.ninetyDayCash)}</Badge>
-                    <Badge variant="muted-accessible">reserve required {Math.round(forecast.reserveRequired)}</Badge>
-                    {forecast.nextCriticalDueInDays != null && <Badge variant="warning-accessible">next due in {forecast.nextCriticalDueInDays}d</Badge>}
-                  </div>
-                  <div className="mt-2 space-y-1 text-xs">
-                    {(forecast.scenarios ?? []).map((s: any) => (
-                      <div key={s.name} className="flex justify-between border-b py-1">
-                        <span className="capitalize">{s.name.replace("_", " ")}</span>
-                        <span className="text-muted-foreground">
-                          ending {Math.round(s.endingCash)} · min {Math.round(s.minCash)} ·{" "}
-                          {s.reserveBreachWeek ? <span className="text-destructive">reserve breach wk {s.reserveBreachWeek}</span> : "no reserve breach (13wk)"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+              <BudgetCashForecast forecast={forecast} />
 
               {/* 6: Fund allocation */}
               {Array.isArray(plan?.fundAllocationChanges) && plan.fundAllocationChanges.length > 0 && (

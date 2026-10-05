@@ -32,8 +32,14 @@ import type { FinancialSnapshotInput } from "./types";
 /** The ONE freshness window for a bank balance relative to the Finance period end. */
 export const BANK_BALANCE_FRESHNESS_DAYS = 45;
 
-/** Merge instant of PR #586, which made `cashOnHand` mean physical cash only (2026-10-04T20:57:23+05:30). */
-export const PHYSICAL_CASH_SEMANTICS_EFFECTIVE_FROM = "2026-10-04T15:27:23.000Z";
+/**
+ * The instant from which owners were told `cashOnHand` is physical cash only (PR #586 copy).
+ * Provenance: the production deployment of merge commit bebc53f475845f37f375eda6f7c669ea3afe14e8 reported
+ * "Deployment has completed" at 2026-10-04T15:29:07Z. The merge itself (15:27:23Z) is NOT the cutover: a
+ * row created between the merge and the deployment was still entered under the old "cash and bank" copy.
+ * Rows before this instant are LEGACY_AMBIGUOUS.
+ */
+export const PHYSICAL_CASH_SEMANTICS_EFFECTIVE_FROM = "2026-10-04T15:29:07.000Z";
 
 export type CashSemantics = "PHYSICAL_ONLY" | "LEGACY_AMBIGUOUS";
 
@@ -46,6 +52,55 @@ export function cashSemanticsForSnapshot(createdAt: Date | string | null | undef
   const t = createdAt instanceof Date ? createdAt.getTime() : new Date(createdAt).getTime();
   if (Number.isNaN(t)) return "LEGACY_AMBIGUOUS";
   return t >= new Date(PHYSICAL_CASH_SEMANTICS_EFFECTIVE_FROM).getTime() ? "PHYSICAL_ONLY" : "LEGACY_AMBIGUOUS";
+}
+
+/**
+ * Total cash on a CASHFLOW snapshot: cash in hand + bank balance, only when BOTH are recorded. An unrecorded
+ * part is unknown, never 0 (the same rule as `resolveLiquidity`), so a half-filled Cashflow row yields
+ * `null` instead of a partial sum that reads as zero or as a complete position.
+ */
+export function cashflowTotalCash(row: { cashInHand?: number | null; bankBalance?: number | null } | null | undefined): number | null {
+  if (!row) return null;
+  const a = finiteOrNull(row.cashInHand);
+  const b = finiteOrNull(row.bankBalance);
+  return a === null || b === null ? null : a + b;
+}
+
+/** One version of a Finance snapshot, as far as cash provenance is concerned. */
+export interface CashLineageNode {
+  createdAt: Date | string;
+  cashOnHand: number | null;
+  /** Stored amendment provenance: the engine-input field names the amendment explicitly supplied. */
+  changedFields: unknown;
+}
+
+function changedCash(changedFields: unknown): boolean {
+  return Array.isArray(changedFields) && changedFields.includes("cashOnHand");
+}
+
+/**
+ * Cash semantics of the LAST node of an amendment chain (ordered root → … → target).
+ *   - the root is classified by when it was created (before the cutover → LEGACY_AMBIGUOUS);
+ *   - an amendment INHERITS its predecessor's semantics unless, on or after the cutover, it explicitly
+ *     replaced `cashOnHand` (stored `changedFields` names it) with a different value — only then has the
+ *     owner re-entered cash under the physical-only meaning. Copying the old value forward because an
+ *     unrelated field was amended (receivables, notes, …) never changes what the number means.
+ * An empty chain is unknown → LEGACY_AMBIGUOUS (fail-safe: bank is never added on top).
+ */
+export function resolveCashSemanticsFromLineage(chain: readonly CashLineageNode[]): CashSemantics {
+  if (chain.length === 0) return "LEGACY_AMBIGUOUS";
+  let semantics = cashSemanticsForSnapshot(chain[0].createdAt);
+  for (let i = 1; i < chain.length; i++) {
+    const node = chain[i];
+    const prev = chain[i - 1];
+    const replacedUnderNewMeaning =
+      cashSemanticsForSnapshot(node.createdAt) === "PHYSICAL_ONLY" &&
+      changedCash(node.changedFields) &&
+      node.cashOnHand !== null &&
+      node.cashOnHand !== prev.cashOnHand;
+    if (replacedUnderNewMeaning) semantics = "PHYSICAL_ONLY";
+  }
+  return semantics;
 }
 
 const MS_PER_DAY = 86_400_000;

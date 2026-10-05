@@ -18,6 +18,10 @@ import {
   CONFIDENCE_ORDER,
 } from "@/domain/owner-budget/types";
 
+/** Owner-facing reason when total liquidity is incomplete (not a cash-distress claim). */
+export const BANK_BALANCE_UNCONFIRMED_REASON =
+  "Confirm the bank balance before OpsIQ clears growth or scale spending. Total cash is not yet known; this is a missing figure, not a sign of cash distress.";
+
 const EMERGENCY_RUNWAY_DAYS = 14;
 const STABILIZE_RUNWAY_DAYS = 45;
 const SEVERE_NEGATIVE_MARGIN = -20;
@@ -43,7 +47,8 @@ function computeCashPosture(input: BudgetAssessmentInput): CashPosture {
   const horizon = input.horizonDays ?? 30;
   // Total liquid funds on the shared basis; null while the position is incomplete (cash in hand alone is
   // not the business's total cash, so no reserve/free-cash claim is made from it).
-  const cashOnHand = resolveLiquidity(f).totalLiquidFunds;
+  const liquidity = resolveLiquidity(f);
+  const cashOnHand = liquidity.totalLiquidFunds;
   const reserve = Math.max(0, input.statutoryReserveRequired ?? 0, input.cashReserveTarget ?? 0);
   const obligations = input.obligations ?? [];
   const dueInHorizon = obligations
@@ -67,6 +72,7 @@ function computeCashPosture(input: BudgetAssessmentInput): CashPosture {
     obligationsDueInHorizon: dueInHorizon,
     freeCashAfterObligations: freeCash,
     reserveBreached,
+    liquidityComplete: liquidity.status === "COMPLETE",
     nextCriticalDueInDays: nextCritical,
   };
 }
@@ -135,7 +141,12 @@ export function classifyBudgetMode(input: BudgetAssessmentInput): BudgetModeResu
     cash.runwayDays !== null && cash.runwayDays < STABILIZE_RUNWAY_DAYS;
   const marginWeakOrNeg = margin !== null && margin < PROFIT_TARGET_MARGIN;
   const confidenceBelowOperational = !confidenceAtLeast(confidence, "OPERATIONAL");
+  // Unknown liquidity is neither zero nor safe: with an incomplete position (e.g. bank balance not
+  // recorded) there is no distress claim (no EMERGENCY, no invented reserve breach or short runway), but
+  // cash cannot be called safe either, so no offensive mode qualifies until the bank balance is confirmed.
+  const liquidityUnconfirmed = !cash.liquidityComplete;
   const cashSafe =
+    !liquidityUnconfirmed &&
     !runwayWeak &&
     !cash.reserveBreached &&
     (cash.freeCashAfterObligations === null || cash.freeCashAfterObligations >= 0);
@@ -148,10 +159,11 @@ export function classifyBudgetMode(input: BudgetAssessmentInput): BudgetModeResu
     (input.capacityUtilizationPct == null || input.capacityUtilizationPct < 90);
   const revenuePresent = typeof f.revenue === "number" && f.revenue > 0;
 
-  const stabilize =
+  const stabilizeOnEvidence =
     runwayWeak || confidenceBelowOperational ||
     (margin !== null && margin < 0) ||
     input.workloadOverloaded === true || input.qualityDeteriorating === true;
+  const stabilize = stabilizeOnEvidence || liquidityUnconfirmed;
 
   const profitIncrease = revenuePresent && marginWeakOrNeg && (margin === null || margin >= 0);
 
@@ -184,7 +196,7 @@ export function classifyBudgetMode(input: BudgetAssessmentInput): BudgetModeResu
     reasons.push("Stabilize cash/controls while running controlled growth — hybrid posture.");
   } else if (stabilize) {
     primary = "STABILIZE";
-    reasons.push("Cash/margin/controls weak but not at emergency — stabilize first.");
+    if (stabilizeOnEvidence) reasons.push("Cash/margin/controls weak but not at emergency — stabilize first.");
   } else if (profitIncrease) {
     primary = "PROFIT_INCREASE";
     reasons.push("Revenue present but net margin below target — fix profit leakage.");
@@ -198,6 +210,11 @@ export function classifyBudgetMode(input: BudgetAssessmentInput): BudgetModeResu
     primary = "STABILIZE";
     reasons.push("No clear offensive posture qualifies — default to conservative stabilize.");
     active.push("STABILIZE");
+  }
+
+  if (liquidityUnconfirmed) {
+    reasons.push(BANK_BALANCE_UNCONFIRMED_REASON);
+    missing.push("bankBalance");
   }
 
   return {

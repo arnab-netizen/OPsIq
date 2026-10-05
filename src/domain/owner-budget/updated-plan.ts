@@ -413,7 +413,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
   signals.push({ type: "updated_plan_ready", severity: "INFO", message: `Updated plan generated in ${mode.primaryMode} mode.` });
 
   // ---- Decision + next best action ----
-  const { decisionType, nextBestAction, topConstraint } = deriveNextAction(mode.primaryMode, cash, mode.netMarginPct, mode.missingCriticalData);
+  const { decisionType, nextBestAction, topConstraint } = deriveNextAction(mode.primaryMode, cash, mode.netMarginPct, mode.missingCriticalData, mode.reasons);
 
   // ---- Generated actions ----
   const generatedActions: BudgetGeneratedAction[] = [];
@@ -460,7 +460,11 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
   // ---- Restrictions ----
   const spendRestrictions: string[] = [];
   if (mode.primaryMode === "EMERGENCY" || mode.primaryMode === "STABILIZE" || mode.primaryMode === "HYBRID") {
-    spendRestrictions.push("Discretionary and experimental spend paused until cash/controls stabilize.");
+    spendRestrictions.push(
+      cash.liquidityComplete
+        ? "Discretionary and experimental spend paused until cash/controls stabilize."
+        : "Discretionary and experimental spend paused until the bank balance is confirmed and cash/controls are clear."
+    );
   }
   if (!["VERIFIED", "AUDITED"].includes(conf)) {
     spendRestrictions.push("Irreversible spend (hiring, capex, new branch, major marketing) blocked below VERIFIED confidence.");
@@ -499,7 +503,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     requiredProof,
     cashImpact: `Free cash after obligations: ${fmtMoney(cash.freeCashAfterObligations)}; reserve required: ${fmtMoney(cash.statutoryReserveRequired)}.`,
     profitImpact: mode.netMarginPct === null ? "Net margin not computable from current data." : `Net margin ${mode.netMarginPct.toFixed(1)}%.`,
-    runwayImpact: cash.runwayDays === null ? "Runway not at risk or not computable." : `Runway ${cash.runwayDays} days.`,
+    runwayImpact: cash.runwayDays === null ? (cash.liquidityComplete ? "Runway not at risk or not computable." : "Runway cannot be confirmed until the bank balance is recorded.") : `Runway ${cash.runwayDays} days.`,
     confidence: conf,
     reviewInDays,
     killRule: "Reassess on any material budget/spend/revenue/proof/cash change.",
@@ -513,7 +517,8 @@ function deriveNextAction(
   mode: UpdatedOwnerPlan["mode"],
   cash: ReturnType<typeof classifyBudgetMode>["cash"],
   margin: number | null,
-  missing: string[]
+  missing: string[],
+  reasons: string[] = []
 ): { decisionType: PlanDecisionType; nextBestAction: string; topConstraint: string } {
   switch (mode) {
     case "EMERGENCY":
@@ -529,6 +534,14 @@ function deriveNextAction(
         nextBestAction: "Enter/upload core financial data (revenue, cash, obligations) before any growth or capex decision.",
       };
     case "STABILIZE":
+      // Held in STABILIZE ONLY because total liquidity is unconfirmed: an evidence request, not a distress verdict.
+      if (!cash.liquidityComplete && !reasons.some((r) => r.startsWith("Cash/margin/controls weak"))) {
+        return {
+          decisionType: "COLLECT_EVIDENCE",
+          topConstraint: "Bank balance not confirmed",
+          nextBestAction: "Confirm your bank balance (Guided setup or Cashflow; enter 0 if you hold none) so OpsIQ can confirm your total cash before clearing growth or scale spending.",
+        };
+      }
       return {
         decisionType: "REDUCE",
         topConstraint: margin !== null && margin < 0 ? "Negative net margin" : "Weak cash/margin/controls",

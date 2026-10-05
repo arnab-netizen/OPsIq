@@ -169,6 +169,9 @@ describe("financial snapshot selection is centralised", () => {
       "amendFinancialSnapshot",
       "createFinancialSnapshot",
       "getFinancialSnapshot",
+      // Reviewed (A1 liquidity lineage): every version of ONE snapshot's own period, scoped by workspace +
+      // business, unordered — cash-semantics resolution only. It selects no "latest" and no "current".
+      "listFinancialSnapshotVersions",
       "listFinancialSnapshots",
       "resolveCurrentSnapshotId",
       "rowToFinanceInput",
