@@ -71,7 +71,9 @@ echo "Step 3: Replaying full migration history..."
 MIGRATION_LOG="/tmp/migration-replay.log"
 rm -f "$MIGRATION_LOG"
 
-if npx prisma migrate deploy 2>&1 | tee "$MIGRATION_LOG"; then
+# Explicit target: the guard accepts a loopback database, or a remote database only after its identity positively
+# matches the approved OpsIQ test branch (src/infra/prisma-datasource.ts).
+if OPSIQ_DB_TARGET=test TEST_DATABASE_URL="$DB_URL" npx prisma migrate deploy 2>&1 | tee "$MIGRATION_LOG"; then
   echo -e "${GREEN}✓ All migrations deployed successfully${NC}"
   MIGRATION_SUCCESS=true
 else

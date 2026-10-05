@@ -9,6 +9,7 @@ jobs:
     environment: test
 
     env:
+      OPSIQ_DB_TARGET: test
       DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
       # Deliberate remote TEST database: explicit opt-in required by src/infra/test-database-guard.ts.

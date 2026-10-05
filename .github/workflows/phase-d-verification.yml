@@ -9,6 +9,7 @@ jobs:
     timeout-minutes: 30
 
     env:
+      OPSIQ_DB_TARGET: ci
       TEST_WITH_DB: "true"
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
       DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public

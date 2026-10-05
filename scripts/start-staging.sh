@@ -130,9 +130,11 @@ log "✓ Database healthy"
 
 # Run migrations
 log "Running database migrations..."
-$DOCKER_COMPOSE_CMD exec -T app npx prisma migrate deploy || {
+# The compose database is local; name that explicitly (single-label compose service host "postgres").
+PRISMA_LOCAL_ENV="-e OPSIQ_DB_TARGET=local -e OPSIQ_LOCAL_DB_EXTRA_HOSTS=postgres"
+$DOCKER_COMPOSE_CMD exec -T $PRISMA_LOCAL_ENV app npx prisma migrate deploy || {
   warn "Migrations may have failed. Attempting fresh deploy..."
-  $DOCKER_COMPOSE_CMD exec -T app npx prisma db push
+  $DOCKER_COMPOSE_CMD exec -T $PRISMA_LOCAL_ENV app npx prisma db push
 }
 log "✓ Migrations complete"
 

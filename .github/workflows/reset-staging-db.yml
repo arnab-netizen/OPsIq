@@ -20,6 +20,9 @@ jobs:
     timeout-minutes: 20
     environment: staging
 
+    env:
+      OPSIQ_DB_TARGET: staging
+      OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
     steps:
       - name: Confirm destructive reset
         run: |
