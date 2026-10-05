@@ -8,7 +8,7 @@
 import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
-import { LIQUIDITY_UNCONFIRMED_STATEMENT } from "./liquidity";
+import { LIQUIDITY_UNCONFIRMED_FINDING_CODE, LIQUIDITY_UNCONFIRMED_STATEMENT } from "./liquidity";
 import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
@@ -302,7 +302,7 @@ export function buildFinanceOpportunityFindings(
   if (m.liquidityStatus === "BANK_UNKNOWN") {
     findings.push(
       opportunity({
-        code: "FIN_LIQUIDITY_UNCONFIRMED",
+        code: LIQUIDITY_UNCONFIRMED_FINDING_CODE,
         title: "Add your bank balance to confirm how long your cash will last",
         summary: LIQUIDITY_UNCONFIRMED_STATEMENT,
         sourceMetric: "totalLiquidFunds",

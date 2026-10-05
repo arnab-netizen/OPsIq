@@ -8,6 +8,7 @@
  * where the owner should spend time, and which should receive investment.
  */
 import type { BusinessConditionProfile } from "@/domain/owner-spine/contracts";
+import type { SurvivalEvidenceAssessment } from "@/domain/owner-spine/survival-evidence";
 import type { CurrentOwnerDecision, OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
 /** One business + its latest condition profile (or null when it has no data yet). */
@@ -25,6 +26,12 @@ export interface PortfolioBusinessInput {
    * INTERNAL context for investment eligibility only; Portfolio never computes freshness itself. Absent = unknown (fail closed).
    */
   staleDomains?: readonly string[];
+  /**
+   * Whether this business's survival reading is sufficiently evidenced (complete and current) to clear a material
+   * investment recommendation — resolved once by Owner Home (survival-evidence.ts). INTERNAL context; absent = unknown (fail closed).
+   * A numeric `survivalRiskScore` below the bar is never sufficient on its own.
+   */
+  survivalEvidence?: SurvivalEvidenceAssessment;
 }
 
 /** Per-business roll-up used in the portfolio view (16.1). */

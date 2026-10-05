@@ -8,6 +8,7 @@ import * as path from "path";
 import { assessPortfolioInvestmentEligibility, PORTFOLIO_THRESHOLDS } from "@/domain/owner-portfolio";
 import type { PortfolioBusinessInput } from "@/domain/owner-portfolio";
 import { OWNER_ADVICE_MODES, ownerMaterialCommitmentGuard, resolveOwnerAdvicePolicy, type OwnerAdvicePolicy } from "@/domain/owner-spine/owner-advice-policy";
+import { assessSurvivalEvidence } from "@/domain/owner-spine/survival-evidence";
 import type { BusinessConditionProfile, DomainScore } from "@/domain/owner-spine/contracts";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
@@ -39,7 +40,7 @@ function policiesByMode(): OwnerAdvicePolicy[] {
 
 function input(p: OwnerAdvicePolicy): PortfolioBusinessInput {
   const d = { businessId: "A", state: "TARGET", primaryTarget: { priorityClass: "GROWTH_OPPORTUNITY", title: "t" }, advicePolicy: p } as unknown as CurrentOwnerDecision;
-  return { businessId: "A", name: "A", profile, ownerDecision: d, staleDomains: [] };
+  return { businessId: "A", name: "A", profile, ownerDecision: d, staleDomains: [], survivalEvidence: assessSurvivalEvidence({ domainsPresent: ["sales"], staleDomains: [], financeLiquidityUnconfirmed: false, cashflowPosition: null }) };
 }
 
 describe("A2 governance — canonical projection, no second policy", () => {
@@ -92,8 +93,10 @@ describe("A2 governance — canonical projection, no second policy", () => {
     const s = src("services/owner-portfolio/portfolio.service.ts");
     expect(s).toMatch(/resolveOwnerHome\(/);
     expect(s).toMatch(/staleDomains:\s*resolved\.staleDomains/);
+    expect(s).toMatch(/survivalEvidence:\s*resolved\.survivalEvidence/);
     const h = src("services/owner-home/home.service.ts");
-    expect(h).toMatch(/\n\s+staleDomains,\n\s+\};\n\}/); // returned beside `home` and `gate`
+    expect(h).toMatch(/\n\s+staleDomains,\n/); // returned beside `home` and `gate`
+    expect(h).toMatch(/survivalEvidence:\s*assessSurvivalEvidence\(/);
     // The public Home payload type does not carry it.
     expect(h.slice(h.indexOf("export interface OwnerHomeResult"), h.indexOf("export async function getOwnerHome"))).not.toContain("staleDomains");
   });

@@ -29,6 +29,13 @@
  */
 import type { FinancialSnapshotInput } from "./types";
 
+/**
+ * The persisted Finance finding that records "physical cash is known, the bank balance is not" (BANK_UNKNOWN). It is
+ * the canonical, persisted trace of an incomplete Finance liquidity position: Finance's numeric risk is NOT a
+ * measurement of that position, so consumers that clear material advice must read this fact, not the number alone.
+ */
+export const LIQUIDITY_UNCONFIRMED_FINDING_CODE = "FIN_LIQUIDITY_UNCONFIRMED";
+
 /** The ONE freshness window for a bank balance relative to the Finance period end. */
 export const BANK_BALANCE_FRESHNESS_DAYS = 45;
 

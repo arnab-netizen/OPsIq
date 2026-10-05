@@ -8,6 +8,7 @@ import type { PortfolioBusinessInput } from "@/domain/owner-portfolio";
 import type { BusinessConditionProfile, DomainScore, OwnerDomain } from "@/domain/owner-spine/contracts";
 import type { CurrentOwnerDecision, OwnerDecisionState, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import { ownerMaterialCommitmentGuard, resolveOwnerAdvicePolicy, type OwnerAdvicePolicy, type OwnerAdvicePolicyInput } from "@/domain/owner-spine/owner-advice-policy";
+import { assessSurvivalEvidence, type SurvivalEvidenceFacts } from "@/domain/owner-spine/survival-evidence";
 
 const NOW = new Date("2026-06-05T00:00:00.000Z");
 
@@ -51,8 +52,13 @@ function decision(businessId: string, p: OwnerAdvicePolicy, priorityClass: Owner
   return { businessId, state, primaryTarget, advicePolicy: p } as unknown as CurrentOwnerDecision;
 }
 
+/** The canonical survival-evidence assessment for a profile's own domains (what Owner Home resolves in production). */
+function evidenceFor(p: BusinessConditionProfile | null, staleDomains: readonly string[], extra: Partial<SurvivalEvidenceFacts> = {}) {
+  return assessSurvivalEvidence({ domainsPresent: (p?.domainScores ?? []).map((d) => d.domain), staleDomains, financeLiquidityUnconfirmed: false, cashflowPosition: null, ...extra });
+}
 function biz(id: string, over: Partial<PortfolioBusinessInput> = {}): PortfolioBusinessInput {
-  return { businessId: id, name: `Biz ${id}`, profile: profile(), ownerDecision: decision(id, policy("SUPPORTED")), staleDomains: [], ...over };
+  const b: PortfolioBusinessInput = { businessId: id, name: `Biz ${id}`, profile: profile(), ownerDecision: decision(id, policy("SUPPORTED")), staleDomains: [], ...over };
+  return "survivalEvidence" in over ? b : { ...b, survivalEvidence: evidenceFor(b.profile, b.staleDomains ?? []) };
 }
 const recId = (inputs: PortfolioBusinessInput[]) => buildPortfolioView(inputs, { now: NOW }).investmentRecommendation?.businessId ?? null;
 
@@ -168,8 +174,9 @@ describe("A2 — freshness reuses canonical staleDomains", () => {
     expect(v.investmentRecommendation).toBeNull();
     expect(v.investmentAssessment.status).toBe("HELD");
   });
-  it("an unrelated stale domain does not block", () => {
-    expect(recId([biz("A", { staleDomains: ["finance"] })])).toBe("A");
+  it("an unrelated stale NON-survival domain does not block", () => {
+    const p = profile({ domainScores: [ds("sales", 90), ds("marketing", 30)] });
+    expect(recId([biz("A", { profile: p, staleDomains: ["marketing"] })])).toBe("A");
   });
   it("tie at the exact max: eligible when at least one supporting domain is current; blocked when all are stale", () => {
     const p = profile({ growthOpportunityScore: 90, domainScores: [ds("sales", 90), ds("marketing", 90)] });

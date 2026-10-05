@@ -10,6 +10,11 @@
  *   - the canonical `staleDomains` (owner-candidate-builder.ts), passed in as context — no freshness rule,
  *     constant or `generatedAt` inference lives in Portfolio.
  *
+ * A numeric survival risk below the bar is a number, not proof: the survival reading must also be complete and current
+ * (`input.survivalEvidence`, resolved once by Owner Home — survival-evidence.ts), and the elected target's canonical INTENT
+ * (`ownerTargetIntent`) must be to grow or execute: PROCESS_OPTIMISATION also holds evidence requests, which come first.
+ * Unknown is neither safe nor dangerous — it withholds the recommendation and says what to confirm; it never alters a score.
+ *
  * Scope boundary: this does NOT make growth scores comparable across businesses or domains. growthOpportunityScore is
  * still a raw max over each domain's own opportunity scale (score-semantics.ts); that is a separate, known
  * limitation (P2) and no formula, weight, rescaling or threshold is introduced or changed here.
@@ -17,7 +22,9 @@
  * Fail closed: a missing canonical decision, a decision for another business, or unknown freshness never qualifies.
  */
 import { clampScore } from "@/domain/owner-spine/contracts";
-import { OWNER_PRIORITY_CLASS_LABEL, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { OWNER_PRIORITY_CLASS_LABEL, ownerDomainLabel, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { ownerTargetIntent, type OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
+import { isSurvivalDomain } from "@/domain/owner-spine/survival-evidence";
 import { ownerMaterialCommitmentGuard } from "@/domain/owner-spine/owner-advice-policy";
 import type { PortfolioBusinessInput } from "./types";
 import type { PortfolioThresholds } from "./thresholds";
@@ -33,11 +40,23 @@ export type PortfolioInvestmentBlockReason =
   | "NO_EVIDENCE"
   | "ADVICE_POLICY_PROHIBITS_COMMITMENT"
   | "PRIMARY_CONCERN_COMES_FIRST"
+  | "EVIDENCE_REQUEST_COMES_FIRST"
+  | "SURVIVAL_LIQUIDITY_UNCONFIRMED"
+  | "SURVIVAL_CASHFLOW_POSITION_INCOMPLETE"
+  | "SURVIVAL_EVIDENCE_OUT_OF_DATE"
+  | "SURVIVAL_EVIDENCE_UNVERIFIABLE"
   | "GROWTH_SIGNAL_OUT_OF_DATE"
   | "GROWTH_SIGNAL_UNVERIFIABLE";
 
 /** The canonical classes that may host a growth/investment recommendation (everything else comes first, fail closed). */
 const GROWTH_COMPATIBLE_CLASSES: ReadonlySet<OwnerPriorityClass> = new Set<OwnerPriorityClass>(["GROWTH_OPPORTUNITY", "PROCESS_OPTIMISATION"]);
+
+/**
+ * Of the growth-compatible classes, only a target whose canonical INTENT is to grow or to execute improvement work may host an
+ * investment recommendation. PROCESS_OPTIMISATION also holds evidence requests (e.g. "add your bank balance"), whose
+ * canonical intent is EVIDENCE; the intent comes from `ownerTargetIntent`, never from a code list kept here.
+ */
+const INVESTMENT_COMPATIBLE_INTENTS: ReadonlySet<OwnerTargetIntent> = new Set<OwnerTargetIntent>(["GROW", "EXECUTE"]);
 
 export type PortfolioInvestmentEligibility =
   | { eligible: true }
@@ -98,6 +117,23 @@ export function assessPortfolioInvestmentEligibility(input: PortfolioBusinessInp
     return held("ADVICE_POLICY_PROHIBITS_COMMITMENT", d.advicePolicy.ownerStatement, [...d.advicePolicy.reasons], d.advicePolicy.nextEvidenceAction || guard.prohibition);
   }
 
+  // (C2) A numeric survival risk below the bar is a number, not proof. The survival reading must be sufficiently evidenced
+  // (complete and current) — resolved once by Owner Home (survival-evidence.ts). Unknown is neither safe nor dangerous: it withholds clearance.
+  const se = input.survivalEvidence;
+  if (!se || p.domainScores.some((dm) => isSurvivalDomain(dm.domain) && !se.coveredDomains.includes(dm.domain))) {
+    return held("SURVIVAL_EVIDENCE_UNVERIFIABLE", "OpsIQ could not confirm that the figures behind this business's survival reading are complete and current, so it will not recommend committing more money yet.", [], "Reload the portfolio, then reassess.");
+  }
+  if (se.financeLiquidityUnconfirmed) {
+    return held("SURVIVAL_LIQUIDITY_UNCONFIRMED", "Your bank balance is not confirmed, so OpsIQ cannot yet say how much cash this business has. It will not recommend committing more money until it is.", [], "Confirm the bank balance (enter 0 if there is none) in Guided setup or Cashflow and re-run the Finance diagnosis; OpsIQ will then reassess.");
+  }
+  if (se.cashflowPositionIncomplete) {
+    return held("SURVIVAL_CASHFLOW_POSITION_INCOMPLETE", "Your latest cash-flow check does not include both cash in hand and the bank balance, so OpsIQ cannot confirm your total cash. It will not recommend committing more money until it can.", [], "Record a current cash-flow check that includes both cash in hand and the bank balance; OpsIQ will then reassess.");
+  }
+  if (se.staleSurvivalDomains.length > 0) {
+    const labels = se.staleSurvivalDomains.map((dm) => ownerDomainLabel(dm)).join(", ");
+    return held("SURVIVAL_EVIDENCE_OUT_OF_DATE", `The ${labels} figures behind this business's survival reading are out of date, so OpsIQ will not rely on them to recommend committing more money.`, [], `Update the ${labels} figures and re-run their diagnosis; OpsIQ will then reassess.`);
+  }
+
   // (D) A present, higher-priority canonical concern is handled before growth spending.
   if (d.state === "NO_EVIDENCE") {
     return held("NO_EVIDENCE", "No evidence supports a recommendation for this business yet.", [], "Add the business's numbers and run a diagnosis, then reassess.");
@@ -109,6 +145,10 @@ export function assessPortfolioInvestmentEligibility(input: PortfolioBusinessInp
   if (target && !GROWTH_COMPATIBLE_CLASSES.has(target.priorityClass)) {
     const concern = OWNER_PRIORITY_CLASS_LABEL[target.priorityClass];
     return held("PRIMARY_CONCERN_COMES_FIRST", `This business's main concern right now is ${concern}; handle that before investing more.`, [`Main target: ${target.title}`], "Resolve or complete the main target, then OpsIQ will reassess.");
+  }
+
+  if (target && !INVESTMENT_COMPATIBLE_INTENTS.has(ownerTargetIntent(target))) {
+    return held("EVIDENCE_REQUEST_COMES_FIRST", `This business's main step right now is "${target.title}", which comes before committing more money.`, [], "Complete that step; OpsIQ will then reassess.");
   }
 
   // Freshness: the SAME canonical staleDomains the decision was resolved with. Unknown freshness fails closed.
