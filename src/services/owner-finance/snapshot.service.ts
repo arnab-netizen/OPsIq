@@ -16,6 +16,7 @@ import { ConflictError, NotFoundError } from "@/infra/errors";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
+import type { CashSemantics } from "@/domain/owner-finance/liquidity";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
 /** Map the validated API input to the engine input shape (refund/rework/complaint merged). */
@@ -58,8 +59,13 @@ export function toFinanceInput(input: FinancialSnapshotCreateInput): FinancialSn
   };
 }
 
-/** Map a persisted snapshot row back to the engine input shape. */
-export function rowToFinanceInput(row: any): FinancialSnapshotInput {
+/**
+ * Map a persisted snapshot row back to the engine input shape.
+ * `cashSemantics` is the meaning of the row's `cashOnHand`, resolved through the amendment lineage by
+ * `loadFinanceEngineInput` (liquidity.service.ts). A bare row has no lineage context, so the fallback is
+ * the conservative LEGACY_AMBIGUOUS: bank is never added on top of a value that may already include it.
+ */
+export function rowToFinanceInput(row: any, cashSemantics: CashSemantics = "LEGACY_AMBIGUOUS"): FinancialSnapshotInput {
   return {
     periodStart: row.periodStart instanceof Date ? row.periodStart.toISOString() : row.periodStart,
     periodEnd: row.periodEnd instanceof Date ? row.periodEnd.toISOString() : row.periodEnd,
@@ -91,7 +97,26 @@ export function rowToFinanceInput(row: any): FinancialSnapshotInput {
     orderCount: row.orderCount ?? undefined,
     customerCount: row.customerCount ?? undefined,
     notes: row.notes ?? undefined,
+    // Which meaning of cashOnHand the row carries (physical-only vs pre-#586 "cash and bank").
+    cashSemantics,
   };
+}
+
+/**
+ * Every version of ONE Finance snapshot (the rows sharing a workspace, business and period) with only the
+ * fields cash-lineage resolution needs. Workspace + business scoped; a read of the model by its own
+ * service, used to resolve how `cashOnHand` should be read through amendments.
+ */
+export async function listFinancialSnapshotVersions(
+  workspaceId: string,
+  businessId: string,
+  periodStart: Date,
+  periodEnd: Date
+) {
+  return db.ownerFinancialSnapshot.findMany({
+    where: { workspaceId, businessId, periodStart, periodEnd },
+    select: { id: true, version: true, supersededById: true, createdAt: true, cashOnHand: true, changedFields: true },
+  });
 }
 
 export async function createFinancialSnapshot(

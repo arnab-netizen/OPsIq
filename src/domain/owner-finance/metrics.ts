@@ -9,6 +9,7 @@
  *   totalCosts         = fixedCostsTotal + variableCostsTotal + marketingSpend
  * (marketingSpend must be reported separately, not folded into the aggregates.)
  */
+import { resolveLiquidity } from "./liquidity";
 import { clampScore } from "@/domain/owner-spine/contracts";
 import type {
   FinancialSnapshotInput,
@@ -129,7 +130,9 @@ export function dailyBreakEvenRevenue(input: FinancialSnapshotInput): number | n
 // --- cash / debt / working capital -------------------------------------------
 
 export function cashRunwayDays(input: FinancialSnapshotInput): number | null {
-  const cash = num(input.cashOnHand);
+  // Runway is a claim about TOTAL liquidity: it abstains (null) unless physical cash AND bank cash are
+  // both known (liquidity.ts). Physical cash 0 with an unknown bank balance is not zero liquidity.
+  const cash = resolveLiquidity(input).totalLiquidFunds;
   const profit = netProfit(input);
   const days = periodDays(input);
   if (cash === null || profit === null || days === null) return null;
@@ -142,12 +145,11 @@ export function cashRunwayDays(input: FinancialSnapshotInput): number | null {
 
 /**
  * Cash divided by daily total costs — measures absolute cash cushion independent of profitability.
- * Uses total liquid funds = cashOnHand + bankBalance (when bank balance is available from a
- * compatible cashflow snapshot, enriched by the service layer). Fails closed: when neither
- * cashOnHand nor bankBalance is present, returns null rather than zero.
+ * Uses TOTAL LIQUID FUNDS from the one liquidity contract (liquidity.ts): physical cash + bank balance,
+ * only when both are known. Fails closed: an unknown part makes this null rather than a partial figure.
  */
 export function cashDaysOfCosts(input: FinancialSnapshotInput): number | null {
-  const liquidFunds = sumPresent(input.cashOnHand, input.bankBalance);
+  const liquidFunds = resolveLiquidity(input).totalLiquidFunds;
   const costs = totalCosts(input);
   const days = periodDays(input);
   if (liquidFunds === null || costs === null || days === null || costs < 1) return null;
@@ -443,6 +445,8 @@ export function computeFinancialMetrics(
     dailyBreakEvenRevenue: dailyBreakEvenRevenue(input),
     cashRunwayDays: cashRunwayDays(input),
     cashDaysOfCosts: cashDaysOfCosts(input),
+    totalLiquidFunds: resolveLiquidity(input).totalLiquidFunds,
+    liquidityStatus: resolveLiquidity(input).status,
     debtServicePressurePct: debtServicePressurePct(input),
     receivablesPressurePct: receivablesPressurePct(input),
     payablesPressurePct: payablesPressurePct(input),

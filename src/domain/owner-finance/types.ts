@@ -58,6 +58,11 @@ export interface FinancialSnapshotInput {
    * compatible cashflow snapshot exists (fail-closed, not zero).
    */
   bankBalance?: number;
+  /**
+   * What `cashOnHand` meant when this snapshot was entered (liquidity.ts). Set by the service layer from
+   * the row's creation time; absent means the current meaning (physical cash only).
+   */
+  cashSemantics?: "PHYSICAL_ONLY" | "LEGACY_AMBIGUOUS";
   receivables?: number;
   receivablesOverdue?: number;
   payables?: number;
@@ -90,6 +95,10 @@ export interface FinancialDerivedMetrics {
   dailyBreakEvenRevenue: number | null;
   cashRunwayDays: number | null;
   cashDaysOfCosts: number | null; // cash / daily cost — valid even when profitable
+  /** Physical + bank cash — ONLY when both are known (liquidity.ts); `null` otherwise, never a partial sum. */
+  totalLiquidFunds: number | null;
+  /** Whether total liquidity is a fact: COMPLETE | BANK_UNKNOWN | PHYSICAL_UNKNOWN | UNKNOWN. */
+  liquidityStatus: "COMPLETE" | "BANK_UNKNOWN" | "PHYSICAL_UNKNOWN" | "UNKNOWN";
   debtServicePressurePct: number | null;
   receivablesPressurePct: number | null;
   payablesPressurePct: number | null;

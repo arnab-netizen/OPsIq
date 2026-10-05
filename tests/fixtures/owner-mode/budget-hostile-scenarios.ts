@@ -33,7 +33,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "revenue_up_profit_down",
     description: "Revenue up, profit down — must not celebrate revenue; fix margin.",
     input: {
-      finance: base({ revenue: 500000, costOfGoodsOrServices: 380000, fixedCosts: 110000, cashOnHand: 200000 }),
+      finance: base({ revenue: 500000, costOfGoodsOrServices: 380000, fixedCosts: 110000, cashOnHand: 200000, bankBalance: 0 }),
       dataConfidence: "OPERATIONAL",
     },
     expectedMode: "PROFIT_INCREASE",
@@ -43,7 +43,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "cash_safe_but_committed_shortfall",
     description: "Cash looks safe but committed payroll/tax creates a near-term shortfall.",
     input: {
-      finance: base({ revenue: 300000, costOfGoodsOrServices: 150000, fixedCosts: 100000, cashOnHand: 120000 }),
+      finance: base({ revenue: 300000, costOfGoodsOrServices: 150000, fixedCosts: 100000, cashOnHand: 120000, bankBalance: 0 }),
       statutoryReserveRequired: 60000,
       obligations: [
         { label: "Payroll", amount: 90000, dueInDays: 5, kind: "payroll" },
@@ -59,7 +59,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     description: "Owner wants to scale but cash weak (burning) / owner-dependency high — must not scale.",
     input: {
       // Net loss → short runway → cash not safe → scale/grow blocked.
-      finance: base({ revenue: 200000, costOfGoodsOrServices: 150000, fixedCosts: 80000, cashOnHand: 30000 }),
+      finance: base({ revenue: 200000, costOfGoodsOrServices: 150000, fixedCosts: 80000, cashOnHand: 30000, bankBalance: 0 }),
       ownerGoal: "scale",
       ownerDependencyHigh: true,
       demandRepeatable: false,
@@ -72,7 +72,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "discount_kills_margin",
     description: "Sales rose via discounts but margin collapsed — profit increase, not more spend.",
     input: {
-      finance: base({ revenue: 400000, costOfGoodsOrServices: 300000, fixedCosts: 80000, discountAmount: 60000, cashOnHand: 150000 }),
+      finance: base({ revenue: 400000, costOfGoodsOrServices: 300000, fixedCosts: 80000, discountAmount: 60000, cashOnHand: 150000, bankBalance: 0 }),
       dataConfidence: "OPERATIONAL",
     },
     expectedMode: "PROFIT_INCREASE",
@@ -93,7 +93,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "healthy_growth_ready",
     description: "Cash safe, margins healthy, capacity available → controlled GROW.",
     input: {
-      finance: base({ revenue: 500000, costOfGoodsOrServices: 250000, fixedCosts: 150000, cashOnHand: 400000 }),
+      finance: base({ revenue: 500000, costOfGoodsOrServices: 250000, fixedCosts: 150000, cashOnHand: 400000, bankBalance: 0 }),
       unitEconomicsPositive: true,
       capacityUtilizationPct: 60,
       demandRepeatable: false,
@@ -106,7 +106,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "scale_ready_verified",
     description: "Verified data, repeatable demand, low owner-dependency, strong margin → SCALE.",
     input: {
-      finance: base({ revenue: 900000, costOfGoodsOrServices: 400000, fixedCosts: 300000, cashOnHand: 800000 }),
+      finance: base({ revenue: 900000, costOfGoodsOrServices: 400000, fixedCosts: 300000, cashOnHand: 800000, bankBalance: 0 }),
       unitEconomicsPositive: true,
       capacityUtilizationPct: 92,
       demandRepeatable: true,
@@ -120,7 +120,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "control_breach_forces_emergency",
     description: "Active control breach forces EMERGENCY regardless of healthy cash.",
     input: {
-      finance: base({ revenue: 600000, costOfGoodsOrServices: 300000, fixedCosts: 150000, cashOnHand: 500000 }),
+      finance: base({ revenue: 600000, costOfGoodsOrServices: 300000, fixedCosts: 150000, cashOnHand: 500000, bankBalance: 0 }),
       controlBreach: true,
       dataConfidence: "OPERATIONAL",
     },
@@ -131,7 +131,7 @@ export const HOSTILE_BUDGET_SCENARIOS: HostileBudgetScenario[] = [
     id: "growth_blocked_when_overloaded",
     description: "Workload overloaded / quality slipping → stabilize, do not push growth.",
     input: {
-      finance: base({ revenue: 450000, costOfGoodsOrServices: 200000, fixedCosts: 120000, cashOnHand: 300000 }),
+      finance: base({ revenue: 450000, costOfGoodsOrServices: 200000, fixedCosts: 120000, cashOnHand: 300000, bankBalance: 0 }),
       unitEconomicsPositive: true,
       workloadOverloaded: true,
       qualityDeteriorating: true,

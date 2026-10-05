@@ -466,6 +466,16 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     effortScore: 20,
     ownerRole: "owner",
   },
+  FIN_LIQUIDITY_UNCONFIRMED: {
+    recommendationCode: "FINREC_CONFIRM_BANK_BALANCE",
+    category: "improve_data_quality",
+    title: "Add your bank balance",
+    requiredOwnerAction: "Add your bank balance in Guided setup or on the Cashflow page. If you hold no money in the bank, enter 0 explicitly so OpsIQ can confirm your total cash.",
+    verificationMethod: "On your next diagnosis, confirm OpsIQ shows how many days your cash will last instead of asking for the bank balance.",
+    expectedTimeframeDays: 7,
+    effortScore: 10,
+    ownerRole: "owner",
+  },
   FIN_NOTABLE_OUTSTANDING_DEBT: {
     recommendationCode: "FINREC_ENTER_DEBT_REPAYMENT",
     category: "reduce_debt_pressure",

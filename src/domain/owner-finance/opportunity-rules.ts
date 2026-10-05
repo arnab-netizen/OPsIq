@@ -8,6 +8,7 @@
 import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
+import { LIQUIDITY_UNCONFIRMED_STATEMENT } from "./liquidity";
 import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
@@ -291,6 +292,33 @@ export function buildFinanceOpportunityFindings(
           "enter the monthly repayment amount (or 0 if there is no fixed schedule)",
         ],
         verificationMetric: "debtServicePressurePct",
+      })
+    );
+  }
+
+  // Liquidity is incomplete: physical cash is recorded but the bank balance is unknown, so total
+  // liquid funds (and therefore cash runway) cannot be confirmed. A data request — never a survival
+  // verdict, and never a claim that liquidity is zero. Enter 0 for the bank if there is none.
+  if (m.liquidityStatus === "BANK_UNKNOWN") {
+    findings.push(
+      opportunity({
+        code: "FIN_LIQUIDITY_UNCONFIRMED",
+        title: "Add your bank balance to confirm how long your cash will last",
+        summary: LIQUIDITY_UNCONFIRMED_STATEMENT,
+        sourceMetric: "totalLiquidFunds",
+        sourceValue: null,
+        threshold: null,
+        severity: "medium",
+        confidence: 1,
+        impactScore: 40,
+        urgencyScore: 30,
+        evidence: [
+          "cash in hand is recorded; bank balance is not",
+          "cash runway and days of cash cover need both cash in hand and the bank balance",
+          "enter the bank balance (or 0 if you hold nothing in the bank) in Guided setup or Cashflow",
+        ],
+        missingData: ["bankBalance"],
+        verificationMetric: "totalLiquidFunds",
       })
     );
   }

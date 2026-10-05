@@ -20,7 +20,7 @@ import { HOSTILE_BUDGET_SCENARIOS } from "../../../tests/fixtures/owner-mode/bud
 describe("Budget Mode Classifier", () => {
   it("classifies EMERGENCY on reserve breach", () => {
     const r = classifyBudgetMode({
-      finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 100000, cashOnHand: 20000 },
+      finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 100000, cashOnHand: 20000, bankBalance: 0 },
       statutoryReserveRequired: 50000,
       dataConfidence: "OPERATIONAL",
     });
@@ -40,7 +40,7 @@ describe("Budget Mode Classifier", () => {
 
   it("requires VERIFIED confidence for SCALE (OPERATIONAL data cannot scale)", () => {
     const operational = classifyBudgetMode({
-      finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 900000, costOfGoodsOrServices: 400000, fixedCosts: 300000, cashOnHand: 800000 },
+      finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 900000, costOfGoodsOrServices: 400000, fixedCosts: 300000, cashOnHand: 800000, bankBalance: 0 },
       unitEconomicsPositive: true, demandRepeatable: true, ownerDependencyHigh: false, dataConfidence: "OPERATIONAL",
     });
     expect(operational.primaryMode).not.toBe("SCALE");
@@ -154,7 +154,7 @@ describe("Updated Owner Plan Composer", () => {
   it("produces a specific, non-generic plan with actions and signals", () => {
     const plan = composeUpdatedPlan({
       assessment: {
-        finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 300000, costOfGoodsOrServices: 150000, fixedCosts: 100000, cashOnHand: 120000 },
+        finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 300000, costOfGoodsOrServices: 150000, fixedCosts: 100000, cashOnHand: 120000, bankBalance: 0 },
         statutoryReserveRequired: 60000,
         obligations: [{ label: "Payroll", amount: 90000, dueInDays: 5, kind: "payroll" }],
         dataConfidence: "OPERATIONAL",
@@ -202,7 +202,7 @@ describe("Owner budget plan mode contract", () => {
   it("EMERGENCY mode plan blocks high-risk decisions (decisionType is BLOCK)", () => {
     const plan = composeUpdatedPlan({
       assessment: {
-        finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 300000, costOfGoodsOrServices: 150000, fixedCosts: 100000, cashOnHand: 120000 },
+        finance: { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 300000, costOfGoodsOrServices: 150000, fixedCosts: 100000, cashOnHand: 120000, bankBalance: 0 },
         statutoryReserveRequired: 60000,
         obligations: [{ label: "Payroll", amount: 90000, dueInDays: 5, kind: "payroll" }],
         dataConfidence: "OPERATIONAL",

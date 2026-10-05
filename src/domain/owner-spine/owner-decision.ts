@@ -187,6 +187,8 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "SOP_OPP_DATA_QUALITY", "MKT_OPP_DATA_QUALITY",
     // A low-severity "enter the EMI for the recorded debt" data request (opportunity-rules.ts).
     "FIN_NOTABLE_OUTSTANDING_DEBT",
+    // A medium-severity "add the bank balance to confirm total cash" data request (opportunity-rules.ts).
+    "FIN_LIQUIDITY_UNCONFIRMED",
     "OPS_OPP_CLOSE_SOP_GAP", "OPS_OPP_CUT_REWORK", "OPS_OPP_RECLAIM_IDLE", "OPS_OPP_RECOVER_DELAYS",
     "OPS_OPP_USE_CAPACITY_HEADROOM",
     "SOP_OPP_CLEAR_OVERDUE", "SOP_OPP_CLOSE_COVERAGE_GAP", "SOP_OPP_CONVERT_TO_SOP", "SOP_OPP_RAISE_VERIFICATION",

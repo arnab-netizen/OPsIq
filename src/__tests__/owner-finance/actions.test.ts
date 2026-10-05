@@ -28,7 +28,7 @@ function profitable(): FinancialSnapshotInput {
   return {
     periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", businessModel: "service",
     revenue: 100000, costOfGoodsOrServices: 30000, rent: 10000, salaryPayroll: 20000,
-    utilities: 5000, marketingSpend: 5000, cashOnHand: 200000, orderCount: 1000, customerCount: 800,
+    utilities: 5000, marketingSpend: 5000, cashOnHand: 200000, bankBalance: 0, orderCount: 1000, customerCount: 800,
   };
 }
 
@@ -37,7 +37,7 @@ function perfect(): FinancialSnapshotInput {
   return {
     periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", businessModel: "service",
     revenue: 100000, costOfGoodsOrServices: 20000, variableCosts: 20000, fixedCosts: 20000,
-    salaryPayroll: 15000, marketingSpend: 5000, cashOnHand: 500000,
+    salaryPayroll: 15000, marketingSpend: 5000, cashOnHand: 500000, bankBalance: 0,
     loanEmiDebtPayments: 0, receivables: 0, payables: 0, ownerWithdrawals: 0,
     discountAmount: 0, refundAmount: 0, orderCount: 1000, customerCount: 800,
   };
@@ -68,7 +68,7 @@ describe("owner-finance/actions — module contract assertions", () => {
 describe("owner-finance planner — recommendation/action creation", () => {
   it("negative net margin creates a margin-improvement action", () => {
     const p = plan({ periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 100000 });
+      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 100000, bankBalance: 0 });
     expect(actionCodes(p)).toContain("FIN_NEGATIVE_NET_MARGIN");
     const rec = p.recommendations.find((r) => r.findingCode === "FIN_NEGATIVE_NET_MARGIN");
     expect(rec?.category).toBe("improve_margin");
@@ -143,7 +143,7 @@ describe("owner-finance planner — priority & ranking", () => {
   it("critical survival action outranks a lower-severity growth action", () => {
     // Insolvent runway (critical) alongside a data-quality (low) opportunity.
     const p = plan({ periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000 });
+      revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000, bankBalance: 0 });
     const survival = p.actions.find((a) => a.findingCode === "FIN_INSOLVENT_RUNWAY")!;
     const growth = p.actions.find((a) => a.findingCode === "FIN_OPP_DATA_QUALITY");
     expect(survival).toBeDefined();
@@ -208,12 +208,12 @@ describe("owner-finance/recommendations — existing-data verification wording",
   };
   // Loss-making business with a controllable cash balance (runway = cash / daily burn).
   const lossMaking = (cashOnHand: number): FinancialSnapshotInput => ({
-    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand,
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand, bankBalance: 0,
     receivables: 0, payables: 0, discountAmount: 0, refundAmount: 0, loanEmiDebtPayments: 0,
     ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
   });
   const pressured: FinancialSnapshotInput = {
-    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000,
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000, bankBalance: 0,
     receivables: 40000, payables: 50000, discountAmount: 15000, refundAmount: 5000,
     loanEmiDebtPayments: 0, ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
   };
@@ -248,7 +248,7 @@ describe("owner-finance/recommendations — existing-data verification wording",
   });
 
   it("FIN_LOW_ABSOLUTE_CASH shows actual days of costs and the stored 14-day threshold", () => {
-    const { rec } = recFor("FIN_LOW_ABSOLUTE_CASH", { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000 });
+    const { rec } = recFor("FIN_LOW_ABSOLUTE_CASH", { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000, bankBalance: 0 });
     expect(rec.verificationMethod).toBe(
       "Next month, check how many days of your costs your cash would cover. Current: 10 days. Target: at least 14 days."
     );
@@ -264,7 +264,7 @@ describe("owner-finance/recommendations — existing-data verification wording",
   });
 
   it("FIN_OPP_MARGIN_IMPROVEMENT uses the healthy net-margin target", () => {
-    const { finding, rec } = recFor("FIN_OPP_MARGIN_IMPROVEMENT", { ...base, revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 40000, cashOnHand: 400000, receivables: 0, payables: 0 });
+    const { finding, rec } = recFor("FIN_OPP_MARGIN_IMPROVEMENT", { ...base, revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 40000, cashOnHand: 400000, bankBalance: 0, receivables: 0, payables: 0 });
     expect(rec.verificationMethod).toContain(`Current: ${finding.sourceValue}%.`);
     expect(rec.verificationMethod).toContain(`Target: at least ${finding.threshold}%.`);
   });
@@ -315,23 +315,23 @@ describe("owner-finance/recommendations — existing-data verification wording",
 describe("owner-finance/actions — canonical evidence rationale (read-time, finding-specific)", () => {
   const base = { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" };
   const loss = (cashOnHand: number): FinancialSnapshotInput => ({
-    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand,
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand, bankBalance: 0,
     receivables: 0, payables: 0, discountAmount: 0, refundAmount: 0, loanEmiDebtPayments: 0,
     ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
   });
   const pressured: FinancialSnapshotInput = {
-    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000,
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000, bankBalance: 0,
     receivables: 40000, payables: 50000, discountAmount: 15000, refundAmount: 5000,
     loanEmiDebtPayments: 40000, ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
   };
   const inputs: FinancialSnapshotInput[] = [
     pressured, loss(3000), loss(10000), loss(22000), loss(20000),
-    { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000 },
-    { ...base, revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 40000, cashOnHand: 400000, receivables: 0, payables: 0 },
-    { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 20000, salaryPayroll: 50000, cashOnHand: 400000, totalDebtOutstanding: 1100000 },
-    { ...base, revenue: 100000, costOfGoodsOrServices: 120000, cashOnHand: 400000 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000, bankBalance: 0 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 40000, cashOnHand: 400000, bankBalance: 0, receivables: 0, payables: 0 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 20000, salaryPayroll: 50000, cashOnHand: 400000, bankBalance: 0, totalDebtOutstanding: 1100000 },
+    { ...base, revenue: 100000, costOfGoodsOrServices: 120000, cashOnHand: 400000, bankBalance: 0 },
     { ...base, revenue: 100000 },
-    { ...base, currency: "??", revenue: 100000, costOfGoodsOrServices: 20000, cashOnHand: 400000 },
+    { ...base, currency: "??", revenue: 100000, costOfGoodsOrServices: 20000, cashOnHand: 400000, bankBalance: 0 },
   ];
   const findings = inputs.flatMap((i) => diagnoseFinanceSnapshot(i, { now: NOW }).findings);
   const find = (code: string, input: FinancialSnapshotInput) => {
@@ -472,7 +472,7 @@ describe("owner-finance/actions — canonical evidence rationale (read-time, fin
 describe("owner-finance/recommendations — final semantic copy cleanup", () => {
   const base = { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" };
   const lossMaking = (cashOnHand: number): FinancialSnapshotInput => ({
-    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand,
+    ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand, bankBalance: 0,
     receivables: 0, payables: 0, discountAmount: 0, refundAmount: 0, loanEmiDebtPayments: 0,
     ownerWithdrawals: 0, orderCount: 10, customerCount: 5,
   });
@@ -488,7 +488,7 @@ describe("owner-finance/recommendations — final semantic copy cleanup", () => 
     ["FIN_NEGATIVE_GROSS_MARGIN", { revenue: 100000, costOfGoodsOrServices: 120000, fixedCosts: 0 }, { revenue: 100000, costOfGoodsOrServices: 100000, fixedCosts: 0 }],
     ["FIN_NEGATIVE_NET_MARGIN", { revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 60000 }, { revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 50000 }],
   ])("%s: wording states the 0%% boundary and exactly 0 does not fire the rule", (code, losing, breakEven) => {
-    const mk = (o: object): FinancialSnapshotInput => ({ ...base, cashOnHand: 400000, receivables: 0, payables: 0, orderCount: 10, customerCount: 5, ...o } as FinancialSnapshotInput);
+    const mk = (o: object): FinancialSnapshotInput => ({ ...base, cashOnHand: 400000, bankBalance: 0, receivables: 0, payables: 0, orderCount: 10, customerCount: 5, ...o } as FinancialSnapshotInput);
     const finding = findingFor(code, mk(losing));
     expect(finding, "negative margin should fire").toBeDefined();
     const text = buildFinanceRecommendation(finding!)!.verificationMethod;
@@ -498,7 +498,7 @@ describe("owner-finance/recommendations — final semantic copy cleanup", () => 
   });
 
   it("FIN_HIGH_RECEIVABLES title does not claim receivables are overdue", () => {
-    const finding = findingFor("FIN_HIGH_RECEIVABLES", { ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000, receivables: 40000, payables: 0, orderCount: 10, customerCount: 5 });
+    const finding = findingFor("FIN_HIGH_RECEIVABLES", { ...base, revenue: 100000, costOfGoodsOrServices: 60000, fixedCosts: 60000, cashOnHand: 400000, bankBalance: 0, receivables: 40000, payables: 0, orderCount: 10, customerCount: 5 });
     const rec = buildFinanceRecommendation(finding!)!;
     expect(rec.title).toBe("Collect money customers owe you");
     expect(rec.title.toLowerCase()).not.toContain("overdue");
@@ -535,7 +535,7 @@ describe("owner-finance/recommendations — final semantic copy cleanup", () => 
   });
 
   it("FIN_LOW_ABSOLUTE_CASH still measures days of costs, not rate of loss", () => {
-    const finding = findingFor("FIN_LOW_ABSOLUTE_CASH", { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000 })!;
+    const finding = findingFor("FIN_LOW_ABSOLUTE_CASH", { ...base, revenue: 100000, costOfGoodsOrServices: 20000, fixedCosts: 40000, cashOnHand: 20000, bankBalance: 0 })!;
     const text = buildFinanceRecommendation(finding)!.verificationMethod;
     expect(text).toContain("days of your costs");
     expect(text).not.toContain("rate of loss");

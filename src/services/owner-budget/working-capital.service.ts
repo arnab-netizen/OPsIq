@@ -15,6 +15,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { netMarginPct } from "@/domain/owner-finance/metrics";
+import { resolveLiquidity } from "@/domain/owner-finance/liquidity";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import {
   assessWorkingCapitalAgeing,
@@ -107,7 +108,7 @@ export async function deriveAgeingForReassessment(
   }));
 
   const reserve = Math.max(0, reserveRequired ?? 0);
-  const cash = typeof finance.cashOnHand === "number" ? finance.cashOnHand : null;
+  const cash = resolveLiquidity(finance).totalLiquidFunds;
   const freeCashAfterReserve = cash === null ? null : cash - reserve;
   const margin = netMarginPct(finance);
   const netProfitable = margin === null ? null : margin > 0;

@@ -156,6 +156,12 @@ const RATIONALE_DEFINITIONS: Record<string, RationaleDefinition> = {
         ? "OpsIQ's confidence in this diagnosis is limited because some useful information is missing or out of date."
         : `OpsIQ's confidence in this diagnosis is ${v} out of 100 because some useful information is missing or out of date.`,
   },
+  // No value is shown: the finding exists precisely because total liquid funds is unknown.
+  FIN_LIQUIDITY_UNCONFIRMED: {
+    metric: "totalLiquidFunds",
+    text: () =>
+      "Your cash in hand is recorded but your bank balance is not, so OpsIQ cannot yet confirm how long your cash will last. This is a missing figure, not a sign that you have no money.",
+  },
   // The source value is a monetary amount and no safe currency context reaches this builder: never shown.
   FIN_NOTABLE_OUTSTANDING_DEBT: {
     metric: "totalDebtOutstanding",

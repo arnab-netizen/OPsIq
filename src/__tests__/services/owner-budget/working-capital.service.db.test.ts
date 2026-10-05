@@ -17,6 +17,7 @@ import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createBudgetPeriod, addBudgetLine, reassessBudget } from "@/services/owner-budget/budget.service";
 import { recordWorkingCapitalItem, listWorkingCapitalItems } from "@/services/owner-budget/working-capital.service";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const ws = () => randomUUID();
@@ -55,6 +56,7 @@ async function seedFinance(workspaceId: string, businessId: string, cashOnHand: 
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 /** Healthy finance + a growth line ⇒ baseline classifies GROW. */

@@ -17,6 +17,7 @@ import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisS
 import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
+import { BANK_BALANCE_FRESHNESS_DAYS } from "@/domain/owner-finance/liquidity";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -229,8 +230,8 @@ export async function getFinanceDashboard(
           : "completed"
         : "provisional";
 
-  // Finance diagnosis dependency tracking: bank-balance enrichment (ownerCashflowSnapshot, ≤45-day
-  // freshness window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
+  // Finance diagnosis dependency tracking: bank-balance enrichment (ownerCashflowSnapshot, within the
+  // liquidity contract's BANK_BALANCE_FRESHNESS_DAYS window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
   // snapshot itself (diagnosis.service.ts). A newer eligible one arriving after the last cycle ran means
   // the existing diagnosis was not computed from all currently-available evidence — recommend a re-run
   // without claiming the snapshot itself is new data.
@@ -239,7 +240,7 @@ export async function getFinanceDashboard(
     const snapshotEnd = diagnosisTargetSnapshot.periodEnd instanceof Date
       ? diagnosisTargetSnapshot.periodEnd
       : new Date(diagnosisTargetSnapshot.periodEnd as string);
-    const freshnessFloor = new Date(snapshotEnd.getTime() - 45 * 86_400_000);
+    const freshnessFloor = new Date(snapshotEnd.getTime() - BANK_BALANCE_FRESHNESS_DAYS * 86_400_000);
     const [newerCashflow, newerIntake] = await Promise.all([
       db.ownerCashflowSnapshot.findFirst({
         where: {
