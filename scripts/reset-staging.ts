@@ -13,8 +13,19 @@
  */
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import { StagingTargetRefusal, assertLocalOrApprovedStagingTarget } from "../src/infra/staging-database-target";
 import * as fs from "fs";
 import * as path from "path";
+
+// This script DELETEs every table. It goes through the Prisma client, not the Prisma CLI, so the CLI datasource guard
+// never sees it: prove the target BEFORE the first statement — positively local, or an approved staging endpoint.
+// (Local compose: set OPSIQ_LOCAL_DB_EXTRA_HOSTS=postgres; staging: OPSIQ_APPROVED_STAGING_ENDPOINT_IDS.)
+try {
+  assertLocalOrApprovedStagingTarget(process.env.DATABASE_URL, process.env);
+} catch (e) {
+  console.error(`[RESET] REFUSED: ${e instanceof StagingTargetRefusal ? e.message : "the database target could not be verified"} No statement was executed.`);
+  process.exit(1);
+}
 
 const prisma = new PrismaClient({
   datasources: {

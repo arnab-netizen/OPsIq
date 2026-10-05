@@ -142,10 +142,10 @@ log "✓ Migrations complete"
 if [ "$RESET_DB" = true ]; then
   log "Resetting database..."
   if [ "$RESEED_DB" = true ]; then
-    $DOCKER_COMPOSE_CMD exec -T app npx ts-node scripts/reset-staging.ts --reseed
+    $DOCKER_COMPOSE_CMD exec -T $PRISMA_LOCAL_ENV app npx ts-node scripts/reset-staging.ts --reseed
     log "✓ Database reset and seeded"
   else
-    $DOCKER_COMPOSE_CMD exec -T app npx ts-node scripts/reset-staging.ts
+    $DOCKER_COMPOSE_CMD exec -T $PRISMA_LOCAL_ENV app npx ts-node scripts/reset-staging.ts
     log "✓ Database reset"
   fi
 fi

@@ -79,7 +79,8 @@
  * `env("DATABASE_URL")` in prisma/schema.prisma and are not routed through here.
  */
 
-import { classifyRemoteDatabaseUrl, effectiveDatabaseHostname } from "./production-db-identity";
+import { classifyRemoteDatabaseUrl } from "./production-db-identity";
+import { StagingTargetRefusal, assertApprovedStagingDatabaseUrl, isPositivelyLocalDatabaseUrl } from "./staging-database-target";
 import { isLoopbackDatabaseUrl } from "./test-database-guard";
 
 export type PrismaTarget = "local" | "test" | "ci" | "staging" | "production-authorized";
@@ -339,24 +340,8 @@ function readTarget(env: ResolveInput["env"]): PrismaTarget | undefined {
   );
 }
 
-function csv(raw: string | undefined): string[] {
-  return (raw ?? "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-/**
- * Positively local: a loopback URL, or a single-label compose service name (no dots, not an IP) that the
- * operator listed in OPSIQ_LOCAL_DB_EXTRA_HOSTS. Anything else — including every dotted remote hostname — is not local.
- */
-function isPositivelyLocal(url: string, env: ResolveInput["env"]): boolean {
-  if (isLoopbackDatabaseUrl(url)) return true;
-  const host = effectiveDatabaseHostname(url);
-  if (host === null) return false;
-  if (host.includes(".") || host.includes(":") || /^\d+$/.test(host)) return false;
-  return csv(env.OPSIQ_LOCAL_DB_EXTRA_HOSTS).includes(host);
-}
+/** Positively local — one definition shared with every other destructive path (staging-database-target.ts). */
+const isPositivelyLocal = isPositivelyLocalDatabaseUrl;
 
 function refuseOperation(target: string, operation: string, allowed: readonly string[], notices: string[]): never {
   throw new PrismaDatasourceError(
@@ -525,26 +510,13 @@ export function resolvePrismaDatasource(input: ResolveInput): ResolveResult {
     if (!(STAGING_ALLOWED_OPERATIONS as readonly string[]).includes(operation)) {
       refuseOperation("staging", operation, STAGING_ALLOWED_OPERATIONS, notices);
     }
-    const host = effectiveDatabaseHostname(url);
-    if (host === null || classifyRemoteDatabaseUrl(url, env) !== "ok") {
-      throw new PrismaDatasourceError(
-        "The staging datasource is not an acceptable remote postgres URL. Refusing.",
-        notices
-      );
-    }
-    const label = host.split(".")[0];
-    if (label.endsWith("-pooler")) {
-      throw new PrismaDatasourceError(
-        "Migrations require the DIRECT (non-pooler) staging endpoint. Refusing a pooled endpoint.",
-        notices
-      );
-    }
-    if (!csv(env.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS).includes(label)) {
-      throw new PrismaDatasourceError(
-        "The staging datasource endpoint is not listed in OPSIQ_APPROVED_STAGING_ENDPOINT_IDS. " +
-          "Refusing to mutate a datasource that was merely labelled staging.",
-        notices
-      );
+    // The ONE staging validator (shared with the staging reset/seed workflows and scripts): valid URL, provable host,
+    // not production, direct endpoint, and an exact match in the approved endpoint allowlist.
+    try {
+      assertApprovedStagingDatabaseUrl(url, env.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS, env);
+    } catch (e) {
+      if (e instanceof StagingTargetRefusal) throw new PrismaDatasourceError(e.message, notices);
+      throw e;
     }
     return { url, target: "staging", mutating, operation, requiresApprovedTestIdentity: false, notices };
   }

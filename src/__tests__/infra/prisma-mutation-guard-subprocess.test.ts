@@ -106,3 +106,46 @@ describe("A3 subprocess: the real Prisma CLI refuses before any mutation can occ
     expect(refused(g.output)).toBe(false);
   });
 });
+
+describe("A3 amendment subprocess: destructive paths outside the Prisma CLI refuse before any statement", () => {
+  const tsx = join(ROOT, "node_modules", ".bin", "tsx");
+  const STG = "postgresql://stg-user:stg-secret@ep-synthetic-stg-9.region.invalid:5432/stg_db_name";
+  const STG_LEAK = ["stg-user", "stg-secret", "ep-synthetic-stg-9", "stg_db_name", "region.invalid"];
+  const exec = (script: string, args: string[], env: Record<string, string>) => {
+    const r = spawnSync(tsx, [join(ROOT, script), ...args], {
+      cwd: ROOT,
+      env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "/tmp", NO_COLOR: "1", ...env },
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    return { status: r.status, output: `${r.stdout ?? ""}\n${r.stderr ?? ""}` };
+  };
+
+  it("the staging preflight CLI passes an approved endpoint and refuses everything else, sanitized", () => {
+    const ok = exec("scripts/assert-approved-staging-database.ts", ["DATABASE_URL"], { DATABASE_URL: STG, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-9" });
+    expect(ok.status).toBe(0);
+    for (const env of [
+      { DATABASE_URL: STG },
+      { DATABASE_URL: STG, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "" },
+      { DATABASE_URL: STG, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-other" },
+      { DATABASE_URL: STG.replace("ep-synthetic-stg-9", "ep-synthetic-stg-9-pooler"), OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-9-pooler" },
+      { DATABASE_URL: `${STG}?hostaddr=203.0.113.9`, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-9" },
+      { DATABASE_URL: STG, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-9", OPSIQ_PRODUCTION_DB_IDENTITIES: "ep-synthetic-stg-9" },
+    ]) {
+      const r = exec("scripts/assert-approved-staging-database.ts", ["DATABASE_URL"], env);
+      expect(r.status, JSON.stringify(Object.keys(env))).toBe(1);
+      expect(r.output).toMatch(/STAGING_TARGET_REFUSED_/);
+      for (const p of STG_LEAK) expect(r.output).not.toContain(p);
+    }
+  });
+
+  it("scripts/reset-staging.ts (DELETE FROM every table) refuses an unverified target before its first statement", () => {
+    for (const env of [{ DATABASE_URL: STG }, { DATABASE_URL: "postgresql://u:p@db.synthetic-remote-9.invalid:5432/d" }, {}]) {
+      const r = exec("scripts/reset-staging.ts", [], env);
+      expect(r.status).toBe(1);
+      expect(r.output).toMatch(/\[RESET\] REFUSED/);
+      expect(r.output).not.toMatch(/Starting staging database reset|Found \d+ tables/);
+      for (const p of [...STG_LEAK, "synthetic-remote-9"]) expect(r.output).not.toContain(p);
+    }
+  });
+});

@@ -84,6 +84,18 @@ against the datasource, not trusted as a label:
   The only production schema mutation path is `.github/workflows/migrate-production.yml`.
 - Local development: `npm run db:migrate:dev | db:migrate:deploy | db:push | db:reset | db:studio`
   already set `OPSIQ_DB_TARGET=local`, so they run only against a loopback `DATABASE_URL`.
+- **Staging approval is one shared rule** (`src/infra/staging-database-target.ts`,
+  `assertApprovedStagingDatabaseUrl`): valid postgres URL with a provable host (no
+  `host`/`hostaddr` override), not a known production endpoint, a direct (non-pooler)
+  endpoint, and an exact match in `OPSIQ_APPROVED_STAGING_ENDPOINT_IDS`; an empty or
+  malformed list refuses. Set that **non-secret** list as a variable on the GitHub
+  Environment `staging` (not a production or repository-wide secret). The Prisma CLI
+  path and every staging path that never loads `prisma.config.ts` use it: the reset
+  workflow's raw `psql DROP SCHEMA` and the staging seed run
+  `scripts/assert-approved-staging-database.ts` on the same secret BEFORE the first
+  write, and `scripts/reset-staging.ts` / `scripts/test-migration-replay.sh` verify
+  their target (local or approved staging / verified test database) before their first
+  statement.
 - Threat model: accidental / operator error. `npx prisma --config <other-file>` bypasses
   `prisma.config.ts` entirely and cannot be intercepted by repository code; repository
   governance (`prisma-mutation-governance.test.ts`) forbids it in every package script,

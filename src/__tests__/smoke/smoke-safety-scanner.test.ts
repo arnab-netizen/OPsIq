@@ -87,6 +87,9 @@ const EXEMPT_SCRIPTS: Record<string, { reason: string }> = {
   "assert-non-production-database.ts": {
     reason: "READ_ONLY identity preflight — one read-only SELECT of the connected database identity; refuses production; makes no HTTP calls and never mutates",
   },
+  "assert-approved-staging-database.ts": {
+    reason: "PURE preflight — validates a staging URL string against the approved-endpoint allowlist; opens no connection, makes no HTTP calls, never mutates, never prints the URL",
+  },
   "smoke-owner-recovery-runtime.ts": {
     reason: "DB_DIRECT — guards against non-localhost DATABASE_URL, not an HTTP mutation script",
   },

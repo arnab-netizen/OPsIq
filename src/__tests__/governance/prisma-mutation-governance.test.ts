@@ -263,3 +263,141 @@ describe("A3 governance: the scanner itself detects the violations it exists to 
     expect(LOOPBACK.test("")).toBe(false);
   });
 });
+
+// ─── A3 amendment: raw (non-Prisma) destructive database operations ───────────────────────────────────────────────
+// `psql` / the Prisma client never load prisma.config.ts, so the CLI datasource guard cannot protect them. Every
+// repository-owned destructive operation against a REMOTE database must prove its target positively BEFORE the first
+// destructive statement, through the one shared validator.
+const RAW_TOOL = /(^|[\s(;&|`])(psql|dropdb|createdb|pg_restore)\b/;
+const DESTRUCTIVE_SQL = /\b(DROP\s+(SCHEMA|DATABASE|TABLE)|TRUNCATE|DELETE\s+FROM|CREATE\s+SCHEMA)\b/;
+const STAGING_PREFLIGHT = /assert-approved-staging-database\.ts\s+([A-Z][A-Z0-9_]*)/;
+
+function loadWorkflow(file: string): Workflow {
+  return parse(readFileSync(join(WF_DIR, file), "utf8")) as Workflow;
+}
+const executableLines = (run: string | undefined) =>
+  (run ?? "").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !/^(echo|printf)\b/.test(l));
+
+interface RawDestructive { file: string; job: string; index: number; step: Step; job_: Job; wf: Workflow }
+const rawDestructive: RawDestructive[] = [];
+for (const file of workflows) {
+  const wf = loadWorkflow(file);
+  for (const [jobName, job] of Object.entries(wf.jobs ?? {})) {
+    (job.steps ?? []).forEach((step, index) => {
+      const lines = executableLines(step.run);
+      if (lines.some((l) => RAW_TOOL.test(l)) && DESTRUCTIVE_SQL.test(step.run ?? "")) {
+        rawDestructive.push({ file, job: jobName, index, step, job_: job, wf });
+      }
+    });
+  }
+}
+const effectiveEnv = (r: RawDestructive): Env => ({ ...(r.wf.env ?? {}), ...(r.job_.env ?? {}), ...(r.step.env ?? {}) });
+const indexOfStep = (job: Job, pred: (s: Step) => boolean) => (job.steps ?? []).findIndex(pred);
+
+describe("A3 governance: raw destructive database operations are target-verified first", () => {
+  it("inventory: the only executable raw destructive workflow step is the staging schema reset", () => {
+    expect(rawDestructive.map((r) => `${r.file}#${r.step.name}`)).toEqual(["reset-staging-db.yml#Drop and recreate public schema"]);
+  });
+
+  it("every raw destructive step against a secret-backed (remote) database is preceded by a staging-target preflight on the SAME variable", () => {
+    for (const r of rawDestructive) {
+      const env = effectiveEnv(r);
+      const remote = Object.values(env).some((v) => /secrets\./.test(String(v)));
+      if (!remote) continue; // runner-local service databases need no remote proof
+      const urlVar = (r.step.run ?? "").match(/psql\s+"\$([A-Z][A-Z0-9_]*)"/)?.[1];
+      expect(urlVar, `${r.file}: psql must take its URL from an env variable`).toBeTruthy();
+      const preIdx = indexOfStep(r.job_, (s) => (s.run ?? "").match(STAGING_PREFLIGHT)?.[1] === urlVar);
+      expect(preIdx, `${r.file}: staging preflight on ${urlVar}`).toBeGreaterThan(-1);
+      expect(preIdx, `${r.file}: preflight must precede the destructive statement`).toBeLessThan(r.index);
+    }
+  });
+
+  describe("reset-staging-db.yml", () => {
+    const wf = loadWorkflow("reset-staging-db.yml");
+    const job = Object.values(wf.jobs ?? {})[0];
+    const steps = job.steps ?? [];
+    const dropIdx = steps.findIndex((s) => /DROP SCHEMA/.test(s.run ?? ""));
+    const preIdx = steps.findIndex((s) => STAGING_PREFLIGHT.test(s.run ?? ""));
+    const secretCheckIdx = steps.findIndex((s) => /STAGING_DATABASE_URL secret is missing/.test(s.run ?? ""));
+    const installIdx = steps.findIndex((s) => /npm ci/.test(s.run ?? ""));
+    const checkoutIdx = steps.findIndex((s) => /actions\/checkout/.test(JSON.stringify(s)));
+
+    it("I. the staging preflight index is before DROP SCHEMA — and before every other write", () => {
+      expect(preIdx).toBeGreaterThan(-1);
+      expect(dropIdx).toBeGreaterThan(-1);
+      expect(preIdx).toBeLessThan(dropIdx);
+      const firstWrite = steps.findIndex((s) => /DROP SCHEMA|CREATE SCHEMA|prisma\s+(migrate|db)\s/.test((s.run ?? "").split("\n").filter((l) => !/^\s*(#|echo)/.test(l)).join("\n")));
+      expect(preIdx).toBeLessThan(firstWrite);
+      // After checkout, dependency installation and the secret-presence check.
+      expect(checkoutIdx).toBeGreaterThan(-1);
+      expect(checkoutIdx).toBeLessThan(preIdx);
+      expect(installIdx).toBeLessThan(preIdx);
+      expect(secretCheckIdx).toBeLessThan(preIdx);
+    });
+
+    it("J. the preflight validates the SAME secret expression the destructive step and the migration step use", () => {
+      const pre = steps[preIdx];
+      const varName = (pre.run ?? "").match(STAGING_PREFLIGHT)![1];
+      const expected = "${{ secrets.STAGING_DATABASE_URL }}";
+      expect(pre.env?.[varName]).toBe(expected);
+      const drop = steps[dropIdx];
+      expect(drop.env?.[varName]).toBe(expected);
+      expect((drop.run ?? "").match(/psql\s+"\$([A-Z_]+)"/g)?.every((m) => m.includes(`$${varName}`))).toBe(true);
+      const deploy = steps.find((s) => /prisma migrate deploy/.test(s.run ?? ""))!;
+      expect(deploy.env?.DATABASE_URL).toBe(expected);
+      // No URL reconstruction between validation and use.
+      for (const s of [pre, drop]) expect(JSON.stringify(s)).not.toMatch(/sed |cut |awk |tr -d|\$\{DATABASE_URL[#%/]/);
+    });
+
+    it("the approved-endpoint allowlist is mandatory input: the preflight wires the staging environment variable, never a fallback", () => {
+      const pre = steps[preIdx];
+      expect(String(pre.env?.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS)).toBe("${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}");
+      expect(JSON.stringify(pre)).not.toMatch(/\|\||:-|default/);
+      expect(job.env?.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS).toBe("${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}");
+      expect((job as { environment?: string }).environment).toBe("staging");
+    });
+
+    it("K. the confirmation phrase remains mandatory and runs first", () => {
+      const first = steps[0];
+      expect(first.run).toMatch(/RESET_STAGING_DATABASE/);
+      expect(first.run).toMatch(/exit 1/);
+      expect(0).toBeLessThan(preIdx);
+    });
+
+    it("L. the Prisma deploy step still runs under the staging target rules (job-level staging target + allowlist)", () => {
+      expect(job.env?.OPSIQ_DB_TARGET).toBe("staging");
+      expect(indexOfStep(job, (s) => /prisma migrate deploy/.test(s.run ?? ""))).toBeGreaterThan(dropIdx);
+    });
+  });
+
+  it("seed-staging.yml proves its target before the seed writes, with the same secret", () => {
+    const wf = loadWorkflow("seed-staging.yml");
+    const steps = Object.values(wf.jobs ?? {})[0].steps ?? [];
+    const pre = steps.findIndex((s) => STAGING_PREFLIGHT.test(s.run ?? ""));
+    const seed = steps.findIndex((s) => /src\/infra\/seed\.ts/.test(s.run ?? ""));
+    expect(pre).toBeGreaterThan(-1);
+    expect(pre).toBeLessThan(seed);
+    expect(steps[pre].env?.DATABASE_URL).toBe(steps[seed].env?.DATABASE_URL);
+    expect(steps[pre].env?.DATABASE_URL).toBe("${{ secrets.STAGING_DATABASE_URL }}");
+  });
+
+  it("scripts/reset-staging.ts and scripts/test-migration-replay.sh verify their target before the first destructive statement", () => {
+    const ts = readFileSync(join(ROOT, "scripts", "reset-staging.ts"), "utf8");
+    expect(ts.indexOf("assertLocalOrApprovedStagingTarget(")).toBeGreaterThan(-1);
+    expect(ts.indexOf("assertLocalOrApprovedStagingTarget(")).toBeLessThan(ts.indexOf("$executeRaw"));
+    expect(ts.indexOf("assertLocalOrApprovedStagingTarget(")).toBeLessThan(ts.indexOf("new PrismaClient"));
+    const sh = readFileSync(join(ROOT, "scripts", "test-migration-replay.sh"), "utf8");
+    const pre = sh.indexOf("assert-non-production-database.ts");
+    expect(pre).toBeGreaterThan(-1);
+    expect(pre).toBeLessThan(sh.indexOf('DROP SCHEMA public CASCADE'));
+    // Nothing else in the repository's workflows runs the table-clearing script.
+    for (const file of workflows) expect(readFileSync(join(WF_DIR, file), "utf8"), file).not.toMatch(/reset-staging\.ts/);
+  });
+
+  it("the shared validator is the single implementation: the Prisma path imports it instead of re-deriving the rules", () => {
+    const prismaSrc = readFileSync(join(ROOT, "src", "infra", "prisma-datasource.ts"), "utf8");
+    expect(prismaSrc).toMatch(/assertApprovedStagingDatabaseUrl/);
+    expect(prismaSrc).not.toMatch(/OPSIQ_APPROVED_STAGING_ENDPOINT_IDS"\s*\)|csv\(env\.OPSIQ_APPROVED/);
+    expect(prismaSrc).not.toMatch(/endsWith\("-pooler"\)/);
+  });
+});

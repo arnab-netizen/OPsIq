@@ -44,6 +44,14 @@ echo ""
 echo "Step 1: Dropping and recreating test database..."
 
 # Try to drop the database
+# Positive target proof BEFORE the first destructive statement (psql never loads prisma.config.ts): a loopback
+# database, or a remote one whose identity matches the approved OpsIQ test branch. The marker greps above are a
+# denylist and are not authorization.
+if ! TEST_DATABASE_URL="$DB_URL" npx tsx scripts/assert-non-production-database.ts TEST_DATABASE_URL; then
+  echo -e "${RED}✗ STOP: target database is not a verified test database; nothing was dropped${NC}" >&2
+  exit 1
+fi
+
 if psql "$DB_URL" -c "DROP SCHEMA public CASCADE;" 2>/dev/null || true; then
   echo -e "${GREEN}✓ Dropped existing schema${NC}"
 else

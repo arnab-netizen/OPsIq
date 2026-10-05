@@ -263,7 +263,8 @@ describe("staging: positive endpoint identity, direct endpoint only, deploy only
   });
   it("refuses an unapproved endpoint, a pooler endpoint and an unset list", () => {
     expect(() => run({ ...env, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-other" }, DEPLOY)).toThrow(/not listed/);
-    expect(() => run({ ...env, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: undefined }, DEPLOY)).toThrow(/not listed/);
+    expect(() => run({ ...env, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: undefined }, DEPLOY)).toThrow(/not set or is empty/);
+    expect(() => run({ ...env, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: " , " }, DEPLOY)).toThrow(/malformed|not set or is empty/);
     const pooled = "postgresql://u:p@ep-synthetic-stg-1-pooler.invalid:5432/app";
     expect(() => run({ ...env, DATABASE_URL: pooled, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-1-pooler" }, DEPLOY)).toThrow(/non-pooler/);
   });
