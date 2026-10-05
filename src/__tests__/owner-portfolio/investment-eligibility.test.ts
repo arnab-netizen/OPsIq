@@ -7,7 +7,7 @@ import { buildPortfolioView, assessPortfolioInvestmentEligibility, PORTFOLIO_THR
 import type { PortfolioBusinessInput } from "@/domain/owner-portfolio";
 import type { BusinessConditionProfile, DomainScore, OwnerDomain } from "@/domain/owner-spine/contracts";
 import type { CurrentOwnerDecision, OwnerDecisionState, OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
-import { resolveOwnerAdvicePolicy, type OwnerAdvicePolicy, type OwnerAdvicePolicyInput } from "@/domain/owner-spine/owner-advice-policy";
+import { ownerMaterialCommitmentGuard, resolveOwnerAdvicePolicy, type OwnerAdvicePolicy, type OwnerAdvicePolicyInput } from "@/domain/owner-spine/owner-advice-policy";
 
 const NOW = new Date("2026-06-05T00:00:00.000Z");
 
@@ -88,7 +88,7 @@ describe("A2 — eligibility matrix", () => {
   });
   it.each([
     "SAFETY_COMPLIANCE", "SURVIVAL_CASH", "CUSTOMER_SERVICE_FAILURE", "OVERLOAD_BLOCKING", "PROFIT_LOSS", "BLOCKED_EXECUTION", "PLAN_COMMITMENT_RISK", "MISSING_CRITICAL_EVIDENCE",
-  ] as const)("primary class %s blocks growth investment even when the policy permits a commitment", (cls) => {
+  ] as const)("primary class %s blocks growth investment even when no material-decision guard applies", (cls) => {
     const v = buildPortfolioView([biz("A", { ownerDecision: decision("A", policy("SUPPORTED"), cls) })], { now: NOW });
     expect(v.investmentRecommendation).toBeNull();
     expect(v.investmentAssessment.status).toBe("HELD");
@@ -100,6 +100,19 @@ describe("A2 — eligibility matrix", () => {
     const p = resolveOwnerAdvicePolicy({ state: "NO_OPEN_ACTIONS", primary: null, intent: null, primaryDomainLabel: "", dataSufficiency: { status: "sufficient", lowConfidenceDomains: [], missingCriticalData: [] }, staleDomains: [], gateCashProvisional: false, gateCashConflicting: false, missingInformation: [], reassessmentTrigger: "" });
     expect(recId([biz("A", { ownerDecision: decision("A", p, null, "NO_OPEN_ACTIONS") })])).toBe("A");
   });
+  it("NO_OPEN_ACTIONS + SUPPORTED: canMakeMaterialCommitment=false, guard=null, still eligible, and copy never claims a commitment is permitted", () => {
+    const p = resolveOwnerAdvicePolicy({ state: "NO_OPEN_ACTIONS", primary: null, intent: null, primaryDomainLabel: "", dataSufficiency: { status: "sufficient", lowConfidenceDomains: [], missingCriticalData: [] }, staleDomains: [], gateCashProvisional: false, gateCashConflicting: false, missingInformation: [], reassessmentTrigger: "" });
+    expect(p.mode).toBe("SUPPORTED");
+    expect(p.canMakeMaterialCommitment).toBe(false);
+    expect(ownerMaterialCommitmentGuard(p)).toBeNull();
+    const v = buildPortfolioView([biz("A", { ownerDecision: decision("A", p, null, "NO_OPEN_ACTIONS") })], { now: NOW });
+    expect(v.investmentRecommendation).not.toBeNull();
+    expect(v.investmentRecommendation?.businessId).toBe("A");
+    expect(v.investmentAssessment.status).toBe("RECOMMENDED");
+    const copy = `${v.investmentRecommendation!.reason} ${v.investmentAssessment.summary}`;
+    expect(copy).not.toMatch(/permits? a commitment/i);
+    expect(copy).toMatch(/do not require holding a material decision/);
+  });
   it("NO_OPEN_ACTIONS with insufficient data is held by the guard", () => {
     const p = resolveOwnerAdvicePolicy({ state: "NO_OPEN_ACTIONS", primary: null, intent: null, primaryDomainLabel: "", dataSufficiency: { status: "insufficient", lowConfidenceDomains: [], missingCriticalData: [] }, staleDomains: [], gateCashProvisional: false, gateCashConflicting: false, missingInformation: [], reassessmentTrigger: "" });
     expect(recId([biz("A", { ownerDecision: decision("A", p, null, "NO_OPEN_ACTIONS") })])).toBeNull();
@@ -108,7 +121,7 @@ describe("A2 — eligibility matrix", () => {
     const p = resolveOwnerAdvicePolicy({ state: "NO_EVIDENCE", primary: null, intent: null, primaryDomainLabel: "", dataSufficiency: { status: "sufficient", lowConfidenceDomains: [], missingCriticalData: [] }, staleDomains: [], gateCashProvisional: false, gateCashConflicting: false, missingInformation: [], reassessmentTrigger: "" });
     expect(recId([biz("A", { ownerDecision: decision("A", p, null, "NO_EVIDENCE") })])).toBeNull();
   });
-  it("NO_EVIDENCE never qualifies even if a (malformed) policy permits commitment", () => {
+  it("NO_EVIDENCE never qualifies even if a (malformed) policy carries no guard", () => {
     expect(recId([biz("A", { ownerDecision: decision("A", policy("SUPPORTED"), null, "NO_EVIDENCE") })])).toBeNull();
   });
   it("missing ownerDecision fails closed (held, not recommended)", () => {

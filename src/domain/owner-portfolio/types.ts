@@ -116,8 +116,12 @@ export interface PortfolioView {
   top3Priorities: PortfolioPriority[];
   riskAlerts: PortfolioRiskAlert[];
   /**
-   * Non-null ONLY when the business's canonical owner decision permits a material commitment (advice policy, primary
-   * priority class and evidence freshness all pass). A ranking such as `ranking.bestGrowthCandidateBusinessId` is never permission.
+   * `investmentRecommendation !== null` means ALL of: the existing quantitative portfolio criteria pass; the business's
+   * canonical decision/context is valid (present, for this business); no canonical owner-wide material-decision guard
+   * applies (`ownerMaterialCommitmentGuard` is null); no higher-priority primary concern blocks discretionary
+   * investment; and the supporting growth evidence is current under canonical freshness (`staleDomains`).
+   * It does NOT imply `advicePolicy.canMakeMaterialCommitment === true`: a supported NO_OPEN_ACTIONS decision carries
+   * no commitment flag yet has no guard. A ranking such as `ranking.bestGrowthCandidateBusinessId` is never permission.
    */
   investmentRecommendation: PortfolioInvestmentRecommendation | null;
   investmentAssessment: PortfolioInvestmentAssessment;

@@ -14,7 +14,7 @@
  * still a raw max over each domain's own opportunity scale (score-semantics.ts); that is a separate, known
  * limitation (P2) and no formula, weight, rescaling or threshold is introduced or changed here.
  *
- * Fail closed: a missing canonical decision, a decision for another business, or unknown freshness never permits.
+ * Fail closed: a missing canonical decision, a decision for another business, or unknown freshness never qualifies.
  */
 import { clampScore } from "@/domain/owner-spine/contracts";
 import { OWNER_PRIORITY_CLASS_LABEL, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
@@ -90,7 +90,9 @@ export function assessPortfolioInvestmentEligibility(input: PortfolioBusinessInp
   // A decision without its advice policy cannot be read as permission (fail closed, never throw).
   if (!d.advicePolicy) return held("NO_OWNER_DECISION", "OpsIQ could not read the advice that applies to this business's current decision, so it cannot recommend investing.", [], "Reload the portfolio, then reassess.");
 
-  // (C) The canonical advice policy decides whether a material commitment may be made (the guard is the projection).
+  // (C) The canonical material-decision guard decides whether a hold applies (the guard is the projection). Null means
+  // "no hold applies"; it is deliberately NOT the same as the policy's commitment flag being true (a supported NO_OPEN_ACTIONS
+  // policy has that flag false and no guard, and stays eligible).
   const guard = ownerMaterialCommitmentGuard(d.advicePolicy);
   if (guard) {
     return held("ADVICE_POLICY_PROHIBITS_COMMITMENT", d.advicePolicy.ownerStatement, [...d.advicePolicy.reasons], d.advicePolicy.nextEvidenceAction || guard.prohibition);

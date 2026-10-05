@@ -178,7 +178,7 @@ export function buildPortfolioView(
     investmentRecommendation = {
       businessId: c.businessId,
       businessName: c.name,
-      reason: `Highest growth opportunity (${c.growthOpportunityScore}/100) among businesses whose current owner decision permits a commitment and whose survival risk is below ${t.safeInvestmentSurvivalRiskBar}/100 (this one: ${c.survivalRiskScore}/100).`,
+      reason: `Highest growth opportunity (${c.growthOpportunityScore}/100) among businesses whose current evidence and owner policy do not require holding a material decision, and whose survival risk is below ${t.safeInvestmentSurvivalRiskBar}/100 (this one: ${c.survivalRiskScore}/100).`,
       growthOpportunityScore: c.growthOpportunityScore,
       survivalRiskScore: c.survivalRiskScore as number,
     };
@@ -188,7 +188,7 @@ export function buildPortfolioView(
     .sort((x, y) => (y.s.growthOpportunityScore !== x.s.growthOpportunityScore ? y.s.growthOpportunityScore - x.s.growthOpportunityScore : x.s.businessId < y.s.businessId ? -1 : 1))
     .map((x) => ({ businessId: x.s.businessId, businessName: x.s.name, ownerStatement: x.a.ownerStatement, reasons: x.a.reasons, nextStep: x.a.nextStep }));
   const investmentAssessment: PortfolioInvestmentAssessment = investmentRecommendation
-    ? { status: "RECOMMENDED", summary: `${investmentRecommendation.businessName} is the strongest growth candidate whose current decision permits a commitment.`, held: holds }
+    ? { status: "RECOMMENDED", summary: `${investmentRecommendation.businessName} is the strongest growth candidate whose current evidence and owner policy do not require holding a material decision.`, held: holds }
     : holds.length > 0
       ? { status: "HELD", summary: "Investment recommendation on hold: a business shows a growth signal, but its current decision does not yet support committing money.", held: holds }
       : { status: "NO_QUALIFYING_CANDIDATE", summary: "No business currently meets the survival-risk and growth-signal criteria for an investment recommendation.", held: [] };

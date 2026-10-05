@@ -1,5 +1,5 @@
 /**
- * A2 governance — Portfolio investment permission is a PROJECTION of the canonical owner decision, never a second policy.
+ * A2 governance — Portfolio investment eligibility is a PROJECTION of the canonical owner decision, never a second policy.
  * Behavioural parity with ownerMaterialCommitmentGuard plus narrow structural checks on the sources.
  */
 import { describe, it, expect } from "vitest";
@@ -47,11 +47,17 @@ describe("A2 governance — canonical projection, no second policy", () => {
     expect(new Set(policiesByMode().map((p) => p.mode))).toEqual(new Set(OWNER_ADVICE_MODES));
   });
 
-  it("for a growth-class, fresh, quantitatively-qualifying business, eligibility equals ownerMaterialCommitmentGuard === null (every mode)", () => {
+  it("for a growth-class, fresh, quantitatively-qualifying business, eligibility equals ownerMaterialCommitmentGuard === null (every mode; a hold is the guard, not the commitment flag)", () => {
     for (const p of policiesByMode()) {
       const r = assessPortfolioInvestmentEligibility(input(p), PORTFOLIO_THRESHOLDS);
       expect(r.eligible, `mode ${p.mode}`).toBe(ownerMaterialCommitmentGuard(p) === null);
     }
+  });
+
+  it("recommendation copy never claims the decision/policy 'permits a commitment' (guard null is not canMakeMaterialCommitment)", () => {
+    const e = src("domain/owner-portfolio/engine.ts");
+    expect(e).not.toMatch(/permits? a commitment/i);
+    expect(src("domain/owner-portfolio/types.ts")).toMatch(/does NOT imply `advicePolicy\.canMakeMaterialCommitment === true`/);
   });
 
   it("a held explanation reuses the policy's own statement and next action", () => {
