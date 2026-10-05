@@ -5,6 +5,17 @@
 # Example: ./restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
 #
 # Restores database from a gzipped SQL dump produced by backup-database.sh.
+#
+# TARGET POLICY (A3 — a restore can drop and recreate a whole database): the target must be proven BEFORE anything is
+# printed, decompressed or written, and DATABASE_URL alone never authorizes it. Reuses OPSIQ_DB_TARGET:
+#   OPSIQ_DB_TARGET=local    DATABASE_URL must be a true loopback URL (localhost / 127.0.0.1 / ::1)
+#   OPSIQ_DB_TARGET=staging  DATABASE_URL must pass the canonical approved-staging validator
+#                            (scripts/assert-approved-staging-database.ts; needs OPSIQ_APPROVED_STAGING_ENDPOINT_IDS)
+#   OPSIQ_DB_TARGET=production, ci, test, unknown or missing: REFUSED. A production restore needs a separately governed
+#   production recovery workflow that does not exist yet (GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED); the production
+#   migration variables (OPSIQ_ALLOW_PRODUCTION_DB_COMMAND, OPSIQ_PRODUCTION_OPERATION) do NOT authorize it.
+# The intended source is OpsIQ's own trusted backup pipeline: a dump executes SQL on restore, so never restore an
+# untrusted dump.
 # Optional: verify checksum against the accompanying .sha256 file.
 # WARNING: this restores a `pg_dump --create` dump, which embeds
 # `DROP DATABASE IF EXISTS <name>` / `CREATE DATABASE <name>` /
@@ -47,11 +58,16 @@ if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.
   exit 1
 fi
 
-REDACTED_URL=$(echo "$DATABASE_URL" | sed -E 's#(://[^:/@]+:)[^@]+(@)#\1***\2#')
+# Positive target proof BEFORE anything is printed, decompressed or written. Never prints the connection URL.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! node "$SCRIPT_DIR/assert-restore-target.mjs"; then
+  echo "ERROR: restore target not verified; nothing was restored." >&2
+  exit 1
+fi
 
 echo "Starting database restore..." | tee "$LOG_FILE"
 echo "Backup file: $BACKUP_FILE" | tee -a "$LOG_FILE"
-echo "Target server: $REDACTED_URL" | tee -a "$LOG_FILE"
+echo "RESTORE_TARGET=${OPSIQ_DB_TARGET}" | tee -a "$LOG_FILE"
 
 # --- Integrity verification before touching any database ---
 if [ "$VERIFY" = "verify" ] || [ -f "${BACKUP_FILE}.sha256" ]; then
@@ -177,7 +193,7 @@ else
   # the Postgres service container's own separate log). Surface the real
   # PostgreSQL diagnostic lines here instead, so a future failure shows
   # the exact DB error directly. LOG_FILE never contains the dump's SQL
-  # content or DATABASE_URL unredacted (see REDACTED_URL above and the
+  # content or DATABASE_URL unredacted (the connection URL is never printed; see the
   # gzip/psql invocations, which never echo the dump itself into this
   # file), so this extraction cannot leak business data or credentials.
   echo "--- PostgreSQL diagnostic lines from restore log ---" | tee -a "$LOG_FILE"

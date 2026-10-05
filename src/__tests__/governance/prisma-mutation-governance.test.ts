@@ -401,3 +401,95 @@ describe("A3 governance: raw destructive database operations are target-verified
     expect(prismaSrc).not.toMatch(/endsWith\("-pooler"\)/);
   });
 });
+
+// ─── A3 final amendment: restore-database.sh is local / approved-staging only ─────────────────────────────────────────
+describe("A3 governance: restore-database.sh cannot be an ad-hoc production restore", () => {
+  const restoreSh = readFileSync(join(ROOT, "scripts", "restore-database.sh"), "utf8");
+  const restoreLib = readFileSync(join(ROOT, "scripts", "lib", "restore-target.mjs"), "utf8");
+  const restoreCli = readFileSync(join(ROOT, "scripts", "assert-restore-target.mjs"), "utf8");
+  const code = (text: string) => text.split("\n").filter((l) => !l.trim().startsWith("#"));
+
+  it("the target preflight runs before anything is printed, decompressed or written", () => {
+    const body = code(restoreSh).join("\n");
+    const pre = body.indexOf("assert-restore-target.mjs");
+    expect(pre).toBeGreaterThan(-1);
+    for (const later of ["gunzip -c", "psql", "zgrep", "sha256sum", "gzip -t", "Starting database restore"]) {
+      expect(pre, later).toBeLessThan(body.indexOf(later));
+    }
+    // Refusal exits non-zero; the script never prints the connection URL.
+    expect(body).toMatch(/assert-restore-target\.mjs"\s*\)?;?\s*then[\s\S]{0,200}exit 1/);
+    // (A piped `echo "$DATABASE_URL" | grep/sed` feeds a filter; an un-piped echo would print it.)
+    expect(body).not.toMatch(/REDACTED_URL|echo\s+[^|\n]*\$\{?DATABASE_URL\}?[^|\n]*(\n|$)/);
+  });
+
+  it("the policy admits only local (loopback, no extra-host exception) and staging; production is refused by name", () => {
+    expect(restoreLib).toMatch(/PRODUCTION_RESTORE_REQUIRES_GOVERNED_WORKFLOW/);
+    expect(restoreLib).not.toMatch(/OPSIQ_LOCAL_DB_EXTRA_HOSTS\s*\]|env\.OPSIQ_LOCAL_DB_EXTRA_HOSTS/);
+    expect(restoreLib).not.toMatch(/OPSIQ_ALLOW_PRODUCTION_DB_COMMAND\s*(===|!==|==)|env\.OPSIQ_ALLOW_PRODUCTION_DB_COMMAND|env\.OPSIQ_PRODUCTION_OPERATION|MIGRATION_DATABASE_URL/);
+  });
+
+  it("staging restore delegates to the canonical validator — no staging URL parsing lives in the restore policy", () => {
+    expect(restoreCli).toMatch(/assert-approved-staging-database\.ts/);
+    for (const text of [restoreLib, restoreCli]) {
+      expect(text).not.toMatch(/OPSIQ_APPROVED_STAGING_ENDPOINT_IDS|-pooler|split\("\."\)|production-db-identity/);
+    }
+  });
+
+  it("restore-rehearsal.yml selects local explicitly on the restore step, and nothing else invokes the script with another target", () => {
+    const invocations: Array<{ where: string; target: string }> = [];
+    for (const file of workflows) {
+      const wf = loadWorkflow(file);
+      for (const job of Object.values(wf.jobs ?? {})) {
+        for (const step of job.steps ?? []) {
+          if (executableLines(step.run).some((l) => /restore-database\.sh/.test(l))) {
+            invocations.push({ where: `${file}#${step.name}`, target: String({ ...(wf.env ?? {}), ...(job.env ?? {}), ...(step.env ?? {}) }.OPSIQ_DB_TARGET ?? "") });
+          }
+        }
+      }
+    }
+    expect(invocations.map((i) => i.where)).toEqual(["restore-rehearsal.yml#Restore into throwaway container"]);
+    for (const i of invocations) expect(["local", "staging"], i.where).toContain(i.target);
+    expect(invocations[0].target).toBe("local");
+  });
+
+  it("no other repository script invokes restore-database.sh", () => {
+    const dir = join(ROOT, "scripts");
+    const offenders: string[] = [];
+    for (const file of readdirSync(dir).filter((f) => /\.(sh|ts|mjs|js)$/.test(f) && f !== "restore-database.sh")) {
+      for (const line of code(readFileSync(join(dir, file), "utf8"))) {
+        const t = line.trim();
+        if (t.startsWith("//") || t.startsWith("*")) continue;
+        if (/restore-database\.sh/.test(t) && /(bash|sh|\.\/|execSync|spawn)/.test(t)) offenders.push(`${file}: ${t.slice(0, 100)}`);
+      }
+    }
+    // The classifier/backup comments name the script; only executable invocations count, and there are none.
+    expect(offenders.filter((o) => !/ci-risk-classifier|backup-database/.test(o))).toEqual([]);
+  });
+
+  it("no document instructs a restore without naming a local or staging target, and none names production", () => {
+    const offenders: string[] = [];
+    const walk = (d: string) => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const p = join(d, e.name);
+        if (e.isDirectory()) { if (e.name !== "node_modules") walk(p); continue; }
+        if (!e.name.endsWith(".md")) continue;
+        const lines = readFileSync(p, "utf8").split("\n");
+        lines.forEach((line, i) => {
+          if (!/(\.\/scripts\/restore-database\.sh|bash scripts\/restore-database\.sh)\s+\S/.test(line)) return;
+          const context = lines.slice(Math.max(0, i - 2), i + 1).join("\n");
+          if (!/OPSIQ_DB_TARGET=(local|staging)\b/.test(context)) offenders.push(`${p.slice(ROOT.length + 1)}:${i + 1}`);
+          if (/OPSIQ_DB_TARGET=production/.test(context)) offenders.push(`${p.slice(ROOT.length + 1)}:${i + 1} (production)`);
+        });
+      }
+    };
+    walk(join(ROOT, "docs"));
+    expect(offenders).toEqual([]);
+  });
+
+  it("the production-restore refusal is stated in the operational runbooks that used to instruct it", () => {
+    for (const doc of ["ROLLBACK_RUNBOOK.md", "DEPLOYMENT_RUNBOOK.md", "BACKUP_RESTORE_PROCEDURE.md", "DATABASE_BACKUP_RECOVERY_RUNBOOK.md"]) {
+      const text = readFileSync(join(ROOT, "docs", doc), "utf8");
+      expect(text, doc).toMatch(/GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED/);
+    }
+  });
+});

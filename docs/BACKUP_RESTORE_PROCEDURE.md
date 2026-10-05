@@ -66,16 +66,18 @@ SHA256: a1b2c3d4e5f6...
 
 ## Manual Restore
 
-### Quick Restore
+> **Restore policy (A3):** `scripts/restore-database.sh` restores only onto a positively local database (`OPSIQ_DB_TARGET=local` with a loopback `DATABASE_URL`) or an approved staging endpoint (`OPSIQ_DB_TARGET=staging` with `OPSIQ_APPROVED_STAGING_ENDPOINT_IDS`). It **refuses production** and any missing target. Production restore is blocked until a separately governed production recovery workflow exists (`GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED`); do not bypass this by setting `DATABASE_URL` manually.
+
+### Quick Restore (local / disposable server)
 
 ```bash
-./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz
 ```
 
-### Restore with Checksum Verification
+### Restore with Checksum Verification (local / disposable server)
 
 ```bash
-./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
 ```
 
 The restore script automatically verifies the checksum if a `.sha256` file exists:
@@ -192,10 +194,10 @@ systemctl stop opsiq-backend opsiq-api
 ```
 
 **Step 2: Restore from backup**
-```bash
-# Use most recent backup (verify checksum)
-./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
-```
+
+**BLOCKED — do not restore production with `scripts/restore-database.sh`.** The script refuses production (`PRODUCTION_RESTORE_REQUIRES_GOVERNED_WORKFLOW`) because a `pg_dump --create` dump drops and recreates a whole database, and no governed production recovery workflow exists yet (`GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED`). Do not bypass this by setting `DATABASE_URL` manually. Use the Neon point-in-time restore path in `docs/DATABASE_BACKUP_RECOVERY_RUNBOOK.md`, or escalate to the owner.
+
+(Rehearse the same backup on a local or disposable server with `OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh <backup> verify`.)
 
 **Step 3: Verify restoration**
 ```bash
@@ -257,7 +259,7 @@ Test restore procedure weekly to ensure backups are valid:
 psql -c "CREATE DATABASE opsiq_test;"
 
 # 2. Restore backup to test database
-PGDATABASE=opsiq_test ./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
 
 # 3. Verify data integrity
 psql -d opsiq_test -c "SELECT COUNT(*) FROM workspaces;"

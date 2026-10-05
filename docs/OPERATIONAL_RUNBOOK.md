@@ -287,8 +287,9 @@ cat /backups/opsiq/opsiq_backup_*.sql.gz.sha256 | head -1
 # 1. Create test database
 psql $DATABASE_URL -c "CREATE DATABASE opsiq_test;"
 
-# 2. Restore latest backup
-PGDATABASE=opsiq_test ./scripts/restore-database.sh \
+# 2. Restore latest backup (local / disposable server only; the script refuses production)
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
+  ./scripts/restore-database.sh \
   /backups/opsiq/opsiq_backup_LATEST.sql.gz verify
 
 # 3. Verify data
