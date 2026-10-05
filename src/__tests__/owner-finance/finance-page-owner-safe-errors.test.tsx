@@ -361,8 +361,11 @@ describe("Owner Finance page — initial-load empty-state gating", () => {
     const { container } = renderPage();
 
     await screen.findByText(/Not enough financial information yet/);
+    // The "+ Add financial snapshot" action is gated on the canonical first-read gate, which the page
+    // resolves from a SECOND request (/api/owner/onboarding) after the dashboard has rendered the guidance
+    // above — so wait for the action itself, not just the guidance text, before asserting on it.
+    expect(await screen.findByText("+ Add financial snapshot")).toBeInTheDocument();
     expect(container.querySelector(".text-destructive")).toBeNull();
-    expect(screen.getByText("+ Add financial snapshot")).toBeInTheDocument();
   });
 
   it("5. a successful populated load followed by a failed reload preserves the prior content and shows the governed error", async () => {
