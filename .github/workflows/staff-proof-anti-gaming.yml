@@ -55,7 +55,7 @@ jobs:
             if(d.count!==120||pass!==120){console.error("SPA DB not 120/120:",d.count,pass);process.exit(1);}
             console.log("SPA DB 120/120 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: spa-db-ledger
@@ -148,7 +148,7 @@ jobs:
         run: npx playwright test tests/browser/25-staff-proof-desktop.spec.ts --project=chromium
       - name: Staff/Proof mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/26-staff-proof-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: spa-browser-shard-${{ matrix.shard }}

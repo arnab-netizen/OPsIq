@@ -49,7 +49,7 @@ jobs:
             if(d.count!==120||pass!==120){console.error("FIN DB not 120/120:",d.count,pass);process.exit(1);}
             console.log("FIN DB 120/120 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: fin-db-ledger
@@ -120,7 +120,7 @@ jobs:
         run: npx playwright test tests/browser/29-finance-desktop.spec.ts --project=chromium
       - name: Finance mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/30-finance-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: fin-browser-shard-${{ matrix.shard }}
