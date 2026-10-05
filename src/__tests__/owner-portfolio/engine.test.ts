@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import { buildPortfolioView } from "@/domain/owner-portfolio";
 import type { PortfolioBusinessInput } from "@/domain/owner-portfolio";
 import type { BusinessConditionProfile, DomainScore, OwnerDomain } from "@/domain/owner-spine/contracts";
+import { assessSurvivalEvidence } from "@/domain/owner-spine/survival-evidence";
 import { resolveOwnerAdvicePolicy } from "@/domain/owner-spine/owner-advice-policy";
 import type { CurrentOwnerDecision, OwnerDecisionTarget, OwnerPriorityClass, OwnerSeverity } from "@/domain/owner-spine/owner-decision";
 
@@ -51,8 +52,16 @@ function profile(over: Partial<BusinessConditionProfile>): BusinessConditionProf
   };
 }
 
+/** Attach the canonical survival-evidence assessment Owner Home would resolve from each business's own domains. */
+function withSurvivalEvidence(inputs: PortfolioBusinessInput[]): PortfolioBusinessInput[] {
+  return inputs.map((b) => ({
+    ...b,
+    survivalEvidence: assessSurvivalEvidence({ domainsPresent: (b.profile?.domainScores ?? []).map((d) => d.domain), staleDomains: b.staleDomains ?? [], financeLiquidityUnconfirmed: false, cashflowPosition: null }),
+  }));
+}
+
 function portfolio(): PortfolioBusinessInput[] {
-  return [
+  return withSurvivalEvidence([
     {
       businessId: "A", name: "Alpha", businessType: "generic_local_service", currency: "INR",
       profile: profile({
@@ -80,7 +89,7 @@ function portfolio(): PortfolioBusinessInput[] {
       staleDomains: [],
       ownerDecision: decision("C", "c-act", "sop", "BLOCKED_EXECUTION", "high"),
     },
-  ];
+  ]);
 }
 
 describe("owner-portfolio engine — module contract assertions", () => {

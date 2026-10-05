@@ -42,6 +42,7 @@ export async function getPortfolio(workspaceId: string, opts: { now?: Date } = {
         ownerDecision: resolved.home.currentOwnerDecision,
         // Canonical stale-evidence domains of that same decision (internal context for investment eligibility).
         staleDomains: resolved.staleDomains ?? undefined,
+        survivalEvidence: resolved.survivalEvidence ?? undefined,
       };
     })
   );

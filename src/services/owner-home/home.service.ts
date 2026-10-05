@@ -28,6 +28,8 @@ import type { OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate
 import { buildOwnerSpineCandidates, loadOwnerSpineEvidence } from "@/services/owner-home/owner-candidate-builder";
 import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
 import { gatherOwnerChangeFacts } from "@/services/owner-home/owner-change-facts";
+import { assessSurvivalEvidence, type SurvivalEvidenceAssessment } from "@/domain/owner-spine/survival-evidence";
+import { LIQUIDITY_UNCONFIRMED_FINDING_CODE } from "@/domain/owner-finance/liquidity";
 import { computeReassessmentCadence } from "@/services/owner-condition/business-condition.service";
 
 export interface OwnerHomeResult {
@@ -62,13 +64,14 @@ export async function getOwnerHome(
  * no business is selected) — for surfaces that must describe the decision against the SAME constraints
  * (Now View: growth readiness and the do-not-repeat annotation). Server-side only: the constraints are never
  * part of the Home payload. `staleDomains` is likewise internal: the canonical stale-evidence domains (null when
- * no business is selected), for the Portfolio's investment eligibility.
+ * no business is selected), and `survivalEvidence` (whether the survival reading may clear investment advice; null when
+ * no business is selected), both for the Portfolio's investment eligibility.
  */
 export async function resolveOwnerHome(
   workspaceId: string,
   requestedBusinessId?: string | null,
   opts: { now?: Date } = {}
-): Promise<{ home: OwnerHomeResult; gate: OwnerGateConstraints | null; staleDomains: readonly string[] | null }> {
+): Promise<{ home: OwnerHomeResult; gate: OwnerGateConstraints | null; staleDomains: readonly string[] | null; survivalEvidence: SurvivalEvidenceAssessment | null }> {
   const now = opts.now ?? new Date();
   const businesses = await listBusinesses(workspaceId);
   const businessList = businesses.map((b: any) => ({
@@ -87,7 +90,7 @@ export async function resolveOwnerHome(
   if (!selectedBusinessId && businesses.length === 1) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { home: { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null }, gate: null, staleDomains: null };
+    return { home: { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null }, gate: null, staleDomains: null, survivalEvidence: null };
   }
   const businessId = selectedBusinessId;
 
@@ -256,6 +259,14 @@ export async function resolveOwnerHome(
     gate,
     // INTERNAL (never part of the Home payload): the canonical stale-evidence domains the decision above was resolved with.
     staleDomains,
+    // INTERNAL: whether the survival reading is sufficiently evidenced to clear a material investment recommendation
+    // (survival-evidence.ts — one assessment from this resolution's own facts; never part of the Home payload).
+    survivalEvidence: assessSurvivalEvidence({
+      domainsPresent: domainScores.map((d) => d.domain),
+      staleDomains,
+      financeLiquidityUnconfirmed: ((evidence.finance?.findings ?? []) as Array<{ code?: unknown }>).some((f) => f.code === LIQUIDITY_UNCONFIRMED_FINDING_CODE),
+      cashflowPosition: evidence.cashflow ? { cashInHand: (evidence.cashflow.snapshot as { cashInHand?: number | null } | null)?.cashInHand, bankBalance: (evidence.cashflow.snapshot as { bankBalance?: number | null } | null)?.bankBalance } : null,
+    }),
   };
 }
 

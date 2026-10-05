@@ -248,7 +248,13 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
         },
       },
     }),
-    db.ownerCashflowCycle.findFirst({ where: evidenceWhere, ...latest }),
+    // Cashflow also needs its snapshot's cash components: whether the cash position can be established from BOTH
+    // is part of the survival-evidence sufficiency (survival-evidence.ts), read from the same current cycle.
+    db.ownerCashflowCycle.findFirst({
+      where: evidenceWhere,
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+      include: { ...spineCycleInclude, snapshot: { select: { id: true, createdAt: true, periodStart: true, periodEnd: true, cashInHand: true, bankBalance: true } } },
+    }),
     db.ownerSalesCycle.findFirst({ where: evidenceWhere, ...latest }),
     db.ownerOperationsCycle.findFirst({ where: evidenceWhere, ...latest }),
     db.ownerSopCycle.findFirst({ where: evidenceWhere, ...latest }),
