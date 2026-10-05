@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import { buildPortfolioView } from "@/domain/owner-portfolio";
 import type { PortfolioBusinessInput } from "@/domain/owner-portfolio";
 import type { BusinessConditionProfile, DomainScore, OwnerDomain } from "@/domain/owner-spine/contracts";
+import { resolveOwnerAdvicePolicy } from "@/domain/owner-spine/owner-advice-policy";
 import type { CurrentOwnerDecision, OwnerDecisionTarget, OwnerPriorityClass, OwnerSeverity } from "@/domain/owner-spine/owner-decision";
 
 const NOW = new Date("2026-06-05T00:00:00.000Z");
@@ -22,7 +23,16 @@ function decision(businessId: string, id: string, domain: OwnerDomain, priorityC
     candidateId: `domain_action:${domain}:${id}`, source: "domain_action", domain, domainLabel: domain, priorityClass,
     findingCode: "X", title: `Target ${id}`, explanation: "", severity, status: "proposed", targetRoute: `/owner/${domain}`,
   };
-  return { businessId, primaryTarget } as unknown as CurrentOwnerDecision;
+  // The canonical advice policy for a current, sufficient decision (resolved by the real policy, not hand-built).
+  const advicePolicy = resolveOwnerAdvicePolicy({
+    state: "TARGET",
+    primary: { source: "domain_action", priorityClass, findingCode: "X", domain, missingData: [] },
+    intent: "FIX" as never,
+    primaryDomainLabel: domain,
+    dataSufficiency: { status: "sufficient", lowConfidenceDomains: [], missingCriticalData: [] },
+    staleDomains: [], gateCashProvisional: false, gateCashConflicting: false, missingInformation: [], reassessmentTrigger: "",
+  });
+  return { businessId, state: "TARGET", primaryTarget, advicePolicy } as unknown as CurrentOwnerDecision;
 }
 
 function profile(over: Partial<BusinessConditionProfile>): BusinessConditionProfile {
@@ -49,6 +59,7 @@ function portfolio(): PortfolioBusinessInput[] {
         overallHealthScore: 85, survivalRiskScore: 20, growthOpportunityScore: 80, executionRiskScore: 15, dataConfidenceScore: 90,
         domainScores: [ds("finance", 85, 20, 80), ds("sales", 80, 25, 70), ds("cashflow", 80, 15)],
       }),
+      staleDomains: [],
       ownerDecision: decision("A", "a-act", "sales", "GROWTH_OPPORTUNITY", "low"),
     },
     {
@@ -57,6 +68,7 @@ function portfolio(): PortfolioBusinessInput[] {
         overallHealthScore: 30, survivalRiskScore: 85, growthOpportunityScore: 40, executionRiskScore: 30, dataConfidenceScore: 70,
         domainScores: [ds("finance", 25, 80), ds("cashflow", 20, 88)],
       }),
+      staleDomains: [],
       ownerDecision: decision("B", "b-act", "cashflow", "SURVIVAL_CASH", "critical"),
     },
     {
@@ -65,6 +77,7 @@ function portfolio(): PortfolioBusinessInput[] {
         overallHealthScore: 55, survivalRiskScore: 40, growthOpportunityScore: 60, executionRiskScore: 80, dataConfidenceScore: 75,
         domainScores: [ds("operations", 55, 70), ds("sop", 30, 80)],
       }),
+      staleDomains: [],
       ownerDecision: decision("C", "c-act", "sop", "BLOCKED_EXECUTION", "high"),
     },
   ];

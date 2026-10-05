@@ -17,8 +17,11 @@ import type {
   PortfolioPriority,
   PortfolioRiskAlert,
   PortfolioInvestmentRecommendation,
+  PortfolioInvestmentHold,
+  PortfolioInvestmentAssessment,
   PortfolioView,
 } from "./types";
+import { assessPortfolioInvestmentEligibility } from "./investment-eligibility";
 import { PORTFOLIO_THRESHOLDS, type PortfolioThresholds } from "./thresholds";
 
 /** Health score for a domain in the profile, or null when absent. */
@@ -162,21 +165,33 @@ export function buildPortfolioView(
   }
   riskAlerts.sort((a, b) => (b.score !== a.score ? b.score - a.score : a.businessId < b.businessId ? -1 : 1));
 
-  // Investment recommendation: best safe growth candidate above the opportunity bar.
+  // Investment recommendation (A2): ranking is not permission. Each business is assessed against its OWN canonical owner
+  // decision (advice policy, primary priority class, evidence freshness); the existing deterministic ranking is then applied
+  // to the ELIGIBLE set only, so a blocked top candidate never suppresses an eligible runner-up. This does not make growth
+  // scores comparable across businesses (P2) — it changes who MAY be recommended, not how scores are computed.
+  const assessments = withData.map((s) => ({ s, a: assessPortfolioInvestmentEligibility(inputs.find((i) => i.businessId === s.businessId)!, t) }));
+  const eligibleRows = assessments.filter((x) => x.a.eligible).map((x) => x.s);
+  const eligibleId = maxByBusiness(eligibleRows, (s) => s.growthOpportunityScore);
   let investmentRecommendation: PortfolioInvestmentRecommendation | null = null;
-  const candidateId = ranking.bestGrowthCandidateBusinessId;
-  if (candidateId) {
-    const c = withData.find((s) => s.businessId === candidateId)!;
-    if (c.survivalRiskScore !== null && c.growthOpportunityScore >= t.minInvestmentOpportunityScore) {
-      investmentRecommendation = {
-        businessId: c.businessId,
-        businessName: c.name,
-        reason: `Highest growth opportunity (${c.growthOpportunityScore}/100) among businesses with survival risk below ${t.safeInvestmentSurvivalRiskBar}/100 (this one: ${c.survivalRiskScore}/100).`,
-        growthOpportunityScore: c.growthOpportunityScore,
-        survivalRiskScore: c.survivalRiskScore,
-      };
-    }
+  if (eligibleId) {
+    const c = eligibleRows.find((s) => s.businessId === eligibleId)!;
+    investmentRecommendation = {
+      businessId: c.businessId,
+      businessName: c.name,
+      reason: `Highest growth opportunity (${c.growthOpportunityScore}/100) among businesses whose current evidence and owner policy do not require holding a material decision, and whose survival risk is below ${t.safeInvestmentSurvivalRiskBar}/100 (this one: ${c.survivalRiskScore}/100).`,
+      growthOpportunityScore: c.growthOpportunityScore,
+      survivalRiskScore: c.survivalRiskScore as number,
+    };
   }
+  const holds: PortfolioInvestmentHold[] = assessments
+    .filter((x): x is { s: PortfolioBusinessSummary; a: Extract<typeof x.a, { eligible: false }> } => !x.a.eligible && x.a.held)
+    .sort((x, y) => (y.s.growthOpportunityScore !== x.s.growthOpportunityScore ? y.s.growthOpportunityScore - x.s.growthOpportunityScore : x.s.businessId < y.s.businessId ? -1 : 1))
+    .map((x) => ({ businessId: x.s.businessId, businessName: x.s.name, ownerStatement: x.a.ownerStatement, reasons: x.a.reasons, nextStep: x.a.nextStep }));
+  const investmentAssessment: PortfolioInvestmentAssessment = investmentRecommendation
+    ? { status: "RECOMMENDED", summary: `${investmentRecommendation.businessName} is the strongest growth candidate whose current evidence and owner policy do not require holding a material decision.`, held: holds }
+    : holds.length > 0
+      ? { status: "HELD", summary: "Investment recommendation on hold: a business shows a growth signal, but its current decision does not yet support committing money.", held: holds }
+      : { status: "NO_QUALIFYING_CANDIDATE", summary: "No business currently meets the survival-risk and growth-signal criteria for an investment recommendation.", held: [] };
 
   return {
     hasData: withData.length > 0,
@@ -187,6 +202,7 @@ export function buildPortfolioView(
     top3Priorities,
     riskAlerts,
     investmentRecommendation,
+    investmentAssessment,
     generatedAt: now,
   };
 }

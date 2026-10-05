@@ -366,6 +366,7 @@ const PORTFOLIO_STUB = {
   businesses: [],
   riskAlerts: [],
   investmentRecommendation: null,
+  investmentAssessment: { status: "NO_QUALIFYING_CANDIDATE", summary: "s", held: [] },
   top3Priorities: [],
   generatedAt: "2024-01-01T00:00:00Z",
 };
@@ -412,6 +413,7 @@ describe("[portfolio-risks] GET /api/owner/portfolio/risks", () => {
     const res = await portfolioRisksGet(makeCtx());
     expect(res).toHaveProperty("riskAlerts");
     expect(res).toHaveProperty("investmentRecommendation");
+    expect(res).toHaveProperty("investmentAssessment");
   });
 });
 
