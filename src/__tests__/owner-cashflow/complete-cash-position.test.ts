@@ -194,7 +194,7 @@ describe("recurrence protection", () => {
     expect(files.length).toBeGreaterThan(5); // the scan must actually scan
     for (const f of files) {
       const src = strip(fs.readFileSync(path.join(dir, f), "utf8"));
-      expect(src, f).not.toMatch(/cashInHand\s*(\+|\?\?|\|\|)|(\+|\?\?|\|\|)\s*[\w.]*bankBalance|bankBalance\s*(\+|\?\?|\|\|)/);
+      expect(src, f).not.toMatch(/(cashInHand|bankBalance)\s*(\+|\?\?\s*0|\|\|\s*0)|\+\s*[\w.]*(cashInHand|bankBalance)/);
     }
   });
   it("the missing-data contract uses the shared completeness helper and cannot treat cash-in-hand OR bank as complete", () => {

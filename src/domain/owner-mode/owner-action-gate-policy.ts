@@ -155,6 +155,15 @@ export interface OwnerGateConstraints {
      */
     provisionalCashState?: "SAFE" | "WATCH" | "AT_RISK" | "CRITICAL" | "INSOLVENT_RISK" | null;
     provisionalFinanceState?: "SAFE" | "WATCH" | "AT_RISK" | "CRITICAL" | "INSOLVENT_RISK" | null;
+    /**
+     * Evidence sufficiency, SEPARATE from `gateState` (current-cash-finance-reading.ts `gateEvidenceSufficient`): false when a
+     * present current reading rests on incomplete material cash evidence (a Cash flow position whose total cash is not
+     * established, or Finance liquidity unconfirmed). It never raises `gateState` (unknown is not danger); a growth-sensitive
+     * step needs BOTH a sufficiently safe state and sufficient evidence. Absent = sufficient (fixtures only: the loader always sets it).
+     */
+    evidenceSufficient?: boolean;
+    /** The gaps behind `evidenceSufficient === false`: source, reason, and the unknown field(s). */
+    evidenceGaps?: ReadonlyArray<{ source: "cashflow" | "finance"; reason: string; missing: readonly string[] }>;
   };
   /** Gross margin of the business's current effective snapshot (null ⇒ unknown). */
   grossMarginPct: number | null;
@@ -231,6 +240,15 @@ function cashHoldReason(c: OwnerGateConstraints["cash"], state: FinancialHealthS
     return `Financial survival is ${s}${inProgress}, driven by profit and margin rather than cash${c.basis}. This ${area} step waits until profitability is restored.`;
   }
   return `Cash survival is ${s}${inProgress}${c.basis}. This ${area} step waits until cash is ${growth ? "safe enough for growth" : "no longer at this level"}.`;
+}
+
+const EVIDENCE_FIELD_WORDS: Readonly<Record<string, string>> = Object.freeze({ cashInHand: "cash in hand", bankBalance: "bank balance" });
+
+/** Owner-facing hold when total cash is not established: names what to enter, never claims danger. */
+function cashEvidenceReason(gaps: NonNullable<OwnerGateConstraints["cash"]["evidenceGaps"]>, area: string): string {
+  const labels = [...new Set(gaps.flatMap((g) => g.missing.map((m) => EVIDENCE_FIELD_WORDS[m] ?? m)))];
+  const what = labels.length > 0 ? labels.join(" and ") : "cash";
+  return `Total cash is not confirmed yet; enter the missing ${what} figure before OpsIQ clears this ${area} growth step.`;
 }
 
 /** Pure constraint builders over the rows the service loads. */
@@ -333,6 +351,12 @@ export function evaluateOwnerActionGate(c: OwnerGateConstraints, s: OwnerGateSub
       const sensitivity = growth ? RecommendationSensitivity.GROWTH_SENSITIVE : DOMAIN_CASH_SENSITIVITY[s.domain] ?? RecommendationSensitivity.GENERAL;
       const r = evaluateCashSafetyGate(c.cash.gateState, c.cash.gateState, sensitivity);
       if (!r.allowed) blocks.push({ code: "CASH_SAFETY_BLOCKED", reason: cashHoldReason(c.cash, c.cash.gateState, area, growth) });
+      // State and EVIDENCE are separate: a safe-looking state resting on incomplete material cash evidence is not proof of
+      // safety for discretionary growth (explicit GROW, or a legacy/unknown-intent step of a growth-sensitive domain).
+      // Protective intents never reach here; EXECUTE is not stopped by an evidence gap.
+      else if ((growth || s.intent === null) && sensitivity === RecommendationSensitivity.GROWTH_SENSITIVE && c.cash.evidenceSufficient === false) {
+        blocks.push({ code: "CASH_SAFETY_BLOCKED", reason: cashEvidenceReason(c.cash.evidenceGaps ?? [], area) });
+      }
     }
     // 4. Margin — a KNOWN margin below the floor stops pricing-sensitive work that scales volume.
     if (c.businessScoped && pricingSensitive) {

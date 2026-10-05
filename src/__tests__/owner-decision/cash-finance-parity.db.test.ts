@@ -194,7 +194,9 @@ describe("[db] the ONE cash/finance reading — parity across Home, Now View, th
     // missing Cash flow half adds (obligations and expected inflows).
     expect(r.nowMissing.join(" | ")).not.toMatch(/latest cash position/);
     expect(r.nowMissing).toContain("cash obligations and expected inflows from a Cash flow check (your cash on hand is already measured from your Finance snapshot)");
-    expect(r.gate).toBe("allowed");
+    // The Finance fixture records cash on hand but no bank balance, so total liquidity is unconfirmed: the STATE is SAFE
+    // everywhere (above), but a safe-looking state resting on incomplete cash evidence never clears a growth step.
+    expect(r.gate).toBe("blocked");
     expect(r.rec).toBe("blocked"); // policy: the missing Cash half is AT_RISK for a growth recommendation
     expect((await consumers(ws, b, "cash flow")).rec).toBe("allowed"); // …which permits spend
     await teardownOwnerBusiness(b);

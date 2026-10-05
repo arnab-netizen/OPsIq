@@ -37,6 +37,12 @@ export type ChangeDirection = "WORSENED" | "IMPROVED" | "NEUTRAL";
  */
 export interface BusinessStateSnapshot {
   cashRunwayDays: number;
+  /**
+   * False when `cashRunwayDays` is only a state PROXY because the cash position is incomplete (the engine's runway is
+   * unknown). Such a figure is never compared: no "Cash runway fell/rose … days" is built from it. Absent = measured
+   * (history written before this existed keeps its behaviour).
+   */
+  cashRunwayMeasured?: boolean;
   netMarginPct: number;
   complaintsCount: number;
   reworkCount: number;
@@ -100,7 +106,8 @@ export function detectChanges(
   const changes: DetectedChange[] = [];
 
   // Cash runway: fewer days = worse.
-  if (fell(prev.cashRunwayDays, current.cashRunwayDays)) {
+  const runwayComparable = prev.cashRunwayMeasured !== false && current.cashRunwayMeasured !== false;
+  if (runwayComparable && fell(prev.cashRunwayDays, current.cashRunwayDays)) {
     changes.push({
       category: ChangeCategory.CASH_WORSENED,
       direction: "WORSENED",
@@ -108,7 +115,7 @@ export function detectChanges(
       reason: `Cash runway fell from ${fmt(prev.cashRunwayDays)} to ${fmt(current.cashRunwayDays)} days.`,
       ownerAlert: true,
     });
-  } else if (rose(prev.cashRunwayDays, current.cashRunwayDays)) {
+  } else if (runwayComparable && rose(prev.cashRunwayDays, current.cashRunwayDays)) {
     changes.push({
       category: ChangeCategory.CASH_IMPROVED,
       direction: "IMPROVED",

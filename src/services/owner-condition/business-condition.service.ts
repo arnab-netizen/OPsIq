@@ -28,6 +28,7 @@ import {
 import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 
 /**
  * Deterministic total order for a domain's per-cycle actions. priorityScore
@@ -427,7 +428,7 @@ export async function getBusinessCondition(
   // Current evidence is judged relative to the same `now` the profile is built with (future periods excluded).
   const evidenceNow = opts.now ?? new Date();
 
-  const [financeCycle, latestFinanceSnapshot, recoveryCycle, cashflowCycle, salesCycle, operationsCycle, sopCycle, marketingCycle, strategyCycle] = await Promise.all([
+  const [financeCycle, latestFinanceSnapshot, recoveryCycle, cashflowCycleRow, salesCycle, operationsCycle, sopCycle, marketingCycle, strategyCycle] = await Promise.all([
     db.ownerFinanceCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
@@ -461,6 +462,8 @@ export async function getBusinessCondition(
       include: {
         findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        // The whole snapshot: a cycle whose snapshot cannot establish total cash is read through the read-time projection.
+        snapshot: true,
       },
     }),
     db.ownerSalesCycle.findFirst({
@@ -516,6 +519,8 @@ export async function getBusinessCondition(
     domainScores.push(recoveryCycleToDomainScore(recoveryCycle, recoveryCycle.snapshot));
     for (const a of recoveryCycle.actions) topActions.push(recoveryActionRowToOwnerAction(a));
   }
+  // Read-time projection (cycle-projection.ts): a persisted partial-cash conclusion never becomes current survival truth.
+  const cashflowCycle = cashflowCycleRow ? projectCashflowCycleRow(cashflowCycleRow) : null;
   if (cashflowCycle) {
     domainScores.push(cashflowCycleToDomainScore(cashflowCycle));
     for (const a of cashflowCycle.actions) topActions.push(cashflowActionRowToOwnerAction(a));

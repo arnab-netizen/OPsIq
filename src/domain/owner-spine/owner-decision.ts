@@ -160,6 +160,9 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "MKT_MISSING_CRITICAL_DATA", "MKT_INVALID_CURRENCY",
     // Cash/Finance figures that are not current hold work until current figures are diagnosed.
     "GATE_CASH_UNVERIFIED",
+    // Total cash is not established (a Cash flow position missing a component, or Finance liquidity unconfirmed): the gate
+    // holds discretionary growth until it is confirmed. A data request — never a survival verdict.
+    "GATE_CASH_UNCONFIRMED",
   ],
   GROWTH_OPPORTUNITY: [
     "SALES_OPP_CONVERT_PIPELINE", "SALES_OPP_IMPROVE_RETENTION", "SALES_OPP_RAISE_CONVERSION",
@@ -917,9 +920,19 @@ const MARGIN_REPAIR_CODES = new Set(["FIN_NEGATIVE_GROSS_MARGIN", "FIN_NEGATIVE_
  * survival state driven by profit and margin, or figures that are not current. The blocker target is named
  * and routed by it — a margin problem is never called "Stabilise cash".
  */
-type CashBlockKind = "cash" | "profit" | "unverified";
+type CashBlockKind = "cash" | "profit" | "unverified" | "evidence";
 function cashBlockKind(gate: OwnerGateConstraints): CashBlockKind {
+  // A block caused ONLY by incomplete material cash evidence (the state itself — SAFE/WATCH — would not hold growth): named
+  // as the data request it is, never as a cash danger ("Stabilise cash").
+  const safeState = gate.cash.gateState === "SAFE" || gate.cash.gateState === "WATCH";
+  if (gate.cash.evidenceSufficient === false && safeState && gate.cash.driver !== "unverified") return "evidence";
   return gate.cash.driver === "finance_profit" ? "profit" : gate.cash.driver === "unverified" ? "unverified" : "cash";
+}
+
+/** The domain a cash-evidence gap points the owner to (the source that holds the gap; Cash flow first). */
+function cashEvidenceDomain(gate: OwnerGateConstraints): "cashflow" | "finance" {
+  const first = gate.cash.evidenceGaps?.find((g) => g.source === "cashflow") ?? gate.cash.evidenceGaps?.[0];
+  return first?.source === "finance" ? "finance" : "cashflow";
 }
 
 /** Whether an eligible candidate already IS the work that clears a gate blocker (so none is synthesized). */
@@ -930,6 +943,10 @@ function addressesBlocker(c: OwnerDecisionCandidate, code: OwnerGateBlockCode, g
     case "CASH_SAFETY_BLOCKED": {
       const kind = cashBlockKind(gate);
       if (kind === "profit") return c.domain === "finance" && c.priorityClass === "PROFIT_LOSS";
+      if (kind === "evidence") {
+        // The request for the missing cash figure (or a refresh of it), in the source that holds the gap.
+        return (c.domain === "cashflow" || c.domain === "finance") && (c.source === "evidence_refresh" || c.priorityClass === "MISSING_CRITICAL_EVIDENCE");
+      }
       if (kind === "unverified") {
         // The refresh of the source whose figures decide it (an amended Finance snapshot → Finance).
         const src = gate.cash.source === "finance" ? "finance" : gate.cash.source === "cashflow" ? "cashflow" : null;
@@ -962,6 +979,10 @@ function gateTarget(code: OwnerGateBlockCode, gate: OwnerGateConstraints, heldDo
     case "CASH_SAFETY_BLOCKED": {
       const kind = cashBlockKind(gate);
       if (kind === "profit") return { findingCode: "GATE_PROFIT_UNSAFE", priorityClass: "PROFIT_LOSS", domain: "finance", route: "/owner/finance" };
+      if (kind === "evidence") {
+        const d = cashEvidenceDomain(gate);
+        return { findingCode: "GATE_CASH_UNCONFIRMED", priorityClass: "MISSING_CRITICAL_EVIDENCE", domain: d, route: `/owner/${d}` };
+      }
       if (kind === "unverified") {
         // Routed to the source whose figures need confirming (an amended Finance snapshot → Finance).
         return gate.cash.source === "finance"
@@ -994,6 +1015,7 @@ export function ownerGateHoldText(code: OwnerGateBlockCode, gate: OwnerGateConst
       case "CASH_SAFETY_BLOCKED": {
         const kind = cashBlockKind(gate);
         if (kind === "profit") return ["the profitability safety limit", "Restore profitability"];
+        if (kind === "evidence") return ["total cash not being confirmed yet", "Enter the missing cash in hand / bank balance figure"];
         if (kind === "unverified") return ["cash and Finance figures that are not current", "Confirm current cash and Finance figures"];
         return ["the cash safety limit", "Stabilise cash"];
       }
@@ -1034,6 +1056,7 @@ function gateBlockerTitle(code: OwnerGateBlockCode, gate: OwnerGateConstraints, 
     case "CASH_SAFETY_BLOCKED": {
       const kind = cashBlockKind(gate);
       if (kind === "profit") return "Restore profitability before advancing the work it holds back";
+      if (kind === "evidence") return "Confirm your total cash (enter the missing cash in hand / bank balance) before advancing the growth work it holds back";
       if (kind === "unverified") return "Confirm current cash and Finance figures before advancing the work they hold back";
       return "Stabilise cash before advancing the work it holds back";
     }

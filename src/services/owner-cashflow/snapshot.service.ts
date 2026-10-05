@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Prisma `db` proxy returns untyped rows; explicit any is pragmatic here */
 /**
  * Owner Cashflow (Module 5) — cashflow snapshot service.
  *
@@ -42,30 +41,7 @@ export function toCashflowInput(input: CashflowSnapshotCreateInput): CashflowSna
   };
 }
 
-/** Map a persisted snapshot row back to the engine input shape. */
-export function rowToCashflowInput(row: any): CashflowSnapshotInput {
-  return {
-    periodStart: row.periodStart instanceof Date ? row.periodStart.toISOString() : row.periodStart,
-    periodEnd: row.periodEnd instanceof Date ? row.periodEnd.toISOString() : row.periodEnd,
-    currency: row.currency,
-    businessModel: row.businessModelType ?? undefined,
-    industryTemplate: row.industryTemplate ?? undefined,
-    cashInHand: row.cashInHand ?? undefined,
-    bankBalance: row.bankBalance ?? undefined,
-    dailyCollections: row.dailyCollections ?? undefined,
-    receivables: row.receivables ?? undefined,
-    receivablesOverdue: row.receivablesOverdue ?? undefined,
-    payables: row.payables ?? undefined,
-    payablesOverdue: row.payablesOverdue ?? undefined,
-    upcomingEmi: row.upcomingEmi ?? undefined,
-    rentDue: row.rentDue ?? undefined,
-    salaryDue: row.salaryDue ?? undefined,
-    vendorDue: row.vendorDue ?? undefined,
-    taxDue: row.taxDue ?? undefined,
-    ownerWithdrawal: row.ownerWithdrawal ?? undefined,
-    notes: row.notes ?? undefined,
-  };
-}
+export { rowToCashflowInput } from "@/domain/owner-cashflow/row-input";
 
 export async function createCashflowSnapshot(
   businessId: string,

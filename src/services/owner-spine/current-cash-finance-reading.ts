@@ -31,12 +31,22 @@
  *     figures; null when the deciding source supplied no confidence (the caller then treats it as unknown).
  *   - `gateSource` names the source whose figures decide it (cash flow or finance), so a refresh target
  *     points at the source that actually needs refreshing (an amended Finance snapshot → Finance).
+ *   - `gateEvidenceSufficient` is a SEPARATE fact from `gateState` (severity vs evidence): it is false when a CURRENT,
+ *     non-superseded reading rests on material cash evidence that is incomplete — a Cash flow position whose total cash
+ *     cannot be established from BOTH cash components, or a Finance reading that carries the liquidity-unconfirmed
+ *     finding. A reading in that condition is never affirmative proof of safety: `gateState` is NOT raised (unknown is
+ *     not danger — a measured WATCH stays WATCH), but any consumer asking "may we treat cash as safe enough for
+ *     discretionary growth?" must require BOTH a sufficiently safe state AND `gateEvidenceSufficient`. Absence of one
+ *     source is not an evidence gap by itself (the other authoritative source may stand); a PRESENT current source
+ *     with a gap is. `gateEvidenceGaps` names each gap (source, reason, the unknown field(s)).
  *   - `gateDriver` says what drives `gateState` — cash, a Finance survival state driven by profit/margin
  *     (the Finance diagnosis's own findings, supplied by the caller), or unverified figures — so a block is
  *     named by its real cause (a margin problem is never called a cash danger).
  */
 import { resolveCashFinanceSignal, type CashFinanceResolution, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { asDate, OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
+import { LIQUIDITY_UNCONFIRMED_FINDING_CODE } from "@/domain/owner-finance/liquidity";
+import type { CashPositionEvidence } from "@/domain/owner-cashflow/cycle-projection";
 
 const DAY_MS = 86_400_000;
 const STATES: ReadonlySet<string> = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
@@ -51,6 +61,26 @@ export interface CashFinanceCycleRead {
   driver?: "cash" | "profit" | null;
   /** The diagnosis's own data confidence, 0..1 (null/absent when unknown). */
   confidence?: number | null;
+  /** Material cash-evidence gaps of THIS reading (see `cashFlowEvidenceGaps` / `financeEvidenceGaps`); absent = none. */
+  evidenceGaps?: readonly CashFinanceEvidenceGap[];
+}
+
+/** Why a present reading cannot count as affirmative proof of safety. */
+export interface CashFinanceEvidenceGap {
+  reason: "CASH_POSITION_INCOMPLETE" | "LIQUIDITY_UNCONFIRMED";
+  /** The unknown field(s): `cashInHand` / `bankBalance` (a cash position) or `bankBalance` (Finance liquidity). */
+  missing: readonly string[];
+}
+
+/** A Cash flow cycle's gaps, from its (projected) cash-position evidence — the one completeness primitive. */
+export function cashFlowEvidenceGaps(cycle: { cashPosition?: CashPositionEvidence } | null | undefined): CashFinanceEvidenceGap[] {
+  const p = cycle?.cashPosition;
+  return p && p.judged && !p.complete ? [{ reason: "CASH_POSITION_INCOMPLETE", missing: [...p.missing] }] : [];
+}
+
+/** A Finance cycle's gaps: the persisted liquidity-unconfirmed finding means total liquid funds are not established. */
+export function financeEvidenceGaps(findings: ReadonlyArray<{ code?: unknown }> | null | undefined): CashFinanceEvidenceGap[] {
+  return (findings ?? []).some((f) => f.code === LIQUIDITY_UNCONFIRMED_FINDING_CODE) ? [{ reason: "LIQUIDITY_UNCONFIRMED", missing: ["bankBalance"] }] : [];
 }
 
 /** Provisional (in-progress current period) readings, one per source; never completed truth. */
@@ -108,6 +138,9 @@ export interface CurrentCashFinanceReading extends CashFinanceResolution {
   provisionalFinanceState: SurvivalLikeState | null;
   /** Source-derived confidence in `gateState`, 0..1 (see the module doc). */
   gateConfidence: number | null;
+  /** SEPARATE from `gateState`: false when a present current reading rests on incomplete material cash evidence (module doc). */
+  gateEvidenceSufficient: boolean;
+  gateEvidenceGaps: Array<CashFinanceEvidenceGap & { source: "cashflow" | "finance" }>;
 }
 
 function asState(v: unknown): SurvivalLikeState | null {
@@ -267,6 +300,11 @@ export function currentCashFinanceReading(
       provisional = true;
     }
   }
+  // Evidence sufficiency (separate from severity): a PRESENT, CURRENT, non-superseded reading with a material gap is
+  // never affirmative proof of safety. Absence of a source is not a gap (the other authoritative source may stand).
+  const gateEvidenceGaps: Array<CashFinanceEvidenceGap & { source: "cashflow" | "finance" }> = [];
+  if (cashIsCurrent && resolution.supersededSource !== "cash") for (const g of cash?.evidenceGaps ?? []) gateEvidenceGaps.push({ ...g, source: "cashflow" });
+  if (financeIsCurrent && resolution.supersededSource !== "finance") for (const g of finance?.evidenceGaps ?? []) gateEvidenceGaps.push({ ...g, source: "finance" });
   return {
     ...resolution,
     cashState,
@@ -282,5 +320,7 @@ export function currentCashFinanceReading(
     provisionalCashState: provCash,
     provisionalFinanceState: provFinance,
     gateConfidence,
+    gateEvidenceSufficient: gateEvidenceGaps.length === 0,
+    gateEvidenceGaps,
   };
 }
