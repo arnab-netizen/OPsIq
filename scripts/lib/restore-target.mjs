@@ -2,8 +2,9 @@
  * Restore-target policy for scripts/restore-database.sh.
  *
  * A restore replays a `pg_dump --create --clean` dump, which embeds DROP DATABASE / CREATE DATABASE for the SOURCE
- * database's own name on whatever SERVER the connection string reaches. So the target must be PROVEN before anything is
- * decompressed, printed or written — `DATABASE_URL` alone is never authorization.
+ * database's own name on whatever SERVER the connection string reaches. So the target is authorized BEFORE the restore
+ * script inspects DATABASE_URL and before any database client runs or anything is written — `DATABASE_URL` alone is never
+ * authorization, and `production` is refused on the target alone (DATABASE_URL is not read).
  *
  * Policy (reuses OPSIQ_DB_TARGET; no overlapping variable):
  *   local      → DATABASE_URL must be a true loopback URL (localhost, 127.0.0.1, ::1). OPSIQ_LOCAL_DB_EXTRA_HOSTS is

@@ -409,13 +409,18 @@ describe("A3 governance: restore-database.sh cannot be an ad-hoc production rest
   const restoreCli = readFileSync(join(ROOT, "scripts", "assert-restore-target.mjs"), "utf8");
   const code = (text: string) => text.split("\n").filter((l) => !l.trim().startsWith("#"));
 
-  it("the target preflight runs before anything is printed, decompressed or written", () => {
+  it("target authorization precedes any DATABASE_URL inspection, database client, decompression or write", () => {
     const body = code(restoreSh).join("\n");
     const pre = body.indexOf("assert-restore-target.mjs");
     expect(pre).toBeGreaterThan(-1);
-    for (const later of ["gunzip -c", "psql", "zgrep", "sha256sum", "gzip -t", "Starting database restore"]) {
+    // The restore script does not look at DATABASE_URL (unset check, placeholder check, connection use) until after the preflight.
+    expect(pre).toBeLessThan(body.indexOf("DATABASE_URL"));
+    expect(body).not.toMatch(/\[ -z "\$\{DATABASE_URL:-\}" \]/); // one authoritative unset-check: the preflight's
+    for (const later of ["gunzip -c", "psql", "zgrep", "sha256sum", "gzip -t", "Starting database restore", "placeholder"]) {
       expect(pre, later).toBeLessThan(body.indexOf(later));
     }
+    // Only the backup-file argument check may run first.
+    expect(body.indexOf("Backup file not found")).toBeLessThan(pre);
     // Refusal exits non-zero; the script never prints the connection URL.
     expect(body).toMatch(/assert-restore-target\.mjs"\s*\)?;?\s*then[\s\S]{0,200}exit 1/);
     // (A piped `echo "$DATABASE_URL" | grep/sed` feeds a filter; an un-piped echo would print it.)

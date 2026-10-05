@@ -197,6 +197,73 @@ describe("restore-database.sh (real script, fake psql)", () => {
   });
 });
 
+
+describe("restore-database.sh: production is refused on the target alone, and the target precedes DATABASE_URL validation (real script)", () => {
+  const POLICY = /PRODUCTION_RESTORE_REQUIRES_GOVERNED_WORKFLOW/;
+  const prodAuth = { OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true", OPSIQ_PRODUCTION_OPERATION: "migrate deploy", MIGRATION_DATABASE_URL: PROD };
+
+  it("A. production + no DATABASE_URL → policy refusal (not 'DATABASE_URL not set'), psql never invoked", () => {
+    const r = restore({ OPSIQ_DB_TARGET: "production" });
+    expect(r.status).toBe(1);
+    expect(r.output).toMatch(POLICY);
+    expect(r.output).not.toMatch(/DATABASE_URL environment variable not set|placeholder/);
+    expect(r.psqlRan).toBe(false);
+    noLeak(r.output);
+  });
+  it("B. production + a synthetic DATABASE_URL → the same refusal", () => {
+    const r = restore({ OPSIQ_DB_TARGET: "production", DATABASE_URL: PROD });
+    expect(r.status).toBe(1);
+    expect(r.output).toMatch(POLICY);
+    expect(r.psqlRan).toBe(false);
+    noLeak(r.output);
+  });
+  it("C. production + a placeholder or malformed DATABASE_URL → the production-policy refusal, not the placeholder message", () => {
+    for (const url of ["postgresql://u:REPLACE_ME@db.example.com/x", "PLACEHOLDER", "your_neon_url", "not a url at all"]) {
+      const r = restore({ OPSIQ_DB_TARGET: "production", DATABASE_URL: url });
+      expect(r.status, url).toBe(1);
+      expect(r.output, url).toMatch(POLICY);
+      expect(r.output, url).not.toMatch(/placeholder value/);
+      expect(r.psqlRan).toBe(false);
+    }
+  });
+  it("D. production + the Prisma production authorization variables → the same refusal", () => {
+    for (const url of [undefined, PROD]) {
+      const r = restore({ OPSIQ_DB_TARGET: "production", ...(url ? { DATABASE_URL: url } : {}), ...prodAuth });
+      expect(r.status).toBe(1);
+      expect(r.output).toMatch(POLICY);
+      expect(r.psqlRan).toBe(false);
+      noLeak(r.output);
+    }
+  });
+  it("E. missing OPSIQ_DB_TARGET + missing DATABASE_URL → RESTORE_TARGET_REQUIRED (the URL's absence decides nothing)", () => {
+    const r = restore({});
+    expect(r.status).toBe(1);
+    expect(r.output).toMatch(/RESTORE_REFUSED RESTORE_TARGET_REQUIRED/);
+    expect(r.output).not.toMatch(/DATABASE_URL environment variable not set/);
+    expect(r.psqlRan).toBe(false);
+  });
+  it("F. local + missing DATABASE_URL → a sanitized URL-unset refusal", () => {
+    const r = restore({ OPSIQ_DB_TARGET: "local" });
+    expect(r.status).toBe(1);
+    expect(r.output).toMatch(/RESTORE_REFUSED RESTORE_DATABASE_URL_UNSET/);
+    expect(r.psqlRan).toBe(false);
+    noLeak(r.output);
+  });
+  it("G. staging + missing DATABASE_URL → a sanitized URL-unset refusal", () => {
+    const r = restore({ OPSIQ_DB_TARGET: "staging", OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-7" });
+    expect(r.status).toBe(1);
+    expect(r.output).toMatch(/RESTORE_REFUSED RESTORE_DATABASE_URL_UNSET/);
+    expect(r.psqlRan).toBe(false);
+    noLeak(r.output);
+  });
+  it("the placeholder check still runs — but only AFTER a local target is authorized", () => {
+    const r = restore({ OPSIQ_DB_TARGET: "local", DATABASE_URL: "postgresql://postgres:REPLACE_ME@localhost:5432/d" });
+    expect(r.status).toBe(1);
+    expect(r.output).toMatch(/placeholder value/);
+    expect(r.psqlRan).toBe(false);
+  });
+});
+
 describe("restore rehearsal workflow", () => {
   it("P. the rehearsal invocation selects local explicitly and still targets the disposable loopback container", () => {
     const wf = yaml.load(readFileSync(join(ROOT, ".github/workflows/restore-rehearsal.yml"), "utf8")) as { jobs: Record<string, { steps: Array<{ name?: string; run?: string; env?: Record<string, string> }> }> };

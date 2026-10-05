@@ -6,8 +6,10 @@
 #
 # Restores database from a gzipped SQL dump produced by backup-database.sh.
 #
-# TARGET POLICY (A3 — a restore can drop and recreate a whole database): the target must be proven BEFORE anything is
-# printed, decompressed or written, and DATABASE_URL alone never authorizes it. Reuses OPSIQ_DB_TARGET:
+# TARGET POLICY (A3 — a restore can drop and recreate a whole database). Safety invariant: TARGET AUTHORIZATION happens
+# right after the backup-file argument check and BEFORE this script inspects DATABASE_URL, and before any database client
+# runs or anything is decompressed or written. `production` is refused on the target alone (DATABASE_URL is not read);
+# DATABASE_URL alone never authorizes a restore. Reuses OPSIQ_DB_TARGET:
 #   OPSIQ_DB_TARGET=local    DATABASE_URL must be a true loopback URL (localhost / 127.0.0.1 / ::1)
 #   OPSIQ_DB_TARGET=staging  DATABASE_URL must pass the canonical approved-staging validator
 #                            (scripts/assert-approved-staging-database.ts; needs OPSIQ_APPROVED_STAGING_ENDPOINT_IDS)
@@ -47,21 +49,19 @@ if [ -z "$BACKUP_FILE" ] || [ ! -f "$BACKUP_FILE" ]; then
   exit 1
 fi
 
-# Validate environment
-if [ -z "${DATABASE_URL:-}" ]; then
-  echo "ERROR: DATABASE_URL environment variable not set" | tee -a "$LOG_FILE"
-  exit 1
-fi
-
-if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
-  echo "ERROR: DATABASE_URL contains a placeholder value - secret not properly configured" | tee -a "$LOG_FILE"
-  exit 1
-fi
-
-# Positive target proof BEFORE anything is printed, decompressed or written. Never prints the connection URL.
+# Positive target authorization — the FIRST thing done with the environment, before DATABASE_URL is inspected here.
+# assert-restore-target.mjs is the single authoritative validation path: it refuses production on the target alone,
+# requires a loopback URL for local, delegates staging to the canonical validator, and reports a missing/unset DATABASE_URL
+# for the allowed targets. It never prints the connection URL and opens no database connection.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if ! node "$SCRIPT_DIR/assert-restore-target.mjs"; then
   echo "ERROR: restore target not verified; nothing was restored." >&2
+  exit 1
+fi
+
+# Remaining non-destructive validation, only after the target is authorized (DATABASE_URL is known set by the preflight).
+if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+  echo "ERROR: DATABASE_URL contains a placeholder value - secret not properly configured" | tee -a "$LOG_FILE"
   exit 1
 fi
 

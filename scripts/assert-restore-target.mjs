@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Preflight called by scripts/restore-database.sh BEFORE anything is printed, decompressed or written.
+ * Preflight called by scripts/restore-database.sh right after its backup-file check — before the script inspects
+ * DATABASE_URL, runs any database client, or decompresses or writes anything.
  * Exit 0 only for a proven local (loopback) or approved staging restore target. Prints `RESTORE_TARGET=<target>`
  * or a sanitized refusal code — never a URL, host, user, password or database name. Opens no database connection.
  */
