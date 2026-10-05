@@ -61,13 +61,14 @@ export async function getOwnerHome(
  * getOwnerHome plus the owner action gate's constraints the canonical decision was resolved with (null when
  * no business is selected) — for surfaces that must describe the decision against the SAME constraints
  * (Now View: growth readiness and the do-not-repeat annotation). Server-side only: the constraints are never
- * part of the Home payload.
+ * part of the Home payload. `staleDomains` is likewise internal: the canonical stale-evidence domains (null when
+ * no business is selected), for the Portfolio's investment eligibility.
  */
 export async function resolveOwnerHome(
   workspaceId: string,
   requestedBusinessId?: string | null,
   opts: { now?: Date } = {}
-): Promise<{ home: OwnerHomeResult; gate: OwnerGateConstraints | null }> {
+): Promise<{ home: OwnerHomeResult; gate: OwnerGateConstraints | null; staleDomains: readonly string[] | null }> {
   const now = opts.now ?? new Date();
   const businesses = await listBusinesses(workspaceId);
   const businessList = businesses.map((b: any) => ({
@@ -86,7 +87,7 @@ export async function resolveOwnerHome(
   if (!selectedBusinessId && businesses.length === 1) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { home: { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null }, gate: null };
+    return { home: { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null, currentOwnerDecision: null, reassessment: null }, gate: null, staleDomains: null };
   }
   const businessId = selectedBusinessId;
 
@@ -253,6 +254,8 @@ export async function resolveOwnerHome(
       reassessment,
     },
     gate,
+    // INTERNAL (never part of the Home payload): the canonical stale-evidence domains the decision above was resolved with.
+    staleDomains,
   };
 }
 

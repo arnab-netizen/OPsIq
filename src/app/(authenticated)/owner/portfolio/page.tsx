@@ -114,7 +114,7 @@ export default function OwnerPortfolioPage() {
               <div>Highest profit opportunity: <strong>{byId(ranking.highestProfitOpportunityBusinessId)}</strong></div>
               <div>Highest cash risk: <strong>{byId(ranking.highestCashRiskBusinessId)}</strong></div>
               <div>Worst execution problem: <strong>{byId(ranking.worstExecutionProblemBusinessId)}</strong></div>
-              <div>Best growth candidate: <strong>{byId(ranking.bestGrowthCandidateBusinessId)}</strong></div>
+              <div>Best growth candidate: <strong>{byId(ranking.bestGrowthCandidateBusinessId)}</strong> <span className="text-muted-foreground">(a ranking only — it is not advice to invest; see the investment recommendation below)</span></div>
             </div>
           </section>
 
@@ -134,11 +134,36 @@ export default function OwnerPortfolioPage() {
             </section>
           )}
 
-          {view.investmentRecommendation && (
+          {view.investmentRecommendation ? (
             <section className="border rounded-lg p-4 bg-card">
               <div className="text-xs uppercase text-muted-foreground">Investment recommendation</div>
               <div className="font-semibold">{view.investmentRecommendation.businessName}</div>
               <p className="text-xs text-muted-foreground">{view.investmentRecommendation.reason}</p>
+            </section>
+          ) : view.investmentAssessment ? (
+            <section className="border rounded-lg p-4 bg-card" data-testid="investment-abstention">
+              <div className="text-xs uppercase text-muted-foreground">
+                {view.investmentAssessment.status === "HELD" ? "Investment recommendation on hold" : "No investment recommendation"}
+              </div>
+              <p className="text-sm">{view.investmentAssessment.summary}</p>
+            </section>
+          ) : null}
+
+          {Array.isArray(view.investmentAssessment?.held) && view.investmentAssessment.held.length > 0 && (
+            <section className="border rounded-lg p-4 bg-card" data-testid="investment-holds">
+              <h2 className="font-bold mb-2">Held for now</h2>
+              <div className="space-y-3">
+                {view.investmentAssessment.held.map((h: any) => (
+                  <div key={h.businessId} className="text-sm">
+                    <div className="font-semibold">{h.businessName}</div>
+                    <p className="text-xs text-muted-foreground">{h.ownerStatement}</p>
+                    {Array.isArray(h.reasons) && h.reasons.map((r: string, i: number) => (
+                      <p key={i} className="text-xs text-muted-foreground">{r}</p>
+                    ))}
+                    {h.nextStep && <p className="text-xs">Before OpsIQ reassesses: {h.nextStep}</p>}
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 

@@ -20,6 +20,11 @@ export interface PortfolioBusinessInput {
   profile: BusinessConditionProfile | null;
   /** The business's ONE canonical owner decision (owner-home service); null when none resolved. */
   ownerDecision?: CurrentOwnerDecision | null;
+  /**
+   * The canonical stale-evidence domains the business's owner decision was resolved with (owner-candidate-builder).
+   * INTERNAL context for investment eligibility only; Portfolio never computes freshness itself. Absent = unknown (fail closed).
+   */
+  staleDomains?: readonly string[];
 }
 
 /** Per-business roll-up used in the portfolio view (16.1). */
@@ -80,6 +85,27 @@ export interface PortfolioInvestmentRecommendation {
   survivalRiskScore: number;
 }
 
+/** A business that met the quantitative criteria but is held by canonical owner policy (plain language only). */
+export interface PortfolioInvestmentHold {
+  businessId: string;
+  businessName: string;
+  ownerStatement: string;
+  reasons: string[];
+  /** What must happen before OpsIQ reassesses. */
+  nextStep: string;
+}
+
+/**
+ * Visible investment abstention (A2). RECOMMENDED: a business is eligible. HELD: none is eligible, but at least one met the
+ * quantitative criteria and canonical owner policy holds it. NO_QUALIFYING_CANDIDATE: none met the quantitative criteria.
+ */
+export interface PortfolioInvestmentAssessment {
+  status: "RECOMMENDED" | "HELD" | "NO_QUALIFYING_CANDIDATE";
+  summary: string;
+  /** Held businesses, ordered by growth signal desc then businessId asc (includes holds beside a recommendation). */
+  held: PortfolioInvestmentHold[];
+}
+
 /** The full deterministic portfolio view. */
 export interface PortfolioView {
   hasData: boolean;
@@ -89,6 +115,11 @@ export interface PortfolioView {
   ranking: PortfolioRanking;
   top3Priorities: PortfolioPriority[];
   riskAlerts: PortfolioRiskAlert[];
+  /**
+   * Non-null ONLY when the business's canonical owner decision permits a material commitment (advice policy, primary
+   * priority class and evidence freshness all pass). A ranking such as `ranking.bestGrowthCandidateBusinessId` is never permission.
+   */
   investmentRecommendation: PortfolioInvestmentRecommendation | null;
+  investmentAssessment: PortfolioInvestmentAssessment;
   generatedAt: Date;
 }

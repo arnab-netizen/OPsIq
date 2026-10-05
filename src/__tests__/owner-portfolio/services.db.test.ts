@@ -16,6 +16,8 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import type { FinancialSnapshotCreateInput } from "@/domain/owner-finance/validation";
+import { getOwnerHome } from "@/services/owner-home/home.service";
+import { ownerMaterialCommitmentGuard } from "@/domain/owner-spine/owner-advice-policy";
 import { getPortfolio } from "@/services/owner-portfolio/portfolio.service";
 
 const actor = randomUUID();
@@ -77,6 +79,31 @@ describe("[db] Owner Portfolio service", () => {
 
     await db.ownerBusiness.delete({ where: { id: withDataId } });
     await db.ownerBusiness.delete({ where: { id: noDataId } });
+  });
+
+  it("[db] investment recommendation never contradicts the business's canonical decision and is withheld on stale evidence", async () => {
+    const workspaceId = randomUUID();
+    const bizId = await newBusiness(workspaceId, "Alpha");
+    const snap = await createFinancialSnapshot(
+      bizId,
+      { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", revenue: 100000, costOfGoodsOrServices: 40000, fixedCosts: 20000, cashOnHand: 90000 } satisfies FinancialSnapshotCreateInput,
+      actor,
+      workspaceId
+    );
+    await runFinanceDiagnosis(bizId, snap.id, actor, workspaceId);
+
+    const fresh = await getPortfolio(workspaceId);
+    expect(fresh.investmentAssessment).toBeDefined();
+    if (fresh.investmentRecommendation) {
+      const home = await getOwnerHome(workspaceId, bizId);
+      expect(ownerMaterialCommitmentGuard(home.currentOwnerDecision!.advicePolicy)).toBeNull();
+    }
+
+    // Long after the evidence period every domain is out of date (canonical staleDomains): never a recommendation.
+    const later = await getPortfolio(workspaceId, { now: new Date("2027-12-01T00:00:00.000Z") });
+    expect(later.investmentRecommendation).toBeNull();
+
+    await db.ownerBusiness.delete({ where: { id: bizId } });
   });
 
   it("[db] returns an explicit empty view for a workspace with no businesses", async () => {
