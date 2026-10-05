@@ -65,7 +65,8 @@ describe("the remote-test opt-in is always paired with the identity preflight", 
 
   it("no opt-in workflow also sets a production authorization flag", () => {
     for (const [f] of optInJobs) {
-      expect(text(f), f).not.toMatch(/OPSIQ_DB_TARGET|OPSIQ_ALLOW_PRODUCTION_DB_COMMAND|OPSIQ_PRODUCTION_OPERATION/);
+      // A3: a ci/test target label is now REQUIRED for any Prisma mutation; a production target or authorization is never allowed here.
+      expect(text(f), f).not.toMatch(/OPSIQ_DB_TARGET:\s*['"]?production|OPSIQ_ALLOW_PRODUCTION_DB_COMMAND|OPSIQ_PRODUCTION_OPERATION/);
     }
   });
 });

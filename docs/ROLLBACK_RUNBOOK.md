@@ -218,11 +218,14 @@ BACKUP_FILE="/backups/opsiq/opsiq_backup_2026-05-21_14-00-30.sql.gz"
 
 ### Step 3: Restore Database
 
+> **BLOCKED — do not restore production with `scripts/restore-database.sh`.** The script refuses production (`PRODUCTION_RESTORE_REQUIRES_GOVERNED_WORKFLOW`) because a `pg_dump --create` dump drops and recreates a whole database, and no governed production recovery workflow exists yet (`GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED`). Do not bypass this by setting `DATABASE_URL` manually. Use the Neon point-in-time restore path in `docs/DATABASE_BACKUP_RECOVERY_RUNBOOK.md`, or escalate to the owner.
+
 ```bash
 # Before: Stop application (already done in Step 1)
 
-# Restore from backup
-./scripts/restore-database.sh $BACKUP_FILE
+# Production restore is NOT performed with scripts/restore-database.sh. Rehearse the chosen backup on a local or
+# disposable server only:
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh $BACKUP_FILE
 
 # Expected output:
 # Restoring from backup: opsiq_backup_2026-05-21_14-00-30.sql.gz
@@ -501,7 +504,7 @@ jobs:
 
 # Steps:
 1. kubectl scale deployment opsiq --replicas=0 (stop app)
-2. ./scripts/restore-database.sh /backups/opsiq/opsiq_backup_KNOWN_GOOD.sql.gz
+2. Database restore: BLOCKED for production via scripts/restore-database.sh (it refuses production; no governed production recovery workflow exists yet) — use Neon point-in-time restore per docs/DATABASE_BACKUP_RECOVERY_RUNBOOK.md or escalate to the owner
 3. git revert $BROKEN_COMMIT (revert app code)
 4. kubectl scale deployment opsiq --replicas=3 (restart app)
 5. Verify schema matches code

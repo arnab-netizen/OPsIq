@@ -129,6 +129,8 @@ jobs:
         id: migrate-deploy
         run: npx prisma migrate deploy
         env:
+          OPSIQ_DB_TARGET: test
+          DATABASE_URL_TEST: ${{ secrets.MIGRATION_DATABASE_URL }}
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 

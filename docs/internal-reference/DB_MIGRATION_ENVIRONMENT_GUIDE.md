@@ -6,10 +6,12 @@ this file. `.env.local` was NOT modified by this guide.
 
 ## 1. Current config truth
 
-- `prisma.config.ts` resolves the Prisma CLI datasource URL as:
-  `MIGRATION_DATABASE_URL || DATABASE_URL || DATABASE_URL_TEST || <local default>`
-  (updated in this task to add `MIGRATION_DATABASE_URL` as the highest-priority
-  source; behavior is unchanged when it is unset).
+- `prisma.config.ts` selects the Prisma CLI datasource through
+  `src/infra/prisma-datasource.ts`. There is **no implicit fallback chain for a
+  mutation** and `MIGRATION_DATABASE_URL` is **never** used implicitly (see
+  section 5a for the supported commands). Read-only / schema-only commands
+  (`generate`, `validate`, `migrate status`, `migrate diff`, `db pull`) still
+  fall back `DATABASE_URL -> DATABASE_URL_TEST -> built-in local default`.
 - `schema.prisma` `datasource db` declares only `provider = "postgresql"` — it has
   **no `url` and no `directUrl`**; the URL comes from `prisma.config.ts`.
 - `.env.local` (developer-local, gitignored intent; do not commit real values):
@@ -53,10 +55,51 @@ Neon endpoint hostname (keep the same credentials/db/params).
 
 ## 5. Which URL Prisma migration should use
 
-`MIGRATION_DATABASE_URL` = the **direct (non-pooler)** Neon URL. With the updated
-`prisma.config.ts`, the Prisma CLI uses `MIGRATION_DATABASE_URL` first. If you
-cannot set it, set `DATABASE_URL` to the direct URL for the migration step only —
-but the clean path is `MIGRATION_DATABASE_URL`.
+`MIGRATION_DATABASE_URL` = the **direct (non-pooler)** Neon URL. The Prisma CLI
+reads it **only** when `OPSIQ_DB_TARGET=production`, `OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true`
+and (for a write) `OPSIQ_PRODUCTION_OPERATION=migrate deploy` are all set, which only
+`.github/workflows/migrate-production.yml` does, on the single step that needs it.
+Do not export a production URL as `DATABASE_URL` or `MIGRATION_DATABASE_URL` in a
+shell to run package scripts: they are refused.
+
+## 5a. Supported Prisma mutation commands (fail-closed, positive target proof)
+
+A mutation-capable command (`migrate dev|deploy|reset|resolve`, `db push|execute|seed`,
+`studio`, or anything unrecognised) **requires an explicit `OPSIQ_DB_TARGET`** — never
+inferred from `DATABASE_URL`, and not granted by `CI=true` — and the target is proven
+against the datasource, not trusted as a label:
+
+| Target | Datasource | Proof | Permitted mutations |
+|---|---|---|---|
+| `local` | `DATABASE_URL` | loopback URL (or a single-label compose service listed in `OPSIQ_LOCAL_DB_EXTRA_HOSTS`) | all |
+| `ci` | `DATABASE_URL` | loopback URL (the runner's own throwaway Postgres) | all |
+| `test` | `TEST_DATABASE_URL` / `DATABASE_URL_TEST` | loopback, or a remote database that is not production and whose in-database identity matches the approved OpsIQ test branch | remote: `migrate deploy`, `migrate resolve`, `db push`, `db execute` |
+| `staging` | `DATABASE_URL` | direct (non-pooler) endpoint id listed in `OPSIQ_APPROVED_STAGING_ENDPOINT_IDS` | `migrate deploy` |
+| `production` | `MIGRATION_DATABASE_URL` | `OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true` + `OPSIQ_PRODUCTION_OPERATION` | `migrate deploy` only |
+
+- `--url` (and `--shadow-database-url`, `--from-url`, `--to-url`) and any `--config`
+  other than `prisma.config.ts` are refused on a mutating command.
+- Against production, `migrate reset`, `migrate dev`, `migrate resolve`, `db push`,
+  `db execute`, `db seed` and `studio` are refused at every authorization level.
+  The only production schema mutation path is `.github/workflows/migrate-production.yml`.
+- Local development: `npm run db:migrate:dev | db:migrate:deploy | db:push | db:reset | db:studio`
+  already set `OPSIQ_DB_TARGET=local`, so they run only against a loopback `DATABASE_URL`.
+- **Staging approval is one shared rule** (`src/infra/staging-database-target.ts`,
+  `assertApprovedStagingDatabaseUrl`): valid postgres URL with a provable host (no
+  `host`/`hostaddr` override), not a known production endpoint, a direct (non-pooler)
+  endpoint, and an exact match in `OPSIQ_APPROVED_STAGING_ENDPOINT_IDS`; an empty or
+  malformed list refuses. Set that **non-secret** list as a variable on the GitHub
+  Environment `staging` (not a production or repository-wide secret). The Prisma CLI
+  path and every staging path that never loads `prisma.config.ts` use it: the reset
+  workflow's raw `psql DROP SCHEMA` and the staging seed run
+  `scripts/assert-approved-staging-database.ts` on the same secret BEFORE the first
+  write, and `scripts/reset-staging.ts` / `scripts/test-migration-replay.sh` verify
+  their target (local or approved staging / verified test database) before their first
+  statement.
+- Threat model: accidental / operator error. `npx prisma --config <other-file>` bypasses
+  `prisma.config.ts` entirely and cannot be intercepted by repository code; repository
+  governance (`prisma-mutation-governance.test.ts`) forbids it in every package script,
+  workflow and script OpsIQ owns.
 
 ## 6. Safe migration command
 

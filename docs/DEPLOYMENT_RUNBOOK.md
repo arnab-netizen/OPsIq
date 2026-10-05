@@ -268,8 +268,10 @@ npx prisma validate
   # Option C: Keep database schema (forward-compatible migrations only)
 
 # For most cases, schema is forward-compatible → keep database
-# If database rollback needed:
-./scripts/restore-database.sh /backups/opsiq/opsiq_backup_YYYY-MM-DD_HH-MM-SS.sql.gz verify
+# If database rollback needed: BLOCKED via scripts/restore-database.sh for production (the script refuses production;
+# no governed production recovery workflow exists yet — GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED). Use Neon
+# point-in-time restore per docs/DATABASE_BACKUP_RECOVERY_RUNBOOK.md, or escalate to the owner. Never set
+# DATABASE_URL manually to bypass the refusal.
 
 # Step 5: Stop services
 systemctl stop opsiq-backend opsiq-api opsiq-worker
@@ -304,8 +306,9 @@ systemctl stop opsiq-backend opsiq-worker
 # Step 2: Create backup of current state (for post-mortem)
 ./scripts/backup-database.sh /backups/opsiq/rollback-diagnostic.sql.gz verify
 
-# Step 3: Restore from pre-deployment backup
-./scripts/restore-database.sh /backups/opsiq/opsiq_backup_PRE_DEPLOYMENT_TIMESTAMP.sql.gz verify
+# Step 3: Restore from pre-deployment backup — BLOCKED for production via scripts/restore-database.sh (it refuses
+# production; GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED). Use Neon point-in-time restore per
+# docs/DATABASE_BACKUP_RECOVERY_RUNBOOK.md, or escalate to the owner.
 
 # Step 4: Verify restore
 psql $DATABASE_URL -c "SELECT COUNT(*) FROM workspaces;" # Should match pre-deployment count
@@ -489,9 +492,10 @@ curl -s http://localhost:3000/api/health | jq .
 
 # Step 2: Provision larger database instance (cloud provider)
 
-# Step 3: Restore backup to new instance
-export DATABASE_URL="postgresql://user:pass@new-host:5432/opsiq"
-./scripts/restore-database.sh /backups/opsiq/pre-scale.sql.gz verify
+# Step 3: Restore backup to new instance — scripts/restore-database.sh restores only onto a loopback database
+# (OPSIQ_DB_TARGET=local) or an approved staging endpoint (OPSIQ_DB_TARGET=staging); it refuses a new production
+# instance (GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED). Rehearse locally:
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh /backups/opsiq/pre-scale.sql.gz verify
 
 # Step 4: Run migrations on new instance (if needed)
 npx prisma migrate deploy
@@ -596,8 +600,8 @@ curl -s http://localhost:3000/api/health | jq .
 # Backup database
 ./scripts/backup-database.sh /backups/opsiq verify
 
-# Restore from backup
-./scripts/restore-database.sh /backups/opsiq/opsiq_backup_YYYY-MM-DD_HH-MM-SS.sql.gz verify
+# Restore from backup (local / disposable server only — the script refuses production)
+OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" ./scripts/restore-database.sh /backups/opsiq/opsiq_backup_YYYY-MM-DD_HH-MM-SS.sql.gz verify
 
 # Check disk space
 df -h /data /backups

@@ -249,6 +249,8 @@ jobs:
           npx prisma migrate resolve --applied 20260511_add_aggregate_locks
           echo "prisma migrate resolve completed"
         env:
+          OPSIQ_DB_TARGET: test
+          DATABASE_URL_TEST: ${{ secrets.MIGRATION_DATABASE_URL }}
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
@@ -294,6 +296,8 @@ jobs:
           npx prisma migrate deploy
           echo "prisma migrate deploy completed"
         env:
+          OPSIQ_DB_TARGET: test
+          DATABASE_URL_TEST: ${{ secrets.MIGRATION_DATABASE_URL }}
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 

@@ -29,6 +29,8 @@ jobs:
         ports:
           - 5432:5432
 
+    env:
+      OPSIQ_DB_TARGET: ci
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

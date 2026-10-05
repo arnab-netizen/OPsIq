@@ -9,12 +9,11 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Database target label'
+        description: 'Database target label (staging only: production schema changes go through migrate-production.yml)'
         required: true
         type: choice
         options:
           - staging
-          - production
       confirm:
         description: 'Must equal APPLY_MODULE2_FINANCE_MIGRATION'
         required: true
@@ -30,6 +29,8 @@ jobs:
     timeout-minutes: 15
     environment: ${{ github.event.inputs.target }}
     env:
+      OPSIQ_DB_TARGET: staging
+      OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
       # prisma.config.ts prioritizes MIGRATION_DATABASE_URL; DATABASE_URL is set
       # to the same secret as a fallback. Secrets are masked in logs by Actions.
       MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}

@@ -122,7 +122,7 @@ if (process.env.DATABASE_URL) {
     const error = String(e);
     if (error.includes("pending")) {
       report.prisma_migrations_status = "PENDING_MIGRATIONS";
-      report.warnings.push("Pending migrations found - run 'npx prisma migrate deploy' before deployment");
+      report.warnings.push("Pending migrations found - apply them through the governed migration workflow (.github/workflows/migrate-production.yml for production; npm run db:migrate:deploy for a local database) before deployment");
       console.log(`  ⚠ Pending migrations`);
     } else {
       report.prisma_migrations_status = "ERROR";
