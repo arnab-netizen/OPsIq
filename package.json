@@ -89,7 +89,7 @@
     "playwright": "^1.60.0",
     "prisma": "^7.7.0",
     "tailwindcss": "^4",
-    "ts-jest": "^29.4.9",
+    "ts-jest": "^29.4.14",
     "tsx": "^4.22.3",
     "typescript": "^5",
     "vitest": "^4.1.4"
