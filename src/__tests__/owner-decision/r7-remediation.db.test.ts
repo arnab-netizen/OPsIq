@@ -48,7 +48,7 @@ function period(endDaysAgo: number, length = 20) {
   const end = new Date(Date.now() - endDaysAgo * DAY);
   return { periodStart: iso(new Date(end.getTime() - length * DAY)), periodEnd: iso(end) };
 }
-const UNSAFE = { cashInHand: 100, dailyCollections: 50, receivables: 20000, receivablesOverdue: 15000, payables: 40000, upcomingEmi: 15000, rentDue: 10000, salaryDue: 20000, vendorDue: 15000, taxDue: 5000, ownerWithdrawal: 4000 };
+const UNSAFE = { cashInHand: 100, bankBalance: 0, dailyCollections: 50, receivables: 20000, receivablesOverdue: 15000, payables: 40000, upcomingEmi: 15000, rentDue: 10000, salaryDue: 20000, vendorDue: 15000, taxDue: 5000, ownerWithdrawal: 4000 };
 
 async function business(workspaceId: string, name: string) {
   const b = await createBusiness({ name, businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false }, actor, workspaceId);

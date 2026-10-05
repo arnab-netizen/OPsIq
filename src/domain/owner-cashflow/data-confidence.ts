@@ -5,6 +5,7 @@
  * critical inputs are listed explicitly. Nothing is invented. Pure (no I/O).
  */
 import { clampScore } from "@/domain/owner-spine/contracts";
+import { cashflowCashPositionMissingComponents } from "@/domain/owner-finance/liquidity";
 import type { CashflowSnapshotInput } from "./types";
 
 /** A finite, present number (missing/NaN/Infinity → not present). */
@@ -23,13 +24,13 @@ export function isValidCurrency(currency: string | undefined | null): boolean {
 
 /**
  * Critical inputs: without these, a cashflow diagnosis is largely guesswork.
- * "Has cash" is satisfied by cash-in-hand or bank balance; "has obligations" by
- * any near-term due; collections drives runway/collection metrics.
+ * The cash position is complete only when BOTH cash in hand and the bank balance are known (a known 0 is known);
+ * each unknown component is listed by its own field name so the owner knows exactly what to enter. "Has
+ * obligations" is satisfied by any near-term due; collections drives runway/collection metrics.
  */
 export function missingCriticalCashflowInputs(input: CashflowSnapshotInput): string[] {
   const missing: string[] = [];
-  const hasCash = present(input.cashInHand) || present(input.bankBalance);
-  if (!hasCash) missing.push("cash");
+  missing.push(...cashflowCashPositionMissingComponents(input));
   const hasObligations =
     present(input.upcomingEmi) ||
     present(input.rentDue) ||
@@ -41,6 +42,20 @@ export function missingCriticalCashflowInputs(input: CashflowSnapshotInput): str
   if (!present(input.dailyCollections)) missing.push("dailyCollections");
   return missing;
 }
+
+const CASH_POSITION_FIELDS: ReadonlySet<string> = new Set(["cashInHand", "bankBalance"]);
+
+/**
+ * How many critical REQUIREMENTS the missing list represents: the cash position is one requirement however many of
+ * its two components are unknown (so one gap is never double-penalised).
+ */
+export function criticalRequirementCount(missing: readonly string[]): number {
+  const cash = missing.some((k) => CASH_POSITION_FIELDS.has(k)) ? 1 : 0;
+  return cash + missing.filter((k) => !CASH_POSITION_FIELDS.has(k)).length;
+}
+
+/** Owner-facing name of a missing cash-position component. */
+export const CASH_POSITION_FIELD_LABEL: Readonly<Record<string, string>> = { cashInHand: "cash in hand", bankBalance: "bank balance" };
 
 const IMPORTANT_FIELDS: (keyof CashflowSnapshotInput)[] = [
   "receivables",
@@ -80,7 +95,7 @@ export function calculateDataConfidence(
 ): DataConfidenceResult {
   const missingCritical = missingCriticalCashflowInputs(input);
   let score = 100;
-  score -= missingCritical.length * 30;
+  score -= criticalRequirementCount(missingCritical) * 30;
 
   for (const f of IMPORTANT_FIELDS) {
     if (!present(input[f] as number | undefined)) score -= 5;

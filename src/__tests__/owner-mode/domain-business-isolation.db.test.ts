@@ -81,7 +81,7 @@ function atRiskFinanceSnapshot() {
 function insolventCashflowSnapshot() {
   return {
     periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR",
-    cashInHand: 5000, dailyCollections: 200,
+    cashInHand: 5000, bankBalance: 0, dailyCollections: 200,
     receivables: 20000, receivablesOverdue: 15000,
     payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000,
     vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,

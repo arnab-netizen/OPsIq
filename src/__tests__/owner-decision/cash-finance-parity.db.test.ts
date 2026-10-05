@@ -64,7 +64,7 @@ function period(endDaysAgo: number) {
   const end = new Date(Date.now() - endDaysAgo * 86_400_000);
   return { periodStart: iso(new Date(end.getTime() - 20 * 86_400_000)), periodEnd: iso(end) };
 }
-const CASH_FIGURES = { cashInHand: 50000, dailyCollections: 2000, receivables: 5000, receivablesOverdue: 1000, payables: 5000, upcomingEmi: 1000, rentDue: 2000, salaryDue: 5000, vendorDue: 1000, taxDue: 500, ownerWithdrawal: 500 };
+const CASH_FIGURES = { cashInHand: 50000, bankBalance: 0, dailyCollections: 2000, receivables: 5000, receivablesOverdue: 1000, payables: 5000, upcomingEmi: 1000, rentDue: 2000, salaryDue: 5000, vendorDue: 1000, taxDue: 500, ownerWithdrawal: 500 };
 
 async function business(workspaceId: string, name: string) {
   const b = await createBusiness({ name, businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false }, actor, workspaceId);
