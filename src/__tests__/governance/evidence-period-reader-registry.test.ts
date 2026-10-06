@@ -97,6 +97,7 @@ export const EVIDENCE_PERIOD_READER_REGISTRY: readonly RegistryEntry[] = [
   { file: "src/services/owner-strategy/command-center.service.ts", classes: ["CURRENT_EVIDENCE", "PROVISIONAL_AWARE"], reason: "wealth classification from the latest COMPLETED period; in-progress period labelled", mentions: {"ownerMetricSnapshot": 2} },
   { file: "src/services/owner-strategy/goal.service.ts", classes: ["CURRENT_EVIDENCE"], reason: "goal trajectory from COMPLETED periods; a currency-exclusion count", mentions: {"ownerMetricSnapshot": 2} },
   { file: "src/services/owner-strategy/wealth-path.service.ts", classes: ["CURRENT_EVIDENCE", "PROVISIONAL_AWARE"], reason: "wealth path from the latest COMPLETED period; in-progress period labelled", mentions: {"ownerMetricSnapshot": 2} },
+  { file: "src/services/owner-outcome/outcome-sources.ts", classes: ["CURRENT_EVIDENCE"], reason: "newer-diagnosis fact for an outcome assessment: the business's current completed cycle of the action's own domain (currentEvidenceWhere), read-only; never selects or changes the owner's current reading", mentions: {"ownerFinanceCycle": 1, "ownerCashflowCycle": 1, "ownerSalesCycle": 1, "ownerOperationsCycle": 1, "ownerSopCycle": 1, "ownerMarketingCycle": 1} },
   { file: "src/services/owner-trust/trust.service.ts", classes: ["CURRENT_EVIDENCE"], reason: "current completed cycles", mentions: {"ownerFinanceCycle": 1, "ownerCashflowCycle": 1, "ownerSalesCycle": 1, "ownerOperationsCycle": 1, "ownerSopCycle": 1, "ownerMarketingCycle": 1} },
 ];
 

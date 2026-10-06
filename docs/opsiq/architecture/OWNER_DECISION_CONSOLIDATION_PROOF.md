@@ -183,6 +183,7 @@ Every reader of financial evidence in `src` — the snapshot model (dot, bracket
 | `src/services/owner-mode/owner-db-providers.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-mode/owner-onboarding.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-mode/owner-progress.service.ts` | DIAGNOSIS_BOUND |
+| `src/services/owner-outcome/outcome-sources.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-spine/provisional-cash-finance.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-trust/trust.service.ts` | DIAGNOSIS_BOUND |
 <!-- financial-evidence-readers:end -->
