@@ -51,7 +51,7 @@ async function cashCycle(ws: string, b: string, snapshot: object) {
   return s;
 }
 const runwayText = async (ws: string, b: string) => (await getOwnerNowView(ws, b)).whatChanged.map((x) => x.reason).filter((r) => /runway/i.test(r)).join(" | ");
-const dash = async (ws: string): Promise<any> => buildOwnerDashboardPayload({ request: new Request("http://localhost/api/owner/dashboard") } as any, ws, actor);
+const dash = async (ws: string) => buildOwnerDashboardPayload({ request: new Request("http://localhost/api/owner/dashboard") } as unknown as Parameters<typeof buildOwnerDashboardPayload>[0], ws, actor);
 
 describe("[db] F1: Cashflow runway proxy is comparable only for a current, evidence-complete reading", () => {
   it("[db] F1-A: a Cashflow cycle that went STALE after a measured 120-day reading yields no 'fell to 0 days'", async () => {
