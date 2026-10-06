@@ -185,6 +185,11 @@ export enum HealthStatus {
   AT_RISK = "at_risk",
   HEALTHY = "healthy",
   IMPROVING = "improving",
+  /**
+   * Evidence is insufficient to assess the business (e.g. the cash position is not confirmed). This is an explicit UNKNOWN —
+   * not a severity: it is never healthy, at-risk, critical or improving, and never counted as measured danger.
+   */
+  NEEDS_DATA = "needs_data",
 }
 
 export enum ActionQueuePriority {
@@ -252,6 +257,10 @@ export interface WorkspaceHealth {
   healthyEngagements: number;
   atRiskEngagements: number;
   criticalEngagements: number;
+  /** Businesses whose evidence is insufficient to assess (additive; absent on older payloads = 0). Never counted as risk. */
+  needsDataEngagements?: number;
+  /** Plain-language owner-attention lines for needs-data businesses (what to enter); never risk language. */
+  needsDataItems?: string[];
   activeKPICount: number;
   onTrackKPICount: number;
   actionQueueSize: number;
@@ -326,7 +335,7 @@ export function validateWorkspaceHealth(health: WorkspaceHealth): string[] {
   if (health.engagementCount < 0) {
     errors.push("Engagement count must be non-negative");
   }
-  if (health.healthyEngagements + health.atRiskEngagements + health.criticalEngagements > health.engagementCount) {
+  if (health.healthyEngagements + health.atRiskEngagements + health.criticalEngagements + (health.needsDataEngagements ?? 0) > health.engagementCount) {
     errors.push("Health snapshot counts exceed total engagement count");
   }
   if (health.averageExecutionCertainty < 0 || health.averageExecutionCertainty > 100) {

@@ -74,7 +74,7 @@ import { evaluateOwnerActionGate, type OwnerGateConstraints } from "@/domain/own
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
-import { currentCashFinanceReading, toUnitConfidence, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
+import { cashFlowEvidenceGaps, financeEvidenceGaps, currentCashFinanceReading, toUnitConfidence, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
 import { cashFinanceOwnerNarrative } from "@/domain/owner-guidance/cash-finance-narrative";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
@@ -82,6 +82,7 @@ import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/st
 import { financeSurvivalDriver, type CurrentOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import { ownerImperativeContext, ownerTargetIntent, quoteTitles, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
 import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -93,7 +94,7 @@ const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK:
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
 type FinanceSnapshotFigures = NonNullable<FinanceReadingFacts["snapshot"]>;
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; snapshot?: ({ periodEnd: Date; supersededById?: string | null } & FinanceSnapshotFigures) | null; findings?: Array<{ code: string; sourceMetric?: string; sourceValue?: number | null; threshold?: number | null }> }
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; generatedAt?: Date; snapshot?: ({ periodEnd: Date; supersededById?: string | null } & FinanceSnapshotFigures) | null; findings?: Array<{ code: string; sourceMetric?: string; sourceValue?: number | null; threshold?: number | null }> }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -902,8 +903,8 @@ export async function assembleGuidanceContext(
   const cycleScope = scope ? { ...scope, ...currentEvidenceWhere(nowDate) } : null;
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
-  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    cycleScope ? deps.db.ownerCashflowCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true } } } }) : none,
+  const [cashRow, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
+    cycleScope ? deps.db.ownerCashflowCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, generatedAt: true, snapshot: true } }) : none,
     cycleScope ? deps.db.ownerFinanceCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true, revenue: true, fixedCosts: true, variableCosts: true, costOfGoods: true, rent: true, payroll: true, utilities: true, deliveryCost: true, marketingSpend: true, cashOnHand: true } }, findings: { select: { code: true, severity: true, sourceMetric: true, sourceValue: true, threshold: true } } } }) : none,
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
@@ -936,6 +937,9 @@ export async function assembleGuidanceContext(
       ? deps.db.salesDealRecord.findMany({ where: { workspaceId, stage: { notIn: CLOSED_STAGES } }, select: { value: true, probability: true, stage: true } })
       : Promise.resolve([] as SalesDealRow[]),
   ]);
+  // Read-time projection (cycle-projection.ts): a Cash flow cycle whose snapshot cannot establish total cash is never
+  // shown as its persisted (possibly pre-fix, partial-total) conclusion; the gap is carried as evidence, not as danger.
+  const cash = cashRow ? projectCashflowCycleRow(cashRow) : null;
 
   // Compute avgActiveMargin from ACTIVE tiers that have cost data (0..1 fractional, same unit as profit-leak-radar marginPct).
   const tiersWithCost = activePriceTiers.filter(
@@ -965,8 +969,8 @@ export async function assembleGuidanceContext(
   // amended is not a current reading. The ONE current cash/finance reading (the same one Home and the
   // safety gates use) arbitrates them — see current-cash-finance-reading.ts / cash-finance-conflict.ts.
   const cashFinanceResolution = currentCashFinanceReading(
-    cash ? { state: cash.cashflowState, snapshot: cash.snapshot } : null,
-    fin ? { state: fin.survivalState, snapshot: fin.snapshot, driver: financeSurvivalDriver(fin.findings) } : null,
+    cash ? { state: cash.cashflowState, snapshot: cash.snapshot, evidenceGaps: cashFlowEvidenceGaps(cash) } : null,
+    fin ? { state: fin.survivalState, snapshot: fin.snapshot, driver: financeSurvivalDriver(fin.findings), evidenceGaps: financeEvidenceGaps(fin.findings) } : null,
     deps.now(),
     provisional
   );
@@ -990,7 +994,9 @@ export async function assembleGuidanceContext(
   const enforcedSafe = enforcedState !== null && SAFE_STATES.has(enforcedState);
   // R10 P2-9: driven ONLY by the authoritative gateState (enforcedSafe) — never by the legacy
   // resolution's own `.safe`, which is a second, independent arbitration of the same facts.
-  const cashSafe = !!cashState && !!finState && enforcedSafe;
+  // State and EVIDENCE are separate: a safe-looking state resting on incomplete material cash evidence (a Cash flow position
+  // whose total cash is unknown, Finance liquidity unconfirmed) is never "cash safe" — it is a gap to fill, not a danger.
+  const cashSafe = !!cashState && !!finState && enforcedSafe && cashFinanceResolution.gateEvidenceSufficient;
   // One safe reading with the other missing: a caution on the cash status, never a manufactured danger issue.
   const cashHalfMeasured = (!!cashState !== !!finState) && enforcedSafe;
   const staffOverloaded = emp?.overburdened === true;
@@ -1062,6 +1068,15 @@ export async function assembleGuidanceContext(
       cashFinanceResolution.provisional
         ? "cash and Finance figures for the latest completed period (only this period's in-progress figures are available)"
         : "current cash and Finance figures (the latest ones are out of date)"
+    );
+  }
+  // A present current reading whose material cash evidence is incomplete: name exactly what to enter (never a danger claim).
+  for (const gap of cashFinanceResolution.gateEvidenceGaps) {
+    const what = gap.missing.map((m) => (m === "bankBalance" ? "bank balance" : "cash in hand")).join(" and ");
+    missingCriticalData.push(
+      gap.reason === "CASH_POSITION_INCOMPLETE"
+        ? `${what} in a Cash flow check (total cash isn't confirmed, so OpsIQ does not treat your cash as safe for growth yet)`
+        : `your bank balance (total cash isn't confirmed — enter 0 if you hold none, so OpsIQ can treat your cash as safe for growth)`
     );
   }
   if (!metric) missingCriticalData.push("latest customer + complaint counts");
@@ -1139,6 +1154,11 @@ export async function assembleGuidanceContext(
 
   const state: BusinessStateSnapshot = {
     cashRunwayDays: cashState ? RUNWAY_BY_STATE[cashState] ?? 0 : 0,
+    // The runway above is a state PROXY, never a measurement, and it is a COMPARABLE figure only when CURRENT Cashflow evidence
+    // supports it: a Cashflow reading that is current (not absent, stale, future-dated or superseded) AND whose cash position is
+    // complete. Anything else (including a Finance-only reading) leaves it unmeasured, so no owner-facing change message is built
+    // from a synthetic 0 / 45 / 120.
+    cashRunwayMeasured: !!cashState && !(cash?.cashPosition.judged && !cash.cashPosition.complete),
     netMarginPct: finState ? MARGIN_BY_STATE[finState] ?? 0 : 0,
     complaintsCount: complaints,
     reworkCount: rework,
@@ -2691,9 +2711,10 @@ export async function getOwnerNowView(
   // Derive the 11 business-condition risk dimensions from snapshot data already in memory.
   // Pure function — no extra DB query. Produces "unknown" only when the source record was absent.
   const derivedBusinessCondition = deriveBusinessConditionSignals({
-    cashState: raw.cashState,
+    // An incomplete cash position is UNKNOWN to the business-condition signals (never a proxy state / resilience).
+    cashState: state.cashRunwayMeasured === false ? undefined : raw.cashState,
     finState: raw.finState,
-    cashRunwayDays: state.cashRunwayDays,
+    cashRunwayDays: state.cashRunwayMeasured === false ? 0 : state.cashRunwayDays,
     supplierInventoryRiskScore: state.supplierInventoryRiskScore,
     ownerLoadPct: state.ownerLoadPct,
     staffOverloadPct: state.staffOverloadPct,
@@ -2756,7 +2777,7 @@ export async function getOwnerNowView(
       data: {
         id: deps.uuid(), workspaceId, businessId: businessId ?? null,
         ...guidanceState,
-        payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
+        payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype, cashRunwayMeasured: state.cashRunwayMeasured !== false } as unknown as Record<string, unknown>,
       },
     });
   }
@@ -3077,7 +3098,8 @@ function deriveExternalOpportunitySignals(
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
   return {
-    cashRunwayDays: row.cashRunwayDays, netMarginPct: row.netMarginPct, complaintsCount: row.complaintsCount,
+    cashRunwayDays: row.cashRunwayDays,
+    cashRunwayMeasured: (row.payload as { cashRunwayMeasured?: unknown } | null | undefined)?.cashRunwayMeasured !== false, netMarginPct: row.netMarginPct, complaintsCount: row.complaintsCount,
     reworkCount: row.reworkCount, capacityUtilizationPct: row.capacityUtilizationPct, staffOverloadPct: row.staffOverloadPct,
     ownerLoadPct: row.ownerLoadPct, churnRiskScore: row.churnRiskScore, supplierInventoryRiskScore: row.supplierInventoryRiskScore,
     overdueProofCount: row.overdueProofCount, outcomeChecksDue: row.outcomeChecksDue, growthReadinessTier: row.growthReadinessTier,

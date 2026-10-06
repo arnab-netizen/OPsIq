@@ -26,6 +26,7 @@ import {
 } from "@/domain/owner-spine/owner-decision";
 import type { OwnerSeverity } from "@/domain/owner-spine/contracts";
 import { ownerLeverKey } from "@/domain/owner-spine/owner-imperatives";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 
 const DAY_MS = 86_400_000;
 
@@ -72,7 +73,7 @@ interface CycleModelReader {
   findFirst(args: {
     where: { workspaceId: string; businessId: string; snapshotId: { not: string }; createdAt: { lt: Date }; snapshot: { periodEnd: { lte: Date }; supersededById?: null } };
     orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER | typeof CURRENT_RECOVERY_CYCLE_ORDER;
-    select: typeof cycleSelect;
+    select: typeof cycleSelect | (Omit<typeof cycleSelect, "snapshot"> & { snapshot: true });
   }): Promise<CycleFactsRow | null>;
 }
 interface AuditFactRow {
@@ -191,14 +192,17 @@ async function evidenceTransition(
   const effectiveAt = currentPeriodEnd && currentPeriodEnd.getTime() > firstDiagnosedAt.getTime() ? currentPeriodEnd : firstDiagnosedAt;
   // The baseline is effective evidence too: a Finance version the owner later amended is not what the
   // business looked like (its corrected version is).
-  const previous = await model.findFirst({
+  const previousRow = await model.findFirst({
     where: {
       workspaceId, businessId, snapshotId: { not: String(current.snapshotId) }, createdAt: { lt: effectiveAt },
       snapshot: { ...currentEvidenceWhere(now).snapshot, ...(spec.domain === "finance" ? { supersededById: null } : {}) },
     },
     orderBy: spec.order,
-    select: cycleSelect,
+    // A Cash flow baseline is read through the read-time projection (cycle-projection.ts): a pre-fix partial-total
+    // conclusion (e.g. a false insolvency finding) is never the baseline an issue "resolved" or "worsened" against.
+    select: spec.domain === "cashflow" ? { ...cycleSelect, snapshot: true as const } : cycleSelect,
   });
+  const previous = previousRow && spec.domain === "cashflow" ? projectCashflowCycleRow(previousRow) : previousRow;
   return {
     domain: spec.domain,
     previousEvidenceId: previous?.snapshotId ?? null,

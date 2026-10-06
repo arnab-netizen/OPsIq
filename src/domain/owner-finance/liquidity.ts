@@ -73,6 +73,21 @@ export function cashflowTotalCash(row: { cashInHand?: number | null; bankBalance
   return a === null || b === null ? null : a + b;
 }
 
+/** The two components of a Cashflow cash position. */
+export type CashflowCashComponent = "cashInHand" | "bankBalance";
+
+/**
+ * Which components of a Cashflow cash position are NOT known (missing / null / non-finite — a known 0 is known).
+ * Empty exactly when `cashflowTotalCash` is a number: the one completeness truth shared by the Cashflow engine, its
+ * missing-data contract, and Portfolio's survival-evidence assessment.
+ */
+export function cashflowCashPositionMissingComponents(row: { cashInHand?: number | null; bankBalance?: number | null } | null | undefined): CashflowCashComponent[] {
+  const missing: CashflowCashComponent[] = [];
+  if (finiteOrNull(row?.cashInHand) === null) missing.push("cashInHand");
+  if (finiteOrNull(row?.bankBalance) === null) missing.push("bankBalance");
+  return missing;
+}
+
 /** One version of a Finance snapshot, as far as cash provenance is concerned. */
 export interface CashLineageNode {
   createdAt: Date | string;

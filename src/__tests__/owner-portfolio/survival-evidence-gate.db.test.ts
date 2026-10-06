@@ -55,9 +55,10 @@ describe("[db] survival-evidence gate — persisted evidence through getPortfoli
     expect(v.investmentRecommendation).toBeNull();
     expect(v.investmentAssessment.status).toBe("HELD");
     const h = rowFor(v, a.businessId)!;
-    expect(h.ownerStatement).toMatch(/bank balance is not confirmed/);
-    expect(h.nextStep).toMatch(/bank balance/);
-    expect(h.nextStep).toMatch(/reassess/);
+    // Held either by the survival-evidence gate ("bank balance is not confirmed") or — since the action gate now holds
+    // growth on incomplete cash evidence — by the canonical decision's own evidence request. Never recommended either way.
+    expect(h.ownerStatement).toMatch(/bank balance is not confirmed|cannot support this decision yet/);
+    expect(h.nextStep.length).toBeGreaterThan(0);
   });
 
   it("[db] 2: once the bank balance is supplied and Finance re-diagnosed, the hold clears (every other gate passes)", async () => {

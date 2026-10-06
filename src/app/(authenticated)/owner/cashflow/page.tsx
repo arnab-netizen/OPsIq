@@ -305,6 +305,7 @@ export default function OwnerCashflowPage() {
   const cycle = dashboard?.latestCycle ?? null;
   const score = dashboard?.domainScore ?? null;
   const missing: string[] = dashboard?.missingCriticalData ?? [];
+  const cashPosition: { judged: boolean; complete: boolean; missing: string[] } | null = dashboard?.cashPosition ?? null;
 
   return (
     <PageContainer>
@@ -422,6 +423,7 @@ export default function OwnerCashflowPage() {
               cycle={cycle}
               score={score}
               missing={missing}
+              cashPosition={cashPosition}
               recommended={dashboard.recommendedNextAction}
               history={dashboard.cycleHistory}
               busy={busy}
@@ -439,6 +441,7 @@ function CashflowCycleView({
   cycle,
   score,
   missing,
+  cashPosition,
   recommended,
   history,
   busy,
@@ -448,6 +451,7 @@ function CashflowCycleView({
   cycle: any;
   score: any;
   missing: string[];
+  cashPosition: { judged: boolean; complete: boolean; missing: string[] } | null;
   recommended: any;
   history: any[];
   busy: boolean;
@@ -471,6 +475,15 @@ function CashflowCycleView({
           </div>
         </div>
       </div>
+
+      {cashPosition && cashPosition.judged && !cashPosition.complete && (
+        <div role="status" className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm" data-testid="cash-position-incomplete">
+          <strong>Total cash isn&apos;t confirmed yet.</strong>{" "}
+          Your {cashPosition.missing.map((m) => (m === "bankBalance" ? "bank balance" : "cash in hand")).join(" and ")} {cashPosition.missing.length > 1 ? "are" : "is"} not recorded in this check, so
+          OpsIQ does not show a cash runway or cash-pressure figures and does not treat this reading as a measure of cash safety or cash danger.
+          Record a Cash flow check with both cash in hand and the bank balance (enter 0 if there is none), then re-run the diagnosis.
+        </div>
+      )}
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">

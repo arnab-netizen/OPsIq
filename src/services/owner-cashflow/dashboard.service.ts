@@ -9,6 +9,9 @@
  * persisted data only — no mock, nothing invented.
  */
 import { db } from "@/lib/db";
+import { projectCashflowCycleRow, type CashPositionEvidence } from "@/domain/owner-cashflow/cycle-projection";
+import { missingCriticalCashflowInputs } from "@/domain/owner-cashflow/data-confidence";
+import { rowToCashflowInput } from "@/domain/owner-cashflow/row-input";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
@@ -40,6 +43,8 @@ export interface CashflowDashboardPayload {
   } | null;
   recommendedNextAction: any | null;
   missingCriticalData: string[];
+  /** Whether the current cycle's cash position is established from BOTH components (cycle-projection.ts); null without a cycle. */
+  cashPosition: CashPositionEvidence | null;
   cycleHistory: Array<{
     id: string;
     sequenceNumber: number;
@@ -75,7 +80,7 @@ export async function getCashflowDashboard(
   if (!selectedBusinessId) {
     return {
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null, latestSnapshotPeriodState: null, latestSnapshotDiagnosis: null,
-      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
+      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [], cashPosition: null,
       cycleHistory: [],
     };
   }
@@ -83,7 +88,7 @@ export async function getCashflowDashboard(
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
   const dashboardNow = new Date();
-  const [latestSnapshot, latestCycle, cycles] = await Promise.all([
+  const [latestSnapshot, latestCycleRow, cycles] = await Promise.all([
     // The latest snapshot that has STARTED (the one the owner can diagnose): a genuinely future period is
     // never shown; an in-progress one is labelled (latestSnapshotPeriodState).
     db.ownerCashflowSnapshot.findFirst({
@@ -129,6 +134,11 @@ export async function getCashflowDashboard(
       include: { findings: { select: { id: true } }, actions: { select: { id: true } } },
     }),
   ]);
+
+  // Read-time projection (cycle-projection.ts): when the current cycle's snapshot cannot establish total cash, its persisted
+  // (possibly pre-fix, partial-total) state, scores, findings and actions are replaced by what the current engine supports —
+  // never shown as current truth (no known total, runway, insolvency or safety from a partial position). Complete: untouched.
+  const latestCycle = latestCycleRow ? projectCashflowCycleRow(latestCycleRow) : null;
 
   // Whether the snapshot this page would diagnose was already diagnosed (and on what): shown instead of a
   // prompt to re-run the same evidence (a changed snapshot needs a new diagnosis).
@@ -211,9 +221,9 @@ export async function getCashflowDashboard(
     // TARGET's own missing-data list -- latestSnapshot is the actual snapshot the re-diagnose button
     // points at -- never the last-diagnosed cycle's own (possibly stale) snapshot, which would show an
     // old snapshot's gaps while the page prompts re-diagnosis on a newer, undiagnosed one.
-    missingCriticalData: latestSnapshot
-      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
-      : [],
+    // Judged by the CURRENT rule from the snapshot itself (a snapshot persisted under an older rule must not hide a gap).
+    missingCriticalData: latestSnapshot ? missingCriticalCashflowInputs(rowToCashflowInput(latestSnapshot)) : [],
+    cashPosition: latestCycle?.cashPosition ?? null,
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,
       sequenceNumber: c.sequenceNumber,

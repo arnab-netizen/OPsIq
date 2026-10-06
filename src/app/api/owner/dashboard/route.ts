@@ -15,7 +15,8 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
-import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
+import { cashFlowEvidenceGaps, currentCashFinanceReading, financeEvidenceGaps } from "@/services/owner-spine/current-cash-finance-reading";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 
 const querySchema = z.object({
   includeKPIs: z.enum(["true", "false"]).optional().default("true"),
@@ -33,6 +34,8 @@ interface OwnerDashboardDtoSource {
     healthyEngagements?: number;
     atRiskEngagements?: number;
     criticalEngagements?: number;
+    needsDataEngagements?: number;
+    needsDataItems?: string[];
     topRisks?: unknown[];
   };
   actionQueue?: {
@@ -58,16 +61,21 @@ interface SurvivalCycleReader {
     findFirst(args: {
       where: { businessId: string; workspaceId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } } };
-    }): Promise<{ survivalState: string | null; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null>;
+      select: { survivalState: true; snapshot: { select: { periodEnd: true; supersededById: true } }; findings: { select: { code: true } } };
+    }): Promise<{ survivalState: string | null; snapshot?: { periodEnd: Date; supersededById: string | null } | null; findings?: Array<{ code: string }> } | null>;
   };
   ownerCashflowCycle: {
     findFirst(args: {
       where: { businessId: string; workspaceId: string; snapshot: { periodEnd: { lte: Date } } };
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
-      select: { cashflowState: true; snapshot: { select: { periodEnd: true } } };
-    }): Promise<{ cashflowState: string | null; snapshot?: { periodEnd: Date } | null } | null>;
+      select: { cashflowState: true; generatedAt: true; snapshot: true };
+    }): Promise<{ cashflowState: string | null; generatedAt?: Date | null; snapshot?: ({ periodEnd: Date } & Record<string, unknown>) | null } | null>;
   };
+}
+
+const CASH_FIELD_LABELS: Record<string, string> = { cashInHand: "cash in hand", bankBalance: "bank balance" };
+function cashFieldLabel(field: string): string {
+  return CASH_FIELD_LABELS[field] ?? field;
 }
 
 function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?: DashboardRecommendationRow[]) {
@@ -89,6 +97,9 @@ function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?
     healthyEngagements: data.health?.healthyEngagements || 0,
     atRiskEngagements: data.health?.atRiskEngagements || 0,
     criticalEngagements: data.health?.criticalEngagements || 0,
+    // Additive: businesses whose evidence is insufficient to assess (a gap to fill — never counted as risk) and what to enter.
+    needsDataEngagements: data.health?.needsDataEngagements || 0,
+    needsDataItems: data.health?.needsDataItems || [],
     actionQueueSize: data.actionQueue?.totalCount || 0,
     overdueActionCount: data.actionQueue?.overdueCount || 0,
     actionsByStatus: data.actionQueue?.byStatus || {},
@@ -139,12 +150,12 @@ export async function buildOwnerDashboardPayload(
         reader.ownerFinanceCycle.findFirst({
           where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } },
+          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } },
         }),
         reader.ownerCashflowCycle.findFirst({
           where: { businessId: biz.id, workspaceId, ...currentEvidenceWhere(evidenceNow) },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
+          select: { cashflowState: true, generatedAt: true, snapshot: true },
         }),
         // The in-progress current period (provisional): may only tighten the health status.
         loadProvisionalCashFinance(db as unknown as ProvisionalCashFinanceDb, { workspaceId, businessId: biz.id }, evidenceNow),
@@ -153,25 +164,36 @@ export async function buildOwnerDashboardPayload(
       // The ONE current cash/finance survival reading (the same one Owner Home, Now View and the action
       // gate use): a critical Cash flow reading is never hidden behind a SAFE Finance diagnosis, a genuine
       // disagreement counts as the worse reading, and amended Finance figures fail safe.
-      const survival = currentCashFinanceReading(
-        cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot } : null,
-        financeCycle ? { state: financeCycle.survivalState, snapshot: financeCycle.snapshot } : null,
+      const cashRead = cashCycle ? projectCashflowCycleRow(cashCycle) : null;
+      const reading = currentCashFinanceReading(
+        cashRead ? { state: cashRead.cashflowState, snapshot: cashRead.snapshot, evidenceGaps: cashFlowEvidenceGaps(cashRead) } : null,
+        financeCycle ? { state: financeCycle.survivalState, snapshot: financeCycle.snapshot, evidenceGaps: financeEvidenceGaps(financeCycle.findings) } : null,
         evidenceNow.getTime(),
         provisional
-      ).gateState;
-      const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
+      );
+      const survival = reading.gateState;
+      // A safe-looking reading that rests on incomplete cash evidence is never "healthy" — and never "at risk" either: the
+      // evidence gap means OpsIQ cannot assess the cash position yet (an explicit needs-data status), not that the business
+      // is measured to be in danger. A genuinely measured critical / at-risk condition still wins over the gap.
+      const healthStatus: "healthy" | "at_risk" | "critical" | "improving" | "needs_data" =
         survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
         : survival === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
+        : !reading.gateEvidenceSufficient ? "needs_data"
         : "healthy";
+      const missingFields = [...new Set(reading.gateEvidenceGaps.flatMap((g) => g.missing))];
+      const needsDataReason = healthStatus === "needs_data"
+        ? `Cash position not confirmed${biz.name ? ` for ${biz.name}` : ""}: enter ${missingFields.length > 0 ? `the missing ${missingFields.map(cashFieldLabel).join(" and ")}` : "the missing bank balance / cash in hand"} (enter 0 if there is none).`
+        : undefined;
 
-      return { bizId: biz.id, bizIdx: idx, healthStatus, progress };
+      return { bizId: biz.id, bizIdx: idx, healthStatus, needsDataReason, progress };
     })
   );
 
   // Map to EngagementHealthSnapshot shape (businessId used as snapshot key — no consulting model needed)
-  const engagementSnapshots = businessSnapshots.map(({ bizId, healthStatus, progress }) => ({
+  const engagementSnapshots = businessSnapshots.map(({ bizId, healthStatus, needsDataReason, progress }) => ({
     engagementId: bizId,
     status: healthStatus,
+    needsDataReason,
     kpiOnTrackCount: progress.totals.completed,
     kpiTotalCount: progress.totals.total,
   }));
