@@ -2750,6 +2750,8 @@ model OwnerBusiness {
   ownerDecisionRecords    OwnerDecisionRecord[]
   ownerOutcomeAssessments OwnerOutcomeAssessment[]
 
+  // Target of the composite tenant-aware FKs of the owner outcome tables: a child row cannot name a business of another workspace.
+  @@unique([id, workspaceId], map: "owner_businesses_id_workspace_id_key")
   @@index([workspaceId])
   @@index([workspaceId, isActive])
   @@map("owner_businesses")
@@ -7055,12 +7057,14 @@ model OwnerDecisionRecord {
   requestFingerprint        String                   @map("request_fingerprint")
   idempotencyKey            String?                  @map("idempotency_key")
   createdAt                 DateTime                 @default(now()) @map("created_at")
-  business                  OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  supersedes                OwnerDecisionRecord?     @relation("OwnerDecisionSupersedes", fields: [supersedesId], references: [id], onDelete: Restrict)
+  business                  OwnerBusiness            @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  supersedes                OwnerDecisionRecord?     @relation("OwnerDecisionSupersedes", fields: [supersedesId, workspaceId, businessId, candidateId], references: [id, workspaceId, businessId, candidateId], onDelete: Restrict)
   supersededBy              OwnerDecisionRecord[]    @relation("OwnerDecisionSupersedes")
   assessments               OwnerOutcomeAssessment[]
 
   @@unique([workspaceId, businessId, candidateId, sequence], map: "owner_decision_records_candidate_sequence_key")
+  // Target of supersedes / assessment-chain FKs: same workspace, business AND candidate.
+  @@unique([id, workspaceId, businessId, candidateId], map: "owner_decision_records_tenant_chain_key")
   @@unique([workspaceId, idempotencyKey], map: "owner_decision_records_ws_idempotency_key")
   @@index([workspaceId, businessId, candidateId])
   @@index([workspaceId, businessId, decidedAt])
@@ -7120,12 +7124,14 @@ model OwnerOutcomeAssessment {
   inputSnapshot              Json                     @map("input_snapshot")
   assessmentFingerprint      String                   @map("assessment_fingerprint")
   createdAt                  DateTime                 @default(now()) @map("created_at")
-  business                   OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  ownerDecision              OwnerDecisionRecord?     @relation(fields: [ownerDecisionId], references: [id], onDelete: Restrict)
-  previous                   OwnerOutcomeAssessment?  @relation("OwnerOutcomeAssessmentPrevious", fields: [previousAssessmentId], references: [id], onDelete: Restrict)
+  business                   OwnerBusiness            @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  ownerDecision              OwnerDecisionRecord?     @relation(fields: [ownerDecisionId, workspaceId, businessId, chainKey], references: [id, workspaceId, businessId, candidateId], onDelete: Restrict)
+  previous                   OwnerOutcomeAssessment?  @relation("OwnerOutcomeAssessmentPrevious", fields: [previousAssessmentId, workspaceId, businessId, chainKey], references: [id, workspaceId, businessId, chainKey], onDelete: Restrict)
   next                       OwnerOutcomeAssessment[] @relation("OwnerOutcomeAssessmentPrevious")
 
   @@unique([workspaceId, chainKey, version], map: "owner_outcome_assessments_chain_version_key")
+  // Target of the previous-assessment FK: same workspace, business AND chain.
+  @@unique([id, workspaceId, businessId, chainKey], map: "owner_outcome_assessments_tenant_chain_key")
   @@index([workspaceId, businessId, chainKey])
   @@index([workspaceId, processTaskId])
   @@index([workspaceId, ownerDecisionId])

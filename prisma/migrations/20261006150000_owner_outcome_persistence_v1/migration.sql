@@ -1,7 +1,16 @@
 -- Owner Outcome Persistence v1 (CORE) — ADDITIVE ONLY.
--- Two new tables; no existing table, column, row or constraint is altered, dropped or backfilled.
--- Preflight: both tables are new, so no unique constraint depends on existing data (nothing to de-duplicate).
+-- Two new tables plus ONE additive unique index on owner_businesses(id, workspace_id) (the target of the tenant-aware foreign
+-- keys; `id` is already the primary key, so the pair is trivially unique and there is nothing to de-duplicate). No existing
+-- column, row or constraint is altered, dropped or backfilled; the index build takes a brief lock on a small table.
+-- Preflight: both new tables are empty, so no unique constraint depends on existing data.
 -- Legacy System A / System B rows are not given owner decisions; they stay unlinked until assessed explicitly.
+--
+-- Tenant integrity is enforced by the DATABASE, not only by services:
+--   * every row's (business_id, workspace_id) must be a real owner_businesses (id, workspace_id) pair;
+--   * supersedes_id may only point at a decision of the same workspace, business AND candidate;
+--   * owner_decision_id may only point at a decision of the same workspace, business AND chain (chain_key = candidate_id);
+--   * previous_assessment_id may only point at an assessment of the same workspace, business AND chain;
+--   * a supersedes / previous link must be exactly the preceding sequence / version (insert-time trigger).
 -- Both tables are append-only (trigger below): a later diagnosis/assessment never rewrites history.
 
 -- CreateTable
@@ -104,6 +113,9 @@ CREATE INDEX "owner_decision_records_workspace_id_business_id_decided_at_idx" ON
 CREATE UNIQUE INDEX "owner_decision_records_candidate_sequence_key" ON "owner_decision_records"("workspace_id", "business_id", "candidate_id", "sequence");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "owner_decision_records_tenant_chain_key" ON "owner_decision_records"("id", "workspace_id", "business_id", "candidate_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "owner_decision_records_ws_idempotency_key" ON "owner_decision_records"("workspace_id", "idempotency_key");
 
 -- CreateIndex
@@ -118,21 +130,26 @@ CREATE INDEX "owner_outcome_assessments_workspace_id_owner_decision_id_idx" ON "
 -- CreateIndex
 CREATE UNIQUE INDEX "owner_outcome_assessments_chain_version_key" ON "owner_outcome_assessments"("workspace_id", "chain_key", "version");
 
--- AddForeignKey
-ALTER TABLE "owner_decision_records" ADD CONSTRAINT "owner_decision_records_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "owner_businesses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- CreateIndex
+CREATE UNIQUE INDEX "owner_outcome_assessments_tenant_chain_key" ON "owner_outcome_assessments"("id", "workspace_id", "business_id", "chain_key");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "owner_businesses_id_workspace_id_key" ON "owner_businesses"("id", "workspace_id");
 
 -- AddForeignKey
-ALTER TABLE "owner_decision_records" ADD CONSTRAINT "owner_decision_records_supersedes_id_fkey" FOREIGN KEY ("supersedes_id") REFERENCES "owner_decision_records"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "owner_decision_records" ADD CONSTRAINT "owner_decision_records_business_id_workspace_id_fkey" FOREIGN KEY ("business_id", "workspace_id") REFERENCES "owner_businesses"("id", "workspace_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "owner_outcome_assessments" ADD CONSTRAINT "owner_outcome_assessments_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "owner_businesses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "owner_decision_records" ADD CONSTRAINT "owner_decision_records_supersedes_id_workspace_id_business_fkey" FOREIGN KEY ("supersedes_id", "workspace_id", "business_id", "candidate_id") REFERENCES "owner_decision_records"("id", "workspace_id", "business_id", "candidate_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "owner_outcome_assessments" ADD CONSTRAINT "owner_outcome_assessments_owner_decision_id_fkey" FOREIGN KEY ("owner_decision_id") REFERENCES "owner_decision_records"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "owner_outcome_assessments" ADD CONSTRAINT "owner_outcome_assessments_business_id_workspace_id_fkey" FOREIGN KEY ("business_id", "workspace_id") REFERENCES "owner_businesses"("id", "workspace_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "owner_outcome_assessments" ADD CONSTRAINT "owner_outcome_assessments_previous_assessment_id_fkey" FOREIGN KEY ("previous_assessment_id") REFERENCES "owner_outcome_assessments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "owner_outcome_assessments" ADD CONSTRAINT "owner_outcome_assessments_owner_decision_id_workspace_id_b_fkey" FOREIGN KEY ("owner_decision_id", "workspace_id", "business_id", "chain_key") REFERENCES "owner_decision_records"("id", "workspace_id", "business_id", "candidate_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+-- AddForeignKey
+ALTER TABLE "owner_outcome_assessments" ADD CONSTRAINT "owner_outcome_assessments_previous_assessment_id_workspace_fkey" FOREIGN KEY ("previous_assessment_id", "workspace_id", "business_id", "chain_key") REFERENCES "owner_outcome_assessments"("id", "workspace_id", "business_id", "chain_key") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- ── Integrity checks (enumerations and cross-field rules; the service validates first, the DB is the backstop) ──
 ALTER TABLE "owner_decision_records"
@@ -168,6 +185,46 @@ ALTER TABLE "owner_outcome_assessments"
   ADD CONSTRAINT "owner_outcome_assessments_system_check" CHECK ("source_system" IN ('SYSTEM_A','SYSTEM_B','NONE')),
   -- RESOLVED is only ever stored together with the specific newer diagnosis cycle that supports it.
   ADD CONSTRAINT "owner_outcome_assessments_resolved_needs_cycle_check" CHECK ("issue_resolution" <> 'RESOLVED' OR "newer_diagnosis_cycle_id" IS NOT NULL);
+
+-- ── Chain integrity beyond what a foreign key can say (the previous row must be exactly the preceding one) ──
+ALTER TABLE "owner_decision_records"
+  ADD CONSTRAINT "owner_decision_records_chain_shape_check" CHECK (("sequence" = 1 AND "supersedes_id" IS NULL) OR ("sequence" > 1 AND "supersedes_id" IS NOT NULL));
+
+CREATE OR REPLACE FUNCTION owner_decision_chain_link_check() RETURNS TRIGGER AS $$
+DECLARE prev_sequence integer;
+BEGIN
+  IF NEW."supersedes_id" IS NOT NULL THEN
+    SELECT "sequence" INTO prev_sequence FROM "owner_decision_records" WHERE "id" = NEW."supersedes_id";
+    IF prev_sequence IS NULL OR prev_sequence <> NEW."sequence" - 1 THEN
+      RAISE EXCEPTION 'owner_decision_records: sequence % must supersede the preceding sequence % of its candidate', NEW."sequence", NEW."sequence" - 1
+        USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER owner_decision_records_chain_link
+  BEFORE INSERT ON "owner_decision_records"
+  FOR EACH ROW EXECUTE FUNCTION owner_decision_chain_link_check();
+
+CREATE OR REPLACE FUNCTION owner_assessment_chain_link_check() RETURNS TRIGGER AS $$
+DECLARE prev_version integer;
+BEGIN
+  IF NEW."previous_assessment_id" IS NOT NULL THEN
+    SELECT "version" INTO prev_version FROM "owner_outcome_assessments" WHERE "id" = NEW."previous_assessment_id";
+    IF prev_version IS NULL OR prev_version <> NEW."version" - 1 THEN
+      RAISE EXCEPTION 'owner_outcome_assessments: version % must follow the preceding version % of its chain', NEW."version", NEW."version" - 1
+        USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER owner_outcome_assessments_chain_link
+  BEFORE INSERT ON "owner_outcome_assessments"
+  FOR EACH ROW EXECUTE FUNCTION owner_assessment_chain_link_check();
 
 -- ── Append-only: history is never rewritten or deleted ──
 CREATE OR REPLACE FUNCTION owner_outcome_persistence_append_only() RETURNS TRIGGER AS $$

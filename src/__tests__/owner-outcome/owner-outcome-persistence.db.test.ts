@@ -21,7 +21,7 @@ import {
   assessPersistedOwnerOutcome, getOwnerOutcomeChain, linkProcessTaskToDecision,
 } from "@/services/owner-outcome/owner-outcome-chain.service";
 import {
-  NOW, daysAgo, seedActionOutcome, seedComplianceItem, seedFinanceAction, seedFinanceCycle, seedFinanceVerification,
+  NOW, daysAgo, withClients, seedActionOutcome, seedComplianceItem, seedFinanceAction, seedFinanceCycle, seedFinanceVerification,
   seedProcessTask, seedRecoveryAction, seedTenant, type Tenant,
 } from "./outcome-db-fixtures";
 
@@ -120,7 +120,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Owner Outcome Persistence v1 — dec
     const cyc = await seedFinanceCycle(A, { periodEnd: daysAgo(40), generatedAt: daysAgo(40) });
     const act = await seedFinanceAction(A, { cycleId: cyc.cycleId, status: "proposed" });
     const body = { candidateId: act.candidateId, state: "ACCEPTED" as const, contract: { targetDirection: "up" as const } };
-    const results = await Promise.all(Array.from({ length: 8 }, () => recordOwnerDecision(A.ws, A.actor, A.biz, body, deps)));
+    // each contender on its OWN database connection: the serialization under test is Postgres', not Node's single-connection pool
+    const results = await withClients(8, (clients) => Promise.all(clients.map((client) => recordOwnerDecision(A.ws, A.actor, A.biz, body, { ...deps, client }))));
     const rows = await db.ownerDecisionRecord.findMany({ where: { workspaceId: A.ws, candidateId: act.candidateId } });
     expect(rows.length).toBe(1);
     expect(new Set(results.map((r) => r.decision.id)).size).toBe(1);
@@ -388,7 +389,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Owner Outcome Persistence v1 — ass
 
   it("64. racing assessments of the same facts produce exactly one version", async () => {
     const ch = await financeChain(A, { verification: V(14) });
-    const results = await Promise.all(Array.from({ length: 8 }, () => assess(A, ch.candidateId)));
+    const results = await withClients(8, (clients) => Promise.all(clients.map((client) => assess(A, ch.candidateId, { ...deps, client }))));
     const rows = await db.ownerOutcomeAssessment.findMany({ where: { workspaceId: A.ws, chainKey: ch.candidateId } });
     expect(rows.length).toBe(1);
     expect(new Set(results.map((r) => r.assessment.id)).size).toBe(1);
@@ -508,10 +509,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Owner Outcome Persistence v1 — Sys
     const i3 = await acceptCompliance(A, {});
     const i4 = await acceptCompliance(A, {});
     const t3 = await seedProcessTask(A, {});
-    const raced = await Promise.allSettled([
-      linkProcessTaskToDecision(A.ws, A.actor, A.biz, { candidateId: i3.candidateId, processTaskKey: t3.taskKey }, deps),
-      linkProcessTaskToDecision(A.ws, A.actor, A.biz, { candidateId: i4.candidateId, processTaskKey: t3.taskKey }, deps),
-    ]);
+    const raced = await withClients(2, ([c1, c2]) => Promise.allSettled([
+      linkProcessTaskToDecision(A.ws, A.actor, A.biz, { candidateId: i3.candidateId, processTaskKey: t3.taskKey }, { ...deps, client: c1 }),
+      linkProcessTaskToDecision(A.ws, A.actor, A.biz, { candidateId: i4.candidateId, processTaskKey: t3.taskKey }, { ...deps, client: c2 }),
+    ]));
     expect(raced.filter((r) => r.status === "fulfilled").length).toBe(1);
     expect(await db.ownerOutcomeAssessment.count({ where: { workspaceId: A.ws, processTaskId: t3.id } })).toBe(1);
   });

@@ -13,7 +13,7 @@ import {
   processOutcomeToOutcomeInput,
   type DomainActionRowFacts,
 } from "@/domain/owner-spine/owner-outcome-adapters";
-import type { OutcomeNewerDiagnosisFact, OwnerOutcomeInput } from "@/domain/owner-spine/owner-outcome-policy";
+import type { OutcomeNewerDiagnosisFact, OwnerOutcomeDomain, OwnerOutcomeInput } from "@/domain/owner-spine/owner-outcome-policy";
 import type { SystemADomain } from "@/domain/owner-spine/owner-decision-record";
 import { directionFromCommitment, type OutcomeLinks } from "@/domain/owner-spine/owner-outcome-spine";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
@@ -188,7 +188,7 @@ export interface CommitmentForDirection {
 
 /** System B chain: task + its OwnerActionOutcome → existing adapter input, with direction ONLY from a linked commitment. */
 export async function loadSystemBInput(
-  db: Db, ws: string, biz: string, task: Row, commitment: CommitmentForDirection | null, now: Date
+  db: Db, ws: string, biz: string, task: Row, commitment: CommitmentForDirection | null, domain: OwnerOutcomeDomain, now: Date
 ): Promise<{ input: OwnerOutcomeInput; links: Pick<OutcomeLinks, "processTaskId" | "processTaskKey" | "ownerActionOutcomeId" | "reassessmentEventId" | "learningCandidateRef">; note: string | null }> {
   const outcome = str(task.outcomeId)
     ? await delegate(db, "ownerActionOutcome").findFirst({ where: { id: task.outcomeId, workspaceId: ws, businessId: biz } })
@@ -207,9 +207,9 @@ export async function loadSystemBInput(
     selfVerified = typeof flag === "boolean" ? flag : null;
   }
   const input = processOutcomeToOutcomeInput({
-    // The adapter only uses the domain for typing here (process outcomes always use the process learning gate); the
-    // spine stores its own honest domain label instead.
-    domain: "operations",
+    // The chain's own domain ("compliance" for a compliance commitment, "process_execution" for an undecided task):
+    // the persisted input names the real chain, never a placeholder.
+    domain,
     actionId: String(task.taskKey),
     recommendationId: null,
     taskStatus: String(task.status),

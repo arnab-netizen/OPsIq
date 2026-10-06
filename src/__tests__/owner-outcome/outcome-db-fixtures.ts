@@ -1,5 +1,6 @@
 /** DB fixtures for Owner Outcome Persistence v1 tests (real Postgres). Not a test file. */
 import { randomUUID } from "crypto";
+import pg from "pg";
 import { db } from "@/lib/db";
 
 export const NOW = new Date("2026-07-20T12:00:00Z");
@@ -166,4 +167,24 @@ export async function seedRecoveryAction(
     });
   }
   return { id, candidateId: `domain_action:recovery:${id}`, verificationId };
+}
+
+/**
+ * An INDEPENDENT database connection (its own pool of one) with the same workspace backstop as the shared client. The shared
+ * `db` has a single connection per process, which serializes concurrent transactions in Node before they reach Postgres; a
+ * race test must run each contender on its own connection to exercise the database's real serialization.
+ */
+export interface IndependentClient { client: typeof db; close: () => Promise<void> }
+export async function makeIndependentClient(): Promise<IndependentClient> {
+  const { PrismaClient } = await import("@/generated/prisma/client");
+  const { PrismaPg } = await import("@prisma/adapter-pg");
+  const { createWorkspaceEnforcementMiddleware } = await import("@/lib/prisma-workspace-enforcement");
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL, max: 1 });
+  const base = new PrismaClient({ adapter: new PrismaPg(pool) });
+  const client = base.$extends(createWorkspaceEnforcementMiddleware());
+  return { client: client as unknown as typeof db, close: async () => { await base.$disconnect(); await pool.end().catch(() => undefined); } };
+}
+export async function withClients<T>(n: number, fn: (clients: Array<typeof db>) => Promise<T>): Promise<T> {
+  const made = await Promise.all(Array.from({ length: n }, () => makeIndependentClient()));
+  try { return await fn(made.map((m) => m.client)); } finally { await Promise.all(made.map((m) => m.close())); }
 }

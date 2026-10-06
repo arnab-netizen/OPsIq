@@ -15,7 +15,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
-import { assessOwnerOutcome, type OutcomeLearningGateResult, type OwnerOutcomeInput } from "@/domain/owner-spine/owner-outcome-policy";
+import { assessOwnerOutcome, type OutcomeLearningGateResult, type OwnerOutcomeDomain, type OwnerOutcomeInput } from "@/domain/owner-spine/owner-outcome-policy";
 import {
   parseOwnerCandidateId,
   type OwnerDecisionState,
@@ -33,7 +33,7 @@ import {
   type OutcomeLinks,
   type OutcomeSourceSystem,
 } from "@/domain/owner-spine/owner-outcome-spine";
-import { assertOwnerBusiness, getLatestOwnerDecision, resolveCandidate, type OwnerDecisionRecordView } from "./owner-decision.service";
+import { assertOwnerBusiness, getLatestOwnerDecision, resolveCandidate, type OutcomeDbClient, type OwnerDecisionRecordView } from "./owner-decision.service";
 import { loadProcessTask, loadSystemAAction, loadSystemAInput, loadSystemBInput, type Row } from "./outcome-sources";
 
 type Tx = Prisma.TransactionClient;
@@ -47,6 +47,8 @@ export type OutcomeChainRef = { candidateId: string } | { processTaskKey: string
 
 export interface AssessDeps {
   now?: () => Date;
+  /** The Prisma client to run on (defaults to the shared `db`; tests inject independent connections to force real interleavings). */
+  client?: OutcomeDbClient;
   /**
    * An ACTUAL result of the existing learning gate, supplied only by a server-side caller that really ran it with real
    * persisted facts. No API accepts it; Core itself never runs or fabricates the gate.
@@ -73,40 +75,40 @@ async function latestAssessment(tx: Pick<Tx, "ownerOutcomeAssessment">, ws: stri
 }
 
 /** Resolve a chain reference to its deterministic chain key, decision and (explicitly linked) process task. */
-async function resolveTarget(ws: string, biz: string, ref: OutcomeChainRef): Promise<ChainTarget> {
+async function resolveTarget(ws: string, biz: string, ref: OutcomeChainRef, c: OutcomeDbClient): Promise<ChainTarget> {
   if ("candidateId" in ref) {
     const parsed = parseOwnerCandidateId(ref.candidateId);
     if (!parsed) {
       throw new ValidationError("candidateId is not a canonical persisted decision candidate.", { fieldErrors: [{ path: "candidateId", message: "Not a canonical persisted candidate id" }] });
     }
     const chainKey = chainKeyForCandidate(parsed.candidateId);
-    const decision = await getLatestOwnerDecision(ws, biz, parsed.candidateId);
+    const decision = await getLatestOwnerDecision(ws, biz, parsed.candidateId, c);
     let taskRow: Row | null = null;
     if (parsed.source === "compliance_item") {
-      const prior = await latestAssessment(db as never, ws, chainKey);
-      if (prior?.processTaskId) taskRow = await loadProcessTask(db as never, ws, biz, { taskId: prior.processTaskId });
+      const prior = await latestAssessment(c as never, ws, chainKey);
+      if (prior?.processTaskId) taskRow = await loadProcessTask(c as never, ws, biz, { taskId: prior.processTaskId });
     }
     return { chainKey, domain: parsed.domain, canonicalActionId: parsed.sourceId, parsed, decision, taskRow, linkingTask: false };
   }
-  const task = await loadProcessTask(db as never, ws, biz, { taskKey: ref.processTaskKey });
+  const task = await loadProcessTask(c as never, ws, biz, { taskKey: ref.processTaskKey });
   if (!task) throw notFound("ProcessExecutionTask", ref.processTaskKey);
   // A task already linked to a decision chain is assessed on THAT chain; otherwise it is its own (undecided) legacy chain.
-  const linked = await db.ownerOutcomeAssessment.findFirst({
+  const linked = await c.ownerOutcomeAssessment.findFirst({
     where: { workspaceId: ws, businessId: biz, processTaskId: String(task.id), ownerDecisionId: { not: null } },
     orderBy: { createdAt: "desc" },
   });
   if (linked) {
     const parsed = parseOwnerCandidateId(linked.chainKey);
-    const decision = await getLatestOwnerDecision(ws, biz, linked.chainKey);
+    const decision = await getLatestOwnerDecision(ws, biz, linked.chainKey, c);
     return { chainKey: linked.chainKey, domain: linked.domain, canonicalActionId: linked.canonicalActionId, parsed, decision, taskRow: task, linkingTask: false };
   }
   return { chainKey: chainKeyForLegacyProcessTask(String(task.id)), domain: "process_execution", canonicalActionId: String(task.taskKey), parsed: null, decision: null, taskRow: task, linkingTask: false };
 }
 
 /** Facts only a commitment can supply when no execution source is linked (everything else stays unknown/null). */
-function commitmentOnlyInput(decision: OwnerDecisionRecordView | null, canonicalActionId: string, now: Date): OwnerOutcomeInput {
+function commitmentOnlyInput(decision: OwnerDecisionRecordView | null, domain: OwnerOutcomeDomain, canonicalActionId: string, now: Date): OwnerOutcomeInput {
   return {
-    domain: "operations", // typing placeholder; the policy does not read it and the spine stores its own domain label
+    domain, // the chain's real domain (e.g. "compliance"), identical to the row's domain and the candidate's
     actionId: canonicalActionId,
     executionStatus: "NOT_STARTED",
     completedAt: null,
@@ -139,7 +141,7 @@ interface BuiltSnapshot {
   sourceLinkState: "LINKED" | "NO_EXECUTION_SOURCE_LINKED";
 }
 
-async function buildSnapshot(ws: string, biz: string, t: ChainTarget, deps: AssessDeps, now: Date): Promise<BuiltSnapshot> {
+async function buildSnapshot(ws: string, biz: string, t: ChainTarget, deps: AssessDeps, now: Date, c: OutcomeDbClient): Promise<BuiltSnapshot> {
   const base: OutcomeLinks = {
     ownerDecisionId: t.decision?.id ?? null, sourceSystem: "NONE", systemAActionId: null, systemAVerificationId: null,
     processTaskId: null, processTaskKey: null, ownerActionOutcomeId: null, reassessmentEventId: null, learningCandidateRef: null,
@@ -147,20 +149,20 @@ async function buildSnapshot(ws: string, biz: string, t: ChainTarget, deps: Asse
   };
   let built: BuiltSnapshot;
   if (t.parsed?.source === "domain_action") {
-    const action = await loadSystemAAction(db as never, ws, biz, t.parsed.domain as SystemADomain, t.parsed.sourceId);
+    const action = await loadSystemAAction(c as never, ws, biz, t.parsed.domain as SystemADomain, t.parsed.sourceId);
     if (!action) throw notFound("OwnerDecisionCandidate", t.parsed.candidateId);
-    const a = await loadSystemAInput(db as never, ws, biz, t.parsed.domain as SystemADomain, action, now);
+    const a = await loadSystemAInput(c as never, ws, biz, t.parsed.domain as SystemADomain, action, now);
     built = { input: a.input, links: { ...base, ...a.links, sourceSystem: "SYSTEM_A" }, system: "SYSTEM_A", sourceLinkState: "LINKED" };
   } else if (t.taskRow) {
-    const b = await loadSystemBInput(db as never, ws, biz, t.taskRow, t.decision && (t.decision.decisionState === "ACCEPTED" || t.decision.decisionState === "MODIFIED") ? t.decision : null, now);
+    const b = await loadSystemBInput(c as never, ws, biz, t.taskRow, t.decision && (t.decision.decisionState === "ACCEPTED" || t.decision.decisionState === "MODIFIED") ? t.decision : null, t.domain as OwnerOutcomeDomain, now);
     built = { input: b.input, links: { ...base, ...b.links, sourceSystem: "SYSTEM_B" }, system: "SYSTEM_B", sourceLinkState: "LINKED" };
   } else {
     // A compliance commitment with no linked execution source: explicit "no source", never a guessed one.
     if (t.parsed?.source === "compliance_item") {
-      const item = await db.ownerComplianceItem.findFirst({ where: { id: t.parsed.sourceId, workspaceId: ws, businessId: biz }, select: { id: true } });
+      const item = await c.ownerComplianceItem.findFirst({ where: { id: t.parsed.sourceId, workspaceId: ws, businessId: biz }, select: { id: true } });
       if (!item) throw notFound("OwnerDecisionCandidate", t.parsed.candidateId);
     }
-    built = { input: commitmentOnlyInput(t.decision && (t.decision.decisionState === "ACCEPTED" || t.decision.decisionState === "MODIFIED") ? t.decision : null, t.canonicalActionId, now), links: base, system: "NONE", sourceLinkState: "NO_EXECUTION_SOURCE_LINKED" };
+    built = { input: commitmentOnlyInput(t.decision && (t.decision.decisionState === "ACCEPTED" || t.decision.decisionState === "MODIFIED") ? t.decision : null, t.domain as OwnerOutcomeDomain, t.canonicalActionId, now), links: base, system: "NONE", sourceLinkState: "NO_EXECUTION_SOURCE_LINKED" };
   }
   if (deps.learningGate) built.input.learningGate = deps.learningGate;
   return built;
@@ -173,7 +175,7 @@ export interface AssessResult {
 }
 
 async function appendAssessment(
-  ws: string, actorId: string | null, biz: string, t: ChainTarget, built: BuiltSnapshot, now: Date, opts: { lockTaskId?: string; auditLink?: boolean } = {}
+  ws: string, actorId: string | null, biz: string, t: ChainTarget, built: BuiltSnapshot, now: Date, c: OutcomeDbClient, opts: { lockTaskId?: string; auditLink?: boolean } = {}
 ): Promise<AssessResult> {
   const assessment = assessOwnerOutcome(built.input); // semantic authority: the only source of every conclusion below
   const fingerprint = assessmentFingerprint({ chainKey: t.chainKey, links: built.links, input: built.input, assessment });
@@ -181,7 +183,7 @@ async function appendAssessment(
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      return await db.$transaction(async (tx: Tx) => {
+      return await c.$transaction(async (tx: Tx) => {
         if (opts.lockTaskId) {
           // Serialize competing links of the same task; one execution source belongs to exactly one commitment (the task's
           // own undecided legacy chain is history, not a competing commitment).
@@ -261,14 +263,15 @@ async function appendAssessment(
 export async function assessPersistedOwnerOutcome(
   workspaceId: string, actorId: string | null, businessId: string, ref: OutcomeChainRef, deps: AssessDeps = {}
 ): Promise<AssessResult> {
-  await assertOwnerBusiness(workspaceId, businessId);
+  const c = deps.client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, c);
   const now = (deps.now ?? (() => new Date()))();
-  const target = await resolveTarget(workspaceId, businessId, ref);
+  const target = await resolveTarget(workspaceId, businessId, ref, c);
   if (target.parsed?.source === "compliance_item" && !target.decision) {
     throw new ValidationError("No owner decision is recorded for this candidate, so there is no commitment to assess.", { fieldErrors: [{ path: "candidateId", message: "No decision recorded" }] });
   }
-  const built = await buildSnapshot(workspaceId, businessId, target, deps, now);
-  return appendAssessment(workspaceId, actorId, businessId, target, built, now);
+  const built = await buildSnapshot(workspaceId, businessId, target, deps, now, c);
+  return appendAssessment(workspaceId, actorId, businessId, target, built, now, c);
 }
 
 /**
@@ -279,26 +282,27 @@ export async function assessPersistedOwnerOutcome(
 export async function linkProcessTaskToDecision(
   workspaceId: string, actorId: string, businessId: string, input: { candidateId: string; processTaskKey: string }, deps: AssessDeps = {}
 ): Promise<AssessResult> {
-  await assertOwnerBusiness(workspaceId, businessId);
+  const c = deps.client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, c);
   const now = (deps.now ?? (() => new Date()))();
   const parsed = parseOwnerCandidateId(input.candidateId);
   if (!parsed) throw new ValidationError("candidateId is not a canonical persisted decision candidate.", { fieldErrors: [{ path: "candidateId", message: "Not a canonical persisted candidate id" }] });
   if (parsed.source === "domain_action") {
     throw new ValidationError("A domain action carries its own execution and verification; a process task cannot be linked to it.", { fieldErrors: [{ path: "candidateId", message: "System A candidates cannot link a process task" }] });
   }
-  await resolveCandidate(workspaceId, businessId, parsed.candidateId, now, { enforceDecidable: false });
-  const decision = await getLatestOwnerDecision(workspaceId, businessId, parsed.candidateId);
+  await resolveCandidate(workspaceId, businessId, parsed.candidateId, now, { enforceDecidable: false, client: c });
+  const decision = await getLatestOwnerDecision(workspaceId, businessId, parsed.candidateId, c);
   if (!decision || (decision.decisionState !== "ACCEPTED" && decision.decisionState !== "MODIFIED")) {
     throw new ValidationError("A process task can only be linked to a candidate the owner has ACCEPTED or MODIFIED.", { fieldErrors: [{ path: "candidateId", message: "No ACCEPTED/MODIFIED decision" }] });
   }
-  const task = await loadProcessTask(db as never, workspaceId, businessId, { taskKey: input.processTaskKey });
+  const task = await loadProcessTask(c as never, workspaceId, businessId, { taskKey: input.processTaskKey });
   if (!task) throw notFound("ProcessExecutionTask", input.processTaskKey);
   const target: ChainTarget = {
     chainKey: chainKeyForCandidate(parsed.candidateId), domain: parsed.domain, canonicalActionId: parsed.sourceId,
     parsed, decision, taskRow: task, linkingTask: true,
   };
-  const built = await buildSnapshot(workspaceId, businessId, target, deps, now);
-  return appendAssessment(workspaceId, actorId, businessId, target, built, now, { lockTaskId: String(task.id), auditLink: true });
+  const built = await buildSnapshot(workspaceId, businessId, target, deps, now, c);
+  return appendAssessment(workspaceId, actorId, businessId, target, built, now, c, { lockTaskId: String(task.id), auditLink: true });
 }
 
 export interface OwnerOutcomeChainView {
@@ -320,24 +324,25 @@ export interface OwnerOutcomeChainView {
 }
 
 /** Read one chain (decisions + assessment history). Workspace + business scoped; a foreign or unknown chain is one uniform 404. */
-export async function getOwnerOutcomeChain(workspaceId: string, businessId: string, ref: OutcomeChainRef): Promise<OwnerOutcomeChainView> {
-  await assertOwnerBusiness(workspaceId, businessId);
+export async function getOwnerOutcomeChain(workspaceId: string, businessId: string, ref: OutcomeChainRef, client?: OutcomeDbClient): Promise<OwnerOutcomeChainView> {
+  const c = client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, c);
   let chainKey: string;
   if ("candidateId" in ref) {
     const parsed = parseOwnerCandidateId(ref.candidateId);
     if (!parsed) throw new ValidationError("candidateId is not a canonical persisted decision candidate.", { fieldErrors: [{ path: "candidateId", message: "Not a canonical persisted candidate id" }] });
     chainKey = chainKeyForCandidate(parsed.candidateId);
   } else {
-    const task = await loadProcessTask(db as never, workspaceId, businessId, { taskKey: ref.processTaskKey });
+    const task = await loadProcessTask(c as never, workspaceId, businessId, { taskKey: ref.processTaskKey });
     if (!task) throw notFound("ProcessExecutionTask", ref.processTaskKey);
-    const linked = await db.ownerOutcomeAssessment.findFirst({
+    const linked = await c.ownerOutcomeAssessment.findFirst({
       where: { workspaceId, businessId, processTaskId: String(task.id), ownerDecisionId: { not: null } }, orderBy: { createdAt: "desc" },
     });
     chainKey = linked ? linked.chainKey : chainKeyForLegacyProcessTask(String(task.id));
   }
   const [decisions, assessments] = await Promise.all([
-    db.ownerDecisionRecord.findMany({ where: { workspaceId, businessId, candidateId: chainKey }, orderBy: { sequence: "asc" } }),
-    db.ownerOutcomeAssessment.findMany({ where: { workspaceId, businessId, chainKey }, orderBy: { version: "asc" } }),
+    c.ownerDecisionRecord.findMany({ where: { workspaceId, businessId, candidateId: chainKey }, orderBy: { sequence: "asc" } }),
+    c.ownerOutcomeAssessment.findMany({ where: { workspaceId, businessId, chainKey }, orderBy: { version: "asc" } }),
   ]);
   if (decisions.length === 0 && assessments.length === 0) throw notFound("OwnerOutcomeChain", chainKey);
   const currentDecision = decisions.length > 0 ? decisions[decisions.length - 1] : null;

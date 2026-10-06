@@ -32,14 +32,30 @@ import { loadSystemAAction, SYSTEM_A_SPECS } from "./outcome-sources";
 import type { SystemADomain } from "@/domain/owner-spine/owner-decision-record";
 
 type Tx = Prisma.TransactionClient;
+/** The Prisma client the services run on. Defaults to the shared `db`; tests inject independent connections to force real interleavings. */
+export type OutcomeDbClient = typeof db;
 type DecisionRow = Awaited<ReturnType<Tx["ownerDecisionRecord"]["findFirstOrThrow"]>>;
 export type OwnerDecisionRecordView = DecisionRow;
+
+/**
+ * Candidate-level serialization key. EVERY writer of a candidate's decision history (a new decision, an amended outcome
+ * contract) takes this transaction-scoped advisory lock first (same `pg_advisory_xact_lock` convention as the beta cap),
+ * re-reads the latest decision under it, applies its own precondition, and only then appends. The lock is released on
+ * commit or rollback. Uniqueness of `sequence` alone would stop duplicate numbers but not an invalid state transition.
+ */
+export function ownerCandidateLockKey(workspaceId: string, businessId: string, candidateId: string): string {
+  return `owner_decision:${workspaceId}:${businessId}:${candidateId}`;
+}
+export async function lockOwnerCandidate(tx: Pick<Tx, "$executeRaw">, workspaceId: string, businessId: string, candidateId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${ownerCandidateLockKey(workspaceId, businessId, candidateId)}, 0))`;
+}
 
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["completed", "cancelled"]);
 const MAX_ATTEMPTS = 4;
 
 export interface DecisionDeps {
   now?: () => Date;
+  client?: OutcomeDbClient;
 }
 
 function isUniqueViolation(e: unknown): boolean {
@@ -51,8 +67,8 @@ function candidateNotFound(candidateId: string): NotFoundError {
   return new NotFoundError("OwnerDecisionCandidate", candidateId);
 }
 
-export async function assertOwnerBusiness(workspaceId: string, businessId: string): Promise<void> {
-  const business = await db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId }, select: { id: true } });
+export async function assertOwnerBusiness(workspaceId: string, businessId: string, client: OutcomeDbClient = db): Promise<void> {
+  const business = await client.ownerBusiness.findFirst({ where: { id: businessId, workspaceId }, select: { id: true } });
   if (!business) throw new NotFoundError("OwnerBusiness", businessId);
 }
 
@@ -65,8 +81,9 @@ export interface ResolvedCandidate {
 
 /** Resolve a canonical candidate id to its persisted source (workspace + business scoped) and build the immutable snapshot. */
 export async function resolveCandidate(
-  workspaceId: string, businessId: string, candidateId: string, capturedAt: Date, opts: { enforceDecidable?: boolean } = {}
+  workspaceId: string, businessId: string, candidateId: string, capturedAt: Date, opts: { enforceDecidable?: boolean; client?: OutcomeDbClient } = {}
 ): Promise<ResolvedCandidate> {
+  const client = opts.client ?? db;
   const parsed = parseOwnerCandidateId(candidateId);
   if (!parsed) {
     throw new ValidationError("candidateId is not a canonical persisted decision candidate (domain_action:<domain>:<id> or compliance_item:<id>).", {
@@ -74,7 +91,7 @@ export async function resolveCandidate(
     });
   }
   if (parsed.source === "domain_action") {
-    const action = await loadSystemAAction(db as never, workspaceId, businessId, parsed.domain as SystemADomain, parsed.sourceId);
+    const action = await loadSystemAAction(client as never, workspaceId, businessId, parsed.domain as SystemADomain, parsed.sourceId);
     if (!action) throw candidateNotFound(candidateId);
     if (opts.enforceDecidable !== false) assertDecidable(String(action.status));
     const spec = SYSTEM_A_SPECS[parsed.domain as SystemADomain];
@@ -89,7 +106,7 @@ export async function resolveCandidate(
     };
     return { parsed, findingCode: strOrNull(action.findingCode), recommendationCode: strOrNull(action.recommendationCode), snapshot };
   }
-  const item = await db.ownerComplianceItem.findFirst({ where: { id: parsed.sourceId, workspaceId, businessId } });
+  const item = await client.ownerComplianceItem.findFirst({ where: { id: parsed.sourceId, workspaceId, businessId } });
   if (!item) throw candidateNotFound(candidateId);
   const snapshot = {
     candidateId, source: parsed.source, domain: parsed.domain, sourceId: parsed.sourceId, capturedAt: capturedAt.toISOString(),
@@ -114,16 +131,28 @@ export interface RecordDecisionResult {
   replayed: boolean;
 }
 
+/**
+ * Append the next decision for a candidate, serialized per candidate. `plan` runs UNDER the lock against the latest
+ * decision as it is at the serialization point (never a state read earlier), and may throw to refuse the operation.
+ */
 async function appendDecision(
   workspaceId: string, actorId: string, businessId: string, resolved: ResolvedCandidate,
-  body: NormalizedDecisionBody, idempotencyKey: string | null, now: Date, auditEvent: AuditEventName
+  plan: (latest: DecisionRow | null) => NormalizedDecisionBody, idempotencyKey: string | null, now: Date, auditEvent: AuditEventName,
+  client: OutcomeDbClient
 ): Promise<RecordDecisionResult> {
   const candidateId = resolved.parsed.candidateId;
-  const fingerprint = decisionRequestFingerprint({ candidateId, actorId, body });
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      return await db.$transaction(async (tx: Tx) => {
+      return await client.$transaction(async (tx: Tx) => {
+        await lockOwnerCandidate(tx, workspaceId, businessId, candidateId);
+        const latest = await tx.ownerDecisionRecord.findFirst({
+          where: { workspaceId, businessId, candidateId },
+          orderBy: { sequence: "desc" },
+        });
+        const body = plan(latest); // operation-specific precondition, evaluated against the latest decision under the lock
+        const fingerprint = decisionRequestFingerprint({ candidateId, actorId, body });
+
         if (idempotencyKey) {
           const keyed = await tx.ownerDecisionRecord.findFirst({ where: { workspaceId, idempotencyKey } });
           if (keyed) {
@@ -133,10 +162,6 @@ async function appendDecision(
             throw new ConflictError("This idempotency key was already used for a different decision.");
           }
         }
-        const latest = await tx.ownerDecisionRecord.findFirst({
-          where: { workspaceId, businessId, candidateId },
-          orderBy: { sequence: "desc" },
-        });
         if (latest && latest.requestFingerprint === fingerprint) return { decision: latest, replayed: true };
 
         const created = await tx.ownerDecisionRecord.create({
@@ -175,7 +200,7 @@ async function appendDecision(
         return { decision: created, replayed: false };
       });
     } catch (e) {
-      // A racing writer took this sequence / key: re-read and either return its identical event or append after it.
+      // Only a cross-candidate idempotency-key race can still collide (the candidate itself is serialized by the lock).
       if (isUniqueViolation(e) && attempt < MAX_ATTEMPTS - 1) continue;
       throw e;
     }
@@ -187,11 +212,12 @@ async function appendDecision(
 export async function recordOwnerDecision(
   workspaceId: string, actorId: string, businessId: string, input: RecordOwnerDecisionInput, deps: DecisionDeps = {}
 ): Promise<RecordDecisionResult> {
-  await assertOwnerBusiness(workspaceId, businessId);
+  const client = deps.client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, client);
   const now = (deps.now ?? (() => new Date()))();
-  const resolved = await resolveCandidate(workspaceId, businessId, input.candidateId, now);
+  const resolved = await resolveCandidate(workspaceId, businessId, input.candidateId, now, { client });
   const body = normalizeDecisionBody(input);
-  return appendDecision(workspaceId, actorId, businessId, resolved, body, input.idempotencyKey ?? null, now, AUDIT_EVENTS.OWNER_DECISION_RECORDED);
+  return appendDecision(workspaceId, actorId, businessId, resolved, () => body, input.idempotencyKey ?? null, now, AUDIT_EVENTS.OWNER_DECISION_RECORDED, client);
 }
 
 /**
@@ -201,27 +227,32 @@ export async function recordOwnerDecision(
 export async function recordOwnerOutcomeContract(
   workspaceId: string, actorId: string, businessId: string, input: RecordOutcomeContractInput, deps: DecisionDeps = {}
 ): Promise<RecordDecisionResult> {
-  await assertOwnerBusiness(workspaceId, businessId);
+  const client = deps.client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, client);
   const now = (deps.now ?? (() => new Date()))();
-  const resolved = await resolveCandidate(workspaceId, businessId, input.candidateId, now);
-  const latest = await getLatestOwnerDecision(workspaceId, businessId, input.candidateId);
-  if (!latest || (latest.decisionState !== "ACCEPTED" && latest.decisionState !== "MODIFIED")) {
-    throw new ValidationError("An outcome contract can only be recorded for a candidate the owner has ACCEPTED or MODIFIED.", {
-      fieldErrors: [{ path: "candidateId", message: "No ACCEPTED/MODIFIED decision for this candidate" }],
-    });
-  }
-  const body = normalizeDecisionBody({ state: latest.decisionState as OwnerDecisionState, ownerReason: input.ownerReason ?? null, revisitAt: null, contract: input.contract });
-  return appendDecision(workspaceId, actorId, businessId, resolved, body, input.idempotencyKey ?? null, now, AUDIT_EVENTS.OWNER_OUTCOME_CONTRACT_RECORDED);
+  const resolved = await resolveCandidate(workspaceId, businessId, input.candidateId, now, { client });
+  // The precondition is evaluated INSIDE the serialized transaction against the latest decision at that point: a concurrent
+  // REJECTED / DEFERRED that committed first makes this amendment fail instead of resurrecting an ACCEPTED/MODIFIED commitment.
+  const plan = (latest: DecisionRow | null): NormalizedDecisionBody => {
+    if (!latest || (latest.decisionState !== "ACCEPTED" && latest.decisionState !== "MODIFIED")) {
+      throw new ValidationError("An outcome contract can only be recorded for a candidate whose current decision is ACCEPTED or MODIFIED.", {
+        fieldErrors: [{ path: "candidateId", message: latest ? `Current decision is ${latest.decisionState}` : "No decision recorded" }],
+      });
+    }
+    return normalizeDecisionBody({ state: latest.decisionState as OwnerDecisionState, ownerReason: input.ownerReason ?? null, revisitAt: null, contract: input.contract });
+  };
+  return appendDecision(workspaceId, actorId, businessId, resolved, plan, input.idempotencyKey ?? null, now, AUDIT_EVENTS.OWNER_OUTCOME_CONTRACT_RECORDED, client);
 }
 
-export async function getLatestOwnerDecision(workspaceId: string, businessId: string, candidateId: string): Promise<OwnerDecisionRecordView | null> {
-  return db.ownerDecisionRecord.findFirst({ where: { workspaceId, businessId, candidateId }, orderBy: { sequence: "desc" } });
+export async function getLatestOwnerDecision(workspaceId: string, businessId: string, candidateId: string, client: OutcomeDbClient = db): Promise<OwnerDecisionRecordView | null> {
+  return client.ownerDecisionRecord.findFirst({ where: { workspaceId, businessId, candidateId }, orderBy: { sequence: "desc" } });
 }
 
 /** All decisions for the business (or one candidate), oldest first; workspace + business scoped. */
-export async function listOwnerDecisions(workspaceId: string, businessId: string, opts: { candidateId?: string } = {}): Promise<OwnerDecisionRecordView[]> {
-  await assertOwnerBusiness(workspaceId, businessId);
-  return db.ownerDecisionRecord.findMany({
+export async function listOwnerDecisions(workspaceId: string, businessId: string, opts: { candidateId?: string; client?: OutcomeDbClient } = {}): Promise<OwnerDecisionRecordView[]> {
+  const client = opts.client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, client);
+  return client.ownerDecisionRecord.findMany({
     where: { workspaceId, businessId, ...(opts.candidateId ? { candidateId: opts.candidateId } : {}) },
     orderBy: [{ candidateId: "asc" }, { sequence: "asc" }],
   });

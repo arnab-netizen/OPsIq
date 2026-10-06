@@ -185,8 +185,28 @@ The owner's response to a canonical, persisted candidate: `ACCEPTED | REJECTED |
   chain carries `commitmentFidelity = MODIFIED_BY_OWNER`, so a result is never presented as the execution of the recommended action.
   **REJECTED / DEFERRED** record intent only — no contract, no execution, no outcome.
 * Append-only (DB trigger). A later decision (or an amended contract) is the next `sequence`, `supersedesId` → previous.
-* **Idempotency** is enforced by the database: `UNIQUE(workspace, business, candidate, sequence)` plus an optional
-  `UNIQUE(workspace, idempotencyKey)`. A racing/duplicate request re-reads and returns the identical event instead of writing a second one.
+* **Serialization and idempotency** are enforced by the database. Every writer of a candidate's history (a new decision *and* an
+  outcome-contract amendment) takes ONE transaction-scoped advisory lock keyed by workspace + business + candidate, re-reads the
+  latest decision *under that lock*, applies its own precondition, and only then appends. So an amendment can append only if the
+  latest decision is still ACCEPTED/MODIFIED at its commit point: when a concurrent REJECTED/DEFERRED committed first the
+  amendment fails and never resurrects the commitment; when the amendment commits first the history is
+  ACCEPTED → amended → REJECTED/DEFERRED and the final state is the rejection. `UNIQUE(workspace, business, candidate, sequence)`
+  and the optional `UNIQUE(workspace, idempotencyKey)` remain as backstops. A duplicate request returns the identical event.
+
+### 8.2a Tenant integrity enforced by the database
+Foreign keys alone do not prove a referenced row belongs to the same workspace, so the new tables use composite, tenant-aware
+keys (the pair `owner_businesses(id, workspace_id)` is unique and is the FK target):
+* `(business_id, workspace_id)` → `owner_businesses(id, workspace_id)` on both tables;
+* `supersedes_id` → a decision of the same workspace, business **and candidate**;
+* `owner_decision_id` → a decision of the same workspace, business **and chain** (`chain_key = candidate_id`);
+* `previous_assessment_id` → an assessment of the same workspace, business **and chain**;
+* an insert-time trigger requires a `supersedes`/`previous` link to be exactly the preceding sequence/version.
+Direct-SQL tests (`owner-outcome-tenant-integrity.db.test.ts`) prove each malformed combination is refused. **Soft references:**
+the source-row ids stored on an assessment (`system_a_action_id`, `system_a_verification_id`, `process_task_id`, `owner_action_outcome_id`,
+`reassessment_event_id`, `newer_diagnosis_cycle_id`) are deliberately NOT foreign keys — like every other cross-system id in these
+domains they point at tables this layer must not constrain (and several lack a tenant-composite key). Every read re-scopes by
+workspace **and** business and ignores a row outside them (tested), so a forged id can never surface another tenant's data; the
+residual exposure is a dangling/forged *reference value* on a row only a direct-SQL writer could create (P3).
 
 ### 8.3 Canonical outcome spine — `owner_outcome_assessments`
 A linkage + provenance record and a **versioned, immutable** snapshot of what OpsIQ could legitimately conclude at that time.
@@ -200,6 +220,9 @@ A linkage + provenance record and a **versioned, immutable** snapshot of what Op
 * **Server-derived only.** Clients submit references; the server builds an `OwnerOutcomeInput` from persisted sources through the
   existing adapters (`domainActionToOutcomeInput`, `processOutcomeToOutcomeInput`) and persists `assessOwnerOutcome()`'s output. No API
   accepts a conclusion.
+* **Input domain is the chain's real domain.** `OwnerOutcomeInput.domain` also admits `compliance` (a compliance commitment) and
+  `process_execution` (an undecided process task), so a persisted `inputSnapshot` never carries a placeholder domain; the
+  candidate, the row and the input always agree.
 * **Linking** is by persisted primary key or stable task key only — never text, metric name, description or timestamp. A System A
   action carries its own execution/verification (no process task can be attached to it); a compliance commitment may be linked to
   one process task by explicit reference (workspace + business validated; one task ↔ one commitment; business-less tasks are never

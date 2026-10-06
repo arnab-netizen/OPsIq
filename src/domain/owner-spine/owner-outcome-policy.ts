@@ -25,6 +25,13 @@ import type { VerificationStatus } from "../founder-recovery/types";
 import { AI_IS_NOT_A_VERIFIER } from "../owner-mode/evidence-verification";
 import type { OwnerDomain } from "./contracts";
 
+/**
+ * The domain an outcome belongs to. Beyond the owner domains it names the two chain kinds that have no owner domain of
+ * their own, so a persisted input never carries a placeholder domain: a `compliance` commitment (a compliance item the
+ * owner decided on) and a standalone `process_execution` task (an undecided System B task). The policy never branches on it.
+ */
+export type OwnerOutcomeDomain = OwnerDomain | "customer" | "compliance" | "process_execution";
+
 export type OutcomeExecutionStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED" | "CANCELLED";
 export type OutcomeObservationStatus = "NOT_STARTED" | "WINDOW_OPEN" | "READY_TO_MEASURE" | "MISSING_AFTER_EVIDENCE" | "MEASURED";
 /** `CHANGED_DIRECTION_UNKNOWN`: before and after differ but the intended direction was not recorded, so no judgment of better/worse is made. */
@@ -71,7 +78,7 @@ export interface OutcomeNewerDiagnosisFact {
 }
 
 export interface OwnerOutcomeInput {
-  domain: OwnerDomain | "customer";
+  domain: OwnerOutcomeDomain;
   actionId: string;
   recommendationId?: string | null;
   executionStatus: OutcomeExecutionStatus;
