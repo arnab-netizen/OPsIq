@@ -34,6 +34,8 @@ interface OwnerDashboardDtoSource {
     healthyEngagements?: number;
     atRiskEngagements?: number;
     criticalEngagements?: number;
+    needsDataEngagements?: number;
+    needsDataItems?: string[];
     topRisks?: unknown[];
   };
   actionQueue?: {
@@ -71,6 +73,11 @@ interface SurvivalCycleReader {
   };
 }
 
+const CASH_FIELD_LABELS: Record<string, string> = { cashInHand: "cash in hand", bankBalance: "bank balance" };
+function cashFieldLabel(field: string): string {
+  return CASH_FIELD_LABELS[field] ?? field;
+}
+
 function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?: DashboardRecommendationRow[]) {
   const recommendedActions = realRecommendations && realRecommendations.length > 0
     ? realRecommendations.map((rec) => ({
@@ -90,6 +97,9 @@ function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?
     healthyEngagements: data.health?.healthyEngagements || 0,
     atRiskEngagements: data.health?.atRiskEngagements || 0,
     criticalEngagements: data.health?.criticalEngagements || 0,
+    // Additive: businesses whose evidence is insufficient to assess (a gap to fill — never counted as risk) and what to enter.
+    needsDataEngagements: data.health?.needsDataEngagements || 0,
+    needsDataItems: data.health?.needsDataItems || [],
     actionQueueSize: data.actionQueue?.totalCount || 0,
     overdueActionCount: data.actionQueue?.overdueCount || 0,
     actionsByStatus: data.actionQueue?.byStatus || {},
@@ -162,21 +172,28 @@ export async function buildOwnerDashboardPayload(
         provisional
       );
       const survival = reading.gateState;
-      // A safe-looking reading that rests on incomplete cash evidence is never reported as "healthy": the business needs
-      // attention (confirm the cash position) — a gap to fill, not a measured danger.
-      const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
+      // A safe-looking reading that rests on incomplete cash evidence is never "healthy" — and never "at risk" either: the
+      // evidence gap means OpsIQ cannot assess the cash position yet (an explicit needs-data status), not that the business
+      // is measured to be in danger. A genuinely measured critical / at-risk condition still wins over the gap.
+      const healthStatus: "healthy" | "at_risk" | "critical" | "improving" | "needs_data" =
         survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
-        : survival === "AT_RISK" || progress.summary === "at_risk" || !reading.gateEvidenceSufficient ? "at_risk"
+        : survival === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
+        : !reading.gateEvidenceSufficient ? "needs_data"
         : "healthy";
+      const missingFields = [...new Set(reading.gateEvidenceGaps.flatMap((g) => g.missing))];
+      const needsDataReason = healthStatus === "needs_data"
+        ? `Cash position not confirmed${biz.name ? ` for ${biz.name}` : ""}: enter ${missingFields.length > 0 ? `the missing ${missingFields.map(cashFieldLabel).join(" and ")}` : "the missing bank balance / cash in hand"} (enter 0 if there is none).`
+        : undefined;
 
-      return { bizId: biz.id, bizIdx: idx, healthStatus, progress };
+      return { bizId: biz.id, bizIdx: idx, healthStatus, needsDataReason, progress };
     })
   );
 
   // Map to EngagementHealthSnapshot shape (businessId used as snapshot key — no consulting model needed)
-  const engagementSnapshots = businessSnapshots.map(({ bizId, healthStatus, progress }) => ({
+  const engagementSnapshots = businessSnapshots.map(({ bizId, healthStatus, needsDataReason, progress }) => ({
     engagementId: bizId,
     status: healthStatus,
+    needsDataReason,
     kpiOnTrackCount: progress.totals.completed,
     kpiTotalCount: progress.totals.total,
   }));

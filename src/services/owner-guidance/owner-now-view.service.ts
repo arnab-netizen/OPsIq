@@ -1154,9 +1154,11 @@ export async function assembleGuidanceContext(
 
   const state: BusinessStateSnapshot = {
     cashRunwayDays: cashState ? RUNWAY_BY_STATE[cashState] ?? 0 : 0,
-    // The runway above is a state PROXY, never a measurement. It is not a comparable figure at all when the cash position
-    // is incomplete (the engine's own runway is null): no owner-facing change message may be built from it.
-    cashRunwayMeasured: !(cashFinanceResolution.cashCurrent && cash?.cashPosition.judged && !cash.cashPosition.complete),
+    // The runway above is a state PROXY, never a measurement, and it is a COMPARABLE figure only when CURRENT Cashflow evidence
+    // supports it: a Cashflow reading that is current (not absent, stale, future-dated or superseded) AND whose cash position is
+    // complete. Anything else (including a Finance-only reading) leaves it unmeasured, so no owner-facing change message is built
+    // from a synthetic 0 / 45 / 120.
+    cashRunwayMeasured: !!cashState && !(cash?.cashPosition.judged && !cash.cashPosition.complete),
     netMarginPct: finState ? MARGIN_BY_STATE[finState] ?? 0 : 0,
     complaintsCount: complaints,
     reworkCount: rework,

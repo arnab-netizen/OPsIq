@@ -144,7 +144,7 @@ export function toPublicWorkspaceHealthDTO(health: any): PublicWorkspaceHealthDT
     assessedAt: health.assessedAt || new Date().toISOString(),
     overallStatus: health.overallStatus || "healthy",
     engagementCount: health.engagementCount || 0,
-    activeEngagements: health.healthyEngagements + health.atRiskEngagements,
+    activeEngagements: health.healthyEngagements + health.atRiskEngagements + (health.needsDataEngagements || 0),
     completedEngagements: 0,
     onTrackKPICount: health.onTrackKPICount || 0,
     totalKPICount: health.activeKPICount || 0,

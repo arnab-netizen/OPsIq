@@ -37,7 +37,9 @@ interface ActionData {
 
 interface HealthDataSnapshot {
   engagementId: string;
-  status: "critical" | "at_risk" | "healthy" | "improving";
+  status: "critical" | "at_risk" | "healthy" | "improving" | "needs_data";
+  /** For `needs_data`: what the owner must enter (plain language). */
+  needsDataReason?: string;
   kpiOnTrackCount: number;
   kpiTotalCount: number;
 }
@@ -60,11 +62,14 @@ export async function calculateWorkspaceHealth(
   const healthyCount = engagementSnapshots.filter((e) => e.status === "healthy").length;
   const atRiskCount = engagementSnapshots.filter((e) => e.status === "at_risk").length;
   const criticalCount = engagementSnapshots.filter((e) => e.status === "critical").length;
+  // Insufficient evidence is an explicit UNKNOWN: its own count, never folded into healthy / at-risk / critical.
+  const needsDataSnapshots = engagementSnapshots.filter((e) => e.status === "needs_data");
+  const needsDataCount = needsDataSnapshots.length;
 
   const totalKPIs = engagementSnapshots.reduce((sum, e) => sum + e.kpiTotalCount, 0);
   const onTrackKPIs = engagementSnapshots.reduce((sum, e) => sum + e.kpiOnTrackCount, 0);
 
-  const overallStatus = determineOverallHealth(healthyCount, atRiskCount, criticalCount, totalEngagements);
+  const overallStatus = determineOverallHealth(healthyCount, atRiskCount, criticalCount, needsDataCount, totalEngagements);
 
   const engagementSnapshots_mapped = engagementSnapshots.map((e): EngagementHealthSnapshot => {
     const statusMap: Record<string, HealthStatus> = {
@@ -72,6 +77,7 @@ export async function calculateWorkspaceHealth(
       at_risk: HealthStatus.AT_RISK,
       healthy: HealthStatus.HEALTHY,
       improving: HealthStatus.IMPROVING,
+      needs_data: HealthStatus.NEEDS_DATA,
     };
     return {
       engagementId: e.engagementId,
@@ -94,6 +100,8 @@ export async function calculateWorkspaceHealth(
     healthyEngagements: healthyCount,
     atRiskEngagements: atRiskCount,
     criticalEngagements: criticalCount,
+    needsDataEngagements: needsDataCount,
+    needsDataItems: needsDataSnapshots.map((e) => e.needsDataReason ?? "More information is needed to assess this business.").filter((v, i, a) => a.indexOf(v) === i),
     activeKPICount: totalKPIs,
     onTrackKPICount: onTrackKPIs,
     actionQueueSize: 0,
@@ -203,12 +211,18 @@ export async function buildOwnerDashboardView(
   return view;
 }
 
-function determineOverallHealth(healthy: number, atRisk: number, critical: number, total: number): HealthStatus {
+function determineOverallHealth(healthy: number, atRisk: number, critical: number, needsData: number, total: number): HealthStatus {
   if (critical > 0) {
     return HealthStatus.CRITICAL;
   }
-  if (atRisk >= total * 0.3) {
+  // Needs-data businesses are unassessed: they neither dilute nor inflate the measured share of at-risk businesses.
+  const assessed = total - needsData;
+  if ((assessed > 0 || needsData === 0) && atRisk >= assessed * 0.3) {
     return HealthStatus.AT_RISK;
+  }
+  // Any unassessed business means the workspace cannot honestly be called healthy/improving: it needs data, not risk.
+  if (needsData > 0) {
+    return HealthStatus.NEEDS_DATA;
   }
   if (healthy >= total * 0.8) {
     return HealthStatus.IMPROVING;
@@ -226,6 +240,8 @@ function generateHealthRecommendation(status: string): string {
       return "On track. Continue current execution plan.";
     case "improving":
       return "Positive momentum. Maintain focus and document wins.";
+    case "needs_data":
+      return "Needs data: confirm the missing figures so OpsIQ can assess this business.";
     default:
       return "Status unknown.";
   }
@@ -264,6 +280,8 @@ function generateRecommendedActions(status: HealthStatus): string[] {
       return ["Review KPI trends", "Increase review cadence", "Strengthen at-risk engagements", "Add buffer capacity"];
     case HealthStatus.HEALTHY:
       return ["Continue execution", "Document best practices", "Prepare for next phase", "Update roadmap"];
+    case HealthStatus.NEEDS_DATA:
+      return ["Enter the missing figures (for example the bank balance or cash in hand) so OpsIQ can assess this business"];
     case HealthStatus.IMPROVING:
       return ["Celebrate wins", "Reinforce successful practices", "Scale what works", "Share learnings across team"];
     default:
