@@ -159,6 +159,49 @@ const STAFF_INEFFICIENCY = 3;
 const B2B_UNDERPRICED = 1;
 const OVERDUE_RECEIVABLES = 3;
 
+const CASH_STATE_RANK: Record<CashRiskState, number> = { SAFE: 0, WATCH: 1, AT_RISK: 2, CRITICAL: 3, INSOLVENT_RISK: 4 };
+
+/**
+ * The categorical state the CASH_SAFETY_RISK signal may be raised from. The arbitrated survival state
+ * (`gateState`) is an enforcement state: when Finance's own findings say a profit/margin problem drives it
+ * (`gateDriver === "finance_profit"`), it is NOT evidence of a cash danger, and describing it as "cash survival"
+ * / "cashflow signals" would call a margin problem a cash danger (a loss-making business with ample, fully-known cash
+ * would read "cash survival critical"). In that case a cash signal needs a cash fact of its own: Finance's own measured
+ * cash finding (cash cushion / runway), or an independent Cash flow reading (current, not superseded, or in
+ * progress) that is itself unsafe — at that reading's own severity. Every other driver keeps the gate state.
+ * Safety enforcement is unchanged: this only attributes the owner-facing cash signal (see `cashProfitRiskIsActive`).
+ */
+export function cashSignalState(input: {
+  gateState: CashRiskState | null;
+  gateDriver: "cash" | "finance_profit" | "unverified" | null;
+  /** Cash flow's own CURRENT state; null when it is not current or has been superseded by a newer Finance reading. */
+  cashState: CashRiskState | null;
+  provisionalCashState: CashRiskState | null;
+  /** Finance's own findings carry a measured cash cushion / runway figure (a genuine, measured cash fact). */
+  financeMeasuredCash: boolean;
+}): CashRiskState | null {
+  if (input.gateState === null) return null;
+  if (input.gateDriver !== "finance_profit" || input.financeMeasuredCash) return input.gateState;
+  let worst: CashRiskState | null = null;
+  for (const s of [input.cashState, input.provisionalCashState]) {
+    if (s !== null && CASH_RISK_STATES.includes(s) && (worst === null || CASH_STATE_RANK[s] > CASH_STATE_RANK[worst])) worst = s;
+  }
+  return worst;
+}
+
+/**
+ * Whether an active cash/profit risk exists (it blocks scaling capital and forces approval on spend). Any unsafe
+ * arbitrated survival state counts — including a profit-driven one — so attributing the cash SIGNAL correctly
+ * (`cashSignalState`) never relaxes that block.
+ */
+export function cashProfitRiskIsActive(
+  protection: { signals: ReadonlyArray<{ category: string; severity: string }> } | null,
+  gateState: CashRiskState | null
+): boolean {
+  return Boolean(protection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")) ||
+    (gateState !== null && CASH_RISK_STATES.includes(gateState));
+}
+
 /** Categorical states that represent a real cash/margin risk (WATCH is above the floor, so it does not fire). */
 const CASH_RISK_STATES: readonly CashRiskState[] = ["AT_RISK", "CRITICAL", "INSOLVENT_RISK"];
 /** Cash runway severity from a categorical state (no measured figure): CRITICAL/INSOLVENT → CRITICAL, AT_RISK → HIGH. */

@@ -46,7 +46,7 @@ import { correctionExecutionStateFromTask } from "@/domain/owner-mode/effectiven
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
-import { buildCashProfitProtection, deriveFinanceCashProfitFacts, type CashProfitProtectionAnalysis, type CashRiskState, type FinanceCashProfitFacts, type FinanceReadingFacts } from "@/domain/owner-mode/cash-profit-protection";
+import { buildCashProfitProtection, cashProfitRiskIsActive, cashSignalState, deriveFinanceCashProfitFacts, type CashProfitProtectionAnalysis, type CashRiskState, type FinanceCashProfitFacts, type FinanceReadingFacts } from "@/domain/owner-mode/cash-profit-protection";
 import { buildProcessExecutionBridge, computeCanStart, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
 import { buildBridgeExpansion } from "@/domain/owner-mode/process-execution-bridge-expansion";
 import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
@@ -878,7 +878,7 @@ export async function assembleGuidanceContext(
    * business (never ready).
    */
   gateInput?: OwnerGateConstraints | null
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; financeFacts: FinanceCashProfitFacts | null; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; financeFacts: FinanceCashProfitFacts | null; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; cashSignalState: CashRiskState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
@@ -1188,6 +1188,15 @@ export async function assembleGuidanceContext(
     // result was computed here but never threaded through to the cash/profit-protection signal
     // builder downstream in getOwnerNowView.
     cashFinanceEffectiveState: cashFinanceResolution.gateState,
+    // The state the owner-facing CASH signal may be raised from (cash-profit-protection.ts cashSignalState): a
+    // profit-driven Finance state is not a cash danger. `cashFinanceEffectiveState` itself stays the enforced state.
+    cashSignalState: cashSignalState({
+      gateState: cashFinanceResolution.gateState as CashRiskState | null,
+      gateDriver: cashFinanceResolution.gateDriver,
+      cashState: cashFinanceResolution.supersededSource === "cash" ? null : (cashState as CashRiskState | undefined) ?? null,
+      provisionalCashState: cashFinanceResolution.provisionalCashState as CashRiskState | null,
+      financeMeasuredCash: financeFacts !== null && (financeFacts.cashRunwayDays !== null || financeFacts.cashDaysOfCosts !== null),
+    }),
     avgActiveMargin,
     pipelineSummary,
     // The ONE business whose evidence was read (null ⇒ none): later business-scoped reads use the same scope.
@@ -1869,7 +1878,7 @@ export async function getOwnerNowView(
   // Read-only: overdue risk-review alerts are raised by the scheduler's risk-review scan and by the risk
   // mutations (business-risk.service.ts), never by loading this view.
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary, evidenceScope } = await assembleGuidanceContext(workspaceId, businessId, deps, options?.ownerGate);
+  const { ctx, state, ag, raw, cashFinanceEffectiveState, cashSignalState: cashSignalStateForProtection, avgActiveMargin, pipelineSummary, evidenceScope } = await assembleGuidanceContext(workspaceId, businessId, deps, options?.ownerGate);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -2319,7 +2328,7 @@ export async function getOwnerNowView(
         // the exact bug a real human usability test reproduced: Home presented a superseded
         // AT_RISK/INSOLVENT_RISK cash reading as the top priority action while the newer finance
         // diagnosis was SAFE.
-        cashRunwayState: cashFinanceEffectiveState as CashRiskState | null,
+        cashRunwayState: cashSignalStateForProtection,
         netMarginState: (raw.finState ?? null) as CashRiskState | null,
         lowMarginJobCount: 0,
         pricingLeakCount: 0,
@@ -2406,7 +2415,7 @@ export async function getOwnerNowView(
     ? await deps.externalOpportunitySignals(workspaceId).catch(() => [])
     : [];
   const nowMs = deps.now();
-  const cashProfitRiskActive = Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL"));
+  const cashProfitRiskActive = cashProfitRiskIsActive(cashProfitProtection, cashFinanceEffectiveState as CashRiskState | null);
 
   // External Opportunity Intelligence v1 — evidence-backed candidates from live structured intake PLUS the
   // internal customer-complaint→retention family, each filtered through cash/profit protection, the
@@ -2446,7 +2455,7 @@ export async function getOwnerNowView(
     ? buildOpportunityValidationPlan(
         externalOpportunityIntelligence.candidates,
         {
-          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
+          cashProfitRiskActive: cashProfitRiskIsActive(cashProfitProtection, cashFinanceEffectiveState as CashRiskState | null),
           capabilityGapPresent: capabilityGaps != null,
         },
         workspaceId,
@@ -2477,7 +2486,7 @@ export async function getOwnerNowView(
         externalOpportunityIntelligence.candidates,
         opportunityValidationWithOutcomes,
         {
-          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
+          cashProfitRiskActive: cashProfitRiskIsActive(cashProfitProtection, cashFinanceEffectiveState as CashRiskState | null),
           capabilityGapPresent: capabilityGaps != null,
         },
         workspaceId,
