@@ -81,8 +81,10 @@ describe("owner dashboard: an evidence gap is NEEDS_DATA — never healthy / at-
     expect((await calculateWorkspaceHealth(ctx, [e("a", "at_risk")])).overallStatus).toBe(HealthStatus.AT_RISK);
     expect((await calculateWorkspaceHealth(ctx, [e("a", "healthy"), e("b", "healthy"), e("c", "at_risk")])).needsDataEngagements).toBe(0);
   });
-  it("the route maps an evidence gap to needs_data, never to at_risk", () => {
-    const src = fs.readFileSync(path.resolve(__dirname, "../../app/api/owner/dashboard/route.ts"), "utf8");
+  it("the route classifies through the shared helper, which maps an evidence gap to needs_data, never to at_risk", () => {
+    const route = fs.readFileSync(path.resolve(__dirname, "../../app/api/owner/dashboard/route.ts"), "utf8");
+    expect(route).toMatch(/classifyDashboardHealth\(/);
+    const src = fs.readFileSync(path.resolve(__dirname, "../../services/owner-spine/dashboard-health-classification.ts"), "utf8");
     expect(src).not.toMatch(/!reading\.gateEvidenceSufficient \? "at_risk"/);
     expect(src).toMatch(/!reading\.gateEvidenceSufficient \? "needs_data"/);
   });

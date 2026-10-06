@@ -17,6 +17,7 @@ import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { cashFlowEvidenceGaps, currentCashFinanceReading, financeEvidenceGaps } from "@/services/owner-spine/current-cash-finance-reading";
 import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
+import { classifyDashboardHealth } from "@/services/owner-spine/dashboard-health-classification";
 
 const querySchema = z.object({
   includeKPIs: z.enum(["true", "false"]).optional().default("true"),
@@ -71,11 +72,6 @@ interface SurvivalCycleReader {
       select: { cashflowState: true; generatedAt: true; snapshot: true };
     }): Promise<{ cashflowState: string | null; generatedAt?: Date | null; snapshot?: ({ periodEnd: Date } & Record<string, unknown>) | null } | null>;
   };
-}
-
-const CASH_FIELD_LABELS: Record<string, string> = { cashInHand: "cash in hand", bankBalance: "bank balance" };
-function cashFieldLabel(field: string): string {
-  return CASH_FIELD_LABELS[field] ?? field;
 }
 
 function toOwnerDashboardDTO(data: OwnerDashboardDtoSource, realRecommendations?: DashboardRecommendationRow[]) {
@@ -171,19 +167,13 @@ export async function buildOwnerDashboardPayload(
         evidenceNow.getTime(),
         provisional
       );
-      const survival = reading.gateState;
-      // A safe-looking reading that rests on incomplete cash evidence is never "healthy" — and never "at risk" either: the
-      // evidence gap means OpsIQ cannot assess the cash position yet (an explicit needs-data status), not that the business
-      // is measured to be in danger. A genuinely measured critical / at-risk condition still wins over the gap.
-      const healthStatus: "healthy" | "at_risk" | "critical" | "improving" | "needs_data" =
-        survival === "CRITICAL" || survival === "INSOLVENT_RISK" || progress.summary === "blocked" ? "critical"
-        : survival === "AT_RISK" || progress.summary === "at_risk" ? "at_risk"
-        : !reading.gateEvidenceSufficient ? "needs_data"
-        : "healthy";
-      const missingFields = [...new Set(reading.gateEvidenceGaps.flatMap((g) => g.missing))];
-      const needsDataReason = healthStatus === "needs_data"
-        ? `Cash position not confirmed${biz.name ? ` for ${biz.name}` : ""}: enter ${missingFields.length > 0 ? `the missing ${missingFields.map(cashFieldLabel).join(" and ")}` : "the missing bank balance / cash in hand"} (enter 0 if there is none).`
-        : undefined;
+      // Health is classified at the dashboard boundary (dashboard-health-classification.ts): the reading's enforcement
+      // state (a fail-safe gate floor) and its "no gaps" flag are never read as "evidence exists" or "measured danger".
+      const { status: healthStatus, needsDataReason } = classifyDashboardHealth({
+        reading,
+        progressSummary: progress.summary,
+        businessName: biz.name,
+      });
 
       return { bizId: biz.id, bizIdx: idx, healthStatus, needsDataReason, progress };
     })
