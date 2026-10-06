@@ -650,6 +650,12 @@ export const AUDIT_EVENTS = {
   OWNER_ACTION_STALL_DETECTED: "owner.action_stall_detected",
   OWNER_ACTION_APPROVAL_GRANTED: "owner.action_approval_granted",
 
+  // Owner Outcome Persistence v1 — decision/commitment record and canonical outcome spine
+  OWNER_DECISION_RECORDED: "owner.decision_recorded",
+  OWNER_OUTCOME_CONTRACT_RECORDED: "owner.outcome_contract_recorded",
+  OWNER_OUTCOME_SOURCE_LINKED: "owner.outcome_source_linked",
+  OWNER_OUTCOME_ASSESSMENT_RECORDED: "owner.outcome_assessment_recorded",
+
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",
   COMPLAINT_TRIAGED: "complaint.triaged",

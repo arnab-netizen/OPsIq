@@ -2747,6 +2747,9 @@ model OwnerBusiness {
   strategyVerifications   OwnerStrategyVerification[]
   dataIntakes             OwnerDataIntake[]
 
+  ownerDecisionRecords    OwnerDecisionRecord[]
+  ownerOutcomeAssessments OwnerOutcomeAssessment[]
+
   @@index([workspaceId])
   @@index([workspaceId, isActive])
   @@map("owner_businesses")
@@ -7011,4 +7014,120 @@ model RateLimitBucket {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("rate_limit_buckets")
+}
+
+// === Owner Outcome Persistence v1 (additive) ===
+// Links existing facts; replaces none. Both tables are APPEND-ONLY (DB trigger blocks UPDATE/DELETE):
+// a later diagnosis or assessment never rewrites what the owner saw/decided or what OpsIQ could conclude then.
+
+/// The owner's response to a canonical, persisted decision candidate (domain action / compliance item).
+/// One row per decision event; a later decision on the same candidate is a new row (sequence + 1, supersedesId).
+/// `recommendationSnapshot` is built by the server from the persisted source at decision time and never rewritten.
+/// The outcome contract columns are null/unknown when not supplied (null != 0); direction is never defaulted to "up".
+model OwnerDecisionRecord {
+  id                        String                   @id @db.Uuid
+  workspaceId               String                   @map("workspace_id") @db.Uuid
+  businessId                String                   @map("business_id") @db.Uuid
+  candidateId               String                   @map("candidate_id")
+  candidateSource           String                   @map("candidate_source") // domain_action | compliance_item
+  domain                    String
+  sourceId                  String                   @map("source_id") @db.Uuid
+  findingCode               String?                  @map("finding_code")
+  recommendationCode        String?                  @map("recommendation_code")
+  decisionState             String                   @map("decision_state") // ACCEPTED | REJECTED | DEFERRED | MODIFIED
+  sequence                  Int
+  supersedesId              String?                  @map("supersedes_id") @db.Uuid
+  decidedById               String                   @map("decided_by_id") @db.Uuid
+  decidedAt                 DateTime                 @map("decided_at")
+  ownerReason               String?                  @map("owner_reason") @db.Text
+  revisitAt                 DateTime?                @map("revisit_at")
+  recommendationSnapshot    Json                     @map("recommendation_snapshot")
+  decisionContractVersion   String                   @map("decision_contract_version")
+  commitmentDescription     String?                  @map("commitment_description") @db.Text
+  verificationMetric        String?                  @map("verification_metric")
+  baselineValue             Float?                   @map("baseline_value")
+  baselineProvenance        String?                  @map("baseline_provenance") // MEASURED | OWNER_REPORTED | EXTERNAL_SOURCE | UNKNOWN
+  targetDirection           String?                  @map("target_direction") // up | down | unknown (null only when no contract: REJECTED/DEFERRED)
+  targetValue               Float?                   @map("target_value")
+  observationWindowDays     Int?                     @map("observation_window_days")
+  intendedCompletionAt      DateTime?                @map("intended_completion_at")
+  expectedMeasurementSource String?                  @map("expected_measurement_source")
+  requestFingerprint        String                   @map("request_fingerprint")
+  idempotencyKey            String?                  @map("idempotency_key")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
+  business                  OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  supersedes                OwnerDecisionRecord?     @relation("OwnerDecisionSupersedes", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy              OwnerDecisionRecord[]    @relation("OwnerDecisionSupersedes")
+  assessments               OwnerOutcomeAssessment[]
+
+  @@unique([workspaceId, businessId, candidateId, sequence], map: "owner_decision_records_candidate_sequence_key")
+  @@unique([workspaceId, idempotencyKey], map: "owner_decision_records_ws_idempotency_key")
+  @@index([workspaceId, businessId, candidateId])
+  @@index([workspaceId, businessId, decidedAt])
+  @@map("owner_decision_records")
+}
+
+/// Canonical outcome spine: a LINKAGE + PROVENANCE record and a VERSIONED, immutable assessment snapshot.
+/// Every row is the output of `assessOwnerOutcome()` over a server-built `OwnerOutcomeInput`; clients never supply
+/// conclusions. Authoritative facts stay in System A verification rows / System B OwnerActionOutcome.
+/// Current assessment for a chain = highest `version` (unique per chain, so a racing writer cannot duplicate one).
+model OwnerOutcomeAssessment {
+  id                         String                   @id @db.Uuid
+  workspaceId                String                   @map("workspace_id") @db.Uuid
+  businessId                 String                   @map("business_id") @db.Uuid
+  chainKey                   String                   @map("chain_key")
+  version                    Int
+  previousAssessmentId       String?                  @map("previous_assessment_id") @db.Uuid
+  ownerDecisionId            String?                  @map("owner_decision_id") @db.Uuid
+  ownerDecisionState         String?                  @map("owner_decision_state")
+  commitmentFidelity         String                   @map("commitment_fidelity") // AS_RECOMMENDED | MODIFIED_BY_OWNER | NOT_COMMITTED | NO_DECISION
+  decisionLinkState          String                   @map("decision_link_state") // LINKED | UNLINKED_NO_DECISION
+  sourceSystem               String                   @map("source_system") // SYSTEM_A | SYSTEM_B | NONE
+  sourceLinkState            String                   @map("source_link_state") // LINKED | NO_EXECUTION_SOURCE_LINKED
+  domain                     String
+  canonicalActionId          String                   @map("canonical_action_id")
+  systemAActionId            String?                  @map("system_a_action_id") @db.Uuid
+  systemAVerificationId      String?                  @map("system_a_verification_id") @db.Uuid
+  processTaskId              String?                  @map("process_task_id") @db.Uuid
+  processTaskKey             String?                  @map("process_task_key")
+  ownerActionOutcomeId       String?                  @map("owner_action_outcome_id")
+  reassessmentEventId        String?                  @map("reassessment_event_id")
+  learningCandidateRef       String?                  @map("learning_candidate_ref")
+  newerDiagnosisDomain       String?                  @map("newer_diagnosis_domain")
+  newerDiagnosisCycleId      String?                  @map("newer_diagnosis_cycle_id") @db.Uuid
+  newerDiagnosisEvidenceAsOf DateTime?                @map("newer_diagnosis_evidence_as_of")
+  policyVersion              String                   @map("policy_version")
+  assessedAt                 DateTime                 @map("assessed_at")
+  assessedById               String?                  @map("assessed_by_id") @db.Uuid
+  executionStatus            String                   @map("execution_status")
+  observationStatus          String                   @map("observation_status")
+  measurementResult          String                   @map("measurement_result")
+  targetAttainment           String                   @map("target_attainment")
+  issueResolution            String                   @map("issue_resolution")
+  causalAttribution          String                   @map("causal_attribution")
+  learningEligibility        String                   @map("learning_eligibility")
+  verificationStatus         String                   @map("verification_status")
+  evidenceQuality            String                   @map("evidence_quality")
+  verifierKind               String                   @map("verifier_kind")
+  independentlyVerified      Boolean                  @map("independently_verified")
+  selfVerified               Boolean                  @map("self_verified")
+  disputed                   Boolean
+  externalInterference       Boolean                  @map("external_interference")
+  measuredAt                 DateTime?                @map("measured_at")
+  verifiedAt                 DateTime?                @map("verified_at")
+  learningBlockers           String[]                 @map("learning_blockers")
+  nextVerificationAction     String                   @map("next_verification_action") @db.Text
+  inputSnapshot              Json                     @map("input_snapshot")
+  assessmentFingerprint      String                   @map("assessment_fingerprint")
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  business                   OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  ownerDecision              OwnerDecisionRecord?     @relation(fields: [ownerDecisionId], references: [id], onDelete: Restrict)
+  previous                   OwnerOutcomeAssessment?  @relation("OwnerOutcomeAssessmentPrevious", fields: [previousAssessmentId], references: [id], onDelete: Restrict)
+  next                       OwnerOutcomeAssessment[] @relation("OwnerOutcomeAssessmentPrevious")
+
+  @@unique([workspaceId, chainKey, version], map: "owner_outcome_assessments_chain_version_key")
+  @@index([workspaceId, businessId, chainKey])
+  @@index([workspaceId, processTaskId])
+  @@index([workspaceId, ownerDecisionId])
+  @@map("owner_outcome_assessments")
 }

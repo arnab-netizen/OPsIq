@@ -1,7 +1,7 @@
 # Owner Outcome Verification Contract
 
-Status: semantics + read-only normalisation. No migration, no new persistence, no score, threshold, ranking,
-confidence or Finance-learning change.
+Status: semantics + read-only normalisation (§1–7). Persistence of the owner decision and of versioned assessment snapshots is
+described in §8 (Outcome Persistence v1 Core). No score, threshold, ranking, confidence or Finance-learning change in either.
 Code of record: `src/domain/owner-spine/owner-outcome-policy.ts` (pure contract),
 `owner-outcome-adapters.ts` (read-only normalisation of the two existing loops),
 `src/__tests__/owner-spine/owner-outcome-policy.test.ts`.
@@ -155,3 +155,73 @@ above applies until then. Per-domain verification rows already persist `targetDi
    label is kept (tested) but the value is owner-entered.
 7. Customer has no outcome loop.
 8. Owner-facing consumers still read raw status; routing every surface through `ownerOutcomeLoopState` is follow-up work.
+
+
+## 8. Persistence layer (Outcome Persistence v1 — Core)
+
+This section describes what is now stored. The semantic contract above is unchanged: `assessOwnerOutcome()` is still the only
+place a conclusion is derived, and the seven facts stay distinct.
+
+> Observed improvement after an OpsIQ recommendation is not proof that the recommendation caused the improvement.
+
+### 8.1 What stays authoritative
+* **System A** (per-domain `*Action` + `*Verification`, eight domains) and **System B** (`ProcessExecutionTask` + `OwnerActionOutcome`) remain
+  the source records. Nothing in the new layer writes to them, replaces them or turns `OwnerActionOutcome` into a universal outcome model.
+* Legacy rows are **not** backfilled and are **not** given an owner decision. A legacy System A action is assessed under its own
+  canonical candidate id with `decisionLinkState = UNLINKED_NO_DECISION`; a legacy process task under `process_task:<taskId>`.
+
+### 8.2 Owner decision record — `owner_decision_records`
+The owner's response to a canonical, persisted candidate: `ACCEPTED | REJECTED | DEFERRED | MODIFIED` (exactly these).
+* Candidate identity is deterministic: `domain_action:<domain>:<actionId>` (recovery, finance, cashflow, sales, operations, sop,
+  marketing, strategy) or `compliance_item:<id>`. Display text is never an identity. Synthesized candidates (`survival_reading`,
+  `safety_gate`, `evidence_refresh`) and workspace-level `business_risk` (no business attribution) are not decidable in v1.
+* The server resolves the candidate inside the caller's workspace **and** business and builds an immutable `recommendationSnapshot`
+  from the persisted row. A later diagnosis or edit never rewrites what the owner saw.
+* **Outcome contract** (ACCEPTED/MODIFIED only): commitment description, verification metric, baseline value + provenance, target value,
+  **target direction** (`up | down | unknown`), observation window, intended completion, expected measurement source.
+  `null` = unknown/not supplied; an explicit `0` is a known zero; no target is not target 0; direction is never defaulted or
+  inferred from a metric name; a baseline value must state its provenance (`UNKNOWN` is an allowed answer).
+* **MODIFIED** keeps the original recommendation (snapshot) and the owner's own commitment side by side; every assessment of that
+  chain carries `commitmentFidelity = MODIFIED_BY_OWNER`, so a result is never presented as the execution of the recommended action.
+  **REJECTED / DEFERRED** record intent only — no contract, no execution, no outcome.
+* Append-only (DB trigger). A later decision (or an amended contract) is the next `sequence`, `supersedesId` → previous.
+* **Idempotency** is enforced by the database: `UNIQUE(workspace, business, candidate, sequence)` plus an optional
+  `UNIQUE(workspace, idempotencyKey)`. A racing/duplicate request re-reads and returns the identical event instead of writing a second one.
+
+### 8.3 Canonical outcome spine — `owner_outcome_assessments`
+A linkage + provenance record and a **versioned, immutable** snapshot of what OpsIQ could legitimately conclude at that time.
+* One chain per commitment: chain key = the canonical candidate id (a legacy undecided process task has its own `process_task:<id>` chain).
+  `UNIQUE(workspace, chain, version)`; the current assessment is the highest version; `previousAssessmentId` links the history.
+  Version 1 `WAITING_TO_MEASURE` → version 2 `MEASURED/IMPROVED/NOT_REACHED` → version 3 `STILL_OPEN` is evidence evolving, not contradiction.
+  An identical re-assessment (same links, facts and conclusions) is not a new version.
+* Each row stores the seven outputs (`executionStatus`, `observationStatus`, `measurementResult`, `targetAttainment`, `issueResolution`,
+  `causalAttribution`, `learningEligibility`), evidence quality, verifier kind/status, dispute and external-interference flags,
+  learning blockers, the next verification action, the exact `OwnerOutcomeInput` facts (`inputSnapshot`) and the explicit source links.
+* **Server-derived only.** Clients submit references; the server builds an `OwnerOutcomeInput` from persisted sources through the
+  existing adapters (`domainActionToOutcomeInput`, `processOutcomeToOutcomeInput`) and persists `assessOwnerOutcome()`'s output. No API
+  accepts a conclusion.
+* **Linking** is by persisted primary key or stable task key only — never text, metric name, description or timestamp. A System A
+  action carries its own execution/verification (no process task can be attached to it); a compliance commitment may be linked to
+  one process task by explicit reference (workspace + business validated; one task ↔ one commitment; business-less tasks are never
+  linkable). A commitment with no execution source is stored as `NO_EXECUTION_SOURCE_LINKED`, not guessed.
+* **Direction persistence (System B):** `ProcessExecutionTask`/`OwnerActionOutcome` still have no direction column. The durable source
+  for a *new* commitment is the linked decision's `targetDirection`; it is applied only when the commitment's metric does not conflict
+  with the task's. Historical rows stay `unknown` (no backfill).
+* **Issue resolution** is `RESOLVED` only from a newer-diagnosis fact: the business's current cycle in the action's own domain,
+  from a different cycle, with evidence period **and** generation strictly after the completion/measurement anchor, a non-amended
+  snapshot, no known evidence gap and within the freshness window. The cycle id, domain and evidence date are persisted and a DB
+  CHECK forbids `RESOLVED` without a cycle id. Domains/chains with no deterministic cycle reference (Recovery, process tasks) stay
+  `NOT_YET_REASSESSED`.
+* **Attribution** defaults to `NOT_ASSESSED`; the maximum positive value is `PLAUSIBLE` (a DB CHECK has no stronger value).
+* **Learning** is persisted as the policy states it. Core never runs or fabricates the learning gate: `ELIGIBLE_CONFIRMED_BY_GATE`
+  requires a real gate result supplied by a server-side caller (no API accepts one) and blockers still win.
+* Every decision, link and assessment write emits an audit event (ids, states and provenance only — no metric values).
+
+### 8.4 Known limitations of Core
+1. Verified-by independence for System B is read from the verify audit event; if absent the verifier is `UNKNOWN`, never `INDEPENDENT`.
+2. Recovery verification rows persist no baseline provenance, so with a verification row the existing adapter reports an unknown baseline
+   (`NOT_MEASURABLE`) — unchanged by this layer.
+3. A newer-diagnosis reference is resolved for the seven uniform System A domains; Recovery and process tasks have none.
+4. No owner-facing UI or timeline (next PR); decisions are recorded through the API only.
+5. Assessments are written on request (API/service); nothing schedules them yet.
+6. **Finance learning decision id — `FINANCE_LEARNING_DECISION_ID_MIGRATION=DEFERRED`.** See `FINANCE_LEARNING_DECISION_ID_DEBT.md`.
