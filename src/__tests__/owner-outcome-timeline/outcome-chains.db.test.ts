@@ -18,7 +18,7 @@ import {
   OWNER_OUTCOME_CHAIN_LIST_LIMIT, assessPersistedOwnerOutcome, getOwnerOutcomeChain, linkProcessTaskToDecision, listOwnerOutcomeChains,
 } from "@/services/owner-outcome/owner-outcome-chain.service";
 import { NOW, daysAgo, seedComplianceItem, seedFinanceAction, seedFinanceCycle, seedFinanceVerification, seedProcessTask, seedTenant, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
-import { buildTimelineStages, chainFreshness, type OwnerOutcomeChainDto } from "@/domain/owner-spine/owner-outcome-presentation";
+import { NEEDS_NEW_CHECK_COPY, buildTimelineStages, chainFreshness, type OwnerOutcomeChainDto } from "@/domain/owner-spine/owner-outcome-presentation";
 
 const deps = (offsetMs = 0) => ({ now: () => new Date(NOW.getTime() + offsetMs) });
 let A: Tenant;
@@ -85,6 +85,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("owner outcome timeline — chain list rea
     let chain = asDto((await listOwnerOutcomeChains(t.ws, t.biz)).chains[0]);
     expect(chainFreshness(chain).assessmentIsStale).toBe(true); // the assessment predates the amended commitment
     expect(chain.assessments).toHaveLength(1);
+    // …and with REAL rows: the current stages carry none of v1's conclusions, while v1 itself is untouched in history.
+    for (const id of ["execution", "observation", "measurement", "target", "issue", "attribution", "learning"]) {
+      const st = buildTimelineStages(chain).find((s) => s.id === id)!;
+      expect(st.code, id).toBeUndefined();
+      expect(st.headline, id).toBe(NEEDS_NEW_CHECK_COPY);
+    }
+    expect(chain.assessments[0].id).toBe(v1.id);
 
     const v2 = (await assessPersistedOwnerOutcome(t.ws, t.actor, t.biz, { candidateId: a.candidateId }, deps(4_000))).assessment;
     expect(v2.version).toBe(2);

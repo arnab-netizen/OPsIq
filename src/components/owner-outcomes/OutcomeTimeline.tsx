@@ -13,7 +13,7 @@ import { Badge, Button, Disclosure } from "@/ui/primitives";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 import { ownerDomainLabel } from "@/domain/owner-spine/owner-decision";
 import {
-  DECISION_LABELS, assessmentHistory, buildTimelineStages, canCheckOutcome, chainFreshness, contractFormFromDecision, contractLines,
+  DECISION_LABELS, assessmentDecisionSequence, assessmentHistory, buildTimelineStages, canCheckOutcome, chainFreshness, contractFormFromDecision, contractLines, currentCommitmentAssessment,
   decisionCommits, decisionHistory, measurementView, originalRecommendation, verificationSummary,
   type OwnerOutcomeChainDto, type StageState, type StatusTone,
 } from "@/domain/owner-spine/owner-outcome-presentation";
@@ -36,7 +36,7 @@ export function OutcomeTimeline({ chain, canManage, onChanged }: { chain: OwnerO
   const fresh = chainFreshness(chain);
   const rec = originalRecommendation(chain);
   const d = chain.currentDecision;
-  const a = chain.currentAssessment;
+  const a = currentCommitmentAssessment(chain); // the stale one (if any) is history only
   const titleId = `${uid}-title`;
 
   async function check() {
@@ -104,7 +104,9 @@ export function OutcomeTimeline({ chain, canManage, onChanged }: { chain: OwnerO
 
       {!a && !fresh.stagesNotApplicable && (
         <p data-testid="outcome-not-checked" className="m-0 text-sm text-muted-foreground">
-          No result has been recorded yet. The stages above stay empty until OpsIQ checks this against your records.
+          {fresh.assessmentIsStale
+            ? "Earlier results were recorded for your previous commitment. They are kept under History and are not shown as the current result."
+            : "No result has been recorded yet. The stages above stay empty until OpsIQ checks this against your records."}
         </p>
       )}
 
@@ -153,7 +155,7 @@ export function OutcomeTimeline({ chain, canManage, onChanged }: { chain: OwnerO
             ) : (
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {assessmentHistory(chain).map((x) => (
-                  <li key={x.id} data-testid="outcome-history-assessment">Version {x.version} · {x.assessedAt.slice(0, 10)} · {measurementView(x.measurementResult).label}</li>
+                  <li key={x.id} data-testid="outcome-history-assessment">Version {x.version} · {x.assessedAt.slice(0, 10)} · {measurementView(x.measurementResult).label}{assessmentDecisionSequence(chain, x) !== null ? ` · checked under decision #${assessmentDecisionSequence(chain, x)}` : ""}{x.ownerDecisionId !== d?.id ? " (earlier commitment)" : ""}</li>
                 ))}
               </ul>
             )}

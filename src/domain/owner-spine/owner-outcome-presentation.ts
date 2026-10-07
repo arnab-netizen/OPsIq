@@ -302,6 +302,22 @@ export function chainFreshness(chain: OwnerOutcomeChainDto): ChainFreshness {
 }
 
 const PENDING_NOT_CHECKED = "Not checked yet";
+/** Shown for every outcome stage when the only assessment on file was recorded under an EARLIER decision record. */
+export const NEEDS_NEW_CHECK_COPY = "Needs a new check for your current commitment";
+
+/**
+ * The assessment the CURRENT stages may read. An assessment recorded under an earlier decision record (a changed or amended
+ * commitment) is HISTORICAL ONLY: it describes what the owner had committed to then, not now, so none of its conclusions may
+ * stand in for the current commitment. Returns null in that case (the assessment stays inspectable under History). With no
+ * decision on the chain at all there is nothing to be stale against, so the latest assessment is used as-is.
+ */
+export function currentCommitmentAssessment(chain: OwnerOutcomeChainDto): OwnerOutcomeAssessmentDto | null {
+  const a = chain.currentAssessment;
+  if (!a) return null;
+  const d = chain.currentDecision;
+  if (d && a.ownerDecisionId !== d.id) return null;
+  return a;
+}
 
 function committedStage(chain: OwnerOutcomeChainDto): TimelineStage {
   const d = chain.currentDecision;
@@ -326,7 +342,7 @@ function committedStage(chain: OwnerOutcomeChainDto): TimelineStage {
 export function buildTimelineStages(chain: OwnerOutcomeChainDto): TimelineStage[] {
   const rec = originalRecommendation(chain);
   const d = chain.currentDecision;
-  const a = chain.currentAssessment;
+  const a = currentCommitmentAssessment(chain); // never an assessment recorded under an earlier decision record
   const fresh = chainFreshness(chain);
 
   const recommended: TimelineStage = {
@@ -356,7 +372,11 @@ export function buildTimelineStages(chain: OwnerOutcomeChainDto): TimelineStage[
     if (fresh.stagesNotApplicable) {
       return { id, question: q, state: "not_applicable" as const, headline: "Not tracked — no commitment", tone: "neutral" as const };
     }
-    if (!a) return { id, question: q, state: "pending" as const, headline: PENDING_NOT_CHECKED, tone: "pending" as const };
+    if (!a) {
+      // An assessment exists but belongs to an earlier decision record: fail closed — no code, caveat or label from it.
+      const stale = fresh.assessmentIsStale;
+      return { id, question: q, state: "pending" as const, headline: stale ? NEEDS_NEW_CHECK_COPY : PENDING_NOT_CHECKED, tone: stale ? ("caution" as const) : ("pending" as const) };
+    }
     const v = view(a);
     return { id, question: question(id), state: "reached" as const, headline: v.label, tone: v.tone, code: v.code, ...(v.caveat ? { caveat: v.caveat } : {}) };
   });
@@ -469,4 +489,9 @@ export function decisionHistory(chain: OwnerOutcomeChainDto): OwnerDecisionRecor
 }
 export function assessmentHistory(chain: OwnerOutcomeChainDto): OwnerOutcomeAssessmentDto[] {
   return [...chain.assessments].sort((a, b) => b.version - a.version);
+}
+
+/** The decision sequence an assessment was recorded under (null when it predates any decision link). Used to label history. */
+export function assessmentDecisionSequence(chain: OwnerOutcomeChainDto, a: OwnerOutcomeAssessmentDto): number | null {
+  return chain.decisions.find((d) => d.id === a.ownerDecisionId)?.sequence ?? null;
 }

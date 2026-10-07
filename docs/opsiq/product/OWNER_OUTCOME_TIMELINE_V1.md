@@ -50,7 +50,7 @@ Untrackable recommendations are still listed, with "Outcome tracking is not avai
 - Unknown ≠ zero: blank is sent as `null`, a typed `0` stays `0`; "no target" is shown as "No target set", never 0; direction is sent as chosen and never inferred; non-numeric text is passed through so the server rejects it (never coerced to `null`).
 - Causation: `IMPROVED` → "Improved" plus a visible caveat; `REACHED` → "Target reached" plus "does not by itself mean the original problem is resolved"; only the persisted `RESOLVED` reads "Resolved in a newer diagnosis"; `PLAUSIBLE` → "Possible contribution" ("cannot show that your action was the reason"); `NOT_ASSESSED` is never "no relationship". A test forbids *caused / proven / worked / solved / fixed* in any label or caveat.
 - MODIFIED: the original recommendation and the owner's own action are shown side by side with a notice that results relate to the owner's action. REJECTED / DEFERRED show no execution or outcome stages.
-- Staleness: an assessment recorded under an earlier decision record than the current one is flagged "out of date".
+- Staleness: an assessment recorded under an earlier decision record than the current one is **historical only**. The current stages fail closed to "Needs a new check for your current commitment" and carry none of its codes, labels, caveats, next action or learning blockers; it stays inspectable under History (labelled "checked under decision #n … earlier commitment"), the out-of-date notice stays visible, and "Check outcome" stays available to a manager. Nothing is recalculated client-side.
 - Verification: owner-entered / self checks are never shown as independent ("Not independently verified").
 - History: decisions and assessment versions are append-only and listed newest first.
 - Caveats are visible text, not hover-only; status is conveyed in words, not colour alone.
@@ -59,7 +59,8 @@ Untrackable recommendations are still listed, with "Outcome tracking is not avai
 
 - Read: `OWNER_VIEW`. Decide / amend / check: `OWNER_MANAGE` — controls are hidden without it, and the existing routes enforce it server-side regardless.
 - Each submit carries a client idempotency key: the same key for a retry of the same payload, a new key when the payload changes. An in-flight guard stops double taps. Duplicate suppression itself stays on the server (unique keys and request fingerprints).
-- Every read and write is scoped by the verified workspace and the path business. A response whose business differs from the active business is discarded; a stale response after a business switch never renders.
+- Every read and write is scoped by the verified workspace and the path business. The page holds an active-business lease (a ref kept in step with the business context): a read commits, or starts, only while its business still holds it, and rendered data carries the business it was read for and is shown only while that business is active — so no render, not even a transition frame, pairs one business's chains, recommendations or forms with another active business.
+- A write that began under Business A may commit server-side after the owner moved to Business B. It is never cancelled or rolled back, but its follow-up read is refused (it neither reloads A nor advances the request generation), so B's page is untouched.
 
 ## 7. Not in scope (carried forward, unchanged)
 

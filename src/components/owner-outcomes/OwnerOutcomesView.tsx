@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount / on-business-change is the established owner-page pattern (see OwnerActivationPanel) */
-
 /**
  * /owner/outcomes — "Results": the historical follow-through layer over the existing outcome persistence.
  *
@@ -10,7 +8,7 @@
  * creates no decision or outcome engine: writes go to the existing decision / outcome-contract / outcome-chain routes.
  * Zero tracked outcomes is a normal state and is shown as exactly that — nothing is simulated.
  */
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Badge, CardDashboardSkeleton, Disclosure, EmptyState, ErrorState, PageContainer, PageHeader } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { useCapabilities } from "@/context/capabilities-context";
@@ -48,58 +46,87 @@ function TrackableTarget({ target, businessId, canManage, onRecorded }: { target
   );
 }
 
+/**
+ * Everything the page renders, tagged with the business it was read for. It is rendered ONLY while its business is the
+ * active one — so a read (or a mutation follow-up) that belongs to another business can never appear, even for one frame.
+ */
+interface LoadedView {
+  businessId: string;
+  chains: OwnerOutcomeChainDto[];
+  truncated: boolean;
+  decision: CurrentOwnerDecision | null;
+  decisionFailed: boolean;
+  error: string | null;
+}
+
 export function OwnerOutcomesView() {
   const { activeBusinessId, needsBusinessRecovery, businesses, loading: businessLoading } = useActiveBusiness();
   const capabilities = useCapabilities();
   const canManage = capabilities.includes(CAPABILITIES.OWNER_MANAGE);
+  const liveBusinessId = needsBusinessRecovery ? null : activeBusinessId;
 
-  const [chains, setChains] = useState<OwnerOutcomeChainDto[] | null>(null);
-  const [truncated, setTruncated] = useState(false);
-  const [decision, setDecision] = useState<CurrentOwnerDecision | null>(null);
-  const [decisionFailed, setDecisionFailed] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<LoadedView | null>(null);
+  /** Request generation: orders reads of the SAME business. It is not, by itself, the business boundary. */
   const generation = useRef(0);
+  /**
+   * The active-business lease: always the business the owner is looking at right now (kept in step with the context before
+   * paint). Every async completion — read or mutation follow-up — must still hold this lease to commit or to start a read,
+   * so an old business's work can never become "latest" and render into a newer business's page.
+   */
+  const leaseRef = useRef<string | null>(liveBusinessId);
+  const inFlight = useRef<AbortController | null>(null);
+  useLayoutEffect(() => { leaseRef.current = liveBusinessId; }, [liveBusinessId]);
 
-  const load = useCallback(async (businessId: string | null) => {
+  /**
+   * Read the page's data for `businessId`. A no-op unless `businessId` is the active business RIGHT NOW (checked before the
+   * generation is taken, so a stale caller cannot advance it), and the result commits only if it still holds the lease.
+   */
+  const load = useCallback(async (businessId: string) => {
+    if (leaseRef.current !== businessId) return;
     const mine = ++generation.current;
-    if (!businessId) { setChains(null); setDecision(null); setLoading(false); return; }
+    inFlight.current?.abort(); // a newer read supersedes an older one (writes are never cancelled)
     const controller = new AbortController();
+    inFlight.current = controller;
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const holdsLease = (): boolean => generation.current === mine && leaseRef.current === businessId;
     try {
       const [list, canonical] = await Promise.all([
         fetchOutcomeChains(businessId, controller.signal),
         fetchCanonicalDecision(businessId, controller.signal).then((d) => ({ d, ok: true }), () => ({ d: null, ok: false })),
       ]);
-      // The active business changed while this was in flight: this response belongs to another business and must never commit.
-      if (generation.current !== mine) return;
-      setChains(list.businessId === businessId ? list.chains : []);
-      setTruncated(list.truncated);
-      setDecision(canonical.d);
-      setDecisionFailed(!canonical.ok);
-      setError(null);
+      if (!holdsLease()) return;
+      setView({
+        businessId, chains: list.businessId === businessId ? list.chains : [], truncated: list.truncated,
+        decision: canonical.d, decisionFailed: !canonical.ok, error: null,
+      });
     } catch {
-      if (generation.current !== mine) return;
-      setError("Couldn't load your results. Please try again.");
+      if (!holdsLease()) return;
+      setView({ businessId, chains: [], truncated: false, decision: null, decisionFailed: false, error: "Couldn't load your results. Please try again." });
     } finally {
       clearTimeout(timer);
-      if (generation.current === mine) setLoading(false);
+      if (inFlight.current === controller) inFlight.current = null;
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    setChains(null);
-    setDecision(null);
-    // A pending business recovery means there is no trustworthy business to read yet: load nothing.
-    // A later load() (business switch) supersedes this one through the generation stamp, so no cleanup is needed.
-    void load(needsBusinessRecovery ? null : activeBusinessId);
-  }, [activeBusinessId, needsBusinessRecovery, load]);
+    // load() sets state only after its awaited reads resolve (never synchronously here): the established owner-page fetch-on-change pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (liveBusinessId) void load(liveBusinessId);
+  }, [liveBusinessId, load]);
 
-  const refresh = useCallback(async () => { await load(activeBusinessId); }, [activeBusinessId, load]);
+  /**
+   * Follow-up read after a write that started under `businessId`. The write may already have committed server-side and is
+   * never rolled back or pretended away — but if the owner has since moved to another business this does nothing at all
+   * (it neither reads nor advances the generation), leaving the newer business's page intact.
+   */
+  const refreshFor = useCallback((businessId: string) => load(businessId), [load]);
 
-  const tracked = new Set((chains ?? []).map((c) => c.chainKey));
-  const attention = decision?.attention ?? [];
+  const current = view && liveBusinessId !== null && view.businessId === liveBusinessId ? view : null;
+  const loading = businessLoading || (liveBusinessId !== null && current === null);
+
+  const chains = current?.chains ?? [];
+  const tracked = new Set(chains.map((c) => c.chainKey));
+  const attention = current?.decision?.attention ?? [];
   const trackable = attention.filter((t) => candidateTrackability(t.candidateId).trackable && !tracked.has(t.candidateId));
   const untrackable = attention.filter((t) => !candidateTrackability(t.candidateId).trackable);
 
@@ -108,19 +135,20 @@ export function OwnerOutcomesView() {
       <div className="flex flex-col gap-6">
         <PageHeader title="Results" description="What you decided about OpsIQ's recommendations, what you committed to, and what actually happened afterwards." />
 
-        {businessLoading || loading ? (
+        {loading ? (
           <div role="status" aria-live="polite" aria-label="Loading your results"><CardDashboardSkeleton /></div>
         ) : needsBusinessRecovery ? (
           <EmptyState title="Choose which business to look at" description="The business selected before is no longer available. Pick a business from the business selector." />
-        ) : (businesses ?? []).length === 0 || !activeBusinessId ? (
+        ) : (businesses ?? []).length === 0 || !current ? (
           <EmptyState title="No business yet" description="Add your business first. Results appear here once you decide on a recommendation." />
-        ) : error ? (
-          <ErrorState title="Couldn't load your results" message={error} onRetry={() => { setLoading(true); void load(activeBusinessId); }} />
+        ) : current.error ? (
+          <ErrorState title="Couldn't load your results" message={current.error} onRetry={() => { setView(null); void load(current.businessId); }} />
         ) : (
-          <>
+          // Keyed by business: no component state (open forms, drafts, messages) can ever carry across businesses.
+          <div key={current.businessId} className="flex flex-col gap-6" data-business-id={current.businessId}>
             <section aria-labelledby="outcomes-tracked-heading" className="flex flex-col gap-3" data-testid="outcomes-tracked">
               <h2 id="outcomes-tracked-heading" className="m-0 text-base font-semibold text-foreground">Results you&apos;re tracking</h2>
-              {(chains ?? []).length === 0 ? (
+              {chains.length === 0 ? (
                 <div data-testid="outcomes-zero-state" className="rounded-lg border border-border p-4">
                   <strong className="text-base font-semibold text-foreground">No tracked outcomes yet</strong>
                   <p className="mt-1.5 text-sm text-muted-foreground">
@@ -129,15 +157,15 @@ export function OwnerOutcomesView() {
                 </div>
               ) : (
                 <>
-                  {(chains ?? []).map((c) => <OutcomeTimeline key={c.chainKey} chain={c} canManage={canManage} onChanged={refresh} />)}
-                  {truncated && <p role="status" className="m-0 text-sm text-muted-foreground">Showing your most recent results. Older ones are not shown here.</p>}
+                  {chains.map((c) => <OutcomeTimeline key={c.chainKey} chain={c} canManage={canManage} onChanged={() => refreshFor(current.businessId)} />)}
+                  {current.truncated && <p role="status" className="m-0 text-sm text-muted-foreground">Showing your most recent results. Older ones are not shown here.</p>}
                 </>
               )}
             </section>
 
             <section aria-labelledby="outcomes-open-heading" className="flex flex-col gap-3" data-testid="outcomes-open">
               <h2 id="outcomes-open-heading" className="m-0 text-base font-semibold text-foreground">Recommendations you can start tracking</h2>
-              {decisionFailed ? (
+              {current.decisionFailed ? (
                 <p className="m-0 text-sm text-muted-foreground">Couldn&apos;t load your current recommendations. Your tracked results above are unaffected.</p>
               ) : attention.length === 0 ? (
                 <p className="m-0 text-sm text-muted-foreground">There are no open recommendations right now.</p>
@@ -146,7 +174,7 @@ export function OwnerOutcomesView() {
                   {trackable.length === 0 && <p className="m-0 text-sm text-muted-foreground">None of your open recommendations can start a new outcome trail right now.</p>}
                   {trackable.length > 0 && (
                     <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                      {trackable.map((t) => <TrackableTarget key={t.candidateId} target={t} businessId={activeBusinessId} canManage={canManage} onRecorded={refresh} />)}
+                      {trackable.map((t) => <TrackableTarget key={t.candidateId} target={t} businessId={current.businessId} canManage={canManage} onRecorded={() => refreshFor(current.businessId)} />)}
                     </ul>
                   )}
                   {untrackable.length > 0 && (
@@ -162,7 +190,7 @@ export function OwnerOutcomesView() {
                 </>
               )}
             </section>
-          </>
+          </div>
         )}
       </div>
     </PageContainer>
