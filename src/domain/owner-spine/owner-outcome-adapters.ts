@@ -23,6 +23,7 @@ import type {
   OwnerOutcomeInput,
 } from "./owner-outcome-policy";
 import type { OwnerDomain } from "./contracts";
+import type { OwnerOutcomeDomain } from "./owner-outcome-policy";
 
 const WINDOW_FALLBACK_NONE = null;
 
@@ -68,7 +69,7 @@ function num(v: unknown): number | null {
 }
 
 /** Only Finance feeds a learning loop from System A (the learning bridge). */
-export function learningLoopForDomain(domain: OwnerDomain | "customer"): OutcomeLearningLoop {
+export function learningLoopForDomain(domain: OwnerOutcomeDomain): OutcomeLearningLoop {
   return domain === "finance" ? "FINANCE_BRIDGE" : "NONE";
 }
 
@@ -144,7 +145,8 @@ export function domainActionToOutcomeInput(f: DomainActionRowFacts): OwnerOutcom
 }
 
 export interface ProcessOutcomeRowFacts {
-  domain: OwnerDomain;
+  /** The chain's real domain (an owner domain, `compliance` for a compliance commitment, or `process_execution`). */
+  domain: OwnerOutcomeDomain;
   actionId: string;
   recommendationId?: string | null;
   taskStatus: string;

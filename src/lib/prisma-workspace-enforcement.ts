@@ -28,7 +28,7 @@ import { Prisma } from "@/generated/prisma/client";
  *      guards withCanonicalEnforcement + assertEngagementAccess + enforceWorkspaceScoping).
  * The extension is no longer inert: (1) and (2) actually execute and throw.
  */
-const WORKSPACE_OWNED_MODELS = new Set<string>([
+export const WORKSPACE_OWNED_MODELS: ReadonlySet<string> = new Set<string>([
   "AIProposalSandbox", "AggregateLock", "ApprovalRequest", "BillingAccount", "BrowserImportConsent", "BrowserImportSession", "BudgetAuthority",
   "BudgetLine", "BudgetPeriod", "BudgetPlanSnapshot", "BudgetReassessment", "BusinessConditionProfile", "CanonicalEvent",
   "ControlledLearningAdmission", "ControlledLearningAttributionReview", "ControlledLearningCandidate", "ControlledLearningCandidateAuditEntry", "ControlledLearningConsentRecord", "ControlledLearningHarmEvent",
@@ -37,11 +37,11 @@ const WORKSPACE_OWNED_MODELS = new Set<string>([
   "ExternalDataLineage", "ExternalImportTemplate", "ExternalRawRecord", "FactReviewAction", "FundedInitiativeOutcome", "OperatorItem",
   "OverrideRecord", "OwnerActionOutcome", "OwnerApprovalMemory", "OwnerArchetypeMetric", "OwnerAttentionEvent", "OwnerBudgetAction", "OwnerBudgetOverride",
   "OwnerBusiness", "OwnerCapacitySnapshot", "OwnerCashflowAction", "OwnerCashflowCycle", "OwnerCashflowFinding", "OwnerCashflowSnapshot",
-  "OwnerCashflowVerification", "OwnerComplianceItem", "OwnerDataIntake", "OwnerDoNotRepeatRule", "OwnerEmployeeWorkloadSnapshot", "OwnerEquipment",
+  "OwnerCashflowVerification", "OwnerComplianceItem", "OwnerDataIntake", "OwnerDecisionRecord", "OwnerDoNotRepeatRule", "OwnerEmployeeWorkloadSnapshot", "OwnerEquipment",
   "OwnerFinanceAction", "OwnerFinanceCycle", "OwnerFinanceFinding", "OwnerFinanceVerification", "OwnerFinancialSnapshot", "OwnerGuidanceSnapshot",
   "OwnerInputQualityAssessment", "OwnerInputRecord", "OwnerMarketingAction", "OwnerMarketingCycle", "OwnerMarketingFinding", "OwnerMarketingSnapshot",
   "OwnerMarketingVerification", "OwnerMetricSnapshot", "OwnerOperationsAction", "OwnerOperationsCycle", "OwnerOperationsFinding", "OwnerOperationsSnapshot",
-  "OwnerOperationsVerification", "OwnerProcess", "OwnerReassessmentEvent", "OwnerSalesAction", "OwnerSalesCycle", "OwnerSalesFinding",
+  "OwnerOperationsVerification", "OwnerOutcomeAssessment", "OwnerProcess", "OwnerReassessmentEvent", "OwnerSalesAction", "OwnerSalesCycle", "OwnerSalesFinding",
   "OwnerSalesSnapshot", "OwnerSalesVerification", "OwnerSelfEvaluation", "OwnerServiceEconomics", "OwnerSopAction", "OwnerSopCycle",
   "OwnerSopDocument", "OwnerSopFinding", "OwnerSopSnapshot", "OwnerSopVerification", "OwnerStaffSkill", "OwnerStandingInstruction",
   "OwnerStrategyAction", "OwnerStrategyCycle", "OwnerStrategyFinding", "OwnerStrategySnapshot", "OwnerStrategyVerification", "OwnerSupplierInventorySnapshot",
