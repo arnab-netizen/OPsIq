@@ -40,9 +40,15 @@ export type TaskStatus =
  *                              attempts >= maxAttempts: "dead_letter".
  *   no handler registered   -> treated exactly like a thrown error (bounded retry, then
  *                              dead_letter) so a rolling deploy cannot lose or loop a task.
- *   lease expired mid-run   -> another worker may reclaim the task ("running" with an expired
- *                              lease is claimable); the reclaim consumes an attempt. Handlers
- *                              MUST be idempotent: a lease is not renewed while a handler runs.
+ *   worker dies mid-run     -> its lease stops being renewed and lapses; another worker then
+ *                              reclaims the task as the next attempt (consuming one attempt).
+ *   handler outlives lease  -> NOT reclaimed: while a handler runs, a heartbeat renews the lease of
+ *                              that exact claimed attempt (fenced on id, status = running and the
+ *                              attempt number). If renewal finds the task already reclaimed, or
+ *                              cannot succeed for a full lease period, TaskContext.signal aborts
+ *                              with LEASE_OWNERSHIP_LOST so a long-running handler can stop before
+ *                              further side effects; its late result is discarded by fenced
+ *                              finalization either way.
  *
  * "failed" and "dead_letter" are deliberately different states: dead_letter means retries were
  * exhausted, failed means no retry was ever warranted. Neither is claimable again.
@@ -79,6 +85,16 @@ export interface TaskContext {
   taskName: string;
   workspaceId: string | null;
   attempt: number;
+  /**
+   * Aborted when this worker can no longer be sure it owns the task's lease: another attempt
+   * has reclaimed the task, or the lease could not be renewed for a full lease period. The
+   * `reason` is a LeaseOwnershipLostError (code LEASE_OWNERSHIP_LOST). A long-running handler
+   * that performs side effects SHOULD check `signal.aborted` (or pass the signal to fetch /
+   * its own cancellation) before each further side effect and stop — JavaScript cannot undo
+   * work already done, so this is how a handler fails closed. Handlers that never look at it
+   * keep working unchanged; their late result is still discarded by fenced finalization.
+   */
+  signal: AbortSignal;
 }
 
 export interface TaskHandler {
@@ -121,7 +137,38 @@ function retryDelaySeconds(attempt: number): number {
   return Math.min(60 * Math.pow(5, attempt - 1), 3600);
 }
 
-const LEASE_MS = 5 * 60 * 1000; // 5-minute processing lease
+/** Processing lease granted at claim time and re-granted by every heartbeat. */
+export const SCHEDULER_LEASE_MS = 5 * 60 * 1000;
+/**
+ * How often a running task's lease is renewed. One fifth of the lease: the first renewal lands
+ * 60s into a 300s lease, so even a missed or very late timer tick still leaves several renewal
+ * opportunities before the lease could lapse.
+ */
+export const SCHEDULER_HEARTBEAT_INTERVAL_MS = SCHEDULER_LEASE_MS / 5;
+
+export const LEASE_OWNERSHIP_LOST = "LEASE_OWNERSHIP_LOST";
+
+/** The reason carried by TaskContext.signal when the worker no longer owns its task's lease. */
+export class LeaseOwnershipLostError extends Error {
+  readonly code = LEASE_OWNERSHIP_LOST;
+  constructor() {
+    super("The scheduler lease for this task was lost; stop performing side effects.");
+    this.name = "LeaseOwnershipLostError";
+  }
+}
+
+export interface DatabaseSchedulerOptions {
+  /** Lease duration. Defaults to SCHEDULER_LEASE_MS. Injectable so tests need not wait minutes. */
+  leaseMs?: number;
+  /** Heartbeat period. Defaults to SCHEDULER_HEARTBEAT_INTERVAL_MS. Must be <= leaseMs / 2. */
+  heartbeatIntervalMs?: number;
+}
+
+/** A running claim's heartbeat. stop() is idempotent and resolves only once no renewal is in flight. */
+interface LeaseHeartbeat {
+  readonly signal: AbortSignal;
+  stop(): Promise<void>;
+}
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -194,6 +241,98 @@ async function auditTaskEvent(
 }
 
 export class DatabaseSchedulerProvider implements SchedulerProvider {
+  private readonly leaseMs: number;
+  private readonly heartbeatIntervalMs: number;
+  private activeHeartbeats = 0;
+
+  constructor(options: DatabaseSchedulerOptions = {}) {
+    this.leaseMs = options.leaseMs ?? SCHEDULER_LEASE_MS;
+    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? SCHEDULER_HEARTBEAT_INTERVAL_MS;
+    if (!(this.leaseMs > 0) || !(this.heartbeatIntervalMs > 0) || this.heartbeatIntervalMs * 2 > this.leaseMs) {
+      throw new Error("Scheduler heartbeat interval must be positive and at most half of the lease duration.");
+    }
+  }
+
+  /** Heartbeat loops currently running in this process (0 when idle). Observability and tests. */
+  get activeHeartbeatCount(): number {
+    return this.activeHeartbeats;
+  }
+
+  /**
+   * Extend the lease of ONE claimed attempt. Succeeds only while the row is still that exact
+   * attempt's running claim: id, status = running AND attempts = the attempt this worker was
+   * given. A reclaimed task (a newer attempt), a finalized task, or a stale attempt matches
+   * nothing and returns false — a stale worker can never extend a newer worker's ownership.
+   */
+  async renewLease(taskId: string, attempt: number): Promise<boolean> {
+    const result = await db.scheduledTask.updateMany({
+      where: { id: taskId, status: "running", attempts: attempt },
+      data: { leaseExpiresAt: new Date(Date.now() + this.leaseMs) },
+    });
+    return result.count === 1;
+  }
+
+  /**
+   * Keep a claimed attempt's lease alive until stop(). Renewals never overlap (the next one is
+   * scheduled only after the previous settles) and stop() awaits any in flight, so no renewal can
+   * run after the caller has moved on to finalization. When a renewal matches no row, or the lease
+   * could not be renewed for a full lease period (so it may already be reclaimable), ownership is
+   * treated as lost: the signal is aborted with a LeaseOwnershipLostError and the loop ends.
+   */
+  private beginLease(task: { id: string; attempts: number }): LeaseHeartbeat {
+    const controller = new AbortController();
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let inFlight: Promise<void> = Promise.resolve();
+    let lastRenewedAt = Date.now();
+    this.activeHeartbeats++;
+
+    const end = (): void => {
+      if (stopped) return;
+      stopped = true;
+      this.activeHeartbeats--;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    const lose = (): void => {
+      end();
+      if (!controller.signal.aborted) controller.abort(new LeaseOwnershipLostError());
+    };
+
+    const tick = async (): Promise<void> => {
+      timer = null;
+      if (stopped) return;
+      try {
+        if (await this.renewLease(task.id, task.attempts)) {
+          lastRenewedAt = Date.now();
+        } else {
+          logger.warn("Scheduled task lease ownership lost (task was reclaimed or finalized elsewhere)", {
+            taskId: task.id,
+            attempt: task.attempts,
+          });
+          lose();
+          return;
+        }
+      } catch (err) {
+        logger.warn("Scheduled task lease renewal failed (will retry)", { taskId: task.id, attempt: task.attempts, error: String(err) });
+        if (Date.now() - lastRenewedAt >= this.leaseMs) {
+          lose();
+          return;
+        }
+      }
+      if (!stopped) timer = setTimeout(() => { inFlight = tick(); }, this.heartbeatIntervalMs);
+    };
+
+    timer = setTimeout(() => { inFlight = tick(); }, this.heartbeatIntervalMs);
+    return {
+      signal: controller.signal,
+      stop: async () => {
+        end();
+        await inFlight;
+      },
+    };
+  }
+
   async schedule(input: ScheduleTaskInput): Promise<string> {
     return (await this.scheduleIdempotent(input)).id;
   }
@@ -282,7 +421,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
 
   async processDue(handlers: Map<string, TaskHandler>): Promise<number> {
     const now = new Date();
-    const leaseExpiry = new Date(now.getTime() + LEASE_MS);
+    const leaseExpiry = new Date(now.getTime() + this.leaseMs);
 
     // Atomic claim: select the batch under FOR UPDATE SKIP LOCKED, capturing
     // each row's PRE-claim status, then update exactly those rows. Capturing
@@ -314,9 +453,16 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         t."workspace_id", "to_claim"."previous_status"
     `;
 
+    // A claimed batch runs sequentially, so a task late in the batch waits while earlier handlers
+    // run. Its lease must be kept alive from the moment it was claimed, not from when it starts.
+    const leases: LeaseHeartbeat[] = claimed.map((task: ClaimedTaskRow) => this.beginLease(task));
     let processed = 0;
-    for (const task of claimed) {
-      if (await this.executeClaimedTask(task, handlers)) processed++;
+    try {
+      for (let i = 0; i < claimed.length; i++) {
+        if (await this.executeClaimedTask(claimed[i], handlers, leases[i])) processed++;
+      }
+    } finally {
+      await Promise.all(leases.map((lease: LeaseHeartbeat) => lease.stop()));
     }
     return processed;
   }
@@ -327,12 +473,18 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
    * the same eligibility predicate (pending and due, or running with an expired lease), so this
    * can never run a task a concurrent drain or a concurrent processTaskById already holds, and
    * can never run a finished (completed / failed / dead_letter) task.
+   *
+   * NOT AN AUTHORIZATION BOUNDARY. It takes a bare task id and enforces no workspace: it is an
+   * internal scheduler primitive for trusted server code that obtained the id from the scheduler
+   * itself (e.g. the id returned by scheduleIdempotent) and must never be exposed to, or fed an id
+   * from, request input. A caller that ever accepts a task id from a user or session must verify
+   * the task's workspace itself before calling.
    */
   async processTaskById(taskId: string, handlers: Map<string, TaskHandler>): Promise<boolean> {
     // A malformed id can never match a row; answering here keeps ::uuid from raising.
     if (!UUID_PATTERN.test(taskId)) return false;
     const now = new Date();
-    const leaseExpiry = new Date(now.getTime() + LEASE_MS);
+    const leaseExpiry = new Date(now.getTime() + this.leaseMs);
     const claimed = await db.$queryRaw<ClaimedTaskRow[]>`
       WITH "to_claim" AS (
         SELECT "id", "status" AS "previous_status"
@@ -356,7 +508,12 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         t."workspace_id", "to_claim"."previous_status"
     `;
     if (claimed.length === 0) return false;
-    return this.executeClaimedTask(claimed[0], handlers);
+    const lease = this.beginLease(claimed[0]);
+    try {
+      return await this.executeClaimedTask(claimed[0], handlers, lease);
+    } finally {
+      await lease.stop();
+    }
   }
 
   /**
@@ -385,7 +542,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
   }
 
   /** Execute one already-claimed task. Returns true when its handler completed it. */
-  private async executeClaimedTask(task: ClaimedTaskRow, handlers: Map<string, TaskHandler>): Promise<boolean> {
+  private async executeClaimedTask(task: ClaimedTaskRow, handlers: Map<string, TaskHandler>, lease: LeaseHeartbeat): Promise<boolean> {
     const wasReclaimed = task.previous_status === "running";
     await auditTaskEvent(
       wasReclaimed ? AUDIT_EVENTS.SCHEDULED_TASK_LEASE_RECLAIMED : AUDIT_EVENTS.SCHEDULED_TASK_CLAIMED,
@@ -399,7 +556,14 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       taskName: task.task_name,
       workspaceId: task.workspace_id,
       attempt: task.attempts,
+      signal: lease.signal,
     };
+
+    if (lease.signal.aborted) {
+      // Ownership was lost while this claimed task waited its turn: another attempt owns it now.
+      logger.warn("Claimed task skipped: lease ownership lost before it started", { taskId: task.id, attempt: task.attempts });
+      return false;
+    }
 
     if (!handler) {
       // Unknown task type MUST fail closed — not cycle pending forever.
@@ -412,6 +576,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         taskName: task.task_name,
         taskId: task.id,
       });
+      await lease.stop();
       await this.recordFailure(
         task,
         new Error(`No handler registered for task type "${task.task_name}"`)
@@ -430,9 +595,11 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       const outcome = await handler(task.payload as Record<string, unknown> | null, context);
       result = outcome ?? { status: "SUCCESS" };
     } catch (err) {
+      await lease.stop(); // no renewal may land once the handler is done and finalization starts
       await this.recordFailure(task, err);
       return false;
     }
+    await lease.stop();
 
     if (result.status === "FAILED") {
       await this.recordTerminalFailure(task, result);
@@ -624,6 +791,7 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
       taskName: task.taskName,
       workspaceId: task.workspaceId ?? null,
       attempt: task.attempts,
+      signal: new AbortController().signal, // single process, no lease: ownership cannot be lost
     };
 
     try {

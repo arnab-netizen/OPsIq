@@ -64,7 +64,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] processTaskById", () => {
     let payloadSeen: unknown;
     await scheduler.processTaskById(id, new Map([[name, async (p, ctx) => { payloadSeen = p; ctxSeen = ctx; }]]));
     expect(payloadSeen).toEqual({ a: 1 });
-    expect(ctxSeen).toEqual({ taskId: id, taskName: name, workspaceId, attempt: 1 });
+    expect(ctxSeen).toMatchObject({ taskId: id, taskName: name, workspaceId, attempt: 1 });
+    expect((ctxSeen as { signal: AbortSignal }).signal).toBeInstanceOf(AbortSignal);
   });
 
   it("returns false and runs nothing for an unknown task id", async () => {
