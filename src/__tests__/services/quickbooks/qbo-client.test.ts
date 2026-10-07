@@ -96,7 +96,7 @@ describe("URL, host and headers", () => {
   });
 
   it("validates the realm id before any URL exists", () => {
-    for (const bad of ["", "abc", "123/../1", "123?x", "evil.com", "1".repeat(21), "12 3"]) {
+    for (const bad of ["", "abc", "123/../1", "123?x", "evil.com", "1".repeat(65), "12 3"]) {
       expect(() => createQboReadClient({ config: config(), realmId: bad, getAccessToken: async () => TOKEN })).toThrow(QboProviderError);
     }
   });
@@ -156,14 +156,38 @@ describe("read operations", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("readEntity validates the id and entity, and returns the record", async () => {
+  it("readEntity returns the record for a normal numeric id, unchanged in the URL", async () => {
     const { client, calls } = harness([json(200, { Invoice: { Id: "7" } })]);
     expect(await client.readEntity("Invoice", "7")).toEqual({ Id: "7" });
     expect(calls[0].url.pathname).toBe(`/v3/company/${REALM}/invoice/7`);
-    for (const bad of ["../x", "7/../8", "7?x=1", "abc", ""]) {
-      expect((await client.readEntity("Invoice", bad).catch((x) => x)).kind).toBe("BAD_REQUEST");
+  });
+
+  it("readEntity rejects non-readable entities and ids that cannot be a single path segment, without a request", async () => {
+    const { client, calls } = harness([json(200, { Invoice: { Id: "x" } })]);
+    for (const bad of ["../x", "..", ".", "7/8", "7\\8", "", "a\nb", "a\u0000b", "x".repeat(129), "\ud800"]) {
+      expect((await client.readEntity("Invoice", bad).catch((x) => x)).kind, JSON.stringify(bad)).toBe("BAD_REQUEST");
     }
-    expect(calls).toHaveLength(1);
+    // @ts-expect-error deliberately invalid
+    expect((await client.readEntity("Employee", "7").catch((x) => x)).kind).toBe("BAD_REQUEST");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("readEntity accepts ids that the old digits-only/20-char assumption would have rejected, sent as one encoded segment", async () => {
+    const { client, calls } = harness([json(200, { Invoice: { Id: "ok" } })]);
+    const longId = "9".repeat(40);
+    await client.readEntity("Invoice", longId);
+    await client.readEntity("Invoice", "abc-123_X");
+    await client.readEntity("Invoice", "7?x=1#frag %41");
+    expect(calls[0].url.pathname).toBe(`/v3/company/${REALM}/invoice/${longId}`);
+    expect(calls[1].url.pathname).toBe(`/v3/company/${REALM}/invoice/abc-123_X`);
+    expect(calls[2].url.pathname).toBe(`/v3/company/${REALM}/invoice/7%3Fx%3D1%23frag%20%2541`);
+    for (const c of calls) {
+      expect(c.url.origin).toBe("https://sandbox-quickbooks.api.intuit.com");
+      expect(c.url.hash).toBe("");
+      expect([...c.url.searchParams.keys()]).toEqual(["minorversion"]); // the id added no query parameter
+      expect(c.url.pathname.split("/")).toHaveLength(6); // "", v3, company, realm, invoice, id
+    }
+    expect(decodeURIComponent(calls[2].url.pathname.split("/")[5])).toBe("7?x=1#frag %41");
   });
 
   it("reports: allowlisted name and parameters only", async () => {

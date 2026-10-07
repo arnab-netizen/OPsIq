@@ -7,8 +7,11 @@
  * method, and the only HTTP verb used in this file is GET.
  *
  * Safety properties
- *  - Host: the base URL comes from the validated config (two fixed Intuit hosts); the realm id is
- *    pattern-checked (digits only) before it is placed in the path; the final URL's origin is re-checked.
+ *  - Host and path: the base URL comes from the validated config (two fixed Intuit hosts). Every path segment —
+ *    fixed names, the realm id and any entity id — is percent-encoded, and the final URL must keep the same origin
+ *    and have exactly the expected pathname, so an identifier cannot add or collapse a path level or add a query/fragment.
+ *    Realm ids must be numeric and entity ids must pass the OpsIQ defensive identifier boundary (qbo-identifiers.ts);
+ *    those are local safety bounds, not Intuit contract limits.
  *  - Auth: the bearer token comes from `getAccessToken()` on every attempt (so a refreshed token is used)
  *    and is checked to be a header-safe token. A 401 triggers AT MOST ONE `onAuthExpired()` refresh and one
  *    retry; a second 401 is a terminal AUTH_EXPIRED — there is no refresh loop.
@@ -26,9 +29,10 @@ import { z } from "zod";
 import {
   QBO_PROVIDER_LIMITS,
   isResolvedQboConfig,
-  isValidRealmId,
   type QboProviderConfig,
 } from "@/domain/quickbooks/qbo-config";
+import { isSafeEntityId, isValidRealmId } from "@/domain/quickbooks/qbo-identifiers";
+import { buildQboRequestUrl } from "@/domain/quickbooks/qbo-request-url";
 import {
   QboProviderError,
   classifyApiHttpFailure,
@@ -48,7 +52,6 @@ import { qboHttp, parseJsonObjectLenient, parseRetryAfterMs, type QboFetch } fro
 import { getSharedQboRateLimiter, type QboRealmRateLimiter } from "./qbo-rate-limiter";
 
 const ACCESS_TOKEN_PATTERN = /^[\x21-\x7e]{1,8192}$/;
-const ENTITY_ID_PATTERN = /^[0-9]{1,20}$/;
 const MAX_API_BODY_BYTES = 20 * 1024 * 1024;
 
 export interface QboClientOptions {
@@ -128,17 +131,6 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
   const maxBackoffMs = opts.maxBackoffMs ?? 60_000;
   const sleep = opts.sleep ?? defaultSleep;
   const random = opts.random ?? Math.random;
-  const baseOrigin = new URL(config.apiBaseUrl).origin;
-
-  function buildUrl(resourcePath: string, query: Record<string, string>): string {
-    const url = new URL(`${config.apiBaseUrl}/v3/company/${realmId}/${resourcePath}`);
-    if (url.origin !== baseOrigin || !url.pathname.startsWith(`/v3/company/${realmId}/`)) {
-      throw new QboProviderError({ kind: "CONFIGURATION_ERROR", localReason: "URL_ESCAPED_BASE" });
-    }
-    url.searchParams.set("minorversion", String(config.minorVersion));
-    for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
-    return url.toString();
-  }
 
   function backoffMs(attempt: number, err: QboProviderError): number {
     const exp = Math.min(maxBackoffMs, 1000 * 2 ** attempt);
@@ -148,9 +140,9 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
   }
 
   /** One GET, with permit, deadline, classification, bounded retry and a single 401 refresh. */
-  async function getJson(resourcePath: string, query: Record<string, string>, call?: QboCallOptions): Promise<{ body: Record<string, unknown>; intuitTid: string | null }> {
+  async function getJson(segments: readonly string[], query: Record<string, string>, call?: QboCallOptions): Promise<{ body: Record<string, unknown>; intuitTid: string | null }> {
     const signal = call?.signal ?? opts.signal;
-    const url = buildUrl(resourcePath, query);
+    const url = buildQboRequestUrl({ apiBaseUrl: config.apiBaseUrl, realmId, segments, minorVersion: config.minorVersion, query });
     let refreshedOnce = false;
     let refreshedToken: string | null = null; // used for the single retry that follows a refresh
     let retriesUsed = 0;
@@ -220,7 +212,7 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
     } catch {
       throw new QboProviderError({ kind: "BAD_REQUEST", localReason: "INVALID_QUERY_SPEC" });
     }
-    const { body, intuitTid } = await getJson("query", { query: statement }, call);
+    const { body, intuitTid } = await getJson(["query"], { query: statement }, call);
     const qr = body.QueryResponse;
     if (typeof qr !== "object" || qr === null || Array.isArray(qr)) {
       throw new QboProviderError({ kind: "MALFORMED_RESPONSE", intuitTid });
@@ -242,7 +234,7 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
     realmId,
 
     async companyInfo(call) {
-      const { body, intuitTid } = await getJson(`companyinfo/${realmId}`, {}, call);
+      const { body, intuitTid } = await getJson(["companyinfo", realmId], {}, call);
       const info = body.CompanyInfo;
       if (typeof info !== "object" || info === null || Array.isArray(info)) {
         throw new QboProviderError({ kind: "MALFORMED_RESPONSE", intuitTid });
@@ -251,10 +243,10 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
     },
 
     async readEntity(entity, id, call) {
-      if (!isReadableEntity(entity) || typeof id !== "string" || !ENTITY_ID_PATTERN.test(id)) {
+      if (!isReadableEntity(entity) || !isSafeEntityId(id)) {
         throw new QboProviderError({ kind: "BAD_REQUEST", localReason: "INVALID_ENTITY_REQUEST" });
       }
-      const { body, intuitTid } = await getJson(`${entity.toLowerCase()}/${id}`, {}, call);
+      const { body, intuitTid } = await getJson([entity.toLowerCase(), id], {}, call);
       const record = body[entity];
       if (typeof record !== "object" || record === null || Array.isArray(record)) {
         throw new QboProviderError({ kind: "MALFORMED_RESPONSE", intuitTid });
@@ -286,7 +278,7 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
       } catch {
         throw new QboProviderError({ kind: "BAD_REQUEST", localReason: "INVALID_REPORT_PARAMS" });
       }
-      const { body } = await getJson(`reports/${name}`, clean, call);
+      const { body } = await getJson(["reports", name], clean, call);
       return body;
     },
   };

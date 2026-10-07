@@ -73,17 +73,7 @@ export const QBO_ENV_KEYS = Object.freeze({
   environment: "QUICKBOOKS_ENVIRONMENT",
 });
 
-/**
- * QBO realm (company) ids are numeric strings. Only digits are accepted, at most 20 of them, so a
- * realm id can never become a host, a path segment separator, a traversal sequence, a query
- * string or SQL. Format validity is NOT authorization: binding a realm to a workspace and
- * business is the connection layer's job.
- */
-export const QBO_REALM_ID_PATTERN = /^[0-9]{1,20}$/;
-
-export function isValidRealmId(value: unknown): value is string {
-  return typeof value === "string" && QBO_REALM_ID_PATTERN.test(value);
-}
+export { isValidRealmId, QBO_REALM_ID_MAX_LENGTH, QBO_REALM_ID_MAX_LENGTH_SOURCE } from "./qbo-identifiers";
 
 export interface QboCredentials {
   readonly clientId: string;

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { inspect } from "node:util";
 import {
+  QBO_REALM_ID_MAX_LENGTH,
   QBO_ACCOUNTING_SCOPE,
   QBO_API_BASE_URLS,
   QBO_OAUTH_ENDPOINTS,
@@ -123,9 +124,12 @@ describe("isValidRealmId", () => {
   it("accepts digit-only ids and rejects anything that could alter a URL, path or query", () => {
     expect(isValidRealmId("9130357000000001")).toBe(true);
     expect(isValidRealmId("123")).toBe(true);
-    for (const bad of ["", "abc", "123/../456", "123?x=1", "123#", "12 3", "123\n", "1".repeat(21), "../", "12.3", "-1", "1e5", "%32", "evil.com", "123@evil.com"]) {
+    for (const bad of ["", "abc", "123/../456", "123?x=1", "123#", "12 3", "123\n", "1".repeat(65), "../", "12.3", "-1", "1e5", "%32", "evil.com", "123@evil.com"]) {
       expect(isValidRealmId(bad)).toBe(false);
     }
+    // No Intuit-documented maximum exists: 20 digits is NOT a limit (the old assumption), only the defensive bound is.
+    expect(isValidRealmId("1".repeat(21))).toBe(true);
+    expect(isValidRealmId("9".repeat(QBO_REALM_ID_MAX_LENGTH))).toBe(true);
     expect(isValidRealmId(123 as unknown)).toBe(false);
     expect(isValidRealmId(null as unknown)).toBe(false);
   });

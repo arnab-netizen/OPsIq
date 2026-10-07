@@ -81,6 +81,15 @@ describe("QuickBooks foundation boundaries", () => {
     expect(code("src/services/quickbooks/qbo-oauth.service.ts")).toContain('from "@/services/external-systems/oauth-token.service"');
   });
 
+  it("no source treats a 20-character / digits-only identifier as an Intuit rule", () => {
+    for (const f of qboFiles) {
+      expect(code(f), f).not.toMatch(/\{1,\s*20\s*\}/);
+    }
+    const ids = code("src/domain/quickbooks/qbo-identifiers.ts");
+    expect(ids).toContain("OPSIQ_DEFENSIVE_BOUND");
+    expect(ids).not.toContain("INTUIT_PROVIDER_MAX\"");
+  });
+
   it("NO persistence: no database, Prisma or ORM access", () => {
     for (const f of qboFiles) {
       const src = code(f);
