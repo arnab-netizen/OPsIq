@@ -345,6 +345,13 @@ export async function getOwnerOutcomeChain(workspaceId: string, businessId: stri
     c.ownerOutcomeAssessment.findMany({ where: { workspaceId, businessId, chainKey }, orderBy: { version: "asc" } }),
   ]);
   if (decisions.length === 0 && assessments.length === 0) throw notFound("OwnerOutcomeChain", chainKey);
+  return assembleOwnerOutcomeChain(chainKey, businessId, decisions, assessments);
+}
+
+/** Pure assembly of one chain's read model from its rows (decisions by sequence asc, assessments by version asc). The single place `commitment` / `current*` are derived. */
+export function assembleOwnerOutcomeChain(
+  chainKey: string, businessId: string, decisions: OwnerDecisionRecordView[], assessments: OwnerOutcomeAssessmentView[]
+): OwnerOutcomeChainView {
   const currentDecision = decisions.length > 0 ? decisions[decisions.length - 1] : null;
   return {
     chainKey, businessId, decisions, currentDecision,
@@ -358,5 +365,45 @@ export async function getOwnerOutcomeChain(workspaceId: string, businessId: stri
       : null,
     assessments,
     currentAssessment: assessments.length > 0 ? assessments[assessments.length - 1] : null,
+  };
+}
+
+/** Upper bound on chains returned in one business-level read. `truncated` says so; nothing is silently dropped. */
+export const OWNER_OUTCOME_CHAIN_LIST_LIMIT = 100;
+
+export interface OwnerOutcomeChainList {
+  businessId: string;
+  /** Decision-backed chains, most recently decided first. Undecided legacy process-task chains are not owner decisions and are not listed. */
+  chains: OwnerOutcomeChainView[];
+  truncated: boolean;
+}
+
+/**
+ * Business-level read of every decision-backed chain (decisions + full assessment history) in TWO scoped queries plus the
+ * candidate index — no per-chain round trips. Read-only: reuses the persisted rows and the same assembly as the single-chain
+ * read; no conclusion is computed here. Workspace + business scoped; a foreign business is the uniform 404.
+ */
+export async function listOwnerOutcomeChains(workspaceId: string, businessId: string, client?: OutcomeDbClient): Promise<OwnerOutcomeChainList> {
+  const c = client ?? db;
+  await assertOwnerBusiness(workspaceId, businessId, c);
+  const index = await c.ownerDecisionRecord.groupBy({
+    by: ["candidateId"], where: { workspaceId, businessId }, _max: { decidedAt: true },
+    orderBy: [{ _max: { decidedAt: "desc" } }, { candidateId: "asc" }], take: OWNER_OUTCOME_CHAIN_LIST_LIMIT + 1,
+  });
+  const truncated = index.length > OWNER_OUTCOME_CHAIN_LIST_LIMIT;
+  const candidateIds = index.slice(0, OWNER_OUTCOME_CHAIN_LIST_LIMIT).map((r: { candidateId: string }) => r.candidateId);
+  if (candidateIds.length === 0) return { businessId, chains: [], truncated: false };
+  const [decisions, assessments] = await Promise.all([
+    c.ownerDecisionRecord.findMany({ where: { workspaceId, businessId, candidateId: { in: candidateIds } }, orderBy: [{ candidateId: "asc" }, { sequence: "asc" }] }),
+    c.ownerOutcomeAssessment.findMany({ where: { workspaceId, businessId, chainKey: { in: candidateIds } }, orderBy: [{ chainKey: "asc" }, { version: "asc" }] }),
+  ]);
+  const decisionsBy = new Map<string, OwnerDecisionRecordView[]>();
+  for (const d of decisions) decisionsBy.set(d.candidateId, [...(decisionsBy.get(d.candidateId) ?? []), d]);
+  const assessmentsBy = new Map<string, OwnerOutcomeAssessmentView[]>();
+  for (const a of assessments) assessmentsBy.set(a.chainKey, [...(assessmentsBy.get(a.chainKey) ?? []), a]);
+  return {
+    businessId,
+    chains: candidateIds.map((id: string) => assembleOwnerOutcomeChain(chainKeyForCandidate(id), businessId, decisionsBy.get(id) ?? [], assessmentsBy.get(id) ?? [])),
+    truncated,
   };
 }

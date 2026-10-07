@@ -328,6 +328,8 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Tasks", href: "/owner/tasks", requiresOwner: true, icon: <TaskIcon /> },
       { label: "Execution & SOP", href: "/owner/execution", requiresOwner: true },
+      // Historical follow-through: what the owner decided on each recommendation and what happened afterwards.
+      { label: "Results", href: "/owner/outcomes", requiresOwner: true },
       // /decision loads /api/calibration (ACTION_VIEW), /api/value and
       // /api/intelligence/summary (ENGAGEMENT_VIEW), and /api/run (ACTION_CREATE) --
       // an entirely consulting-engagement page (calibration/value/intelligence-summary),
