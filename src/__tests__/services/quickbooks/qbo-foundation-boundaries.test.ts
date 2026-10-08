@@ -90,8 +90,15 @@ describe("QuickBooks foundation boundaries", () => {
     expect(ids).not.toContain("INTUIT_PROVIDER_MAX\"");
   });
 
-  it("NO persistence: no database, Prisma or ORM access", () => {
-    for (const f of qboFiles) {
+  // The connection-persistence slice (20261008090000) is the ONLY QuickBooks module allowed to touch the database.
+  // Every provider/OAuth/client module stays persistence-free, and no second persistence file may appear.
+  const PERSISTENCE_MODULE = /qbo-connection\.service\.ts$/;
+
+  it("NO persistence outside the single connection-persistence service", () => {
+    const persisting = qboFiles.filter((f) => /@\/lib\/db/.test(code(f)));
+    expect(persisting.filter((f) => !PERSISTENCE_MODULE.test(f))).toEqual([]);
+    expect(persisting.filter((f) => PERSISTENCE_MODULE.test(f))).toHaveLength(1);
+    for (const f of qboFiles.filter((f) => !PERSISTENCE_MODULE.test(f))) {
       const src = code(f);
       expect(src, f).not.toMatch(/@\/lib\/db|@\/generated\/prisma|@prisma\/client|\bdb\.\w+\./);
       expect(src, f).not.toMatch(/\$queryRaw|\$executeRaw|\$transaction/);
