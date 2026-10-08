@@ -112,9 +112,14 @@ describe("QuickBooks foundation boundaries", () => {
     }
   });
 
-  it("OWNER_QBO_SURFACE=NONE: no routes, webhooks, owner pages or UI components for QuickBooks", () => {
-    const offenders = [...walk("src/app"), ...walk("src/ui")].filter((p) => /quickbooks|qbo/i.test(p));
-    expect(offenders).toEqual([]);
+  it("OWNER_QBO_SURFACE=NONE: no webhooks, owner pages or UI components; the ONLY QuickBooks routes are connect + callback", () => {
+    const offenders = [...walk("src/app"), ...walk("src/ui")]
+      .map((p) => p.replace(/\\/g, "/"))
+      .filter((p) => /quickbooks|qbo/i.test(p));
+    expect(offenders.sort()).toEqual([
+      "src/app/api/owner/integrations/quickbooks/callback/route.ts",
+      "src/app/api/owner/integrations/quickbooks/connect/route.ts",
+    ]);
   });
 
   it("SYNC_IMPLEMENTED=NO / no scheduler registration", () => {
