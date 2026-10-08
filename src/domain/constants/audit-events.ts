@@ -656,6 +656,14 @@ export const AUDIT_EVENTS = {
   OWNER_OUTCOME_SOURCE_LINKED: "owner.outcome_source_linked",
   OWNER_OUTCOME_ASSESSMENT_RECORDED: "owner.outcome_assessment_recorded",
 
+  // QuickBooks Online — business-scoped connection persistence (identifiers/metadata only; never tokens, codes or state)
+  QBO_AUTHORIZATION_STARTED: "qbo.authorization_started",
+  QBO_AUTHORIZATION_COMPLETED: "qbo.authorization_completed",
+  QBO_TOKENS_ROTATED: "qbo.tokens_rotated",
+  QBO_REAUTHORIZATION_REQUIRED: "qbo.reauthorization_required",
+  QBO_CONNECTION_DISCONNECTED: "qbo.connection_disconnected",
+  QBO_REALM_BINDING_CONFLICT: "qbo.realm_binding_conflict",
+
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",
   COMPLAINT_TRIAGED: "complaint.triaged",

@@ -36,7 +36,7 @@ export const WORKSPACE_OWNED_MODELS: ReadonlySet<string> = new Set<string>([
   "ControlledLearningRolloutFlag", "DelegatedTask", "Engagement", "Escalation", "ExternalConnection", "ExternalConnectionConsent",
   "ExternalDataLineage", "ExternalImportTemplate", "ExternalRawRecord", "FactReviewAction", "FundedInitiativeOutcome", "OperatorItem",
   "OverrideRecord", "OwnerActionOutcome", "OwnerApprovalMemory", "OwnerArchetypeMetric", "OwnerAttentionEvent", "OwnerBudgetAction", "OwnerBudgetOverride",
-  "OwnerBusiness", "OwnerCapacitySnapshot", "OwnerCashflowAction", "OwnerCashflowCycle", "OwnerCashflowFinding", "OwnerCashflowSnapshot",
+  "OwnerBusiness", "QboOAuthState", "QboConnection", "QboConnectionToken", "OwnerCapacitySnapshot", "OwnerCashflowAction", "OwnerCashflowCycle", "OwnerCashflowFinding", "OwnerCashflowSnapshot",
   "OwnerCashflowVerification", "OwnerComplianceItem", "OwnerDataIntake", "OwnerDecisionRecord", "OwnerDoNotRepeatRule", "OwnerEmployeeWorkloadSnapshot", "OwnerEquipment",
   "OwnerFinanceAction", "OwnerFinanceCycle", "OwnerFinanceFinding", "OwnerFinanceVerification", "OwnerFinancialSnapshot", "OwnerGuidanceSnapshot",
   "OwnerInputQualityAssessment", "OwnerInputRecord", "OwnerMarketingAction", "OwnerMarketingCycle", "OwnerMarketingFinding", "OwnerMarketingSnapshot",

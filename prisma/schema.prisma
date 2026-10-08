@@ -2748,6 +2748,8 @@ model OwnerBusiness {
   dataIntakes             OwnerDataIntake[]
 
   ownerDecisionRecords    OwnerDecisionRecord[]
+  qboOAuthStates          QboOAuthState[]
+  qboConnections          QboConnection[]
   ownerOutcomeAssessments OwnerOutcomeAssessment[]
 
   // Target of the composite tenant-aware FKs of the owner outcome tables: a child row cannot name a business of another workspace.
@@ -7136,4 +7138,85 @@ model OwnerOutcomeAssessment {
   @@index([workspaceId, processTaskId])
   @@index([workspaceId, ownerDecisionId])
   @@map("owner_outcome_assessments")
+}
+
+
+// ─── QuickBooks Online — business-scoped connection persistence (read-only integration) ────────────────────
+// QBO-specific tables (not the generic External* tables): ExternalConnection is unique per (workspace, provider) and
+// carries no business / realm / environment, and ExternalOAuthToken has no rotation fence or refresh expiry, so a
+// per-business Intuit realm cannot be represented there without changing legacy connector semantics.
+// Tenancy: every row carries (workspaceId, businessId) bound to owner_businesses(id, workspace_id) by a composite FK.
+
+/// One-time OAuth authorization intent. Stores the SHA-256 of the state only — never the clear-text state.
+model QboOAuthState {
+  id            String    @id @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  businessId    String    @map("business_id") @db.Uuid
+  initiatedById String    @map("initiated_by_id") @db.Uuid
+  environment   String
+  scope         String
+  stateHash     String    @map("state_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  expiresAt     DateTime  @map("expires_at")
+  consumedAt    DateTime? @map("consumed_at")
+  finalizedAt   DateTime? @map("finalized_at")
+
+  business OwnerBusiness @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@unique([stateHash], map: "qbo_oauth_states_state_hash_key")
+  @@index([workspaceId, businessId])
+  @@index([expiresAt])
+  @@map("qbo_oauth_states")
+}
+
+/// A business's binding to one Intuit realm in one environment. Rows are never deleted; DISCONNECTED is terminal-until-reconnect.
+model QboConnection {
+  id                String    @id @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String    @map("business_id") @db.Uuid
+  environment       String
+  realmId           String    @map("realm_id")
+  status            String
+  connectedById     String    @map("connected_by_id") @db.Uuid
+  connectedAt       DateTime  @map("connected_at")
+  reauthRequiredAt  DateTime? @map("reauth_required_at")
+  lastErrorCode     String?   @map("last_error_code")
+  disconnectedAt    DateTime? @map("disconnected_at")
+  disconnectedById  String?   @map("disconnected_by_id") @db.Uuid
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  business OwnerBusiness        @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  token    QboConnectionToken?
+
+  @@unique([workspaceId, businessId, environment, realmId], map: "qbo_connections_binding_key")
+  @@unique([id, workspaceId], map: "qbo_connections_tenant_key")
+  @@index([workspaceId, businessId])
+  @@index([environment, realmId])
+  @@map("qbo_connections")
+}
+
+/// Encrypted token pair (AES-256-GCM, workspace-bound key via encryptOAuthToken). `revision` fences rotation writes.
+model QboConnectionToken {
+  connectionId              String    @id @map("connection_id") @db.Uuid
+  workspaceId               String    @map("workspace_id") @db.Uuid
+  accessTokenCiphertext     String    @map("access_token_ciphertext")
+  refreshTokenCiphertext    String    @map("refresh_token_ciphertext")
+  tokenType                 String    @map("token_type")
+  accessTokenExpiresAt      DateTime  @map("access_token_expires_at")
+  refreshTokenExpiresAt     DateTime  @map("refresh_token_expires_at")
+  refreshTokenHardExpiresAt DateTime? @map("refresh_token_hard_expires_at")
+  grantedScope              String    @map("granted_scope")
+  intuitTid                 String?   @map("intuit_tid")
+  revision                  Int       @default(1)
+  rotatedAt                 DateTime? @map("rotated_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@unique([connectionId, workspaceId], map: "qbo_connection_tokens_tenant_key")
+  @@index([workspaceId])
+  @@map("qbo_connection_tokens")
 }
