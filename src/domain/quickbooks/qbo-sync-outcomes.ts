@@ -31,7 +31,7 @@ export interface PublicSyncBody {
   runId?: string;
   mode?: "FULL" | "INCREMENTAL";
   changed?: boolean;
-  summary?: { inserted: number; updated: number; unchanged: number; skipped: number; reportsStored: number; reportsChanged: number };
+  summary?: { inserted: number; updated: number; unchanged: number; skipped: number; reportsStored: number; reportsChanged: number; markedMissing: number };
   runStatus?: string;
   code?: QboSyncFailureCode;
   message?: string;
@@ -47,12 +47,21 @@ export function mapSyncOutcome(outcome: QboSyncOutcome): { httpStatus: number; b
         httpStatus: 200,
         body: {
           status: "SUCCEEDED", runId: outcome.runId, mode: outcome.mode, changed: outcome.changed,
-          summary: { inserted: c.inserted, updated: c.updated, unchanged: c.unchanged, skipped: c.skipped, reportsStored: c.reportsStored, reportsChanged: c.reportsChanged },
+          summary: { inserted: c.inserted, updated: c.updated, unchanged: c.unchanged, skipped: c.skipped, reportsStored: c.reportsStored, reportsChanged: c.reportsChanged, markedMissing: c.markedMissing },
         },
       };
     }
     case "ALREADY_COMPLETED":
-      return { httpStatus: 200, body: { status: "ALREADY_COMPLETED", runId: outcome.runId, runStatus: outcome.runStatus } };
+      // Only a SUCCEEDED run is a successful replay. Anything else must not look like success to a caller that only checks status.
+      if (outcome.runStatus === "SUCCEEDED") return { httpStatus: 200, body: { status: "ALREADY_COMPLETED", runId: outcome.runId, runStatus: outcome.runStatus } };
+      return {
+        httpStatus: 409,
+        body: {
+          status: "ALREADY_COMPLETED", runId: outcome.runId, runStatus: outcome.runStatus,
+          message: outcome.runStatus === "RUNNING" ? "This request is still running." : "An earlier attempt with this request id did not succeed. Send a new request id to try again.",
+          retry: outcome.runStatus === "RUNNING" ? "LATER" : "NONE",
+        },
+      };
     case "BUSY":
       return {
         httpStatus: 409,

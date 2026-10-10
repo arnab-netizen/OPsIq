@@ -95,15 +95,20 @@ function instant(v: unknown): Date | null {
   return Number.isNaN(t) ? null : new Date(t);
 }
 
-function eventKeyOf(e: Omit<QboWebhookEvent, "eventKey" | "supported">): string {
+/**
+ * An event with neither a provider id nor a provider time cannot be told apart from a later identical change, so it is keyed
+ * by the 15-minute window it was RECEIVED in: redeliveries inside the window dedupe, a genuinely later change does not get
+ * swallowed forever.
+ */
+function eventKeyOf(e: Omit<QboWebhookEvent, "eventKey" | "supported">, receivedAt: Date): string {
   const identity = e.providerEventId
     ? `${e.format}|${e.realmId}|id:${e.providerEventId}`
-    : `${e.format}|${e.realmId}|${e.entityName}|${e.entityId}|${e.operation}|${e.eventTime?.toISOString() ?? ""}`;
+    : `${e.format}|${e.realmId}|${e.entityName}|${e.entityId}|${e.operation}|${e.eventTime?.toISOString() ?? `rx:${Math.floor(receivedAt.getTime() / (15 * 60 * 1000))}`}`;
   return createHash("sha256").update(identity, "utf8").digest("hex");
 }
 
-function build(partial: Omit<QboWebhookEvent, "eventKey" | "supported">): QboWebhookEvent {
-  return { ...partial, supported: HINT_LOOKUP.has(partial.entityName.toLowerCase()), eventKey: eventKeyOf(partial) };
+function build(partial: Omit<QboWebhookEvent, "eventKey" | "supported">, receivedAt: Date): QboWebhookEvent {
+  return { ...partial, supported: HINT_LOOKUP.has(partial.entityName.toLowerCase()), eventKey: eventKeyOf(partial, receivedAt) };
 }
 
 export type QboWebhookParseResult =
@@ -115,7 +120,7 @@ function isObject(v: unknown): v is Record<string, unknown> {
 }
 
 /** Parse an already signature-verified body. Malformed individual events are counted and dropped, never guessed at. */
-export function parseQboWebhookBody(rawBody: string): QboWebhookParseResult {
+export function parseQboWebhookBody(rawBody: string, receivedAt: Date = new Date()): QboWebhookParseResult {
   let json: unknown;
   try {
     json = JSON.parse(rawBody);
@@ -134,7 +139,7 @@ export function parseQboWebhookBody(rawBody: string): QboWebhookParseResult {
         if (events.length + rejected > QBO_WEBHOOK_MAX_EVENTS) return { ok: false, reason: "TOO_MANY_EVENTS" };
         if (!isObject(ent) || typeof ent.name !== "string" || !isSafeEntityId(ent.id)) { rejected++; continue; }
         const name = ent.name.slice(0, 64);
-        events.push(build({ format: "LEGACY", realmId: realm, entityName: HINT_LOOKUP.get(name.toLowerCase()) ?? name, entityId: ent.id, operation: operationOf(ent.operation), eventTime: instant(ent.lastUpdated), providerEventId: null }));
+        events.push(build({ format: "LEGACY", realmId: realm, entityName: HINT_LOOKUP.get(name.toLowerCase()) ?? name, entityId: ent.id, operation: operationOf(ent.operation), eventTime: instant(ent.lastUpdated), providerEventId: null }, receivedAt));
       }
     }
     return { ok: true, events, rejectedEvents: rejected };
@@ -149,7 +154,7 @@ export function parseQboWebhookBody(rawBody: string): QboWebhookParseResult {
       const realm = ev.intuitaccountid;
       if (!m || !isValidRealmId(realm) || !isSafeEntityId(ev.intuitentityid)) { rejected++; continue; }
       const providerEventId = typeof ev.id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(ev.id) ? ev.id : null;
-      events.push(build({ format: "CLOUDEVENTS", realmId: realm, entityName: HINT_LOOKUP.get(m[1]) ?? m[1], entityId: ev.intuitentityid, operation: operationOf(m[2]), eventTime: instant(ev.time), providerEventId }));
+      events.push(build({ format: "CLOUDEVENTS", realmId: realm, entityName: HINT_LOOKUP.get(m[1]) ?? m[1], entityId: ev.intuitentityid, operation: operationOf(m[2]), eventTime: instant(ev.time), providerEventId }, receivedAt));
     }
     return { ok: true, events, rejectedEvents: rejected };
   }

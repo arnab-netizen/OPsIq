@@ -7232,28 +7232,31 @@ model QboConnectionToken {
 
 /// One row per connection: the single sync lease (fenced by leaseEpoch + leaseToken), watermarks and outcome history.
 model QboSyncState {
-  connectionId         String    @id @map("connection_id") @db.Uuid
-  workspaceId          String    @map("workspace_id") @db.Uuid
-  businessId           String    @map("business_id") @db.Uuid
-  leaseToken           String?   @map("lease_token") @db.Uuid
-  leaseRunId           String?   @map("lease_run_id") @db.Uuid
-  leaseExpiresAt       DateTime? @map("lease_expires_at")
-  leaseEpoch           Int       @default(0) @map("lease_epoch")
-  lastAttemptedAt      DateTime? @map("last_attempted_at")
-  lastSucceededAt      DateTime? @map("last_succeeded_at")
-  lastFullSyncAt       DateTime? @map("last_full_sync_at")
-  lastOutcome          String?   @map("last_outcome")
-  lastErrorCode        String?   @map("last_error_code")
-  consecutiveFailures  Int       @default(0) @map("consecutive_failures")
-  nextAttemptNotBefore DateTime? @map("next_attempt_not_before")
+  connectionId          String    @id @map("connection_id") @db.Uuid
+  workspaceId           String    @map("workspace_id") @db.Uuid
+  businessId            String    @map("business_id") @db.Uuid
+  leaseToken            String?   @map("lease_token") @db.Uuid
+  leaseRunId            String?   @map("lease_run_id") @db.Uuid
+  leaseExpiresAt        DateTime? @map("lease_expires_at")
+  leaseEpoch            Int       @default(0) @map("lease_epoch")
+  lastAttemptedAt       DateTime? @map("last_attempted_at")
+  lastSucceededAt       DateTime? @map("last_succeeded_at")
+  lastFullSyncAt        DateTime? @map("last_full_sync_at")
+  lastOutcome           String?   @map("last_outcome")
+  lastErrorCode         String?   @map("last_error_code")
+  consecutiveFailures   Int       @default(0) @map("consecutive_failures")
+  nextAttemptNotBefore  DateTime? @map("next_attempt_not_before")
   /// { "<Entity>": "<ISO instant>" } — the cutoff up to which that entity was fully read by a successful run.
-  watermarks           Json      @default("{}")
-  lastChangeAt         DateTime? @map("last_change_at")
+  watermarks            Json      @default("{}")
+  lastChangeAt          DateTime? @map("last_change_at")
   /// Set by a verified webhook hint; cleared by the next successful run that started after it.
-  webhookHintAt        DateTime? @map("webhook_hint_at")
-  version              Int       @default(1)
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  webhookHintAt         DateTime? @map("webhook_hint_at")
+  /// Short claim serializing token refreshes of this connection (Intuit rotates the refresh token, so one refresher at a time).
+  refreshClaimToken     String?   @map("refresh_claim_token") @db.Uuid
+  refreshClaimExpiresAt DateTime? @map("refresh_claim_expires_at")
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
 
@@ -7332,6 +7335,9 @@ model QboReportObservation {
   inconsistencies     Json      @default("[]")
   contentHash         String    @map("content_hash")
   revision            Int       @default(1)
+  /// The metrics/hash this row held before its latest revision (one step of history for governed re-evaluation).
+  previousMetrics     Json?     @map("previous_metrics")
+  previousContentHash String?   @map("previous_content_hash")
   providerGeneratedAt DateTime? @map("provider_generated_at")
   firstSeenRunId      String    @map("first_seen_run_id") @db.Uuid
   lastSeenRunId       String    @map("last_seen_run_id") @db.Uuid

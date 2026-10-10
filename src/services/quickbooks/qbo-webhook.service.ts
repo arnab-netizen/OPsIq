@@ -11,7 +11,7 @@
  *    The workspace/business never come from the payload.
  *  - Duplicate deliveries (Intuit is at-least-once) are absorbed by the unique event key in the ledger.
  *  - Ordering is irrelevant by construction: every hint collapses into "run a sync", and the sync reads current state.
- *  - The task idempotency key coalesces hints per connection into 15-minute buckets.
+ *  - The task idempotency key coalesces hints per connection per lease epoch (see below); the sync runs only for an unserved hint.
  *  - Nothing here logs and no secret is placed in a result.
  */
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
@@ -26,7 +26,7 @@ import {
   verifyQboWebhookSignature,
 } from "@/domain/quickbooks/qbo-webhook";
 import type { QboPersistenceDeps } from "./qbo-connection.service";
-import { markWebhookEventsProcessed, markWebhookHint, recordWebhookEvent, resolveRealmForWebhook, type WebhookHintResolution } from "./qbo-sync-store.service";
+import { markWebhookEventsProcessed, markWebhookHint, readSyncState, recordWebhookEvent, resolveRealmForWebhook, type WebhookHintResolution } from "./qbo-sync-store.service";
 
 export interface QboWebhookDeps extends QboPersistenceDeps {
   env: Record<string, string | undefined>;
@@ -51,7 +51,7 @@ async function defaultEnqueue(task: { workspaceId: string; connectionId: string;
 }
 
 export async function handleQboWebhook(
-  input: { rawBody: string; signature: string | null; declaredLength: number | null },
+  input: { rawBody: Uint8Array; signature: string | null; declaredLength: number | null },
   deps: QboWebhookDeps,
 ): Promise<QboWebhookResult> {
   const now = (deps.now ?? (() => new Date()))();
@@ -59,14 +59,14 @@ export async function handleQboWebhook(
   const providerConfig = resolveQboConfig(deps.env);
   if (!webhookConfig.available || !providerConfig.available) return { httpStatus: 503, body: { error: "NOT_CONFIGURED" } };
 
-  if ((input.declaredLength !== null && input.declaredLength > QBO_WEBHOOK_MAX_BODY_BYTES) || Buffer.byteLength(input.rawBody, "utf8") > QBO_WEBHOOK_MAX_BODY_BYTES) {
+  if ((input.declaredLength !== null && input.declaredLength > QBO_WEBHOOK_MAX_BODY_BYTES) || input.rawBody.byteLength > QBO_WEBHOOK_MAX_BODY_BYTES) {
     return { httpStatus: 413, body: { error: "PAYLOAD_TOO_LARGE" } };
   }
   // Signature FIRST, over the exact raw body. An unsigned or mis-signed request is rejected before any parsing or lookup.
   if (!verifyQboWebhookSignature(input.rawBody, input.signature, webhookConfig.verifierToken)) {
     return { httpStatus: 401, body: { error: "UNAUTHORIZED" } };
   }
-  const parsed = parseQboWebhookBody(input.rawBody);
+  const parsed = parseQboWebhookBody(new TextDecoder("utf-8").decode(input.rawBody), now);
   if (!parsed.ok) return { httpStatus: 400, body: { error: "BAD_REQUEST" } };
 
   const environment = providerConfig.config.environment;
@@ -85,16 +85,13 @@ export async function handleQboWebhook(
       resolution = await resolveRealmForWebhook({ environment, realmId: ev.realmId }, deps);
       realmCache.set(ev.realmId, resolution);
     }
+    // Events for an unknown realm or a non-ACTIVE connection are COUNTED, not stored: a signed sender must not be able to grow
+    // the ledger without bound, and there is nothing to dedupe or serve.
+    if (resolution.kind !== "ACTIVE") { ignored++; continue; }
     const ledger = {
       eventKey: ev.eventKey, format: ev.format, realmId: ev.realmId, entityName: ev.entityName, entityId: ev.entityId,
       operation: ev.operation, providerEventTime: ev.eventTime,
     };
-    if (resolution.kind !== "ACTIVE") {
-      const recorded = await recordWebhookEvent({ ...ledger, disposition: resolution.kind === "UNKNOWN_REALM" ? "IGNORED_UNKNOWN_REALM" : "IGNORED_NOT_ACTIVE", resolution: null }, deps);
-      if (recorded === "DUPLICATE") duplicates++;
-      else ignored++;
-      continue;
-    }
     const recorded = await recordWebhookEvent({ ...ledger, disposition: "HINT_RECORDED", resolution }, deps);
     if (recorded === "DUPLICATE") { duplicates++; continue; }
     // NEW, or RETRY_PENDING: an earlier delivery recorded the hint but never finished serving it — finish it now.
@@ -104,10 +101,13 @@ export async function handleQboWebhook(
     hintedConnections.set(resolution.connectionId, { workspaceId: resolution.workspaceId, businessId: resolution.businessId, connectionId: resolution.connectionId, events: (prior?.events ?? 0) + 1 });
   }
 
-  const bucket = Math.floor(now.getTime() / (15 * 60 * 1000));
   for (const c of hintedConnections.values()) {
     await markWebhookHint({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
-    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${bucket}` });
+    // The task key carries the connection's lease epoch: hints that arrive before a sync starts coalesce into ONE task; once a
+    // sync has taken the lease (epoch + 1) a later hint — which that sync may have missed — gets a NEW task instead of being
+    // swallowed by an already-completed one. The sync itself runs only while an unserved hint exists (webhook_hint_at).
+    const state = await readSyncState({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
+    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}` });
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.QBO_WEBHOOK_HINT_RECORDED, workspaceId: c.workspaceId, actorType: "system",
       entityType: "qbo_connection", entityId: c.connectionId, visibility: "internal",

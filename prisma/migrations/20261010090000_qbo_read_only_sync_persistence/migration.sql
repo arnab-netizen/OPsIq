@@ -32,6 +32,8 @@ CREATE TABLE "qbo_sync_states" (
     "watermarks" JSONB NOT NULL DEFAULT '{}',
     "last_change_at" TIMESTAMP(3),
     "webhook_hint_at" TIMESTAMP(3),
+    "refresh_claim_token" UUID,
+    "refresh_claim_expires_at" TIMESTAMP(3),
     "version" INTEGER NOT NULL DEFAULT 1,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -99,6 +101,8 @@ CREATE TABLE "qbo_report_observations" (
     "inconsistencies" JSONB NOT NULL DEFAULT '[]',
     "content_hash" TEXT NOT NULL,
     "revision" INTEGER NOT NULL DEFAULT 1,
+    "previous_metrics" JSONB,
+    "previous_content_hash" TEXT,
     "provider_generated_at" TIMESTAMP(3),
     "first_seen_run_id" UUID NOT NULL,
     "last_seen_run_id" UUID NOT NULL,
@@ -152,6 +156,7 @@ ALTER TABLE "qbo_report_observations" ADD CONSTRAINT "qbo_report_obs_connection_
 
 -- CHECK constraints
 ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_lease_shape_check" CHECK (("lease_token" IS NULL) = ("lease_expires_at" IS NULL) AND ("lease_token" IS NULL) = ("lease_run_id" IS NULL));
+ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_refresh_claim_shape_check" CHECK (("refresh_claim_token" IS NULL) = ("refresh_claim_expires_at" IS NULL));
 ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_counters_check" CHECK ("lease_epoch" >= 0 AND "consecutive_failures" >= 0 AND "version" >= 1);
 ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_outcome_check" CHECK ("last_outcome" IS NULL OR "last_outcome" IN ('SUCCEEDED', 'FAILED'));
 ALTER TABLE "qbo_sync_runs" ADD CONSTRAINT "qbo_sync_runs_trigger_check" CHECK ("trigger" IN ('MANUAL', 'SCHEDULED', 'WEBHOOK'));

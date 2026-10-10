@@ -39,9 +39,10 @@ export function contentHash(value: unknown): string {
 export function toDecimalString(value: unknown): string | null {
   let n: number;
   if (typeof value === "number") n = value;
-  else if (typeof value === "string" && /^-?\d{1,15}(\.\d{1,8})?$/.test(value.trim())) n = Number(value.trim());
+  else if (typeof value === "string" && /^-?\d{1,12}(\.\d{1,8})?$/.test(value.trim())) n = Number(value.trim());
   else return null;
-  if (!Number.isFinite(n) || Math.abs(n) > 1e15) return null;
+  // 1e12 keeps value*10000 inside the exactly-representable integer range of a double.
+  if (!Number.isFinite(n) || Math.abs(n) > 1e12) return null;
   const fixed = (Math.round(n * 10000) / 10000).toFixed(4);
   const trimmed = fixed.replace(/\.?0+$/, "");
   return trimmed === "-0" || trimmed === "" ? "0" : trimmed;
@@ -50,7 +51,10 @@ export function toDecimalString(value: unknown): string | null {
 function text(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null;
   const cleaned = v.replace(/[\u0000-\u001f\u007f]/g, " ").trim();
-  return cleaned.length === 0 ? null : cleaned.slice(0, max);
+  if (cleaned.length === 0) return null;
+  // Truncation can split a surrogate pair, and a provider can send a lone surrogate: Postgres rejects both inside jsonb, which
+  // would fail the whole page forever. Replace any lone surrogate with U+FFFD after slicing.
+  return cleaned.slice(0, max).replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, "\ufffd");
 }
 
 function isoDate(v: unknown): string | null {
@@ -131,6 +135,12 @@ function normalizeTransaction(entity: "Invoice" | "Bill", raw: unknown): Normali
     totalAmt: total,
     balance,
     currency: currencyOf(raw),
+    // Foreign-currency documents: the home-currency equivalents and the rate, so no consumer ever sums mixed currencies.
+    exchangeRate: toDecimalString(raw.ExchangeRate),
+    homeTotalAmt: toDecimalString(raw.HomeTotalAmt),
+    homeBalance: toDecimalString(raw.HomeBalance),
+    // A voided invoice keeps its number with a zero total and "Voided" in the private note. Only the flag is kept (the note is free text).
+    isVoided: total === "0" && typeof raw.PrivateNote === "string" && /^voided\b/i.test(raw.PrivateNote.trim()),
     counterpartyId: refId(counterpartyRef),
   });
 }
@@ -282,7 +292,12 @@ export function parseBalanceSheet(body: unknown): ReportParseResult {
   if (!h) return { ok: false, reason: "MALFORMED" };
   const g = groupSummaries(body, BS_GROUPS);
   if (!g.ok) return { ok: false, reason: "MALFORMED" };
-  return { ok: true, report: { currency: h.currency, basis: h.basis, startPeriod: h.start, endPeriod: h.end, metrics: g.metrics, inconsistencies: [], generatedAt: h.generatedAt } };
+  const inconsistencies: string[] = [];
+  const { TotalAssets, Liabilities, Equity } = g.metrics;
+  if (TotalAssets !== undefined && Liabilities !== undefined && Equity !== undefined) {
+    if (Math.abs(Number(TotalAssets) - (Number(Liabilities) + Number(Equity))) > 0.011) inconsistencies.push("BALANCE_SHEET_DOES_NOT_BALANCE");
+  }
+  return { ok: true, report: { currency: h.currency, basis: h.basis, startPeriod: h.start, endPeriod: h.end, metrics: g.metrics, inconsistencies, generatedAt: h.generatedAt } };
 }
 
 const AGING_CURRENT = /^current$/i;
@@ -328,8 +343,11 @@ export function parseAgedReport(body: unknown): ReportParseResult {
     metrics.total = total;
     metrics.overdue = toDecimalString(bucketSum) ?? "0";
     if (Math.abs(Number(current) + bucketSum - Number(total)) > 0.011) inconsistencies.push("AGING_BUCKETS_DO_NOT_SUM_TO_TOTAL");
-  } else if (all.length === 0 || all.every((n) => n.group === null && n.summary === null)) {
-    // A company with nothing outstanding returns no rows at all: zero is the truthful value there.
+    // Credits / unapplied payments net into buckets; a negative "overdue" is not an overdue amount.
+    if (bucketSum < 0) inconsistencies.push("NEGATIVE_OVERDUE_FROM_CREDITS");
+  } else if (isObject(body.Rows) && (all.length === 0 || all.every((n) => n.group === null && n.summary === null))) {
+    // A company with nothing outstanding returns an EMPTY Rows object: zero is the truthful value there. A body with no Rows key
+    // at all is a truncated/odd response, not a zero.
     metrics.current = "0";
     metrics.total = "0";
     metrics.overdue = "0";

@@ -67,6 +67,8 @@ export function testDeps(c: ConnectedTenant, extra: Partial<QboSyncDeps> = {}): 
     sleep: async () => undefined,
     random: () => 0,
     clientOptions: { timeoutMs: 5_000, maxRetries: 3 },
+    manualCooldownMs: 0,
+    claimPollMs: 1,
     ...extra,
   };
 }

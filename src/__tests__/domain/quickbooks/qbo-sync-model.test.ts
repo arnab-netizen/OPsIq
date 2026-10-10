@@ -43,7 +43,7 @@ describe("manual request contract", () => {
 
 describe("back-off", () => {
   it("terminal failures are never retried", () => {
-    for (const c of ["REAUTH_REQUIRED", "CONNECTION_NOT_ACTIVE", "CONFIGURATION_UNAVAILABLE", "COMPANY_MISMATCH", "ENVIRONMENT_MISMATCH", "CONNECTION_NOT_FOUND"] as const) {
+    for (const c of ["REAUTH_REQUIRED", "CONNECTION_NOT_ACTIVE", "CONFIGURATION_UNAVAILABLE", "ENVIRONMENT_MISMATCH", "CONNECTION_NOT_FOUND"] as const) {
       expect(isTerminalSyncFailure(c)).toBe(true);
       expect(computeSyncBackoffMs(c, 1)).toBeNull();
     }
@@ -51,6 +51,10 @@ describe("back-off", () => {
   it("transient failures back off 15m doubling to a 6h ceiling", () => {
     const m = (n: number) => computeSyncBackoffMs("PROVIDER_UNAVAILABLE", n) as number;
     expect([1, 2, 3, 4, 5, 6, 12, 50].map(m)).toEqual([15, 30, 60, 120, 240, 360, 360, 360].map((x) => x * 60_000));
+  });
+  it("a company mismatch is persistent (24h ceiling), not terminal: it is re-checked daily, never hot-looped", () => {
+    expect(isTerminalSyncFailure("COMPANY_MISMATCH")).toBe(false);
+    expect([1, 2, 3, 9].map((n) => computeSyncBackoffMs("COMPANY_MISMATCH", n))).toEqual([6, 12, 24, 24].map((x) => x * 3_600_000));
   });
   it("persistent non-auth failures back off 6h doubling to a 24h ceiling", () => {
     const m = (n: number) => computeSyncBackoffMs("PROVIDER_MALFORMED", n) as number;
@@ -85,7 +89,7 @@ describe("planning helpers", () => {
     expect(incrementalLowerBound("FULL", wm)).toBeNull();
     expect(incrementalLowerBound("INCREMENTAL", undefined)).toBeNull();
   });
-  it("idempotency keys: manual replays by request id, scheduled/webhook are bucketed with a failure generation", () => {
+  it("idempotency keys: manual replays by request id, scheduled/webhook are bucketed per lease epoch", () => {
     const now = new Date("2026-10-10T03:07:00Z");
     expect(syncIdempotencyKey("MANUAL", now, UUID, 0, () => "r")).toBe(`manual:${UUID}`);
     expect(syncIdempotencyKey("MANUAL", now, null, 0, () => "r")).toBe("manual:r");
@@ -119,10 +123,16 @@ describe("failure mapping and public outcomes", () => {
       expect(Object.keys(m.body).sort()).toEqual(["code", "message", "nextAttemptNotBefore", "retry", "status"]);
     }
   });
-  it("BUSY is 409, replay is 200, success carries counts only", () => {
+  it("BUSY is 409; only a SUCCEEDED replay is 200 (a failed/running/abandoned replay must not look like success); success carries counts only", () => {
     expect(mapSyncOutcome({ status: "BUSY", runId: UUID, leaseExpiresAt: new Date() }).httpStatus).toBe(409);
     expect(mapSyncOutcome({ status: "ALREADY_COMPLETED", runId: UUID, runStatus: "SUCCEEDED" }).httpStatus).toBe(200);
-    const ok = mapSyncOutcome({ status: "SUCCEEDED", runId: UUID, mode: "FULL", changed: true, counts: { fetched: { Invoice: 3 }, inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8 } });
-    expect(ok.body.summary).toEqual({ inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8 });
+    for (const runStatus of ["FAILED", "RUNNING", "ABANDONED"] as const) {
+      const m = mapSyncOutcome({ status: "ALREADY_COMPLETED", runId: UUID, runStatus });
+      expect(m.httpStatus).toBe(409);
+      expect(m.body.runStatus).toBe(runStatus);
+      expect(m.body.message).toBeTruthy();
+    }
+    const ok = mapSyncOutcome({ status: "SUCCEEDED", runId: UUID, mode: "FULL", changed: true, counts: { fetched: { Invoice: 3 }, inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, reportsFailed: 0, confirmedByRead: 0, markedMissing: 0 } });
+    expect(ok.body.summary).toEqual({ inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, markedMissing: 0 });
   });
 });

@@ -27,6 +27,10 @@ export interface FakeIntuit {
   tokenResponses: Array<{ status: number; body: unknown }>;
   tokenCalls: number;
   currency: string;
+  /** Entities deleted at Intuit ("Customer:7"): a read by id answers HTTP 400 + fault code 610; the query omits them (caller removes them from `data`). */
+  deleted: Set<string>;
+  /** Objects the QUERY omits but a read by id still returns (e.g. inactive customers). */
+  inactive: Map<string, FakeRecord>;
   nonTokenPosts: () => RecordedRequest[];
   accountingRequests: () => RecordedRequest[];
 }
@@ -115,6 +119,8 @@ export function createFakeIntuit(opts: { realmId: string; currency?: string; com
     realmId: opts.realmId,
     companyId: opts.companyId ?? opts.realmId,
     currency,
+    deleted: new Set<string>(),
+    inactive: new Map<string, FakeRecord>(),
     reports: {},
     validAccessTokens: null,
     tokenResponses: [],
@@ -166,6 +172,15 @@ export function createFakeIntuit(opts: { realmId: string; currency?: string; com
         if (name === "BalanceSheet") return json(200, balanceSheetBody(url.searchParams, currency));
         if (name === "AgedReceivables" || name === "AgedPayables") return json(200, agedBody(url.searchParams, currency, name));
         return json(404, { Fault: { Error: [{ code: "404" }] } });
+      }
+      const byId = /^(customer|invoice|bill)\/([^/]+)$/.exec(rest);
+      if (byId) {
+        const entity = (byId[1][0].toUpperCase() + byId[1].slice(1)) as keyof FakeIntuit["data"];
+        const id = decodeURIComponent(byId[2]);
+        if (fake.deleted.has(`${entity}:${id}`)) return json(400, { Fault: { Error: [{ code: "610", Message: "Object Not Found" }], type: "ValidationFault" } });
+        const found = fake.inactive.get(`${entity}:${id}`) ?? fake.data[entity].find((r) => r.Id === id);
+        if (!found) return json(400, { Fault: { Error: [{ code: "610", Message: "Object Not Found" }], type: "ValidationFault" } });
+        return json(200, { [entity]: found, time: iso(new Date()) });
       }
       if (rest === "query") {
         const q = url.searchParams.get("query") ?? "";

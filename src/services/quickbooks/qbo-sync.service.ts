@@ -19,9 +19,12 @@
 import { randomUUID } from "crypto";
 import { resolveQboConfig, type QboProviderConfig } from "@/domain/quickbooks/qbo-config";
 import { createQboReadClient, type QboReadClient } from "./qbo-client";
+import { isQboProviderError } from "@/domain/quickbooks/qbo-errors";
 import type { QboQuerySpec } from "@/domain/quickbooks/qbo-read-catalog";
 import {
+  QBO_SYNC_MANUAL_COOLDOWN_MS,
   QBO_SYNC_MAX_PAGES_PER_ENTITY,
+  QBO_SYNC_MISSING_CONFIRMATIONS_PER_ENTITY,
   QBO_SYNC_PAGE_SIZE,
   QBO_SYNC_QUERY_ENTITIES,
   QBO_SYNC_REPORT_MONTHS,
@@ -30,6 +33,7 @@ import {
   emptySyncCounts,
   incrementalLowerBound,
   isTerminalSyncFailure,
+  scheduleBucket,
   syncFailureFromError,
   syncIdempotencyKey,
   toQboInstant,
@@ -59,7 +63,9 @@ import {
   beginSyncRun,
   finishSyncRunFailure,
   finishSyncRunSuccess,
-  markUnseenRecordsMissing,
+  extendSyncLease,
+  listUnseenRecordIds,
+  markRecordsMissing,
   parseWatermarks,
   persistRecordsPage,
   persistReportObservation,
@@ -84,6 +90,8 @@ export interface QboSyncDeps extends QboPersistenceDeps {
   uuid?: () => string;
   /** Test seam: replaces the resolved provider configuration. */
   configOverride?: QboProviderConfig;
+  /** Minimum spacing between MANUAL runs of one connection. Default QBO_SYNC_MANUAL_COOLDOWN_MS. */
+  manualCooldownMs?: number;
   /** Read-client tuning (deadline / retry budget). Defaults are the client's own. */
   clientOptions?: { timeoutMs?: number; maxRetries?: number; maxBackoffMs?: number };
 }
@@ -129,14 +137,32 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
 
   // 3. due-gating and mode
   const state = await readSyncState(scope, deps);
-  if (input.trigger !== "MANUAL" && state?.nextAttemptNotBefore && state.nextAttemptNotBefore.getTime() > now.getTime()) {
-    return { status: "NOT_DUE", nextAttemptNotBefore: state.nextAttemptNotBefore };
+  if (input.trigger === "MANUAL") {
+    // Each run costs ~11 provider calls against a per-realm quota; a loop of fresh request ids must not burn it.
+    const cooldown = deps.manualCooldownMs ?? QBO_SYNC_MANUAL_COOLDOWN_MS;
+    const last = state?.lastAttemptedAt;
+    if (cooldown > 0 && last && now.getTime() - last.getTime() < cooldown) {
+      return { status: "NOT_DUE", nextAttemptNotBefore: new Date(last.getTime() + cooldown) };
+    }
+  } else {
+    if (state?.nextAttemptNotBefore && state.nextAttemptNotBefore.getTime() > now.getTime()) {
+      return { status: "NOT_DUE", nextAttemptNotBefore: state.nextAttemptNotBefore };
+    }
+    if (input.trigger === "SCHEDULED" && state?.lastSucceededAt && scheduleBucket(state.lastSucceededAt) === scheduleBucket(now)) {
+      // Cadence is one successful scheduled sync per UTC day.
+      return { status: "NOT_DUE", nextAttemptNotBefore: new Date(Date.parse(`${scheduleBucket(now)}T00:00:00Z`) + 86_400_000) };
+    }
+    if (input.trigger === "WEBHOOK" && !state?.webhookHintAt) {
+      // Every hint it was scheduled for has already been served by a later sync: nothing to do (this is what coalesces tasks).
+      return { status: "NOT_DUE", nextAttemptNotBefore: now };
+    }
   }
   const watermarks = parseWatermarks(state?.watermarks);
   const mode = input.modeOverride ?? chooseSyncMode({ now, watermarks, lastFullSyncAt: state?.lastFullSyncAt ?? null });
 
-  // 4. atomic replay / lease / run
-  const idempotencyKey = syncIdempotencyKey(input.trigger, now, input.requestId ?? null, state?.consecutiveFailures ?? 0, deps.uuid ?? randomUUID);
+  // 4. atomic replay / lease / run. The epoch in the key lets a retry after a failed / abandoned / crashed attempt run under a
+  // fresh key while two triggers racing from the same state still collide and replay.
+  const idempotencyKey = syncIdempotencyKey(input.trigger, now, input.requestId ?? null, state?.leaseEpoch ?? 0, deps.uuid ?? randomUUID);
   const begun = await beginSyncRun({ ...scope, trigger: input.trigger, mode, idempotencyKey, requestedById: input.actorId }, deps);
   if (!begun.ok) {
     if (begun.reason === "BUSY") return { status: "BUSY", runId: begun.runId, leaseExpiresAt: begun.leaseExpiresAt };
@@ -151,14 +177,16 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
     await finishSyncRunSuccess({ lease, mode, startedAt: now, counts, changed, watermarks: newWatermarks, actorId: input.actorId }, deps);
     return { status: "SUCCEEDED", runId: lease.runId, mode, counts, changed };
   } catch (e) {
+    // The fence is (token, epoch): a lease-lost error means ANOTHER worker took over, so this worker must write nothing more.
     if (e instanceof QboLeaseLostError) return failed("LEASE_LOST", lease.runId);
-    const mapped = e instanceof SyncFailure ? { code: e.code, retryAfterMs: null } : syncFailureFromError(e);
+    const mapped = e instanceof SyncFailure ? { code: e.code, retryAfterMs: e.retryAfterMs } : syncFailureFromError(e);
     try {
+      // Record the failure FIRST (lease-fenced): a stale worker then cannot go on to flip the connection state.
+      const done = await finishSyncRunFailure({ lease, code: mapped.code, counts, retryAfterMs: mapped.retryAfterMs, actorId: input.actorId }, deps);
       if (mapped.code === "REAUTH_REQUIRED") {
         // An access token rejected even after a forced refresh, or a dead refresh token: the owner must reconnect.
         await markQboReauthorizationRequired({ workspaceId: lease.workspaceId, connectionId: lease.connectionId, reasonCode: REAUTH_REASON_ACCESS_REJECTED }, deps);
       }
-      const done = await finishSyncRunFailure({ lease, code: mapped.code, counts, retryAfterMs: mapped.retryAfterMs, actorId: input.actorId }, deps);
       return failed(mapped.code, lease.runId, done.nextAttemptNotBefore);
     } catch (finishError) {
       if (finishError instanceof QboLeaseLostError) return failed("LEASE_LOST", lease.runId);
@@ -169,7 +197,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
 
 /** An orchestration-level failure that already carries a closed code. */
 class SyncFailure extends Error {
-  constructor(readonly code: QboSyncFailureCode) {
+  constructor(readonly code: QboSyncFailureCode, readonly retryAfterMs: number | null = null) {
     super(code);
     this.name = "SyncFailure";
   }
@@ -194,9 +222,10 @@ async function executeReads(a: ExecuteArgs): Promise<boolean> {
   // Token: decrypted in memory only; refresh (if needed) goes through the CAS-fenced rotation.
   const tokenDeps = { ...deps, config };
   const first = await getUsableQboAccessToken({ workspaceId: lease.workspaceId, connectionId: lease.connectionId }, tokenDeps);
-  if (!first.ok) throw new SyncFailure(first.code);
+  if (!first.ok) throw new SyncFailure(first.code, first.retryAfterMs);
   if (first.realmId !== connection.realmId) throw new SyncFailure("COMPANY_MISMATCH");
   let accessToken = first.accessToken;
+  let tokenRevision = first.revision;
   let forcedRefreshUsed = false;
 
   const abort = new AbortController();
@@ -209,13 +238,15 @@ async function executeReads(a: ExecuteArgs): Promise<boolean> {
       config,
       realmId: connection.realmId,
       getAccessToken: async () => accessToken,
-      // At most ONE forced refresh per sync: a second rejection is terminal (REAUTH_REQUIRED), never a loop.
+      // One forced refresh per token expiry: a second rejection of a token that was JUST refreshed is terminal
+      // (REAUTH_REQUIRED), never a loop. The flag is re-armed after the refreshed token has been accepted by a real call.
       onAuthExpired: async () => {
         if (forcedRefreshUsed) return null;
         forcedRefreshUsed = true;
-        const again = await getUsableQboAccessToken({ workspaceId: lease.workspaceId, connectionId: lease.connectionId, forceRefresh: true }, tokenDeps);
+        const again = await getUsableQboAccessToken({ workspaceId: lease.workspaceId, connectionId: lease.connectionId, forceRefresh: true, knownRevision: tokenRevision }, tokenDeps);
         if (!again.ok) return null;
         accessToken = again.accessToken;
+        tokenRevision = again.revision;
         return again.accessToken;
       },
       fetchImpl: deps.fetchImpl,
@@ -225,9 +256,16 @@ async function executeReads(a: ExecuteArgs): Promise<boolean> {
       signal: abort.signal,
       ...deps.clientOptions,
     });
+    /** Keep the lease alive across a provider call (its retry budget can be minutes) and re-arm the forced-refresh allowance. */
+    const call = async <T>(fn: () => Promise<T>): Promise<T> => {
+      await extendSyncLease(lease, deps);
+      const out = await fn();
+      forcedRefreshUsed = false;
+      return out;
+    };
 
     // CompanyInfo establishes identity: the company must be the realm this connection is bound to.
-    const info = await client.companyInfo();
+    const info = await call(() => client.companyInfo());
     const company = normalizeCompanyInfo(info, connection.realmId);
     if (!company.ok) throw new SyncFailure("PROVIDER_MALFORMED");
     if (company.record.normalized.reportedRealmId !== null && company.record.normalized.reportedRealmId !== connection.realmId) {
@@ -236,38 +274,103 @@ async function executeReads(a: ExecuteArgs): Promise<boolean> {
     changed = (await persistPage(lease, [company.record], counts, deps)) || changed;
 
     for (const entity of QBO_SYNC_QUERY_ENTITIES) {
-      const lower = incrementalLowerBound(mode, watermarks[entity]);
-      const where: NonNullable<QboQuerySpec["where"]> = [
-        ...(lower ? [{ field: "MetaData.LastUpdatedTime", op: ">=" as const, value: toQboInstant(lower) }] : []),
-        // Fixed upper bound: records changing while we page are picked up by the next run (watermark = this cutoff).
-        { field: "MetaData.LastUpdatedTime", op: "<=" as const, value: toQboInstant(now) },
-      ];
-      const pages = client.paginate(
-        { entity, where, orderBy: { field: "MetaData.LastUpdatedTime", direction: "ASC" }, maxResults: QBO_SYNC_PAGE_SIZE },
-        { maxPages: QBO_SYNC_MAX_PAGES_PER_ENTITY },
-      );
-      for await (const page of pages) {
-        const normalized: NormalizedRecord[] = [];
-        for (const raw of page.records) {
-          const n = normalizeQueryRecord(entity, raw);
-          if (n.ok) normalized.push(n.record);
-          else counts.skipped++;
-        }
-        counts.fetched[entity] = (counts.fetched[entity] ?? 0) + page.records.length;
-        changed = (await persistPage(lease, dedupeRecords(normalized), counts, deps)) || changed;
-      }
-      if (mode === "FULL") {
-        const missing = await markUnseenRecordsMissing(lease, entity, deps);
-        if (missing > 0) changed = true;
-      }
+      changed = (await readEntityKeyset({ client, call, entity, lease, mode, lower: incrementalLowerBound(mode, watermarks[entity]), cutoff: now, counts, deps })) || changed;
+      if (mode === "FULL") changed = (await confirmMissing({ client, call, entity, lease, counts, deps })) || changed;
     }
 
-    changed = (await readReports(client, lease, counts, now, deps)) || changed;
+    changed = (await readReports(client, call, lease, counts, now, deps)) || changed;
     return changed;
   } finally {
     deps.signal?.removeEventListener("abort", onParentAbort);
     abort.abort();
   }
+}
+
+type Call = <T>(fn: () => Promise<T>) => Promise<T>;
+
+/**
+ * Read one entity with KEYSET pagination. Offset paging over a moving set skips records (an edit that moves a row out of the
+ * window shifts every later offset by one). Instead each page asks for `LastUpdatedTime >= cursor` from position 1, ordered by
+ * LastUpdatedTime, so a change elsewhere can never shift the window. Rows sharing the cursor's timestamp reappear on the next
+ * page and are collapsed by id; if a whole page shares ONE timestamp (a bulk import larger than a page) the cursor cannot move,
+ * so the query advances by offset inside that single timestamp only. Stops on a short page.
+ */
+async function readEntityKeyset(a: {
+  client: QboReadClient; call: Call; entity: (typeof QBO_SYNC_QUERY_ENTITIES)[number]; lease: SyncLease; mode: QboSyncMode;
+  lower: Date | null; cutoff: Date; counts: QboSyncCounts; deps: QboSyncDeps;
+}): Promise<boolean> {
+  const { client, call, entity, lease, lower, cutoff, counts, deps } = a;
+  let changed = false;
+  let cursor: Date | null = lower;
+  let tieOffset = 0; // rows already consumed at exactly `cursor` by offset advancement
+  const seen = new Set<string>();
+  for (let page = 0; page < QBO_SYNC_MAX_PAGES_PER_ENTITY; page++) {
+    const where: NonNullable<QboQuerySpec["where"]> = [
+      ...(cursor ? [{ field: "MetaData.LastUpdatedTime", op: ">=" as const, value: toQboInstant(cursor) }] : []),
+      // Fixed upper bound: records changing while we page are picked up by the next run (watermark = this cutoff).
+      { field: "MetaData.LastUpdatedTime", op: "<=" as const, value: toQboInstant(cutoff) },
+    ];
+    const result = await call(() => client.query({ entity, where, orderBy: { field: "MetaData.LastUpdatedTime", direction: "ASC" }, startPosition: 1 + tieOffset, maxResults: QBO_SYNC_PAGE_SIZE }));
+    const normalized: NormalizedRecord[] = [];
+    let fresh = 0;
+    for (const raw of result.records) {
+      const n = normalizeQueryRecord(entity, raw);
+      if (n.ok) {
+        if (!seen.has(n.record.providerEntityId)) fresh++;
+        seen.add(n.record.providerEntityId);
+        normalized.push(n.record);
+      } else counts.skipped++;
+    }
+    counts.fetched[entity] = (counts.fetched[entity] ?? 0) + result.records.length;
+    changed = (await persistPage(lease, dedupeRecords(normalized), counts, deps)) || changed;
+    if (result.records.length < QBO_SYNC_PAGE_SIZE) return changed;
+
+    // Full page: advance the cursor to the newest timestamp seen. Raw timestamps decide the cursor even for skipped records.
+    const stamps = result.records.map((r) => Date.parse(String((r.MetaData as { LastUpdatedTime?: unknown } | undefined)?.LastUpdatedTime ?? ""))).filter((t) => !Number.isNaN(t));
+    if (stamps.length === 0) throw new SyncFailure("PROVIDER_MALFORMED");
+    const newest = Math.max(...stamps);
+    const oldest = Math.min(...stamps);
+    if (cursor && newest === cursor.getTime() && oldest === newest) {
+      tieOffset += QBO_SYNC_PAGE_SIZE; // a page of pure ties at the cursor: step through that timestamp by offset
+    } else {
+      cursor = new Date(newest);
+      tieOffset = 0;
+    }
+    if (fresh === 0 && tieOffset === 0 && cursor && newest === oldest) {
+      // Defensive: a full page of already-seen ids with no cursor progress would loop; treat it as a tie group.
+      tieOffset += QBO_SYNC_PAGE_SIZE;
+    }
+  }
+  // The bound was reached with more data possibly remaining: fail loudly rather than truncate silently.
+  throw new SyncFailure("PROVIDER_REJECTED");
+}
+
+/**
+ * FULL sync reconciliation: records this run did not see are only CANDIDATES. Each is re-read by id (GET): a record that exists
+ * is refreshed and kept (it had moved out of the query window or is inactive); only one the provider confirms absent is
+ * flagged MISSING. Bounded per run; beyond the bound nothing more is flagged and the rest wait for the next FULL run.
+ */
+async function confirmMissing(a: { client: QboReadClient; call: Call; entity: (typeof QBO_SYNC_QUERY_ENTITIES)[number]; lease: SyncLease; counts: QboSyncCounts; deps: QboSyncDeps }): Promise<boolean> {
+  const { client, call, entity, lease, counts, deps } = a;
+  const candidates = await listUnseenRecordIds(lease, entity, QBO_SYNC_MISSING_CONFIRMATIONS_PER_ENTITY, deps);
+  const toCheck = candidates.slice(0, QBO_SYNC_MISSING_CONFIRMATIONS_PER_ENTITY);
+  let changed = false;
+  const confirmedAbsent: string[] = [];
+  for (const id of toCheck) {
+    counts.confirmedByRead++;
+    try {
+      const raw = await call(() => client.readEntity(entity, id));
+      const n = normalizeQueryRecord(entity, raw);
+      if (n.ok) changed = (await persistPage(lease, [n.record], counts, deps)) || changed;
+    } catch (e) {
+      // Intuit answers a deleted/unknown object with HTTP 404, or 400 + fault code 610 ("Object Not Found").
+      if (isQboProviderError(e) && (e.kind === "NOT_FOUND" || (e.kind === "BAD_REQUEST" && e.providerCode === "610"))) confirmedAbsent.push(id);
+      else throw e;
+    }
+  }
+  const flagged = await markRecordsMissing(lease, entity, confirmedAbsent, deps);
+  counts.markedMissing += flagged;
+  return changed || flagged > 0;
 }
 
 async function persistPage(lease: SyncLease, records: NormalizedRecord[], counts: QboSyncCounts, deps: QboSyncDeps): Promise<boolean> {
@@ -284,33 +387,40 @@ interface ReportJob {
   params: Record<string, string>;
   periodStart: string;
   periodEnd: string;
+  /** Which header period fields must echo the request (an echo mismatch means the numbers belong to another period). */
+  verify: { start: boolean; end: boolean };
   parse: (body: unknown) => ReportParseResult;
 }
 
 function planReports(now: Date): ReportJob[] {
   const jobs: ReportJob[] = [];
   for (const p of completeMonthPeriods(now, QBO_SYNC_REPORT_MONTHS)) {
-    jobs.push({ name: "ProfitAndLoss", params: { start_date: p.start, end_date: p.end, accounting_method: "Accrual" }, periodStart: p.start, periodEnd: p.end, parse: parseProfitAndLoss });
+    jobs.push({ name: "ProfitAndLoss", params: { start_date: p.start, end_date: p.end, accounting_method: "Accrual" }, periodStart: p.start, periodEnd: p.end, verify: { start: true, end: true }, parse: parseProfitAndLoss });
     // A balance sheet is a point in time: observed at period end.
-    jobs.push({ name: "BalanceSheet", params: { start_date: p.start, end_date: p.end, accounting_method: "Accrual" }, periodStart: p.end, periodEnd: p.end, parse: parseBalanceSheet });
+    jobs.push({ name: "BalanceSheet", params: { start_date: p.start, end_date: p.end, accounting_method: "Accrual" }, periodStart: p.end, periodEnd: p.end, verify: { start: false, end: true }, parse: parseBalanceSheet });
   }
   const today = utcDate(now);
-  jobs.push({ name: "AgedReceivables", params: { report_date: today }, periodStart: today, periodEnd: today, parse: parseAgedReport });
-  jobs.push({ name: "AgedPayables", params: { report_date: today }, periodStart: today, periodEnd: today, parse: parseAgedReport });
+  // Aged reports are "as of the day read" (UTC date); their header period echo is not asserted (not established for Intuit).
+  jobs.push({ name: "AgedReceivables", params: { report_date: today }, periodStart: today, periodEnd: today, verify: { start: false, end: false }, parse: parseAgedReport });
+  jobs.push({ name: "AgedPayables", params: { report_date: today }, periodStart: today, periodEnd: today, verify: { start: false, end: false }, parse: parseAgedReport });
   return jobs;
 }
 
-async function readReports(client: QboReadClient, lease: SyncLease, counts: QboSyncCounts, now: Date, deps: QboSyncDeps): Promise<boolean> {
+/**
+ * Read and store every report. One malformed report does not discard the others: the rest are stored, and the run then ends
+ * FAILED(PROVIDER_MALFORMED) so the problem is visible and the watermarks do not advance.
+ */
+async function readReports(client: QboReadClient, call: Call, lease: SyncLease, counts: QboSyncCounts, now: Date, deps: QboSyncDeps): Promise<boolean> {
   let changed = false;
+  let malformed = false;
   for (const job of planReports(now)) {
-    const body = await client.report(job.name, job.params);
+    const body = await call(() => client.report(job.name, job.params));
     const parsed = job.parse(body);
-    if (!parsed.ok) throw new SyncFailure("PROVIDER_MALFORMED");
+    if (!parsed.ok) { malformed = true; counts.reportsFailed++; continue; }
     const report: ParsedReport = parsed.report;
     // The provider must answer for the period that was asked, otherwise the numbers would be filed under the wrong date.
-    if (job.name === "ProfitAndLoss" && report.endPeriod !== null && report.endPeriod !== job.periodEnd) {
-      throw new SyncFailure("PROVIDER_MALFORMED");
-    }
+    const echoed = (job.verify.end && report.endPeriod !== null && report.endPeriod !== job.periodEnd) || (job.verify.start && report.startPeriod !== null && report.startPeriod !== job.params.start_date);
+    if (echoed) { malformed = true; counts.reportsFailed++; continue; }
     const basis = report.basis ?? (job.params.accounting_method ?? "Accrual");
     const result = await persistReportObservation(
       lease,
@@ -333,6 +443,7 @@ async function readReports(client: QboReadClient, lease: SyncLease, counts: QboS
       changed = true;
     }
   }
+  if (malformed) throw new SyncFailure("PROVIDER_MALFORMED");
   return changed;
 }
 

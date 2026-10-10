@@ -136,28 +136,55 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(kept.revision).toBe(2);
     });
 
-    it("a record Intuit stops returning is flagged MISSING by a FULL sync (never deleted) and returns when it reappears", async () => {
+    it("a record Intuit really deleted is confirmed by a GET-by-id and flagged MISSING (never deleted); it returns when it reappears", async () => {
       const removed = c.fake.data.Customer.splice(0, 1)[0];
+      c.fake.deleted.add(`Customer:${removed.Id}`);
       const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 10_800_000) });
-      expect(out.status === "SUCCEEDED" && out.changed).toBe(true);
+      expect(out.status === "SUCCEEDED" && [out.changed, out.counts.markedMissing, out.counts.confirmedByRead]).toEqual([true, 1, 1]);
       const row = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } });
       expect(row.recordState).toBe("MISSING");
-      // An INCREMENTAL run cannot see deletions and must not flag anything.
+      expect(c.fake.accountingRequests().every((r) => r.method === "GET")).toBe(true);
+      // An INCREMENTAL run cannot see deletions and must not flag or read anything by id.
+      const before = c.fake.requests.length;
       const inc = await run(c, { modeOverride: "INCREMENTAL" }, { now: () => new Date(NOW.getTime() + 11_000_000) });
       expect(inc.status).toBe("SUCCEEDED");
+      expect(c.fake.requests.slice(before).some((r) => /\/customer\/\d+$/.test(r.path))).toBe(false);
+      c.fake.deleted.delete(`Customer:${removed.Id}`);
       c.fake.data.Customer.push(removed);
-      await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 12_000_000) });
-      const back = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } });
-      expect(back.recordState).toBe("ACTIVE");
+      const back = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 12_000_000) });
+      expect(back.status === "SUCCEEDED" && back.counts.updated).toBe(1); // MISSING -> ACTIVE counts as a change
+      const again = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } });
+      expect(again.recordState).toBe("ACTIVE");
+      expect(again.revision).toBeGreaterThanOrEqual(3);
+    });
+
+    it("a live record that merely fell outside the query window (edited after the cutoff) is re-read, kept ACTIVE and never flagged MISSING", async () => {
+      const keep = c.fake.data.Invoice[1];
+      c.fake.data.Invoice[1] = invoice(keep.Id, "2026-12-01T00:00:00Z", { Balance: 1 }); // edited AFTER the run's cutoff -> not returned by the query
+      const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 13_000_000) });
+      expect(out.status === "SUCCEEDED" && [out.counts.markedMissing, out.counts.confirmedByRead]).toEqual([0, 1]);
+      const row = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Invoice", providerEntityId: keep.Id } });
+      expect(row.recordState).toBe("ACTIVE");
+      expect((row.normalized as { balance: string }).balance).toBe("1");
+    });
+
+    it("an inactive customer Intuit's query omits is confirmed by id and stored INACTIVE, not MISSING", async () => {
+      const gone = c.fake.data.Customer.splice(0, 1)[0];
+      c.fake.inactive.set(`Customer:${gone.Id}`, { ...gone, Active: false });
+      const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 14_000_000) });
+      expect(out.status === "SUCCEEDED" && out.counts.markedMissing).toBe(0);
+      expect((await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: gone.Id } })).recordState).toBe("INACTIVE");
+      c.fake.inactive.delete(`Customer:${gone.Id}`);
+      c.fake.data.Customer.push(gone);
     });
 
     it("inactive customers are stored INACTIVE; records with missing optional fields are kept with nulls; malformed ones are skipped and counted", async () => {
-      const at = "2026-10-10T06:30:00Z"; // after every earlier watermark (≈06:20), before this run's cutoff (NOW + 13,000s ≈ 06:36)
+      const at = "2026-10-10T08:30:00Z"; // after every earlier watermark (≤ ≈07:50), before this run's cutoff (NOW + 20,000s ≈ 08:33)
       c.fake.data.Customer.push(customer("500", at, { Active: false }));
       c.fake.data.Bill.push(bill("501", at, { DueDate: undefined, CurrencyRef: undefined, DocNumber: undefined }));
       c.fake.data.Invoice.push({ Id: "502/evil", MetaData: { LastUpdatedTime: inst(at) }, TotalAmt: 1 } as never);
       c.fake.data.Invoice.push({ Id: "503", MetaData: { LastUpdatedTime: inst(at) } } as never);
-      const out = await run(c, {}, { now: () => new Date(NOW.getTime() + 13_000_000) });
+      const out = await run(c, {}, { now: () => new Date(NOW.getTime() + 20_000_000) });
       expect(out.status === "SUCCEEDED" && out.counts.skipped).toBe(2);
       expect((await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, providerEntityId: "500" } })).recordState).toBe("INACTIVE");
       const partial = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, providerEntityId: "501" } });
@@ -167,22 +194,55 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
   });
 
   describe("pagination and high volume", () => {
-    it("pages 2,500 records as 1000/1000/500 with a final short page, no duplicates, and survives a provider duplicate", async () => {
+    it("keyset-pages 2,500 records (each page re-queries from the cursor at position 1), no duplicates, and survives a provider duplicate", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 2500; i++) c.fake.data.Customer.push(customer(String(i), new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
       c.fake.data.Customer.push(c.fake.data.Customer[10]); // provider returns the same record twice
       const out = await run(c);
-      expect(out.status === "SUCCEEDED" && out.counts.fetched.Customer).toBe(2501);
+      expect(out.status).toBe("SUCCEEDED");
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer" } })).toBe(2500);
       const queries = c.fake.requests.filter((r) => r.path.endsWith("/query") && /FROM Customer/.test(r.url.searchParams.get("query") ?? ""));
-      expect(queries.map((r) => /STARTPOSITION (\d+)/.exec(r.url.searchParams.get("query") ?? "")?.[1])).toEqual(["1", "1001", "2001"]);
+      // Keyset: the window is anchored on LastUpdatedTime, never on a running offset that a concurrent edit could shift.
+      expect(queries.map((r) => /STARTPOSITION (\d+)/.exec(r.url.searchParams.get("query") ?? "")?.[1])).toEqual(["1", "1", "1"]);
+      expect(queries.slice(1).every((r) => /LastUpdatedTime >= /.test(r.url.searchParams.get("query") ?? ""))).toBe(true);
     });
 
-    it("an exact multiple of the page size ends with one empty page", async () => {
+    it("a record edited WHILE paging (moves out of the window) can no longer shift later pages and make live records vanish", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 2500; i++) c.fake.data.Customer.push(customer(String(i), new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      const realFetch = c.fake.fetchImpl;
+      let customerPages = 0;
+      const racing = async (input: string, init?: RequestInit) => {
+        const res = await realFetch(input, init);
+        const q = new URL(input).searchParams.get("query") ?? "";
+        if (/FROM Customer/.test(q) && ++customerPages === 1) {
+          // Right after page 1 is served, a user edits customer 5: its LastUpdatedTime jumps past this run's cutoff, so the
+          // row leaves the filtered set and (with offset paging) every later row would shift down by one.
+          c.fake.data.Customer[4] = customer("5", "2026-12-31T00:00:00Z", { DisplayName: "edited" });
+        }
+        return res;
+      };
+      const out = await runQboReadSync(manual(c), testDeps(c, { now: () => NOW, fetchImpl: racing }));
+      expect(out.status).toBe("SUCCEEDED");
+      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer", recordState: "ACTIVE" } })).toBe(2500);
+      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, recordState: "MISSING" } })).toBe(0);
+    });
+
+    it("more records than a page share ONE timestamp (bulk import): none are skipped or looped on", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 2300; i++) c.fake.data.Invoice.push(invoice(String(i).padStart(5, "0"), "2026-09-15T10:00:00Z"));
+      const out = await run(c);
+      expect(out.status).toBe("SUCCEEDED");
+      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Invoice" } })).toBe(2300);
+      expect(c.fake.requests.filter((r) => /FROM Invoice/.test(r.url.searchParams.get("query") ?? "")).length).toBeLessThan(10);
+    });
+
+    it("an exact multiple of the page size ends with one short page (the boundary row re-read)", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 1000; i++) c.fake.data.Invoice.push(invoice(String(i), new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
       const out = await run(c);
-      expect(out.status === "SUCCEEDED" && out.counts.fetched.Invoice).toBe(1000);
+      expect(out.status === "SUCCEEDED" && out.counts.fetched.Invoice).toBe(1001); // 1000 + the boundary row re-read by the keyset query
+      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Invoice" } })).toBe(1000);
       const q = c.fake.requests.filter((r) => /FROM Invoice/.test(r.url.searchParams.get("query") ?? ""));
       expect(q).toHaveLength(2);
     });
@@ -190,15 +250,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
     it("a provider failure on page 2 fails the run without advancing the watermark; the retry resumes cleanly with no duplicates", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 1500; i++) c.fake.data.Customer.push(customer(String(i), new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
-      // Customer page 1 succeeds; page 2 (STARTPOSITION 1001) fails on all 4 attempts (1 try + 3 retries) of the first run only.
-      const failures = [{ status: 500 }, { status: 500 }, { status: 500 }, { status: 500 }];
+      // Customer page 1 succeeds; page 2 (the first query carrying a cursor) fails on all 4 attempts (1 try + 3 retries) of the first run only.
       const realFetch = c.fake.fetchImpl;
-      let customerQueries = 0;
+      let page2Attempts = 0;
       const flaky = async (input: string, init?: RequestInit) => {
         const u = new URL(input);
-        if (u.pathname.endsWith("/query") && /FROM Customer/.test(u.searchParams.get("query") ?? "") && /STARTPOSITION 1001/.test(u.searchParams.get("query") ?? "")) {
-          customerQueries++;
-          if (customerQueries <= failures.length) return new Response("{}", { status: 500 });
+        const q = u.searchParams.get("query") ?? "";
+        if (u.pathname.endsWith("/query") && /FROM Customer/.test(q) && /LastUpdatedTime >= /.test(q)) {
+          page2Attempts++;
+          if (page2Attempts <= 4) return new Response("{}", { status: 500 });
         }
         return realFetch(input, init);
       };
@@ -244,14 +304,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       const revised = await db.qboReportObservation.findMany({ where: { connectionId: c.connectionId, reportName: "ProfitAndLoss" } });
       expect(revised).toHaveLength(3);
       expect(revised.every((o: { revision: number; metrics: unknown }) => o.revision === 2 && (o.metrics as { Income: string }).Income === "12345.67")).toBe(true);
+      // One step of history is kept for governed re-evaluation: what the row held before the revision.
+      expect(revised.every((o: { previousMetrics: unknown; previousContentHash: string | null }) => (o.previousMetrics as { Income: string }).Income === "10000" && /^[0-9a-f]{64}$/.test(o.previousContentHash ?? ""))).toBe(true);
     });
 
-    it("a report for the wrong period or a malformed report fails the run as PROVIDER_MALFORMED and stores nothing", async () => {
+    it("a report for the wrong period fails the run as PROVIDER_MALFORMED, but the other reports are still stored and the watermarks do not advance", async () => {
       const c = await seedConnected();
       c.fake.reports.ProfitAndLoss = (p) => ({ Header: { StartPeriod: p.get("start_date"), EndPeriod: "2001-01-31", Currency: "USD" }, Columns: { Column: [] }, Rows: {} });
       const out = await run(c);
       expect(out).toMatchObject({ status: "FAILED", code: "PROVIDER_MALFORMED" });
-      expect((await countRows(c)).observations).toBe(0);
+      const stored = await db.qboReportObservation.findMany({ where: { connectionId: c.connectionId } });
+      expect(stored.map((o: { reportName: string }) => o.reportName).sort()).toEqual(["AgedPayables", "AgedReceivables", "BalanceSheet", "BalanceSheet", "BalanceSheet"]);
+      expect(await db.qboReportObservation.count({ where: { connectionId: c.connectionId, reportName: "ProfitAndLoss" } })).toBe(0); // nothing filed under the wrong date
+      expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).watermarks).toEqual({});
+      const runRow = await db.qboSyncRun.findFirstOrThrow({ where: { connectionId: c.connectionId } });
+      expect((runRow.counts as { reportsFailed: number }).reportsFailed).toBe(3);
     });
 
     it("keeps the provider currency even when it differs from the business currency (conversion/adoption is the policy's job)", async () => {
@@ -304,7 +371,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       seedData(c);
       c.fake.companyId = nextRealm(); // Intuit answers for another company
       const out = await run(c);
-      expect(out).toMatchObject({ status: "FAILED", code: "COMPANY_MISMATCH", terminal: true, nextAttemptNotBefore: null });
+      // Persistent, not terminal: re-checked after a 6h+ back-off (never hot-looped, never silently dropped).
+      expect(out).toMatchObject({ status: "FAILED", code: "COMPANY_MISMATCH", terminal: false, nextAttemptNotBefore: new Date(NOW.getTime() + 6 * 3_600_000) });
       expect((await countRows(c)).records).toBe(0);
     });
 

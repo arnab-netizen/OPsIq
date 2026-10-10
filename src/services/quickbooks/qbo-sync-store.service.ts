@@ -48,6 +48,9 @@ import type { QboPersistenceDeps } from "./qbo-connection.service";
 
 type Tx = Prisma.TransactionClient;
 
+/** Page-sized writes (1000 upserts) exceed Prisma's 5s interactive-transaction default on a busy database. */
+const TX_OPTIONS = { maxWait: 10_000, timeout: 60_000 } as const;
+
 export interface SyncScope {
   workspaceId: string;
   businessId: string;
@@ -97,13 +100,9 @@ export interface QboSyncStateRow {
 }
 
 async function ensureState(tx: Pick<Tx, "qboSyncState">, scope: SyncScope): Promise<void> {
-  const found = await tx.qboSyncState.findFirst({ where: scope, select: { connectionId: true } });
-  if (found) return;
-  try {
-    await tx.qboSyncState.create({ data: { ...scope, watermarks: {} } });
-  } catch (e) {
-    if (!isUniqueViolation(e)) throw e;
-  }
+  // createMany + skipDuplicates compiles to INSERT ... ON CONFLICT DO NOTHING: a concurrent creator can never abort the
+  // surrounding Postgres transaction (a caught P2002 would leave it in the failed state).
+  await tx.qboSyncState.createMany({ data: [{ ...scope, watermarks: {} }], skipDuplicates: true });
 }
 
 export async function readSyncState(scope: SyncScope, deps?: QboPersistenceDeps): Promise<QboSyncStateRow | null> {
@@ -219,12 +218,17 @@ export async function beginSyncRun(input: BeginRunInput, deps?: QboPersistenceDe
   }
 }
 
-/** Re-verify and extend the lease inside `tx`. Throws QboLeaseLostError if this worker no longer holds it. */
+/**
+ * Re-verify and extend the lease inside `tx`. Throws QboLeaseLostError if this worker no longer holds it.
+ * The fence is (token, epoch): a takeover REPLACES the token, so a taken-over worker always fails. Expiry itself is not part of
+ * the fence — an expired-but-untaken lease may still be extended by its owner (nobody else holds it), which keeps a slow
+ * provider call from throwing away work that nobody competed for.
+ */
 async function assertAndExtendLease(tx: Pick<Tx, "qboSyncState">, lease: SyncLease, now: Date): Promise<void> {
   const r = await tx.qboSyncState.updateMany({
     where: {
       connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
-      leaseToken: lease.token, leaseEpoch: lease.epoch, leaseExpiresAt: { gt: now },
+      leaseToken: lease.token, leaseEpoch: lease.epoch,
     },
     data: { leaseExpiresAt: new Date(now.getTime() + QBO_SYNC_LEASE_MS) },
   });
@@ -266,8 +270,8 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
           entityType, providerEntityId: { in: records.filter((r) => r.entityType === entityType).map((r) => r.providerEntityId) },
         })),
       },
-      select: { entityType: true, providerEntityId: true, contentHash: true, providerUpdatedAt: true },
-    })) as Array<{ entityType: string; providerEntityId: string; contentHash: string; providerUpdatedAt: Date | null }>;
+      select: { entityType: true, providerEntityId: true, contentHash: true, providerUpdatedAt: true, recordState: true },
+    })) as Array<{ entityType: string; providerEntityId: string; contentHash: string; providerUpdatedAt: Date | null; recordState: string }>;
     const known = new Map(existing.map((e) => [`${e.entityType}:${e.providerEntityId}`, e]));
 
     const toWrite: NormalizedRecord[] = [];
@@ -280,7 +284,8 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
         staleSeen.push(r);
         continue;
       }
-      if (prior.contentHash === r.contentHash) result.unchanged++;
+      // A record returning from MISSING (or changing state) is a real change even when its content is identical.
+      if (prior.contentHash === r.contentHash && prior.recordState === r.recordState) result.unchanged++;
       else result.updated++;
       toWrite.push(r);
     }
@@ -321,7 +326,7 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
         provider_updated_at = EXCLUDED.provider_updated_at,
         record_state = EXCLUDED.record_state,
         normalized = EXCLUDED.normalized,
-        revision = CASE WHEN qbo_synced_records.content_hash <> EXCLUDED.content_hash THEN qbo_synced_records.revision + 1 ELSE qbo_synced_records.revision END,
+        revision = CASE WHEN qbo_synced_records.content_hash <> EXCLUDED.content_hash OR qbo_synced_records.record_state <> EXCLUDED.record_state THEN qbo_synced_records.revision + 1 ELSE qbo_synced_records.revision END,
         content_hash = EXCLUDED.content_hash,
         last_seen_run_id = EXCLUDED.last_seen_run_id,
         fetched_at = EXCLUDED.fetched_at,
@@ -330,27 +335,48 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
         AND qbo_synced_records.business_id = EXCLUDED.business_id
         AND (qbo_synced_records.provider_updated_at IS NULL OR EXCLUDED.provider_updated_at IS NULL
              OR EXCLUDED.provider_updated_at >= qbo_synced_records.provider_updated_at)`;
-  });
+  }, TX_OPTIONS);
   return result;
 }
 
 /**
- * After a FULL sync has read an entity to the end: records of that entity that this run did not see are flagged MISSING
- * (deleted or deactivated at Intuit). Never a delete — history is kept and a later sighting flips the record back.
+ * After a FULL sync has read an entity to the end: records of that entity this run did not see are CANDIDATES for "deleted
+ * or deactivated at Intuit". The list is capped (limit + 1 to detect overflow). The orchestrator re-reads each candidate by id
+ * before anything is flagged, so a record that merely moved out of the query window (edited after the cutoff, paging race)
+ * is never mislabeled.
  */
-export async function markUnseenRecordsMissing(lease: SyncLease, entityType: string, deps?: QboPersistenceDeps): Promise<number> {
+export async function listUnseenRecordIds(lease: SyncLease, entityType: string, limit: number, deps?: QboPersistenceDeps): Promise<string[]> {
+  const now = clock(deps);
+  return clientOf(deps).$transaction(async (tx: Tx) => {
+    await assertAndExtendLease(tx, lease, now);
+    const rows = (await tx.qboSyncedRecord.findMany({
+      where: {
+        connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
+        entityType, recordState: { in: ["ACTIVE", "INACTIVE"] }, lastSeenRunId: { not: lease.runId },
+      },
+      select: { providerEntityId: true },
+      orderBy: { providerEntityId: "asc" },
+      take: Math.max(1, limit) + 1,
+    })) as Array<{ providerEntityId: string }>;
+    return rows.map((r) => r.providerEntityId);
+  }, TX_OPTIONS);
+}
+
+/** Flag records the provider confirmed absent as MISSING (never a delete; a later sighting flips them back). */
+export async function markRecordsMissing(lease: SyncLease, entityType: string, providerEntityIds: readonly string[], deps?: QboPersistenceDeps): Promise<number> {
+  if (providerEntityIds.length === 0) return 0;
   const now = clock(deps);
   return clientOf(deps).$transaction(async (tx: Tx) => {
     await assertAndExtendLease(tx, lease, now);
     const r = await tx.qboSyncedRecord.updateMany({
       where: {
         connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
-        entityType, recordState: { in: ["ACTIVE", "INACTIVE"] }, lastSeenRunId: { not: lease.runId },
+        entityType, providerEntityId: { in: [...providerEntityIds] }, recordState: { in: ["ACTIVE", "INACTIVE"] }, lastSeenRunId: { not: lease.runId },
       },
       data: { recordState: "MISSING", revision: { increment: 1 }, updatedAt: now },
     });
     return r.count;
-  });
+  }, TX_OPTIONS);
 }
 
 // ─── Report observations ─────────────────────────────────────────────────────
@@ -375,7 +401,7 @@ export async function persistReportObservation(lease: SyncLease, input: ReportOb
       connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
       reportName: input.reportName, periodStart: input.periodStart, periodEnd: input.periodEnd, basis: input.basis,
     };
-    const existing = await tx.qboReportObservation.findFirst({ where: key, select: { id: true, contentHash: true, revision: true } });
+    const existing = await tx.qboReportObservation.findFirst({ where: key, select: { id: true, contentHash: true, revision: true, metrics: true } });
     if (!existing) {
       await tx.qboReportObservation.create({
         data: {
@@ -394,11 +420,12 @@ export async function persistReportObservation(lease: SyncLease, input: ReportOb
             currency: input.currency, metrics: input.metrics as Prisma.InputJsonValue,
             inconsistencies: [...input.inconsistencies] as Prisma.InputJsonValue, contentHash: input.contentHash,
             providerGeneratedAt: input.providerGeneratedAt, revision: existing.revision + 1, lastSeenRunId: lease.runId, fetchedAt: now,
+            previousMetrics: existing.metrics as Prisma.InputJsonValue, previousContentHash: existing.contentHash,
           }
         : { lastSeenRunId: lease.runId, fetchedAt: now },
     });
     return { changed, created: false };
-  });
+  }, TX_OPTIONS);
 }
 
 // ─── Finish ──────────────────────────────────────────────────────────────────
@@ -424,7 +451,13 @@ export async function finishSyncRunSuccess(input: FinishSuccessInput, deps?: Qbo
       select: { watermarks: true },
     })) as { watermarks: unknown } | null;
     if (!current) throw new QboLeaseLostError();
-    const merged = { ...Object.fromEntries(Object.entries(parseWatermarks(current.watermarks)).map(([k, v]) => [k, v.toISOString()])), ...input.watermarks };
+    // Watermarks only move forward: a run that started from a stale read can never regress a newer one.
+    const stored = parseWatermarks(current.watermarks);
+    const merged: Record<string, string> = Object.fromEntries(Object.entries(stored).map(([k, v]) => [k, v.toISOString()]));
+    for (const [k, v] of Object.entries(input.watermarks)) {
+      const prior = stored[k];
+      if (!prior || Date.parse(v) > prior.getTime()) merged[k] = v;
+    }
     const released = await tx.qboSyncState.updateMany({
       where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, leaseToken: lease.token, leaseEpoch: lease.epoch },
       data: {
@@ -706,4 +739,37 @@ export async function resolveConnectionScope(input: { workspaceId: string; conne
     select: { businessId: true },
   })) as { businessId: string } | null;
   return row ? { workspaceId: input.workspaceId, businessId: row.businessId, connectionId: input.connectionId } : null;
+}
+
+// ─── Token refresh claim ─────────────────────────────────────────────────────
+
+/** How long one refresher may hold the claim (the token endpoint call has a 15s deadline). A crashed holder simply expires. */
+export const QBO_REFRESH_CLAIM_MS = 45_000;
+
+/**
+ * Try to become THE refresher of this connection. One conditional UPDATE on the sync-state row (no transaction is held open
+ * while the token endpoint is called, so the connection pool cannot be exhausted by waiters). The connection's business is
+ * recovered from the connection row for the caller's workspace; a foreign connection id claims nothing.
+ */
+export async function tryClaimTokenRefresh(input: { workspaceId: string; connectionId: string }, deps?: QboPersistenceDeps): Promise<{ claimed: true; token: string } | { claimed: false }> {
+  const scope = await resolveConnectionScope(input, deps);
+  if (!scope) return { claimed: false };
+  const now = clock(deps);
+  const token = randomUUID();
+  return clientOf(deps).$transaction(async (tx: Tx) => {
+    await ensureState(tx, scope);
+    const won = await tx.qboSyncState.updateMany({
+      where: { ...scope, OR: [{ refreshClaimToken: null }, { refreshClaimExpiresAt: { lte: now } }] },
+      data: { refreshClaimToken: token, refreshClaimExpiresAt: new Date(now.getTime() + QBO_REFRESH_CLAIM_MS) },
+    });
+    return won.count === 1 ? { claimed: true as const, token } : { claimed: false as const };
+  });
+}
+
+/** Release the claim iff this holder still owns it (idempotent). */
+export async function releaseTokenRefreshClaim(input: { workspaceId: string; connectionId: string; token: string }, deps?: QboPersistenceDeps): Promise<void> {
+  await clientOf(deps).qboSyncState.updateMany({
+    where: { connectionId: input.connectionId, workspaceId: input.workspaceId, refreshClaimToken: input.token },
+    data: { refreshClaimToken: null, refreshClaimExpiresAt: null },
+  });
 }

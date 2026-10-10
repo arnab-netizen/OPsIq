@@ -23,7 +23,7 @@ function recorder() {
 }
 const deliver = (body: string, o: { signature?: string | null; env?: Record<string, string | undefined>; enqueue?: ReturnType<typeof recorder>["enqueue"]; declaredLength?: number | null } = {}) =>
   handleQboWebhook(
-    { rawBody: body, signature: o.signature === undefined ? sign(body) : o.signature, declaredLength: o.declaredLength ?? null },
+    { rawBody: new TextEncoder().encode(body), signature: o.signature === undefined ? sign(body) : o.signature, declaredLength: o.declaredLength ?? null },
     { env: o.env ?? ENV, now: () => NOW, enqueue: o.enqueue ?? recorder().enqueue },
   );
 
@@ -57,7 +57,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     const body = legacy(A.realmId, [ent("1"), ent("2", { name: "Customer" })]);
     const res = await deliver(body, { enqueue: rec.enqueue });
     expect(res).toEqual({ httpStatus: 200, body: { received: true, hints: 2, duplicates: 0, ignored: 0 } });
-    expect(rec.calls).toEqual([{ workspaceId: A.t.ws, connectionId: A.connectionId, idempotencyKey: expect.stringMatching(/^qbo-read-sync:webhook:.+:\d+$/) }]);
+    expect(rec.calls).toEqual([{ workspaceId: A.t.ws, connectionId: A.connectionId, idempotencyKey: expect.stringMatching(/^qbo-read-sync:webhook:.+:0$/) }]);
     const rows = await db.qboWebhookEvent.findMany({ where: { realmId: A.realmId } });
     expect(rows).toHaveLength(2);
     expect(rows.every((r: { disposition: string; workspaceId: string; businessId: string; connectionId: string }) => r.disposition === "HINT_RECORDED" && r.workspaceId === A.t.ws && r.businessId === A.t.biz && r.connectionId === A.connectionId)).toBe(true);
@@ -89,7 +89,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     const b = await deliver(legacy(A.realmId, [older]), { enqueue: rec.enqueue });
     expect([a.body, b.body].map((x) => (x as { hints: number }).hints)).toEqual([1, 1]);
     expect(rec.calls).toHaveLength(2);
-    expect(new Set(rec.calls.map((c) => c.idempotencyKey)).size).toBe(1); // same 15-minute bucket -> the scheduler coalesces them
+    expect(new Set(rec.calls.map((c) => c.idempotencyKey)).size).toBe(1); // same lease epoch -> the scheduler coalesces them
   });
 
   it("a delivery that crashed after recording the hint but before serving it is finished by the redelivery (a hint is never lost)", async () => {
@@ -124,27 +124,45 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     expect(rec2.calls.every((c) => c.workspaceId === A.t.ws)).toBe(true);
   });
 
-  it("an unknown realm is recorded as ignored (unresolved) and schedules nothing", async () => {
+  it("an unknown realm is counted as ignored and schedules NOTHING; the ledger does not grow for it", async () => {
     const rec = recorder();
-    const unknownRealm = `9${String(Date.now())}${Math.floor(Math.random() * 1e4)}`; // unique per run: the ledger is durable
-    const res = await deliver(legacy(unknownRealm, [ent("1")]), { enqueue: rec.enqueue });
-    expect(res).toEqual({ httpStatus: 200, body: { received: true, hints: 0, duplicates: 0, ignored: 1 } });
+    const unknownRealm = `9${String(Date.now())}${Math.floor(Math.random() * 1e4)}`;
+    const res = await deliver(legacy(unknownRealm, [ent("1"), ent("2")]), { enqueue: rec.enqueue });
+    expect(res).toEqual({ httpStatus: 200, body: { received: true, hints: 0, duplicates: 0, ignored: 2 } });
     expect(rec.calls).toHaveLength(0);
-    const row = await db.qboWebhookEvent.findFirstOrThrow({ where: { realmId: unknownRealm } });
-    expect(row).toMatchObject({ disposition: "IGNORED_UNKNOWN_REALM", workspaceId: null, businessId: null, connectionId: null });
+    expect(await db.qboWebhookEvent.count({ where: { realmId: unknownRealm } })).toBe(0);
   });
 
-  it("a non-ACTIVE connection's events are ignored; a production realm is unknown to a sandbox deployment", async () => {
+  it("a non-ACTIVE connection's events are ignored (counted, not stored); a production realm is unknown to a sandbox deployment", async () => {
     const reauth = await seedConnected();
     await db.qboConnection.update({ where: { id: reauth.connectionId }, data: { status: "REAUTH_REQUIRED", reauthRequiredAt: new Date() } });
     const prod = await seedConnected({ environment: "production" });
     const rec = recorder();
-    await deliver(legacy(reauth.realmId, [ent("1")]), { enqueue: rec.enqueue });
-    await deliver(legacy(prod.realmId, [ent("1")]), { enqueue: rec.enqueue });
+    expect((await deliver(legacy(reauth.realmId, [ent("1")]), { enqueue: rec.enqueue })).body).toMatchObject({ hints: 0, ignored: 1 });
+    expect((await deliver(legacy(prod.realmId, [ent("1")]), { enqueue: rec.enqueue })).body).toMatchObject({ hints: 0, ignored: 1 });
     expect(rec.calls).toHaveLength(0);
-    expect((await db.qboWebhookEvent.findFirstOrThrow({ where: { realmId: reauth.realmId } })).disposition).toBe("IGNORED_NOT_ACTIVE");
-    expect((await db.qboWebhookEvent.findFirstOrThrow({ where: { realmId: prod.realmId } })).disposition).toBe("IGNORED_UNKNOWN_REALM");
+    expect(await db.qboWebhookEvent.count({ where: { realmId: { in: [reauth.realmId, prod.realmId] } } })).toBe(0);
     expect(await db.qboSyncState.count({ where: { connectionId: { in: [reauth.connectionId, prod.connectionId] } } })).toBe(0);
+  });
+
+  it("an event with no provider id and no time is keyed by its receive window: a later identical change is not swallowed forever", async () => {
+    const c = await seedConnected();
+    const body = legacy(c.realmId, [{ name: "Invoice", id: "77", operation: "Update" }]);
+    const at = (ms: number) => ({ env: ENV, now: () => new Date(NOW.getTime() + ms), enqueue: recorder().enqueue });
+    const post = (ms: number) => handleQboWebhook({ rawBody: new TextEncoder().encode(body), signature: sign(body), declaredLength: null }, at(ms));
+    expect((await post(0)).body).toMatchObject({ hints: 1 });
+    expect((await post(60_000)).body).toMatchObject({ hints: 0, duplicates: 1 }); // redelivery in the same window
+    expect((await post(40 * 60_000)).body).toMatchObject({ hints: 1 }); // a genuinely later change
+  });
+
+  it("a hint that arrives after a sync has started gets a NEW task (the task key carries the lease epoch)", async () => {
+    const c = await seedConnected();
+    const rec = recorder();
+    await deliver(legacy(c.realmId, [ent("1")]), { enqueue: rec.enqueue });
+    // A sync takes the lease (epoch 0 -> 1) and completes; a later hint must not be swallowed by the earlier task.
+    await db.qboSyncState.update({ where: { connectionId: c.connectionId }, data: { leaseEpoch: 1 } });
+    await deliver(legacy(c.realmId, [ent("2")]), { enqueue: rec.enqueue });
+    expect(rec.calls.map((x) => x.idempotencyKey.split(":").pop())).toEqual(["0", "1"]);
   });
 
   it("unsupported entities are ignored without a ledger row; malformed events are counted and dropped", async () => {
@@ -172,9 +190,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
   it("the default enqueue is a durable, idempotent ScheduledTask carrying only the connection id", async () => {
     const fresh = await seedConnected();
     const body = legacy(fresh.realmId, [ent("1")]);
-    await handleQboWebhook({ rawBody: body, signature: sign(body), declaredLength: null }, { env: ENV, now: () => NOW });
+    await handleQboWebhook({ rawBody: new TextEncoder().encode(body), signature: sign(body), declaredLength: null }, { env: ENV, now: () => NOW });
     const body2 = legacy(fresh.realmId, [ent("2")]);
-    await handleQboWebhook({ rawBody: body2, signature: sign(body2), declaredLength: null }, { env: ENV, now: () => new Date(NOW.getTime() + 60_000) });
+    await handleQboWebhook({ rawBody: new TextEncoder().encode(body2), signature: sign(body2), declaredLength: null }, { env: ENV, now: () => new Date(NOW.getTime() + 60_000) });
     const tasks = await db.scheduledTask.findMany({ where: { workspaceId: fresh.t.ws } });
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({ taskName: "qbo-read-sync", workspaceId: fresh.t.ws });

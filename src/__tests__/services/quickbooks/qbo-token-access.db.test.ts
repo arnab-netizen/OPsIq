@@ -52,32 +52,70 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO token access + refresh (real Postgres
     }
   });
 
-  it("concurrent refresh: both refreshers call Intuit, exactly ONE rotation persists, and the loser adopts the winner's token (stale writer discarded)", async () => {
+  it("concurrent refresh is SERIALIZED: Intuit is called once, exactly one rotation persists, and the other caller adopts the stored result", async () => {
     const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "race" }) });
     c.fake.tokenResponses.push({ status: 200, body: tokenBody(1) }, { status: 200, body: tokenBody(2) });
-    // Park the first token call until the second arrives, so both refreshers hold revision 1.
-    let arrived = 0;
-    let releaseBoth!: () => void;
-    const both = new Promise<void>((r) => { releaseBoth = r; });
-    const fetchImpl = async (input: string, init?: RequestInit) => {
-      if (new URL(input).pathname.endsWith("/tokens/bearer")) {
-        arrived++;
-        if (arrived === 2) releaseBoth();
-        await both;
-      }
-      return c.fake.fetchImpl(input, init);
-    };
-    const [a, b] = await Promise.all([get(c, {}, { config: qboConfig(), fetchImpl }), get(c, {}, { config: qboConfig(), fetchImpl })]);
-    expect(a.ok && b.ok).toBe(true);
-    expect(c.fake.tokenCalls).toBe(2);
-    expect((await tokenRow(c)).revision).toBe(2); // one rotation only
+    const deps = { config: qboConfig(), fetchImpl: c.fake.fetchImpl, claimPollMs: 5 };
+    const results = await Promise.all([get(c, {}, deps), get(c, {}, deps), get(c, {}, deps), get(c, {}, deps)]);
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(c.fake.tokenCalls).toBe(1); // the losers waited for the winner instead of consuming the (rotating) refresh token again
+    expect((await tokenRow(c)).revision).toBe(2);
     const stored = await loadQboTokensForUse({ workspaceId: c.t.ws, connectionId: c.connectionId });
-    if (!stored.ok || !a.ok || !b.ok) throw new Error("setup");
-    // Both callers hold the SAME (winning, persisted) access token; the losing grant exists nowhere.
-    expect(a.accessToken).toBe(stored.tokens.accessToken);
-    expect(b.accessToken).toBe(stored.tokens.accessToken);
-    expect([a.refreshed, b.refreshed]).toEqual([true, true]);
+    if (!stored.ok) throw new Error("setup");
+    expect(new Set(results.map((r) => (r.ok ? r.accessToken : ""))).size).toBe(1);
+    expect(results.every((r) => r.ok && r.accessToken === stored.tokens.accessToken)).toBe(true);
     expect(await db.auditEvent.count({ where: { workspaceId: c.t.ws, eventName: "qbo.tokens_rotated" } })).toBe(1);
+    expect(await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).toMatchObject({ refreshClaimToken: null, refreshClaimExpiresAt: null });
+  });
+
+  it("a refresher that crashed holding the claim does not wedge the connection: the claim expires; a live claim makes waiters back off", async () => {
+    const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "claim" }) });
+    c.fake.tokenResponses.push({ status: 200, body: tokenBody(1) });
+    await db.qboSyncState.create({ data: { connectionId: c.connectionId, workspaceId: c.t.ws, businessId: c.t.biz, refreshClaimToken: randomUUID(), refreshClaimExpiresAt: new Date(Date.now() + 60_000) } });
+    // Claim is live: a waiter with a tiny budget gives up retryably, and Intuit is NOT called.
+    expect(await get(c, {}, { config: qboConfig(), fetchImpl: c.fake.fetchImpl, claimPollMs: 1, claimMaxWaitMs: 30 })).toMatchObject({ ok: false, code: "PROVIDER_UNAVAILABLE" });
+    expect(c.fake.tokenCalls).toBe(0);
+    // The holder "crashed": its claim expires and the next caller proceeds.
+    await db.qboSyncState.update({ where: { connectionId: c.connectionId }, data: { refreshClaimExpiresAt: new Date(Date.now() - 1000) } });
+    expect(await get(c)).toMatchObject({ ok: true, accessToken: "fresh-access-1" });
+  });
+
+  it("a forced refresh for an access token that was already replaced does not call Intuit again", async () => {
+    const c = await seedConnected({ grant: grantOf({ tag: "forced" }) });
+    c.fake.tokenResponses.push({ status: 200, body: tokenBody(1) });
+    const first = await get(c, { forceRefresh: true });
+    expect(first).toMatchObject({ ok: true, refreshed: true, revision: 2 });
+    // Another caller was also rejected for revision 1: the stored revision is already newer, so it just adopts it.
+    const second = await getUsableQboAccessToken({ workspaceId: c.t.ws, connectionId: c.connectionId, forceRefresh: true, knownRevision: 1 }, tokenDeps(c));
+    expect(second).toMatchObject({ ok: true, accessToken: "fresh-access-1", revision: 2 });
+    expect(c.fake.tokenCalls).toBe(1);
+  });
+
+  it("a transient database error while persisting the ROTATED grant is retried with the same grant (the new refresh token is not lost)", async () => {
+    const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "rot" }) });
+    c.fake.tokenResponses.push({ status: 200, body: tokenBody(1) });
+    let failNextTx = false;
+    const fetchImpl = async (input: string, init?: RequestInit) => {
+      const res = await c.fake.fetchImpl(input, init);
+      if (new URL(input).pathname.endsWith("/tokens/bearer")) failNextTx = true; // Intuit has now rotated the refresh token
+      return res;
+    };
+    const flakyClient = new Proxy(db as object, {
+      get(target, prop, receiver) {
+        if (prop === "$transaction") {
+          return (fn: unknown, opts?: unknown) => {
+            if (failNextTx) { failNextTx = false; return Promise.reject(new Error("connection reset")); }
+            return (target as { $transaction: (f: unknown, o?: unknown) => Promise<unknown> }).$transaction(fn, opts);
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    }) as typeof db;
+    const r = await getUsableQboAccessToken({ workspaceId: c.t.ws, connectionId: c.connectionId }, { config: qboConfig(), fetchImpl, client: flakyClient });
+    expect(r).toMatchObject({ ok: true, accessToken: "fresh-access-1", revision: 2 });
+    const stored = await loadQboTokensForUse({ workspaceId: c.t.ws, connectionId: c.connectionId });
+    expect(stored.ok && stored.tokens.refreshToken).toBe("fresh-refresh-1");
+    expect(c.fake.tokenCalls).toBe(1);
   });
 
   it("invalid_grant on refresh marks REAUTH_REQUIRED, audits it, and is never retried (no refresh storm)", async () => {

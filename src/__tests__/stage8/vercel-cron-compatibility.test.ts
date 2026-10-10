@@ -41,6 +41,7 @@ const enqueueDueEmailRetryTasks = vi.fn();
 const enqueueDueFinanceLearningBridgeTasks = vi.fn();
 const enqueueDueReassessmentScanTasks = vi.fn();
 const enqueueDueRiskReviewScanTasks = vi.fn();
+const enqueueDueQboReadSyncTasks = vi.fn();
 
 vi.mock("@/infra/scheduler", () => ({
   DatabaseSchedulerProvider: class {
@@ -57,6 +58,7 @@ vi.mock("@/services/scheduler/scheduler-producers", () => ({
   enqueueDueFinanceLearningBridgeTasks,
   enqueueDueReassessmentScanTasks,
   enqueueDueRiskReviewScanTasks,
+  enqueueDueQboReadSyncTasks,
 }));
 
 vi.mock("@/infra/observability", () => ({ captureError: vi.fn() }));
@@ -108,6 +110,7 @@ beforeEach(() => {
   enqueueDueFinanceLearningBridgeTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueReassessmentScanTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueRiskReviewScanTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
+  enqueueDueQboReadSyncTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   vi.stubEnv("CRON_SECRET", SECRET);
 });
 
@@ -171,11 +174,12 @@ describe("[stage8] 6. cron authentication is fail-closed", () => {
 });
 
 describe("[stage8] producers run before the drain and their results are reported", () => {
-  it("calls all four producers and reports their scan results", async () => {
+  it("calls all five producers and reports their scan results", async () => {
     enqueueDueEmailRetryTasks.mockResolvedValueOnce({ candidatesFound: 5, enqueued: 5 });
     enqueueDueFinanceLearningBridgeTasks.mockResolvedValueOnce({ candidatesFound: 2, enqueued: 2 });
     enqueueDueReassessmentScanTasks.mockResolvedValueOnce({ candidatesFound: 3, enqueued: 3 });
     enqueueDueRiskReviewScanTasks.mockResolvedValueOnce({ candidatesFound: 4, enqueued: 4 });
+    enqueueDueQboReadSyncTasks.mockResolvedValueOnce({ candidatesFound: 6, enqueued: 6 });
 
     const { GET } = await loadRoute();
     const body = await (await GET(cronRequest(SECRET))).json();
@@ -184,6 +188,8 @@ describe("[stage8] producers run before the drain and their results are reported
     expect(enqueueDueFinanceLearningBridgeTasks).toHaveBeenCalledTimes(1);
     expect(enqueueDueReassessmentScanTasks).toHaveBeenCalledTimes(1);
     expect(enqueueDueRiskReviewScanTasks).toHaveBeenCalledTimes(1);
+    expect(enqueueDueQboReadSyncTasks).toHaveBeenCalledTimes(1);
+    expect(body.results.producers.qboReadSync).toEqual({ candidatesFound: 6, enqueued: 6 });
     expect(body.results.producers.emailRetry).toEqual({ candidatesFound: 5, enqueued: 5 });
     expect(body.results.producers.financeLearningBridge).toEqual({ candidatesFound: 2, enqueued: 2 });
     expect(body.results.producers.reassessmentScan).toEqual({ candidatesFound: 3, enqueued: 3 });

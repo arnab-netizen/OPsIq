@@ -18,9 +18,10 @@ export const runtime = "nodejs";
 export async function POST(request: Request): Promise<NextResponse> {
   const lengthHeader = request.headers.get("content-length");
   const declared = lengthHeader !== null && /^\d{1,12}$/.test(lengthHeader) ? Number(lengthHeader) : null;
-  let rawBody: string;
+  // Raw BYTES: the HMAC is computed over exactly what Intuit sent (no UTF-8 decode/BOM normalisation first).
+  let rawBody: Uint8Array;
   try {
-    rawBody = await request.text();
+    rawBody = new Uint8Array(await request.arrayBuffer());
   } catch {
     return NextResponse.json({ error: "BAD_REQUEST" }, { status: 400, headers: { "cache-control": "no-store" } });
   }

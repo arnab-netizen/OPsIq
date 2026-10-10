@@ -89,7 +89,6 @@ const TERMINAL_FAILURES: ReadonlySet<QboSyncFailureCode> = new Set<QboSyncFailur
   "CONNECTION_NOT_FOUND",
   "CONNECTION_NOT_ACTIVE",
   "REAUTH_REQUIRED",
-  "COMPANY_MISMATCH",
 ]);
 
 export function isTerminalSyncFailure(code: QboSyncFailureCode): boolean {
@@ -98,12 +97,19 @@ export function isTerminalSyncFailure(code: QboSyncFailureCode): boolean {
 
 // ─── Timing constants ────────────────────────────────────────────────────────
 
-/** One sync lease lives this long and is extended by every persisted page. */
-export const QBO_SYNC_LEASE_MS = 5 * 60 * 1000;
+/**
+ * One sync lease lives this long and is extended before every provider call and by every persisted page. It is sized above the
+ * worst-case retry budget of a single provider request (4 attempts x 30s deadline + back-off waits ~ 9 minutes).
+ */
+export const QBO_SYNC_LEASE_MS = 15 * 60 * 1000;
 /** Lower bound of an incremental window is the previous watermark minus this overlap (provider indexing lag, clock skew). */
 export const QBO_SYNC_WATERMARK_OVERLAP_MS = 10 * 60 * 1000;
 /** A FULL sync (which also reconciles records Intuit no longer returns) is forced at least this often. */
 export const QBO_SYNC_FULL_RECONCILE_MS = 7 * 24 * 60 * 60 * 1000;
+/** Minimum spacing between MANUAL runs of one connection (each run costs ~11 provider calls). */
+export const QBO_SYNC_MANUAL_COOLDOWN_MS = 60 * 1000;
+/** Hard bound on provider records re-read by id to confirm "missing" per entity per FULL run. */
+export const QBO_SYNC_MISSING_CONFIRMATIONS_PER_ENTITY = 100;
 /** Scheduled cadence: one run per connection per UTC day, matching the platform's daily scheduler cron. */
 export const QBO_SYNC_SCHEDULE_BUCKET_MS = 24 * 60 * 60 * 1000;
 /** Complete calendar months of period reports (ProfitAndLoss, BalanceSheet) kept current. */
@@ -197,10 +203,14 @@ export interface QboSyncCounts {
   skipped: number;
   reportsStored: number;
   reportsChanged: number;
+  reportsFailed: number;
+  /** Records re-read by id to confirm they still exist / were really deleted. */
+  confirmedByRead: number;
+  markedMissing: number;
 }
 
 export function emptySyncCounts(): QboSyncCounts {
-  return { fetched: {}, inserted: 0, updated: 0, unchanged: 0, skipped: 0, reportsStored: 0, reportsChanged: 0 };
+  return { fetched: {}, inserted: 0, updated: 0, unchanged: 0, skipped: 0, reportsStored: 0, reportsChanged: 0, reportsFailed: 0, confirmedByRead: 0, markedMissing: 0 };
 }
 
 export type QboSyncOutcome =
@@ -276,14 +286,15 @@ export function incrementalLowerBound(mode: QboSyncMode, watermark: Date | undef
 }
 
 /**
- * Idempotency key by trigger. MANUAL is replayable by requestId. SCHEDULED is one per UTC day per failure generation and
- * WEBHOOK coalesces per 15 minutes per failure generation: the generation (consecutive failures so far) lets a retry
- * after a failed attempt run under a fresh key once its back-off has elapsed, while a duplicate of the SAME attempt replays.
+ * Idempotency key by trigger. MANUAL is replayable by requestId. SCHEDULED is one per UTC day per lease epoch and WEBHOOK
+ * coalesces per 15 minutes per lease epoch. The epoch (it increments on every lease acquisition) makes a retry after a
+ * failed / abandoned / crashed attempt run under a fresh key, while two triggers racing from the SAME state still collide on
+ * the unique key and replay. Same-day duplicate scheduled runs after a SUCCESS are refused by the service (NOT_DUE), not by the key.
  */
-export function syncIdempotencyKey(trigger: QboSyncTrigger, now: Date, requestId: string | null, generation: number, randomId: () => string): string {
+export function syncIdempotencyKey(trigger: QboSyncTrigger, now: Date, requestId: string | null, leaseEpoch: number, randomId: () => string): string {
   switch (trigger) {
     case "MANUAL": return `manual:${requestId ?? randomId()}`;
-    case "SCHEDULED": return `scheduled:${scheduleBucket(now)}:${generation}`;
-    case "WEBHOOK": return `webhook:${Math.floor(now.getTime() / (15 * 60 * 1000))}:${generation}`;
+    case "SCHEDULED": return `scheduled:${scheduleBucket(now)}:${leaseEpoch}`;
+    case "WEBHOOK": return `webhook:${Math.floor(now.getTime() / (15 * 60 * 1000))}:${leaseEpoch}`;
   }
 }

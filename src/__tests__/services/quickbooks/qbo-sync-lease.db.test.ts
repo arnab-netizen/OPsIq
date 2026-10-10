@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { runQboReadSync, runScheduledQboSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-sync.service";
 import {
-  QboLeaseLostError, beginSyncRun, extendSyncLease, persistRecordsPage, finishSyncRunSuccess, finishSyncRunFailure, persistReportObservation,
+  QboLeaseLostError, beginSyncRun, extendSyncLease, markWebhookHint, persistRecordsPage, finishSyncRunSuccess, finishSyncRunFailure, persistReportObservation,
   type SyncLease,
 } from "@/services/quickbooks/qbo-sync-store.service";
 import { normalizeInvoice, type NormalizedRecord } from "@/domain/quickbooks/qbo-normalize";
@@ -102,6 +102,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
     await g.inFlight;
     const before = c.fake.requests.length;
     const sched = await runScheduledQboSync({ workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" }, testDeps(c, { now: () => NOW }));
+    await markWebhookHint(scopeOf(c), { now: () => NOW }); // an unserved hint exists, so the webhook-triggered run is due
     const hook = await runScheduledQboSync({ workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "WEBHOOK" }, testDeps(c, { now: () => NOW }));
     expect(sched.status).toBe("BUSY");
     expect(hook.status).toBe("BUSY");
@@ -121,16 +122,70 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
     expect(row).toMatchObject({ trigger: "SCHEDULED", businessId: a.t.biz, requestedById: null });
   });
 
-  it("scheduled runs are one per day per failure generation; a repeat the same day replays", async () => {
+  it("scheduled cadence is one SUCCESSFUL run per UTC day: a same-day repeat is NOT_DUE, the next day runs", async () => {
     const c = await seedConnected();
     const args = { workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" as const };
     const a = await runScheduledQboSync(args, testDeps(c, { now: () => NOW }));
+    const requests = c.fake.requests.length;
     const b = await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 3_600_000) }));
     expect(a.status).toBe("SUCCEEDED");
-    expect(b).toMatchObject({ status: "ALREADY_COMPLETED", runStatus: "SUCCEEDED" });
+    expect(b).toEqual({ status: "NOT_DUE", nextAttemptNotBefore: new Date("2026-10-11T00:00:00Z") });
+    expect(c.fake.requests.length).toBe(requests);
     const next = await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 86_400_000) }));
     expect(next.status).toBe("SUCCEEDED");
     expect(await db.qboSyncRun.count({ where: { connectionId: c.connectionId } })).toBe(2);
+  });
+
+  it("a crashed scheduled run does not swallow the day: once its lease expires the retry runs under a fresh key and recovers it", async () => {
+    const c = await seedConnected();
+    const crashed = lease(c, await beginSyncRun({ ...scopeOf(c), trigger: "SCHEDULED", mode: "FULL", idempotencyKey: "scheduled:2026-10-10:0", requestedById: null }, { now: () => NOW }));
+    // The process died; nobody finished the run. While the lease is live the retry is BUSY, not a bogus "already completed".
+    const early = await runScheduledQboSync({ workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" }, testDeps(c, { now: () => new Date(NOW.getTime() + 60_000) }));
+    expect(early).toMatchObject({ status: "BUSY", runId: crashed.runId });
+    const later = new Date(NOW.getTime() + QBO_SYNC_LEASE_MS + 5000);
+    const retry = await runScheduledQboSync({ workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" }, testDeps(c, { now: () => later }));
+    expect(retry.status).toBe("SUCCEEDED");
+    expect(await db.qboSyncRun.findUniqueOrThrow({ where: { id: crashed.runId } })).toMatchObject({ status: "ABANDONED" });
+  });
+
+  it("a failed scheduled attempt is retried after its back-off under a fresh key (the day is not swallowed)", async () => {
+    const c = await seedConnected();
+    const args = { workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" as const };
+    c.fake.inject(`companyinfo/${c.realmId}`, ...Array.from({ length: 4 }, () => ({ status: 503 })));
+    expect((await runScheduledQboSync(args, testDeps(c, { now: () => NOW }))).status).toBe("FAILED");
+    // A manual success in between resets the failure counter; the next scheduled attempt must still not be blocked by the old key.
+    expect((await runQboReadSync(manual(c), testDeps(c, { now: () => new Date(NOW.getTime() + 60_000) }))).status).toBe("SUCCEEDED");
+    const keys = (await db.qboSyncRun.findMany({ where: { connectionId: c.connectionId } })).map((r: { idempotencyKey: string }) => r.idempotencyKey);
+    expect(keys.filter((k: string) => k.startsWith("scheduled:"))).toHaveLength(1);
+    const next = await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 86_400_000 + 1000) }));
+    expect(next.status).toBe("SUCCEEDED");
+  });
+
+  it("a webhook-triggered run only happens while an unserved hint exists: coalesced tasks do not each sync", async () => {
+    const c = await seedConnected();
+    const args = { workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "WEBHOOK" as const };
+    expect(await runScheduledQboSync(args, testDeps(c, { now: () => NOW }))).toMatchObject({ status: "NOT_DUE" }); // no hint at all
+    await markWebhookHint(scopeOf(c), { now: () => new Date(NOW.getTime() - 60_000) });
+    expect((await runScheduledQboSync(args, testDeps(c, { now: () => NOW }))).status).toBe("SUCCEEDED");
+    const requests = c.fake.requests.length;
+    // Ninety-five more tasks for the same burst arrive later: the hint was served, so they do nothing.
+    expect(await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 20 * 60_000) }))).toMatchObject({ status: "NOT_DUE" });
+    expect(c.fake.requests.length).toBe(requests);
+    // A hint that lands DURING a sync is not cleared by that sync and is served by the next one.
+    await markWebhookHint(scopeOf(c), { now: () => new Date(NOW.getTime() + 25 * 60_000) });
+    expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).webhookHintAt).not.toBeNull();
+    expect((await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 30 * 60_000) }))).status).toBe("SUCCEEDED");
+    expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).webhookHintAt).toBeNull();
+  });
+
+  it("MANUAL runs have a cooldown so a loop of fresh request ids cannot burn the realm's quota", async () => {
+    const c = await seedConnected();
+    const deps = (at: number) => testDeps(c, { now: () => new Date(NOW.getTime() + at), manualCooldownMs: 60_000 });
+    expect((await runQboReadSync(manual(c), deps(0))).status).toBe("SUCCEEDED");
+    const requests = c.fake.requests.length;
+    expect(await runQboReadSync(manual(c), deps(10_000))).toEqual({ status: "NOT_DUE", nextAttemptNotBefore: new Date(NOW.getTime() + 60_000) });
+    expect(c.fake.requests.length).toBe(requests);
+    expect((await runQboReadSync(manual(c), deps(61_000))).status).toBe("SUCCEEDED");
   });
 
   describe("expired lease recovery and stale workers", () => {
@@ -176,6 +231,31 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
       expect(state).toMatchObject({ lastOutcome: "SUCCEEDED", consecutiveFailures: 0 });
       expect((state.watermarks as { Invoice: string }).Invoice).toBe(later.toISOString());
       expect(await db.qboSyncRun.findUniqueOrThrow({ where: { id: fresh.runId } })).toMatchObject({ status: "SUCCEEDED" });
+    });
+
+    it("an owner whose lease EXPIRED but was never taken over can still finish (work is not thrown away); a takeover is the only thing that fences it", async () => {
+      const c = await seedConnected();
+      const slow = lease(c, await beginSyncRun({ ...scopeOf(c), trigger: "MANUAL", mode: "FULL", idempotencyKey: "manual:slow", requestedById: c.t.actor }, { now: () => NOW }));
+      const wellPastExpiry = new Date(NOW.getTime() + QBO_SYNC_LEASE_MS * 3);
+      await persistRecordsPage(slow, [inv("1", "2026-10-01T00:00:00Z")], { now: () => wellPastExpiry });
+      await finishSyncRunSuccess({ lease: slow, mode: "FULL", startedAt: NOW, counts: emptySyncCounts(), changed: true, watermarks: { Invoice: NOW.toISOString() }, actorId: c.t.actor }, { now: () => wellPastExpiry });
+      expect(await db.qboSyncRun.findUniqueOrThrow({ where: { id: slow.runId } })).toMatchObject({ status: "SUCCEEDED" });
+      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId } })).toBe(1);
+    });
+
+    it("the lease is extended before every provider call, so a slow call cannot outlive it", async () => {
+      const c = await seedConnected();
+      const expiries: number[] = [];
+      const spy = async (input: string, init?: RequestInit) => {
+        const st = await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
+        if (st.leaseExpiresAt) expiries.push(st.leaseExpiresAt.getTime());
+        return c.fake.fetchImpl(input, init);
+      };
+      let t = NOW.getTime();
+      const out = await runQboReadSync(manual(c), testDeps(c, { now: () => new Date((t += 1000)), fetchImpl: spy }));
+      expect(out.status).toBe("SUCCEEDED");
+      expect(expiries.length).toBeGreaterThan(8);
+      for (let i = 1; i < expiries.length; i++) expect(expiries[i]).toBeGreaterThan(expiries[i - 1]); // monotonically re-armed before each call
     });
 
     it("each persisted page extends the lease, so a long sync is not recovered out from under its owner", async () => {

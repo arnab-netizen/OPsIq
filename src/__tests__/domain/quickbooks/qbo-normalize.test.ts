@@ -42,9 +42,28 @@ describe("record normalization", () => {
   });
   it("Invoice/Bill keep totals, balance, dates, currency and counterparty id; missing optionals become null", () => {
     const i = normalizeInvoice(invoice("11", "2026-10-02T00:00:00Z"));
-    expect(i.ok && i.record.normalized).toEqual({ docNumber: "INV-11", txnDate: "2026-09-01", dueDate: "2026-09-30", totalAmt: "100", balance: "40", currency: "USD", counterpartyId: "1" });
+    expect(i.ok && i.record.normalized).toEqual({ docNumber: "INV-11", txnDate: "2026-09-01", dueDate: "2026-09-30", totalAmt: "100", balance: "40", currency: "USD", exchangeRate: null, homeTotalAmt: null, homeBalance: null, isVoided: false, counterpartyId: "1" });
     const b = normalizeBill(bill("12", "2026-10-02T00:00:00Z", { DueDate: undefined, CurrencyRef: undefined }));
     expect(b.ok && b.record.normalized).toMatchObject({ totalAmt: "250.5", dueDate: null, currency: null, counterpartyId: "9" });
+  });
+  it("keeps foreign-currency home amounts and rate, and flags (without keeping the note) a voided invoice", () => {
+    const fx = normalizeInvoice(invoice("21", "2026-10-02T00:00:00Z", { CurrencyRef: { value: "EUR" }, ExchangeRate: 1.0825, HomeTotalAmt: 108.25, HomeBalance: 43.3 }));
+    expect(fx.ok && fx.record.normalized).toMatchObject({ currency: "EUR", exchangeRate: "1.0825", homeTotalAmt: "108.25", homeBalance: "43.3" });
+    const voided = normalizeInvoice(invoice("22", "2026-10-02T00:00:00Z", { TotalAmt: 0, Balance: 0, PrivateNote: "Voided - customer cancelled order 77" }));
+    expect(voided.ok && voided.record.normalized.isVoided).toBe(true);
+    expect(JSON.stringify(voided)).not.toContain("customer cancelled");
+    const zero = normalizeInvoice(invoice("23", "2026-10-02T00:00:00Z", { TotalAmt: 0, Balance: 0 }));
+    expect(zero.ok && zero.record.normalized.isVoided).toBe(false);
+  });
+  it("lone / split surrogates can never reach jsonb (Postgres would reject the whole page)", () => {
+    const emoji = "😀";
+    const name = "x".repeat(199) + emoji; // truncation at 200 UTF-16 units splits the pair
+    const r = normalizeCustomer(customer("30", "2026-10-02T00:00:00Z", { DisplayName: name }));
+    const text = (r.ok ? r.record.normalized.displayName : "") as string;
+    expect(text).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/);
+    expect(() => JSON.parse(JSON.stringify(r))).not.toThrow();
+    const lone = normalizeCustomer(customer("31", "2026-10-02T00:00:00Z", { DisplayName: "a\ud800b" }));
+    expect(lone.ok && lone.record.normalized.displayName).toBe("a\ufffdb");
   });
   it("rejects malformed provider data without throwing", () => {
     for (const bad of [null, "x", [], 5, {}, { Id: 5 }, { Id: "1/2" }, { Id: ".." }, { Id: "1", MetaData: {} }]) {
@@ -105,6 +124,19 @@ describe("report parsing", () => {
     expect(r.ok && r.report.inconsistencies).toEqual([]);
     const bad = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedPayables", { total: "999.00" }));
     expect(bad.ok && bad.report.inconsistencies).toEqual(["AGING_BUCKETS_DO_NOT_SUM_TO_TOTAL"]);
+  });
+  it("an aged body with no Rows key at all is malformed, not a zero", () => {
+    const body = agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { empty: true }) as { Rows?: unknown };
+    delete body.Rows;
+    expect(parseAgedReport(body).ok).toBe(false);
+  });
+  it("credits that net an aging bucket negative are flagged, and an unbalanced balance sheet is flagged", () => {
+    const neg = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { current: "300.00", buckets: ["-100.00", "0.00", "0.00", "0.00"], total: "200.00" }));
+    expect(neg.ok && neg.report.inconsistencies).toContain("NEGATIVE_OVERDUE_FROM_CREDITS");
+    const bs = balanceSheetBody(P({ start_date: "2026-09-01", end_date: "2026-09-30" }), "USD") as { Rows: { Row: Array<{ group: string; Summary: { ColData: Array<{ value: string }> } }> } };
+    bs.Rows.Row[2].Summary.ColData[1].value = "1.00"; // Equity no longer balances the sheet
+    const r = parseBalanceSheet(bs);
+    expect(r.ok && r.report.inconsistencies).toEqual(["BALANCE_SHEET_DOES_NOT_BALANCE"]);
   });
   it("an aged report with no rows at all is a truthful zero", () => {
     const r = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { empty: true }));

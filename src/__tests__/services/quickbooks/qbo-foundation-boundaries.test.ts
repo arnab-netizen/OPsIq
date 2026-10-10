@@ -176,9 +176,9 @@ describe("QuickBooks foundation boundaries", () => {
     }
     const sync = code("src/services/quickbooks/qbo-sync.service.ts");
     expect(sync).toContain("createQboReadClient");
-    // The only provider calls are the five read-client methods.
+    // The only provider calls are read-client methods (keyset pages use query, deletion confirmation uses readEntity).
     const providerCalls = [...sync.matchAll(/\bclient\.(\w+)\(/g)].map((m) => m[1]);
-    expect([...new Set(providerCalls)].sort()).toEqual(["companyInfo", "paginate", "report"]);
+    expect([...new Set(providerCalls)].sort()).toEqual(["companyInfo", "query", "readEntity", "report"]);
     expect(sync).not.toMatch(/qbo-oauth\.service|qbo-http/);
     // Only the token-access service refreshes tokens (the separately reviewed OAuth POST), never the sync loop.
     expect(code("src/services/quickbooks/qbo-token-access.service.ts")).toContain("refreshQboTokens");
