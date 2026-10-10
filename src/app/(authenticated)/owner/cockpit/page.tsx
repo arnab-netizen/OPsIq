@@ -82,6 +82,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { firstRunApi } from "@/lib/owner-first-run-client";
+import { AcceptedNextMoveCard } from "@/components/owner/first-run/AcceptedNextMoveCard";
 import { Button, CardDashboardSkeleton, EmptyState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -529,6 +530,7 @@ export default function OwnerCockpitPage() {
         }
       />
       {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
+      {activeBusinessId && <AcceptedNextMoveCard businessId={activeBusinessId} />}
       {loading ? (
         <CardDashboardSkeleton label="Loading your business" sections={2} />
       ) : error ? (

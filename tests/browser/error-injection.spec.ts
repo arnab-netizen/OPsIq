@@ -12,6 +12,7 @@
  * SAFETY: refuses to run except against an explicit local Postgres DATABASE_URL, same guard as
  * the other journey specs in this directory.
  */
+import { completeFirstRunBusinessStep } from "./first-run-helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
@@ -40,7 +41,7 @@ async function signUpFreshOwner(page: Page): Promise<{ email: string; password: 
   await page.goto("/signup", { waitUntil: "networkidle" });
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByLabel("Workspace Name", { exact: true }).fill(`Error Inject Workspace ${rand}`);
+  await page.getByLabel("Business name", { exact: true }).fill(`Error Inject Workspace ${rand}`);
   for (const cb of await page.locator('input[type="checkbox"]').all()) {
     if (!(await cb.isChecked())) await cb.check();
   }
@@ -89,25 +90,24 @@ test.describe("Error injection: owner-safe failure UX", () => {
     // to be showing, unlike a shared seeded account whose business state can drift run to run.
     const owner = await signUpFreshOwner(page);
     await login(page, owner.email, owner.password);
-    await page.goto("/owner/data", { waitUntil: "networkidle" });
-    const nameInput = page.locator('[data-testid="data-hub-business-name"]');
-    await expect(nameInput).toBeVisible({ timeout: 10000 });
-    await page.route("**/api/owner/recovery/businesses", (route) => {
+    await page.goto("/owner/first-run", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("first-run-business-step")).toBeVisible({ timeout: 10000 });
+    await page.route("**/api/owner/first-run/business", (route) => {
       if (route.request().method() === "POST") {
         void route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify(FAKE_500_BODY) });
       } else {
         void route.continue();
       }
     });
-    await nameInput.fill("Injected Failure Bakery");
-    await page.locator('select[name="businessType"]').selectOption({ index: 1 });
-    await page.locator('select[name="currency"]').selectOption("INR");
-    await page.getByRole("button", { name: /save business profile/i }).click();
-    await page.waitForTimeout(1000);
+    await page.getByLabel(/what kind of business/i).selectOption({ index: 1 });
+    await page.getByLabel(/which currency/i).selectOption("INR");
+    await page.getByTestId("first-run-business-submit").click();
+    await expect(page.getByTestId("first-run-business-error")).toBeVisible({ timeout: 10000 });
+    // Nothing was lost and there is a way on: the form is still usable.
+    await expect(page.getByTestId("first-run-business-submit")).toBeEnabled();
     const text = await page.locator("body").innerText();
     assertNoRawLeak(text, "Business create failure");
     // The panel's owner-safe error path (classifyOperatorError) — not a blank/frozen UI.
-    expect(page.locator('[role="alert"]').first()).toBeTruthy();
   });
 
   test("Start Work 500 -> owner-safe message, action not silently applied", async ({ page }) => {
@@ -117,14 +117,7 @@ test.describe("Error injection: owner-safe failure UX", () => {
     // current task state.
     const owner = await signUpFreshOwner(page);
     await login(page, owner.email, owner.password);
-    await page.goto("/owner/data", { waitUntil: "networkidle" });
-    await page.locator('[data-testid="data-hub-business-name"]').fill("Error Inject Bakery");
-    await page.locator('select[name="businessType"]').selectOption({ index: 1 });
-    await page.locator('select[name="currency"]').selectOption("INR");
-    await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/api/owner/recovery/businesses") && r.request().method() === "POST"),
-      page.getByRole("button", { name: /save business profile/i }).click(),
-    ]);
+    await completeFirstRunBusinessStep(page, { currency: "INR" });
     await page.goto("/owner/cockpit", { waitUntil: "networkidle" });
     const startWorkBtn = page.getByRole("button", { name: "Start Work" }).first();
     if ((await startWorkBtn.count()) === 0) {

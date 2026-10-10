@@ -16,7 +16,7 @@ export default function TermsPage() {
       </Link>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Terms</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        OpsIQ is currently in <PublicBetaText pick={(p) => p.betaPhrase} />. Version {POLICY_VERSION}.
+        OpsIQ is currently in <PublicBetaText field="betaPhrase" />. Version {POLICY_VERSION}.
       </p>
       <p className="mt-2 rounded bg-muted p-3 text-xs text-muted-foreground">
         This page is written in plain language by the OpsIQ team. It has{" "}

@@ -23,7 +23,7 @@ export default function BetaNoticePage() {
 
       <div className="mt-8 space-y-5 text-sm leading-relaxed text-muted-foreground">
         <section>
-          <h2 className="font-semibold text-foreground"><PublicBetaText pick={(p) => p.betaNoticeHeading} /></h2>
+          <h2 className="font-semibold text-foreground"><PublicBetaText field="betaNoticeHeading" /></h2>
           <p className="mt-1">
             <PublicBetaSwitch
               open={

@@ -8,6 +8,7 @@
  * owner empty state routes to My Business, and that one click saves exactly one snapshot and lands on
  * a Money read. Screenshots are written to docs/opsiq/evidence/owner-minimum-effort-input/.
  */
+import { completeFirstRunBusinessStep } from "./first-run-helpers";
 import { test, expect, type Page, type Browser } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
@@ -51,16 +52,11 @@ async function signupAndLogin(page: Page, email: string, password: string, works
   await page.waitForURL(/\/owner/, { timeout: 20000 });
 }
 
-async function createBusinessViaUi(page: Page, name: string, currency: string) {
+async function createBusinessViaUi(page: Page, _name: string, currency: string) {
+  // The name is inherited from signup (typed once); first-run asks only type + currency. The quick picture under
+  // test is then reached on the Money-data page, where it is the first-input surface for an existing business.
+  await completeFirstRunBusinessStep(page, { currency });
   await page.goto("/owner/data", { waitUntil: "networkidle" });
-  await page.locator('[data-testid="data-hub-business-name"]').fill(name);
-  await page.locator('select[name="businessType"]').selectOption({ index: 1 });
-  await page.locator('select[name="currency"]').selectOption(currency);
-  const [res] = await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/api/owner/recovery/businesses") && r.request().method() === "POST"),
-    page.getByRole("button", { name: /save business profile/i }).click(),
-  ]);
-  expect(res.status()).toBe(201);
   await expect(page.getByTestId("quick-financial-picture-form")).toBeVisible({ timeout: 15000 });
 }
 
@@ -124,7 +120,9 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
   const rand = randomUUID().slice(0, 8);
   const password = "correct-horse-battery-staple";
   const email = `min-effort-${rand}@example.com`;
-  const bizA = `Desktop Bakery ${rand}`;
+  // The first business inherits the name typed once at signup (no second name prompt exists).
+  const wsA = `MinEffort WS ${rand}`;
+  const bizA = wsA;
   const bizB = `Money Route Cafe ${rand}`;
 
   async function newPage(browser: Browser, width: number, height: number, mobile = false) {
@@ -134,7 +132,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
 
   test("desktop 1440: My Business quick path, truthful eligibility, one click, no duplicate; Money route; empty state", async ({ browser }) => {
     const { ctx, page } = await newPage(browser, 1440, 900);
-    await signupAndLogin(page, email, password, `MinEffort WS ${rand}`);
+    await signupAndLogin(page, email, password, wsA);
 
     // Owner empty state (no business yet) → My Business, never the legacy Money flow.
     await page.goto("/owner", { waitUntil: "networkidle" });
@@ -380,9 +378,10 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
 
   test("direct Money on mobile for a no-data business shows the shared quick start without overflow", async ({ browser }) => {
     const { ctx, page } = await newPage(browser, 390, 844, true);
-    const bizC = `Mobile Money ${rand}`;
+    const wsC = `MinEffort WS2 ${rand}`;
+    const bizC = wsC;
     const email2 = `min-effort-b-${rand}@example.com`;
-    await signupAndLogin(page, email2, password, `MinEffort WS2 ${rand}`);
+    await signupAndLogin(page, email2, password, wsC);
     // owner empty state on mobile → My Business
     await page.goto("/owner", { waitUntil: "networkidle" });
     await expect(page.getByTestId("owner-empty-setup-cta")).toBeVisible();

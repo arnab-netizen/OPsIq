@@ -30,15 +30,15 @@ export function PublicBetaCta({ triggerClassName, initialMode = null }: { trigge
   return <BetaAccessCta triggerClassName={triggerClassName} />;
 }
 
-/** Text that differs by admission mode (e.g. "invite-only beta" vs "beta"). Display only; same fallback rules. */
-export function PublicBetaText({
-  pick,
-  initialMode = null,
-}: {
-  pick: (p: ReturnType<typeof presentationForAdmissionMode>) => string;
-  initialMode?: string | null;
-}) {
-  return <>{pick(presentationForAdmissionMode(usePublicAdmissionMode(initialMode)))}</>;
+/**
+ * Text that differs by admission mode (e.g. "invite-only beta" vs "beta"). Display only; same fallback rules.
+ * `field` is a plain string key, not a function: this component is rendered from Server Components, and
+ * functions cannot cross the server/client boundary.
+ */
+export type PublicBetaTextField = "heroBadge" | "offerDescription" | "aboutSentence" | "resourceLine" | "betaPhrase" | "betaNoticeHeading";
+
+export function PublicBetaText({ field, initialMode = null }: { field: PublicBetaTextField; initialMode?: string | null }) {
+  return <>{presentationForAdmissionMode(usePublicAdmissionMode(initialMode))[field]}</>;
 }
 
 /** Renders `open` under OPEN_BETA and `invite` otherwise (initial render, INVITE_ONLY, CLOSED, WAITLIST, fetch failure). */

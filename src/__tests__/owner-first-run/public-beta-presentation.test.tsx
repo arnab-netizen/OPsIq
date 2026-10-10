@@ -91,7 +91,7 @@ describe("statically generated public pages resolve the mode after mount (server
   });
   it("text switches the same way", async () => {
     fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ admissionMode: "OPEN_BETA" }) });
-    render(<p data-testid="t"><PublicBetaText pick={(p) => p.resourceLine} /></p>);
+    render(<p data-testid="t"><PublicBetaText field="resourceLine" /></p>);
     expect(screen.getByTestId("t").textContent).toMatch(/invite-only/);
     await waitFor(() => expect(screen.getByTestId("t").textContent).not.toMatch(/invite/i));
   });

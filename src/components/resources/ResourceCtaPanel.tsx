@@ -26,7 +26,7 @@ export function ResourceDefaultCta() {
     <ResourceCtaPanel heading="See what OpsIQ finds in your business.">
       <p className="mt-2 text-sm leading-relaxed">
         OpsIQ reads your business numbers, tells you what needs attention and why, and gives you an ordered plan for
-        what to do next. <PublicBetaText pick={(p) => p.resourceLine} />
+        what to do next. <PublicBetaText field="resourceLine" />
       </p>
     </ResourceCtaPanel>
   );

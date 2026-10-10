@@ -288,12 +288,12 @@ export function QuickFinancialPicture({
             <legend className="text-sm font-medium text-foreground">These numbers are for</legend>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               {periods.map((p) => (
-                <label key={p.id} className="flex items-center gap-1.5">
+                <label key={p.id} className="flex min-h-11 items-center gap-2">
                   <input type="radio" name="period" checked={periodId === p.id} disabled={takenKey(p.start, p.end)} onChange={() => setPeriodChoice(p.id)} />
                   {p.label}{takenKey(p.start, p.end) ? " (already saved)" : ""}
                 </label>
               ))}
-              <label className="flex items-center gap-1.5">
+              <label className="flex min-h-11 items-center gap-2">
                 <input type="radio" name="period" checked={periodId === "custom"} onChange={() => setPeriodChoice("custom")} />
                 Choose dates
               </label>

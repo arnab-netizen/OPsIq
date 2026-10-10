@@ -3,7 +3,6 @@
  * record (decision recording, snapshot amendment, finance diagnosis) — this file only sequences them and
  * emits the funnel events.
  */
-import { db } from "@/lib/db";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { emitAuditEvent } from "@/infra/audit";
 import { ConflictError, ValidationError } from "@/infra/errors";
@@ -29,14 +28,13 @@ export async function acceptFirstResultAction(
   if (view.stale) {
     throw new ConflictError("Your numbers changed after this read. Refresh your read before using it.");
   }
-  const action = await db.ownerFinanceAction.findFirst({
-    where: { workspaceId, businessId, cycleId: view.cycleId },
-    orderBy: [{ priorityScore: "desc" }, { expectedImpactScore: "desc" }, { confidence: "desc" }, { findingCode: "asc" }, { title: "asc" }, { id: "asc" }],
-    select: { title: true, verificationMetric: true, expectedTimeframeDays: true },
-  });
-  if (!view.candidateId || !action) {
-    throw new ValidationError("There is no recommended action to accept yet.", { fieldErrors: [] });
+  if (!view.candidateId || !view.presentedAction || !view.read.canAccept) {
+    throw new ValidationError(
+      view.read.acceptNote ?? "There is no recommended action to accept yet.",
+      { fieldErrors: [] },
+    );
   }
+  const action = view.presentedAction;
   const result = await recordOwnerDecision(workspaceId, actorId, businessId, {
     candidateId: view.candidateId,
     state: "ACCEPTED",

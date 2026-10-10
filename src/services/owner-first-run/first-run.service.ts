@@ -24,7 +24,7 @@ import {
   timeToFirstValueSeconds,
   type TrustedInteractionFact,
 } from "@/domain/owner-first-run/activation";
-import { buildFirstMoneyRead, type FirstMoneyRead } from "@/domain/owner-first-run/first-money-read";
+import { buildFirstMoneyRead, selectFirstReadActions, type FirstMoneyRead } from "@/domain/owner-first-run/first-money-read";
 import { selectNextQuestion, type NextQuestionResult } from "@/domain/owner-first-run/next-question";
 import { OWNER_INPUT_CATEGORIES } from "@/domain/owner-mode/input-catalog";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
@@ -234,6 +234,8 @@ export interface FirstMoneyReadView {
   snapshotId: string;
   /** The server-resolved decision candidate for the primary action (never client-chosen). */
   candidateId: string | null;
+  /** The presented action's own verification facts (used to build the outcome contract on accept). */
+  presentedAction: { title: string; verificationMetric: string; expectedTimeframeDays: number } | null;
   decisionState: string | null;
   /** The evidence was corrected after this read; it must be re-run before it is trusted. */
   stale: boolean;
@@ -256,13 +258,24 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
 
   const cycle = await getFinanceDiagnosis(latest.id, workspaceId);
   const snapshot = cycle.snapshot as Json & { id: string; supersededById: string | null };
-  const action = cycle.actions[0] ?? null;
-  const finding = (action?.findingId ? cycle.findings.find((f: { id: string }) => f.id === action.findingId) : null) ?? cycle.findings[0] ?? null;
+  // The canonical planner's ranked actions, partitioned (never re-ranked): the first real finding leads the read;
+  // the first "supply this information" action is what would sharpen it.
+  const { primary, dataRequest } = selectFirstReadActions(cycle.actions as Array<(typeof cycle.actions)[number] & { findingCode: string }>);
+  const action = primary ?? dataRequest;
+  const finding =
+    primary ? ((primary.findingId ? cycle.findings.find((f: { id: string }) => f.id === primary.findingId) : null) ?? cycle.findings.find((f: { code: string }) => f.code === primary.findingCode) ?? null) : null;
 
   const missing = computeMissingInputsWithPriority(snapshot).sort((a, b) =>
     a.priority === b.priority ? 0 : a.priority === "CRITICAL" ? -1 : 1,
   );
   const quality = isEvidenceQuality(snapshot.evidenceQuality) ? (snapshot.evidenceQuality as EvidenceQuality) : null;
+  const asRead = (a: (typeof cycle.actions)[number]) => ({
+    title: a.title,
+    description: a.description,
+    ownerRole: a.ownerRole,
+    expectedTimeframeDays: a.expectedTimeframeDays,
+    verificationMetric: a.verificationMetric,
+  });
 
   const read = buildFirstMoneyRead({
     finding: finding
@@ -275,21 +288,16 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
           missingData: jsonStringArray(finding.missingData),
         }
       : null,
-    action: action
-      ? {
-          title: action.title,
-          description: action.description,
-          ownerRole: action.ownerRole,
-          expectedTimeframeDays: action.expectedTimeframeDays,
-          verificationMetric: action.verificationMetric,
-        }
-      : null,
+    action: primary && finding ? asRead(primary) : null,
+    dataRequest: dataRequest ? asRead(dataRequest) : null,
     confidenceScore: Number(snapshot.dataConfidenceScore ?? 0),
     evidenceQuality: quality,
     missingEvidence: missing.slice(0, 5).map((m) => m.field),
   });
 
-  const candidateId = action ? formatDomainActionCandidateId("finance", action.id) : null;
+  // The candidate is the action the read actually presents (server-resolved; the client never names one).
+  const presented = read.status === "NO_ATTENTION_FOUND" ? null : action;
+  const candidateId = presented ? formatDomainActionCandidateId("finance", presented.id) : null;
   let decisionState: string | null = null;
   if (candidateId) {
     const decisions = await listOwnerDecisions(workspaceId, businessId, { candidateId });
@@ -313,6 +321,7 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     cycleId: cycle.id,
     snapshotId: snapshot.id,
     candidateId,
+    presentedAction: presented ? { title: presented.title, verificationMetric: presented.verificationMetric, expectedTimeframeDays: presented.expectedTimeframeDays } : null,
     decisionState,
     stale: Boolean(currentSnapshot && currentSnapshot.id !== snapshot.id),
     previousSnapshotId: previous?.id ?? null,

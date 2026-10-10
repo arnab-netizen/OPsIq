@@ -27,11 +27,15 @@ export const EVIDENCE_QUALITY_EXPLANATION: Record<EvidenceQuality, string> = {
   ROUGH_ESTIMATE: "These numbers are a rough guess, so the read below is directional only.",
 };
 
-/** Points removed from the confidence score. ACTUAL and unspecified (null) are unchanged. */
+/**
+ * Points removed from the confidence score. ACTUAL and unspecified (null) are unchanged. The penalty is
+ * deliberately modest: provenance is ALSO carried explicitly (the label, the tier ceiling below), so it must not
+ * by itself turn an otherwise-LOW read into BLOCKED ("do not act on this") — missing evidence does that.
+ */
 export const EVIDENCE_QUALITY_PENALTY: Record<EvidenceQuality, number> = {
   ACTUAL: 0,
-  GOOD_ESTIMATE: 10,
-  ROUGH_ESTIMATE: 25,
+  GOOD_ESTIMATE: 5,
+  ROUGH_ESTIMATE: 15,
 };
 
 /** Highest score an estimate can reach: a good estimate cannot read HIGH, a rough one cannot read MEDIUM. */

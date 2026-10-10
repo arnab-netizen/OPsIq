@@ -14,6 +14,7 @@
  * contract itself (token issuance, expiry, resend) is covered separately by
  * src/__tests__/**\/*.test.ts and is not what this test is proving.
  */
+import { completeFirstRunBusinessStep } from "./first-run-helpers";
 import { test, expect } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
@@ -36,15 +37,14 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
   const email = `journey-${randomUUID().slice(0, 8)}@example.com`;
   const password = "correct-horse-battery-staple";
   const workspaceName = `Journey Test ${randomUUID().slice(0, 6)}`;
-  const businessName = `Test Cafe ${randomUUID().slice(0, 6)}`;
 
   test("signup", async ({ page }) => {
     await page.goto("/signup", { waitUntil: "networkidle" });
     // PUBLIC_BETA_ENABLED must be "true" in this local environment for signup to accept new
     // accounts (see src/lib/beta.ts) -- the same env this whole local journey already depends on.
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
-    await page.getByLabel("Workspace Name").fill(workspaceName);
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Business name", { exact: true }).fill(workspaceName);
     for (const cb of await page.locator('input[type="checkbox"]').all()) {
       if (!(await cb.isChecked())) await cb.check();
     }
@@ -66,7 +66,7 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/owner\/cockpit|\/dashboard/, { timeout: 15000 });
+    await page.waitForURL(/\/owner\/(cockpit|first-run)|\/dashboard/, { timeout: 15000 });
   });
 
   test("first-run onboarding: business basics -> essential numbers -> first result", async ({ page }) => {
@@ -75,13 +75,13 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/owner\/cockpit|\/dashboard/, { timeout: 15000 });
+    await page.waitForURL(/\/owner\/(cockpit|first-run)|\/dashboard/, { timeout: 15000 });
 
+    // With no business yet, guided setup hands over to the single first-run surface (name inherited from signup).
     await page.goto("/owner/onboarding", { waitUntil: "networkidle" });
-    await expect(page.getByText("Welcome to OpsIQ")).toBeVisible();
-
-    await page.fill('[data-testid="data-hub-business-name"]', businessName);
-    await page.click('button:has-text("Save business profile")');
+    await page.waitForURL(/\/owner\/first-run/, { timeout: 15000 });
+    await completeFirstRunBusinessStep(page);
+    await page.goto("/owner/onboarding", { waitUntil: "networkidle" });
 
     await page.waitForSelector('[data-testid="onboarding-essential-numbers"]', { timeout: 15000 });
     await page.fill('input[name="revenue"]', "20000");
@@ -102,7 +102,7 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/owner\/cockpit|\/dashboard/, { timeout: 15000 });
+    await page.waitForURL(/\/owner\/(cockpit|first-run)|\/dashboard/, { timeout: 15000 });
 
     await page.goto("/owner/cockpit", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
@@ -116,7 +116,7 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/owner\/cockpit|\/dashboard/, { timeout: 15000 });
+    await page.waitForURL(/\/owner\/(cockpit|first-run)|\/dashboard/, { timeout: 15000 });
 
     await page.click('a:has-text("What needs attention")');
     await page.waitForURL(/\/owner\/priorities/, { timeout: 15000 });
@@ -128,7 +128,7 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/owner\/cockpit|\/dashboard/, { timeout: 15000 });
+    await page.waitForURL(/\/owner\/(cockpit|first-run)|\/dashboard/, { timeout: 15000 });
 
     await page.click('a:has-text("Tasks")');
     await page.waitForURL(/\/owner\/tasks/, { timeout: 15000 });

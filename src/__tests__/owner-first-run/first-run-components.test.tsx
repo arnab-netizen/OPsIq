@@ -87,7 +87,8 @@ describe("FirstRunBusinessStep — business name entered once", () => {
 
 const read = buildFirstMoneyRead({
   finding: { title: "Cash covers about 12 days of costs", summary: "A late payment could stop you paying suppliers.", sourceMetric: "Cash days of costs", sourceValue: 12, evidence: ["Cash is small next to monthly costs"], missingData: [] },
-  action: { title: "Chase overdue payments this week", description: "List unpaid invoices, contact the largest first.", ownerRole: "Owner", expectedTimeframeDays: 7, verificationMetric: "Cash in hand" },
+  action: { title: "Chase overdue payments this week", description: "List unpaid invoices, contact the largest first.", ownerRole: "owner", expectedTimeframeDays: 7, verificationMetric: "cashOnHand" },
+  dataRequest: { title: "Add your bank balance", description: "Enter what is in your bank accounts.", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" },
   confidenceScore: 55,
   evidenceQuality: "ROUGH_ESTIMATE",
   missingEvidence: ["Receivables"],
@@ -103,10 +104,23 @@ describe("FirstMoneyReadCard", () => {
     expect(screen.getByTestId("first-money-read-value").textContent).toBe("12");
     expect(screen.getByTestId("first-money-read-action").textContent).toMatch(/Chase overdue payments this week/);
     expect(screen.getByTestId("first-money-read-action").textContent).toMatch(/Owner: Owner · When: Within 7 days/);
-    expect(screen.getByTestId("first-money-read-action").textContent).toMatch(/Watch: Cash in hand/);
+    expect(screen.getByTestId("first-money-read-action").textContent).toMatch(/Watch: cash on hand/);
     expect(screen.getByTestId("first-money-read-confidence").textContent).toMatch(/directional only/i);
     expect(screen.getByTestId("first-money-read-quality").textContent).toMatch(/A rough guess/);
     expect(screen.getByTestId("first-money-read-missing").textContent).toMatch(/Receivables/);
+  });
+  it("shows what would sharpen the read, apart from the primary action", () => {
+    render(<FirstMoneyReadCard {...props} />);
+    expect(screen.getByTestId("first-money-read-sharpen").textContent).toMatch(/Add your bank balance/);
+    expect(screen.getByTestId("first-money-read-action").textContent).not.toMatch(/bank balance/);
+  });
+  it("a blocked read cannot be accepted and says why, while correct/improve stay available", () => {
+    const blocked = buildFirstMoneyRead({ finding: null, action: null, dataRequest: { title: "Add your bank balance", description: "d", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" }, confidenceScore: 20, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: [] });
+    render(<FirstMoneyReadCard {...props} read={blocked} />);
+    expect((screen.getByTestId("first-run-accept") as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId("first-money-read-accept-note").textContent).toMatch(/isn.t enough reliable information/);
+    expect((screen.getByTestId("first-run-correct") as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId("first-run-improve") as HTMLButtonElement).disabled).toBe(false);
   });
   it("shows exactly three post-result paths and never overclaims", () => {
     const { container } = render(<FirstMoneyReadCard {...props} />);
@@ -135,7 +149,7 @@ describe("FirstMoneyReadCard", () => {
     expect([h.onAccept, h.onCorrect, h.onImprove].map((f) => f.mock.calls.length)).toEqual([1, 1, 1]);
   });
   it("with nothing to act on, the accept path is unavailable rather than inventing an action", () => {
-    const empty = buildFirstMoneyRead({ finding: null, action: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
+    const empty = buildFirstMoneyRead({ finding: null, action: null, dataRequest: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
     render(<FirstMoneyReadCard {...props} read={empty} />);
     expect((screen.getByTestId("first-run-accept") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByTestId("first-money-read-action")).toBeNull();

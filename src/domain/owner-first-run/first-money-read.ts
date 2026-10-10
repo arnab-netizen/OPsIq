@@ -8,6 +8,7 @@
  * Pure.
  */
 import { confidenceTierFromScore, type ConfidenceTier } from "@/domain/owner-finance/data-confidence";
+import { humanizeEvidenceLine, humanizeMetricKey, humanizeSnakeCase } from "@/lib/metric-label";
 import {
   EVIDENCE_QUALITY_EXPLANATION,
   EVIDENCE_QUALITY_LABEL,
@@ -50,16 +51,51 @@ export interface FirstMoneyReadAction {
   verificationMetric: string;
 }
 
+/**
+ * Finance findings whose recommended action is to SUPPLY information rather than to change the business.
+ * They are real and canonical, but they are not "what OpsIQ noticed about the money": the first read leads with
+ * the highest-ranked action that is not one of these, and offers the top one as "what would sharpen this".
+ */
+export const DATA_GATHERING_FINDING_CODES: ReadonlySet<string> = new Set([
+  "FIN_MISSING_CRITICAL_DATA",
+  "FIN_OPP_DATA_QUALITY",
+  "FIN_LIQUIDITY_UNCONFIRMED",
+  "FIN_NOTABLE_OUTSTANDING_DEBT",
+  "FIN_INVALID_CURRENCY",
+]);
+
+export function isDataGatheringFinding(code: string): boolean {
+  return DATA_GATHERING_FINDING_CODES.has(code);
+}
+
+/**
+ * Presentation choice over the canonical ranked actions (it re-ranks nothing): the first read's primary item is
+ * the first ranked action that is a real finding; the first ranked data request is kept apart. When only data
+ * requests exist, there is no primary finding and the read says so instead of dressing a request as a diagnosis.
+ */
+export function selectFirstReadActions<T extends { findingCode: string }>(
+  rankedActions: readonly T[],
+): { primary: T | null; dataRequest: T | null } {
+  return {
+    primary: rankedActions.find((a) => !isDataGatheringFinding(a.findingCode)) ?? null,
+    dataRequest: rankedActions.find((a) => isDataGatheringFinding(a.findingCode)) ?? null,
+  };
+}
+
 export interface FirstMoneyReadInput {
+  /** The real finding behind the primary action (null when only data requests exist). */
   finding: FirstMoneyReadFinding | null;
+  /** The primary action (null when nothing needs attention). */
   action: FirstMoneyReadAction | null;
+  /** The top ranked "supply this information" action, shown as what would sharpen the read. */
+  dataRequest: FirstMoneyReadAction | null;
   confidenceScore: number;
   evidenceQuality: EvidenceQuality | null;
   /** Critical/important inputs still missing from the snapshot (owner-facing labels). */
   missingEvidence: readonly string[];
 }
 
-export type FirstMoneyReadStatus = "READY" | "NO_ATTENTION_FOUND";
+export type FirstMoneyReadStatus = "READY" | "NEEDS_MORE_EVIDENCE" | "NO_ATTENTION_FOUND";
 
 export interface FirstMoneyRead {
   status: FirstMoneyReadStatus;
@@ -90,6 +126,11 @@ export interface FirstMoneyRead {
   evidenceQualityLabel: string | null;
   evidenceQualityNote: string | null;
   isEstimated: boolean;
+  /** What would make this read sharper (the top canonical data request), when it is not the primary item. */
+  sharpenBy: { title: string; detail: string } | null;
+  /** False when confidence is BLOCKED (the repo's own tier contract: do not act on it yet) or there is no action. */
+  canAccept: boolean;
+  acceptNote: string | null;
 }
 
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
@@ -103,6 +144,11 @@ function timingLabel(days: number): string {
   if (days <= 0) return "Today";
   if (days === 1) return "Within 1 day";
   return `Within ${days} days`;
+}
+
+/** "owner" -> "Owner", "head_chef" -> "Head chef": a role is shown the way a person would say it. */
+function roleLabel(role: string): string {
+  return humanizeSnakeCase(role.trim().replace(/[-\s]+/g, "_").toLowerCase());
 }
 
 export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead {
@@ -119,39 +165,64 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
     evidenceQualityNote: quality ? EVIDENCE_QUALITY_EXPLANATION[quality] : null,
     isEstimated: isEstimate(quality),
   };
+  const blocked = tier === "BLOCKED";
+  const acceptNote = blocked
+    ? "There isn't enough reliable information to act on this yet. Correct a number or add what is missing first."
+    : null;
+  const present = (a: FirstMoneyReadAction) => ({
+    recommendedAction: a.title,
+    actionDetail: a.description,
+    owner: roleLabel(a.ownerRole),
+    timing: timingLabel(a.expectedTimeframeDays),
+    watchMetric: humanizeMetricKey(a.verificationMetric),
+  });
+  const none = { recommendedAction: null, actionDetail: null, owner: null, timing: null, watchMetric: null };
 
-  if (!input.finding) {
+  if (input.finding && input.action) {
+    const { finding, action } = input;
     return {
       ...common,
-      status: "NO_ATTENTION_FOUND",
-      noticed: "Nothing in the money figures you gave stands out as needing attention right now.",
-      evidenceMetric: null,
-      actualValue: null,
-      supportingEvidence: [],
-      whyItMatters:
-        "That only reflects the figures provided. Adding more detail can surface issues these figures can't show.",
-      recommendedAction: null,
-      actionDetail: null,
-      owner: null,
-      timing: null,
-      watchMetric: null,
+      status: "READY",
+      noticed: finding.title,
+      evidenceMetric: humanizeMetricKey(finding.sourceMetric),
+      actualValue: finding.sourceValue ?? null,
+      supportingEvidence: finding.evidence.map(humanizeEvidenceLine),
+      whyItMatters: finding.summary,
+      ...present(action),
+      sharpenBy: input.dataRequest ? { title: input.dataRequest.title, detail: input.dataRequest.description } : null,
+      canAccept: !blocked,
+      acceptNote,
     };
   }
 
-  const { finding, action } = input;
+  if (input.dataRequest) {
+    return {
+      ...common,
+      status: "NEEDS_MORE_EVIDENCE",
+      noticed: "OpsIQ can't point to a specific money problem from these figures yet.",
+      evidenceMetric: null,
+      actualValue: null,
+      supportingEvidence: [],
+      whyItMatters: "Rather than guess, OpsIQ needs one more piece of information before it can say where to look first.",
+      ...present(input.dataRequest),
+      sharpenBy: null,
+      canAccept: !blocked,
+      acceptNote,
+    };
+  }
+
   return {
     ...common,
-    status: "READY",
-    noticed: finding.title,
-    evidenceMetric: finding.sourceMetric,
-    actualValue: finding.sourceValue ?? null,
-    supportingEvidence: [...finding.evidence],
-    whyItMatters: finding.summary,
-    recommendedAction: action?.title ?? null,
-    actionDetail: action?.description ?? null,
-    owner: action?.ownerRole ?? null,
-    timing: action ? timingLabel(action.expectedTimeframeDays) : null,
-    watchMetric: action?.verificationMetric ?? null,
+    status: "NO_ATTENTION_FOUND",
+    noticed: "Nothing in the money figures you gave stands out as needing attention right now.",
+    evidenceMetric: null,
+    actualValue: null,
+    supportingEvidence: [],
+    whyItMatters: "That only reflects the figures provided. Adding more detail can surface issues these figures can't show.",
+    ...none,
+    sharpenBy: null,
+    canAccept: false,
+    acceptNote: null,
   };
 }
 
@@ -166,6 +237,9 @@ export function firstMoneyReadStrings(read: FirstMoneyRead): string[] {
     read.actionDetail,
     read.confidenceLabel,
     read.evidenceQualityNote,
+    read.acceptNote,
+    read.sharpenBy?.title ?? null,
+    read.sharpenBy?.detail ?? null,
   ].filter((s): s is string => typeof s === "string");
 }
 

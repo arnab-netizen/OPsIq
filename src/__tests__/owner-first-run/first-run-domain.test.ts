@@ -13,6 +13,7 @@ import {
 } from "@/domain/owner-first-run/activation";
 import {
   buildFirstMoneyRead,
+  selectFirstReadActions,
   findOverclaims,
   firstMoneyReadStrings,
   FIRST_MONEY_READ_HEADING,
@@ -134,9 +135,9 @@ describe("first Money read is correctly scoped", () => {
     description: "List unpaid invoices and contact the largest first.",
     ownerRole: "Owner",
     expectedTimeframeDays: 7,
-    verificationMetric: "Cash in hand",
+    verificationMetric: "cashOnHand",
   };
-  const read = buildFirstMoneyRead({ finding, action, confidenceScore: 55, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: ["Receivables"] });
+  const read = buildFirstMoneyRead({ finding, action, dataRequest: null, confidenceScore: 55, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: ["Receivables"] });
   it("uses the honest heading and money-only scope", () => {
     expect(read.heading).toBe(FIRST_MONEY_READ_HEADING);
     expect(read.scope).toMatch(/money figures only/);
@@ -146,7 +147,7 @@ describe("first Money read is correctly scoped", () => {
     expect(read.actualValue).toBe(12);
     expect(read.owner).toBe("Owner");
     expect(read.timing).toBe("Within 7 days");
-    expect(read.watchMetric).toBe("Cash in hand");
+    expect(read.watchMetric).toBe("cash on hand");
     expect(read.missingEvidence).toEqual(["Receivables"]);
     expect(read.isEstimated).toBe(true);
     expect(read.evidenceQualityLabel).toBe("A rough guess");
@@ -157,7 +158,7 @@ describe("first Money read is correctly scoped", () => {
     expect(findOverclaims(["Your biggest business problem"])).toEqual(["biggest business problem"]);
   });
   it("with no finding it does not invent a problem or action", () => {
-    const empty = buildFirstMoneyRead({ finding: null, action: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
+    const empty = buildFirstMoneyRead({ finding: null, action: null, dataRequest: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
     expect(empty.status).toBe("NO_ATTENTION_FOUND");
     expect(empty.recommendedAction).toBeNull();
     expect(empty.actualValue).toBeNull();
@@ -213,13 +214,19 @@ describe("progressive OBQ question selection", () => {
   });
   it("business archetype can change the ranking", () => {
     const supplied = ["revenue_sales", "expenses", "cash_debt"];
-    const picks = new Set(
+    const sequences = new Set(
       [...SMB_ARCHETYPES].map((t) => {
-        const r = selectNextQuestion({ guidance: guide(t, supplied), skipped: [], answeredCount: 0 });
-        return r.done ? `done:${r.reason}` : r.question.category;
+        const g = guide(t, supplied);
+        const seen: string[] = [];
+        for (let i = 0; i < 6; i++) {
+          const r = selectNextQuestion({ guidance: g, skipped: seen, answeredCount: 0 });
+          if (r.done) break;
+          seen.push(r.question.category);
+        }
+        return seen.join(">");
       }),
     );
-    expect(picks.size).toBeGreaterThan(1);
+    expect(sequences.size).toBeGreaterThan(1);
   });
 });
 
@@ -253,15 +260,117 @@ describe("progressive OBQ relevance", () => {
     expect(ask("b2b_project_contract_service")).toContain("b2b_contracts");
     expect(ask("retail_storefront")).not.toContain("b2b_contracts");
   });
-  it("higher-value evidence outranks lower-value evidence at the same severity", () => {
+  it("money evidence is asked before an archetype's non-money minimum, then higher value before lower", () => {
     const g = buildInputGuidance({ profileType: "b2b_project_contract_service", ownerRole: "owner_operated", suppliedCategories: supplied, firstRead: { sufficient: true } as never });
-    const r = selectNextQuestion({ guidance: g, skipped: [], answeredCount: 0 });
-    expect(r.done).toBe(false);
-    if (!r.done) {
-      const picked = g.guidance.find((x) => x.category === r.question.category)!;
-      // the first pick is the top of the catalog ordering: critical severity, highest gain among the candidates
-      expect(picked.severity).toBe("critical");
-      expect(picked.expectedConfidenceGain).toBe("high");
+    const order: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const r = selectNextQuestion({ guidance: g, skipped: order, answeredCount: 0 });
+      if (r.done) break;
+      order.push(r.question.category);
     }
+    const domainOf = (c: string) => g.guidance.find((x) => x.category === c)!.confidenceDomain;
+    const money = ["finance_cash", "margin_pricing", "working_capital"];
+    const firstNonMoney = order.findIndex((c) => !money.includes(domainOf(c)));
+    expect(order.length).toBeGreaterThan(0);
+    // every money-domain question precedes every non-money one
+    if (firstNonMoney >= 0) expect(order.slice(firstNonMoney).every((c) => !money.includes(domainOf(c)))).toBe(true);
+    expect(order).toContain("b2b_contracts"); // the archetype's own requirement is still reached
+  });
+});
+
+describe("first read leads with a real finding, not a data request", () => {
+  const ranked = [
+    { findingCode: "FIN_LIQUIDITY_UNCONFIRMED", id: "a1" },
+    { findingCode: "FIN_OPP_DATA_QUALITY", id: "a2" },
+    { findingCode: "FIN_HIGH_FIXED_COST_BURDEN", id: "a3" },
+    { findingCode: "FIN_OPP_MARGIN_IMPROVEMENT", id: "a4" },
+  ];
+  it("keeps canonical order within each group and never re-ranks", () => {
+    const { primary, dataRequest } = selectFirstReadActions(ranked);
+    expect(primary?.id).toBe("a3"); // first non-data action
+    expect(dataRequest?.id).toBe("a1"); // first data request
+  });
+  it("with only data requests there is no primary finding", () => {
+    const { primary, dataRequest } = selectFirstReadActions(ranked.slice(0, 2));
+    expect(primary).toBeNull();
+    expect(dataRequest?.id).toBe("a1");
+  });
+  it("only data requests -> says so honestly instead of dressing a request as a diagnosis", () => {
+    const r = buildFirstMoneyRead({
+      finding: null, action: null,
+      dataRequest: { title: "Add your bank balance", description: "Enter the balance of your bank accounts.", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" },
+      confidenceScore: 50, evidenceQuality: "ACTUAL", missingEvidence: [],
+    });
+    expect(r.status).toBe("NEEDS_MORE_EVIDENCE");
+    expect(r.noticed).toMatch(/can't point to a specific money problem/);
+    expect(r.recommendedAction).toBe("Add your bank balance");
+    expect(r.watchMetric).toBe("total liquid funds");
+    expect(findOverclaims(firstMoneyReadStrings(r))).toEqual([]);
+  });
+  it("a real finding exposes the top data request as what would sharpen it", () => {
+    const r = buildFirstMoneyRead({
+      finding: { title: "Fixed costs are too high", summary: "They take most of your sales.", sourceMetric: "fixedCostBurdenPct", sourceValue: 58.3, evidence: ["fixedCostBurdenPct = 58.3 > 40"], missingData: [] },
+      action: { title: "Right-size fixed costs", description: "Review each fixed cost.", ownerRole: "owner", expectedTimeframeDays: 14, verificationMetric: "fixedCostBurdenPct" },
+      dataRequest: { title: "Add your bank balance", description: "Enter the balance of your bank accounts.", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" },
+      confidenceScore: 50, evidenceQuality: "ACTUAL", missingEvidence: [],
+    });
+    expect(r.status).toBe("READY");
+    expect(r.sharpenBy).toEqual({ title: "Add your bank balance", detail: "Enter the balance of your bank accounts." });
+    expect(r.recommendedAction).toBe("Right-size fixed costs");
+  });
+  it("owners never see raw metric keys or lowercase roles", () => {
+    const r = buildFirstMoneyRead({
+      finding: { title: "Fixed costs are too high", summary: "They take most of your sales.", sourceMetric: "fixedCostBurdenPct", sourceValue: 58.3, evidence: ["fixedCostBurdenPct = 58.3 > 40", "data confidence score is 50 out of 100"], missingData: [] },
+      action: { title: "Right-size fixed costs", description: "Review each fixed cost.", ownerRole: "owner", expectedTimeframeDays: 14, verificationMetric: "dataConfidenceScore" },
+      dataRequest: null, confidenceScore: 60, evidenceQuality: "GOOD_ESTIMATE", missingEvidence: [],
+    });
+    const shown = [r.evidenceMetric, r.watchMetric, r.owner, ...r.supportingEvidence].join(" | ");
+    expect(shown).not.toMatch(/[a-z][A-Z]/); // no camelCase token reaches the owner
+    expect(r.owner).toBe("Owner");
+    expect(r.watchMetric).toBe("data confidence score");
+  });
+  it("a BLOCKED read (do not act on it yet) cannot be accepted; a LOW one can, labelled directional", () => {
+    const base = {
+      finding: { title: "x", summary: "y", sourceMetric: "netMarginPct", sourceValue: 5, evidence: [], missingData: [] },
+      action: { title: "Do it", description: "d", ownerRole: "owner", expectedTimeframeDays: 7, verificationMetric: "netMarginPct" },
+      dataRequest: null, evidenceQuality: null, missingEvidence: [] as string[],
+    };
+    const blocked = buildFirstMoneyRead({ ...base, confidenceScore: 25 });
+    expect(blocked.canAccept).toBe(false);
+    expect(blocked.acceptNote).toMatch(/isn't enough reliable information/);
+    const low = buildFirstMoneyRead({ ...base, confidenceScore: 40 });
+    expect(low.canAccept).toBe(true);
+    expect(low.confidenceLabel).toMatch(/directional only/i);
+  });
+});
+
+import { deriveNextMove } from "@/domain/owner-first-run/next-move";
+
+describe("returning owner: your next move", () => {
+  const decidedAt = new Date("2026-10-01T09:00:00.000Z");
+  const base = { commitment: "Right-size fixed costs", decidedAt, intendedCompletionAt: null, observationWindowDays: 14, assessed: false, evidenceChangedSince: false };
+  it("shows timing while the window is open", () => {
+    const v = deriveNextMove({ ...base, now: new Date("2026-10-05T09:00:00.000Z") });
+    expect(v.status).toBe("IN_PROGRESS");
+    expect(v.daysUntilDue).toBe(10);
+    expect(v.prompt).toBe("Due in 10 days.");
+  });
+  it("prompts the check once the window has elapsed and nothing was assessed", () => {
+    const v = deriveNextMove({ ...base, now: new Date("2026-10-20T09:00:00.000Z") });
+    expect(v.status).toBe("DUE_FOR_CHECK");
+    expect(v.prompt).toMatch(/time to check/i);
+  });
+  it("an assessment ends the prompt; evidence change is carried through", () => {
+    const v = deriveNextMove({ ...base, assessed: true, evidenceChangedSince: true, now: new Date("2026-10-20T09:00:00.000Z") });
+    expect(v.status).toBe("ASSESSED");
+    expect(v.evidenceChangedSince).toBe(true);
+  });
+  it("the owner's own completion date wins; no date means no invented deadline", () => {
+    const own = deriveNextMove({ ...base, intendedCompletionAt: new Date("2026-10-03T09:00:00.000Z"), now: new Date("2026-10-02T09:00:00.000Z") });
+    expect(own.daysUntilDue).toBe(1);
+    expect(own.prompt).toBe("Due tomorrow.");
+    const none = deriveNextMove({ ...base, observationWindowDays: null, now: new Date("2026-10-02T09:00:00.000Z") });
+    expect(none.dueAt).toBeNull();
+    expect(none.prompt).toBeNull();
   });
 });

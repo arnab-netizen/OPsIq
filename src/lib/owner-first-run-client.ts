@@ -6,7 +6,9 @@ import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import type { FirstRunContext, FirstMoneyReadView, NextQuestionView } from "@/services/owner-first-run/first-run.service";
 import type { CorrectionResult } from "@/services/owner-first-run/first-run-actions.service";
 
-export type { FirstRunContext, FirstMoneyReadView, NextQuestionView, CorrectionResult };
+import type { NextMoveView } from "@/domain/owner-first-run/next-move";
+
+export type { NextMoveView, FirstRunContext, FirstMoneyReadView, NextQuestionView, CorrectionResult };
 
 const TIMEOUT_MS = 20_000;
 const BASE = "/api/owner/first-run";
@@ -49,5 +51,7 @@ export const firstRunApi = {
       `/next-question?businessId=${encodeURIComponent(businessId)}&skipped=${encodeURIComponent(skipped.join(","))}&answered=${answered}`,
     ),
   feedback: (body: { businessId: string; rating: string; reason?: string; idempotencyKey: string }) => post<{ replayed: boolean }>("/feedback", body),
+  nextMove: (businessId: string) =>
+    call<{ nextMove: NextMoveView | null }>(`/next-move?businessId=${encodeURIComponent(businessId)}`),
   cockpitVisit: () => post<{ ok: true }>("/cockpit-visit", {}),
 };

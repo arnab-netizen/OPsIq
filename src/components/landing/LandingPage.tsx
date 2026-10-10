@@ -144,7 +144,7 @@ export default function LandingPage({ admissionMode = null }: { admissionMode?: 
       <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:py-16">
         <div className="text-center lg:text-left">
           <p className="mb-4 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-            <PublicBetaText pick={(p) => p.heroBadge} initialMode={admissionMode} />
+            <PublicBetaText field="heroBadge" initialMode={admissionMode} />
           </p>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Diagnose your business. Know your next move.

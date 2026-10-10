@@ -46,12 +46,18 @@ export interface SelectNextQuestionArgs {
  * The first result is a MONEY read, so evidence can only change it if it feeds the money domains
  * (confidence domains in INPUT_CATALOG), or the archetype's own minimum requirement (e.g. a B2B firm's
  * contracts). Anything else (proof of completion, rotas, training…) is a legitimate later question but
- * would not change THIS recommendation, so it is never asked here.
+ * would not change THIS recommendation, so it is never asked here. Money-domain evidence is always asked before
+ * an archetype-specific non-money minimum (it is what most directly changes a money read); the business type then
+ * decides what else is required and how the rest is tiered.
  */
 export const MONEY_CONFIDENCE_DOMAINS: readonly string[] = ["finance_cash", "margin_pricing", "working_capital"];
 
+function isMoneyDomain(g: CategoryGuidance): boolean {
+  return MONEY_CONFIDENCE_DOMAINS.includes(g.confidenceDomain);
+}
+
 function changesThisRead(g: CategoryGuidance): boolean {
-  return MONEY_CONFIDENCE_DOMAINS.includes(g.confidenceDomain) || g.tier === "minimum";
+  return isMoneyDomain(g) || g.tier === "minimum";
 }
 
 /**
@@ -78,6 +84,7 @@ export function selectNextQuestion(args: SelectNextQuestionArgs): NextQuestionRe
 
   const best = [...pool].sort(
     (a, b) =>
+      (isMoneyDomain(a) ? 0 : 1) - (isMoneyDomain(b) ? 0 : 1) ||
       SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       GAIN_RANK[a.expectedConfidenceGain] - GAIN_RANK[b.expectedConfidenceGain] ||
       (b.confidenceWouldImprove ? 1 : 0) - (a.confidenceWouldImprove ? 1 : 0) ||

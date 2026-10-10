@@ -196,6 +196,42 @@ describe("[db] first-run: evidence quality + first Money read", () => {
   });
 });
 
+describe("[db] first-run: the read leads with a real finding", () => {
+  it("[db] a real finding leads; the data request is what would sharpen it; accept binds to the presented action", async () => {
+    const t = await makeTenant();
+    const { business } = await setUpToResult(t, "ACTUAL");
+    const view = await getFirstMoneyRead(t.workspaceId, business.id);
+    expect(view.read.status).toBe("READY");
+    expect(view.read.noticed).toMatch(/fixed costs/i);
+    expect(view.read.sharpenBy?.title).toMatch(/bank balance/i);
+    expect(view.read.recommendedAction).not.toMatch(/data completeness|bank balance/i);
+    const actionId = view.candidateId!.split(":")[2];
+    const action: any = await db.ownerFinanceAction.findFirst({ where: { id: actionId } });
+    expect(action.findingCode).toBe("FIN_HIGH_FIXED_COST_BURDEN");
+    const accepted = await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-lead-1");
+    expect(accepted.candidateId).toBe(view.candidateId);
+  });
+  it("[db] a BLOCKED read (stale rough numbers) says so and cannot be accepted, but can still be corrected", async () => {
+    const t = await makeTenant();
+    const { business } = await createFirstBusiness(t.workspaceId, t.userId, { businessType: "laundry_local_service", currency: "GBP" });
+    const end = new Date(); end.setUTCDate(end.getUTCDate() - 120);
+    const start = new Date(end); start.setUTCDate(start.getUTCDate() - 29);
+    const snap: any = await createFinancialSnapshot(
+      business.id,
+      quick({ periodStart: start.toISOString().slice(0, 10), periodEnd: end.toISOString().slice(0, 10), evidenceQuality: "ROUGH_ESTIMATE" }) as any,
+      t.userId, t.workspaceId,
+    );
+    await runFinanceDiagnosis(business.id, snap.id, t.userId, t.workspaceId);
+    const view = await getFirstMoneyRead(t.workspaceId, business.id);
+    expect(view.read.confidenceTier).toBe("BLOCKED");
+    expect(view.read.canAccept).toBe(false);
+    await expect(acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-blocked")).rejects.toBeInstanceOf(ValidationError);
+    expect(await db.ownerDecisionRecord.count({ where: { workspaceId: t.workspaceId } })).toBe(0);
+    const fixed = await correctFirstResultEvidence(t.workspaceId, t.userId, business.id, snap.id, { amendmentReason: "Checked the records", evidenceQuality: "ACTUAL" } as any);
+    expect(fixed.after.read.evidenceQuality).toBe("ACTUAL");
+  });
+});
+
 describe("[db] first-run: governed correction and activation", () => {
   it("[db] correction appends a new snapshot version, keeps the old one, re-runs the diagnosis, and reports the change", async () => {
     const t = await makeTenant();
@@ -241,6 +277,25 @@ describe("[db] first-run: governed correction and activation", () => {
     expect(rec.candidateId).toBe(first.candidateId);
     expect(rec.verificationMetric).toBeTruthy();
     expect(rec.targetValue).toBeNull(); // no invented target
+  });
+  it("[db] returning owner sees the accepted action, its timing, and that the evidence changed since", async () => {
+    const t = await makeTenant();
+    const { business, snap } = await setUpToResult(t);
+    const { getAcceptedNextMove } = await import("@/services/owner-first-run/next-move.service");
+    expect(await getAcceptedNextMove(t.workspaceId, business.id)).toBeNull();
+    await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-next-move");
+    const move = await getAcceptedNextMove(t.workspaceId, business.id);
+    expect(move?.commitment).toBeTruthy();
+    expect(move?.status).toBe("IN_PROGRESS");
+    expect(move?.daysUntilDue).toBeGreaterThan(0);
+    expect(move?.evidenceChangedSince).toBe(false);
+    const later = await getAcceptedNextMove(t.workspaceId, business.id, new Date(Date.now() + 400 * 86_400_000));
+    expect(later?.status).toBe("DUE_FOR_CHECK");
+    await correctFirstResultEvidence(t.workspaceId, t.userId, business.id, snap.id, { amendmentReason: "fix", cashOnHand: 900 } as any);
+    expect((await getAcceptedNextMove(t.workspaceId, business.id))?.evidenceChangedSince).toBe(true);
+    // a foreign workspace never sees it
+    const other = await makeTenant();
+    await expect(getAcceptedNextMove(other.workspaceId, business.id)).rejects.toBeInstanceOf(NotFoundError);
   });
   it("[db] accept is refused while the evidence has changed since the read", async () => {
     const t = await makeTenant();

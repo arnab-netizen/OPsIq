@@ -93,6 +93,16 @@ export function FirstMoneyReadCard({
           </div>
         )}
 
+        {read.sharpenBy && (
+          <div data-testid="first-money-read-sharpen">
+            <dt className="font-medium text-muted-foreground">What would sharpen this</dt>
+            <dd className="mt-0.5 text-foreground">
+              <span className="font-semibold">{read.sharpenBy.title}</span>
+              <span className="mt-1 block text-muted-foreground">{read.sharpenBy.detail}</span>
+            </dd>
+          </div>
+        )}
+
         {read.missingEvidence.length > 0 && (
           <div data-testid="first-money-read-missing">
             <dt className="font-medium text-muted-foreground">What is still missing</dt>
@@ -101,13 +111,19 @@ export function FirstMoneyReadCard({
         )}
       </dl>
 
+      {!accepted && read.acceptNote && (
+        <p className="mt-4 rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="first-money-read-accept-note">
+          {read.acceptNote}
+        </p>
+      )}
+
       <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3" data-testid="first-money-read-actions">
         {accepted ? (
           <p className="rounded-md border border-border bg-background p-3 text-sm text-foreground sm:col-span-3" data-testid="first-money-read-accepted">
             This is your next move. You can find it in your Cockpit.
           </p>
         ) : (
-          <Button type="button" onClick={onAccept} disabled={busy || stale || !read.recommendedAction} className="min-h-11" data-testid="first-run-accept">
+          <Button type="button" onClick={onAccept} disabled={busy || stale || !read.canAccept} className="min-h-11" data-testid="first-run-accept">
             Use this as my next move
           </Button>
         )}
