@@ -123,7 +123,7 @@ describe("[db] first-run: canonical state transitions from persisted facts", () 
     const snap: any = await createFinancialSnapshot(business.id, quick() as any, t.userId, t.workspaceId);
     const c = await getFirstRunContext(t.workspaceId);
     expect(c.state).toBe("NEEDS_DIAGNOSIS");
-    expect(c.href).toBe("/owner/start");
+    expect(c.href).toBe("/owner/first-run");
 
     await runFinanceDiagnosis(business.id, snap.id, t.userId, t.workspaceId);
     const d = await getFirstRunContext(t.workspaceId);

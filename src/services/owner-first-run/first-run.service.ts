@@ -38,6 +38,7 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { listOwnerDecisions } from "@/services/owner-outcome/owner-decision.service";
 import { logger } from "@/infra/logger";
+import { NEW_GOAL_TARGET_TYPES } from "@/services/owner-strategy/goal.service";
 import { recordProductEvent } from "@/services/analytics/product-events.service";
 import type { ProductEventName } from "@/domain/analytics/product-events";
 
@@ -66,6 +67,8 @@ export interface FirstRunContext {
   diagnosisStale: boolean;
   firstTrustedInteractionAt: string | null;
   businessTypes: readonly string[];
+  /** The goal families the product supports today (never invented in the UI). */
+  goalFamilies: readonly string[];
 }
 
 async function firstRealBusiness(workspaceId: string): Promise<FirstRunBusiness | null> {
@@ -156,6 +159,7 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
     diagnosisStale: Boolean(latestCycle && currentSnapshotId && latestCycle.snapshotId !== currentSnapshotId),
     firstTrustedInteractionAt: first?.at ?? null,
     businessTypes: BUSINESS_TYPES,
+    goalFamilies: NEW_GOAL_TARGET_TYPES,
   };
 }
 
@@ -513,4 +517,23 @@ export async function submitFirstValueFeedback(
     });
   }
   return { replayed: !created };
+}
+
+/**
+ * Where a signed-in self-serve owner should land: an interrupted first run resumes, everyone else goes to
+ * the Cockpit. Resolves the workspace exactly as the policy context does (first active membership,
+ * deterministic order) and fails closed to the Cockpit — a lookup problem must never trap a sign-in.
+ */
+export async function resolveOwnerLoginHref(userId: string): Promise<string> {
+  try {
+    const membership = await db.workspaceMembership.findFirst({
+      where: { userId, isActive: true },
+      orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
+      select: { workspaceId: true },
+    });
+    if (!membership) return "/owner/cockpit";
+    return (await getFirstRunContext(membership.workspaceId)).loginHref;
+  } catch {
+    return "/owner/cockpit";
+  }
 }

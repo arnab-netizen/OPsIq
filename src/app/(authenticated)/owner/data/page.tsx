@@ -22,7 +22,7 @@ import Link from "next/link";
 import { Badge, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
+import { FirstRunRedirect } from "@/components/owner/first-run/FirstRunRedirect";
 import { PlanNewBusinessLink } from "@/components/owner/PlanNewBusinessLink";
 import { useActiveBusiness } from "@/context/active-business-context";
 import {
@@ -580,7 +580,7 @@ export default function OwnerDataHubPage() {
 
       {!loading && !hasBusiness && (
         <div className="mt-6">
-          <CreateBusinessPanel onCreated={load} />
+          <FirstRunRedirect />
         </div>
       )}
 

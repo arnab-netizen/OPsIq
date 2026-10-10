@@ -79,20 +79,22 @@ function mockWithBusiness() {
 }
 
 describe("no business yet", () => {
-  it("shows the business profile as the blocking first step", async () => {
+  // The business name is typed once at signup; with no business the owner is taken to the single first-run
+  // surface (which prefills it) instead of being asked to create a business by hand on this page.
+  it("sends the owner to the first-run surface, not a second business-name form", async () => {
     fetchMock.mockImplementation(() => json({ businesses: [] }));
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-create-business")).toBeTruthy());
-    expect(screen.getByTestId("data-hub-create-business").textContent).toMatch(
-      /Start with your business profile/i,
-    );
-    expect(screen.getByTestId("data-hub-business-name")).toBeTruthy();
+    const { container } = renderPage();
+    await waitFor(() => expect(screen.getByTestId("first-run-redirect")).toBeTruthy());
+    const link = screen.getByRole("link", { name: /continue/i });
+    expect(link.getAttribute("href")).toBe("/owner/first-run");
+    expect(container.querySelector('[data-testid="data-hub-business-name"]')).toBeNull();
+    expect(container.querySelector('input[name="name"]')).toBeNull();
   });
 
   it("does not offer readiness or categories before a business exists", async () => {
     fetchMock.mockImplementation(() => json({ businesses: [] }));
     const { container } = renderPage();
-    await waitFor(() => expect(screen.getByTestId("data-hub-create-business")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("first-run-redirect")).toBeTruthy());
     expect(container.querySelector('[data-testid="data-hub-readiness"]')).toBeNull();
     expect(container.querySelector('[data-testid="data-hub-group-money"]')).toBeNull();
   });

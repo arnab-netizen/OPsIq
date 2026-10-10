@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
+import { FirstRunRedirect } from "@/components/owner/first-run/FirstRunRedirect";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
@@ -523,7 +523,7 @@ export default function OwnerOnboardingPage() {
       {(businesses?.length ?? 0) === 0 ? (
         <div data-testid="onboarding-empty">
           <h2 className="mb-2 text-sm font-medium text-muted-foreground">Business basics</h2>
-          <CreateBusinessPanel onCreated={load} />
+          <FirstRunRedirect />
         </div>
       ) : (
         <>

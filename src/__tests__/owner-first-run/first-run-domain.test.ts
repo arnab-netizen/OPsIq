@@ -52,11 +52,11 @@ describe("first-run router state transitions", () => {
     expect(firstRunHref("ESTABLISHED")).toBe("/owner/cockpit");
   });
   it("interrupted first run resumes on login; a viewed first result does not trap the owner", () => {
-    expect(landingAfterLogin({ ...base, hasBusiness: true })).toBe("/owner/start");
+    expect(landingAfterLogin({ ...base, hasBusiness: true })).toBe("/owner/first-run");
     expect(landingAfterLogin({ hasBusiness: true, firstReadSufficient: true, hasDiagnosis: true, hasTrustedInteraction: false })).toBe(
       "/owner/cockpit",
     );
-    expect(landingAfterVerification(base)).toBe("/owner/start");
+    expect(landingAfterVerification(base)).toBe("/owner/first-run");
   });
 });
 

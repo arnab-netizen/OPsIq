@@ -13,6 +13,7 @@
  * Whether the numbers suffice for a first read is NOT decided here: it is asked of the canonical
  * `evaluateFirstReadSufficiency`, the same rule onboarding, My Business and Start Here consume.
  */
+import type { EvidenceQuality } from "./evidence-quality";
 import {
   evaluateFirstReadSufficiency,
   type FirstReadSufficiency,
@@ -101,6 +102,8 @@ export interface QuickSnapshotPayload {
   fixedCosts?: number;
   variableCosts?: number;
   cashOnHand?: number;
+  /** Provenance of the numbers; omitted when the owner did not say (stored as unspecified, never as actual). */
+  evidenceQuality?: EvidenceQuality;
 }
 
 /**
@@ -112,11 +115,13 @@ export function buildQuickSnapshotPayload(args: {
   values: QuickEntryAssessment["values"];
   period: { start: string; end: string };
   currency: string | null | undefined;
+  evidenceQuality?: EvidenceQuality | null;
 }): { ok: true; payload: QuickSnapshotPayload } | { ok: false; reason: "currency_missing" | "nothing_entered" } {
   const currency = (args.currency ?? "").trim();
   if (!currency) return { ok: false, reason: "currency_missing" };
   if (Object.keys(args.values).length === 0) return { ok: false, reason: "nothing_entered" };
   const payload: QuickSnapshotPayload = { periodStart: args.period.start, periodEnd: args.period.end, currency };
+  if (args.evidenceQuality) payload.evidenceQuality = args.evidenceQuality;
   for (const field of QUICK_ENTRY_FIELDS) {
     const v = args.values[field.name];
     if (v !== undefined) payload[field.name] = v;

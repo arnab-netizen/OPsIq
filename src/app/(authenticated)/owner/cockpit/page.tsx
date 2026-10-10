@@ -81,6 +81,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { firstRunApi } from "@/lib/owner-first-run-client";
 import { Button, CardDashboardSkeleton, EmptyState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -184,6 +185,12 @@ interface AvoidItem { avoid?: string; conditionOn?: string[] }
 
 export default function OwnerCockpitPage() {
   const { activeBusinessId, needsBusinessRecovery, businesses, loading: contextLoading } = useActiveBusiness();
+  // Funnel milestones (cockpit reached / returning owner). Server-deduplicated; never blocks the page.
+  const hasBusinessForVisit = businesses.length > 0;
+  useEffect(() => {
+    if (!hasBusinessForVisit) return;
+    void firstRunApi.cockpitVisit().catch(() => undefined);
+  }, [hasBusinessForVisit]);
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [stepConditions, setStepConditions] = useState<string[]>([]);
@@ -495,7 +502,7 @@ export default function OwnerCockpitPage() {
         <EmptyState
           title="Set up your business to get your first assessment"
           description="OpsIQ needs at least one business on file before it can show you cash health, priorities, or recommendations. Add your business to get started."
-          primaryAction={{ label: "Set up your business", href: "/owner/data" }}
+          primaryAction={{ label: "Set up your business", href: "/owner/first-run" }}
         />
       </PageContainer>
     );

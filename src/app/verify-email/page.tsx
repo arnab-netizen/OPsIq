@@ -52,7 +52,7 @@ function VerifyEmailForm() {
         // A verified visit already holds a fresh session cookie — send them
         // straight into the product rather than back through login.
         window.setTimeout(() => {
-          window.location.href = "/owner/data";
+          window.location.href = "/owner/first-run";
         }, 1500);
       })
       .catch(() => {

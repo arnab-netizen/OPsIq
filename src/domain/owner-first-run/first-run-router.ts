@@ -26,7 +26,7 @@ export interface FirstRunFacts {
   hasTrustedInteraction: boolean;
 }
 
-export const FIRST_RUN_START_HREF = "/owner/start";
+export const FIRST_RUN_START_HREF = "/owner/first-run";
 export const OWNER_COCKPIT_HREF = "/owner/cockpit";
 
 export function resolveFirstRunState(facts: FirstRunFacts): FirstRunState {

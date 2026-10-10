@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession, getPolicyContext } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
+import { resolveOwnerLoginHref } from "@/services/owner-first-run/first-run.service";
 import LandingPage from "@/components/landing/LandingPage";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,7 @@ export default async function HomePage() {
     } catch {
       ownerHome = false;
     }
-    redirect(ownerHome ? "/owner/cockpit" : "/dashboard");
+    redirect(ownerHome ? await resolveOwnerLoginHref(session.user.id) : "/dashboard");
   }
 
   return (
