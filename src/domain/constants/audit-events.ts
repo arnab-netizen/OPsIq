@@ -733,6 +733,26 @@ export const AUDIT_EVENTS = {
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",
 
+  // Public-beta product funnel (src/domain/analytics/product-events.ts). Payloads carry enums/durations only.
+  PRODUCT_PUBLIC_START_FREE_CLICKED: "product.public_start_free_clicked",
+  PRODUCT_SIGNUP_STARTED: "product.signup_started",
+  PRODUCT_SIGNUP_COMPLETED: "product.signup_completed",
+  PRODUCT_EMAIL_VERIFIED: "product.email_verified",
+  PRODUCT_FIRST_RUN_STARTED: "product.first_run_started",
+  PRODUCT_BUSINESS_PROFILE_COMPLETED: "product.business_profile_completed",
+  PRODUCT_FIRST_EVIDENCE_SAVED: "product.first_evidence_saved",
+  PRODUCT_FIRST_DIAGNOSIS_COMPLETED: "product.first_diagnosis_completed",
+  PRODUCT_FIRST_RESULT_VIEWED: "product.first_result_viewed",
+  PRODUCT_FIRST_RESULT_ACTION_ACCEPTED: "product.first_result_action_accepted",
+  PRODUCT_FIRST_RESULT_CORRECTED: "product.first_result_corrected",
+  PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED: "product.first_result_improvement_requested",
+  PRODUCT_FIRST_TRUSTED_DECISION_INTERACTION: "product.first_trusted_decision_interaction",
+  PRODUCT_FIRST_VALUE_FEEDBACK: "product.first_value_feedback",
+  PRODUCT_COCKPIT_REACHED: "product.cockpit_reached",
+  PRODUCT_RETURNING_OWNER: "product.returning_owner",
+  PRODUCT_OUTCOME_VERIFICATION_STARTED: "product.outcome_verification_started",
+  PRODUCT_OUTCOME_VERIFIED: "product.outcome_verified",
+
   // Controlled-beta homepage capture
   BETA_REQUEST_CREATED: "beta_request.created",
   BETA_REQUEST_DUPLICATE_SUBMITTED: "beta_request.duplicate_submitted",

@@ -2748,6 +2748,7 @@ model OwnerBusiness {
   dataIntakes             OwnerDataIntake[]
 
   ownerDecisionRecords    OwnerDecisionRecord[]
+  firstResultInteractions OwnerFirstResultInteraction[]
   qboOAuthStates          QboOAuthState[]
   qboConnections          QboConnection[]
   ownerOutcomeAssessments OwnerOutcomeAssessment[]
@@ -2937,6 +2938,8 @@ model OwnerFinancialSnapshot {
   currency             String
   businessModelType    String?             @map("business_model_type")
   industryTemplate     String?             @map("industry_template")
+  /// ACTUAL | GOOD_ESTIMATE | ROUGH_ESTIMATE. NULL = recorded before provenance existed (unspecified; never treated as ACTUAL).
+  evidenceQuality      String?             @map("evidence_quality")
   revenue              Float?
   costOfGoods          Float?              @map("cost_of_goods")
   fixedCosts           Float?              @map("fixed_costs")
@@ -7219,4 +7222,24 @@ model QboConnectionToken {
   @@unique([connectionId, workspaceId], map: "qbo_connection_tokens_tenant_key")
   @@index([workspaceId])
   @@map("qbo_connection_tokens")
+}
+
+/// First-run: an owner asking to improve the first Money read, and first-value feedback. Append-only, tenant-scoped.
+/// (Accepting an action and correcting evidence are NOT stored here: they are OwnerDecisionRecord and a snapshot amendment.)
+model OwnerFirstResultInteraction {
+  id             String        @id @db.Uuid
+  workspaceId    String        @map("workspace_id") @db.Uuid
+  businessId     String        @map("business_id") @db.Uuid
+  snapshotId     String?       @map("snapshot_id") @db.Uuid
+  kind           String // IMPROVEMENT_REQUESTED | FEEDBACK | RESULT_VIEWED
+  rating         String? // USEFUL | PARTLY_USEFUL | NOT_USEFUL (FEEDBACK only)
+  reason         String? // WRONG_PRIORITY | MISSING_INFORMATION | RECOMMENDATION_IMPRACTICAL | EXPLANATION_UNCLEAR | OTHER
+  idempotencyKey String        @map("idempotency_key")
+  createdBy      String        @map("created_by") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+  business       OwnerBusiness @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@unique([workspaceId, idempotencyKey], map: "owner_first_result_interactions_ws_idem_key")
+  @@index([workspaceId, businessId, kind])
+  @@map("owner_first_result_interactions")
 }

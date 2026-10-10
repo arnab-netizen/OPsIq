@@ -16,6 +16,7 @@ import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableErro
 import { canAdmitSignup } from "@/domain/beta/admission";
 import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
 import { checkAndSendCapacityAlert } from "@/services/beta/capacity-alerts.service";
+import { recordProductEvent } from "@/services/analytics/product-events.service";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { publicAdmissionRefusal } from "@/lib/public-admission-response";
@@ -332,6 +333,7 @@ const handleSignup = async (request: NextRequest) => {
         entityId: user.id,
         visibility: "internal",
       });
+      await recordProductEvent({ name: "signup_completed", workspaceId: workspace.id, actorId: user.id });
     } catch (auditError) {
       const governed = classifyOperatorError(
         auditError instanceof Error ? auditError : new Error(String(auditError)),

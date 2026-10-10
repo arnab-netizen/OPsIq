@@ -1,3 +1,4 @@
+import { recordProductEvent } from "@/services/analytics/product-events.service";
 import type { NextRequest } from "next/server";
 import { createHash } from "crypto";
 import { db, withStatementTimeout } from "@/lib/db";
@@ -116,6 +117,7 @@ export const POST = async (request: NextRequest) => {
         entityId: user.id,
         visibility: "internal",
       });
+      await recordProductEvent({ name: "email_verified", workspaceId: membership?.workspaceId, actorId: user.id });
     } catch (auditError) {
       console.error("[VERIFY_EMAIL_AUDIT_FAILURE]", auditError instanceof Error ? auditError.constructor.name : "UnknownError");
     }

@@ -17,6 +17,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { CashSemantics } from "@/domain/owner-finance/liquidity";
+import { isEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
 /** Map the validated API input to the engine input shape (refund/rework/complaint merged). */
@@ -29,6 +30,7 @@ export function toFinanceInput(input: FinancialSnapshotCreateInput): FinancialSn
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
     currency: input.currency,
+    evidenceQuality: input.evidenceQuality ?? null,
     businessModel: input.businessModel,
     industryTemplate: input.industryTemplate,
     revenue: input.revenue,
@@ -70,6 +72,7 @@ export function rowToFinanceInput(row: any, cashSemantics: CashSemantics = "LEGA
     periodStart: row.periodStart instanceof Date ? row.periodStart.toISOString() : row.periodStart,
     periodEnd: row.periodEnd instanceof Date ? row.periodEnd.toISOString() : row.periodEnd,
     currency: row.currency,
+    evidenceQuality: isEvidenceQuality(row.evidenceQuality) ? row.evidenceQuality : null,
     businessModel: row.businessModelType ?? undefined,
     industryTemplate: row.industryTemplate ?? undefined,
     revenue: row.revenue ?? undefined,
@@ -156,6 +159,7 @@ export async function createFinancialSnapshot(
         periodStart,
         periodEnd,
         currency: input.currency,
+        evidenceQuality: input.evidenceQuality ?? null,
         businessModelType: input.businessModel ?? null,
         industryTemplate: input.industryTemplate ?? null,
         revenue: input.revenue ?? null,
@@ -299,6 +303,7 @@ export async function amendFinancialSnapshot(
       periodStart: current.periodStart,
       periodEnd: current.periodEnd,
       currency: current.currency,
+      evidenceQuality: input.evidenceQuality ?? current.evidenceQuality ?? null,
       businessModelType: current.businessModelType,
       industryTemplate: current.industryTemplate,
       revenue: input.revenue ?? current.revenue,
@@ -343,6 +348,7 @@ export async function amendFinancialSnapshot(
       ["ownerWithdrawals", input.ownerWithdrawals], ["inventoryStockCashLock", input.inventoryStockCashLock],
       ["orderCount", input.orderCount], ["customerCount", input.customerCount],
       ["repeatCustomerCount", input.repeatCustomerCount], ["notes", input.notes],
+      ["evidenceQuality", input.evidenceQuality],
     ];
     for (const [key, val] of fieldMap) {
       if (val !== undefined) changedFields.push(key);
@@ -384,6 +390,7 @@ export async function amendFinancialSnapshot(
         b2bRevenue: input.b2bRevenue ?? current.b2bRevenue ?? null,
         b2cRevenue: input.b2cRevenue ?? current.b2cRevenue ?? null,
         notes: mergedRow.notes ?? null,
+        evidenceQuality: mergedRow.evidenceQuality,
         dataConfidenceScore: confidence.dataConfidenceScore,
         missingCriticalData: confidence.missingCritical as object,
         version: g.version + 1,
