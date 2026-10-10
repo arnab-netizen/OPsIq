@@ -335,7 +335,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
 
     it("a P&L/Balance Sheet header that omits the period it covers, or states another basis, fails closed (nothing filed); a missing basis is stored as UNKNOWN, never assumed Accrual", async () => {
       const noPeriod = await seedConnected();
-      noPeriod.fake.reports.ProfitAndLoss = (p) => ({ Header: { Currency: "USD", ReportBasis: "Accrual" }, Columns: { Column: [] }, Rows: {} });
+      noPeriod.fake.reports.ProfitAndLoss = () => ({ Header: { Currency: "USD", ReportBasis: "Accrual" }, Columns: { Column: [] }, Rows: {} });
       expect(await run(noPeriod)).toMatchObject({ status: "FAILED", code: "PROVIDER_MALFORMED" });
       expect(await db.qboReportObservation.count({ where: { connectionId: noPeriod.connectionId, reportName: "ProfitAndLoss" } })).toBe(0);
 
