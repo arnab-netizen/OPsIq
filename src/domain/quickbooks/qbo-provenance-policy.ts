@@ -41,7 +41,8 @@ export type PrecedenceReason =
   | "STALE"
   | "PERIOD_MISMATCH"
   | "BASIS_NOT_SUPPORTED"
-  | "BUSINESS_ARCHIVED";
+  | "BUSINESS_ARCHIVED"
+  | "SOURCE_MISMATCH";
 
 /** Which QuickBooks metric informs which owner snapshot field. */
 export const QBO_FIELD_SOURCES = {
@@ -78,6 +79,12 @@ export interface QboObservationInput {
   /** Traceability back to the stored observation. */
   observationId: string;
   connectionId: string;
+  /** Which report and metric this value is: it must be the one QBO_FIELD_SOURCES maps to the target field. */
+  reportName: string;
+  metricKey: string;
+  /** Exact stored revision / content hash, so an adopted figure can be traced to precisely what was read. */
+  revision: number;
+  contentHash: string;
 }
 
 export interface PrecedenceInput {
@@ -101,13 +108,15 @@ export interface PrecedenceResult {
   conflict: boolean;
   /** The QuickBooks figure offered to the owner when it was not adopted but is usable. */
   suggestion: number | null;
-  provenance: { observationId: string; connectionId: string; fetchedAt: Date } | null;
+  provenance: { observationId: string; connectionId: string; fetchedAt: Date; revision: number; contentHash: string } | null;
   confidenceCap: number | null;
 }
 
 function usableQbo(i: PrecedenceInput): { ok: true; value: number } | { ok: false; reason: PrecedenceReason } {
   const q = i.qbo;
   if (!q || q.value === null) return { ok: false, reason: "NO_PROVIDER_VALUE" };
+  const wanted = QBO_FIELD_SOURCES[i.field];
+  if (q.reportName !== wanted.report || q.metricKey !== wanted.metric) return { ok: false, reason: "SOURCE_MISMATCH" };
   if (q.currency === null) return { ok: false, reason: "CURRENCY_UNKNOWN" };
   if (q.currency !== i.businessCurrency) return { ok: false, reason: "CURRENCY_MISMATCH" };
   if (q.inconsistencies.length > 0) return { ok: false, reason: "OBSERVATION_INCONSISTENT" };
@@ -151,7 +160,7 @@ export function resolveFinancialFieldPrecedence(i: PrecedenceInput): PrecedenceR
   const obs = i.qbo as QboObservationInput;
   return {
     field: i.field, source: "QBO", value: q.value, reason: "PROVIDER_FILLS_GAP", conflict: false, suggestion: null,
-    provenance: { observationId: obs.observationId, connectionId: obs.connectionId, fetchedAt: obs.fetchedAt },
+    provenance: { observationId: obs.observationId, connectionId: obs.connectionId, fetchedAt: obs.fetchedAt, revision: obs.revision, contentHash: obs.contentHash },
     confidenceCap: PROVIDER_SYNCED_CONFIDENCE,
   };
 }

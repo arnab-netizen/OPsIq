@@ -125,6 +125,8 @@ export const QBO_SYNC_REPORT_MONTHS = 3;
 export const QBO_SYNC_PAGES_PER_EXECUTION = 100;
 /** Intuit's documented maximum entities per query response. */
 export const QBO_SYNC_PAGE_SIZE = 1000;
+/** Wall-clock budget of ONE execution (scheduled or manual): it stops at its checkpoint when exceeded, inside the 300 s function ceiling. */
+export const QBO_EXECUTION_DEADLINE_MS = 100_000;
 /** A timestamp-bucket enumeration that makes no progress for this many consecutive passes is declared incomplete (never looped on). */
 export const QBO_SYNC_TIE_MAX_STALLED_PASSES = 3;
 
@@ -359,7 +361,7 @@ export function evaluateDueGate(trigger: QboSyncTrigger, state: DueGateState | n
 /**
  * The durable position of an unfinished sync. Written in the SAME transaction as the page it describes, so a crash can neither
  * lose a persisted page's progress nor record progress for a page that was not persisted. The durable per-entity WATERMARKS are
- * not part of it and do not move until the sync has PROVEN exhaustion (all entities, then reports).
+ * not part of it and do not move until the sync has CONFIRMED exhaustion (all entities, then reports).
  */
 export const QboContinuationSchema = z.object({
   v: z.literal(1),

@@ -5,11 +5,17 @@ const now = new Date("2026-10-10T00:00:00Z");
 const TARGET = { periodStart: "2026-09-01", periodEnd: "2026-09-30" };
 const obs = (o: Partial<NonNullable<PrecedenceInput["qbo"]>> = {}): NonNullable<PrecedenceInput["qbo"]> => ({
   value: "10000", currency: "USD", periodStart: "2026-09-01", periodEnd: "2026-09-30", basis: "Accrual",
-  fetchedAt: new Date("2026-10-09T00:00:00Z"), inconsistencies: [], observationId: "obs-1", connectionId: "conn-1", ...o,
+  fetchedAt: new Date("2026-10-09T00:00:00Z"), inconsistencies: [], observationId: "obs-1", connectionId: "conn-1", reportName: "ProfitAndLoss", metricKey: "Income", revision: 3, contentHash: "h".repeat(64), ...o,
 });
-const base = (o: Partial<PrecedenceInput> = {}): PrecedenceInput => ({
-  field: "revenue", manualValue: null, businessCurrency: "USD", businessIsActive: true, target: TARGET, now, qbo: obs(), ...o,
-});
+const base = (o: Partial<PrecedenceInput> = {}): PrecedenceInput => {
+  const input: PrecedenceInput = { field: "revenue", manualValue: null, businessCurrency: "USD", businessIsActive: true, target: TARGET, now, qbo: obs(), ...o };
+  // The default observation is a P&L Income figure; for another field (and an unspecified source) use that field's own source.
+  if (input.qbo && input.qbo.reportName === "ProfitAndLoss" && input.qbo.metricKey === "Income") {
+    const src = QBO_FIELD_SOURCES[input.field];
+    input.qbo = { ...input.qbo, reportName: src.report, metricKey: src.metric };
+  }
+  return input;
+};
 
 describe("QuickBooks provenance / precedence", () => {
   it("a manual value is NEVER overwritten; a material difference is surfaced as a conflict with a suggestion", () => {
@@ -25,7 +31,11 @@ describe("QuickBooks provenance / precedence", () => {
   it("with no manual value QuickBooks fills the gap, tagged with provenance and a confidence cap", () => {
     const r = resolveFinancialFieldPrecedence(base());
     expect(r).toMatchObject({ source: "QBO", value: 10000, reason: "PROVIDER_FILLS_GAP", confidenceCap: PROVIDER_SYNCED_CONFIDENCE });
-    expect(r.provenance).toEqual({ observationId: "obs-1", connectionId: "conn-1", fetchedAt: new Date("2026-10-09T00:00:00Z") });
+    expect(r.provenance).toEqual({ observationId: "obs-1", connectionId: "conn-1", fetchedAt: new Date("2026-10-09T00:00:00Z"), revision: 3, contentHash: "h".repeat(64) });
+  });
+  it("an observation of a DIFFERENT report/metric than the field maps to is never adopted (SOURCE_MISMATCH)", () => {
+    expect(resolveFinancialFieldPrecedence(base({ field: "cashOnHand", qbo: obs({ reportName: "AgedReceivables", metricKey: "total" }) }))).toMatchObject({ source: "NONE", reason: "SOURCE_MISMATCH" });
+    expect(resolveFinancialFieldPrecedence(base({ qbo: obs({ metricKey: "COGS" }) }))).toMatchObject({ source: "NONE", reason: "SOURCE_MISMATCH" });
   });
   it("currency mismatch or unknown currency is never adopted (and never converted)", () => {
     expect(resolveFinancialFieldPrecedence(base({ businessCurrency: "INR" }))).toMatchObject({ source: "NONE", value: null, reason: "CURRENCY_MISMATCH" });

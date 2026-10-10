@@ -68,7 +68,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(await stored(c, "Customer")).toBe(26);
     });
 
-    it("the closure compares against rows THIS logical sync saw: a record stored by an earlier sync does not count as read", async () => {
+    it("a second logical sync re-enumerates the whole bucket (it does not trust an earlier sync's stored rows)", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 23; i++) c.fake.data.Customer.push(customer(`c${String(i).padStart(2, "0")}`, "2026-09-15T10:00:00Z"));
       expect((await run(c, { pageSize: 10 })).status).toBe("SUCCEEDED");
@@ -384,6 +384,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
         let out = await run(c, { pageSize: 10, fetchImpl: racing });
         for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, fetchImpl: racing });
         await assertNoSilentSkip(c, out);
+        if (seed === null) expect(out.status).toBe("SUCCEEDED"); // a stable provider with one swap converges (restart + re-enumeration), it does not just fail closed
         if (out.status === "SUCCEEDED") {
           expect((await ids(c)).has("B-late")).toBe(true);
           // A's NEW copy (after the cutoff) is picked up by the next incremental sync.
@@ -566,6 +567,82 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(await enqueueQboSyncContinuation({ ...base, dayBucket: "2026-10-11" })).toBe(true);
       expect(await enqueueQboSyncContinuation({ ...base, dayBucket: "2026-10-11" })).toBe(false);
       expect(await enqueueQboSyncContinuation({ ...base, dayBucket: "2026-10-12" })).toBe(true);
+    });
+
+    it("more than 50 normalizer-rejected records in an oversized bucket fail closed BEFORE anything unreadable is persisted: the checkpoint stays parseable and flagged for restart", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 20; i++) c.fake.data.Invoice.push(invoice(`t${String(i).padStart(3, "0")}`, "2026-09-15T10:00:00Z"));
+      for (let i = 1; i <= 60; i++) c.fake.data.Invoice.push({ Id: `bad${i}`, MetaData: { LastUpdatedTime: new Date("2026-09-15T10:00:00Z").toISOString() } } as never);
+      const out = await run(c, { pageSize: 80, pagesPerExecution: 1000 });
+      expect(out).toMatchObject({ status: "FAILED", code: "PROVIDER_INCOMPLETE" });
+      const st = await stateOf(c);
+      expect(st.watermarks).toEqual({});
+      const cp = parseContinuation(st.continuation);
+      expect(cp).not.toBeNull();
+      expect(cp?.restart).toBe(true);
+    });
+
+    it("a failure BEFORE any provider data is read leaves no checkpoint: the next attempt starts a fresh sync with a fresh cutoff", async () => {
+      const c = await seedConnected();
+      c.fake.data.Customer.push(customer("1", "2026-09-01T00:00:00Z"));
+      c.fake.inject("companyinfo/" + c.realmId, { status: 500 }, { status: 500 }, { status: 500 }, { status: 500 });
+      const failed = await run(c);
+      expect(failed.status).toBe("FAILED");
+      expect((await stateOf(c)).continuation).toBeNull();
+    });
+
+    it("a report change is durable in the checkpoint at the moment the observation commits (visible to the NEXT report request, before any finish/catch)", async () => {
+      const c = await seedConnected();
+      expect((await run(c)).status).toBe("SUCCEEDED");
+      c.fake.reports.ProfitAndLoss = (p) => profitAndLossBody(p, "USD", { income: "88888.00" });
+      const realFetch = c.fake.fetchImpl;
+      const seen: Array<boolean | undefined> = [];
+      let plCalls = 0;
+      const probe = async (input: string, init?: RequestInit) => {
+        const u = new URL(input);
+        if (u.pathname.includes("/reports/")) {
+          if (u.pathname.endsWith("ProfitAndLoss")) plCalls++;
+          else if (plCalls === 3) seen.push(((await stateOf(c)).continuation as { changed?: boolean } | null)?.changed); // first non-P&L request after the 3 changed P&L months
+        }
+        return realFetch(input, init);
+      };
+      await run(c, { fetchImpl: probe, now: () => new Date(NOW.getTime() + 3_600_000) });
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.every((v) => v === true)).toBe(true);
+    });
+
+    it("an aged report read on a later day with IDENTICAL figures is a new row but not new evidence (no change signal)", async () => {
+      const c = await seedConnected();
+      expect((await run(c)).status).toBe("SUCCEEDED");
+      const next = await run(c, { now: () => new Date(NOW.getTime() + 36 * 3_600_000) });
+      expect(next.status === "SUCCEEDED" && next.changed).toBe(false);
+      expect(await db.qboReportObservation.count({ where: { connectionId: c.connectionId, reportName: "AgedReceivables" } })).toBe(2);
+    });
+
+    it("a deterministic error on one by-id verification read still advances the rotation, so it cannot pin every later FULL sync to the same id", async () => {
+      const c = await seedConnected();
+      c.fake.data.Customer.push(customer("1", "2026-09-01T00:00:00Z"), customer("2", "2026-09-02T00:00:00Z"));
+      expect((await run(c)).status).toBe("SUCCEEDED");
+      c.fake.data.Customer.splice(0, 1); // customer 1 no longer returned by the query -> verification candidate
+      c.fake.inject("/customer/1", { status: 400, body: { Fault: { Error: [{ code: "4000" }], type: "ValidationFault" } } });
+      const out = await run(c, { now: () => new Date(NOW.getTime() + 3_600_000) }, { modeOverride: "FULL" });
+      expect(out.status).toBe("FAILED");
+      const row = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: "1" } });
+      expect(row.lastVerifyAttemptAt).not.toBeNull();
+    });
+
+    it("the cron drain claims a bounded number of tasks per pass (a platform kill can strand at most that many)", async () => {
+      const { DatabaseSchedulerProvider } = await import("@/infra/scheduler");
+      const sched = new DatabaseSchedulerProvider();
+      const name = "v26a-claim-bound-test";
+      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+      const c = await seedConnected();
+      for (let i = 0; i < 5; i++) await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 2, workspaceId: c.t.ws, idempotencyKey: `${name}:${c.connectionId}:${i}` });
+      const handlers = new Map([[name, async () => ({ status: "SUCCESS" as const })]]);
+      expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(2);
+      expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(2);
+      expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(1);
+      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
     });
   });
 });

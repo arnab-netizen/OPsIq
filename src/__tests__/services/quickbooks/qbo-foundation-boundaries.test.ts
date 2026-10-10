@@ -76,6 +76,41 @@ describe("QuickBooks foundation boundaries", () => {
     expect(oauth).toContain("config.revokeUrl");
   });
 
+  it("raw HTTP primitives (fetch, a method option, qboHttp) exist ONLY in the three reviewed transport modules - checked over every QuickBooks file, route and scheduler touchpoint", () => {
+    const transport = ["qbo-client.ts", "qbo-http.ts", "qbo-oauth.service.ts"];
+    const touchpoints = [
+      ...qboFiles,
+      "src/app/api/owner/integrations/quickbooks/sync/route.ts",
+      "src/app/api/owner/integrations/quickbooks/status/route.ts",
+      "src/app/api/owner/integrations/quickbooks/connect/route.ts",
+      "src/app/api/owner/integrations/quickbooks/callback/route.ts",
+      "src/app/api/integrations/quickbooks/webhook/route.ts",
+      "src/infra/scheduler-handlers.ts",
+      "src/infra/qbo-sync-tasks.ts",
+      "src/services/scheduler/scheduler-producers.ts",
+    ];
+    for (const f of touchpoints) {
+      if (transport.some((t) => f.endsWith(t))) continue;
+      const src = code(f);
+      expect(src, f).not.toMatch(/\bfetch\s*\(|\bmethod\s*:|\bqboHttp\b|XMLHttpRequest|axios|https?\.request/);
+      expect(src, f).not.toMatch(/["'`](POST|PUT|PATCH|DELETE)["'`]/);
+    }
+    // qbo-http (the generic sender) is imported only by the client and the OAuth service.
+    for (const f of qboFiles) {
+      if (/qbo-client\.ts$|qbo-oauth\.service\.ts$|qbo-http\.ts$/.test(f)) continue;
+      // (a type-only import of QboFetch is not a use of the sender)
+      const withoutTypeImports = code(f).replace(/import\s+type\s[^;]*;/g, "");
+      expect(withoutTypeImports, f).not.toMatch(/from\s+["']\.\/qbo-http["']|services\/quickbooks\/qbo-http/);
+    }
+  });
+
+  it("both execution entry points bound an execution by wall clock (manual route and scheduler handler)", () => {
+    expect(code("src/app/api/owner/integrations/quickbooks/sync/route.ts")).toMatch(/deadlineMs:\s*QBO_EXECUTION_DEADLINE_MS/);
+    expect(code("src/infra/scheduler-handlers.ts")).toMatch(/deadlineMs:\s*QBO_EXECUTION_DEADLINE_MS/);
+    expect(code("src/app/api/internal/cron/scheduler/route.ts")).toMatch(/export const maxDuration\s*=\s*300/);
+    expect(code("src/app/api/internal/cron/scheduler/route.ts")).toMatch(/maxClaim:\s*DRAIN_CLAIM_PER_PASS/);
+  });
+
   it("GENERIC_OAUTH_CRYPTO_REUSED=YES: no second encryption implementation", () => {
     for (const f of qboFiles) {
       expect(code(f), f).not.toMatch(/createCipheriv|createDecipheriv|hkdfSync|aes-256|scryptSync|pbkdf2/i);
@@ -196,7 +231,7 @@ describe("QuickBooks foundation boundaries", () => {
   });
 
   it("scheduler: exactly ONE QuickBooks task (the read-only sync) is registered and produced", () => {
-    const handlers = code("src/infra/scheduler-handlers.ts");
+    const handlers = code("src/infra/qbo-sync-tasks.ts");
     expect([...handlers.matchAll(/TASK_NAME_QBO\w*\s*=\s*"([^"]+)"/g)].map((m) => m[1])).toEqual(["qbo-read-sync"]);
     const producers = code("src/services/scheduler/scheduler-producers.ts");
     expect([...producers.matchAll(/export async function (enqueue\w*Qbo\w*)/g)].map((m) => m[1])).toEqual(["enqueueDueQboReadSyncTasks"]);

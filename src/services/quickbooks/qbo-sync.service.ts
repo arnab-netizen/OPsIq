@@ -348,7 +348,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
       const entity = QBO_SYNC_QUERY_ENTITIES[pager.cp.entityIndex];
       const exhausted = await readEntityKeyset(pager, entity, incrementalLowerBound(mode, watermarks[entity]));
       if (!exhausted) return { status: "BUDGET", changed: changed || pager.changed };
-      // Exhaustion of this entity is PROVEN (short page from the keyset window, or every oversized bucket closed by the two-round identity-inclusion check).
+      // Exhaustion of this entity is CONFIRMED (short page from the keyset window, or every oversized bucket closed by the two-round identity-inclusion check).
       if (mode === "FULL" && !pager.cp.reconciled.includes(entity)) {
         await verifyUnseen(pager, entity);
         await advance(pager, { reconciled: [...pager.cp.reconciled, entity] });
@@ -412,7 +412,7 @@ function stampsOf(records: readonly Record<string, unknown>[]): number[] {
 }
 
 /**
- * Read one entity completely, in bounded steps. Returns true when exhaustion is PROVEN, false when this execution's budget ran out
+ * Read one entity completely, in bounded steps. Returns true when exhaustion is CONFIRMED (under the documented provider-consistency assumptions R1/R2), false when this execution's budget ran out
  * first (the checkpoint then describes exactly where to resume).
  *
  * KEYSET: each page asks for `LastUpdatedTime >= cursor` from position 1, ordered by LastUpdatedTime ASC, so a change elsewhere
@@ -420,9 +420,8 @@ function stampsOf(records: readonly Record<string, unknown>[]): number[] {
  * the cursor moves to the newest second; a short page proves the whole remaining window was returned in one response.
  *
  * EQUAL-TIMESTAMP BUCKET LARGER THAN A PAGE: the provider documents no stable order inside one timestamp, so offset paging cannot
- * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only by the identity-inclusion check in tieStep (not by a count comparison); its provider `count(*)` for exactly
- * that second is confirmed by the identity-inclusion check in tieStep. QBO_SYNC_TIE_MAX_STALLED_PASSES passes in
- * a row that find nothing new end the run as PROVIDER_INCOMPLETE — never a silent skip, never an endless loop.
+ * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only by the identity-inclusion check in tieStep (never by
+ * a count comparison alone). QBO_SYNC_TIE_MAX_STALLED_PASSES passes in a row that find nothing new end the run as PROVIDER_INCOMPLETE — never a silent skip, never an endless loop.
  */
 async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): Promise<boolean> {
   for (;;) {
@@ -448,7 +447,7 @@ async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): P
     const newest = floorSecond(new Date(stamps[stamps.length - 1]));
     if (floorSecond(new Date(stamps[0])).getTime() === newest.getTime()) {
       // The whole page shares ONE second: that second holds at least a page of records. Enumerate it with identity-inclusion closure (see tieStep).
-      await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: { second: newest.toISOString(), offset: 0, stalledPasses: 0, lastSeen: 0, total: null, verify: null, rejected: rejectedIdsOf(entity, result.records) } });
+      await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: { second: newest.toISOString(), offset: 0, stalledPasses: 0, lastSeen: 0, total: null, verify: null, rejected: mergeRejected([], rejectedIdsOf(entity, result.records)) } });
       continue;
     }
     // Everything below `newest` is complete in this page; `newest` itself may continue, so the next page starts AT it.
@@ -510,7 +509,7 @@ async function persistQueryPage(
  * i.e. every record the provider reports in that second is one we already have (documented operators only: count(*), IN on Id,
  * range on LastUpdatedTime; no ordering assumption). Stored ids that have left the second match nothing and are harmless.
  * The check runs in two full rounds, each followed by a re-read of count(second) and of the number of records stamped after the
- * cutoff (a record can only leave a past second by being edited, which changes that number even when a swap keeps count(second)).
+ * cutoff (an edit moves a record forward in time and changes that number even when a swap keeps count(second); a delete or deactivation does not, so those are detected only through count(second) and the batch sums, i.e. only if nothing arrives in the second at the same time).
  *
  * WHAT THIS DOES AND DOES NOT GUARANTEE. Every one of those counts is a SEPARATE provider call; Intuit documents no snapshot,
  * transaction or read-version semantics across query calls (and its batch endpoint is a POST, which this read-only client never
@@ -556,9 +555,10 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
     // Rejected-by-normalizer records are provider members we hold by id only: confirm them the same way (inclusion by Id IN).
     const rejectedMatched = tie.rejected.length > 0 ? await countWhere([...windowWhere, { field: "Id", op: "IN", value: tie.rejected }]) : 0;
     if (v.matched + rejectedMatched !== v.total || now !== v.total) return restartPass(tie.stalledPasses, tie.lastSeen, null);
-    // A record can only LEAVE a past second by being edited (its stamp moves forward), and an edit anywhere changes the number of
-    // records stamped after the cutoff - a swap that leaves count(second) unchanged is therefore still visible here. (A record
-    // ENTERING a past second is the late-visibility assumption, which no read can observe.) Any edit restarts the check.
+    // A record that LEAVES a past second by EDIT (its stamp moves forward) changes the number of records stamped after the cutoff, so
+    // an edit+arrival swap that keeps count(second) unchanged is still visible here. A DELETE or deactivation does not change that
+    // number: it is caught only by count(second)/the batch sums, so a delete coinciding with an arrival is the residual (R1/R2).
+    // Any edit restarts the check.
     if ((await countWhere(editsWhere)) !== v.edits) return restartPass(tie.stalledPasses + 1, tie.lastSeen, null);
     if (v.round === 1) {
       await advance(p, { tie: { ...tie, verify: { round: 2, after: null, matched: 0, total: v.total, edits: v.edits } } });
@@ -605,6 +605,7 @@ async function verifyUnseen(p: Pager, entity: Entity): Promise<void> {
   const ids = await listUnseenRecordIds(p.lease, entity, QBO_SYNC_VERIFY_READS_PER_ENTITY, p.deps);
   for (const id of ids) {
     p.counts.verifiedByRead++;
+    p.units++; // by-id reads are provider calls like any other: they count against the execution budget
     try {
       const raw = await p.call(() => p.client.readEntity(entity, id));
       const n = normalizeQueryRecord(entity, raw);
@@ -614,10 +615,15 @@ async function verifyUnseen(p: Pager, entity: Entity): Promise<void> {
     } catch (e) {
       // Not found / fault 610 on a read: unresolved, never "deleted". Anything else (auth, rate limit, outage, timeout) is a real failure.
       if (isQboProviderError(e) && (e.kind === "NOT_FOUND" || (e.kind === "BAD_REQUEST" && e.providerCode === "610"))) p.counts.unresolved++;
-      else throw e;
+      else {
+        // Even a failing candidate must move to the back of the rotation, or one deterministic error would pin every later FULL
+        // sync to the same id forever.
+        await markVerifyAttempted(p.lease, entity, [id], p.deps).catch(() => undefined);
+        throw e;
+      }
     }
+    await markVerifyAttempted(p.lease, entity, [id], p.deps);
   }
-  await markVerifyAttempted(p.lease, entity, ids, p.deps);
 }
 
 async function persistPage(lease: SyncLease, records: NormalizedRecord[], checkpoint: QboContinuation | undefined, counts: QboSyncCounts, deps: QboSyncDeps): Promise<boolean> {

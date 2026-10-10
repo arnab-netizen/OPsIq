@@ -17,7 +17,7 @@
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { TASK_NAME_QBO_READ_SYNC } from "@/infra/scheduler-handlers";
+import { TASK_NAME_QBO_READ_SYNC } from "@/infra/qbo-sync-tasks";
 import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
 import {
   QBO_WEBHOOK_MAX_BODY_BYTES,
@@ -107,7 +107,7 @@ export async function handleQboWebhook(
     // has taken the lease (epoch + 1), or the window moved on, a later hint — which a BUSY/NOT_DUE task could not serve — gets a NEW
     // task. A hint no task manages to serve is still served by the next SCHEDULED run (the same-day gate is lifted while a hint exists). The sync itself runs only while an unserved hint exists (webhook_hint_at).
     const state = await readSyncState({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
-    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}:${Math.floor(now.getTime() / (15 * 60 * 1000))}` });
+    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}` });
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.QBO_WEBHOOK_HINT_RECORDED, workspaceId: c.workspaceId, actorType: "system",
       entityType: "qbo_connection", entityId: c.connectionId, visibility: "internal",

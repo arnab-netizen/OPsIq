@@ -44,7 +44,7 @@ import {
   type QboSyncStatusView,
   type QboSyncTrigger,
 } from "@/domain/quickbooks/qbo-sync-model";
-import { parseContinuation, type QboContinuation } from "@/domain/quickbooks/qbo-sync-model";
+import { QboContinuationSchema, parseContinuation, type QboContinuation } from "@/domain/quickbooks/qbo-sync-model";
 import type { NormalizedRecord } from "@/domain/quickbooks/qbo-normalize";
 import type { QboPersistenceDeps } from "./qbo-connection.service";
 
@@ -313,7 +313,8 @@ async function markCheckpointChanged(tx: Pick<Tx, "$executeRaw">, lease: SyncLea
 async function writeCheckpoint(tx: Pick<Tx, "qboSyncState">, lease: SyncLease, checkpoint: QboContinuation): Promise<void> {
   const r = await tx.qboSyncState.updateMany({
     where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, leaseToken: lease.token, leaseEpoch: lease.epoch },
-    data: { continuation: checkpoint as unknown as Prisma.InputJsonValue },
+    // Fail closed on a write the read side would reject: a poisoned checkpoint would silently restart the sync and lose its progress.
+    data: { continuation: QboContinuationSchema.parse(checkpoint) as unknown as Prisma.InputJsonValue },
   });
   if (r.count !== 1) throw new QboLeaseLostError();
 }
@@ -622,7 +623,7 @@ export async function finishSyncRunSuccess(input: FinishSuccessInput, deps?: Qbo
       data: {
         leaseToken: null, leaseRunId: null, leaseExpiresAt: null, lastSucceededAt: now, lastOutcome: "SUCCEEDED", lastErrorCode: null,
         consecutiveFailures: 0, nextAttemptNotBefore: null, watermarks: merged as Prisma.InputJsonValue,
-        // Completion is only ever recorded here, after PROVEN exhaustion: the checkpoint is cleared in the same transaction that
+        // Completion is only ever recorded here, after CONFIRMED exhaustion (docs: assumptions R1/R2): the checkpoint is cleared in the same transaction that
         // advances the durable watermarks, so there is no state in which one has happened without the other.
         continuation: Prisma.DbNull,
         ...(input.mode === "FULL" ? { lastFullSyncAt: now } : {}), ...(input.changed ? { lastChangeAt: now } : {}),

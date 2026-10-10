@@ -134,6 +134,22 @@ describe("read operations", () => {
     }
   });
 
+  it("a chunked response with NO Content-Length is cut off at the byte cap (stream cancelled), never buffered whole", async () => {
+    let cancelled = false;
+    let produced = 0;
+    // (A function responder: the harness clones plain Responses, and cloning an endless stream would itself buffer without bound.)
+    const { client } = harness([() => new Response(new ReadableStream<Uint8Array>({
+      pull(controller) {
+        produced += 1;
+        controller.enqueue(new Uint8Array(1024 * 1024)); // 1 MiB per chunk, endless
+      },
+      cancel() { cancelled = true; },
+    }), { status: 200, headers: { "content-type": "application/json" } })]);
+    await expect(client.query({ entity: "Invoice" })).rejects.toMatchObject({ kind: "MALFORMED_RESPONSE" });
+    expect(cancelled).toBe(true);
+    expect(produced).toBeLessThan(40); // MAX_API_BODY_BYTES is 20 MiB: stopped shortly after the cap, not run to completion
+  });
+
   it("an empty page (entity key omitted by Intuit) is an empty list, not an error", async () => {
     const { client } = harness([json(200, queryBody("Invoice", []))]);
     expect((await client.query({ entity: "Invoice" })).records).toEqual([]);

@@ -61,7 +61,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     const body = legacy(A.realmId, [ent("1"), ent("2", { name: "Customer" })]);
     const res = await deliver(body, { enqueue: rec.enqueue });
     expect(res).toEqual({ httpStatus: 200, body: { received: true, hints: 2, duplicates: 0, ignored: 0 } });
-    expect(rec.calls).toEqual([{ workspaceId: A.t.ws, connectionId: A.connectionId, idempotencyKey: expect.stringMatching(/^qbo-read-sync:webhook:.+:0:\d+$/) }]);
+    expect(rec.calls).toEqual([{ workspaceId: A.t.ws, connectionId: A.connectionId, idempotencyKey: expect.stringMatching(/^qbo-read-sync:webhook:[0-9a-f-]+:0$/) }]);
     const rows = await db.qboWebhookEvent.findMany({ where: { realmId: A.realmId } });
     expect(rows).toHaveLength(2);
     expect(rows.every((r: { disposition: string; workspaceId: string; businessId: string; connectionId: string }) => r.disposition === "HINT_RECORDED" && r.workspaceId === A.t.ws && r.businessId === A.t.biz && r.connectionId === A.connectionId)).toBe(true);
@@ -166,7 +166,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     // A sync takes the lease (epoch 0 -> 1) and completes; a later hint must not be swallowed by the earlier task.
     await db.qboSyncState.update({ where: { connectionId: c.connectionId }, data: { leaseEpoch: 1 } });
     await deliver(legacy(c.realmId, [ent("2")]), { enqueue: rec.enqueue });
-    expect(rec.calls.map((x) => x.idempotencyKey.split(":").slice(-2)[0])).toEqual(["0", "1"]);
+    expect(rec.calls.map((x) => x.idempotencyKey.split(":").slice(-1)[0])).toEqual(["0", "1"]);
+    // ...and within one lease epoch repeated hints COALESCE onto a single task (no per-15-minute fan-out).
+    const again = recorder();
+    await deliver(legacy(c.realmId, [ent("3")]), { enqueue: again.enqueue });
+    await deliver(legacy(c.realmId, [ent("4")]), { enqueue: again.enqueue });
+    expect(new Set(again.calls.map((x) => x.idempotencyKey)).size).toBe(1);
   });
 
   it("unsupported entities are ignored without a ledger row; malformed events are counted and dropped", async () => {

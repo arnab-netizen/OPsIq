@@ -180,8 +180,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       for (const r of deactivated) c2.fake.inactive.set(`Customer:${r.Id}`, { ...r, Active: false });
       c2.fake.data.Customer.pop();
       c2.fake.deleted.add("Customer:z999");
-      await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 3_600_000) });
-      await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 7_200_000) });
+      // Each FULL sync may span several executions (by-id verification reads count against the execution budget).
+      for (const at of [3_600_000, 7_200_000]) {
+        let r = await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + at) });
+        for (let i = 1; i < 6 && r.status === "CONTINUING"; i++) r = await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + at + i * 60_000) });
+        expect(r.status).toBe("SUCCEEDED");
+      }
       const rows = await db.qboSyncedRecord.findMany({ where: { connectionId: c2.connectionId, entityType: "Customer" }, select: { providerEntityId: true, recordState: true, lastVerifyAttemptAt: true } });
       expect(rows.filter((r: { recordState: string }) => r.recordState === "INACTIVE")).toHaveLength(105);
       const z = rows.find((r: { providerEntityId: string }) => r.providerEntityId === "z999");

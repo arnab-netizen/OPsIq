@@ -151,6 +151,20 @@ describe("report parsing", () => {
     expect(body.Rows.Row.length).toBeGreaterThan(0);
     expect(parseAgedReport(body).ok).toBe(false);
   });
+  it("an empty grand-TOTAL cell is absent (malformed), while an empty bucket cell is zero", () => {
+    const body = agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables") as { Rows: { Row: Array<{ group?: string; Summary?: { ColData: Array<{ value: string }> } }> } };
+    const gt = body.Rows.Row.find((r) => r.group === "GrandTotal") as { Summary: { ColData: Array<{ value: string }> } };
+    gt.Summary.ColData[gt.Summary.ColData.length - 1].value = "";
+    expect(parseAgedReport(body).ok).toBe(false);
+  });
+  it("aging sums are exact fixed-point (no float noise), including very large amounts", () => {
+    const r = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { current: "0.1", buckets: ["0.1", "0.1", "", "0.0001"], total: "0.3001" }));
+    expect(r.ok && r.report.metrics.overdue).toBe("0.2001");
+    expect(r.ok && r.report.inconsistencies).toEqual([]);
+    const big = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { current: "123456789012.3456", buckets: ["100000000000.0001", "0.0001", "", "0.0001"], total: "223456789012.3459" }));
+    expect(big.ok && big.report.metrics.overdue).toBe("100000000000.0003");
+    expect(big.ok && big.report.inconsistencies).toEqual([]);
+  });
   it("an aged report with no rows at all is a truthful zero", () => {
     const r = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { empty: true }));
     expect(r.ok && r.report.metrics).toEqual({ current: "0", total: "0", overdue: "0" });

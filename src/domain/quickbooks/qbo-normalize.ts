@@ -59,6 +59,21 @@ export function toDecimalString(value: unknown): string | null {
   return m[1] === "-" && out !== "0" ? `-${out}` : out;
 }
 
+/** Exact fixed-point (4 fractional digits) arithmetic on strings produced by toDecimalString - no floating point. */
+const SCALE_FACTOR = BigInt("10000");
+function scaledOf(decimal: string): bigint {
+  const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(decimal) as RegExpExecArray;
+  return BigInt(`${m[1]}${m[2]}${(m[3] ?? "").padEnd(4, "0")}`);
+}
+function decimalOf(scaled: bigint): string {
+  const neg = scaled < BigInt("0");
+  const abs = neg ? -scaled : scaled;
+  const frac = (abs % SCALE_FACTOR).toString().padStart(4, "0").replace(/0+$/, "");
+  const out = frac ? `${abs / SCALE_FACTOR}.${frac}` : `${abs / SCALE_FACTOR}`;
+  return neg && out !== "0" ? `-${out}` : out;
+}
+const abs11 = (v: bigint): boolean => (v < BigInt("0") ? -v : v) > BigInt("110"); // |v| > 0.011
+
 function text(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null;
   const cleaned = v.replace(/[\u0000-\u001f\u007f]/g, " ").trim();
@@ -291,8 +306,8 @@ export function parseProfitAndLoss(body: unknown): ReportParseResult {
   const inconsistencies: string[] = [];
   const { Income, COGS, GrossProfit } = g.metrics;
   if (Income !== undefined && GrossProfit !== undefined) {
-    const expected = Number(Income) - Number(COGS ?? "0");
-    if (Math.abs(expected - Number(GrossProfit)) > 0.011) inconsistencies.push("GROSS_PROFIT_MISMATCH");
+    const expected = scaledOf(Income) - scaledOf(COGS ?? "0");
+    if (abs11(expected - scaledOf(GrossProfit))) inconsistencies.push("GROSS_PROFIT_MISMATCH");
   }
   return { ok: true, report: { currency: h.currency, basis: h.basis, startPeriod: h.start, endPeriod: h.end, metrics: g.metrics, inconsistencies, generatedAt: h.generatedAt } };
 }
@@ -306,7 +321,7 @@ export function parseBalanceSheet(body: unknown): ReportParseResult {
   const inconsistencies: string[] = [];
   const { TotalAssets, Liabilities, Equity } = g.metrics;
   if (TotalAssets !== undefined && Liabilities !== undefined && Equity !== undefined) {
-    if (Math.abs(Number(TotalAssets) - (Number(Liabilities) + Number(Equity))) > 0.011) inconsistencies.push("BALANCE_SHEET_DOES_NOT_BALANCE");
+    if (abs11(scaledOf(TotalAssets) - (scaledOf(Liabilities) + scaledOf(Equity)))) inconsistencies.push("BALANCE_SHEET_DOES_NOT_BALANCE");
   }
   return { ok: true, report: { currency: h.currency, basis: h.basis, startPeriod: h.start, endPeriod: h.end, metrics: g.metrics, inconsistencies, generatedAt: h.generatedAt } };
 }
@@ -344,19 +359,19 @@ export function parseAgedReport(body: unknown): ReportParseResult {
     const current = cell(currentIdx);
     const total = grand.summary?.[totalIdx] === "" ? null : cell(totalIdx);
     if (current === null || total === null) return { ok: false, reason: "MALFORMED" };
-    let bucketSum = 0;
+    let bucketSum = BigInt("0");
     for (let i = 1; i < titles.length; i++) {
       if (i === currentIdx || i === totalIdx) continue;
       const v = cell(i);
       if (v === null) return { ok: false, reason: "MALFORMED" };
-      bucketSum += Number(v);
+      bucketSum += scaledOf(v);
     }
     metrics.current = current;
     metrics.total = total;
-    metrics.overdue = toDecimalString(bucketSum) ?? "0";
-    if (Math.abs(Number(current) + bucketSum - Number(total)) > 0.011) inconsistencies.push("AGING_BUCKETS_DO_NOT_SUM_TO_TOTAL");
+    metrics.overdue = decimalOf(bucketSum);
+    if (abs11(scaledOf(current) + bucketSum - scaledOf(total))) inconsistencies.push("AGING_BUCKETS_DO_NOT_SUM_TO_TOTAL");
     // Credits / unapplied payments net into buckets; a negative "overdue" is not an overdue amount.
-    if (bucketSum < 0) inconsistencies.push("NEGATIVE_OVERDUE_FROM_CREDITS");
+    if (bucketSum < BigInt("0")) inconsistencies.push("NEGATIVE_OVERDUE_FROM_CREDITS");
   } else if (isObject(body.Rows) && all.length === 0) {
     // A company with nothing outstanding returns an EMPTY Rows object: zero is the truthful value there. A body with no Rows key
     // at all, or with customer rows but no grand-total section (truncated), is not a zero: it is MALFORMED.

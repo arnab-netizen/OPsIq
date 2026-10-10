@@ -14,7 +14,9 @@ import { parseRequestBody } from "@/lib/validation";
 import { QboManualSyncRequestSchema } from "@/domain/quickbooks/qbo-sync-model";
 import { mapSyncOutcome } from "@/domain/quickbooks/qbo-sync-outcomes";
 import { runQboReadSync } from "@/services/quickbooks/qbo-sync.service";
-import { QBO_SCHEDULED_EXECUTION_DEADLINE_MS, enqueueQboSyncContinuation } from "@/infra/scheduler-handlers";
+import { enqueueQboSyncContinuation } from "@/infra/qbo-sync-tasks";
+import { QBO_EXECUTION_DEADLINE_MS } from "@/domain/quickbooks/qbo-sync-model";
+import { logger } from "@/infra/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,13 +30,13 @@ export const POST = withCanonicalEnforcement(
         workspaceId: ctx.verifiedWorkspaceId, businessId: body.businessId, connectionId: body.connectionId,
         trigger: "MANUAL", actorId: ctx.verifiedActorId, requestId: body.requestId ?? null,
       },
-      { env: process.env, deadlineMs: QBO_SCHEDULED_EXECUTION_DEADLINE_MS },
+      { env: process.env, deadlineMs: QBO_EXECUTION_DEADLINE_MS },
     );
     // A large sync stops at a durable checkpoint inside this request; the rest runs as scheduled follow-up executions.
     if (outcome.status === "CONTINUING") {
       // Progress is already durable: a failure to queue the follow-up must not turn this accepted response into a 500 (the daily
       // producer re-queues the checkpoint under a day-scoped key).
-      await enqueueQboSyncContinuation({ workspaceId: ctx.verifiedWorkspaceId, connectionId: body.connectionId, continuationKey: outcome.continuationKey }).catch(() => undefined);
+      await enqueueQboSyncContinuation({ workspaceId: ctx.verifiedWorkspaceId, connectionId: body.connectionId, continuationKey: outcome.continuationKey }).catch((e: unknown) => logger.warn("QuickBooks continuation enqueue failed; the daily producer will re-queue it", { error: e instanceof Error ? e.name : "unknown" }));
     }
     const mapped = mapSyncOutcome(outcome);
     return canonicalJson(mapped.body, { status: mapped.httpStatus, headers: { "cache-control": "no-store" } });

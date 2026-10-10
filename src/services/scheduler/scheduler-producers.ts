@@ -31,7 +31,8 @@
  */
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_QBO_READ_SYNC, TASK_NAME_REASSESSMENT_SCAN, enqueueQboSyncContinuation, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
+import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
+import { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation } from "@/infra/qbo-sync-tasks";
 import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
 import { scheduleBucket } from "@/domain/quickbooks/qbo-sync-model";
 import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
