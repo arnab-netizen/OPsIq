@@ -113,7 +113,7 @@ export interface QboReadClient {
   companyInfo(options?: QboCallOptions): Promise<Record<string, unknown>>;
   readEntity(entity: QboReadableEntity, id: string, options?: QboCallOptions): Promise<Record<string, unknown>>;
   query(spec: QboQuerySpec, options?: QboCallOptions): Promise<QboQueryPage>;
-  /** Number of records matching a structured filter (`SELECT count(*)`, GET). Used to PROVE that a window has been read completely. */
+  /** Number of records matching a structured filter (`SELECT count(*)`, GET). Input to the identity-inclusion check on oversized equal-timestamp buckets (see tieStep); a count alone is never a completeness proof. */
   count(spec: Pick<QboQuerySpec, "entity" | "where">, options?: QboCallOptions): Promise<number>;
   /** Pages through a query (1000 per page by default) until a short page, lazily. */
   paginate(spec: Omit<QboQuerySpec, "startPosition">, options?: QboCallOptions & { maxPages?: number }): AsyncGenerator<QboQueryPage, void, void>;

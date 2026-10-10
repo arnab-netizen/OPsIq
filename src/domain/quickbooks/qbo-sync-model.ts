@@ -217,7 +217,7 @@ export interface QboSyncCounts {
   reportsFailed: number;
   /** Provider query pages read (excluding count queries and by-id reads). */
   pages: number;
-  /** Equal-timestamp buckets larger than a page that were enumerated to a PROVEN-complete close. */
+  /** Equal-timestamp buckets larger than a page that were closed by the two-round identity-inclusion check (a bounded guarantee under read quiescence, not an atomic snapshot). */
   tieBucketsClosed: number;
   /** Unseen records re-read by id to refresh them (inactive / moved out of the query window). */
   verifiedByRead: number;
@@ -381,7 +381,7 @@ export const QboContinuationSchema = z.object({
     /** The provider's count for the bucket at the START of the current pass (null until probed). A pass never reads past it. */
     total: z.number().int().min(0).nullable(),
     /**
-     * Identity-inclusion proof in progress. Two full rounds over the ids this sync stored for the second; each batch asks the provider
+     * Identity-inclusion check in progress (separate provider calls are NOT an atomic snapshot: Intuit documents no read snapshot). Two full rounds over the ids this sync stored for the second; each batch asks the provider
      * for count(window AND Id IN batch). `matched` is the running sum; the bucket may close only when it equals the provider's `total`.
      */
     verify: z.object({
@@ -389,6 +389,8 @@ export const QboContinuationSchema = z.object({
       after: z.string().max(64).nullable(),
       matched: z.number().int().min(0),
       total: z.number().int().min(0),
+      /** Count of the entity's records stamped AFTER the sync cutoff when verification began: an edit anywhere changes it. */
+      edits: z.number().int().min(0).default(0),
     }).nullable().default(null),
   }).nullable(),
   /** Entities whose FULL reconciliation (verify reads) has finished. */

@@ -422,6 +422,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 
+    it("ordinary single membership flips are detected at EVERY verification read from the start of verification to its last re-read (deterministic sweep): never a close with B missing", async () => {
+      // 3 IN-batches per round x 2 rounds = 6 identity reads; the flip lands right after read k (including after the LAST identity read,
+      // which only the post-cutoff edit count can still observe).
+      for (let flipAt = 1; flipAt <= 6; flipAt++) {
+        const c = await seedConnected();
+        seedBucket(c, 120);
+        let inCounts = 0;
+        const racing = hook(c, (q) => q.startsWith("SELECT count(*)") && q.includes(" Id IN ") && ++inCounts === flipAt, () => replaceAB(c));
+        let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
+        for (let i = 0; i < 8 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
+        await assertNoSilentSkip(c, out);
+        if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
+      }
+    });
+
     it("restart between the two observations / continuation worker takeover: the flip lands while the sync is PAUSED at its checkpoint inside the proof; the resuming execution still does not close falsely", async () => {
       const c = await seedConnected();
       seedBucket(c, 60);

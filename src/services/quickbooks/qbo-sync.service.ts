@@ -329,7 +329,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
       const entity = QBO_SYNC_QUERY_ENTITIES[pager.cp.entityIndex];
       const exhausted = await readEntityKeyset(pager, entity, incrementalLowerBound(mode, watermarks[entity]));
       if (!exhausted) return { status: "BUDGET", changed: changed || pager.changed };
-      // Exhaustion of this entity is PROVEN (short page from the keyset window, or every tie bucket closed by count).
+      // Exhaustion of this entity is PROVEN (short page from the keyset window, or every oversized bucket closed by the two-round identity-inclusion check).
       if (mode === "FULL" && !pager.cp.reconciled.includes(entity)) {
         await verifyUnseen(pager, entity);
         await advance(pager, { reconciled: [...pager.cp.reconciled, entity] });
@@ -399,7 +399,7 @@ function stampsOf(records: readonly Record<string, unknown>[]): number[] {
  * the cursor moves to the newest second; a short page proves the whole remaining window was returned in one response.
  *
  * EQUAL-TIMESTAMP BUCKET LARGER THAN A PAGE: the provider documents no stable order inside one timestamp, so offset paging cannot
- * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only when the provider's own `count(*)` for exactly
+ * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only by the identity-inclusion check in tieStep (not by a count comparison); its provider `count(*)` for exactly
  * that second equals the number of distinct records this logical sync has stored for it. QBO_SYNC_TIE_MAX_STALLED_PASSES passes in
  * a row that find nothing new end the run as PROVIDER_INCOMPLETE — never a silent skip, never an endless loop.
  */
@@ -458,15 +458,26 @@ async function persistQueryPage(
 /**
  * One step of the handling of an oversized equal-timestamp bucket (one whole second holding at least a page of records).
  *
- * COMPLETENESS PROOF (set inclusion, not cardinality). Counting alone proves nothing about WHICH records were read: a record
- * that leaves the bucket while another enters it keeps both the provider's count and the stored count unchanged. So the bucket is
- * closed only when, for the ids this logical sync stored for that second, the provider itself confirms
+ * COMPLETENESS GUARANTEE (set inclusion under read quiescence - NOT an atomic snapshot). Counting alone says nothing about WHICH
+ * records were read: a record that leaves the bucket while another enters keeps every count equal. So the bucket is closed only
+ * when, for the ids this logical sync stored for that second, the provider confirms
  *     sum over batches of count(second AND Id IN batch)  ==  count(second)
- * i.e. every record the provider currently holds in that second is one we already have (documented operators: count(*), IN on Id,
- * range on LastUpdatedTime; no ordering assumption). Stored records that have since left the second match nothing and are harmless.
- * The proof runs in two full rounds with the provider's count re-read after each, so a membership flip that straddles one round is
- * caught by the next. Any shortfall or drift restarts the enumeration (new pass); passes that do not grow the stored set, or
- * repeated drift, end the run PROVIDER_INCOMPLETE - the durable watermark is never advanced on an unproven bucket.
+ * i.e. every record the provider reports in that second is one we already have (documented operators only: count(*), IN on Id,
+ * range on LastUpdatedTime; no ordering assumption). Stored ids that have left the second match nothing and are harmless.
+ * The check runs in two full rounds, each followed by a re-read of count(second) and of the number of records stamped after the
+ * cutoff (a record can only leave a past second by being edited, which changes that number even when a swap keeps count(second)).
+ *
+ * WHAT THIS DOES AND DOES NOT GUARANTEE. Every one of those counts is a SEPARATE provider call; Intuit documents no snapshot,
+ * transaction or read-version semantics across query calls (and its batch endpoint is a POST, which this read-only client never
+ * issues). Therefore: (a) any single membership change, anywhere between the start of verification and its last re-read, is detected - a
+ * departure by edit changes the post-cutoff count, a departure by delete or an arrival changes the bucket total or makes a batch sum fall short -
+ * and leaves the bucket open; (b) a SINGLE round could be
+ * fooled by one flip that straddles it, which is why a second round follows; (c) an adversary that, in the same window, both deletes/edits a member AND makes an unseen record appear in the second
+ * with matching totals while neutralising the post-cutoff count cannot be excluded without provider snapshot semantics. That residual is a stated provider read-consistency assumption
+ * (the bucket is quiescent for the duration of the check), distinct from the late-visibility assumption (a record that first becomes
+ * visible after our last observation of its second, stamped with that old second). Any shortfall, drift, or stalled
+ * enumeration fails closed: the bucket stays open, the pass restarts or the run ends PROVIDER_INCOMPLETE, and the durable
+ * watermark does not move.
  */
 async function tieStep(p: Pager, entity: Entity): Promise<void> {
   const tie = p.cp.tie as NonNullable<QboContinuation["tie"]>;
@@ -476,6 +487,7 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
     { field: "MetaData.LastUpdatedTime", op: ">=", value: toQboInstant(from) },
     { field: "MetaData.LastUpdatedTime", op: "<", value: toQboInstant(to) },
   ];
+  const editsWhere: NonNullable<QboQuerySpec["where"]> = [{ field: "MetaData.LastUpdatedTime", op: ">", value: toQboInstant(p.cutoff) }];
   const countWhere = async (where: NonNullable<QboQuerySpec["where"]>): Promise<number> => {
     const n = await p.call(() => p.client.count({ entity, where }));
     p.units++;
@@ -497,8 +509,12 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
     // Round finished: every provider member must be among the stored ids, and the bucket must not have changed size meanwhile.
     const now = await countWhere(windowWhere);
     if (v.matched !== v.total || now !== v.total) return restartPass(tie.stalledPasses, tie.lastSeen, null);
+    // A record can only LEAVE a past second by being edited (its stamp moves forward), and an edit anywhere changes the number of
+    // records stamped after the cutoff - a swap that leaves count(second) unchanged is therefore still visible here. (A record
+    // ENTERING a past second is the late-visibility assumption, which no read can observe.) Any edit restarts the check.
+    if ((await countWhere(editsWhere)) !== v.edits) return restartPass(tie.stalledPasses + 1, tie.lastSeen, null);
     if (v.round === 1) {
-      await advance(p, { tie: { ...tie, verify: { round: 2, after: null, matched: 0, total: v.total } } });
+      await advance(p, { tie: { ...tie, verify: { round: 2, after: null, matched: 0, total: v.total, edits: v.edits } } });
       return;
     }
     p.counts.tieBucketsClosed++;
@@ -527,7 +543,7 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
   const seen = await countSeenInWindow(p.lease, entity, from, to, p.deps);
   const stalledPasses = providerCount === tie.total && seen > tie.lastSeen ? 0 : tie.stalledPasses + 1;
   if (providerCount !== tie.total) return restartPass(stalledPasses, seen, providerCount);
-  await advance(p, { tie: { second: tie.second, offset: tie.offset, stalledPasses, lastSeen: seen, total: providerCount, verify: { round: 1, after: null, matched: 0, total: providerCount } } });
+  await advance(p, { tie: { second: tie.second, offset: tie.offset, stalledPasses, lastSeen: seen, total: providerCount, verify: { round: 1, after: null, matched: 0, total: providerCount, edits: await countWhere(editsWhere) } } });
 }
 
 /**

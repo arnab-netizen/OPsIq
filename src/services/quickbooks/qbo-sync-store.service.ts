@@ -444,7 +444,7 @@ export async function markVerifyAttempted(lease: SyncLease, entityType: string, 
 
 /**
  * How many distinct records of an entity whose provider timestamp lies in [from, to) THIS logical sync has seen (across all of
- * its executions). Compared with the provider's count(*) for the same window, equality PROVES the window was read completely.
+ * its executions). Diagnostic/progress measure only (pass-stall detection): equality with the provider's count is NOT a completeness criterion - closure uses the identity-inclusion check.
  */
 export async function countSeenInWindow(lease: SyncLease, entityType: string, from: Date, to: Date, deps?: QboPersistenceDeps): Promise<number> {
   return (await clientOf(deps).qboSyncedRecord.count({
