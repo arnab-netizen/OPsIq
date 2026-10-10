@@ -201,7 +201,9 @@ async function executeReads(a: ExecuteArgs): Promise<boolean> {
 
   const abort = new AbortController();
   const onParentAbort = () => abort.abort();
-  deps.signal?.addEventListener("abort", onParentAbort, { once: true });
+  // An already-aborted parent never fires "abort" again, so honour it explicitly.
+  if (deps.signal?.aborted) abort.abort();
+  else deps.signal?.addEventListener("abort", onParentAbort, { once: true });
   try {
     const client: QboReadClient = createQboReadClient({
       config,

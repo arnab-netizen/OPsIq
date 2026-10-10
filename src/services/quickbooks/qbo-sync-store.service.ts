@@ -627,26 +627,38 @@ export interface WebhookLedgerInput {
   resolution: { workspaceId: string; businessId: string; connectionId: string } | null;
 }
 
+export type WebhookRecordResult = "NEW" | "RETRY_PENDING" | "DUPLICATE";
+
 /**
- * Insert-if-absent into the dedup ledger. Returns false when the delivery was already seen (duplicate), true when this
- * call recorded it. Never overwrites an existing row, so replay and reordering cannot change a recorded disposition.
+ * Insert-if-absent into the dedup ledger. NEW: this call recorded it. DUPLICATE: already seen and fully handled.
+ * RETRY_PENDING: seen before but its hint/task was never completed (the earlier delivery crashed mid-way), so the
+ * redelivery must finish the job — a recorded-but-unserved hint can never be lost. Never overwrites a recorded disposition.
+ * Hints are written unprocessed (processed_at NULL) and completed by markWebhookEventsProcessed(); ignored events need no work.
  */
-export async function recordWebhookEvent(input: WebhookLedgerInput, deps?: QboPersistenceDeps): Promise<boolean> {
+export async function recordWebhookEvent(input: WebhookLedgerInput, deps?: QboPersistenceDeps): Promise<WebhookRecordResult> {
   const now = clock(deps);
   try {
     await clientOf(deps).qboWebhookEvent.create({
       data: {
         id: randomUUID(), eventKey: input.eventKey, format: input.format, realmId: input.realmId, entityName: input.entityName.slice(0, 64),
         entityId: input.entityId.slice(0, 128), operation: input.operation, providerEventTime: input.providerEventTime, receivedAt: now,
-        disposition: input.disposition, processedAt: now,
+        disposition: input.disposition, processedAt: input.disposition === "HINT_RECORDED" ? null : now,
         workspaceId: input.resolution?.workspaceId ?? null, businessId: input.resolution?.businessId ?? null, connectionId: input.resolution?.connectionId ?? null,
       },
     });
-    return true;
+    return "NEW";
   } catch (e) {
-    if (isUniqueViolation(e)) return false;
-    throw e;
+    if (!isUniqueViolation(e)) throw e;
+    const existing = (await clientOf(deps).qboWebhookEvent.findFirst({ where: { eventKey: input.eventKey }, select: { processedAt: true, disposition: true } })) as { processedAt: Date | null; disposition: string } | null;
+    return existing && existing.disposition === "HINT_RECORDED" && existing.processedAt === null ? "RETRY_PENDING" : "DUPLICATE";
   }
+}
+
+/** Mark hints as served (their sync hint + task exist). Idempotent. */
+export async function markWebhookEventsProcessed(eventKeys: readonly string[], deps?: QboPersistenceDeps): Promise<void> {
+  if (eventKeys.length === 0) return;
+  const now = clock(deps);
+  await clientOf(deps).qboWebhookEvent.updateMany({ where: { eventKey: { in: [...eventKeys] }, processedAt: null }, data: { processedAt: now } });
 }
 
 /** Remember that a verified hint arrived (cleared by the next successful run that started after it). */

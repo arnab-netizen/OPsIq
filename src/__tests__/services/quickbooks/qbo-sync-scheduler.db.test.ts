@@ -1,0 +1,137 @@
+/**
+ * Scheduled QuickBooks read-only sync: producer idempotency, tenant isolation, no hammering of dead/backing-off
+ * connections, and the registered handler — real PostgreSQL. The handler is exercised WITHOUT network (QuickBooks is
+ * unconfigured in the test process, so it must fail closed instead of calling out).
+ * Requires TEST_WITH_DB=true. Self-skips otherwise.
+ */
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { randomUUID } from "crypto";
+import { db } from "@/lib/db";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { enqueueDueQboReadSyncTasks } from "@/services/scheduler/scheduler-producers";
+import { getProductionTaskHandlers, TASK_NAME_QBO_READ_SYNC } from "@/infra/scheduler-handlers";
+import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
+import { QBO_TEST_ENV, seedConnected } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import * as webhookRoute from "@/app/api/integrations/quickbooks/webhook/route";
+import { createHmac } from "node:crypto";
+
+const SANDBOX = QBO_TEST_ENV("sandbox");
+const tasksFor = (ws: string) => db.scheduledTask.findMany({ where: { workspaceId: ws, taskName: TASK_NAME_QBO_READ_SYNC } });
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("enqueues one task per eligible ACTIVE connection per UTC day, idempotently, carrying only the connection id", async () => {
+    const a = await seedConnected();
+    const b = await seedConnected();
+    const first = await enqueueDueQboReadSyncTasks(SANDBOX);
+    expect(first.enqueued).toBeGreaterThanOrEqual(2);
+    const again = await enqueueDueQboReadSyncTasks(SANDBOX);
+    expect(again.enqueued).toBe(0); // registration is idempotent: same keys replay, nothing new is created
+    for (const x of [a, b]) {
+      const tasks = await tasksFor(x.t.ws);
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].workspaceId).toBe(x.t.ws);
+      expect(tasks[0].idempotencyKey).toMatch(new RegExp(`^qbo-read-sync:${x.connectionId}:\\d{4}-\\d{2}-\\d{2}$`));
+      const payload = typeof tasks[0].payload === "string" ? JSON.parse(tasks[0].payload) : tasks[0].payload;
+      expect(payload).toEqual({ connectionId: x.connectionId, trigger: "SCHEDULED" });
+    }
+  });
+
+  it("skips REAUTH_REQUIRED, DISCONNECTED, archived-business, held-lease and backing-off connections, and other environments", async () => {
+    const reauth = await seedConnected();
+    const gone = await seedConnected();
+    const archived = await seedConnected();
+    const leased = await seedConnected();
+    const backoff = await seedConnected();
+    const prod = await seedConnected({ environment: "production" });
+    const live = await seedConnected();
+    await db.qboConnection.update({ where: { id: reauth.connectionId }, data: { status: "REAUTH_REQUIRED", reauthRequiredAt: new Date() } });
+    await db.qboConnection.update({ where: { id: gone.connectionId }, data: { status: "DISCONNECTED", disconnectedAt: new Date() } });
+    await db.ownerBusiness.update({ where: { id: archived.t.biz }, data: { isActive: false } });
+    const sc = (c: typeof leased) => ({ connectionId: c.connectionId, workspaceId: c.t.ws, businessId: c.t.biz });
+    await db.qboSyncState.create({ data: { ...sc(leased), leaseToken: randomUUID(), leaseRunId: randomUUID(), leaseExpiresAt: new Date(Date.now() + 300_000), leaseEpoch: 1 } });
+    await db.qboSyncState.create({ data: { ...sc(backoff), nextAttemptNotBefore: new Date(Date.now() + 3_600_000), consecutiveFailures: 2 } });
+
+    await enqueueDueQboReadSyncTasks(SANDBOX);
+    for (const x of [reauth, gone, archived, leased, backoff, prod]) expect(await tasksFor(x.t.ws)).toHaveLength(0);
+    expect(await tasksFor(live.t.ws)).toHaveLength(1);
+
+    // An expired lease or an elapsed back-off makes a connection eligible again.
+    await db.qboSyncState.update({ where: { connectionId: leased.connectionId }, data: { leaseExpiresAt: new Date(Date.now() - 1000) } });
+    await db.qboSyncState.update({ where: { connectionId: backoff.connectionId }, data: { nextAttemptNotBefore: new Date(Date.now() - 1000) } });
+    await enqueueDueQboReadSyncTasks(SANDBOX);
+    expect(await tasksFor(leased.t.ws)).toHaveLength(1);
+    expect(await tasksFor(backoff.t.ws)).toHaveLength(1);
+    // The environment is decided by configuration: a production deployment would pick the production connection only.
+    const prodList = await listSchedulableConnections({ environment: "production", limit: 500 });
+    expect(prodList.some((c) => c.connectionId === prod.connectionId)).toBe(true);
+    expect(prodList.some((c) => c.connectionId === live.connectionId)).toBe(false);
+  });
+
+  it("does nothing when QuickBooks is not configured", async () => {
+    await seedConnected();
+    expect(await enqueueDueQboReadSyncTasks({})).toEqual({ candidatesFound: 0, enqueued: 0 });
+  });
+
+  it("the handler is registered once, requires a claimed workspace and a connection id, and fails closed without QuickBooks configuration (no network)", async () => {
+    const handlers = getProductionTaskHandlers();
+    const handler = handlers.get(TASK_NAME_QBO_READ_SYNC);
+    expect(handler).toBeTypeOf("function");
+    const c = await seedConnected();
+    const ctx = (workspaceId: string | null) => ({ taskId: randomUUID(), taskName: TASK_NAME_QBO_READ_SYNC, workspaceId, attempt: 1, signal: new AbortController().signal });
+    await expect(handler!({ connectionId: c.connectionId }, ctx(null))).rejects.toThrow(/workspaceId/);
+    await expect(handler!({}, ctx(c.t.ws))).rejects.toThrow(/connectionId/);
+    await expect(handler!(null, ctx(c.t.ws))).rejects.toThrow(/connectionId/);
+
+    const spy = vi.spyOn(globalThis, "fetch");
+    const result = await handler!({ connectionId: c.connectionId, trigger: "SCHEDULED" }, ctx(c.t.ws));
+    // The test process has no QUICKBOOKS_* configuration, so the sync refuses to start: reported, not retried, no network.
+    expect(result).toMatchObject({ status: "PARTIAL_FAILURE", summary: expect.stringContaining("CONFIGURATION_UNAVAILABLE") });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("the handler never trusts a payload: a connection of another workspace is CONNECTION_NOT_FOUND", async () => {
+    const a = await seedConnected();
+    const b = await seedConnected();
+    vi.stubEnv("QUICKBOOKS_CLIENT_ID", SANDBOX.QUICKBOOKS_CLIENT_ID);
+    vi.stubEnv("QUICKBOOKS_CLIENT_SECRET", SANDBOX.QUICKBOOKS_CLIENT_SECRET);
+    vi.stubEnv("QUICKBOOKS_REDIRECT_URI", SANDBOX.QUICKBOOKS_REDIRECT_URI);
+    vi.stubEnv("QUICKBOOKS_ENVIRONMENT", "sandbox");
+    const spy = vi.spyOn(globalThis, "fetch");
+    const handler = getProductionTaskHandlers().get(TASK_NAME_QBO_READ_SYNC)!;
+    const result = await handler({ connectionId: a.connectionId, businessId: a.t.biz, workspaceId: a.t.ws }, { taskId: randomUUID(), taskName: TASK_NAME_QBO_READ_SYNC, workspaceId: b.t.ws, attempt: 1, signal: new AbortController().signal });
+    expect(result).toMatchObject({ status: "PARTIAL_FAILURE", summary: expect.stringContaining("CONNECTION_NOT_FOUND") });
+    expect(spy).not.toHaveBeenCalled();
+    expect(await db.qboSyncRun.count({ where: { connectionId: a.connectionId } })).toBe(0);
+    spy.mockRestore();
+  });
+
+  describe("webhook route", () => {
+    const TOKEN = "route-verifier-token-0123456789";
+    const stubQbo = () => {
+      for (const [k, v] of Object.entries(SANDBOX)) vi.stubEnv(k, v);
+      vi.stubEnv("QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN", TOKEN);
+    };
+    const req = (body: string, signature: string | null) =>
+      new Request("http://localhost/api/integrations/quickbooks/webhook", { method: "POST", body, headers: { "content-type": "application/json", ...(signature ? { "intuit-signature": signature } : {}) } });
+
+    it("reads the raw body + intuit-signature header: unsigned 401, tampered 401, signed 200, unconfigured 503", async () => {
+      const c = await seedConnected();
+      const body = JSON.stringify({ eventNotifications: [{ realmId: c.realmId, dataChangeEvent: { entities: [{ name: "Invoice", id: "5", operation: "Create", lastUpdated: "2026-10-10T00:00:00Z" }] } }] });
+      const good = createHmac("sha256", TOKEN).update(body).digest("base64");
+      expect((await webhookRoute.POST(req(body, good))).status).toBe(503); // nothing configured yet
+      stubQbo();
+      expect((await webhookRoute.POST(req(body, null))).status).toBe(401);
+      expect((await webhookRoute.POST(req(body + " ", good))).status).toBe(401);
+      const ok = await webhookRoute.POST(req(body, good));
+      expect(ok.status).toBe(200);
+      expect(ok.headers.get("cache-control")).toBe("no-store");
+      expect(await ok.json()).toEqual({ received: true, hints: 1, duplicates: 0, ignored: 0 });
+      expect((await webhookRoute.POST(req(body, good))).status).toBe(200); // redelivery
+      expect(await tasksFor(c.t.ws)).toHaveLength(1);
+      expect(await db.qboWebhookEvent.count({ where: { realmId: c.realmId } })).toBe(1);
+    });
+  });
+});

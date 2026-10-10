@@ -26,7 +26,7 @@ import {
   verifyQboWebhookSignature,
 } from "@/domain/quickbooks/qbo-webhook";
 import type { QboPersistenceDeps } from "./qbo-connection.service";
-import { markWebhookHint, recordWebhookEvent, resolveRealmForWebhook, type WebhookHintResolution } from "./qbo-sync-store.service";
+import { markWebhookEventsProcessed, markWebhookHint, recordWebhookEvent, resolveRealmForWebhook, type WebhookHintResolution } from "./qbo-sync-store.service";
 
 export interface QboWebhookDeps extends QboPersistenceDeps {
   env: Record<string, string | undefined>;
@@ -73,6 +73,7 @@ export async function handleQboWebhook(
   const enqueue = deps.enqueue ?? ((t) => defaultEnqueue(t, now));
   const realmCache = new Map<string, WebhookHintResolution>();
   const hintedConnections = new Map<string, { workspaceId: string; businessId: string; connectionId: string; events: number }>();
+  const pendingKeys: string[] = [];
   let hints = 0;
   let duplicates = 0;
   let ignored = parsed.rejectedEvents;
@@ -90,13 +91,15 @@ export async function handleQboWebhook(
     };
     if (resolution.kind !== "ACTIVE") {
       const recorded = await recordWebhookEvent({ ...ledger, disposition: resolution.kind === "UNKNOWN_REALM" ? "IGNORED_UNKNOWN_REALM" : "IGNORED_NOT_ACTIVE", resolution: null }, deps);
-      if (!recorded) duplicates++;
+      if (recorded === "DUPLICATE") duplicates++;
       else ignored++;
       continue;
     }
     const recorded = await recordWebhookEvent({ ...ledger, disposition: "HINT_RECORDED", resolution }, deps);
-    if (!recorded) { duplicates++; continue; }
+    if (recorded === "DUPLICATE") { duplicates++; continue; }
+    // NEW, or RETRY_PENDING: an earlier delivery recorded the hint but never finished serving it — finish it now.
     hints++;
+    pendingKeys.push(ev.eventKey);
     const prior = hintedConnections.get(resolution.connectionId);
     hintedConnections.set(resolution.connectionId, { workspaceId: resolution.workspaceId, businessId: resolution.businessId, connectionId: resolution.connectionId, events: (prior?.events ?? 0) + 1 });
   }
@@ -111,5 +114,7 @@ export async function handleQboWebhook(
       payload: { businessId: c.businessId, events: c.events, syncEnqueued: created },
     });
   }
+  // Only after every hint + task exists is the ledger completed; a crash before this line makes the redelivery finish the work.
+  await markWebhookEventsProcessed(pendingKeys, deps);
   return { httpStatus: 200, body: { received: true, hints, duplicates, ignored } };
 }
