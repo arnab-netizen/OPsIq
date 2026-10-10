@@ -175,6 +175,10 @@ describe("financial snapshot selection is centralised", () => {
       // business, unordered — cash-semantics resolution only. It selects no "latest" and no "current".
       "listFinancialSnapshotVersions",
       "listFinancialSnapshots",
+      // Reviewed (compare-at-write): a share lock on ONE snapshot row by id, scoped by workspace + business, that
+      // reports whether it is still un-superseded. It selects no "latest" and no "current"; it serialises a decision
+      // against a concurrent amendment (which takes the same row FOR UPDATE).
+      "lockUnsupersededFinancialSnapshotShared",
       "resolveCurrentSnapshotId",
       "rowToFinanceInput",
       "toFinanceInput",

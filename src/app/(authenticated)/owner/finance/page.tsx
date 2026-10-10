@@ -24,6 +24,7 @@ import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
+import { EVIDENCE_QUALITIES, EVIDENCE_QUALITY_LABEL } from "@/domain/owner-finance/evidence-quality";
 import { CASH_IN_HAND_COPY } from "@/domain/owner-finance/quick-entry";
 import { Disclosure } from "@/ui/primitives";
 
@@ -417,6 +418,8 @@ export default function OwnerFinancePage() {
       periodEnd: fd.get("periodEnd"),
       currency: currentBusiness?.currency || fd.get("currency") || "INR",
     };
+    const stated = fd.get("evidenceQuality");
+    if (typeof stated === "string" && stated) body.evidenceQuality = stated;
     const model = fd.get("businessModel");
     if (model && typeof model === "string" && model.trim()) body.businessModel = model;
     for (const f of FINANCE_FIELDS) {
@@ -665,6 +668,7 @@ export default function OwnerFinancePage() {
           {preFirstRead && selected && (
             <div className="mb-6" data-testid="finance-quick-start">
               <QuickFinancialPicture
+                requireEvidenceQuality
                 key={selected}
                 businessId={selected}
                 currency={currentBusiness?.currency}
@@ -687,6 +691,17 @@ export default function OwnerFinancePage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input name="periodStart" label="These numbers cover: from" hint="First day of the month or period you are entering." type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} />
                 <Input name="periodEnd" label="These numbers cover: to" hint="Last day of that period." type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} />
+                <Select
+                  name="evidenceQuality"
+                  label="How reliable are these numbers?"
+                  hint="From your records, a good estimate, or a rough guess. OpsIQ uses this to say how far to trust its read."
+                  required
+                  defaultValue=""
+                  options={[
+                    { value: "", label: "Choose one" },
+                    ...EVIDENCE_QUALITIES.map((q) => ({ value: q, label: EVIDENCE_QUALITY_LABEL[q] })),
+                  ]}
+                />
                 <Select
                   name="businessModel"
                   label="Business model (optional)"

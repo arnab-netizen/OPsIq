@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   correct: vi.fn(),
   nextQuestion: vi.fn(),
   improve: vi.fn(),
+  skipQuestion: vi.fn(),
   feedback: vi.fn(),
 }));
 vi.mock("@/lib/owner-first-run-client", () => ({
@@ -24,6 +25,10 @@ import { FirstResultCorrection } from "@/components/owner/first-run/FirstResultC
 import { FirstResultImprovement } from "@/components/owner/first-run/FirstResultImprovement";
 import { FirstValueFeedback } from "@/components/owner/first-run/FirstValueFeedback";
 import { buildFirstMoneyRead, findOverclaims } from "@/domain/owner-first-run/first-money-read";
+import { HttpResponseError } from "@/lib/operator-safe-errors";
+import { CORRECTION_UNCONFIRMED_MESSAGE } from "@/domain/owner-first-run/read-staleness";
+
+const PERIOD = { start: "2026-09-01T00:00:00.000Z", end: "2026-09-30T00:00:00.000Z", state: "completed" as const };
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => cleanup());
@@ -85,7 +90,7 @@ describe("FirstRunBusinessStep — business name entered once", () => {
   });
 });
 
-const read = buildFirstMoneyRead({
+const read = buildFirstMoneyRead({ period: PERIOD,
   finding: { title: "Cash covers about 12 days of costs", summary: "A late payment could stop you paying suppliers.", sourceMetric: "Cash days of costs", sourceValue: 12, evidence: ["Cash is small next to monthly costs"], missingData: [] },
   action: { title: "Chase overdue payments this week", description: "List unpaid invoices, contact the largest first.", ownerRole: "owner", expectedTimeframeDays: 7, verificationMetric: "cashOnHand" },
   dataRequest: { title: "Add your bank balance", description: "Enter what is in your bank accounts.", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" },
@@ -95,7 +100,7 @@ const read = buildFirstMoneyRead({
 });
 
 describe("FirstMoneyReadCard", () => {
-  const props = { read, stale: false, decisionState: null, busy: false, onAccept: vi.fn(), onCorrect: vi.fn(), onImprove: vi.fn() };
+  const props = { read, decisionState: null, busy: false, onAccept: vi.fn(), onCorrect: vi.fn(), onImprove: vi.fn() };
   it("answers the eleven first-value questions", () => {
     render(<FirstMoneyReadCard {...props} />);
     expect(screen.getByRole("heading", { name: "Your first Money read" })).toBeTruthy();
@@ -115,7 +120,7 @@ describe("FirstMoneyReadCard", () => {
     expect(screen.getByTestId("first-money-read-action").textContent).not.toMatch(/bank balance/);
   });
   it("a blocked read cannot be accepted and says why, while correct/improve stay available", () => {
-    const blocked = buildFirstMoneyRead({ finding: null, action: null, dataRequest: { title: "Add your bank balance", description: "d", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" }, confidenceScore: 20, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: [] });
+    const blocked = buildFirstMoneyRead({ period: PERIOD, finding: null, action: null, dataRequest: { title: "Add your bank balance", description: "d", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" }, confidenceScore: 20, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: [] });
     render(<FirstMoneyReadCard {...props} read={blocked} />);
     expect((screen.getByTestId("first-run-accept") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId("first-money-read-accept-note").textContent).toMatch(/isn.t enough reliable information/);
@@ -127,11 +132,6 @@ describe("FirstMoneyReadCard", () => {
     const buttons = screen.getByTestId("first-money-read-actions").querySelectorAll("button");
     expect([...buttons].map((b) => b.textContent)).toEqual(["Use this as my next move", "Something here is wrong", "Improve this recommendation"]);
     expect(findOverclaims([container.textContent ?? ""])).toEqual([]);
-  });
-  it("accepting is disabled while the read is stale, and the stale warning is shown", () => {
-    render(<FirstMoneyReadCard {...props} stale />);
-    expect((screen.getByTestId("first-run-accept") as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByTestId("first-money-read-stale")).toBeTruthy();
   });
   it("after acceptance the primary path becomes a confirmation, with the other two still available", () => {
     render(<FirstMoneyReadCard {...props} decisionState="ACCEPTED" />);
@@ -149,7 +149,7 @@ describe("FirstMoneyReadCard", () => {
     expect([h.onAccept, h.onCorrect, h.onImprove].map((f) => f.mock.calls.length)).toEqual([1, 1, 1]);
   });
   it("with nothing to act on, the accept path is unavailable rather than inventing an action", () => {
-    const empty = buildFirstMoneyRead({ finding: null, action: null, dataRequest: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
+    const empty = buildFirstMoneyRead({ period: PERIOD, finding: null, action: null, dataRequest: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
     render(<FirstMoneyReadCard {...props} read={empty} />);
     expect((screen.getByTestId("first-run-accept") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByTestId("first-money-read-action")).toBeNull();
@@ -181,54 +181,95 @@ describe("FirstResultCorrection", () => {
     fireEvent.change(screen.getByLabelText(/cash in hand/i), { target: { value: "-5" } });
     expect((screen.getByTestId("first-result-correction-submit") as HTMLButtonElement).disabled).toBe(true);
   });
-  it("a failed correction says the earlier numbers are unchanged", async () => {
-    api.correct.mockRejectedValue(new Error("nope"));
+  it("a conflict (409: another tab already corrected it) shows the server's reason and never claims 'unchanged'", async () => {
+    api.correct.mockRejectedValue(new HttpResponseError("This read has already been corrected. Reload to see the latest.", 409, true));
     render(<FirstResultCorrection businessId="b1" snapshotId="s1" currency="GBP" onDone={vi.fn()} onCancel={vi.fn()} />);
     fireEvent.change(screen.getByLabelText(/cash in hand/i), { target: { value: "10" } });
     fireEvent.click(screen.getByTestId("first-result-correction-submit"));
-    await waitFor(() => expect(screen.getByTestId("first-result-correction-error").textContent).toMatch(/earlier numbers are unchanged/i));
+    await waitFor(() => expect(screen.getByTestId("first-result-correction-error").textContent).toBe("This read has already been corrected. Reload to see the latest."));
+    expect(screen.getByTestId("first-result-correction-error").textContent).not.toMatch(/unchanged/i);
+  });
+  it("a refused correction (4xx, nothing written) says the earlier numbers are unchanged, with no false 'automatic retry'", async () => {
+    api.correct.mockRejectedValue(new HttpResponseError("Please check your numbers.", 422, true));
+    render(<FirstResultCorrection businessId="b1" snapshotId="s1" currency="GBP" onDone={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/cash in hand/i), { target: { value: "10" } });
+    fireEvent.click(screen.getByTestId("first-result-correction-submit"));
+    await waitFor(() => expect(screen.getByTestId("first-result-correction-error").textContent).toMatch(/earlier numbers are unchanged\. Please check your numbers\./i));
+    expect(screen.getByTestId("first-result-correction-error").textContent).not.toMatch(/automatic/i);
+  });
+  it("a failure that may have happened after the save never claims nothing changed", async () => {
+    api.correct.mockRejectedValue(new Error("network down"));
+    render(<FirstResultCorrection businessId="b1" snapshotId="s1" currency="GBP" onDone={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/cash in hand/i), { target: { value: "10" } });
+    fireEvent.click(screen.getByTestId("first-result-correction-submit"));
+    await waitFor(() => expect(screen.getByTestId("first-result-correction-error").textContent).toBe(CORRECTION_UNCONFIRMED_MESSAGE));
+    expect(screen.getByTestId("first-result-correction-error").textContent).not.toMatch(/unchanged/i);
   });
 });
 
 describe("FirstResultImprovement — progressive OBQ", () => {
-  const question = (category: string) => ({
+  const readOnScreen = buildFirstMoneyRead({ period: PERIOD, finding: null, action: null, dataRequest: null, confidenceScore: 55, evidenceQuality: "GOOD_ESTIMATE", missingEvidence: ["Fixed costs"] });
+  const question = (category: string, handled = 0) => ({
     result: { done: false, question: { category, label: "Fixed costs", request: "Fixed costs", why: "Fixed costs decide your break-even.", couldChange: "the break-even recommendation", effort: "low", effortLabel: "About a minute" } },
-    inputHref: "/owner/finance",
+    inputHref: "/owner/finance?returnTo=first-run",
     inputActionLabel: "Add snapshot",
+    progress: { handled, max: 3 },
   });
-  it("records the request once, shows one explained question, and never repeats a skipped category", async () => {
+  const done = (reason: string, handled: number) => ({ result: { done: true, reason }, inputHref: null, inputActionLabel: null, progress: { handled, max: 3 } });
+
+  it("records the request once per category, shows one explained question, and persists a skip instead of holding it in the browser", async () => {
     api.improve.mockResolvedValue({ replayed: false });
-    api.nextQuestion.mockResolvedValueOnce(question("fixed_costs")).mockResolvedValueOnce({ result: { done: true, reason: "NOTHING_WORTH_ASKING" }, inputHref: null, inputActionLabel: null });
-    render(<FirstResultImprovement businessId="b1" onClose={vi.fn()} />);
+    api.skipQuestion.mockResolvedValue({ replayed: false });
+    api.nextQuestion.mockResolvedValueOnce(question("fixed_costs")).mockResolvedValueOnce(done("NOTHING_WORTH_ASKING", 1));
+    render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
     await waitFor(() => expect(screen.getByTestId("first-result-improvement-question")).toBeTruthy());
     const q = screen.getByTestId("first-result-improvement-question").textContent ?? "";
     expect(q).toMatch(/break-even/);
     expect(q).toMatch(/It could change/);
     expect(q).toMatch(/About a minute/);
+    expect(screen.getByTestId("first-result-improvement-progress").textContent).toMatch(/0 of up to 3/);
     // Opening the panel is not a request: it is recorded when the owner sets out to supply the evidence.
     expect(api.improve).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("first-result-improvement-add"));
-    expect(api.improve).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(api.improve).toHaveBeenCalledWith("b1", "fixed_costs"));
     fireEvent.click(screen.getByTestId("first-result-improvement-skip"));
     await waitFor(() => expect(screen.getByTestId("first-result-improvement-done")).toBeTruthy());
-    expect(api.nextQuestion).toHaveBeenLastCalledWith("b1", ["fixed_costs"], 0);
+    // The skip is sent to the server; the next question is requested with NOTHING but the business (no client-held counters).
+    expect(api.skipQuestion).toHaveBeenCalledWith("b1", "fixed_costs");
+    expect(api.nextQuestion).toHaveBeenLastCalledWith("b1");
+  });
+  it("the question limit is reached from persisted progress and ends the flow", async () => {
+    api.nextQuestion.mockResolvedValue(done("QUESTION_LIMIT", 3));
+    render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId("first-result-improvement-done").textContent).toMatch(/enough for now/i));
+    expect(screen.getByTestId("first-result-improvement-progress").textContent).toMatch(/3 of up to 3/);
+    expect(screen.queryByTestId("first-result-improvement-question")).toBeNull();
   });
   it("lets the owner continue later at any point", async () => {
-    api.improve.mockResolvedValue({ replayed: false });
     api.nextQuestion.mockResolvedValue(question("fixed_costs"));
     const onClose = vi.fn();
-    render(<FirstResultImprovement businessId="b1" onClose={onClose} />);
+    render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={onClose} />);
     await waitFor(() => expect(screen.getByTestId("first-result-improvement-later")).toBeTruthy());
     fireEvent.click(screen.getByTestId("first-result-improvement-later"));
     expect(onClose).toHaveBeenCalled();
   });
   it("a load failure offers a retry", async () => {
-    api.improve.mockResolvedValue({ replayed: false });
     api.nextQuestion.mockRejectedValueOnce(new Error("x")).mockResolvedValueOnce(question("fixed_costs"));
-    render(<FirstResultImprovement businessId="b1" onClose={vi.fn()} />);
+    render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     await waitFor(() => expect(screen.getByTestId("first-result-improvement-question")).toBeTruthy());
+  });
+  it("remembers what the owner was looking at (labels and tiers only) so the return can show what changed", async () => {
+    api.improve.mockResolvedValue({ replayed: false });
+    api.nextQuestion.mockResolvedValue(question("fixed_costs"));
+    window.sessionStorage.clear();
+    render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId("first-result-improvement-add")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("first-result-improvement-add"));
+    const stored = JSON.parse(window.sessionStorage.getItem("opsiq:first-run:before") ?? "{}");
+    expect(stored).toMatchObject({ confidenceTier: readOnScreen.confidenceTier, evidenceQuality: "GOOD_ESTIMATE", missingEvidence: ["Fixed costs"], questionLabel: "Fixed costs" });
+    expect(JSON.stringify(stored)).not.toMatch(/\d{4,}/); // no amounts
   });
 });
 

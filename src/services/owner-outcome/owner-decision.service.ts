@@ -56,6 +56,12 @@ const MAX_ATTEMPTS = 4;
 export interface DecisionDeps {
   now?: () => Date;
   client?: OutcomeDbClient;
+  /**
+   * Compare-at-write precondition. Runs INSIDE the decision transaction, after the candidate lock and before anything
+   * is written; it may throw to refuse. It lets a caller prove the evidence the owner saw is still current at the
+   * moment of commit (not merely when the page was loaded). Omitted by every other caller.
+   */
+  guard?: (tx: Prisma.TransactionClient) => Promise<void>;
 }
 
 function isUniqueViolation(e: unknown): boolean {
@@ -138,7 +144,7 @@ export interface RecordDecisionResult {
 async function appendDecision(
   workspaceId: string, actorId: string, businessId: string, resolved: ResolvedCandidate,
   plan: (latest: DecisionRow | null) => NormalizedDecisionBody, idempotencyKey: string | null, now: Date, auditEvent: AuditEventName,
-  client: OutcomeDbClient
+  client: OutcomeDbClient, guard?: (tx: Tx) => Promise<void>
 ): Promise<RecordDecisionResult> {
   const candidateId = resolved.parsed.candidateId;
 
@@ -146,6 +152,7 @@ async function appendDecision(
     try {
       return await client.$transaction(async (tx: Tx) => {
         await lockOwnerCandidate(tx, workspaceId, businessId, candidateId);
+        if (guard) await guard(tx);
         const latest = await tx.ownerDecisionRecord.findFirst({
           where: { workspaceId, businessId, candidateId },
           orderBy: { sequence: "desc" },
@@ -217,7 +224,7 @@ export async function recordOwnerDecision(
   const now = (deps.now ?? (() => new Date()))();
   const resolved = await resolveCandidate(workspaceId, businessId, input.candidateId, now, { client });
   const body = normalizeDecisionBody(input);
-  return appendDecision(workspaceId, actorId, businessId, resolved, () => body, input.idempotencyKey ?? null, now, AUDIT_EVENTS.OWNER_DECISION_RECORDED, client);
+  return appendDecision(workspaceId, actorId, businessId, resolved, () => body, input.idempotencyKey ?? null, now, AUDIT_EVENTS.OWNER_DECISION_RECORDED, client, deps.guard);
 }
 
 /**

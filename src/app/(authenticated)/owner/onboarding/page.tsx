@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { lastFullCalendarMonth } from "@/lib/owner-quick-start";
+import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
+import type { EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FirstRunRedirect } from "@/components/owner/first-run/FirstRunRedirect";
@@ -100,13 +103,10 @@ async function api(path: string, init?: RequestInit) {
  * (as opposed to an abstract "any typical month"), and it never straddles today.
  */
 function lastFullMonthStart(): string {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10);
+  return lastFullCalendarMonth(new Date()).start;
 }
 function lastFullMonthEnd(): string {
-  const d = new Date();
-  // Day 0 of the current month is the last day of the previous month.
-  return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10);
+  return lastFullCalendarMonth(new Date()).end;
 }
 
 function confidencePhrase(score: number): string {
@@ -142,6 +142,7 @@ function EssentialNumbersForm({
   const [saveFailure, setSaveFailure] = useState<string | null>(null);
   const [draft, setDraft] = useState<QuickEntryDraft>({});
   const [bankText, setBankText] = useState("");
+  const [quality, setQuality] = useState<EvidenceQuality | null>(null);
   // Synchronous guard: two fast submits must not both pass a state-based `busy` check.
   const inFlight = useRef(false);
 
@@ -149,7 +150,7 @@ function EssentialNumbersForm({
   const bank = parseQuickAmount(bankText);
   const hasErrors = Object.keys(assessment.errors).length > 0 || bank.kind === "invalid";
   const sufficient = assessment.sufficiency?.sufficient === true;
-  const disabled = busy || hasErrors || !sufficient;
+  const disabled = busy || hasErrors || !sufficient || quality === null;
   const feedback = hasErrors || assessment.nothingEntered
     ? null
     : sufficient
@@ -173,7 +174,7 @@ function EssentialNumbersForm({
       try {
         const snapshot = await api(`/api/owner/finance/businesses/${businessId}/snapshots`, {
           method: "POST",
-          body: JSON.stringify({ periodStart, periodEnd, currency, ...fields }),
+          body: JSON.stringify({ periodStart, periodEnd, currency, ...fields, ...(quality ? { evidenceQuality: quality } : {}) }),
         });
         snapshotId = snapshot.id;
       } catch (createErr) {
@@ -191,7 +192,7 @@ function EssentialNumbersForm({
         if (!currentPeriod) throw createErr;
         const amended = await api(`/api/owner/finance/snapshots/${currentPeriod.id}/amend`, {
           method: "POST",
-          body: JSON.stringify({ amendmentReason: "Updated during onboarding essential numbers.", ...fields }),
+          body: JSON.stringify({ amendmentReason: "Updated during onboarding essential numbers.", ...fields, ...(quality ? { evidenceQuality: quality } : {}) }),
         });
         snapshotId = amended.newSnapshotId;
       }
@@ -280,7 +281,7 @@ function EssentialNumbersForm({
                 value={draft[f.name] ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
                 aria-invalid={assessment.errors[f.name] ? true : undefined}
-                className="w-full rounded-md border border-border p-2 text-sm"
+                className="min-h-11 w-full rounded-md border border-border p-2 text-base sm:text-sm"
                 placeholder="Blank = don't know"
               />
               {assessment.errors[f.name] ? (
@@ -291,6 +292,7 @@ function EssentialNumbersForm({
             </label>
           ))}
         </div>
+        <EvidenceQualityFieldset testId="onboarding-evidence-quality" value={quality} onChange={setQuality} required />
         <label className="flex flex-col gap-1 text-sm text-foreground">
           <span>{BANK_BALANCE_COPY.label} ({currency}) — optional</span>
           <input
@@ -301,7 +303,7 @@ function EssentialNumbersForm({
             value={bankText}
             onChange={(e) => setBankText(e.target.value)}
             aria-invalid={bank.kind === "invalid" ? true : undefined}
-            className="w-full rounded-md border border-border p-2 text-sm"
+            className="min-h-11 w-full rounded-md border border-border p-2 text-base sm:text-sm"
             placeholder="e.g. 6000"
           />
           {bank.kind === "invalid" ? (

@@ -13,7 +13,13 @@ import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface OverviewData {
-  capacity: { admitted: number; limit: number; admissionMode: string; source: string };
+  capacity: { admitted: number; verified: number; pending: number; ledger: number; limit: number; admissionMode: string; source: string };
+  journey: {
+    windowDays: number;
+    truncated: boolean;
+    steps: Array<{ key: string; label: string; count: number }>;
+    failures: Array<{ key: string; label: string; count: number }>;
+  } | null;
   requests: { requested: number; invited: number; revoked: number; rejected: number };
   customers: { registered: number; awaitingVerification: number; active: number };
   readiness: { status: string; checks: Record<string, boolean> };
@@ -88,10 +94,10 @@ export default function AdminOverviewPage() {
   }
   if (!state.data) return <GovernedEmptyState reason="no_data" />;
 
-  const { capacity, requests, customers, readiness } = state.data;
+  const { capacity, requests, customers, readiness, journey } = state.data;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-3xl font-bold">Administration overview</h1>
         <p className="text-gray-600">Beta cohort usage, request pipeline, and system readiness.</p>
@@ -99,11 +105,11 @@ export default function AdminOverviewPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Beta cohort usage</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <StatTile
             label="Beta cohort usage"
             value={`${capacity.admitted} / ${capacity.limit}`}
-            sublabel={`Admission mode: ${capacity.admissionMode}${capacity.source === "legacy" ? " (legacy env — not yet initialized)" : ""}`}
+            sublabel={`Admission mode: ${capacity.admissionMode}${capacity.source === "legacy" ? " (legacy env — not yet initialized)" : ""}. ${capacity.verified} verified + ${capacity.pending} waiting to verify (a waiting place lapses after 24 hours).`}
           />
           <StatTile label="Requested" value={requests.requested} />
           <StatTile label="Invited" value={requests.invited} />
@@ -118,6 +124,36 @@ export default function AdminOverviewPage() {
           <StatTile label="Awaiting verification" value={customers.awaitingVerification} />
           <StatTile label="Active" value={customers.active} />
         </div>
+      </section>
+
+      <section className="space-y-3" data-testid="journey-funnel">
+        <h2 className="text-lg font-semibold">Signup to first value{journey ? ` (last ${journey.windowDays} days)` : ""}</h2>
+        {!journey && <p className="text-sm text-muted-foreground">The journey counts couldn&rsquo;t load. The rest of this page is unaffected.</p>}
+        {journey && (
+          <>
+            <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="journey-steps">
+              {journey.steps.map((step) => (
+                <li key={step.key} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <span className="text-sm">{step.label}</span>
+                  <span className="text-lg font-semibold" data-testid={`journey-${step.key}`}>{step.count}</span>
+                </li>
+              ))}
+            </ol>
+            <h3 className="text-base font-semibold">Things that went wrong</h3>
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="journey-failures">
+              {journey.failures.map((f) => (
+                <li key={f.key} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <span className="text-sm">{f.label}</span>
+                  <span className={`text-lg font-semibold ${f.count > 0 ? "text-destructive" : ""}`}>{f.count}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Counts of people and events only. No names, emails or financial figures are shown here.
+              {journey.truncated ? " This window had more events than can be counted exactly, so the numbers are a minimum." : ""}
+            </p>
+          </>
+        )}
       </section>
 
       <section className="space-y-3">

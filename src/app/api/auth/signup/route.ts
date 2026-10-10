@@ -12,7 +12,7 @@ import { ROLES } from "@/domain/constants/roles";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { isBetaRequestInvited, PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE, CURRENT_POLICY_VERSIONS } from "@/lib/beta";
-import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableError, BetaAdmissionRefusedError } from "@/services/auth/beta-cap";
+import { reservePublicBetaCapacity, BetaCapExceededError, BetaPendingFromSourceError, BetaCapUnavailableError, BetaAdmissionRefusedError } from "@/services/auth/beta-cap";
 import { canAdmitSignup } from "@/domain/beta/admission";
 import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
 import { checkAndSendCapacityAlert } from "@/services/beta/capacity-alerts.service";
@@ -21,6 +21,7 @@ import { recordProductEvent } from "@/services/analytics/product-events.service"
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { publicAdmissionRefusal } from "@/lib/public-admission-response";
+import { trustedClientAddress } from "@/lib/client-address";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,8 +51,8 @@ const signupSchema = z.object({
   workspaceName: z
     .string()
     .trim()
-    .min(1, "Workspace name is required")
-    .max(100, "Workspace name must be 100 characters or fewer"),
+    .min(1, "Business name is required")
+    .max(100, "Business name must be 100 characters or fewer"),
   acceptTerms: z.literal(true, "You must accept the Terms of Service"),
   acceptPrivacy: z.literal(true, "You must accept the Privacy Notice"),
   acceptBetaNotice: z.literal(true, "You must accept the Beta Notice"),
@@ -144,6 +145,12 @@ const handleSignup = async (request: NextRequest) => {
       const gateInvited = gateEmail !== null && (await isBetaRequestInvited(gateEmail));
       const wouldAdmit = canAdmitSignup(preFilterSettings.admissionMode, gateInvited, true);
       if (!wouldAdmit) {
+        // Recorded so the operator's failure view reflects every refusal, not only the rare in-transaction race.
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_DISABLED,
+          payload: { reason: preFilterSettings.admissionMode === "WAITLIST" ? "admission_waitlist" : preFilterSettings.admissionMode === "CLOSED" ? "admission_closed" : "not_invited" },
+          visibility: "internal",
+        });
         return publicAdmissionRefusal("/api/auth/signup", BETA_CLOSED_RESPONSE, 403);
       }
       // Pre-filter passed (admitted pending only a capacity check). Fall
@@ -186,6 +193,8 @@ const handleSignup = async (request: NextRequest) => {
     const workspaceId = randomUUID();
     const now = new Date();
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+    // The per-source bound on unverified signups keys on the PLATFORM-set address, never the caller-influenced list.
+    const clientAddress = trustedClientAddress(request.headers);
 
     // Workspace slug is internal routing metadata, not a human-facing
     // uniqueness promise. Always suffixing with the workspace's own id makes
@@ -233,7 +242,7 @@ const handleSignup = async (request: NextRequest) => {
       db,
       SIGNUP_TRANSACTION_TIMEOUT_MS,
       async (tx: Prisma.TransactionClient) => {
-        await reservePublicBetaCapacity(tx, isInvited);
+        await reservePublicBetaCapacity(tx, isInvited, isInvited ? null : clientAddress);
 
         const user = await tx.user.create({
           data: {
@@ -286,7 +295,7 @@ const handleSignup = async (request: NextRequest) => {
               userId: user.id,
               policyType,
               version: CURRENT_POLICY_VERSIONS[policyType],
-              ipAddress: ip !== "unknown" ? ip : null,
+              ipAddress: clientAddress ?? (ip !== "unknown" ? ip : null),
             },
           });
         }
@@ -297,7 +306,7 @@ const handleSignup = async (request: NextRequest) => {
             userId: user.id,
             tokenHash: verificationTokenHash,
             expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
-            ipAddress: ip !== "unknown" ? ip : null,
+            ipAddress: clientAddress ?? (ip !== "unknown" ? ip : null),
           },
         });
 
@@ -397,7 +406,7 @@ const handleSignup = async (request: NextRequest) => {
       // emitAuditEvent failure regardless.
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_CAP,
-        payload: { reason: "beta_cap_reached" },
+        payload: { reason: error instanceof BetaPendingFromSourceError ? "pending_from_source" : "beta_cap_reached" },
         visibility: "internal",
       });
       return Response.json(

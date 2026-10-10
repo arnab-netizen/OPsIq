@@ -116,16 +116,16 @@ export default function SignupPage() {
         <div className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-background p-8 text-center shadow-sm">
           <h1 className="text-2xl font-bold text-primary">Check your email</h1>
           <p className="text-sm text-muted-foreground">
-            We sent a verification link to <strong>{email}</strong>. Click it to activate your
-            account and sign in.
+            We sent a verification link to <strong className="break-all">{email}</strong>. Open it and you&rsquo;ll be taken straight in.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Didn&rsquo;t get it? Check your spam folder, or{" "}
-            <Link href={`/resend-verification?email=${encodeURIComponent(email)}`} className="text-[var(--primary-text)] hover:underline">
-              resend the verification email
-            </Link>
-            .
-          </p>
+          <p className="text-sm text-muted-foreground">Didn&rsquo;t get it? Check your spam folder, or</p>
+          <Link
+            href={`/resend-verification?email=${encodeURIComponent(email)}`}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-[var(--primary-text)]"
+            data-testid="signup-resend-link"
+          >
+            Resend the verification email
+          </Link>
         </div>
       </div>
     );
@@ -136,7 +136,7 @@ export default function SignupPage() {
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-primary">
-            <Link href="/">OpsIQ</Link>
+            <Link href="/" className="inline-flex min-h-11 items-center">OpsIQ</Link>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Create your account &mdash; beta access</p>
         </div>
@@ -203,14 +203,14 @@ export default function SignupPage() {
                 disabled={betaEnabled === null}
               />
 
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <label className="flex items-start gap-2">
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <label className="flex min-h-11 items-start gap-3 py-1">
                   <input
                     type="checkbox"
                     checked={acceptTerms}
                     onChange={(e) => setAcceptTerms(e.target.checked)}
                     required
-                    className="mt-0.5"
+                    className="mt-0.5 h-5 w-5 shrink-0"
                   />
                   <span>
                     I accept the{" "}
@@ -219,13 +219,13 @@ export default function SignupPage() {
                     </Link>
                   </span>
                 </label>
-                <label className="flex items-start gap-2">
+                <label className="flex min-h-11 items-start gap-3 py-1">
                   <input
                     type="checkbox"
                     checked={acceptPrivacy}
                     onChange={(e) => setAcceptPrivacy(e.target.checked)}
                     required
-                    className="mt-0.5"
+                    className="mt-0.5 h-5 w-5 shrink-0"
                   />
                   <span>
                     I accept the{" "}
@@ -234,13 +234,13 @@ export default function SignupPage() {
                     </Link>
                   </span>
                 </label>
-                <label className="flex items-start gap-2">
+                <label className="flex min-h-11 items-start gap-3 py-1">
                   <input
                     type="checkbox"
                     checked={acceptBetaNotice}
                     onChange={(e) => setAcceptBetaNotice(e.target.checked)}
                     required
-                    className="mt-0.5"
+                    className="mt-0.5 h-5 w-5 shrink-0"
                   />
                   <span>
                     I accept the{" "}
@@ -253,7 +253,7 @@ export default function SignupPage() {
               </div>
 
               {error && (
-                <div className="rounded bg-destructive/10 p-3 text-sm text-destructive">
+                <div role="alert" className="rounded bg-destructive/10 p-3 text-sm text-destructive">
                   {error}
                 </div>
               )}
@@ -272,7 +272,7 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="text-[var(--primary-text)] hover:underline">
+          <Link href="/login" className="inline-flex min-h-11 items-center text-[var(--primary-text)] hover:underline">
             Sign in
           </Link>
         </p>

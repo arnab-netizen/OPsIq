@@ -115,6 +115,7 @@ describe("Money (sidebar) before the first read", () => {
     renderMoney();
     await screen.findByTestId("finance-quick-start");
     type("revenue", "100"); type("fixedCosts", "40"); type("cashOnHand", "10");
+    fireEvent.click(screen.getByLabelText("From my records")); // the first evidence must state how reliable it is
     fireEvent.click(screen.getByTestId("quick-primary-action"));
     await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/diagnoses"))).toBe(true));
     const writes = fetchMock.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === "POST").map((c) => String(c[0]));

@@ -68,27 +68,36 @@ function VerifyEmailForm() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-background p-8 text-center shadow-sm">
         <h1 className="text-2xl font-bold text-primary">
-          <Link href="/">OpsIQ</Link>
+          <Link href="/" className="inline-flex min-h-11 items-center">OpsIQ</Link>
         </h1>
         {status === "verifying" && (
-          <p className="text-sm text-muted-foreground">Verifying your email&hellip;</p>
+          <p role="status" className="text-sm text-muted-foreground">Verifying your email&hellip;</p>
         )}
         {status === "success" && (
-          <p className="text-sm text-muted-foreground">
-            Email verified. Taking you to your first read&hellip;
-          </p>
+          <>
+            <p role="status" className="text-sm text-muted-foreground">
+              Email verified. Taking you to your first read&hellip;
+            </p>
+            <Link
+              href="/owner/first-run"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-[var(--primary-text)]"
+              data-testid="verify-continue-link"
+            >
+              Continue
+            </Link>
+          </>
         )}
         {status === "error" && (
           <>
-            <div className="rounded bg-destructive/10 p-3 text-sm text-destructive">{message}</div>
+            <div role="alert" className="rounded bg-destructive/10 p-3 text-sm text-destructive">{message}</div>
             <p className="text-sm text-muted-foreground">
-              <Link href="/resend-verification" className="text-[var(--primary-text)] hover:underline">
+              <Link href="/resend-verification" className="inline-flex min-h-11 items-center text-[var(--primary-text)] hover:underline">
                 Request a new verification link
               </Link>
             </p>
             <p className="text-xs text-muted-foreground">
               Already verified? A link can only be used once &mdash;{" "}
-              <Link href="/login" className="text-[var(--primary-text)] hover:underline">
+              <Link href="/login" className="inline-flex min-h-11 items-center text-[var(--primary-text)] hover:underline">
                 sign in
               </Link>
               .

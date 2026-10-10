@@ -5,12 +5,15 @@
  * Parsing reuses the quick-entry parser (blank = unchanged, 0 = a real zero); the save goes to the canonical
  * amendment route, which keeps the old version and re-runs the canonical diagnosis. Presentation only.
  */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "@/ui/primitives";
 import { QUICK_ENTRY_FIELDS, assessQuickEntry, type QuickEntryDraft } from "@/domain/owner-finance/quick-entry";
-import { EVIDENCE_QUALITIES, EVIDENCE_QUALITY_LABEL, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { firstRunApi, type CorrectionResult } from "@/lib/owner-first-run-client";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { firstRunErrorText } from "@/lib/first-run-errors";
+import { HttpResponseError } from "@/lib/operator-safe-errors";
+import { CORRECTION_UNCONFIRMED_MESSAGE } from "@/domain/owner-first-run/read-staleness";
 
 export function FirstResultCorrection({
   businessId,
@@ -30,6 +33,9 @@ export function FirstResultCorrection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // The panel opens below the read: move focus to it so keyboard and screen-reader users land on the form.
+  useEffect(() => { headingRef.current?.focus(); }, []);
   const assessment = useMemo(() => assessQuickEntry(draft), [draft]);
   const hasErrors = Object.keys(assessment.errors).length > 0;
   const changes = Object.keys(assessment.values).length > 0 || quality !== null;
@@ -50,8 +56,19 @@ export function FirstResultCorrection({
       });
       onDone(result);
     } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "save" });
-      setError(`We couldn't apply that correction. Your earlier numbers are unchanged. ${governed.recovery}`);
+      // A 4xx is refused before anything is written, so "unchanged" is true. Anything else (network, 5xx) may have
+      // reached the server after the amendment committed: say it is unconfirmed, never that nothing changed.
+      const refusedBeforeWrite = err instanceof HttpResponseError && err.status >= 400 && err.status < 500;
+      // 409 means the figures moved under this form (another tab corrected them): the server's reason stands alone, and
+      // "unchanged" is not claimed because the numbers on record are no longer the ones this form was opened on.
+      const conflict = err instanceof HttpResponseError && err.status === 409;
+      setError(
+        conflict
+          ? firstRunErrorText(err)
+          : refusedBeforeWrite
+            ? `We couldn't apply that correction. Your earlier numbers are unchanged. ${firstRunErrorText(err)}`
+            : CORRECTION_UNCONFIRMED_MESSAGE,
+      );
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -60,7 +77,7 @@ export function FirstResultCorrection({
 
   return (
     <form onSubmit={submit} noValidate data-testid="first-result-correction" className="rounded-lg border border-border bg-background p-4">
-      <h3 className="text-lg font-semibold text-foreground">What should be different?</h3>
+      <h3 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">What should be different?</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Change only what is wrong and leave the rest blank. Your earlier numbers are kept on record, and OpsIQ will work out the read again.
       </p>
@@ -80,17 +97,13 @@ export function FirstResultCorrection({
           />
         ))}
       </div>
-      <fieldset className="mt-3">
-        <legend className="text-sm font-medium text-foreground">How reliable are the corrected numbers?</legend>
-        <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {EVIDENCE_QUALITIES.map((q) => (
-            <label key={q} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border p-2 text-sm ${quality === q ? "border-primary bg-primary/10" : "border-border"}`}>
-              <input type="radio" name="correctionQuality" checked={quality === q} onChange={() => setQuality(q)} />
-              {EVIDENCE_QUALITY_LABEL[q]}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <EvidenceQualityFieldset
+        legend="How reliable are the corrected numbers?"
+        name="correctionQuality"
+        value={quality}
+        onChange={setQuality}
+        hint="Optional. If you change a number and say nothing here, OpsIQ stops treating the whole set as straight from your records."
+      />
       {error && (
         <p
           role="alert"

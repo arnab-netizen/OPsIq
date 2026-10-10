@@ -12,6 +12,9 @@ import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { randomUUID } from "crypto";
 import { z } from "zod/v4";
 import { cookies } from "next/headers";
+import { PENDING_SIGNUP_HOLD_MS } from "@/services/beta/platform-settings.service";
+import { BetaCapExceededError, reserveCapacityForLateVerification } from "@/services/auth/beta-cap";
+import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -67,6 +70,20 @@ export const POST = async (request: NextRequest) => {
         });
         if (claim.count === 0) {
           throw new BadRequestError(INVALID_TOKEN_TEXT);
+        }
+
+        // An external beta signup whose pending hold lapsed no longer holds a capacity slot: verifying must take one,
+        // under the shared advisory lock, so a late verifier can never push the beta over its limit. Accounts that
+        // verify inside the hold already own their slot, and accounts outside the beta cohort are unaffected.
+        const pendingWorkspace = await tx.workspace.findFirst({
+          where: {
+            createdBy: verificationToken.userId,
+            signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] },
+          },
+          select: { createdAt: true },
+        });
+        if (pendingWorkspace && Date.now() - pendingWorkspace.createdAt.getTime() > PENDING_SIGNUP_HOLD_MS) {
+          await reserveCapacityForLateVerification(tx);
         }
 
         const user = await tx.user.update({
@@ -132,6 +149,13 @@ export const POST = async (request: NextRequest) => {
     }
     if (error instanceof BadRequestError) {
       return Response.json({ error: INVALID_TOKEN_TEXT }, { status: 400 });
+    }
+    if (error instanceof BetaCapExceededError) {
+      // The transaction rolled back: the token is NOT consumed and the account is untouched, so this link works later.
+      return Response.json(
+        { error: "The beta is full right now. Your account is saved — please open this link again in a day or two." },
+        { status: 409 },
+      );
     }
     console.error("[VERIFY_EMAIL_FAILED]", error instanceof Error ? error.constructor.name : "UnknownError");
     return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });

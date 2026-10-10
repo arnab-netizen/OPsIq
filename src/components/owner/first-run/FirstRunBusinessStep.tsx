@@ -9,7 +9,7 @@ import { useRef, useState } from "react";
 import { Button, Input, Select } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { firstRunApi } from "@/lib/owner-first-run-client";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { firstRunErrorText } from "@/lib/first-run-errors";
 
 const CURRENCIES = ["GBP", "USD", "EUR", "INR", "AUD", "CAD", "NZD", "SGD", "AED", "ZAR", "MYR", "IDR", "PHP", "NGN", "KES"] as const;
 
@@ -51,8 +51,7 @@ export function FirstRunBusinessStep({
         onConflict?.();
         return;
       }
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "save" });
-      setError(`We couldn't set up your business yet. Nothing was lost. ${governed.recovery}`);
+      setError(`We couldn't set up your business yet. Nothing was lost. ${firstRunErrorText(err)}`);
     } finally {
       inFlight.current = false;
       setBusy(false);

@@ -601,6 +601,7 @@ export default function OwnerDataHubPage() {
           {selectedBusiness && state && !state.canRunFirstDiagnosis && (
             <div className="space-y-4" data-testid="data-hub-quick-start">
               <QuickFinancialPicture
+                requireEvidenceQuality
                 key={selectedBusiness.id}
                 businessId={selectedBusiness.id}
                 currency={selectedBusiness.currency}

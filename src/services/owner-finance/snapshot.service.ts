@@ -17,7 +17,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { CashSemantics } from "@/domain/owner-finance/liquidity";
-import { isEvidenceQuality, resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { isEvidenceQuality, provenanceOf, resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
 /** True when an amendment changes any numeric figure (notes, reason and quality alone are not numbers). */
@@ -262,6 +262,23 @@ export async function resolveCurrentSnapshotId(originalId: string): Promise<stri
 }
 
 /**
+ * Share-lock one snapshot row (workspace + business scoped) and report whether it is still un-superseded. Amendment takes
+ * the same row FOR UPDATE, so a caller that holds this lock inside its own transaction and then commits is serialised
+ * against any concurrent amendment: either the amendment committed first (this returns false) or it waits for the caller.
+ * Used by compare-at-write checks ("the evidence this decision was made on is still current").
+ */
+export async function lockUnsupersededFinancialSnapshotShared(
+  tx: Prisma.TransactionClient, workspaceId: string, businessId: string, snapshotId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM owner_financial_snapshots
+    WHERE id = ${snapshotId} AND workspace_id = ${workspaceId} AND business_id = ${businessId} AND superseded_by_id IS NULL
+    FOR SHARE
+  `;
+  return rows.length > 0;
+}
+
+/**
  * Amend a financial snapshot by creating a new version with corrected/added fields.
  * The original row is preserved and marked superseded (supersededById = newId).
  * Uses SELECT FOR UPDATE to prevent concurrent amendments from branching the chain.
@@ -353,11 +370,16 @@ export async function amendFinancialSnapshot(
       ["ownerWithdrawals", input.ownerWithdrawals], ["inventoryStockCashLock", input.inventoryStockCashLock],
       ["orderCount", input.orderCount], ["customerCount", input.customerCount],
       ["repeatCustomerCount", input.repeatCustomerCount], ["notes", input.notes],
-      ["evidenceQuality", input.evidenceQuality],
     ];
     for (const [key, val] of fieldMap) {
       if (val !== undefined) changedFields.push(key);
     }
+    // Provenance can move WITHOUT being passed (changed numbers step ACTUAL down to GOOD_ESTIMATE). Any change is
+    // recorded, with before/after, in the snapshot's own lineage (changedFields) and in the amendment audit event.
+    const qualityBefore = provenanceOf(current.evidenceQuality);
+    const qualityAfter = provenanceOf(mergedRow.evidenceQuality);
+    // Only a real change is recorded: restating the same quality is not a change of provenance.
+    if (qualityBefore !== qualityAfter) changedFields.push("evidenceQuality");
 
     const created = await tx.ownerFinancialSnapshot.create({
       data: {
@@ -427,6 +449,8 @@ export async function amendFinancialSnapshot(
           version: created.version,
           changedFields,
           amendmentReason: input.amendmentReason,
+          evidenceQualityBefore: qualityBefore,
+          evidenceQualityAfter: qualityAfter,
         },
       },
       tx

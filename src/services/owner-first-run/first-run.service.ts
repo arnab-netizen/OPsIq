@@ -25,8 +25,9 @@ import {
   type TrustedInteractionFact,
 } from "@/domain/owner-first-run/activation";
 import { buildFirstMoneyRead, selectFirstReadActions, type FirstMoneyRead } from "@/domain/owner-first-run/first-money-read";
-import { selectNextQuestion, type NextQuestionResult } from "@/domain/owner-first-run/next-question";
+import { MAX_PROGRESSIVE_QUESTIONS, selectNextQuestion, type NextQuestionResult } from "@/domain/owner-first-run/next-question";
 import { OWNER_INPUT_CATEGORIES } from "@/domain/owner-mode/input-catalog";
+import { withFirstRunReturn } from "@/domain/owner-first-run/first-run-return";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { computeMissingInputsWithPriority } from "@/domain/owner-finance/data-confidence";
 import { isEvidenceQuality, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
@@ -34,6 +35,7 @@ import { formatDomainActionCandidateId } from "@/domain/owner-spine/owner-decisi
 import { prefetchOwnerDomainRows } from "@/services/owner-mode/owner-db-providers";
 import { loadFirstReadSufficiency } from "@/services/owner-mode/owner-onboarding.service";
 import { getOwnerInputGuidance } from "@/services/owner-mode/owner-input-guidance.service";
+import { evidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 import { firstRunEvidence } from "@/services/owner-first-run/first-run-evidence.reader";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
@@ -51,7 +53,7 @@ type Json = Record<string, unknown>;
 const FIRST_RUN_RECENT_DAYS = 14;
 
 /** Server-side log text for a swallowed analytics failure (governed classifier; never shown to an owner). */
-function describeFailure(error: unknown): string {
+export function describeFailure(error: unknown): string {
   return classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).technicalDetails;
 }
 
@@ -249,8 +251,10 @@ export interface FirstMoneyReadView {
   /** The presented action's own verification facts (used to build the outcome contract on accept). */
   presentedAction: { title: string; verificationMetric: string; expectedTimeframeDays: number } | null;
   decisionState: string | null;
-  /** The evidence was corrected after this read; it must be re-run before it is trusted. */
-  stale: boolean;
+}
+
+function toIso(value: unknown): string {
+  return value instanceof Date ? value.toISOString() : String(value);
 }
 
 function jsonStringArray(value: unknown): string[] {
@@ -304,6 +308,19 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     dataRequestCode: dataRequest ? String((dataRequest as { findingCode?: string }).findingCode ?? "") : null,
     criticalInputsMissing: jsonStringArray(snapshot.missingCriticalData).length > 0,
     evidenceQuality: quality,
+    currency: business.currency,
+    evidenceDomains: ["finance"],
+    period: {
+      start: toIso(snapshot.periodStart),
+      end: toIso(snapshot.periodEnd),
+      // Canonical period semantics (current-diagnosis-cycle.ts): an unended period is PROVISIONAL, never "completed".
+      // A date-only period end is stored as midnight UTC at the START of its last day, so the period is only complete once
+      // that whole day is over: from 00:00 UTC on the 31st, "1–31 October" is still missing a day of trading.
+      state:
+        evidencePeriodState({ periodStart: snapshot.periodStart as Date, periodEnd: new Date((snapshot.periodEnd as Date).getTime() + 86_400_000) }, new Date()) === "completed"
+          ? "completed"
+          : "provisional",
+    },
     missingEvidence: missing.slice(0, 5).map((m) => m.field),
   });
 
@@ -325,8 +342,6 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     candidateId,
     presentedAction: presented ? { title: presented.title, verificationMetric: presented.verificationMetric, expectedTimeframeDays: presented.expectedTimeframeDays } : null,
     decisionState,
-    // A read exists only on the CURRENT figures (see first-run-evidence.reader.ts), so it is never stale when returned.
-    stale: false,
   };
 }
 
@@ -338,19 +353,46 @@ export interface NextQuestionView {
   inputActionLabel: string | null;
 }
 
-export async function getNextQuestionView(
-  workspaceId: string,
-  businessId: string,
-  opts: { skipped: readonly string[]; answeredCount: number },
-): Promise<NextQuestionView> {
-  const valid = new Set<string>(OWNER_INPUT_CATEGORIES);
-  const skipped = opts.skipped.filter((c) => valid.has(c));
+/**
+ * Progressive-question progress is PERSISTED (OwnerFirstResultInteraction), never held by the browser: a category the
+ * owner chose to supply (IMPROVEMENT_REQUESTED) or skipped (QUESTION_SKIPPED) is "handled" and is never asked again,
+ * and the number of handled categories is what the question limit counts. A reload, a second tab or a new device
+ * therefore sees the same progress, and the limit is reachable.
+ */
+export async function getQuestionProgress(workspaceId: string, businessId: string): Promise<{ handled: string[]; skipped: string[] }> {
+  const rows = await db.ownerFirstResultInteraction.findMany({
+    where: { workspaceId, businessId, kind: { in: ["IMPROVEMENT_REQUESTED", "QUESTION_SKIPPED"] }, questionCategory: { not: null } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { kind: true, questionCategory: true },
+  });
+  const handled = new Set<string>();
+  const skipped = new Set<string>();
+  for (const r of rows) {
+    if (!r.questionCategory) continue;
+    handled.add(r.questionCategory);
+    if (r.kind === "QUESTION_SKIPPED") skipped.add(r.questionCategory);
+  }
+  return { handled: [...handled], skipped: [...skipped] };
+}
+
+export interface NextQuestionView {
+  result: NextQuestionResult;
+  inputHref: string | null;
+  inputActionLabel: string | null;
+  /** How many questions have been handled so far, and the hard ceiling (it can be reached). */
+  progress: { handled: number; max: number };
+}
+
+export async function getNextQuestionView(workspaceId: string, businessId: string): Promise<NextQuestionView> {
+  await assertBusiness(workspaceId, businessId);
+  const { handled } = await getQuestionProgress(workspaceId, businessId);
   const guidance = await getOwnerInputGuidance({ db: db as unknown as PrismaClient, workspaceId, businessId, now: new Date() });
   if (!guidance.found) throw new NotFoundError("OwnerBusiness", businessId);
-  const result = selectNextQuestion({ guidance, skipped, answeredCount: Math.max(0, opts.answeredCount) });
-  if (result.done) return { result, inputHref: null, inputActionLabel: null };
+  const result = selectNextQuestion({ guidance, skipped: handled, answeredCount: handled.length });
+  const progress = { handled: handled.length, max: MAX_PROGRESSIVE_QUESTIONS };
+  if (result.done) return { result, inputHref: null, inputActionLabel: null, progress };
   const target = inputTargetForCategory(result.question.category);
-  return { result, inputHref: target.href, inputActionLabel: target.actionLabel };
+  return { result, inputHref: withFirstRunReturn(target.href), inputActionLabel: target.actionLabel, progress };
 }
 
 // ── Interactions: viewed, improvement requested, feedback ──────────────────────────────────────────────────────
@@ -374,7 +416,8 @@ async function insertInteractionOnce(args: {
   businessId: string;
   actorId: string;
   snapshotId: string | null;
-  kind: "IMPROVEMENT_REQUESTED" | "FEEDBACK" | "RESULT_VIEWED";
+  kind: "IMPROVEMENT_REQUESTED" | "FEEDBACK" | "RESULT_VIEWED" | "QUESTION_SKIPPED";
+  questionCategory?: string;
   rating?: string;
   reason?: string;
   idempotencyKey: string;
@@ -394,6 +437,7 @@ async function insertInteractionOnce(args: {
           businessId: args.businessId,
           snapshotId: args.snapshotId,
           kind: args.kind,
+          questionCategory: args.questionCategory ?? null,
           rating: args.rating ?? null,
           reason: args.reason ?? null,
           idempotencyKey: args.idempotencyKey,
@@ -486,6 +530,23 @@ async function assertBusiness(workspaceId: string, businessId: string): Promise<
   if (!b) throw new NotFoundError("OwnerBusiness", businessId);
 }
 
+/**
+ * Server-side half of the evidence-provenance contract. Until a business has been diagnosed once (the first-run
+ * journey), new evidence MUST state how reliable it is: a client-side "required" control is not an integrity
+ * guarantee. Once the business is established, or for callers that never state it (imports, legacy integrations),
+ * an omitted quality stays NULL = LEGACY_UNKNOWN: conservative (never authoritative), never fabricated.
+ */
+export async function assertEvidenceQualityStatedForFirstEvidence(
+  workspaceId: string, businessId: string, quality: EvidenceQuality | undefined,
+): Promise<void> {
+  if (quality) return;
+  await assertBusiness(workspaceId, businessId);
+  if ((await firstRunEvidence(workspaceId, businessId)).hasAnyRun) return;
+  throw new ValidationError("Tell OpsIQ how reliable these numbers are: from your records, a good estimate, or a rough guess.", {
+    fieldErrors: [{ path: "evidenceQuality", message: "Choose how reliable these numbers are" }],
+  });
+}
+
 export async function recordFirstResultViewed(workspaceId: string, actorId: string, businessId: string): Promise<void> {
   const view = await getFirstMoneyRead(workspaceId, businessId);
   await insertInteractionOnce({
@@ -497,17 +558,45 @@ export async function recordFirstResultViewed(workspaceId: string, actorId: stri
   });
 }
 
+function assertQuestionCategory(category: string): void {
+  if (!(OWNER_INPUT_CATEGORIES as readonly string[]).includes(category)) {
+    throw new ValidationError("That isn't a question OpsIQ asks.", { fieldErrors: [{ path: "category", message: "Unknown category" }] });
+  }
+}
+
+/**
+ * The owner chose to supply a specific piece of evidence. Recorded once per (business, category) — the key is derived
+ * from the category, so a repeat tap or a retry can never count twice — and it is the improvement-request activation fact.
+ */
 export async function requestImprovement(
-  workspaceId: string, actorId: string, businessId: string, idempotencyKey: string,
+  workspaceId: string, actorId: string, businessId: string, category: string,
 ): Promise<{ replayed: boolean }> {
+  assertQuestionCategory(category);
   await assertBusiness(workspaceId, businessId);
   const evidence = await firstRunEvidence(workspaceId, businessId);
   if (!evidence.hasAnyRun) throw new ValidationError("There is no first read to improve yet.", { fieldErrors: [] });
   const { created } = await insertInteractionOnce({
-    workspaceId, businessId, actorId, snapshotId: evidence.headSnapshotId, kind: "IMPROVEMENT_REQUESTED", idempotencyKey: `improve:${businessId}:${idempotencyKey}`,
+    workspaceId, businessId, actorId, snapshotId: evidence.headSnapshotId, kind: "IMPROVEMENT_REQUESTED", questionCategory: category,
+    idempotencyKey: `improve:${businessId}:${category}`,
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED },
   });
   if (created) await recordActivationIfFirst(workspaceId, actorId, businessId);
+  return { replayed: !created };
+}
+
+/** The owner does not have this evidence: persisted so the question is not asked again and counts toward the limit. */
+export async function skipQuestion(
+  workspaceId: string, actorId: string, businessId: string, category: string,
+): Promise<{ replayed: boolean }> {
+  assertQuestionCategory(category);
+  await assertBusiness(workspaceId, businessId);
+  const evidence = await firstRunEvidence(workspaceId, businessId);
+  if (!evidence.hasAnyRun) throw new ValidationError("There is no first read to improve yet.", { fieldErrors: [] });
+  const { created } = await insertInteractionOnce({
+    workspaceId, businessId, actorId, snapshotId: evidence.headSnapshotId, kind: "QUESTION_SKIPPED", questionCategory: category,
+    idempotencyKey: `skip:${businessId}:${category}`,
+    audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_QUESTION_SKIPPED },
+  });
   return { replayed: !created };
 }
 

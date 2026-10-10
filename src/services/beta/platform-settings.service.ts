@@ -84,7 +84,7 @@ export interface EffectiveSettings {
   source: "database" | "legacy";
 }
 
-type SettingsClient = Pick<Prisma.TransactionClient, "platformSetting" | "workspace">;
+type SettingsClient = Pick<Prisma.TransactionClient, "platformSetting" | "workspace" | "$queryRaw">;
 
 /** Legacy-behavior mapping: byte-identical to pre-Administration-V1 signup gating. Exported for the bootstrap action's preview step. */
 export function legacyEffectiveSettings(): EffectiveSettings {
@@ -136,6 +136,76 @@ export async function countExternalBetaWorkspaces(client: SettingsClient = db): 
   return client.workspace.count({
     where: { signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] } },
   });
+}
+
+/**
+ * CAPACITY DEFINITION (decision record — see docs/opsiq/product/PUBLIC_BETA_SEA_RUNBOOK.md §5).
+ *
+ * The cap protects the cost and operator attention of REAL customers, so it is a cap on VERIFIED beta accounts plus
+ * the unverified signups that are still inside a short pending hold. It is deliberately NOT "every row ever created":
+ * with open registration anybody can submit unverified signups for addresses they do not own, and counting them
+ * forever would let a handful of requests fill the whole beta permanently.
+ *
+ *   - verified  = external beta workspaces whose creator verified their email (or never needed to). They hold a slot
+ *                 permanently; suspension never frees one (the original ledger rule is kept for them).
+ *   - pending   = unverified creators, for PENDING_SIGNUP_HOLD_MS after signup. They hold a slot so a real person who
+ *                 is about to click the link is guaranteed room.
+ *   - consumed  = verified + pending: what admission compares to the limit.
+ *   - ledger    = every external beta workspace ever created (informational; includes lapsed unverified signups).
+ *
+ * A lapsed unverified signup stops holding a slot without any row being deleted or rewritten, so abuse is a temporary
+ * slowdown, never a permanent exhaustion. A single source address may also hold only PENDING_SIGNUPS_PER_SOURCE_LIMIT
+ * pending places at once (see countPendingFromSource), which makes occupying the pending hold take many addresses.
+ * If a lapsed signup's owner clicks the link later, verification re-checks capacity under the same advisory lock (see the
+ * verify-email route), so the limit can never be exceeded by a late verifier either.
+ */
+export const PENDING_SIGNUP_HOLD_MS = 24 * 60 * 60 * 1000;
+export const PENDING_SIGNUPS_PER_SOURCE_LIMIT = 3;
+
+export interface CapacityUsage {
+  verified: number;
+  pending: number;
+  consumed: number;
+  ledger: number;
+}
+
+export async function countCapacityUsage(client: SettingsClient = db, now: Date = new Date()): Promise<CapacityUsage> {
+  const cutoff = new Date(now.getTime() - PENDING_SIGNUP_HOLD_MS);
+  const rows = await client.$queryRaw<Array<{ verified: bigint; pending: bigint; ledger: bigint }>>`
+    SELECT
+      COUNT(*) FILTER (WHERE u.id IS NULL OR u.requires_email_verification = false OR u.email_verified_at IS NOT NULL) AS verified,
+      COUNT(*) FILTER (WHERE u.requires_email_verification = true AND u.email_verified_at IS NULL AND w.created_at > ${cutoff}) AS pending,
+      COUNT(*) AS ledger
+    FROM workspaces w
+    LEFT JOIN users u ON u.id = w.created_by
+    WHERE w.signup_source IN (${PUBLIC_BETA_SIGNUP_SOURCE}, ${CONTROLLED_BETA_SIGNUP_SOURCE})
+  `;
+  const row = rows[0];
+  const verified = Number(row?.verified ?? 0);
+  const pending = Number(row?.pending ?? 0);
+  return { verified, pending, consumed: verified + pending, ledger: Number(row?.ledger ?? 0) };
+}
+
+/**
+ * Unverified signups still inside their hold that were made from this source address (the address recorded on the policy
+ * acceptances written at signup). Zero for an unknown source: the per-source bound is skipped when there is no address.
+ */
+export async function countPendingFromSource(client: SettingsClient, sourceIp: string | null, now: Date = new Date()): Promise<number> {
+  if (!sourceIp || sourceIp === "unknown") return 0;
+  const cutoff = new Date(now.getTime() - PENDING_SIGNUP_HOLD_MS);
+  const rows = await client.$queryRaw<Array<{ n: bigint }>>`
+    SELECT COUNT(DISTINCT u.id) AS n
+    FROM users u
+    JOIN policy_acceptances p ON p.user_id = u.id
+    WHERE u.requires_email_verification = true AND u.email_verified_at IS NULL AND u.created_at > ${cutoff}
+      AND p.ip_address = ${sourceIp}
+  `;
+  return Number(rows[0]?.n ?? 0);
+}
+
+/** Whether one more signup may be admitted right now against the total bound (diagnostics and admission share this). */
+export function hasSignupCapacity(usage: CapacityUsage, capacityLimit: number): boolean {
+  return usage.consumed < capacityLimit;
 }
 
 async function acquireCapacityLock(tx: Prisma.TransactionClient): Promise<void> {
@@ -190,7 +260,7 @@ export async function updatePlatformSettings(input: UpdatePlatformSettingsInput)
     }
 
     if (capacityLimit !== undefined) {
-      const utilization = await countExternalBetaWorkspaces(tx);
+      const utilization = (await countCapacityUsage(tx)).consumed;
       if (capacityLimit < utilization) {
         throw new ValidationError(
           `Cannot set capacity to ${capacityLimit}: current usage is ${utilization}.`

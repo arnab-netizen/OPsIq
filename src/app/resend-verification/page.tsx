@@ -59,7 +59,7 @@ function ResendVerificationForm() {
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
           <p className="text-sm font-bold text-primary">
-            <Link href="/">OpsIQ</Link>
+            <Link href="/" className="inline-flex min-h-11 items-center">OpsIQ</Link>
           </p>
           <h1 className="mt-1 text-2xl font-bold text-primary">Resend verification email</h1>
         </div>
@@ -91,7 +91,7 @@ function ResendVerificationForm() {
         )}
 
         <p className="text-center text-sm text-muted-foreground">
-          <Link href="/login" className="text-[var(--primary-text)] hover:underline">
+          <Link href="/login" className="inline-flex min-h-11 items-center text-[var(--primary-text)] hover:underline">
             Back to sign in
           </Link>
         </p>

@@ -16,14 +16,22 @@ import {
   getFirstRunContext,
   getFirstMoneyRead,
   requestImprovement,
+  skipQuestion,
   submitFirstValueFeedback,
   getNextQuestionView,
 } from "@/services/owner-first-run/first-run.service";
 import { acceptFirstResultAction, correctFirstResultEvidence } from "@/services/owner-first-run/first-run-actions.service";
 import { findOverclaims, firstMoneyReadStrings } from "@/domain/owner-first-run/first-money-read";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
+import { READ_STALE_MESSAGE } from "@/domain/owner-first-run/read-staleness";
 
 const BUSINESS_NAME = "Maple Street Laundry";
+
+/** Accept the read as it stands now (the cycle the owner is looking at is named explicitly, as the route requires). */
+async function acceptNow(t: { workspaceId: string; userId: string }, businessId: string, key: string) {
+  const v = await getFirstMoneyRead(t.workspaceId, businessId);
+  return acceptFirstResultAction(t.workspaceId, t.userId, businessId, key, v.cycleId);
+}
 
 async function makeTenant() {
   const workspaceId = randomUUID();
@@ -130,7 +138,7 @@ describe("[db] first-run: canonical state transitions from persisted facts", () 
     expect(d.state).toBe("FIRST_RESULT");
     expect(d.loginHref).toBe("/owner/cockpit"); // a viewed first read never traps the owner in setup
 
-    const accepted = await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-0001");
+    const accepted = await acceptNow(t, business.id, "accept-key-0001");
     expect(accepted.replayed).toBe(false);
     const e = await getFirstRunContext(t.workspaceId);
     expect(e.state).toBe("ESTABLISHED");
@@ -149,9 +157,9 @@ describe("[db] first-run: canonical state transitions from persisted facts", () 
     const { business } = await setUpToResult(a);
     expect((await getFirstRunContext(b.workspaceId)).state).toBe("NEEDS_BUSINESS");
     await expect(getFirstMoneyRead(b.workspaceId, business.id)).rejects.toBeInstanceOf(NotFoundError);
-    await expect(acceptFirstResultAction(b.workspaceId, b.userId, business.id, "accept-key-foreign")).rejects.toBeInstanceOf(NotFoundError);
-    await expect(requestImprovement(b.workspaceId, b.userId, business.id, "improve-key-foreign")).rejects.toBeInstanceOf(NotFoundError);
-    await expect(getNextQuestionView(b.workspaceId, business.id, { skipped: [], answeredCount: 0 })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(acceptFirstResultAction(b.workspaceId, b.userId, business.id, "accept-key-foreign", randomUUID())).rejects.toBeInstanceOf(NotFoundError);
+    await expect(requestImprovement(b.workspaceId, b.userId, business.id, "fixed_costs")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getNextQuestionView(b.workspaceId, business.id)).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
@@ -185,7 +193,6 @@ describe("[db] first-run: evidence quality + first Money read", () => {
     expect(view.read.heading).toBe("Your first Money read");
     expect(findOverclaims(firstMoneyReadStrings(view.read))).toEqual([]);
     expect(view.candidateId).toMatch(/^domain_action:finance:/);
-    expect(view.stale).toBe(false);
     if (view.read.status === "READY") {
       expect(view.read.noticed.length).toBeGreaterThan(0);
       expect(view.read.recommendedAction).toBeTruthy();
@@ -208,7 +215,7 @@ describe("[db] first-run: the read leads with a real finding", () => {
     const actionId = view.candidateId!.split(":")[2];
     const action: any = await db.ownerFinanceAction.findFirst({ where: { id: actionId } });
     expect(action.findingCode).toBe("FIN_HIGH_FIXED_COST_BURDEN");
-    const accepted = await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-lead-1");
+    const accepted = await acceptNow(t, business.id, "accept-key-lead-1");
     expect(accepted.candidateId).toBe(view.candidateId);
   });
   it("[db] a BLOCKED read (stale rough numbers) says so and cannot be accepted, but can still be corrected", async () => {
@@ -225,10 +232,10 @@ describe("[db] first-run: the read leads with a real finding", () => {
     const view = await getFirstMoneyRead(t.workspaceId, business.id);
     expect(view.read.confidenceTier).toBe("BLOCKED");
     expect(view.read.canAccept).toBe(false);
-    await expect(acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-blocked")).rejects.toBeInstanceOf(ValidationError);
+    await expect(acceptNow(t, business.id, "accept-key-blocked")).rejects.toBeInstanceOf(ValidationError);
     expect(await db.ownerDecisionRecord.count({ where: { workspaceId: t.workspaceId } })).toBe(0);
     const fixed = await correctFirstResultEvidence(t.workspaceId, t.userId, business.id, snap.id, { amendmentReason: "Checked the records", evidenceQuality: "ACTUAL" } as any);
-    expect(fixed.after.read.evidenceQuality).toBe("ACTUAL");
+    expect(fixed.after!.read.evidenceQuality).toBe("ACTUAL");
   });
 });
 
@@ -242,9 +249,8 @@ describe("[db] first-run: governed correction and activation", () => {
       evidenceQuality: "ACTUAL",
     } as any);
     expect(result.changedFields.sort()).toEqual(["cashOnHand", "evidenceQuality"]);
-    expect(result.after.snapshotId).toBe(result.newSnapshotId);
-    expect(result.after.read.evidenceQuality).toBe("ACTUAL");
-    expect(result.after.stale).toBe(false);
+    expect(result.after!.snapshotId).toBe(result.newSnapshotId);
+    expect(result.after!.read.evidenceQuality).toBe("ACTUAL");
     expect(result.before.evidenceQuality).toBe("ROUGH_ESTIMATE");
 
     const old: any = await db.ownerFinancialSnapshot.findFirst({ where: { id: snap.id } });
@@ -261,7 +267,7 @@ describe("[db] first-run: governed correction and activation", () => {
     const t = await makeTenant();
     const { business, snap } = await setUpToResult(t, "ACTUAL");
     const out = await correctFirstResultEvidence(t.workspaceId, t.userId, business.id, snap.id, { amendmentReason: "guessed the cash", cashOnHand: 5000 } as any);
-    expect(out.after.read.evidenceQuality).toBe("GOOD_ESTIMATE");
+    expect(out.after!.read.evidenceQuality).toBe("GOOD_ESTIMATE");
     const row: any = await db.ownerFinancialSnapshot.findFirst({ where: { id: out.newSnapshotId } });
     expect(row.evidenceQuality).toBe("GOOD_ESTIMATE");
   });
@@ -289,8 +295,8 @@ describe("[db] first-run: governed correction and activation", () => {
   it("[db] accept is idempotent and its outcome contract comes from the action itself", async () => {
     const t = await makeTenant();
     const { business } = await setUpToResult(t);
-    const first = await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-0002");
-    const again = await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-0002");
+    const first = await acceptNow(t, business.id, "accept-key-0002");
+    const again = await acceptNow(t, business.id, "accept-key-0002");
     expect(again.replayed).toBe(true);
     expect(await db.ownerDecisionRecord.count({ where: { workspaceId: t.workspaceId, businessId: business.id } })).toBe(1);
     const rec: any = await db.ownerDecisionRecord.findFirst({ where: { workspaceId: t.workspaceId, businessId: business.id } });
@@ -304,7 +310,7 @@ describe("[db] first-run: governed correction and activation", () => {
     const { business, snap } = await setUpToResult(t);
     const { getAcceptedNextMove } = await import("@/services/owner-first-run/next-move.service");
     expect(await getAcceptedNextMove(t.workspaceId, business.id)).toBeNull();
-    await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-next-move");
+    await acceptNow(t, business.id, "accept-key-next-move");
     const move = await getAcceptedNextMove(t.workspaceId, business.id);
     expect(move?.commitment).toBeTruthy();
     expect(move?.status).toBe("IN_PROGRESS");
@@ -333,21 +339,21 @@ describe("[db] first-run: governed correction and activation", () => {
     expect(after.diagnosisStale).toBe(false);
     const view = await getFirstMoneyRead(t.workspaceId, business.id);
     expect(view.snapshotId).toBe(amended.snapshot.id);
-    expect(view.stale).toBe(false);
   });
   it("[db] accept is refused while the evidence has changed since the read", async () => {
     const t = await makeTenant();
     const { business, snap } = await setUpToResult(t);
+    const seen = await getFirstMoneyRead(t.workspaceId, business.id);
     const { amendFinancialSnapshot } = await import("@/services/owner-finance/snapshot.service");
     await amendFinancialSnapshot(snap.id, { amendmentReason: "fix", revenue: 9000 } as any, t.userId, t.workspaceId);
-    await expect(acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-stale")).rejects.toBeInstanceOf(ConflictError);
+    await expect(acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-stale", seen.cycleId)).rejects.toMatchObject({ message: READ_STALE_MESSAGE });
   });
   it("[db] improvement request is idempotent, activates once, and emits TIME_TO_FIRST_VALUE without any financial value", async () => {
     const t = await makeTenant();
     const { business } = await setUpToResult(t);
-    expect((await requestImprovement(t.workspaceId, t.userId, business.id, "improve-key-0001")).replayed).toBe(false);
-    expect((await requestImprovement(t.workspaceId, t.userId, business.id, "improve-key-0001")).replayed).toBe(true);
-    await acceptFirstResultAction(t.workspaceId, t.userId, business.id, "accept-key-0003");
+    expect((await requestImprovement(t.workspaceId, t.userId, business.id, "fixed_costs")).replayed).toBe(false);
+    expect((await requestImprovement(t.workspaceId, t.userId, business.id, "fixed_costs")).replayed).toBe(true);
+    await acceptNow(t, business.id, "accept-key-0003");
     const events: any[] = await db.auditEvent.findMany({ where: { workspaceId: t.workspaceId, eventName: "product.first_trusted_decision_interaction" } });
     expect(events).toHaveLength(1);
     expect(events[0].payload.interactionKind).toBeTruthy();
@@ -377,22 +383,19 @@ describe("[db] first-run: governed correction and activation", () => {
   });
 });
 
-describe("[db] first-run: progressive OBQ is bounded", () => {
-  let ctx: { workspaceId: string; userId: string; businessId: string };
-  beforeAll(async () => {
+describe("[db] first-run: progressive OBQ is bounded and its progress is persisted", () => {
+  it("[db] returns one explained question or a stop reason, and never repeats a handled category", async () => {
     const t = await makeTenant();
     const { business } = await setUpToResult(t);
-    ctx = { ...t, businessId: business.id };
-  });
-  it("[db] returns one explained question or a stop reason, and never repeats a skipped category", async () => {
-    const skipped: string[] = [];
+    const seen: string[] = [];
     for (let i = 0; i < 12; i++) {
-      const v = await getNextQuestionView(ctx.workspaceId, ctx.businessId, { skipped, answeredCount: 0 });
+      const v = await getNextQuestionView(t.workspaceId, business.id);
       if (v.result.done) { expect(v.result.reason).toBeTruthy(); return; }
-      expect(skipped).not.toContain(v.result.question.category);
+      expect(seen).not.toContain(v.result.question.category);
       expect(v.result.question.why.length).toBeGreaterThan(0);
-      expect(v.inputHref).toBeTruthy();
-      skipped.push(v.result.question.category);
+      expect(v.inputHref).toMatch(/returnTo=first-run/);
+      seen.push(v.result.question.category);
+      await skipQuestion(t.workspaceId, t.userId, business.id, v.result.question.category);
     }
     throw new Error("progressive OBQ did not terminate");
   });

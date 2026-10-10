@@ -8,7 +8,9 @@
  * When figures were amended and not yet re-diagnosed there is no read on the head: the owner is asked to update it.
  * Every query is workspace + business scoped.
  */
-import { db } from "@/lib/db";
+import { db as sharedDb } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
+import { lockUnsupersededFinancialSnapshotShared } from "@/services/owner-finance/snapshot.service";
 import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 export interface FirstRunEvidence {
@@ -20,7 +22,11 @@ export interface FirstRunEvidence {
   hasAnyRun: boolean;
 }
 
-export async function firstRunEvidence(workspaceId: string, businessId: string, now: Date = new Date()): Promise<FirstRunEvidence> {
+/** `client` lets a caller evaluate the head inside its own transaction (compare-at-write); it defaults to the shared client. */
+export async function firstRunEvidence(
+  workspaceId: string, businessId: string, now: Date = new Date(), client: Prisma.TransactionClient = sharedDb as unknown as Prisma.TransactionClient,
+): Promise<FirstRunEvidence> {
+  const db = client;
   const scope = { workspaceId, businessId };
   const effective = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery(scope, { id: true }, now));
   const head =
@@ -42,9 +48,23 @@ export async function firstRunEvidence(workspaceId: string, businessId: string, 
 
 /** Whether the diagnosis with this id ran on a snapshot that has since been amended (workspace + business scoped). */
 export async function cycleSnapshotSuperseded(workspaceId: string, businessId: string, cycleId: string): Promise<boolean> {
-  const row = await db.ownerFinanceCycle.findFirst({
+  const row = await sharedDb.ownerFinanceCycle.findFirst({
     where: { id: cycleId, workspaceId, businessId },
     select: { snapshot: { select: { supersededById: true } } },
   });
   return row?.snapshot?.supersededById != null;
+}
+
+/**
+ * Compare-at-write for an owner decision on a read: INSIDE the caller's transaction, share-lock the snapshot row the read
+ * was built on (an amendment takes the same row FOR UPDATE, so exactly one of the two wins) and report whether that snapshot
+ * is still un-superseded, still the diagnosable head, and the read is still the latest diagnosis on it. False means the
+ * read is stale and the decision must not be recorded.
+ */
+export async function isReadCurrentForWrite(
+  tx: Prisma.TransactionClient, workspaceId: string, businessId: string, snapshotId: string, cycleId: string,
+): Promise<boolean> {
+  if (!(await lockUnsupersededFinancialSnapshotShared(tx, workspaceId, businessId, snapshotId))) return false;
+  const head = await firstRunEvidence(workspaceId, businessId, new Date(), tx);
+  return head.headSnapshotId === snapshotId && head.runOnHead?.id === cycleId;
 }

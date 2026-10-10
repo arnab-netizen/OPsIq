@@ -7231,7 +7231,9 @@ model OwnerFirstResultInteraction {
   workspaceId    String        @map("workspace_id") @db.Uuid
   businessId     String        @map("business_id") @db.Uuid
   snapshotId     String?       @map("snapshot_id") @db.Uuid
-  kind           String // IMPROVEMENT_REQUESTED | FEEDBACK | RESULT_VIEWED
+  kind           String // IMPROVEMENT_REQUESTED | FEEDBACK | RESULT_VIEWED | QUESTION_SKIPPED
+  /// Progressive-question identity (an OwnerInputCategory) for IMPROVEMENT_REQUESTED and QUESTION_SKIPPED.
+  questionCategory String?     @map("question_category")
   rating         String? // USEFUL | PARTLY_USEFUL | NOT_USEFUL (FEEDBACK only)
   reason         String? // WRONG_PRIORITY | MISSING_INFORMATION | RECOMMENDATION_IMPRACTICAL | EXPLANATION_UNCLEAR | OTHER
   idempotencyKey String        @map("idempotency_key")

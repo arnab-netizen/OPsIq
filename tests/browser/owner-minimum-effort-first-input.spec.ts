@@ -63,6 +63,9 @@ async function createBusinessViaUi(page: Page, _name: string, currency: string) 
 const fill = (page: Page, name: string, v: string) => page.locator(`[data-testid="quick-financial-picture-form"] input[name="${name}"]`).fill(v);
 const clear = async (page: Page) => { for (const n of ["revenue", "fixedCosts", "variableCosts", "cashOnHand"]) await fill(page, n, ""); };
 const cta = (page: Page) => page.getByTestId("quick-primary-action");
+// First evidence must state how reliable it is (enforced by the server; the control is required on every first-evidence form).
+const chooseQuality = (page: Page) => page.getByTestId("quick-evidence-quality").getByLabel("From my records").check();
+const gchooseQuality = (page: Page) => page.getByTestId("onboarding-evidence-quality").getByLabel("From my records").check();
 const CASH_HINT = /Physical cash the business holds outside the bank/;
 const BANK_INCLUSIVE = /cash and bank|bank (balance )?(and|\+|or) (till|cash)|bank balance you could use/i;
 async function assertCashCopy(page: Page, scope = page.locator("body")) {
@@ -164,6 +167,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await expect(page.getByTestId("quick-feedback")).toContainText("Still needed for a first read: one cost figure");
     await expect(cta(page)).toBeDisabled();
     await shot(page, "desktop-3-partial-feedback");
+    await chooseQuality(page);
     // fixed-cost-only → eligible
     await fill(page, "fixedCosts", "200000");
     await expect(page.getByTestId("quick-feedback")).toContainText("enough for a first read");
@@ -263,6 +267,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await shot(page, "desktop-8-guided-setup-partial");
     expect(await snapshotCount(bizG), "nothing saved while incomplete").toBe(0);
     await gfill(page, "cashOnHand", "0"); // known zero is valid
+    await gchooseQuality(page);
     await expect(gcta(page)).toBeEnabled();
     await gcta(page).click();
     await expect(page.getByTestId("onboarding-first-result")).toBeVisible({ timeout: 30000 });
@@ -329,9 +334,10 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await page.getByTestId("quick-more-detail").locator("summary").click();
     // primary CTA visible without zoom and the journey completes
     await fill(page, "variableCosts", "30");
+    await chooseQuality(page);
     await cta(page).scrollIntoViewIfNeeded();
     const vp = await cta(page).evaluate((e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, b: r.bottom, h: r.height }; });
-    expect(vp.l).toBeGreaterThanOrEqual(0); expect(vp.r).toBeLessThanOrEqual(390); expect(vp.h).toBeGreaterThanOrEqual(36);
+    expect(vp.l).toBeGreaterThanOrEqual(0); expect(vp.r).toBeLessThanOrEqual(390); expect(vp.h).toBeGreaterThanOrEqual(44);
     await cta(page).click();
     await page.waitForURL(/\/owner\/finance/, { timeout: 30000 });
     await page.waitForLoadState("networkidle");
@@ -365,6 +371,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await assertNoHorizontalScroll(page, "Guided setup partial (mobile)");
     await shot(page, "mobile-9-guided-setup-partial");
     await gfill(page, "variableCosts", "30");
+    await gchooseQuality(page);
     await gcta(page).scrollIntoViewIfNeeded();
     await expect(gcta(page)).toBeEnabled();
     await gcta(page).click();

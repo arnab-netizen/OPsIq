@@ -24,6 +24,7 @@ import { buildInputGuidance } from "@/domain/owner-mode/input-guidance";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 
+const PERIOD = { start: "2026-09-01T00:00:00.000Z", end: "2026-09-30T00:00:00.000Z", state: "completed" as const };
 const base: FirstRunFacts = { hasBusiness: false, firstReadSufficient: false, hasDiagnosis: false, hasTrustedInteraction: false };
 
 describe("first-run router state transitions", () => {
@@ -137,7 +138,7 @@ describe("first Money read is correctly scoped", () => {
     expectedTimeframeDays: 7,
     verificationMetric: "cashOnHand",
   };
-  const read = buildFirstMoneyRead({ finding, action, dataRequest: null, confidenceScore: 55, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: ["Receivables"] });
+  const read = buildFirstMoneyRead({ period: PERIOD, finding, action, dataRequest: null, confidenceScore: 55, evidenceQuality: "ROUGH_ESTIMATE", missingEvidence: ["Receivables"] });
   it("uses the honest heading and money-only scope", () => {
     expect(read.heading).toBe(FIRST_MONEY_READ_HEADING);
     expect(read.scope).toMatch(/money figures only/);
@@ -158,7 +159,7 @@ describe("first Money read is correctly scoped", () => {
     expect(findOverclaims(["Your biggest business problem"])).toEqual(["biggest business problem"]);
   });
   it("with no finding it does not invent a problem or action", () => {
-    const empty = buildFirstMoneyRead({ finding: null, action: null, dataRequest: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
+    const empty = buildFirstMoneyRead({ period: PERIOD, finding: null, action: null, dataRequest: null, confidenceScore: 80, evidenceQuality: "ACTUAL", missingEvidence: [] });
     expect(empty.status).toBe("NO_ATTENTION_FOUND");
     expect(empty.recommendedAction).toBeNull();
     expect(empty.actualValue).toBeNull();
@@ -296,7 +297,7 @@ describe("first read leads with a real finding, not a data request", () => {
     expect(dataRequest?.id).toBe("a1");
   });
   it("only data requests -> says so honestly instead of dressing a request as a diagnosis", () => {
-    const r = buildFirstMoneyRead({
+    const r = buildFirstMoneyRead({ period: PERIOD,
       finding: null, action: null,
       dataRequest: { title: "Add your bank balance", description: "Enter the balance of your bank accounts.", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" },
       confidenceScore: 50, evidenceQuality: "ACTUAL", missingEvidence: [],
@@ -308,18 +309,18 @@ describe("first read leads with a real finding, not a data request", () => {
     expect(findOverclaims(firstMoneyReadStrings(r))).toEqual([]);
   });
   it("a real finding exposes the top data request as what would sharpen it", () => {
-    const r = buildFirstMoneyRead({
+    const r = buildFirstMoneyRead({ period: PERIOD,
       finding: { title: "Fixed costs are too high", summary: "They take most of your sales.", sourceMetric: "fixedCostBurdenPct", sourceValue: 58.3, evidence: ["fixedCostBurdenPct = 58.3 > 40"], missingData: [] },
       action: { title: "Right-size fixed costs", description: "Review each fixed cost.", ownerRole: "owner", expectedTimeframeDays: 14, verificationMetric: "fixedCostBurdenPct" },
       dataRequest: { title: "Add your bank balance", description: "Enter the balance of your bank accounts.", ownerRole: "owner", expectedTimeframeDays: 3, verificationMetric: "totalLiquidFunds" },
       confidenceScore: 50, evidenceQuality: "ACTUAL", missingEvidence: [],
     });
     expect(r.status).toBe("READY");
-    expect(r.sharpenBy).toEqual({ title: "Add your bank balance", detail: "Enter the balance of your bank accounts." });
+    expect(r.sharpenBy).toEqual({ title: "Add your bank balance", detail: "Enter the balance of your bank accounts.", href: null });
     expect(r.recommendedAction).toBe("Right-size fixed costs");
   });
   it("owners never see raw metric keys or lowercase roles", () => {
-    const r = buildFirstMoneyRead({
+    const r = buildFirstMoneyRead({ period: PERIOD,
       finding: { title: "Fixed costs are too high", summary: "They take most of your sales.", sourceMetric: "fixedCostBurdenPct", sourceValue: 58.3, evidence: ["fixedCostBurdenPct = 58.3 > 40", "data confidence score is 50 out of 100"], missingData: [] },
       action: { title: "Right-size fixed costs", description: "Review each fixed cost.", ownerRole: "owner", expectedTimeframeDays: 14, verificationMetric: "dataConfidenceScore" },
       dataRequest: null, confidenceScore: 60, evidenceQuality: "GOOD_ESTIMATE", missingEvidence: [],
@@ -335,10 +336,10 @@ describe("first read leads with a real finding, not a data request", () => {
       action: { title: "Do it", description: "d", ownerRole: "owner", expectedTimeframeDays: 7, verificationMetric: "netMarginPct" },
       dataRequest: null, evidenceQuality: null, missingEvidence: [] as string[],
     };
-    const blocked = buildFirstMoneyRead({ ...base, confidenceScore: 25 });
+    const blocked = buildFirstMoneyRead({ period: PERIOD, ...base, confidenceScore: 25 });
     expect(blocked.canAccept).toBe(false);
     expect(blocked.acceptNote).toMatch(/isn't enough reliable information/);
-    const low = buildFirstMoneyRead({ ...base, confidenceScore: 40 });
+    const low = buildFirstMoneyRead({ period: PERIOD, ...base, confidenceScore: 40 });
     expect(low.canAccept).toBe(true);
     expect(low.confidenceLabel).toMatch(/directional only/i);
   });
@@ -403,19 +404,19 @@ describe("audit fixes: read honesty", () => {
     expect(selectFirstReadActions([{ findingCode: "FIN_INVALID_CURRENCY" }]).primary).not.toBeNull();
   });
   it("estimates and low confidence carry visible cautions but do not block on their own", () => {
-    const r = buildFirstMoneyRead({ ...base, confidenceScore: 40, evidenceQuality: "ROUGH_ESTIMATE" });
+    const r = buildFirstMoneyRead({ period: PERIOD, ...base, confidenceScore: 40, evidenceQuality: "ROUGH_ESTIMATE" });
     expect(r.canAccept).toBe(true);
     expect(r.cautions.join(" ")).toMatch(/estimated numbers/);
     expect(r.cautions.join(" ")).toMatch(/confidence is low/);
   });
   it("unconfirmed cash is called out, and missing critical inputs block acceptance", () => {
-    const r = buildFirstMoneyRead({ ...base, dataRequestCode: "FIN_LIQUIDITY_UNCONFIRMED", confidenceScore: 70, evidenceQuality: "ACTUAL" });
+    const r = buildFirstMoneyRead({ period: PERIOD, ...base, dataRequestCode: "FIN_LIQUIDITY_UNCONFIRMED", confidenceScore: 70, evidenceQuality: "ACTUAL" });
     expect(r.cautions.join(" ")).toMatch(/how long your cash will last/);
-    const blocked = buildFirstMoneyRead({ ...base, criticalInputsMissing: true, confidenceScore: 70, evidenceQuality: "ACTUAL" });
+    const blocked = buildFirstMoneyRead({ period: PERIOD, ...base, criticalInputsMissing: true, confidenceScore: 70, evidenceQuality: "ACTUAL" });
     expect(blocked.canAccept).toBe(false);
   });
   it("no caution is invented for a clean, high-confidence, actual read", () => {
-    expect(buildFirstMoneyRead({ ...base, confidenceScore: 90, evidenceQuality: "ACTUAL" }).cautions).toEqual([]);
+    expect(buildFirstMoneyRead({ period: PERIOD, ...base, confidenceScore: 90, evidenceQuality: "ACTUAL" }).cautions).toEqual([]);
   });
 });
 

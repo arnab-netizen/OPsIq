@@ -43,13 +43,12 @@ export const firstRunApi = {
     post<{ business: { id: string; name: string; businessType: string; currency: string }; replayed: boolean }>("/business", body),
   result: (businessId: string) => call<FirstMoneyReadView>(`/result?businessId=${encodeURIComponent(businessId)}`),
   markViewed: (businessId: string) => post<{ ok: true }>("/result/viewed", { businessId }),
-  accept: (businessId: string, idempotencyKey: string) => post<{ replayed: boolean }>("/accept", { businessId, idempotencyKey }),
+  accept: (businessId: string, readCycleId: string, idempotencyKey: string) =>
+    post<{ replayed: boolean }>("/accept", { businessId, readCycleId, idempotencyKey }),
   correct: (body: Record<string, unknown>) => post<CorrectionResult>("/correct", body),
-  improve: (businessId: string, idempotencyKey: string) => post<{ replayed: boolean }>("/improve", { businessId, idempotencyKey }),
-  nextQuestion: (businessId: string, skipped: string[], answered: number) =>
-    call<NextQuestionView>(
-      `/next-question?businessId=${encodeURIComponent(businessId)}&skipped=${encodeURIComponent(skipped.join(","))}&answered=${answered}`,
-    ),
+  improve: (businessId: string, category: string) => post<{ replayed: boolean }>("/improve", { businessId, category }),
+  skipQuestion: (businessId: string, category: string) => post<{ replayed: boolean }>("/skip-question", { businessId, category }),
+  nextQuestion: (businessId: string) => call<NextQuestionView>(`/next-question?businessId=${encodeURIComponent(businessId)}`),
   feedback: (body: { businessId: string; rating: string; reason?: string; idempotencyKey: string }) => post<{ replayed: boolean }>("/feedback", body),
   nextMove: (businessId: string) =>
     call<{ nextMove: NextMoveView | null }>(`/next-move?businessId=${encodeURIComponent(businessId)}`),

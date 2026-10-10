@@ -17,6 +17,7 @@ import { test, expect, type Page, type Browser } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
 import { randomUUID, createHash } from "crypto";
+import * as bcrypt from "bcryptjs";
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const isLocal = (() => {
@@ -51,15 +52,55 @@ async function setAdmissionMode(mode: "OPEN_BETA" | "INVITE_ONLY") {
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
 async function expectNoHorizontalScroll(page: Page, label: string) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow, `${label}: page must not scroll horizontally`).toBeLessThanOrEqual(1);
+  // The authenticated shell scrolls INSIDE <main> (overflow-y:auto makes overflow-x auto too), so overflowing content there
+  // never moves the document width: measure the document AND every scroll container on the page.
+  const m = await page.evaluate(() => {
+    const doc = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+    const containers = [...document.querySelectorAll("main, [role=main], body")] as HTMLElement[];
+    const inner = Math.max(0, ...containers.map((el) => el.scrollWidth - el.clientWidth));
+    // Every visible element's right edge must sit inside the viewport (catches clipped actions inside a scroller).
+    const vw = document.documentElement.clientWidth;
+    let clipped = 0;
+    for (const el of document.querySelectorAll("main a, main button, main input, main select, main textarea, main label")) {
+      const r = (el as HTMLElement).getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && r.right > vw + 1) clipped++;
+    }
+    // Name the widest offenders so a failure points at the element, not just a number.
+    const wide = [...document.querySelectorAll("main *")]
+      .map((el) => ({ el: el as HTMLElement, w: (el as HTMLElement).scrollWidth, r: (el as HTMLElement).getBoundingClientRect().right }))
+      .filter((x) => x.r > vw + 1 || x.w > vw + 1)
+      .slice(0, 4)
+      .map((x) => `${x.el.tagName.toLowerCase()}${x.el.dataset.testid ? `[${x.el.dataset.testid}]` : ""}.${String(x.el.className).slice(0, 60)} right=${Math.round(x.r)} sw=${x.w}`);
+    return { doc, inner, clipped, wide };
+  });
+  expect(m.doc, `${label}: page must not scroll horizontally`).toBeLessThanOrEqual(1);
+  expect(m.inner, `${label}: no inner scroll container may scroll horizontally; offenders: ${m.wide.join(" | ")}`).toBeLessThanOrEqual(1);
+  expect(m.clipped, `${label}: no control may extend past the right edge`).toBe(0);
 }
 
+/** The production standard for a launch-path control on a phone: a 44px-tall tap target. */
+const MIN_TAP_PX = 44;
+/** Below 16px, iOS Safari zooms the page when a text field is focused. */
+const MIN_INPUT_FONT_PX = 16;
+
 async function expectFingerSizedControls(page: Page, selector: string, label: string) {
-  for (const el of await page.locator(selector).all()) {
+  const els = await page.locator(selector).all();
+  expect(els.length, `${label}: selector matched no controls (the check would be vacuous)`).toBeGreaterThan(0);
+  for (const el of els) {
     if (!(await el.isVisible())) continue;
     const box = await el.boundingBox();
-    expect(box?.height ?? 0, `${label}: control must be at least 40px tall`).toBeGreaterThanOrEqual(40);
+    expect(box?.height ?? 0, `${label}: control must be at least ${MIN_TAP_PX}px tall`).toBeGreaterThanOrEqual(MIN_TAP_PX);
+  }
+}
+
+/** Every visible text-entry control in `scope` must be tall enough to tap and large enough not to trigger iOS zoom. */
+async function expectNoZoomInputs(page: Page, scope: string, label: string) {
+  const fields = await page.locator(`${scope} input:not([type=radio]):not([type=checkbox]):not([type=hidden]), ${scope} select, ${scope} textarea`).all();
+  for (const el of fields) {
+    if (!(await el.isVisible())) continue;
+    const m = await el.evaluate((n) => ({ font: parseFloat(getComputedStyle(n).fontSize), height: n.getBoundingClientRect().height, name: (n as HTMLInputElement).name || n.tagName }));
+    expect(m.font, `${label}: ${m.name} font must be >= ${MIN_INPUT_FONT_PX}px (iOS focus zoom)`).toBeGreaterThanOrEqual(MIN_INPUT_FONT_PX);
+    expect(m.height, `${label}: ${m.name} must be at least ${MIN_TAP_PX}px tall`).toBeGreaterThanOrEqual(MIN_TAP_PX);
   }
 }
 
@@ -83,7 +124,10 @@ async function signUpAndVerify(page: Page, opts: { mobile?: boolean } = {}) {
   const startFree = page.getByTestId("start-free-cta").first();
   await expect(startFree, "OPEN_BETA homepage must offer Start free").toBeVisible();
   await expect(page.getByText(/request beta access/i)).toHaveCount(0);
-  if (opts.mobile) await expectNoHorizontalScroll(page, "homepage");
+  if (opts.mobile) {
+    await expectNoHorizontalScroll(page, "homepage");
+    await expectFingerSizedControls(page, '[data-testid="start-free-cta"]', "homepage CTA");
+  }
   await startFree.click();
   await page.waitForURL(/\/signup/);
 
@@ -92,7 +136,11 @@ async function signUpAndVerify(page: Page, opts: { mobile?: boolean } = {}) {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Business name", { exact: true }).fill(businessName);
   for (const cb of await page.locator('input[type="checkbox"]').all()) if (!(await cb.isChecked())) await cb.check();
-  if (opts.mobile) await expectNoHorizontalScroll(page, "signup");
+  if (opts.mobile) {
+    await expectNoHorizontalScroll(page, "signup");
+    await expectNoZoomInputs(page, "form", "signup");
+    await expectFingerSizedControls(page, 'form button[type="submit"], form label:has(input[type="checkbox"])', "signup");
+  }
   const [signupRes] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/auth/signup") && r.request().method() === "POST"),
     page.click('button[type="submit"]'),
@@ -101,6 +149,7 @@ async function signUpAndVerify(page: Page, opts: { mobile?: boolean } = {}) {
   await expect(page.getByText(/check your email/i)).toBeVisible();
   // Recovery is self-service: spam hint + resend link that carries the address.
   await expect(page.getByRole("link", { name: /resend the verification email/i })).toHaveAttribute("href", new RegExp(encodeURIComponent(email)));
+  if (opts.mobile) await expectFingerSizedControls(page, '[data-testid="signup-resend-link"]', "signup recovery");
 
   // Redeem a real token through the real page + route (the email provider is absent locally, so the link is minted here).
   const raw = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
@@ -128,6 +177,7 @@ async function completeBusinessStep(page: Page, businessName: string, opts: { mo
   if (opts.mobile) {
     await expectNoHorizontalScroll(page, "business profile");
     await expectFingerSizedControls(page, "main button, main select", "business profile");
+    await expectNoZoomInputs(page, "main", "business profile");
   }
   const [res] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/owner/first-run/business") && r.request().method() === "POST"),
@@ -158,6 +208,7 @@ test.describe("Public beta OBQ journey", () => {
 
   for (const viewport of [
     { name: "desktop", size: { width: 1280, height: 800 }, mobile: false },
+    { name: "mobile 390px", size: { width: 390, height: 844 }, mobile: true },
     { name: "mobile 375px", size: { width: 375, height: 667 }, mobile: true },
   ]) {
     test(`visitor to Cockpit with an accepted action — ${viewport.name}`, async ({ browser }) => {
@@ -177,6 +228,7 @@ test.describe("Public beta OBQ journey", () => {
       if (viewport.mobile) {
         await expectNoHorizontalScroll(page, "quick evidence");
         await expectFingerSizedControls(page, '[data-testid="quick-financial-picture-form"] label:has(input[type=radio]), [data-testid="quick-primary-action"]', "quick evidence");
+        await expectNoZoomInputs(page, '[data-testid="quick-financial-picture-form"]', "quick evidence");
       }
       await chooseQualityAndRead(page, "A rough guess");
 
@@ -184,6 +236,11 @@ test.describe("Public beta OBQ journey", () => {
       const read = page.getByTestId("first-money-read");
       await expect(read.getByRole("heading", { name: "Your first Money read" })).toBeVisible();
       await expect(page.getByTestId("first-money-read-scope")).toContainText(/money figures only/i);
+      await expect(page.getByTestId("first-money-read-scope")).toHaveAttribute("data-scope-kind", "FINANCIAL_FIRST_READ");
+      // The period, its completed/provisional status and the evidence quality are always on the card.
+      await expect(page.getByTestId("first-money-read-basis")).toContainText(/Based on your .+ figures/);
+      await expect(page.getByTestId("first-money-read-basis")).toContainText(/completed period|provisional/);
+      await expect(page.getByTestId("first-money-read-basis")).toContainText("A rough guess");
       await expect(page.getByTestId("first-money-read-quality")).toContainText("A rough guess");
       await expect(page.getByTestId("first-money-read-confidence")).not.toContainText(/fairly confident/i);
       // The first read leads with something about the money, not a request for more data, and never shows a raw key.
@@ -214,7 +271,11 @@ test.describe("Public beta OBQ journey", () => {
       // The canonical Cockpit shows the action just accepted, with its timing.
       await expect(page.getByTestId("accepted-next-move")).toBeVisible({ timeout: 20000 });
       await expect(page.getByTestId("accepted-next-move-prompt")).toContainText(/due/i);
-      if (viewport.mobile) await expectNoHorizontalScroll(page, "cockpit");
+      if (viewport.mobile) {
+        await expectNoHorizontalScroll(page, "cockpit");
+        await expectFingerSizedControls(page, '[data-testid="accepted-next-move"] a, [data-testid="accepted-next-move"] button', "cockpit accepted move");
+      }
+      expect((await page.locator("body").innerText()).toLowerCase(), "owners never see the word workspace").not.toMatch(/\bworkspace\b/);
       await context.close();
     });
   }
@@ -258,8 +319,8 @@ test.describe("Public beta OBQ journey", () => {
     await context.close();
   });
 
-  test("improve: one explained question at a time, owner can leave and resume", async ({ browser }) => {
-    const context = await browser.newContext({ viewport: { width: 375, height: 667 } });
+  test("improve: persisted progress, skip is remembered, Add this returns and shows what changed (390px)", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     const { businessName } = await signUpAndVerify(page);
     await completeBusinessStep(page, businessName);
@@ -270,17 +331,78 @@ test.describe("Public beta OBQ journey", () => {
     await expectNoHorizontalScroll(page, "progressive question");
     const q = page.getByTestId("first-result-improvement-question");
     const done = page.getByTestId("first-result-improvement-done");
-    await expect(q.or(done)).toBeVisible({ timeout: 15000 });
-    if (await q.isVisible()) {
+    // This business has money gaps the catalog asks about, so a question MUST be offered (the checks below are not optional).
+    await expect(q, "a progressive question must be offered here").toBeVisible({ timeout: 15000 });
+    expect(await done.count()).toBe(0);
+    await expect(page.getByTestId("first-result-improvement-progress")).toContainText(/0 of up to 3/);
+    {
       await expect(q).toContainText(/It could change/);
       await expect(q).toContainText(/Effort/);
       // Money evidence first: the question is about the money picture, not a rota or a certificate.
       await expect(q).not.toContainText(/proof of completion|staff rota|training/i);
+      await expectFingerSizedControls(page, '[data-testid="first-result-improvement"] a, [data-testid="first-result-improvement"] button', "progressive question");
+
+      // Skip it: the skip is saved on the server, survives a reload, and the same question is not offered again.
+      const asked = (await q.locator("p").first().innerText()).trim();
+      await page.getByTestId("first-result-improvement-skip").click();
+      await expect(page.getByTestId("first-result-improvement-progress")).toContainText(/1 of up to 3/);
+      await page.reload({ waitUntil: "networkidle" });
+      await expect(page.getByTestId("first-money-read")).toBeVisible({ timeout: 20000 });
+      await page.getByTestId("first-run-improve").click();
+      await expect(page.getByTestId("first-result-improvement-progress")).toContainText(/1 of up to 3/);
+      const again = page.getByTestId("first-result-improvement-question");
+      if (await again.isVisible().catch(() => false)) {
+        expect((await again.locator("p").first().innerText()).trim(), "a skipped question must not be asked again").not.toBe(asked);
+      }
+
+      // "Add this" goes to the existing input surface with a way back; returning re-runs the read and says what changed.
+      const add = page.getByTestId("first-result-improvement-add");
+      await expect(add, "\"Add this\" must be offered for a question with an input surface").toBeVisible();
+      {
+        await add.click();
+        await page.waitForURL(/returnTo=first-run/);
+        const bar = page.getByTestId("first-run-return-bar");
+        await expect(bar).toBeVisible();
+        await expectFingerSizedControls(page, '[data-testid="first-run-return-link"]', "return bar");
+        await expectNoHorizontalScroll(page, "input surface with return bar");
+        await page.getByTestId("first-run-return-link").click();
+        await page.waitForURL(/\/owner\/first-run/, { timeout: 20000 });
+        await expect(page.getByTestId("first-result-improved")).toBeVisible({ timeout: 30000 });
+        await expect(page.getByTestId("first-money-read")).toBeVisible();
+        expect(page.url(), "the update flag is consumed").not.toMatch(/update=1/);
+      }
     }
-    await page.getByTestId("first-result-improvement-later").click();
-    // Resume: reloading lands on the same read (state is derived from saved records).
-    await page.reload({ waitUntil: "networkidle" });
-    await expect(page.getByTestId("first-money-read")).toBeVisible({ timeout: 20000 });
+    const later = page.getByTestId("first-result-improvement-later");
+    if (await later.isVisible().catch(() => false)) await later.click();
+    await context.close();
+  });
+
+  test("a stale read cannot be accepted: another tab corrects the figures first (READ_STALE)", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const { businessName } = await signUpAndVerify(page);
+    await completeBusinessStep(page, businessName);
+    await fillEvidence(page, { revenue: "12000", fixedCosts: "7000", variableCosts: "4000", cashOnHand: "1500" });
+    await chooseQualityAndRead(page, "From my records");
+
+    // "Another tab" (same session) corrects the figures through the governed route while this read is still on screen.
+    const info = await (await context.request.get("/api/owner/first-run")).json();
+    const corrected = await context.request.post("/api/owner/first-run/correct", {
+      data: { businessId: info.business.id, snapshotId: info.currentSnapshotId, amendmentReason: "Other tab", revenue: 9000, evidenceQuality: "GOOD_ESTIMATE" },
+    });
+    expect(corrected.status()).toBe(201);
+
+    const [acceptRes] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/owner/first-run/accept") && r.request().method() === "POST"),
+      page.getByTestId("first-run-accept").click(),
+    ]);
+    expect(acceptRes.status(), "accepting a read built on superseded figures must be refused").toBe(409);
+    // The screen was already refreshed to the new read, so it says so rather than asking for an update that is done.
+    await expect(page.getByTestId("first-run-action-error")).toHaveText("Your numbers changed since this read was created, so OpsIQ has refreshed it. Review the new read, then choose again.");
+    const decisions = await db((c) => c.query("SELECT count(*)::int AS n FROM owner_decision_records d JOIN owner_businesses b ON b.id = d.business_id WHERE b.id = $1", [info.business.id]));
+    expect(decisions.rows[0].n).toBe(0);
+    // The screen then shows the CURRENT read (revenue was corrected, so the estimate label changed).
+    await expect(page.getByTestId("first-money-read-quality")).toContainText("A good estimate");
     await context.close();
   });
 
@@ -319,8 +441,9 @@ test.describe("Public beta OBQ journey", () => {
     for (const res of [
       await ctxB.request.get(`/api/owner/first-run/result?businessId=${businessId}`),
       await ctxB.request.get(`/api/owner/first-run/next-question?businessId=${businessId}`),
-      await ctxB.request.post("/api/owner/first-run/accept", { data: { businessId, idempotencyKey: "foreign-key-0001" } }),
-      await ctxB.request.post("/api/owner/first-run/improve", { data: { businessId, idempotencyKey: "foreign-key-0002" } }),
+      await ctxB.request.post("/api/owner/first-run/accept", { data: { businessId, readCycleId: randomUUID(), idempotencyKey: "foreign-key-0001" } }),
+      await ctxB.request.post("/api/owner/first-run/improve", { data: { businessId, category: "fixed_costs" } }),
+      await ctxB.request.post("/api/owner/first-run/skip-question", { data: { businessId, category: "fixed_costs" } }),
     ]) {
       expect([403, 404], `foreign business must be refused, got ${res.status()}`).toContain(res.status());
     }
@@ -368,5 +491,80 @@ test.describe("Invite-only keeps the governed behaviour", () => {
     await expect(page.getByTestId("start-free-cta")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /request beta access/i }).first()).toBeVisible();
     await ctx.close();
+  });
+});
+
+test.describe("Admin beta control on a phone (390px)", () => {
+  test.skip(!isLocal, "Refuses to run except against an explicit local Postgres DATABASE_URL.");
+  test.setTimeout(120_000);
+  test.beforeAll(async () => setAdmissionMode("OPEN_BETA"));
+  test.afterAll(async () => setAdmissionMode("INVITE_ONLY"));
+
+  async function createOperator() {
+    const userId = randomUUID();
+    const workspaceId = randomUUID();
+    const email = `ops-${userId.slice(0, 8)}@example.com`;
+    const password = "correct-horse-battery-staple";
+    const hash = await bcrypt.hash(password, 10);
+    await db(async (c) => {
+      await c.query("INSERT INTO users (id, email, hashed_password, is_active, requires_email_verification, updated_at) VALUES ($1,$2,$3,true,false,now())", [userId, email, hash]);
+      await c.query("INSERT INTO workspaces (id, name, slug, created_by, is_active) VALUES ($1,'Operator HQ',$2,$3,true)", [workspaceId, `ops-${workspaceId.slice(0, 8)}`, userId]);
+      await c.query("INSERT INTO workspace_memberships (workspace_id, user_id, role, added_by, is_active) VALUES ($1,$2,'owner',$2,true)", [workspaceId, userId]);
+      await c.query("INSERT INTO user_role_assignments (id, user_id, role, scope, scope_id, is_active) VALUES ($1,$2,'administration_operator','workspace',$3,true)", [randomUUID(), userId, workspaceId]);
+    });
+    return { email, password };
+  }
+
+  test("the operator sees mode + capacity, can stop signups with one thumb, and the server enforces it", async ({ browser }) => {
+    await resetLocalRateLimits();
+    const op = await createOperator();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    await page.goto("/login", { waitUntil: "networkidle" });
+    await page.fill('input[type="email"]', op.email);
+    await page.fill('input[type="password"]', op.password);
+    await page.click('button[type="submit"]');
+    await page.waitForURL((u) => !/\/login/.test(u.pathname), { timeout: 20000 });
+
+    await page.goto("/admin/beta-programme", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("stop-signups-panel")).toBeVisible({ timeout: 20000 });
+    await expectNoHorizontalScroll(page, "admin beta programme");
+
+    // Reachable with one thumb: the stop button is on the first screen, not pushed below a setup block.
+    await expect(page.getByTestId("stop-signups-button")).toBeInViewport();
+    await expect(page.getByTestId("beta-state-mode-value")).toBeInViewport();
+    // Critical state is visible without scrolling around: mode and capacity.
+    await expect(page.getByTestId("beta-state-mode-value")).toHaveText(/OPEN to anyone/);
+    await expect(page.getByTestId("beta-state-capacity")).toContainText(/Places used: \d+ of 500/);
+
+    // Every control is a finger-sized target with a readable (non-zooming) input.
+    await expectFingerSizedControls(page, '[data-testid="stop-signups-button"], [data-testid="stop-signups-panel"] button, main button, main select', "admin beta controls");
+    await expectNoZoomInputs(page, "main", "admin beta controls");
+    // The request list never forces sideways scrolling: phones get cards, wider screens the table.
+    await expect(page.getByTestId("beta-requests-cards")).toBeVisible();
+
+    // Stop signups.
+    const [res] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/admin/platform-settings") && r.request().method() === "POST"),
+      page.getByTestId("stop-signups-button").click(),
+    ]);
+    expect(res.status()).toBe(200);
+    await expect(page.getByTestId("beta-state-mode-value")).toHaveText("CLOSED");
+    await expect(page.getByTestId("stop-signups-button")).toContainText(/closed/i);
+    const mode = await db((c) => c.query("SELECT admission_mode FROM platform_settings WHERE id = 'global'"));
+    expect(mode.rows[0].admission_mode).toBe("CLOSED");
+
+    // Verify it is ACTUALLY enforced: an anonymous signup is now refused by the server, and the homepage stops offering Start free.
+    await resetLocalRateLimits();
+    const anon = await browser.newContext();
+    const refused = await anon.request.post("/api/auth/signup", {
+      data: { email: `late-${randomUUID().slice(0, 8)}@example.com`, password: "correct-horse-battery-staple", workspaceName: "Too Late", acceptTerms: true, acceptPrivacy: true, acceptBetaNotice: true },
+    });
+    expect(refused.status()).toBe(403);
+    const home = await anon.newPage();
+    await home.goto("/", { waitUntil: "networkidle" });
+    await expect(home.getByTestId("start-free-cta")).toHaveCount(0);
+    await anon.close();
+    await context.close();
   });
 });

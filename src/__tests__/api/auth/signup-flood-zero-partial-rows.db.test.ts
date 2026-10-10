@@ -69,16 +69,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] signup flood creates zero partial ro
       allEmails.push(email);
       const res = await POST(signupRequest(email) as never);
       results.push({ email, status: res.status });
-      // Stop once we've clearly entered the rate-limited regime and confirmed
-      // at least one earlier success, so the test doesn't need to hardcode
-      // the exact configured ceiling.
-      if (res.status === 429 && results.some((r) => r.status === 201)) break;
+      // Stop once the flood is being refused (by the per-IP rate limiter, 429, or by the per-source cap on unverified
+      // signups, 403) and at least one earlier request succeeded, so the test doesn't hardcode either ceiling.
+      if (res.status !== 201 && results.some((r) => r.status === 201)) break;
     }
 
     const succeeded = results.filter((r) => r.status === 201);
-    const rateLimited = results.filter((r) => r.status === 429);
+    const rateLimited = results.filter((r) => r.status !== 201); // refused by a limiter: rate limit (429) or per-source pending cap (403)
 
-    // The flood must actually have tripped the limiter within this many attempts.
+    // The flood must actually have been stopped within this many attempts.
     expect(rateLimited.length).toBeGreaterThan(0);
     // And at least one request must have gone through before the limiter tripped.
     expect(succeeded.length).toBeGreaterThan(0);
@@ -86,7 +85,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] signup flood creates zero partial ro
     // Every attempt's outcome is one of exactly these two statuses (no
     // silent 500s / unexpected partial-failure paths muddying the count).
     for (const r of results) {
-      expect([201, 429]).toContain(r.status);
+      expect([201, 403, 429]).toContain(r.status);
     }
 
     // Exactly one durable User row per 201 — no more, no less.

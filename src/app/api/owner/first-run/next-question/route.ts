@@ -1,6 +1,7 @@
 /**
- * GET /api/owner/first-run/next-question?businessId=&skipped=a,b&answered=n — the ONE next question,
- * chosen deterministically from actual missing evidence (progressive OBQ), or the reason to stop.
+ * GET /api/owner/first-run/next-question?businessId= — the ONE next question, chosen deterministically from actual
+ * missing evidence (progressive OBQ), or the reason to stop. Progress (answered/skipped) is read from the persisted
+ * interactions: the client supplies nothing but the business, so it cannot reset or spoof the question limit.
  */
 import { z } from "zod/v4";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -13,17 +14,12 @@ export const runtime = "nodejs";
 
 import { getNextQuestionView } from "@/services/owner-first-run/first-run.service";
 
-const querySchema = z.object({
-  businessId: uuidSchema,
-  skipped: z.string().max(600).optional(),
-  answered: z.coerce.number().int().min(0).max(10).optional(),
-});
+const querySchema = z.object({ businessId: uuidSchema });
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const q = parseSearchParams(ctx.request!.url, querySchema);
-    const skipped = (q.skipped ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 30);
-    return getNextQuestionView(ctx.verifiedWorkspaceId, q.businessId, { skipped, answeredCount: q.answered ?? 0 });
+    return getNextQuestionView(ctx.verifiedWorkspaceId, q.businessId);
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true },
 );

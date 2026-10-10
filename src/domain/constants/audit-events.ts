@@ -748,6 +748,7 @@ export const AUDIT_EVENTS = {
   PRODUCT_FIRST_RESULT_ACTION_ACCEPTED: "product.first_result_action_accepted",
   PRODUCT_FIRST_RESULT_CORRECTED: "product.first_result_corrected",
   PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED: "product.first_result_improvement_requested",
+  PRODUCT_FIRST_RESULT_QUESTION_SKIPPED: "product.first_result_question_skipped",
   PRODUCT_FIRST_TRUSTED_DECISION_INTERACTION: "product.first_trusted_decision_interaction",
   PRODUCT_FIRST_VALUE_FEEDBACK: "product.first_value_feedback",
   PRODUCT_COCKPIT_REACHED: "product.cockpit_reached",

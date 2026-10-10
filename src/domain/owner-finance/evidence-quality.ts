@@ -50,6 +50,26 @@ export function applyEvidenceQualityToScore(score: number, quality: EvidenceQual
   return Math.min(score - EVIDENCE_QUALITY_PENALTY[quality], EVIDENCE_QUALITY_SCORE_CEILING[quality]);
 }
 
+/**
+ * What a snapshot's provenance IS, with legacy made explicit: NULL in storage means the snapshot predates the field
+ * (or was entered without saying), so its provenance is UNKNOWN. Unknown is never authoritative and never presented
+ * as ACTUAL; it is not penalised either (existing records keep their stored confidence).
+ */
+export const LEGACY_UNKNOWN = "LEGACY_UNKNOWN" as const;
+export type EvidenceProvenance = EvidenceQuality | typeof LEGACY_UNKNOWN;
+
+export function provenanceOf(quality: EvidenceQuality | string | null | undefined): EvidenceProvenance {
+  return isEvidenceQuality(quality) ? quality : LEGACY_UNKNOWN;
+}
+
+/** Only evidence the owner stated is from their records may be recorded as authoritative. Unknown and estimates are not. */
+export function isAuthoritativeEvidence(quality: EvidenceQuality | string | null | undefined): boolean {
+  return quality === "ACTUAL";
+}
+
+export const LEGACY_UNKNOWN_LABEL = "Not stated";
+export const LEGACY_UNKNOWN_BASIS = "reliability not stated";
+
 export function isEstimate(quality: EvidenceQuality | null | undefined): boolean {
   return quality === "GOOD_ESTIMATE" || quality === "ROUGH_ESTIMATE";
 }

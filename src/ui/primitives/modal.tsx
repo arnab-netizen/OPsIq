@@ -46,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="mx-4 w-full max-w-lg rounded-lg border border-border bg-background shadow-xl outline-none"
+        className="mx-4 max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-background shadow-xl outline-none"
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -55,7 +55,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
           <h2 className="text-lg font-semibold text-foreground">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Close"
           >
             <svg

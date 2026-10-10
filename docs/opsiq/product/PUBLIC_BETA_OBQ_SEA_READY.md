@@ -40,7 +40,7 @@ Metric: `TIME_TO_TRUSTWORTHY_VALUE` (target < 5 min, ceiling < 10), not question
 * `owner_financial_snapshots.evidence_quality` — nullable, CHECK `ACTUAL | GOOD_ESTIMATE | ROUGH_ESTIMATE`. NULL = recorded
   before provenance existed.
 * `owner_first_result_interactions` — append-only, tenant-scoped (composite FK to `owner_businesses(id, workspace_id)`),
-  idempotent on `(workspace_id, idempotency_key)`; kinds `RESULT_VIEWED | IMPROVEMENT_REQUESTED | FEEDBACK`.
+  idempotent on `(workspace_id, idempotency_key)`; kinds `RESULT_VIEWED | IMPROVEMENT_REQUESTED | QUESTION_SKIPPED | FEEDBACK`, plus nullable `question_category` (CHECKed to the two question kinds).
 
 **Routes `/api/owner/first-run/*`** (all `withCanonicalEnforcement`, capability + workspace enforced server-side):
 `GET /` (routing contract) · `POST /business` · `GET /result` · `POST /result/viewed` · `POST /accept` · `POST /correct` ·
@@ -100,7 +100,7 @@ allow-listed keys holding an enum token or a bounded whole number — **money, n
 | `business_profile_completed` | first-run business route (once) |
 | `first_evidence_saved`, `first_diagnosis_completed` | snapshot / diagnosis routes (once per business) |
 | `first_result_viewed` | `result/viewed` (once per diagnosis cycle) |
-| `first_result_action_accepted`, `first_result_corrected`, `first_result_improvement_requested` | the three result actions |
+| `first_result_action_accepted`, `first_result_corrected`, `first_result_improvement_requested`, `first_result_question_skipped` | the three result actions |
 | `first_trusted_decision_interaction` | activation derivation (once) |
 | `cockpit_reached` (once), `returning_owner` (≤ once/UTC day, after activation day) | cockpit visit |
 | `outcome_verification_started`, `outcome_verified` | process-execution `VERIFY_OUTCOME` (before the attempt / after commit) |
@@ -137,9 +137,9 @@ Query example (funnel): `SELECT event_name, count(*) FROM audit_events WHERE eve
      code on the new schema and a rollback are both safe.
   4. `/admin/beta-programme` opens and the Stop button works from a phone; `platform_settings` is bootstrapped.
 * **Operating limits to know about** (not changed here — they are the existing, governed beta architecture):
-  * **Capacity counts accounts at signup, not at verification.** About ten junk or mistyped signups can fill a cap of 10 with
-    no way to free a slot except raising capacity. *Owner decision needed:* count only verified (or recent) accounts. Until
-    decided, run the first stage at 10 only while someone can raise it, or start at 25. Monitor with the SQL below.
+  * **Capacity no longer counts unverified signups forever (decision record: `PUBLIC_BETA_SEA_RUNBOOK.md` §5).** It counts
+    verified accounts plus unverified signups still inside a 24-hour pending hold; one source address may hold at most 3
+    pending places. A late verifier re-checks capacity under the shared advisory lock.
   * Per-IP limits apply to signup/login (10 per 15 min) and verification (30 per hour, raised from 5 so a small cohort behind
     one office/mobile-carrier address cannot lock itself out; resend stays 5 per hour per address and per email).
   * The production database pool is one connection per instance; a sudden spike queues and can return a retryable
@@ -163,14 +163,36 @@ SELECT count(*) FILTER (WHERE email_verified_at IS NULL) AS unverified, count(*)
 owner's own thinking time and is **not** the < 5 min "time to a trustworthy first read" target; there is no event for "first
 result shown" other than `first_result_viewed` (compare its `occurred_at` with `email_verified` per workspace for that).
 
+## 6b. Repair round (post-audit) — what changed and where
+
+* Evidence truth: `NULL` quality is `LEGACY_UNKNOWN` (never authoritative, never "estimated", never promoted to `ACTUAL`; shown as
+  "Not stated" with a caution). The snapshot-create route refuses to store the **first** evidence of a not-yet-diagnosed business
+  without a stated quality (server-side; the UI control is a convenience). Callers that never state it after the first diagnosis stay
+  `NULL` (conservative). Any quality change — including the implicit `ACTUAL → GOOD_ESTIMATE` step-down — is recorded in the
+  amendment audit event (`evidenceQualityBefore/After`, actor, previous snapshot id) and in the new version's `changedFields`.
+* Amounts: a lone dot followed by exactly three digits (`1.500`) is refused as ambiguous; `1,500`, `1,500.00`, `1,80,000`,
+  `1 500` are read as thousands grouping; locale is never guessed.
+* First read: `scopeKind` (`FINANCIAL_FIRST_READ` / `WHOLE_BUSINESS`) is a runtime contract — the builder refuses
+  whole-business wording unless ≥ 3 distinct evidence domains back it. Period, completed/provisional status and evidence quality are
+  shown in one line (canonical `evidencePeriodState`).
+* Progressive questions: progress is persisted (`OwnerFirstResultInteraction.questionCategory`; kinds `IMPROVEMENT_REQUESTED` and
+  `QUESTION_SKIPPED`); the limit (3) counts handled categories and is reachable; skipped/chosen categories are never re-asked.
+  "Add this" carries `returnTo=first-run`; a return bar on every owner page links back to `/owner/first-run?update=1`, which re-runs
+  the canonical diagnosis once and shows what changed.
+* Operability: `PUBLIC_BETA_SEA_RUNBOOK.md`; `/admin/overview` shows the signup → first-value funnel and capacity breakdown.
+
 ## 7. Known limitations (stated, not hidden)
 
 0. **Later verification does not read evidence quality.** An accepted action built on an *estimated* read records
    `expectedMeasurementSource = OWNER_ENTERED` (not `AUTHORITATIVE_SNAPSHOT`), but the existing outcome/verification
    machinery itself does not look at `evidenceQuality` of the snapshot it later measures against. Wiring that is a change to
    governed verification and is deliberately out of scope here.
-0b. Accepting a read is a stale-check followed by a decision write, not one transaction; a concurrent correction in between
-   could let a just-superseded read be accepted (the Cockpit's next-move card then reports "numbers changed").
+0b. *(Resolved.)* Accepting a read is **compare-at-write**: the accept request names the read (cycle) the owner is looking at, and
+   inside the decision transaction (under the candidate lock) the snapshot is share-locked and re-checked as un-superseded, still
+   the diagnosable head, and still the latest diagnosis. An amendment takes the same row `FOR UPDATE`, so exactly one of
+   them wins; the loser gets `409` with the contract message "Your numbers changed since this read was created. Update the read
+   before using this recommendation." A correction whose diagnosis re-run fails after the amendment committed is reported as
+   "saved, but the read could not be updated yet" and the old read is withdrawn.
 0c. An amendment cannot return a field to *unknown* (blank means "leave as is"); a deliberate known zero is preserved.
 0d. The key number on the read is shown with its metric label but no unit (it may be a ratio, days or an amount).
 
@@ -182,3 +204,11 @@ result shown" other than `first_result_viewed` (compare its `occurred_at` with `
    version strings are **unchanged**. If counsel treats that as a material change, bump the versions and re-consent.
 4. The remote test database in this environment was never touched; migration and DB tests ran against a throwaway local
    Postgres. The migration has **not** been applied to any shared database.
+5. Accepted residual items from the repair-round hostile reviews (P3, none blocks): spreadsheet **imports** create evidence with no
+   stated quality (stays "Not stated", conservative); server date validation still accepts non-calendar strings such as
+   `2026-02-30` (they roll forward; labels show the stored UTC value); the per-source pending bound compares against a
+   non-indexed `policy_acceptances.ip_address` under the capacity lock (fine at beta scale; add an index before opening past
+   ~1000 accounts); the question limit is per business for life and an abandoned "Add this" counts as handled; legacy
+   *workspace-scoped goals* (which a new owner cannot have) still read "Workspace goal" on the Goals page; a no-op amendment that
+   re-submits the same number still steps `ACTUAL` down to `GOOD_ESTIMATE` (conservative, audited); anonymous funnel counts are
+   approximate and can be inflated by a hostile caller (labelled as such).

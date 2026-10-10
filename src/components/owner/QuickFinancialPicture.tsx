@@ -21,7 +21,8 @@ import {
   buildQuickSnapshotPayload,
   type QuickEntryDraft,
 } from "@/domain/owner-finance/quick-entry";
-import { EVIDENCE_QUALITIES, EVIDENCE_QUALITY_EXPLANATION, EVIDENCE_QUALITY_LABEL, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
 import { firstReadSufficiencyFromRow, type CriticalFinanceRow } from "@/domain/owner-finance/first-read-sufficiency";
 import {
@@ -266,23 +267,13 @@ export function QuickFinancialPicture({
             ))}
           </div>
 
-          <fieldset className="mt-4" data-testid="quick-evidence-quality" disabled={locked}>
-            <legend className="text-sm font-medium text-foreground">How reliable are these numbers?</legend>
-            <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {EVIDENCE_QUALITIES.map((q) => (
-                <label
-                  key={q}
-                  className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border p-2 text-sm ${quality === q ? "border-primary bg-primary/10" : "border-border bg-background"}`}
-                >
-                  <input type="radio" name="evidenceQuality" value={q} checked={quality === q} onChange={() => setQuality(q)} />
-                  <span>{EVIDENCE_QUALITY_LABEL[q]}</span>
-                </label>
-              ))}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground" data-testid="quick-evidence-quality-note">
-              {quality ? EVIDENCE_QUALITY_EXPLANATION[quality] : requireEvidenceQuality ? "Pick one so OpsIQ can say how far to trust the read." : "Optional — it tells OpsIQ how far to trust the read."}
-            </p>
-          </fieldset>
+          <EvidenceQualityFieldset
+            testId="quick-evidence-quality"
+            value={quality}
+            onChange={setQuality}
+            disabled={locked}
+            hint={requireEvidenceQuality ? "Pick one so OpsIQ can say how far to trust the read." : "Optional — it tells OpsIQ how far to trust the read."}
+          />
 
           <fieldset className="mt-4">
             <legend className="text-sm font-medium text-foreground">These numbers are for</legend>

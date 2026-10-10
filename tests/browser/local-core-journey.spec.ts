@@ -87,6 +87,7 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     await page.fill('input[name="revenue"]', "20000");
     await page.fill('input[name="variableCosts"]', "8000");
     await page.fill('input[name="cashOnHand"]', "6000");
+    await page.getByTestId("onboarding-evidence-quality").getByLabel("From my records").check(); // first evidence states its reliability
     await page.click('button:has-text("See my first result")');
 
     await page.waitForSelector('[data-testid="onboarding-first-result"]', { timeout: 20000 });

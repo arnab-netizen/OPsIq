@@ -20,6 +20,10 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// A refused signup now leaves an audit event (so the operator view counts every refusal); these tests are about the gate
+// decision, not audit persistence, so the audit write is stubbed.
+vi.mock("@/infra/audit", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/infra/audit")>()), emitAuditEvent: vi.fn().mockResolvedValue(undefined) }));
+
 const mocks = vi.hoisted(() => ({
   findUniqueBetaRequest: vi.fn(),
 }));
