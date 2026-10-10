@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -31,10 +31,14 @@ function VerifyEmailForm() {
     token ? "" : "This verification link is missing its token."
   );
 
-  useEffect(() => {
-    if (!token) return;
+  // A verification token is single-use. The request is made exactly once per page load: React StrictMode (dev)
+  // runs this effect twice, and a second POST would find the token already used and show a false failure.
+  const requested = useRef(false);
 
-    let cancelled = false;
+  useEffect(() => {
+    if (!token || requested.current) return;
+    requested.current = true;
+
     fetch("/api/auth/verify-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,7 +46,6 @@ function VerifyEmailForm() {
     })
       .then(async (res) => {
         const data = await res.json();
-        if (cancelled) return;
         if (!res.ok) {
           setStatus("error");
           setMessage(data.error || "Verification failed.");
@@ -56,15 +59,9 @@ function VerifyEmailForm() {
         }, 1500);
       })
       .catch(() => {
-        if (!cancelled) {
-          setStatus("error");
-          setMessage("Something went wrong. Please try again.");
-        }
+        setStatus("error");
+        setMessage("Something went wrong. Please try again.");
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, [token]);
 
   return (
@@ -78,7 +75,7 @@ function VerifyEmailForm() {
         )}
         {status === "success" && (
           <p className="text-sm text-muted-foreground">
-            Email verified. Taking you to your workspace&hellip;
+            Email verified. Taking you to your first read&hellip;
           </p>
         )}
         {status === "error" && (
@@ -88,6 +85,13 @@ function VerifyEmailForm() {
               <Link href="/resend-verification" className="text-[var(--primary-text)] hover:underline">
                 Request a new verification link
               </Link>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Already verified? A link can only be used once &mdash;{" "}
+              <Link href="/login" className="text-[var(--primary-text)] hover:underline">
+                sign in
+              </Link>
+              .
             </p>
           </>
         )}

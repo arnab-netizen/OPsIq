@@ -120,9 +120,9 @@ export default function SignupPage() {
             account and sign in.
           </p>
           <p className="text-xs text-muted-foreground">
-            Didn&rsquo;t get it?{" "}
-            <Link href="/resend-verification" className="text-[var(--primary-text)] hover:underline">
-              Resend the verification email
+            Didn&rsquo;t get it? Check your spam folder, or{" "}
+            <Link href={`/resend-verification?email=${encodeURIComponent(email)}`} className="text-[var(--primary-text)] hover:underline">
+              resend the verification email
             </Link>
             .
           </p>
