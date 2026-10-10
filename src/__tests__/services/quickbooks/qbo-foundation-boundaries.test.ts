@@ -10,6 +10,7 @@ import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createQboReadClient } from "@/services/quickbooks/qbo-client";
 import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
+import { importClosure, importSpecifiers, realFs, type ClosureFs } from "@/__tests__/test-helpers/import-closure";
 
 const ROOT = process.cwd();
 const QBO_DIRS = ["src/domain/quickbooks", "src/services/quickbooks"];
@@ -107,14 +108,19 @@ describe("QuickBooks foundation boundaries", () => {
   });
 
   it("the public webhook route/service, the manual sync route and the task leaf never import the handler registry; and only reviewed modules import the transport layer anywhere in src", () => {
-    for (const f of [
-      "src/services/quickbooks/qbo-webhook.service.ts",
+    // TRANSITIVE: the handler registry (which imports the whole sync stack) must be unreachable from the public webhook, the manual sync
+    // route, the task leaf and the QuickBooks services - otherwise a future import would create a cycle or drag the registry into them.
+    const protectedEntries = [
       "src/app/api/integrations/quickbooks/webhook/route.ts",
       "src/app/api/owner/integrations/quickbooks/sync/route.ts",
       "src/infra/qbo-sync-tasks.ts",
-    ]) {
-      expect(code(f), f).not.toMatch(/scheduler-handlers/);
-    }
+      "src/infra/scheduler.ts",
+      ...qboFiles,
+    ];
+    const reached = importClosure(protectedEntries, realFs(ROOT));
+    expect(reached.size).toBeGreaterThan(protectedEntries.length); // the walk really followed imports
+    expect(reached.has("src/infra/qbo-sync-tasks.ts")).toBe(true);
+    expect(reached.has("src/infra/scheduler-handlers.ts"), "scheduler-handlers must not be reachable from the QuickBooks entry points").toBe(false);
     // No module outside src/services/quickbooks may import the sender, OAuth POSTs or the read client directly (tests excluded).
     const walk = (dir: string): string[] => readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
       const rel = join(dir, e.name);
@@ -140,11 +146,30 @@ describe("QuickBooks foundation boundaries", () => {
     }
   });
 
+  it("the import-closure guard itself: it follows relative and alias imports transitively, ignores comments / strings, and FAILS when a forbidden path exists", () => {
+    const files: Record<string, string> = {
+      "src/a.ts": `import { b } from "./b";\n// import { x } from "@/infra/scheduler-handlers";\nconst s = "@/infra/scheduler-handlers";`,
+      "src/b.ts": `export { c } from "@/mid/c";`,
+      "src/mid/c.ts": `export const c = 1;`,
+      "src/infra/scheduler-handlers.ts": `export const h = 1;`,
+      "src/leaky/x.ts": `import "./y";`,
+      "src/leaky/y.ts": `const m = await import("@/infra/scheduler-handlers");`,
+    };
+    const fs: ClosureFs = { read: (rel) => files[rel] ?? null };
+    const clean = importClosure(["src/a.ts"], fs);
+    expect([...clean].sort()).toEqual(["src/a.ts", "src/b.ts", "src/mid/c.ts"]); // comment and string mentions are not imports
+    const leaky = importClosure(["src/leaky/x.ts"], fs);
+    expect(leaky.has("src/infra/scheduler-handlers.ts")).toBe(true); // a transitive dynamic import is caught
+    expect(importSpecifiers(`import type { T } from "./t";\nexport * from "./u";\nconst r = require("./v");`).sort()).toEqual(["./t", "./u", "./v"]);
+  });
+
   it("both execution entry points bound an execution by wall clock (manual route and scheduler handler)", () => {
     expect(code("src/app/api/owner/integrations/quickbooks/sync/route.ts")).toMatch(/deadlineMs:\s*QBO_EXECUTION_DEADLINE_MS/);
     expect(code("src/infra/scheduler-handlers.ts")).toMatch(/deadlineMs:\s*QBO_EXECUTION_DEADLINE_MS/);
     expect(code("src/app/api/internal/cron/scheduler/route.ts")).toMatch(/export const maxDuration\s*=\s*300/);
     expect(code("src/app/api/internal/cron/scheduler/route.ts")).toMatch(/maxClaim:\s*DRAIN_CLAIM_PER_PASS/);
+    expect(code("src/app/api/internal/cron/scheduler/route.ts")).toMatch(/invocationDeadlineAt:\s*invocationStartedAt\s*\+\s*INVOCATION_DEADLINE_MS/);
+    expect(code("src/infra/scheduler-handlers.ts")).toMatch(/invocationDeadlineAt:\s*context\.invocationDeadlineAt/);
   });
 
   it("GENERIC_OAUTH_CRYPTO_REUSED=YES: no second encryption implementation", () => {

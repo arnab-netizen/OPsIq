@@ -23,16 +23,20 @@ export function qboConfig(environment: QboEnvironment = "sandbox"): QboProviderC
 }
 
 /**
- * Scope cleanup of `qbo-read-sync` scheduler tasks to the rows a test FILE created: snapshot the existing ids in beforeAll, delete
- * everything that appeared since in afterAll. (Producers scan every active connection in the database, so a workspace filter alone
- * would leak rows for connections seeded by other files - and an unscoped delete would remove other files' rows.)
+ * Scheduler-row OWNERSHIP for a test file. Every workspace this file seeds through seedConnected() is recorded (the module registry is
+ * per test file), and a file's rows are exactly the scheduler tasks of those workspaces. Cleanup removes only those rows; a file
+ * never deletes - and, with `onlyWorkspaceIds`, never creates or claims - a task belonging to a workspace it does not own, so test
+ * files that share a database cannot interfere with each other even when they run concurrently.
  */
-export function trackQboTasks(): { snapshot: () => Promise<void>; cleanup: () => Promise<void> } {
-  let before = new Set<string>();
-  const ids = async (): Promise<string[]> => (await db.scheduledTask.findMany({ where: { taskName: "qbo-read-sync" }, select: { id: true } })).map((r: { id: string }) => r.id);
+const ownedWorkspaces = new Set<string>();
+export const ownedQboWorkspaceIds = (): string[] => [...ownedWorkspaces];
+
+export function ownedQboTasks(): { cleanup: () => Promise<void> } {
   return {
-    snapshot: async () => { before = new Set(await ids()); },
-    cleanup: async () => { await db.scheduledTask.deleteMany({ where: { id: { in: (await ids()).filter((id) => !before.has(id)) } } }).catch(() => undefined); },
+    cleanup: async () => {
+      // No catch: a cleanup that fails must fail the file, never silently leave rows behind.
+      await db.scheduledTask.deleteMany({ where: { taskName: "qbo-read-sync", workspaceId: { in: ownedQboWorkspaceIds() } } });
+    },
   };
 }
 
@@ -59,6 +63,7 @@ export interface ConnectedTenant { t: Tenant; connectionId: string; realmId: str
 /** Seed a tenant with an ACTIVE QuickBooks connection (real OAuth persistence path) and a matching fake Intuit. */
 export async function seedConnected(o: { environment?: QboEnvironment; realmId?: string; grant?: QboTokenGrant; tenant?: Tenant; businessKey?: "biz" | "bizB"; currency?: string } = {}): Promise<ConnectedTenant> {
   const t = o.tenant ?? (await seedTenant());
+  ownedWorkspaces.add(t.ws);
   const environment = o.environment ?? "sandbox";
   const realmId = o.realmId ?? nextRealm();
   const grant = o.grant ?? grantOf();

@@ -59,6 +59,35 @@ export function toDecimalString(value: unknown): string | null {
   return m[1] === "-" && out !== "0" ? `-${out}` : out;
 }
 
+/**
+ * Exchange-rate normalizer. A rate is NOT a monetary amount: it needs more fractional digits than the 4 kept for amounts (USD per VND is
+ * about 0.00004). Keeps up to 8 fractional digits (rounded half away from zero beyond that) and never turns a NON-ZERO rate into "0":
+ * a positive value too small to represent in 8 digits is rejected (null) instead of being stored as a fabricated zero.
+ */
+export function toExchangeRateString(value: unknown): string | null {
+  let text: string;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Math.abs(value) >= 1e15) return null;
+    // toFixed(20) is exact enough to see a sub-1e-8 value as non-zero; the digits are then rounded below.
+    text = value.toFixed(20);
+  } else if (typeof value === "string") {
+    text = value.trim();
+  } else return null;
+  const m = /^(-?)(\d{1,15})(?:\.(\d+))?$/.exec(text);
+  if (!m || (m[3] ?? "").length > 30) return null;
+  const frac = m[3] ?? "";
+  const kept = BigInt(m[2] + frac.slice(0, 8).padEnd(8, "0"));
+  const roundUp = frac.length > 8 && frac.charCodeAt(8) >= 53; // '5'
+  const scaled = kept + BigInt(roundUp ? "1" : "0");
+  const inputNonZero = /[1-9]/.test(m[2] + frac);
+  if (scaled === BigInt("0")) return inputNonZero ? null : "0";
+  const unit = BigInt("100000000");
+  const whole = scaled / unit;
+  const fracOut = (scaled % unit).toString().padStart(8, "0").replace(/0+$/, "");
+  const out = fracOut ? `${whole}.${fracOut}` : `${whole}`;
+  return m[1] === "-" ? `-${out}` : out;
+}
+
 /** Exact fixed-point (4 fractional digits) arithmetic on strings produced by toDecimalString - no floating point. */
 const SCALE_FACTOR = BigInt("10000");
 function scaledOf(decimal: string): bigint {
@@ -162,7 +191,7 @@ function normalizeTransaction(entity: "Invoice" | "Bill", raw: unknown): Normali
     balance,
     currency: currencyOf(raw),
     // Foreign-currency documents: the home-currency equivalents and the rate, so no consumer ever sums mixed currencies.
-    exchangeRate: toDecimalString(raw.ExchangeRate),
+    exchangeRate: toExchangeRateString(raw.ExchangeRate),
     homeTotalAmt: toDecimalString(raw.HomeTotalAmt),
     homeBalance: toDecimalString(raw.HomeBalance),
     // A voided invoice keeps its number with a zero total and "Voided" in the private note. Only the flag is kept (the note is free text).

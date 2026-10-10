@@ -34,7 +34,7 @@ function gated(c: ConnectedTenant) {
 }
 
 /** A fresh logical sync's checkpoint (production always writes it together with the first record). */
-const ckpt = (l: SyncLease) => ({ v: 1 as const, syncId: l.syncId, mode: "FULL" as const, cutoff: NOW.toISOString(), entityIndex: 0, cursor: null, tie: null, reconciled: [] as string[], seq: 1, changed: false, restart: false });
+const ckpt = (l: SyncLease) => ({ v: 1 as const, syncId: l.syncId, mode: "FULL" as const, cutoff: NOW.toISOString(), entityIndex: 0, cursor: null, tie: null, reconciled: [] as string[], seq: 1, changed: false, restart: false, reportFailures: 0 });
 
 function lease(c: ConnectedTenant, r: Awaited<ReturnType<typeof beginSyncRun>>): SyncLease {
   if (!r.ok) throw new Error(`begin ${r.reason}`);

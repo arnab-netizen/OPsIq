@@ -181,7 +181,7 @@ const qboReadSyncHandler: TaskHandler = async (payload, context): Promise<Handle
   if (!context.workspaceId) {
     throw new Error("qbo-read-sync task missing workspaceId — cannot enforce workspace isolation");
   }
-  const outcome = await runScheduledQboSync({ workspaceId: context.workspaceId, connectionId, trigger }, { env: process.env, signal: context.signal, deadlineMs: QBO_EXECUTION_DEADLINE_MS });
+  const outcome = await runScheduledQboSync({ workspaceId: context.workspaceId, connectionId, trigger }, { env: process.env, signal: context.signal, deadlineMs: QBO_EXECUTION_DEADLINE_MS, invocationDeadlineAt: context.invocationDeadlineAt });
   switch (outcome.status) {
     case "SUCCEEDED":
       return { status: "SUCCESS", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged, reportsStored: outcome.counts.reportsStored } };

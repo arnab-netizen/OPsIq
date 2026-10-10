@@ -318,8 +318,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       expect(await db.qboConnection.count({ where: { workspaceId: u.ws } })).toBe(0);
       expect(await db.qboConnectionToken.count({ where: { workspaceId: u.ws } })).toBe(0);
       // A company held by ANOTHER tenant: the refused grant is NOT revoked (an Intuit revoke could take the holder's connection down).
-      const afterB = fetchCalls.length;
-      expect(fetchCalls.slice(0, afterB).filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
     });
     it("business no longer eligible (archived mid-flow) revokes the unused grant", async () => {
       const t = await seedTenant();
@@ -329,6 +328,44 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       expect(r.body.code).toBe("BUSINESS_NOT_ELIGIBLE");
       expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(1);
       expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(0);
+    });
+    it("RC10: business archived mid-flow while a LIVE connection still holds the verified company => NO revoke (the revoke could be company-wide)", async () => {
+      const t = await seedTenant(); const realm = nextRealm();
+      const a = await startFlow(t);
+      const b = await startFlow(t); // a second, still-pending authorization for the same business
+      expect((await callback(t, { state: a.state, code: "c0de", realmId: realm })).status).toBe(200);
+      await db.ownerBusiness.update({ where: { id: t.biz }, data: { isActive: false } });
+      const r = await callback(t, { state: b.state, code: "c0de", realmId: realm });
+      expect(r.body.code).toBe("BUSINESS_NOT_ELIGIBLE");
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
+      expect(await db.qboConnection.count({ where: { workspaceId: t.ws, status: "ACTIVE" } })).toBe(1);
+    });
+    it("RC10: a TRANSIENT verification failure revokes the fresh grant only when no live connection holds that company", async () => {
+      const t = await seedTenant(); const realm = nextRealm();
+      const first = await startFlow(t);
+      expect((await callback(t, { state: first.state, code: "c0de", realmId: realm })).status).toBe(200);
+      const reconnect = await startFlow(t);
+      companyInfoResponder = () => new Response("down", { status: 503 });
+      const held = await callback(t, { state: reconnect.state, code: "c0de", realmId: realm });
+      expect(held.body.code).toBe("PROVIDER_TEMPORARY");
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0); // the working connection survives
+      const u = await seedTenant(); const free = await startFlow(u);
+      const notHeld = await callback(u, { state: free.state, code: "c0de", realmId: nextRealm() });
+      expect(notHeld.body.code).toBe("PROVIDER_TEMPORARY");
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(1); // nobody holds it: the unused grant is discarded
+    });
+    it("RC10: a missing token-encryption key fails BEFORE the authorization code is exchanged (no refresh token is ever issued)", async () => {
+      const t = await seedTenant(); const { state } = await startFlow(t);
+      const saved = process.env.OAUTH_TOKEN_ENCRYPTION_KEY;
+      process.env.OAUTH_TOKEN_ENCRYPTION_KEY = "";
+      try {
+        const r = await callback(t, { state, code: "c0de", realmId: nextRealm() });
+        expect(r.status).toBe(503);
+        expect(exchangeCalls()).toHaveLength(0);
+        expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(0);
+      } finally {
+        if (saved === undefined) delete process.env.OAUTH_TOKEN_ENCRYPTION_KEY; else process.env.OAUTH_TOKEN_ENCRYPTION_KEY = saved;
+      }
     });
     it("business already bound to another company", async () => {
       const t = await seedTenant();

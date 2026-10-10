@@ -172,7 +172,7 @@ describe("due gate (pure)", () => {
 });
 
 describe("continuation checkpoint and CONTINUING outcome", () => {
-  const cp = { v: 1, syncId: UUID, mode: "FULL", cutoff: "2026-10-10T03:00:00.000Z", entityIndex: 1, cursor: "2026-09-01T00:00:00.000Z", tie: { second: "2026-09-15T10:00:00.000Z", offset: 20, stalledPasses: 0, lastSeen: 20, total: 47, rejected: ["9"], verify: { round: 1, after: "130", matched: 12, total: 47, edits: 3 } }, reconciled: ["Customer"], seq: 5, changed: false, restart: false };
+  const cp = { v: 1, syncId: UUID, mode: "FULL", cutoff: "2026-10-10T03:00:00.000Z", entityIndex: 1, cursor: "2026-09-01T00:00:00.000Z", tie: { second: "2026-09-15T10:00:00.000Z", offset: 20, stalledPasses: 0, lastSeen: 20, total: 47, rejected: ["9"], verify: { round: 1, after: "130", matched: 12, total: 47, edits: 3 } }, reconciled: ["Customer"], seq: 5, changed: false, restart: false, reportFailures: 0 };
   it("round-trips a valid checkpoint and treats anything unreadable as ABSENT (restart cleanly, never trust garbage)", async () => {
     const { parseContinuation } = await import("@/domain/quickbooks/qbo-sync-model");
     expect(parseContinuation(cp)).toEqual(cp);
@@ -181,6 +181,12 @@ describe("continuation checkpoint and CONTINUING outcome", () => {
     expect(parseContinuation({ ...cp, entityIndex: 99 })).toBeNull();
     expect(parseContinuation({ ...cp, cutoff: "yesterday" })).toBeNull();
     expect(parseContinuation({ ...cp, tie: { second: "2026-09-15T10:00:00.000Z" } })).toBeNull();
+    // A checkpoint written before reportFailures existed is still readable (defaults to 0); a corrupt counter is unreadable, not trusted.
+    const legacy: Record<string, unknown> = { ...cp };
+    delete legacy.reportFailures;
+    expect(parseContinuation(legacy)).toEqual(cp);
+    expect(parseContinuation({ ...cp, reportFailures: -1 })).toBeNull();
+    expect(parseContinuation({ ...cp, reportFailures: 1.5 })).toBeNull();
   });
   it("floorSecond drops sub-second precision only", async () => {
     const { floorSecond } = await import("@/domain/quickbooks/qbo-sync-model");

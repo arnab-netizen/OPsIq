@@ -51,6 +51,18 @@ export interface ProducerScanResult {
   enqueued: number;
 }
 
+/** QuickBooks producer result: adds the backlog / truncation signals, so a capped scan is never silent. */
+export interface QboProducerScanResult extends ProducerScanResult {
+  /** Eligible connections that already had a pending / running qbo-read-sync task (nothing new was queued for them). */
+  skippedOpenTask: number;
+  /** The scan stopped at its page cap while more eligible connections remained: the rest are picked up by a later scan. */
+  truncated: boolean;
+  /** qbo-read-sync tasks pending or running after this scan: the backlog the drain still has to work through. */
+  openTasks: number;
+}
+
+const QBO_OPEN_TASK_STATUSES = ["pending", "running"] as const;
+
 /**
  * Enqueue one alert-email-retry ScheduledTask per currently-retriable alert
  * that does not already have an outstanding (pending/running) task for its
@@ -207,9 +219,13 @@ export async function enqueueDueRiskReviewScanTasks(): Promise<ProducerScanResul
  * matching the daily scheduler cron — and registration is idempotent (scheduleIdempotent replays the key). The task
  * carries only the connection id; the handler recovers workspace from the claimed row and business from the connection.
  */
-export async function enqueueDueQboReadSyncTasks(env: Record<string, string | undefined> = process.env): Promise<ProducerScanResult> {
+export async function enqueueDueQboReadSyncTasks(
+  env: Record<string, string | undefined> = process.env,
+  /** Restrict the scan to these workspaces (maintenance / tests that share a database). Production passes nothing: every workspace is scanned. */
+  options: { onlyWorkspaceIds?: readonly string[] } = {},
+): Promise<QboProducerScanResult> {
   const resolved = resolveQboConfig(env);
-  if (!resolved.available) return { candidatesFound: 0, enqueued: 0 };
+  if (!resolved.available) return { candidatesFound: 0, enqueued: 0, skippedOpenTask: 0, truncated: false, openTasks: 0 };
   const scheduler = new DatabaseSchedulerProvider();
   const now = new Date();
   const bucket = scheduleBucket(now);
@@ -217,10 +233,16 @@ export async function enqueueDueQboReadSyncTasks(env: Record<string, string | un
   // beyond it, because enqueued connections stay eligible until their sync actually runs.
   let candidatesFound = 0;
   let enqueued = 0;
+  let skippedOpenTask = 0;
+  let truncated = false;
   for (let page = 0; page < QBO_MAX_PRODUCER_PAGES; page++) {
-    const candidates = await listSchedulableConnections({ environment: resolved.config.environment, limit: MAX_ENQUEUE_PER_SCAN, offset: page * MAX_ENQUEUE_PER_SCAN });
+    const candidates = await listSchedulableConnections({ environment: resolved.config.environment, limit: MAX_ENQUEUE_PER_SCAN, offset: page * MAX_ENQUEUE_PER_SCAN, onlyWorkspaceIds: options.onlyWorkspaceIds });
     candidatesFound += candidates.length;
+    // A connection that already has a pending / running task (from any earlier day or a continuation) is NOT queued again: otherwise an
+    // undrained backlog would gain one more task per connection every day, forever, and starve everything behind it.
+    const open = await connectionsWithOpenQboTask(candidates.map((c: { connectionId: string; workspaceId: string }) => ({ connectionId: c.connectionId, workspaceId: c.workspaceId })));
     for (const c of candidates) {
+      if (open.has(c.connectionId)) { skippedOpenTask++; continue; }
       // An unfinished sync (durable checkpoint) is continued under a key tied to its checkpoint, not to the day: the safety net for
       // a continuation task that was lost, without ever stacking a second task on the same checkpoint.
       const created = c.continuationKey !== null
@@ -236,6 +258,26 @@ export async function enqueueDueQboReadSyncTasks(env: Record<string, string | un
       if (created) enqueued++;
     }
     if (candidates.length < MAX_ENQUEUE_PER_SCAN) break;
+    if (page === QBO_MAX_PRODUCER_PAGES - 1) truncated = true;
   }
-  return { candidatesFound, enqueued };
+  const openTasks = await db.scheduledTask.count({
+    where: { taskName: TASK_NAME_QBO_READ_SYNC, status: { in: [...QBO_OPEN_TASK_STATUSES] }, ...(options.onlyWorkspaceIds ? { workspaceId: { in: [...options.onlyWorkspaceIds] } } : {}) },
+  });
+  return { candidatesFound, enqueued, skippedOpenTask, truncated, openTasks };
+}
+
+/** Which of these connections already have a pending / running qbo-read-sync task (scoped by their own workspace). */
+async function connectionsWithOpenQboTask(connections: ReadonlyArray<{ connectionId: string; workspaceId: string }>): Promise<Set<string>> {
+  if (connections.length === 0) return new Set();
+  const wanted = new Set(connections.map((c) => c.connectionId));
+  const rows = (await db.scheduledTask.findMany({
+    where: { taskName: TASK_NAME_QBO_READ_SYNC, status: { in: [...QBO_OPEN_TASK_STATUSES] }, workspaceId: { in: [...new Set(connections.map((c) => c.workspaceId))] } },
+    select: { payload: true },
+  })) as Array<{ payload: unknown }>;
+  const open = new Set<string>();
+  for (const r of rows) {
+    const id = (r.payload as { connectionId?: unknown } | null)?.connectionId;
+    if (typeof id === "string" && wanted.has(id)) open.add(id);
+  }
+  return open;
 }

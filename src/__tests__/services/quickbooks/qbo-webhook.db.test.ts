@@ -7,7 +7,7 @@ import { createHmac } from "node:crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { handleQboWebhook } from "@/services/quickbooks/qbo-webhook.service";
-import { QBO_TEST_ENV, seedConnected, trackQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { QBO_TEST_ENV, seedConnected, ownedQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 
 const TOKEN = "test-verifier-token-0123456789";
 const ENV = { ...QBO_TEST_ENV("sandbox"), QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN: TOKEN };
@@ -30,8 +30,7 @@ const deliver = (body: string, o: { signature?: string | null; env?: Record<stri
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", () => {
   // These tests create durable qbo-read-sync ScheduledTasks. Left pending they would be claimed by the scheduler suites that
   // run processDue() over the whole table later in the same database, so they are removed when this file is done.
-  const qboTasks = trackQboTasks();
-  beforeAll(qboTasks.snapshot);
+  const qboTasks = ownedQboTasks();
   afterAll(qboTasks.cleanup);
 
   let A: ConnectedTenant;

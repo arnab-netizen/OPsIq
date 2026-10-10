@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizeCustomer, normalizeInvoice, normalizeBill, normalizeCompanyInfo, normalizeQueryRecord, dedupeRecords, toDecimalString, contentHash, canonicalJson,
+  normalizeCustomer, normalizeInvoice, normalizeBill, normalizeCompanyInfo, normalizeQueryRecord, dedupeRecords, toDecimalString, toExchangeRateString, contentHash, canonicalJson,
   parseProfitAndLoss, parseBalanceSheet, parseAgedReport, type NormalizedRecord,
 } from "@/domain/quickbooks/qbo-normalize";
 import { customer, invoice, bill, profitAndLossBody, balanceSheetBody, agedBody } from "@/__tests__/test-helpers/qbo-fake-intuit";
@@ -29,6 +29,30 @@ describe("decimal handling", () => {
     expect(canonicalJson({ b: 1, a: [2, { d: 1, c: 2 }] })).toBe(canonicalJson({ a: [2, { c: 2, d: 1 }], b: 1 }));
     expect(contentHash({ a: 1, b: 2 })).toBe(contentHash({ b: 2, a: 1 }));
     expect(contentHash({ a: 1 })).not.toBe(contentHash({ a: 2 }));
+  });
+});
+
+describe("exchange-rate normalization (RC11: a rate is not a money amount)", () => {
+  it("keeps small non-zero rates instead of rounding them to a fabricated zero", () => {
+    expect(toExchangeRateString(0.0000417)).toBe("0.0000417");
+    expect(toExchangeRateString(0.006912)).toBe("0.006912");
+    expect(toExchangeRateString("0.00004170")).toBe("0.0000417");
+    expect(toExchangeRateString("0.000000015")).toBe("0.00000002"); // 9th digit rounds half away from zero
+    expect(toExchangeRateString(1.0825)).toBe("1.0825");
+    expect(toExchangeRateString("1")).toBe("1");
+  });
+  it("fails closed (null) for a non-zero rate that cannot be represented, and for non-numbers; a true zero stays zero", () => {
+    expect(toExchangeRateString(0.000000001)).toBeNull();
+    expect(toExchangeRateString("0.000000004")).toBeNull();
+    expect(toExchangeRateString(0)).toBe("0");
+    expect(toExchangeRateString("abc")).toBeNull();
+    expect(toExchangeRateString(Number.NaN)).toBeNull();
+    expect(toExchangeRateString(null)).toBeNull();
+    expect(toExchangeRateString(1e15)).toBeNull();
+  });
+  it("an invoice keeps a USD-per-VND rate, while amounts keep their 4-digit behaviour", () => {
+    const fx = normalizeInvoice(invoice("22", "2026-10-02T00:00:00Z", { CurrencyRef: { value: "VND" }, ExchangeRate: 0.0000417, TotalAmt: 1000000.12345 }));
+    expect(fx.ok && fx.record.normalized).toMatchObject({ currency: "VND", exchangeRate: "0.0000417", totalAmt: "1000000.1235" });
   });
 });
 

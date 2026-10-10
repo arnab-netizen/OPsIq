@@ -27,12 +27,14 @@ import {
   evaluateDueGate,
   QBO_SYNC_PAGES_PER_EXECUTION,
   QBO_EXECUTION_HARD_ABORT_GRACE_MS,
+  QBO_EXECUTION_FINALIZE_ALLOWANCE_MS,
   QBO_SYNC_PAGE_SIZE,
   QBO_SYNC_TIE_MAX_STALLED_PASSES,
   QBO_SYNC_VERIFY_READS_PER_ENTITY,
   floorSecond,
   QBO_SYNC_QUERY_ENTITIES,
   QBO_SYNC_REPORT_MONTHS,
+  reportStageFailureDisposition,
   chooseSyncMode,
   completeMonthPeriods,
   emptySyncCounts,
@@ -103,8 +105,18 @@ export interface QboSyncDeps extends QboPersistenceDeps {
   configOverride?: QboProviderConfig;
   /** Minimum spacing between MANUAL runs of one connection. Default QBO_SYNC_MANUAL_COOLDOWN_MS. */
   manualCooldownMs?: number;
-  /** Wall-clock budget (ms) for one execution: it stops at a checkpoint when exceeded (scheduler/serverless time ceilings). */
+  /**
+   * Wall-clock budget (ms) for one execution, measured from the START OF THE INVOCATION (token acquisition included): it stops at a
+   * durable checkpoint when exceeded, and a request still in flight `hardAbortGraceMs` later is aborted (scheduler/serverless ceilings).
+   */
   deadlineMs?: number;
+  /** Grace between the soft deadline and aborting in-flight requests. Default QBO_EXECUTION_HARD_ABORT_GRACE_MS (a test seam). */
+  hardAbortGraceMs?: number;
+  /**
+   * Absolute time (epoch ms) by which the whole invocation hosting this execution must be finished (e.g. the cron function's
+   * ceiling). The soft deadline is pulled in so that soft + grace + finalisation allowance still ends before it.
+   */
+  invocationDeadlineAt?: number;
   /** Test seams for the bounded-work design: records per provider page and provider query calls per execution. */
   pageSize?: number;
   pagesPerExecution?: number;
@@ -132,6 +144,7 @@ function failed(code: QboSyncFailureCode, runId: string | null, nextAttemptNotBe
 }
 
 export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps): Promise<QboSyncOutcome> {
+  const startedAtMs = Date.now(); // the invocation clock: every deadline below is measured from here
   const now = (deps.now ?? (() => new Date()))();
   const scope = { workspaceId: input.workspaceId, businessId: input.businessId, connectionId: input.connectionId };
 
@@ -177,14 +190,14 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
     const resume = begun.continuation && !begun.continuation.restart ? begun.continuation : null;
     const checkpoint: QboContinuation = resume ?? {
       v: 1, syncId: lease.syncId, mode: begun.mode, cutoff: floorSecond(now).toISOString(), entityIndex: 0, cursor: null, tie: null, reconciled: [],
-      seq: (begun.continuation?.seq ?? 0) + 1, changed: begun.continuation?.changed ?? false, restart: false,
+      seq: (begun.continuation?.seq ?? 0) + 1, changed: begun.continuation?.changed ?? false, restart: false, reportFailures: 0,
     };
     track.cp = checkpoint;
     // A fresh logical sync's (empty) checkpoint is written in the SAME transaction as its first record (CompanyInfo), never earlier:
     // a failure before any provider data was read leaves no checkpoint, so the next attempt starts a fresh sync with a fresh cutoff.
     track.freshCheckpoint = resume ? null : checkpoint;
     const stored = parseWatermarks(begun.priorState.watermarks);
-    const result = await executeReads({ lease, connection, config, mode: begun.mode, watermarks: stored, counts, now, checkpoint, track, input, deps });
+    const result = await executeReads({ lease, connection, config, mode: begun.mode, watermarks: stored, counts, now, checkpoint, track, input, deps, startedAtMs });
     if (result.status === "BUDGET") {
       // Bounded work per execution: stop at the durable checkpoint. NOT a failure and NOT a completion: watermarks stay put.
       const cp = await persistChangedMarker(lease, track, deps);
@@ -203,7 +216,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
     const mapped = e instanceof SyncFailure ? { code: e.code, retryAfterMs: e.retryAfterMs } : syncFailureFromError(e);
     try {
       // Changes already persisted by this failed attempt must still reach re-evaluation once the sync completes.
-      await persistChangedMarker(lease, track, deps, mapped.code === "PROVIDER_INCOMPLETE").catch((markerError) => {
+      await persistChangedMarker(lease, track, deps, failureCheckpointPatch(mapped.code, track)).catch((markerError) => {
         // Only a lost lease is acceptable to ignore (another worker owns the state now); anything else must not silently drop the
         // restart / re-evaluation flags.
         if (markerError instanceof QboLeaseLostError) return undefined;
@@ -235,15 +248,41 @@ interface Track {
  * Make "this logical sync persisted a provider change" durable in the checkpoint (lease-fenced). Returns the checkpoint now in force.
  * Used before a PARTIAL finish and on failure, so the re-evaluation marker cannot be lost across executions or failed attempts.
  */
-async function persistChangedMarker(lease: SyncLease, track: Track, deps: QboSyncDeps, restart = false): Promise<QboContinuation> {
+async function persistChangedMarker(lease: SyncLease, track: Track, deps: QboSyncDeps, patch: CheckpointFailurePatch | null = null): Promise<QboContinuation> {
   const base = (track.pager?.cp ?? track.cp) as QboContinuation;
   const changed = track.changed || track.pager?.changed === true;
-  if (!restart && (!changed || base.changed)) return base;
-  const next: QboContinuation = { ...base, changed: base.changed || changed, restart: restart || base.restart, seq: base.seq + 1 };
+  if (!patch && (!changed || base.changed)) return base;
+  const next: QboContinuation = {
+    ...base,
+    changed: base.changed || changed,
+    restart: (patch?.restart ?? false) || base.restart,
+    reportFailures: patch?.reportFailures ?? base.reportFailures,
+    seq: base.seq + 1,
+  };
   await saveContinuation(lease, next, deps);
   if (track.pager) track.pager.cp = next;
   track.cp = next;
   return next;
+}
+
+interface CheckpointFailurePatch {
+  restart: boolean;
+  reportFailures: number | null;
+}
+
+/**
+ * Checkpoint consequences of a FAILED execution. PROVIDER_INCOMPLETE always restarts (the window could not be confirmed). A failure
+ * while the REPORT stage ran (all entities exhausted at the sync's fixed cutoff) restarts when permanent or repeating, see
+ * reportStageFailureDisposition: it must never pin entity reads to that cutoff. Watermarks never move on a failure.
+ */
+function failureCheckpointPatch(code: QboSyncFailureCode, track: Track): CheckpointFailurePatch | null {
+  const cp = track.pager?.cp ?? track.cp;
+  if (code === "PROVIDER_INCOMPLETE") return { restart: true, reportFailures: null };
+  if (cp && track.pager && cp.entityIndex >= QBO_SYNC_QUERY_ENTITIES.length) {
+    const d = reportStageFailureDisposition(code, cp.reportFailures);
+    return { restart: d.restart, reportFailures: d.reportFailures };
+  }
+  return null;
 }
 
 /** An orchestration-level failure that already carries a closed code. */
@@ -266,6 +305,17 @@ interface ExecuteArgs {
   track: Track;
   input: RunQboSyncInput;
   deps: QboSyncDeps;
+  /** Invocation start (epoch ms): the origin of the soft deadline and of the hard-abort timer. */
+  startedAtMs: number;
+}
+
+/** Soft deadline (epoch ms) of this invocation: its own budget from its start, pulled in by an outer invocation deadline. */
+export function softDeadlineAt(deps: QboSyncDeps, startedAtMs: number): number | null {
+  const grace = deps.hardAbortGraceMs ?? QBO_EXECUTION_HARD_ABORT_GRACE_MS;
+  const own = deps.deadlineMs !== undefined ? startedAtMs + deps.deadlineMs : null;
+  const outer = deps.invocationDeadlineAt !== undefined ? deps.invocationDeadlineAt - grace - QBO_EXECUTION_FINALIZE_ALLOWANCE_MS : null;
+  if (own === null) return outer;
+  return outer === null ? own : Math.min(own, outer);
 }
 
 type ExecuteResult = { status: "DONE"; changed: boolean } | { status: "BUDGET"; changed: boolean };
@@ -274,24 +324,29 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
   const { lease, connection, config, mode, watermarks, counts, now, deps } = a;
   let changed = false;
 
-  // Token: decrypted in memory only; refresh (if needed) goes through the CAS-fenced rotation.
-  const tokenDeps = { ...deps, config };
-  const first = await getUsableQboAccessToken({ workspaceId: lease.workspaceId, connectionId: lease.connectionId }, tokenDeps);
-  if (!first.ok) throw new SyncFailure(first.code, first.retryAfterMs);
-  if (first.realmId !== connection.realmId) throw new SyncFailure("COMPANY_MISMATCH");
-  let accessToken = first.accessToken;
-  let tokenRevision = first.revision;
-  let forcedRefreshUsed = false;
-
+  // ONE abort controller and ONE hard-abort timer cover the whole invocation, armed BEFORE token acquisition: the claim wait, the token
+  // refresh, the forced refresh after a 401, every provider read (entity, count, by-id, report) share this signal. Wall-clock backstop:
+  // a request still in flight long after the soft deadline is aborted, so the function never reaches the platform kill; the run then
+  // fails CANCELLED and resumes from its durable checkpoint.
+  const softAt = softDeadlineAt(deps, a.startedAtMs);
   const abort = new AbortController();
   const onParentAbort = () => abort.abort();
-  // Wall-clock backstop: a provider call (retries and back-off included) still in flight long after the soft deadline is aborted, so the
-  // function never reaches the platform kill. The run fails CANCELLED and resumes from its durable checkpoint.
-  const hardAbort = deps.deadlineMs !== undefined ? setTimeout(() => abort.abort(), deps.deadlineMs + QBO_EXECUTION_HARD_ABORT_GRACE_MS) : null;
+  const hardAbort = softAt !== null
+    ? setTimeout(() => abort.abort(), Math.max(0, softAt + (deps.hardAbortGraceMs ?? QBO_EXECUTION_HARD_ABORT_GRACE_MS) - Date.now()))
+    : null;
   // An already-aborted parent never fires "abort" again, so honour it explicitly.
   if (deps.signal?.aborted) abort.abort();
   else deps.signal?.addEventListener("abort", onParentAbort, { once: true });
   try {
+    // Token: decrypted in memory only; refresh (if needed) goes through the CAS-fenced rotation, under the invocation's signal.
+    const tokenDeps = { ...deps, config, signal: abort.signal };
+    const first = await getUsableQboAccessToken({ workspaceId: lease.workspaceId, connectionId: lease.connectionId }, tokenDeps);
+    if (!first.ok) throw new SyncFailure(first.code, first.retryAfterMs);
+    if (first.realmId !== connection.realmId) throw new SyncFailure("COMPANY_MISMATCH");
+    let accessToken = first.accessToken;
+    let tokenRevision = first.revision;
+    let forcedRefreshUsed = false;
+
     const client: QboReadClient = createQboReadClient({
       config,
       realmId: connection.realmId,
@@ -344,7 +399,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
       budget: Math.max(1, deps.pagesPerExecution ?? QBO_SYNC_PAGES_PER_EXECUTION),
       units: 0,
       cp: { ...a.checkpoint, changed: a.checkpoint.changed || changed },
-      deadlineAt: deps.deadlineMs !== undefined ? Date.now() + deps.deadlineMs : null,
+      deadlineAt: softAt,
       cutoff: new Date(a.checkpoint.cutoff),
       changed: false,
     };
@@ -611,30 +666,36 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
  * (least recently attempted first) lets later syncs cover the rest.
  */
 async function verifyUnseen(p: Pager, entity: Entity): Promise<boolean> {
-  const ids = await listUnseenRecordIds(p.lease, entity, QBO_SYNC_VERIFY_READS_PER_ENTITY, p.deps);
-  for (const id of ids) {
-    if (p.deadlineAt !== null && p.units > 0 && Date.now() >= p.deadlineAt) return false;
-    p.counts.verifiedByRead++;
-    p.units++; // by-id reads are provider calls like any other: they count against the execution budget
-    try {
-      const raw = await p.call(() => p.client.readEntity(entity, id));
-      const n = normalizeQueryRecord(entity, raw);
-      if (n.ok) {
-        if (await persistPage(p.lease, [n.record], undefined, p.counts, p.deps)) { p.changed = true; p.cp = { ...p.cp, changed: true }; }
-      } else p.counts.unresolved++;
-    } catch (e) {
-      // Not found / fault 610 on a read: unresolved, never "deleted". Anything else (auth, rate limit, outage, timeout) is a real failure.
-      if (isQboProviderError(e) && (e.kind === "NOT_FOUND" || (e.kind === "BAD_REQUEST" && e.providerCode === "610"))) p.counts.unresolved++;
-      else {
-        // Even a failing candidate must move to the back of the rotation, or one deterministic error would pin every later FULL
-        // sync to the same id forever.
-        await markVerifyAttempted(p.lease, entity, [id], p.deps).catch(() => undefined);
-        throw e;
+  // Batches until no unattempted candidate is left FOR THIS LOGICAL SYNC (attempted ones are excluded by the query), so reconciliation
+  // terminates even when many candidates stay unresolvable; it stops early (false) at the wall-clock deadline or the call budget and
+  // the next execution carries on with what is left.
+  let attempted = 0; // every execution verifies at least one candidate before it may stop, so each one makes forward progress
+  for (;;) {
+    const ids = await listUnseenRecordIds(p.lease, entity, QBO_SYNC_VERIFY_READS_PER_ENTITY, p.cutoff, p.deps);
+    if (ids.length === 0) return true;
+    for (const id of ids) {
+      if (attempted > 0 && (p.units >= p.budget || (p.deadlineAt !== null && Date.now() >= p.deadlineAt))) return false;
+      attempted++;
+      p.counts.verifiedByRead++;
+      p.units++; // by-id reads are provider calls like any other: they count against the execution budget
+      try {
+        const raw = await p.call(() => p.client.readEntity(entity, id));
+        const n = normalizeQueryRecord(entity, raw);
+        if (n.ok) {
+          if (await persistPage(p.lease, [n.record], undefined, p.counts, p.deps)) { p.changed = true; p.cp = { ...p.cp, changed: true }; }
+        } else p.counts.unresolved++;
+      } catch (e) {
+        // Not found / fault 610 on a read: unresolved, never "deleted". Anything else (auth, rate limit, outage, timeout) is a real failure.
+        if (isQboProviderError(e) && (e.kind === "NOT_FOUND" || (e.kind === "BAD_REQUEST" && e.providerCode === "610"))) p.counts.unresolved++;
+        else {
+          // Even a failing candidate is marked attempted, so one deterministic error cannot pin the sync to the same id.
+          await markVerifyAttempted(p.lease, entity, [id], p.deps).catch(() => undefined);
+          throw e;
+        }
       }
+      await markVerifyAttempted(p.lease, entity, [id], p.deps);
     }
-    await markVerifyAttempted(p.lease, entity, [id], p.deps);
   }
-  return true;
 }
 
 async function persistPage(lease: SyncLease, records: NormalizedRecord[], checkpoint: QboContinuation | undefined, counts: QboSyncCounts, deps: QboSyncDeps): Promise<boolean> {

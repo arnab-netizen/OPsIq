@@ -351,7 +351,20 @@ describe("[stage8] 8. batch limits and drain-loop termination do not permanently
     processDue.mockResolvedValue(0);
     const { GET } = await loadRoute();
     await GET(cronRequest(SECRET));
-    expect(processDue).toHaveBeenCalledWith(expect.anything(), { maxClaim: 2 });
+    expect(processDue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ maxClaim: 2 }));
+  });
+
+  it("10b. RC13/RC3: the drain deprioritises QuickBooks tasks (no starvation of other task types) and passes ONE absolute invocation deadline inside maxDuration", async () => {
+    processDue.mockResolvedValue(0);
+    const before = Date.now();
+    const { GET } = await loadRoute();
+    await GET(cronRequest(SECRET));
+    const opts = processDue.mock.calls[0][1] as { deprioritize: string[]; invocationDeadlineAt: number };
+    expect(opts.deprioritize).toEqual(["qbo-read-sync"]);
+    const maxDurationMs = Number(/maxDuration\s*=\s*(\d+)/.exec(ROUTE_SRC)?.[1]) * 1000;
+    expect(opts.invocationDeadlineAt).toBeGreaterThanOrEqual(before);
+    expect(opts.invocationDeadlineAt - before).toBeLessThan(maxDurationMs);
+    expect(opts.invocationDeadlineAt - Date.now()).toBeGreaterThan(0);
   });
 
   it("7. a throw in the drain loop is contained and leaves work retryable", async () => {

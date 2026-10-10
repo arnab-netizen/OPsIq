@@ -30,7 +30,7 @@ Additive only; three new empty tables; no existing uniqueness changes (no prefli
 
 ## Known limitations
 - (Superseded by `QBO_READ_ONLY_SYNC.md`: `refreshQboTokens` is now invoked by `getUsableQboAccessToken`; sync, status and webhook routes and the `qbo-read-sync` scheduler task exist. Still no UI.)
-- Revoking the grant at Intuit is the caller's step; `disconnectQboConnection` is local and removes the token ciphertext.
+- `disconnectQboConnection` is local and removes the token ciphertext; revoking the grant at Intuit is the caller's step. The connect callback revokes a just-issued grant it will not keep **only** when it is certain the grant is not stored and no not-disconnected connection holds the verified company (an Intuit revocation may be app/company-wide). It deliberately leaves the grant live — to be revoked by an operator at Intuit — when another connection holds the company (`REALM_ALREADY_BOUND`), when the one-time state was lost to a race, when the finalize commit outcome is unknown, when the holder lookup fails, and when the revocation request itself fails. A token-rotation loser discards its own freshly rotated refresh token unrecorded (Intuit's old/new overlap makes this benign).
 - A state consumed but whose code exchange fails is burned (the user restarts authorization).
 - No business-condition re-evaluation hook yet: nothing consumes QBO data until the sync/evidence slice.
 - Actor ids are recorded, not FK-linked, matching the owner-outcome tables; capability checks belong to the future route layer.

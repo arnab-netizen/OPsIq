@@ -58,7 +58,11 @@ export const QboConsumeStateSchema = z.object({
 });
 export const QboConnectionRefSchema = z.object({ workspaceId: uuid, connectionId: uuid });
 export const QboDisconnectSchema = QboConnectionRefSchema.extend({ actorId: uuid });
-export const QboReauthSchema = QboConnectionRefSchema.extend({ reasonCode: z.string().regex(/^[A-Z0-9_]{1,64}$/) });
+export const QboReauthSchema = QboConnectionRefSchema.extend({
+  reasonCode: z.string().regex(/^[A-Z0-9_]{1,64}$/),
+  /** When set, the connection is marked only if its stored token is STILL at this revision (a concurrent rotation then wins). */
+  expectedTokenRevision: z.number().int().min(1).optional(),
+});
 export const QboRotateSchema = QboConnectionRefSchema.extend({ expectedRevision: z.number().int().min(1) });
 
 /** The proof that a one-time state was consumed. Finalize re-verifies every field against the database. */

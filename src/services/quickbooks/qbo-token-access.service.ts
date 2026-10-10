@@ -35,6 +35,11 @@ export interface QboTokenAccessDeps extends QboPersistenceDeps {
   claimPollMs?: number;
   claimMaxWaitMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Invocation-level cancellation: aborts the claim wait and the refresh request in flight (the caller's hard deadline). An aborted
+   * refresh persists nothing and is reported as CANCELLED (retryable); it never changes the connection state.
+   */
+  signal?: AbortSignal;
 }
 
 export type QboTokenAccessResult =
@@ -85,10 +90,15 @@ export async function getUsableQboAccessToken(
   // Become the one refresher (a short DB claim, no open transaction). If another refresher holds it, wait for its result:
   // when it finishes the stored tokens are fresh and Intuit is NOT called a second time.
   const poll = deps.claimPollMs ?? 250;
-  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => {
+    const t = setTimeout(done, ms);
+    function done() { deps.signal?.removeEventListener("abort", done); clearTimeout(t); r(); }
+    deps.signal?.addEventListener("abort", done, { once: true });
+  }));
   const deadline = Date.now() + (deps.claimMaxWaitMs ?? 30_000);
   let claim = await tryClaimTokenRefresh(ref, deps);
   while (!claim.claimed) {
+    if (deps.signal?.aborted) return fail("CANCELLED");
     if (Date.now() >= deadline) return fail("PROVIDER_UNAVAILABLE");
     await sleep(poll);
     const peek = await loadQboTokensForUse(ref, deps);
@@ -98,6 +108,7 @@ export async function getUsableQboAccessToken(
   }
   const claimToken = claim.token;
   try {
+    if (deps.signal?.aborted) return fail("CANCELLED");
     // Re-read under the claim: a refresher that held it before us may already have done the work.
     const again = await loadQboTokensForUse(ref, deps);
     if (!again.ok) return fail(again.reason === "NOT_FOUND" ? "CONNECTION_NOT_FOUND" : "CONNECTION_NOT_ACTIVE");
@@ -108,12 +119,29 @@ export async function getUsableQboAccessToken(
       return fail("REAUTH_REQUIRED");
     }
 
+    /** A newer stored revision than the one this refresh started from => someone else rotated: use it (or back off), never REAUTH. */
+    const supersededBy = async (startedFrom: number): Promise<QboTokenAccessResult | null> => {
+      const latest = await loadQboTokensForUse(ref, deps);
+      if (!latest.ok || latest.tokens.revision <= startedFrom) return null;
+      return accessStillValid(latest.tokens, now, skewMs) ? ok(latest.tokens, true) : fail("PROVIDER_UNAVAILABLE");
+    };
+
     let grant;
     try {
-      grant = await refreshQboTokens(deps.config, tokens.refreshToken, { fetchImpl: deps.fetchImpl, now: () => now });
+      grant = await refreshQboTokens(deps.config, tokens.refreshToken, { fetchImpl: deps.fetchImpl, now: () => now, signal: deps.signal });
     } catch (e) {
       if (isQboProviderError(e) && e.kind === "REFRESH_INVALID") {
-        await markQboReauthorizationRequired({ ...ref, reasonCode: "REFRESH_INVALID" }, deps);
+        // invalid_grant is only proof of a dead grant if the token we presented is still the CURRENT one. If our claim lapsed while
+        // another refresher rotated (it holds a newer revision), Intuit correctly rejected the superseded token: that is not a
+        // reason to demand a reconnect. The mark itself is fenced on the revision we presented, so a rotation landing between this
+        // re-read and the mark also wins.
+        const superseded = await supersededBy(tokens.revision);
+        if (superseded) return superseded;
+        const marked = await markQboReauthorizationRequired({ ...ref, reasonCode: "REFRESH_INVALID", expectedTokenRevision: tokens.revision }, deps);
+        if (!marked.changed) {
+          const raced = await supersededBy(tokens.revision);
+          if (raced) return raced;
+        }
         return fail("REAUTH_REQUIRED");
       }
       const mapped = syncFailureFromError(e);

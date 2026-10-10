@@ -9,7 +9,7 @@
  *   ─────────────────────────────────────────  ─────────────────────────────────────────────────────────
  *   revenue, costOfGoods                       ProfitAndLoss report (Income, COGS)
  *   cashOnHand / bankBalance                   BalanceSheet report (BankAccounts)
- *   receivables                                BalanceSheet (AR) cross-checked with AgedReceivables + open Invoice balances
+ *   receivables                                BalanceSheet (AR) and AgedReceivables (read separately; no reconciliation between them is implemented yet)
  *   overdueReceivables                         AgedReceivables report (everything not in the "Current" bucket)
  *   payables, overduePayables, vendorDue       BalanceSheet (AP), AgedPayables report, open Bill balances
  *   customerCount, orderCount                  Customer (active) and Invoice records
@@ -123,10 +123,28 @@ export const QBO_SYNC_REPORT_MONTHS = 3;
 export const QBO_SYNC_PAGES_PER_EXECUTION = 100;
 /** Intuit's documented maximum entities per query response. */
 export const QBO_SYNC_PAGE_SIZE = 1000;
-/** Wall-clock budget of ONE execution (scheduled or manual): it stops at its checkpoint when exceeded, inside the 300 s function ceiling. */
+/**
+ * Wall-clock budget of ONE execution (scheduled or manual), measured from the START OF THE INVOCATION (token acquisition included):
+ * it stops at a durable checkpoint once exceeded and the sync continues in a follow-up execution.
+ */
 export const QBO_EXECUTION_DEADLINE_MS = 45_000;
-/** After the soft deadline an in-flight provider call is aborted at this margin (the run then fails CANCELLED and resumes from its checkpoint). */
-export const QBO_EXECUTION_HARD_ABORT_GRACE_MS = 60_000;
+/**
+ * Hard backstop, measured from the same start: this long AFTER the soft deadline every request still in flight (token claim wait,
+ * token refresh, provider query / count / by-id read, report) is aborted, and the run ends CANCELLED with its checkpoint resumable.
+ */
+export const QBO_EXECUTION_HARD_ABORT_GRACE_MS = 30_000;
+/**
+ * Allowance for the bounded database work that follows an abort (fenced failure record, checkpoint marker, lease release). Not
+ * enforced by a timer: it is the budget the documented bound assumes for ordinary single-statement transactions.
+ */
+export const QBO_EXECUTION_FINALIZE_ALLOWANCE_MS = 10_000;
+/** The documented upper bound of one QuickBooks execution: soft deadline + hard-abort grace + finalisation allowance. */
+export const QBO_EXECUTION_WORST_CASE_MS = QBO_EXECUTION_DEADLINE_MS + QBO_EXECUTION_HARD_ABORT_GRACE_MS + QBO_EXECUTION_FINALIZE_ALLOWANCE_MS;
+/**
+ * A logical sync whose entities are exhausted but whose REPORT stage keeps failing may be resumed (reports only) this many failed
+ * executions in a row for TRANSIENT causes; after that it is restarted as a fresh logical sync. Permanent causes restart at once.
+ */
+export const QBO_SYNC_REPORT_STAGE_MAX_RESUMES = 3;
 /** A timestamp-bucket enumeration that makes no progress for this many consecutive passes is declared incomplete (never looped on). */
 export const QBO_SYNC_TIE_MAX_STALLED_PASSES = 3;
 
@@ -165,6 +183,20 @@ export function computeSyncBackoffMs(code: QboSyncFailureCode, consecutiveFailur
 /** UTC day bucket used in scheduler idempotency keys: `YYYY-MM-DD`. */
 export function scheduleBucket(now: Date): string {
   return now.toISOString().slice(0, 10);
+}
+
+/**
+ * What to do with the checkpoint when an execution FAILS while the report stage was running (every entity already exhausted under the
+ * sync's fixed cutoff). The durable watermarks never move on a failure either way. Resuming is only worth it when the cause is
+ * transient and the report reads alone can plausibly succeed next time; a permanent cause (malformed / rejected / forbidden report)
+ * or a repeating transient one would otherwise pin entity reads to this old cutoff forever, so the next attempt must start a FRESH
+ * logical sync (new syncId and cutoff, entities re-read from the unchanged watermark).
+ */
+export function reportStageFailureDisposition(code: QboSyncFailureCode, priorReportFailures: number): { restart: boolean; reportFailures: number } {
+  const reportFailures = priorReportFailures + 1;
+  if (isTerminalSyncFailure(code)) return { restart: false, reportFailures: priorReportFailures };
+  const transient = TRANSIENT_FAILURES.has(code);
+  return { restart: !transient || reportFailures >= QBO_SYNC_REPORT_STAGE_MAX_RESUMES, reportFailures };
 }
 
 /** Map any thrown provider error onto the closed, sanitized failure vocabulary (nothing provider-supplied survives). */
@@ -404,6 +436,8 @@ export const QboContinuationSchema = z.object({
   changed: z.boolean().default(false),
   /** The attempt ended PROVIDER_INCOMPLETE: do NOT resume this checkpoint; the next attempt starts a fresh logical sync (keeping `changed`). */
   restart: z.boolean().default(false),
+  /** Failed executions of the REPORT stage of this logical sync (entities already exhausted). Bounded by QBO_SYNC_REPORT_STAGE_MAX_RESUMES. */
+  reportFailures: z.number().int().min(0).max(1000).default(0),
 });
 export type QboContinuation = z.infer<typeof QboContinuationSchema>;
 

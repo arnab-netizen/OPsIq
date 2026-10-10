@@ -32,6 +32,9 @@ import {
   beginQboAuthorization,
   consumeQboAuthorizationState,
   finalizeQboConnection,
+  assertQboTokenEncryptionReady,
+  isQboRealmHeldLive,
+  QboGrantNotStoredError,
   type QboPersistenceDeps,
 } from "./qbo-connection.service";
 import { exchangeQboAuthorizationCode, revokeQboToken } from "./qbo-oauth.service";
@@ -131,6 +134,15 @@ export async function completeQboCallback(
   const authorizationCode = code as string;
   const verifiedRealm = realmId as string;
 
+  // Fail closed BEFORE Intuit issues a long-lived refresh token that this deployment could not store (missing / short encryption key).
+  try {
+    assertQboTokenEncryptionReady(workspaceId);
+  } catch (e) {
+    if (!(e instanceof QboGrantNotStoredError)) throw e;
+    await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "PREFLIGHT", reason: "TOKEN_STORAGE_UNAVAILABLE" });
+    return { ok: false, code: "CONFIGURATION_UNAVAILABLE" };
+  }
+
   let grant;
   try {
     grant = await exchangeQboAuthorizationCode(config, authorizationCode, { fetchImpl: deps.fetchImpl, now: deps.now });
@@ -140,9 +152,19 @@ export async function completeQboCallback(
     return { ok: false, code: failure };
   }
 
-  /** A grant OpsIQ will not keep must not stay live at Intuit: best-effort revocation of the refresh token (errors swallowed, nothing logged). */
+  /**
+   * A grant OpsIQ will not keep should not stay live at Intuit, but an Intuit revocation may be app/company-wide: it is attempted ONLY when
+   * no not-disconnected connection holds the verified company. If that cannot be established (the lookup fails) the grant is NOT
+   * revoked - leaving an unrecorded token is the lesser harm than killing a working connection (an operator revokes it at Intuit;
+   * see QBO_CONNECTION_PERSISTENCE.md, "Grant revocation"). Revocation errors are swallowed; nothing is logged.
+   */
   const discardGrant = async (): Promise<void> => {
-    await revokeQboToken(config, grant.refreshToken, { fetchImpl: deps.fetchImpl }).catch(() => undefined);
+    try {
+      if (await isQboRealmHeldLive({ environment: authorization.environment, realmId: verifiedRealm }, deps)) return;
+      await revokeQboToken(config, grant.refreshToken, { fetchImpl: deps.fetchImpl });
+    } catch {
+      // best effort only
+    }
   };
 
   // The realm in the callback URL is client-relayed: bind it only if the NEW token can actually read that company and the company
@@ -164,9 +186,10 @@ export async function completeQboCallback(
   try {
     const finalized = await finalizeQboConnection({ authorization, realmId: verifiedRealm, grant }, deps);
     if (!finalized.ok) {
-      // Revoke ONLY where the grant is certainly not held by any OpsIQ connection: a business already bound to another company.
-      // REALM_ALREADY_BOUND (another tenant holds this company - an Intuit revoke may be app/company-wide) and the state-race
-      // refusals (another request may have just stored this very grant) are NOT revoked: that could kill a working connection.
+      // Revoke ONLY for a business already bound to another company (and then only if no live connection holds the verified company,
+      // see discardGrant). REALM_ALREADY_BOUND (another connection holds this company - an Intuit revoke may be app/company-wide) and
+      // the state-race refusals (AUTHORIZATION_NOT_CONSUMED / _ALREADY_FINALIZED: a stored grant may belong to the request that won)
+      // are NOT revoked: that could kill a working connection.
       if (finalized.reason === "BUSINESS_BOUND_TO_OTHER_REALM") await discardGrant();
       return { ok: false, code: mapFinalizeFailure(finalized.reason) };
     }
@@ -182,8 +205,14 @@ export async function completeQboCallback(
       await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "FINALIZE", reason: "BUSINESS_NOT_ELIGIBLE" });
       return { ok: false, code: "BUSINESS_NOT_ELIGIBLE" };
     }
-    // Any other failure leaves it UNKNOWN whether the grant was stored (e.g. a commit that timed out): it is deliberately not revoked
-    // - killing a stored, working connection is the worse outcome; the consumed one-time state prevents reuse of the exchange.
+    // The grant was certainly NOT stored (encryption failed before the transaction opened): discard it (guarded), then fail generically.
+    if (e instanceof QboGrantNotStoredError) {
+      await discardGrant();
+      await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "FINALIZE", reason: "TOKEN_STORAGE_UNAVAILABLE" });
+      throw e;
+    }
+    // Any error from the transaction itself leaves it UNKNOWN whether the grant was stored (e.g. a commit that timed out): it is
+    // deliberately not revoked - killing a stored, working connection is the worse outcome; the consumed one-time state prevents reuse.
     throw e;
   }
 }

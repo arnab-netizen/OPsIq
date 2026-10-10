@@ -2,15 +2,15 @@
  * QuickBooks token access / refresh wired into real reads — real PostgreSQL, fake Intuit.
  * Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { getUsableQboAccessToken } from "@/services/quickbooks/qbo-token-access.service";
 import { runQboReadSync, runScheduledQboSync } from "@/services/quickbooks/qbo-sync.service";
-import { loadQboTokensForUse } from "@/services/quickbooks/qbo-connection.service";
+import { loadQboTokensForUse, markQboReauthorizationRequired } from "@/services/quickbooks/qbo-connection.service";
 import { enqueueDueQboReadSyncTasks } from "@/services/scheduler/scheduler-producers";
-import { seedConnected, testDeps, qboConfig, scopeOf, grantOf, QBO_TEST_ENV, trackQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { seedConnected, testDeps, qboConfig, scopeOf, grantOf, QBO_TEST_ENV, ownedQboTasks, ownedQboWorkspaceIds, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { customer } from "@/__tests__/test-helpers/qbo-fake-intuit";
 
 const NOW = new Date();
@@ -22,8 +22,7 @@ const tokenRow = (c: ConnectedTenant) => db.qboConnectionToken.findUniqueOrThrow
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO token access + refresh (real Postgres)", () => {
   // The producer scan enqueues a task for EVERY active connection in the database: remove exactly the rows this file caused.
-  const qboTasks = trackQboTasks();
-  beforeAll(qboTasks.snapshot);
+  const qboTasks = ownedQboTasks();
   afterAll(qboTasks.cleanup);
 
   it("a valid access token is returned without any refresh", async () => {
@@ -136,6 +135,58 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO token access + refresh (real Postgres
     expect(c.fake.tokenCalls).toBe(1);
   });
 
+  describe("RC2: a lapsed refresh claim must not turn a superseded token's invalid_grant into REAUTH_REQUIRED", () => {
+    const deferred = () => { let release!: () => void; const promise = new Promise<void>((r) => { release = r; }); return { promise, release }; };
+    const isTokenCall = (input: string) => input.includes("/tokens/bearer");
+    const waitFor = async (cond: () => Promise<boolean>) => { for (let i = 0; i < 400; i++) { if (await cond()) return; await new Promise((r) => setTimeout(r, 5)); } throw new Error("condition not reached"); };
+
+    it("A stalls past claim expiry; B refreshes the OLD token and gets invalid_grant AFTER A rotated => B adopts A's grant, the connection stays ACTIVE", async () => {
+      const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "lapse" }) });
+      c.fake.tokenResponses.push({ status: 200, body: tokenBody(1) });
+      const dA = deferred(); const dB = deferred(); const bAtProvider = deferred();
+      const forA = async (input: string, init?: RequestInit) => { if (isTokenCall(input)) await dA.promise; return c.fake.fetchImpl(input, init); };
+      const forB = async (input: string, init?: RequestInit) => {
+        if (isTokenCall(input)) { bAtProvider.release(); await dB.promise; return new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400, headers: { "content-type": "application/json" } }); }
+        return c.fake.fetchImpl(input, init);
+      };
+      const A = get(c, {}, { config: qboConfig(), fetchImpl: forA });
+      await waitFor(async () => (await db.qboSyncState.findUnique({ where: { connectionId: c.connectionId } }))?.refreshClaimToken != null);
+      // A stalls: its claim lapses.
+      await db.qboSyncState.update({ where: { connectionId: c.connectionId }, data: { refreshClaimExpiresAt: new Date(Date.now() - 1000) } });
+      const B = get(c, {}, { config: qboConfig(), fetchImpl: forB, claimPollMs: 1 });
+      await bAtProvider.promise; // B holds the (re-)claim and has presented the OLD refresh token to Intuit
+      // A's refresh completes and rotates the stored token to revision 2 ...
+      dA.release();
+      const a = await A;
+      expect(a).toMatchObject({ ok: true, accessToken: "fresh-access-1", revision: 2 });
+      // ... and only now does Intuit answer B's request for the superseded token with invalid_grant.
+      dB.release();
+      const b = await B;
+      expect(b).toMatchObject({ ok: true, accessToken: "fresh-access-1", revision: 2 });
+      const conn = await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } });
+      expect(conn.status).toBe("ACTIVE");
+      expect(conn.lastErrorCode).toBeNull();
+      expect((await tokenRow(c)).revision).toBe(2);
+      expect(await db.auditEvent.count({ where: { workspaceId: c.t.ws, eventName: "qbo.reauthorization_required" } })).toBe(0);
+    }, 20_000);
+
+    it("the REAUTH mark itself is fenced on the revision that was presented: a rotation that landed first wins, a genuinely current dead token still marks", async () => {
+      const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "fence" }) });
+      const ref = { workspaceId: c.t.ws, connectionId: c.connectionId, reasonCode: "REFRESH_INVALID" };
+      expect(await markQboReauthorizationRequired({ ...ref, expectedTokenRevision: 7 })).toEqual({ changed: false });
+      expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("ACTIVE");
+      expect(await markQboReauthorizationRequired({ ...ref, expectedTokenRevision: 1 })).toEqual({ changed: true });
+      expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("REAUTH_REQUIRED");
+    });
+
+    it("invalid_grant for the CURRENT revision still ends in REAUTH_REQUIRED (unchanged behaviour)", async () => {
+      const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "current" }) });
+      c.fake.tokenResponses.push({ status: 400, body: { error: "invalid_grant" } });
+      expect(await get(c)).toEqual({ ok: false, code: "REAUTH_REQUIRED", retryAfterMs: null });
+      expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("REAUTH_REQUIRED");
+    });
+  });
+
   it("an expired or hard-expired refresh token needs reauthorization without calling Intuit", async () => {
     const exp = await seedConnected({ grant: grantOf({ accessInMs: -1000, refreshInMs: -1000 }) });
     expect(await get(exp)).toMatchObject({ ok: false, code: "REAUTH_REQUIRED" });
@@ -207,7 +258,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO token access + refresh (real Postgres
       expect(again).toMatchObject({ status: "FAILED", code: "REAUTH_REQUIRED" });
       expect(c.fake.tokenCalls).toBe(1);
       const before = await db.scheduledTask.count({ where: { workspaceId: c.t.ws } });
-      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox"));
+      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox"), { onlyWorkspaceIds: ownedQboWorkspaceIds() });
       expect(await db.scheduledTask.count({ where: { workspaceId: c.t.ws } })).toBe(before);
     });
 

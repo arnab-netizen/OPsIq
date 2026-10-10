@@ -9,12 +9,12 @@
  *  - a provider that cannot be confirmed complete ends as PROVIDER_INCOMPLETE and cannot loop.
  * Requires TEST_WITH_DB=true and a migrated PostgreSQL. Self-skips otherwise.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { runQboReadSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-sync.service";
-import { seedConnected, testDeps, scopeOf, trackQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { seedConnected, testDeps, scopeOf, ownedQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { customer, invoice, profitAndLossBody } from "@/__tests__/test-helpers/qbo-fake-intuit";
 import { QBO_SYNC_QUERY_ENTITIES, QBO_SYNC_TIE_MAX_STALLED_PASSES, parseContinuation } from "@/domain/quickbooks/qbo-sync-model";
 import { continuationTaskKey, markWebhookHint } from "@/services/quickbooks/qbo-sync-store.service";
@@ -33,8 +33,7 @@ const queriesFor = (c: ConnectedTenant, entity: string, kind: "page" | "count" =
   });
 const stored = (c: ConnectedTenant, entityType: string) => db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType } });
 
-const qboTasks = trackQboTasks();
-beforeAll(qboTasks.snapshot);
+const qboTasks = ownedQboTasks();
 afterAll(qboTasks.cleanup);
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (real Postgres, hostile fake)", () => {
@@ -397,10 +396,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       }
     });
 
-    it("a swap landing right before verification (count unchanged) is not closed on counts: it is re-enumerated and B is recovered or the run fails closed", async () => {
+    it("a swap landing right AFTER the first identity-inclusion batch response (count unchanged) is not closed on counts: it is re-enumerated and B is recovered or the run fails closed (the earlier boundaries are swept below)", async () => {
       const c = await seedConnected();
       seedBucket(c);
-      // Replacement happens right after the enumeration pass finished and BEFORE verification starts (first IN-count request).
+      // Replacement happens when the first identity-inclusion (Id IN) count has just been answered.
       const racing = hook(c, (q) => q.startsWith("SELECT count(*)") && q.includes(" Id IN "), () => replaceAB(c));
       let out = await run(c, { pageSize: 10, fetchImpl: racing });
       for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, fetchImpl: racing });
@@ -424,18 +423,24 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 
-    it("membership-change sweep: {delete, arrival, edit-out, swap} injected after EVERY provider count read of the verification phase - never a SUCCEEDED run with a gap, and a stable provider always converges", async () => {
+    /**
+     * Sweep: inject one membership change {delete, arrival, edit-out, swap} after EVERY provider count read from the PASS-END bucket total
+     * (the first read that follows the last enumeration page) through the read before the final bucket-size re-read. That covers, in order:
+     * pass-end total -> post-cutoff edits baseline -> every Id IN batch -> round-end total -> edits re-read -> round two. The read sequence
+     * is learnt from a clean run, so the sweep boundaries are asserted, not assumed.
+     */
+    const sweep = async (label: string, seed: (c: ConnectedTenant) => void, stored: (r: { TotalAmt?: unknown }) => boolean) => {
       const kindOf = (q: string): "IN" | "EDITS" | "TOTAL" | null =>
         !q.startsWith("SELECT count(*)") ? null : q.includes(" Id IN ") ? "IN" : /LastUpdatedTime > '/.test(q) ? "EDITS" : "TOTAL";
-      // Learn the provider-call sequence of one clean verification (from the first identity read to the end).
       const clean = await seedConnected();
-      seedBucket(clean, 120);
-      expect((await run(clean, { pageSize: 25, pagesPerExecution: 1000 })).status).toBe("SUCCEEDED");
+      seed(clean);
+      expect((await run(clean, { pageSize: 25, pagesPerExecution: 1000 })).status, `${label} clean`).toBe("SUCCEEDED");
       const seq = clean.fake.requests.map((r) => kindOf(r.url.searchParams.get("query") ?? "")).filter((k): k is "IN" | "EDITS" | "TOTAL" => k !== null);
-      const first = seq.indexOf("IN");
-      const phase = seq.slice(first);
-      const lastTotal = phase.lastIndexOf("TOTAL") + 1; // 1-based read number of the final bucket-size re-read
-      expect(lastTotal).toBeGreaterThan(6);
+      const passEnd = seq.indexOf("TOTAL", seq.indexOf("TOTAL") + 1); // 0-based index of the pass-end total
+      const lastTotal = seq.lastIndexOf("TOTAL");
+      // The sweep really starts at the pass-end total and walks through the baseline read into the first identity batch.
+      expect(seq.slice(passEnd, passEnd + 3), label).toEqual(["TOTAL", "EDITS", "IN"]);
+      expect(lastTotal, label).toBeGreaterThan(passEnd + 6);
       const inject = (c: ConnectedTenant, kind: "delete" | "arrival" | "edit-out" | "swap") => {
         const at = c.fake.data.Invoice.findIndex((r) => r.Id === "t005");
         if (kind === "delete") c.fake.data.Invoice.splice(at, 1);
@@ -444,29 +449,37 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       };
       let runs = 0;
       for (const kind of ["delete", "arrival", "edit-out", "swap"] as const) {
-        // A change landing after the last bucket-size re-read has nothing left to observe it (assumption R2 for arrivals), so the sweep
-        // covers every read BEFORE that one.
-        for (let k = 1; k < lastTotal; k++) {
+        // A change landing after the last bucket-size re-read has nothing left to observe it (assumption R2 for arrivals).
+        for (let j = passEnd; j < lastTotal; j++) {
           const c = await seedConnected();
-          seedBucket(c, 120);
+          seed(c);
           let count = 0;
-          let started = false;
-          const racing = hook(c, (q) => {
-            if (kindOf(q) === null) return false;
-            if (!started) { if (kindOf(q) !== "IN") return false; started = true; }
-            return ++count === k;
-          }, () => inject(c, kind));
+          const racing = hook(c, (q) => kindOf(q) !== null && ++count === j + 1, () => inject(c, kind));
           let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
           for (let i = 0; i < 8 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
-          const label = `${kind}@${k}`;
-          await assertNoSilentSkip(c, out);
-          expect(out.status, label).toBe("SUCCEEDED");
-          if (kind === "arrival" || kind === "swap") expect((await ids(c)).has("B-late"), label).toBe(true);
+          const where = `${label} ${kind}@read${j - passEnd}(${seq[j]})`;
+          expect(out.status, where).toBe("SUCCEEDED");
+          const have = await ids(c);
+          for (const r of c.fake.data.Invoice) if (Date.parse(r.MetaData.LastUpdatedTime) <= NOW.getTime() && stored(r)) expect(have.has(r.Id), `${where} has ${r.Id}`).toBe(true);
+          if (kind === "arrival" || kind === "swap") expect(have.has("B-late"), where).toBe(true);
           runs++;
         }
       }
-      expect(runs).toBeGreaterThanOrEqual(4 * 8);
+      expect(runs).toBe(4 * (lastTotal - passEnd));
+      expect(runs).toBeGreaterThanOrEqual(4 * 7);
+    };
+
+    it("membership-change sweep from the PASS-END total: {delete, arrival, edit-out, swap} injected after EVERY provider count read - never a SUCCEEDED run with a gap, and a stable provider always converges", async () => {
+      await sweep("plain", (c) => seedBucket(c, 120), () => true);
     });
+
+    it("membership-change sweep with normalizer-REJECTED ids in the bucket (they are confirmed by id, never stored): same invariant at every boundary", async () => {
+      const withRejected = (c: ConnectedTenant) => {
+        seedBucket(c, 120);
+        for (const id of ["bad1", "bad2"]) c.fake.data.Invoice.push({ Id: id, MetaData: { LastUpdatedTime: new Date(SECOND).toISOString() } } as never); // no TotalAmt -> rejected
+      };
+      await sweep("rejected", withRejected, (r) => r.TotalAmt !== undefined);
+    }, 120_000);
 
     it("restart between the two observations / continuation worker takeover: the flip lands while the sync is PAUSED at its checkpoint inside the proof; the resuming execution still does not close falsely", async () => {
       const c = await seedConnected();
@@ -669,12 +682,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       for (let i = 0; i < 5; i++) await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 2, workspaceId: c.t.ws, idempotencyKey: `${name}:${i}` });
       const handlers = new Map([[name, async () => ({ status: "SUCCESS" as const })]]);
       const done = () => db.scheduledTask.count({ where: { taskName: name, status: "completed" } });
-      // Judged on OUR OWN rows only (our tasks sort first; a pass may also claim a foreign due row, which is not our assertion).
-      await sched.processDue(handlers, { maxClaim: 2 });
+      // The pass is scoped to the workspace this test owns, so it cannot claim (and burn an attempt of) any other file's row.
+      const scope = { onlyWorkspaceIds: [c.t.ws] };
+      await sched.processDue(handlers, { maxClaim: 2, ...scope });
       expect(await done()).toBe(2);
-      await sched.processDue(handlers, { maxClaim: 2 });
+      await sched.processDue(handlers, { maxClaim: 2, ...scope });
       expect(await done()).toBe(4);
-      await sched.processDue(handlers, { maxClaim: 2 });
+      await sched.processDue(handlers, { maxClaim: 2, ...scope });
       expect(await done()).toBe(5);
       await db.scheduledTask.deleteMany({ where: { taskName: name } });
     });
@@ -689,7 +703,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       // No checkpoint row content yet -> the marker cannot be carried -> integrity failure, nothing committed.
       await expect(persistReportObservation(begun.lease, input, deps)).rejects.toThrow();
       expect(await db.qboReportObservation.count({ where: { connectionId: c.connectionId } })).toBe(0);
-      await saveContinuation(begun.lease, { v: 1, syncId: begun.lease.syncId, mode: "FULL", cutoff: NOW.toISOString(), entityIndex: 3, cursor: null, tie: null, reconciled: [], seq: 1, changed: false, restart: false }, deps);
+      await saveContinuation(begun.lease, { v: 1, syncId: begun.lease.syncId, mode: "FULL", cutoff: NOW.toISOString(), entityIndex: 3, cursor: null, tie: null, reconciled: [], seq: 1, changed: false, restart: false, reportFailures: 0 }, deps);
       expect((await persistReportObservation(begun.lease, input, deps)).changed).toBe(true);
       expect(((await stateOf(c)).continuation as { changed: boolean }).changed).toBe(true);
     });
@@ -712,8 +726,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       const c = await seedConnected();
       await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 3, workspaceId: c.t.ws, idempotencyKey: `${name}:${c.connectionId}` });
       const failing = new Map([[name, async () => { throw new Error("boom"); }]]);
-      await sched.processDue(failing, { maxClaim: 2 });
-      expect(sched.lastClaimedCount).toBeGreaterThanOrEqual(1); // a row WAS claimed even though its handler failed
+      await sched.processDue(failing, { maxClaim: 2, onlyWorkspaceIds: [c.t.ws] });
+      expect(sched.lastClaimedCount).toBe(1); // exactly our row WAS claimed even though its handler failed
       const row = await db.scheduledTask.findFirstOrThrow({ where: { taskName: name } });
       expect(row.attempts).toBe(1); // ...so a drain must not conclude there is no work (the failed task is rescheduled, not lost)
       await db.scheduledTask.deleteMany({ where: { taskName: name } });
@@ -722,23 +736,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
     it("a leftover checkpoint is re-queued by the daily producer under a DAY-scoped continuation key, once per day", async () => {
       const { enqueueDueQboReadSyncTasks } = await import("@/services/scheduler/scheduler-producers");
       const { QBO_TEST_ENV } = await import("@/__tests__/test-helpers/qbo-db-fixtures");
-      // The producer scans EVERY active connection in the database: remember what existed so only the rows this test caused are removed.
-      const before = new Set((await db.scheduledTask.findMany({ where: { taskName: TASK_NAME_QBO_READ_SYNC }, select: { id: true } })).map((r: { id: string }) => r.id));
       const c = await seedConnected();
       for (let i = 1; i <= 30; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
       expect((await run(c, { pageSize: 10, pagesPerExecution: 1 })).status).toBe("CONTINUING");
-      try {
-      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox"));
+      // The scan is restricted to the workspace this test owns: it queues nothing for any other file's connection, and the file's
+      // afterAll removes exactly the rows of its own workspaces.
+      const scope = { onlyWorkspaceIds: [c.t.ws] };
+      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox"), scope);
       const first = await db.scheduledTask.findMany({ where: { taskName: TASK_NAME_QBO_READ_SYNC, workspaceId: c.t.ws } });
       const keys = first.map((t: { idempotencyKey: string }) => t.idempotencyKey);
       expect(keys.filter((k: string) => k.includes(`:cont:${c.connectionId}:`) && /:\d{4}-\d{2}-\d{2}$/.test(k))).toHaveLength(1);
       expect(keys.some((k: string) => k === `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${new Date().toISOString().slice(0, 10)}`)).toBe(false); // not the plain daily key
-      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox")); // same day again: idempotent
+      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox"), scope); // same day again: idempotent
       expect(await db.scheduledTask.count({ where: { taskName: TASK_NAME_QBO_READ_SYNC, workspaceId: c.t.ws } })).toBe(first.length);
-      } finally {
-        const after = await db.scheduledTask.findMany({ where: { taskName: TASK_NAME_QBO_READ_SYNC }, select: { id: true } });
-        await db.scheduledTask.deleteMany({ where: { id: { in: after.map((r: { id: string }) => r.id).filter((id: string) => !before.has(id)) } } });
-      }
     });
   });
 });

@@ -3,20 +3,22 @@
  * over real PostgreSQL with a fake Intuit. Proves capability gates, strict bodies, server-controlled authority and tenancy.
  * Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ROLES } from "@/domain/constants/roles";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
-import { seedConnected, testDeps, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { seedConnected, testDeps, ownedQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import * as qboTasksModule from "@/infra/qbo-sync-tasks";
+import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
 import { customer } from "@/__tests__/test-helpers/qbo-fake-intuit";
 
 let mockSessionValid = true;
 let mockActorId = randomUUID();
 let mockRoles: Array<{ role: string; scope?: string | null; scopeId?: string | null }> = [];
 let current: ConnectedTenant | null = null;
-const syncSpy = vi.hoisted(() => ({ calls: [] as unknown[] }));
+const syncSpy = vi.hoisted(() => ({ calls: [] as unknown[], extra: {} as Record<string, unknown> }));
 
 vi.mock("@/services/auth", () => ({
   getSessionFact: vi.fn(async () =>
@@ -37,7 +39,7 @@ vi.mock("@/services/quickbooks/qbo-sync.service", async (orig) => {
     runQboReadSync: vi.fn(async (input: Parameters<typeof actual.runQboReadSync>[0]) => {
       syncSpy.calls.push(input);
       if (!current) throw new Error("no fake");
-      return actual.runQboReadSync(input, testDeps(current, { now: () => new Date("2026-10-10T03:00:00Z") }));
+      return actual.runQboReadSync(input, testDeps(current, { now: () => new Date("2026-10-10T03:00:00Z"), ...syncSpy.extra }));
     }),
   };
 });
@@ -190,5 +192,49 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync + status routes (real wrapper, r
     const busy = await post({ businessId: B.t.biz, connectionId: B.connectionId });
     expect(busy.status).toBe(409);
     expect(await busy.json()).toMatchObject({ status: "BUSY", retry: "LATER" });
+  });
+
+  describe("RC7 continuation hand-off from the manual route", () => {
+    const owned = ownedQboTasks();
+    afterAll(owned.cleanup);
+    afterEach(() => { syncSpy.extra = {}; vi.restoreAllMocks(); });
+    const bigTenant = async () => {
+      const x = await seedConnected();
+      await db.workspace.create({ data: { id: x.t.ws, name: `QBO route ${x.t.ws}`, slug: `qbo-${x.t.ws.slice(0, 8)}` } });
+      await db.workspaceMembership.create({ data: { userId: x.t.actor, workspaceId: x.t.ws, role: "owner", isActive: true } });
+      for (let i = 1; i <= 25; i++) x.fake.data.Customer.push(customer(`r${String(i).padStart(2, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      syncSpy.extra = { pageSize: 10, pagesPerExecution: 1 };
+      current = x;
+      return x;
+    };
+
+    it("CONTINUING maps to HTTP 202, queues the follow-up under the checkpoint's key, and that key is exactly the one listSchedulableConnections discovers", async () => {
+      const x = await bigTenant();
+      await asMember(x.t);
+      const res = await post({ businessId: x.t.biz, connectionId: x.connectionId });
+      expect(res.status).toBe(202);
+      expect((await res.json()).status).toBe("CONTINUING");
+      const tasks = await db.scheduledTask.findMany({ where: { workspaceId: x.t.ws, taskName: "qbo-read-sync" } });
+      expect(tasks).toHaveLength(1);
+      const prefix = `qbo-read-sync:cont:${x.connectionId}:`;
+      expect(tasks[0].idempotencyKey.startsWith(prefix)).toBe(true);
+      const discovered = (await listSchedulableConnections({ environment: "sandbox", limit: 10, onlyWorkspaceIds: [x.t.ws] })).find((c) => c.connectionId === x.connectionId);
+      expect(discovered?.continuationKey).toBe(tasks[0].idempotencyKey.slice(prefix.length));
+      // Re-queueing the same checkpoint (a replayed request) never stacks a second task on it.
+      await qboTasksModule.enqueueQboSyncContinuation({ workspaceId: x.t.ws, connectionId: x.connectionId, continuationKey: discovered?.continuationKey as string });
+      expect(await db.scheduledTask.count({ where: { workspaceId: x.t.ws, taskName: "qbo-read-sync" } })).toBe(1);
+    });
+
+    it("a FAILED follow-up enqueue does not turn the healthy partial execution into a 500: still 202, and the checkpoint is intact for the daily producer", async () => {
+      const x = await bigTenant();
+      await asMember(x.t);
+      const enqueue = vi.spyOn(qboTasksModule, "enqueueQboSyncContinuation").mockRejectedValue(new Error("scheduler unavailable"));
+      const res = await post({ businessId: x.t.biz, connectionId: x.connectionId });
+      expect(enqueue).toHaveBeenCalledTimes(1);
+      expect(res.status).toBe(202);
+      expect(await db.scheduledTask.count({ where: { workspaceId: x.t.ws, taskName: "qbo-read-sync" } })).toBe(0);
+      const found = (await listSchedulableConnections({ environment: "sandbox", limit: 10, onlyWorkspaceIds: [x.t.ws] })).find((c) => c.connectionId === x.connectionId);
+      expect(found?.continuationKey).toEqual(expect.any(String)); // the producer will pick this checkpoint up
+    });
   });
 });

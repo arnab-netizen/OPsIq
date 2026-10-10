@@ -4,27 +4,30 @@
  * unconfigured in the test process, so it must fail closed instead of calling out).
  * Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect, vi, afterEach, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi, afterEach, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
-import { enqueueDueQboReadSyncTasks } from "@/services/scheduler/scheduler-producers";
+import { enqueueDueQboReadSyncTasks as produce } from "@/services/scheduler/scheduler-producers";
+import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
+import { seedTenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 import { TASK_NAME_QBO_READ_SYNC } from "@/infra/qbo-sync-tasks";
 import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
-import { QBO_TEST_ENV, seedConnected, trackQboTasks } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { QBO_TEST_ENV, seedConnected, ownedQboTasks, ownedQboWorkspaceIds } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import * as webhookRoute from "@/app/api/integrations/quickbooks/webhook/route";
 import { createHmac } from "node:crypto";
 
 const SANDBOX = QBO_TEST_ENV("sandbox");
+/** The producer scan is global by default; every call here is restricted to the workspaces THIS file seeded, so it never creates a task for a row it does not own. */
+const enqueueDueQboReadSyncTasks = (env: Record<string, string | undefined>) => produce(env, { onlyWorkspaceIds: ownedQboWorkspaceIds() });
 const tasksFor = (ws: string) => db.scheduledTask.findMany({ where: { workspaceId: ws, taskName: TASK_NAME_QBO_READ_SYNC } });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () => {
   afterEach(() => vi.unstubAllEnvs());
   // These tests create durable qbo-read-sync ScheduledTasks. Left pending they would be claimed by the scheduler suites that
   // run processDue() over the whole table later in the same database, so they are removed when this file is done.
-  const qboTasks = trackQboTasks();
-  beforeAll(qboTasks.snapshot);
+  const qboTasks = ownedQboTasks();
   afterAll(qboTasks.cleanup);
 
 
@@ -78,7 +81,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () =
 
   it("does nothing when QuickBooks is not configured", async () => {
     await seedConnected();
-    expect(await enqueueDueQboReadSyncTasks({})).toEqual({ candidatesFound: 0, enqueued: 0 });
+    expect(await enqueueDueQboReadSyncTasks({})).toEqual({ candidatesFound: 0, enqueued: 0, skippedOpenTask: 0, truncated: false, openTasks: 0 });
   });
 
   it("the handler is registered once, requires a claimed workspace and a connection id, and fails closed without QuickBooks configuration (no network)", async () => {
@@ -113,6 +116,72 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () =
     expect(spy).not.toHaveBeenCalled();
     expect(await db.qboSyncRun.count({ where: { connectionId: a.connectionId } })).toBe(0);
     spy.mockRestore();
+  });
+
+  describe("RC13 backlog and fairness", () => {
+    const sched = new DatabaseSchedulerProvider();
+    const stale = (connectionId: string) => `qbo-read-sync:${connectionId}:2000-01-01`;
+    const seedOldTask = async (c: { t: { ws: string }; connectionId: string }, status: "pending" | "running" | "completed") => {
+      const created = await sched.scheduleIdempotent({
+        taskName: TASK_NAME_QBO_READ_SYNC, payload: { connectionId: c.connectionId, trigger: "SCHEDULED" }, scheduledFor: new Date("2000-01-01T00:00:00Z"),
+        maxAttempts: 2, workspaceId: c.t.ws, idempotencyKey: stale(c.connectionId),
+      });
+      if (status !== "pending") await db.scheduledTask.update({ where: { id: created.id }, data: { status, ...(status === "running" ? { leaseExpiresAt: new Date(Date.now() + 600_000) } : { completedAt: new Date() }) } });
+      return created.id;
+    };
+
+    it("a connection that already has a pending OR running task is not queued again, and the skip is reported", async () => {
+      const a = await seedConnected(); const b = await seedConnected();
+      await seedOldTask(a, "pending");
+      await seedOldTask(b, "running");
+      const r = await produce(SANDBOX, { onlyWorkspaceIds: [a.t.ws, b.t.ws] });
+      expect(r.skippedOpenTask).toBe(2);
+      expect(r.enqueued).toBe(0);
+      expect(await tasksFor(a.t.ws)).toHaveLength(1);
+      expect(await tasksFor(b.t.ws)).toHaveLength(1);
+      expect(r.openTasks).toBe(2);
+    });
+
+    it("once the old task is finished the connection is queued again (a spent task never strands a connection)", async () => {
+      const c = await seedConnected();
+      await seedOldTask(c, "completed");
+      const r = await produce(SANDBOX, { onlyWorkspaceIds: [c.t.ws] });
+      expect(r.skippedOpenTask).toBe(0);
+      expect(await tasksFor(c.t.ws)).toHaveLength(2);
+    });
+
+    it("a large QuickBooks backlog does not starve another task type: it is claimed first, then QuickBooks tasks oldest first (and foreign rows are never claimed)", async () => {
+      const ours = await seedTenant(); const foreign = await seedTenant();
+      const OTHER = `rc13-other-${randomUUID()}`;
+      const ran: string[] = [];
+      const handlers = new Map<string, TaskHandler>([
+        [TASK_NAME_QBO_READ_SYNC, async (payload) => { ran.push(`qbo:${(payload as { n: number }).n}`); return { status: "SUCCESS" }; }],
+        [OTHER, async () => { ran.push("other"); return { status: "SUCCESS" }; }],
+      ]);
+      for (let n = 1; n <= 3; n++) await sched.scheduleIdempotent({ taskName: TASK_NAME_QBO_READ_SYNC, payload: { n }, scheduledFor: new Date(`2000-01-0${n}T00:00:00Z`), maxAttempts: 2, workspaceId: ours.ws, idempotencyKey: `rc13:${randomUUID()}` });
+      await sched.scheduleIdempotent({ taskName: OTHER, payload: {}, scheduledFor: new Date("2000-02-01T00:00:00Z"), maxAttempts: 2, workspaceId: ours.ws, idempotencyKey: `rc13:${randomUUID()}` });
+      const foreignTask = await sched.scheduleIdempotent({ taskName: OTHER, payload: {}, scheduledFor: new Date("1999-01-01T00:00:00Z"), maxAttempts: 2, workspaceId: foreign.ws, idempotencyKey: `rc13:${randomUUID()}` });
+      try {
+        const scope = { onlyWorkspaceIds: [ours.ws] };
+        // Control: plain oldest-first would run the QuickBooks task first.
+        expect(await sched.processDue(handlers, { maxClaim: 1, ...scope })).toBe(1);
+        expect(ran).toEqual(["qbo:1"]);
+        ran.length = 0;
+        // With QuickBooks deprioritised the OTHER task type runs first although it is NEWER than the whole QuickBooks backlog.
+        expect(await sched.processDue(handlers, { maxClaim: 1, deprioritize: [TASK_NAME_QBO_READ_SYNC], ...scope })).toBe(1);
+        expect(ran).toEqual(["other"]);
+        // The rest of the backlog still progresses (oldest first).
+        expect(await sched.processDue(handlers, { maxClaim: 5, deprioritize: [TASK_NAME_QBO_READ_SYNC], ...scope })).toBe(2);
+        expect(ran).toEqual(["other", "qbo:2", "qbo:3"]);
+        // A due row of a workspace this pass does not own was never claimed.
+        expect(await db.scheduledTask.findUniqueOrThrow({ where: { id: foreignTask.id } })).toMatchObject({ status: "pending", attempts: 0 });
+        // An empty scope claims nothing at all.
+        expect(await sched.processDue(handlers, { onlyWorkspaceIds: [] })).toBe(0);
+        expect(await sched.processDue(handlers, { onlyTaskNames: [] })).toBe(0);
+      } finally {
+        await db.scheduledTask.deleteMany({ where: { workspaceId: { in: [ours.ws, foreign.ws] } } });
+      }
+    });
   });
 
   describe("webhook route", () => {

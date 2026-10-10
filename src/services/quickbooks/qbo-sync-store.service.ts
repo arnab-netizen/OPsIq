@@ -417,9 +417,9 @@ export async function persistRecordsPageWithCheckpoint(
 /**
  * FULL reconciliation CANDIDATES: records of an entity that the current logical sync has not seen. Not a claim of deletion — the
  * orchestrator re-reads them by id to refresh any that merely fell outside the query window or are inactive, and leaves the rest
- * UNCHANGED. Ordered least-recently-attempted first (NULLs first) so a standing set it cannot resolve never starves the others.
+ * UNCHANGED. Records already attempted in this logical sync are excluded (see the filter); ordered least-recently-attempted first (NULLs first).
  */
-export async function listUnseenRecordIds(lease: SyncLease, entityType: string, limit: number, deps?: QboPersistenceDeps): Promise<string[]> {
+export async function listUnseenRecordIds(lease: SyncLease, entityType: string, limit: number, attemptedBefore: Date, deps?: QboPersistenceDeps): Promise<string[]> {
   const now = clock(deps);
   return clientOf(deps).$transaction(async (tx: Tx) => {
     await assertAndExtendLease(tx, lease, now);
@@ -427,6 +427,10 @@ export async function listUnseenRecordIds(lease: SyncLease, entityType: string, 
       where: {
         connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
         entityType, lastSeenSyncId: { not: lease.syncId },
+        // Records already verification-attempted in THIS logical sync (attempt stamp at or after its fixed cutoff, whatever the
+        // result) are excluded, so a standing set of unresolvable records cannot be selected again and again: each execution
+        // moves forward through the remainder, and reconciliation ends when no unattempted candidate is left.
+        OR: [{ lastVerifyAttemptAt: null }, { lastVerifyAttemptAt: { lt: attemptedBefore } }],
       },
       select: { providerEntityId: true },
       orderBy: [{ lastVerifyAttemptAt: { sort: "asc", nulls: "first" } }, { providerEntityId: "asc" }],
@@ -777,7 +781,7 @@ export interface SchedulableConnection {
  * window. Bounded; ordered by oldest success first so no connection starves.
  */
 export async function listSchedulableConnections(
-  input: { environment: "sandbox" | "production"; limit: number; offset?: number },
+  input: { environment: "sandbox" | "production"; limit: number; offset?: number; onlyWorkspaceIds?: readonly string[] },
   deps?: QboPersistenceDeps,
 ): Promise<SchedulableConnection[]> {
   const now = clock(deps);
@@ -785,6 +789,7 @@ export async function listSchedulableConnections(
     where: {
       environment: input.environment,
       status: "ACTIVE",
+      ...(input.onlyWorkspaceIds ? { workspaceId: { in: [...input.onlyWorkspaceIds] } } : {}),
       business: { isActive: true, isFixtureBusiness: false },
       OR: [
         { syncState: null },

@@ -121,6 +121,40 @@ function isUniqueViolation(e: unknown): boolean {
 }
 
 /** Thrown inside a transaction to roll it back with a typed, non-secret reason. */
+/**
+ * The grant was NOT stored because it could not be encrypted (missing / short key). Raised before the transaction opens, so nothing
+ * was written: the caller may safely discard the grant it just obtained.
+ */
+export class QboGrantNotStoredError extends Error {
+  constructor(message = "QUICKBOOKS_GRANT_NOT_STORED") {
+    super(message); // the encryption layer's own (secret-free) configuration message is preserved
+    this.name = "QboGrantNotStoredError";
+  }
+}
+
+/**
+ * Fail-closed pre-flight: can this workspace's tokens be encrypted at all? The callback calls it BEFORE the authorization code is
+ * exchanged, so a missing / short OAUTH_TOKEN_ENCRYPTION_KEY stops the flow before Intuit issues a long-lived refresh token that
+ * could not be stored. Throws QboGrantNotStoredError; encrypts a throw-away value and persists nothing.
+ */
+export function assertQboTokenEncryptionReady(workspaceId: string): void {
+  try {
+    encryptOAuthToken({ accessToken: "preflight", refreshToken: "preflight", expiresAt: new Date(0), tokenType: "Bearer" } as never, workspaceId);
+  } catch (e) {
+    throw new QboGrantNotStoredError(e instanceof Error ? e.message : undefined);
+  }
+}
+
+/**
+ * Does a not-disconnected connection (any workspace) hold this company in this environment? Used before a best-effort revoke: an
+ * Intuit revocation may be app/company-wide, so a grant is never revoked while a live connection may depend on the same company.
+ */
+export async function isQboRealmHeldLive(input: { environment: QboEnvironment; realmId: string }, deps: QboPersistenceDeps = {}): Promise<boolean> {
+  const client = deps.client ?? db;
+  const row = await client.qboConnection.findFirst({ where: { environment: input.environment, realmId: input.realmId, status: LIVE }, select: { id: true } });
+  return row !== null;
+}
+
 class FinalizeRefusal extends Error {
   constructor(readonly reason: QboFinalizeFailure) {
     super(reason);
@@ -240,7 +274,12 @@ export async function finalizeQboConnection(
   const client = deps.client ?? db;
   const now = (deps.now ?? (() => new Date()))();
   // Encrypt first: a missing/short key fails closed here, before anything is written.
-  const enc = encryptOAuthToken(toOAuthToken(grant), a.workspaceId);
+  let enc: ReturnType<typeof encryptOAuthToken>;
+  try {
+    enc = encryptOAuthToken(toOAuthToken(grant), a.workspaceId);
+  } catch (e) {
+    throw new QboGrantNotStoredError(e instanceof Error ? e.message : undefined);
+  }
   if (!enc.refreshToken) throw new ValidationError("The QuickBooks grant has no refresh token.");
 
   try {
@@ -256,8 +295,10 @@ export async function finalizeQboConnection(
         throw new FinalizeRefusal("AUTHORIZATION_NOT_CONSUMED");
       }
       if (state.finalizedAt) throw new FinalizeRefusal("AUTHORIZATION_ALREADY_FINALIZED");
-      await requireEligibleBusiness(tx, a.workspaceId, a.businessId);
 
+      // Holder / binding refusals come BEFORE the eligibility check: a typed refusal about a company another connection holds must
+      // never be pre-empted by an eligibility error, because the caller treats those two outcomes differently when deciding
+      // whether the just-issued grant may be discarded.
       const holder = await tx.qboConnection.findFirst({ where: { environment: a.environment, realmId, status: LIVE } });
       if (holder && (holder.workspaceId !== a.workspaceId || holder.businessId !== a.businessId)) {
         throw new FinalizeRefusal("REALM_ALREADY_BOUND");
@@ -266,6 +307,7 @@ export async function finalizeQboConnection(
         where: { workspaceId: a.workspaceId, businessId: a.businessId, environment: a.environment, status: LIVE },
       });
       if (businessLive && businessLive.realmId !== realmId) throw new FinalizeRefusal("BUSINESS_BOUND_TO_OTHER_REALM");
+      await requireEligibleBusiness(tx, a.workspaceId, a.businessId); // still before any write
 
       const existing = await tx.qboConnection.findFirst({
         where: { workspaceId: a.workspaceId, businessId: a.businessId, environment: a.environment, realmId },
@@ -320,12 +362,18 @@ export async function finalizeQboConnection(
       e instanceof FinalizeRefusal ? e.reason : isUniqueViolation(e) ? "REALM_ALREADY_BOUND" : null;
     if (!reason) throw e;
     if (reason === "REALM_ALREADY_BOUND" || reason === "BUSINESS_BOUND_TO_OTHER_REALM") {
-      // Reported to the REQUESTING workspace only; never names the other tenant or business.
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.QBO_REALM_BINDING_CONFLICT, workspaceId: a.workspaceId, actorId: a.actorId,
-        entityType: "qbo_oauth_state", entityId: a.authorizationId, visibility: "internal",
-        payload: { businessId: a.businessId, environment: a.environment, realmId, reason },
-      }, client);
+      // Reported to the REQUESTING workspace only; never names the other tenant or business. A failure to WRITE this audit row must not
+      // turn the typed refusal (already decided, nothing stored) into an exception: the caller's revoke / no-revoke decision depends on
+      // receiving the refusal reason.
+      try {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.QBO_REALM_BINDING_CONFLICT, workspaceId: a.workspaceId, actorId: a.actorId,
+          entityType: "qbo_oauth_state", entityId: a.authorizationId, visibility: "internal",
+          payload: { businessId: a.businessId, environment: a.environment, realmId, reason },
+        }, client);
+      } catch {
+        // Refusal outcome is authoritative; the audit store being unavailable is reported by its own health signals.
+      }
     }
     return { ok: false, reason };
   }
@@ -435,7 +483,7 @@ export async function loadQboTokensForUse(
 
 /** ACTIVE -> REAUTH_REQUIRED (idempotent: any other state is left untouched and reported as unchanged). */
 export async function markQboReauthorizationRequired(
-  input: { workspaceId: string; connectionId: string; reasonCode: string },
+  input: { workspaceId: string; connectionId: string; reasonCode: string; expectedTokenRevision?: number },
   deps: QboPersistenceDeps = {},
 ): Promise<{ changed: boolean }> {
   const v = parse(QboReauthSchema, input);
@@ -443,7 +491,10 @@ export async function markQboReauthorizationRequired(
   const now = (deps.now ?? (() => new Date()))();
   return client.$transaction(async (tx: Tx) => {
     const r = await tx.qboConnection.updateMany({
-      where: { id: v.connectionId, workspaceId: v.workspaceId, status: QBO_CONNECTION_STATUS.ACTIVE },
+      where: {
+        id: v.connectionId, workspaceId: v.workspaceId, status: QBO_CONNECTION_STATUS.ACTIVE,
+        ...(v.expectedTokenRevision !== undefined ? { token: { is: { revision: v.expectedTokenRevision } } } : {}),
+      },
       data: { status: QBO_CONNECTION_STATUS.REAUTH_REQUIRED, reauthRequiredAt: now, lastErrorCode: v.reasonCode, version: { increment: 1 } },
     });
     if (r.count !== 1) return { changed: false };

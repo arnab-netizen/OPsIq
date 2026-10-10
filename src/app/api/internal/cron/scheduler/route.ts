@@ -45,6 +45,7 @@ import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
+import { TASK_NAME_QBO_READ_SYNC } from "@/infra/qbo-sync-tasks";
 import {
   enqueueDueEmailRetryTasks,
   enqueueDueFinanceLearningBridgeTasks,
@@ -70,6 +71,12 @@ const MAX_DRAIN_PASSES = 200;
 /** Tasks claimed per drain pass (see the call site). */
 const DRAIN_CLAIM_PER_PASS = 2;
 
+/**
+ * Absolute ceiling for the WHOLE invocation, measured from its start: 15 s under `maxDuration`. Every QuickBooks execution is told
+ * to finish (soft deadline + hard-abort grace + finalisation allowance) before it, whatever pass it runs in.
+ */
+const INVOCATION_DEADLINE_MS = 285_000;
+
 function verifyCronSecret(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
@@ -80,7 +87,7 @@ function verifyCronSecret(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Explicit function ceiling (same as the owner sync route): a QuickBooks execution self-limits to 120 s and then continues in a follow-up. */
+/** Explicit function ceiling. A QuickBooks execution is bounded by QBO_EXECUTION_WORST_CASE_MS (soft deadline + hard-abort grace + finalisation) and then continues in a follow-up. */
 export const maxDuration = 300;
 
 export async function GET(request: Request): Promise<NextResponse> {
@@ -91,7 +98,8 @@ export async function GET(request: Request): Promise<NextResponse> {
   const results: Record<string, unknown> = {};
   const errors: string[] = [];
 
-  const deadline = Date.now() + DRAIN_BUDGET_MS;
+  const invocationStartedAt = Date.now();
+  const deadline = invocationStartedAt + DRAIN_BUDGET_MS;
 
   // ─── 1. Producers: enqueue canonical ScheduledTask rows for outstanding work ──
   try {
@@ -131,10 +139,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     // bounded retry, then dead-letter) is rescheduled, so it cannot spin the loop; MAX_DRAIN_PASSES and the time budget bound it anyway.
     for (; schedulerPasses < MAX_DRAIN_PASSES; schedulerPasses++) {
       if (Date.now() >= deadline) break;
-      // Few tasks per pass. Worst case for a pass of 2 QuickBooks executions is 2 x (45 s soft deadline + 60 s hard-abort grace) = 210 s,
-      // and a pass is only started inside the 80 s budget, so it ends inside maxDuration (300 s); a platform kill can strand at most 2
-      // claimed rows (not a batch of 50).
-      const passProcessed = await scheduler.processDue(handlers, { maxClaim: DRAIN_CLAIM_PER_PASS });
+      // Few tasks per pass. A pass is only started inside the 80 s budget, and each QuickBooks execution in it is bounded by
+      // QBO_EXECUTION_WORST_CASE_MS from ITS OWN start (token acquisition included) and is additionally told the invocation's absolute
+      // deadline, so a pass of 2 ends well inside maxDuration (300 s); a platform kill can strand at most 2 claimed rows (not a batch of 50).
+      // QuickBooks tasks are claimed AFTER every other due task (oldest first within each class): a large QuickBooks backlog cannot starve
+      // the email-retry, reassessment, risk-review and finance scans.
+      const passProcessed = await scheduler.processDue(handlers, {
+        maxClaim: DRAIN_CLAIM_PER_PASS,
+        deprioritize: [TASK_NAME_QBO_READ_SYNC],
+        invocationDeadlineAt: invocationStartedAt + INVOCATION_DEADLINE_MS,
+      });
       tasksProcessed += passProcessed;
       // Stop when nothing was CLAIMED (no due work). A pass whose tasks all failed claimed rows and moved them to retry/dead-letter, so the
       // next pass sees different rows; the pass cap and time budget already bound the loop.

@@ -95,6 +95,11 @@ export interface TaskContext {
    * keep working unchanged; their late result is still discarded by fenced finalization.
    */
   signal: AbortSignal;
+  /**
+   * Absolute wall-clock time (epoch ms) by which the whole INVOCATION that runs this task must be finished (e.g. the cron function's
+   * ceiling), when the caller of processDue() knows one. A handler that can bound its own work SHOULD finish before it.
+   */
+  invocationDeadlineAt?: number;
 }
 
 export interface TaskHandler {
@@ -419,15 +424,35 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     logger.info("Task cancelled", { taskId });
   }
 
-  /**
-   * `maxClaim` (default 50) bounds how many tasks one pass claims. A caller with a wall-clock ceiling (the cron drain) claims few per
-   * pass so a function kill can strand at most that many `running` rows instead of a whole batch.
-   */
   /** How many rows the most recent processDue() claimed (processed or not): lets a drain tell "nothing due" from "everything claimed failed". */
   lastClaimedCount = 0;
 
-  async processDue(handlers: Map<string, TaskHandler>, options: { maxClaim?: number } = {}): Promise<number> {
+  /**
+   * Claim and run due tasks (one bounded pass).
+   *  - `maxClaim` (default 50) bounds how many tasks one pass claims. A caller with a wall-clock ceiling (the cron drain) claims few per
+   *    pass so a function kill can strand at most that many `running` rows instead of a whole batch.
+   *  - `deprioritize` names task types that are claimed AFTER every other due task (still oldest first within each class): a large backlog
+   *    of one expensive type (QuickBooks syncs) can then not starve unrelated scheduled work.
+   *  - `onlyTaskNames` / `onlyWorkspaceIds` restrict which rows this pass may claim. Production drains pass neither; a caller that must
+   *    not touch rows it does not own (tests sharing a database) passes its own.
+   */
+  async processDue(
+    handlers: Map<string, TaskHandler>,
+    options: { maxClaim?: number; deprioritize?: readonly string[]; onlyTaskNames?: readonly string[]; onlyWorkspaceIds?: readonly string[]; invocationDeadlineAt?: number } = {},
+  ): Promise<number> {
     const maxClaim = Math.max(1, Math.min(50, Math.floor(options.maxClaim ?? 50)));
+    const scope = [
+      options.onlyTaskNames
+        ? options.onlyTaskNames.length > 0 ? Prisma.sql`AND "task_name" IN (${Prisma.join([...options.onlyTaskNames])})` : Prisma.sql`AND false`
+        : Prisma.empty,
+      options.onlyWorkspaceIds
+        ? options.onlyWorkspaceIds.length > 0 ? Prisma.sql`AND "workspace_id" IN (${Prisma.join(options.onlyWorkspaceIds.map((id) => Prisma.sql`${id}::uuid`))})` : Prisma.sql`AND false`
+        : Prisma.empty,
+    ];
+    const scopeSql = Prisma.join(scope, " ");
+    const orderSql = options.deprioritize && options.deprioritize.length > 0
+      ? Prisma.sql`(CASE WHEN "task_name" IN (${Prisma.join([...options.deprioritize])}) THEN 1 ELSE 0 END) ASC, "scheduled_for" ASC`
+      : Prisma.sql`"scheduled_for" ASC`;
     const now = new Date();
     const leaseExpiry = new Date(now.getTime() + this.leaseMs);
 
@@ -444,8 +469,8 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
           ("status" = 'pending'  AND "scheduled_for" <= ${now})
           OR
           ("status" = 'running'  AND "lease_expires_at" < ${now})
-        )
-        ORDER BY "scheduled_for" ASC
+        ) ${scopeSql}
+        ORDER BY ${orderSql}
         LIMIT ${maxClaim}
         FOR UPDATE SKIP LOCKED
       )
@@ -469,7 +494,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     let processed = 0;
     try {
       for (let i = 0; i < claimed.length; i++) {
-        if (await this.executeClaimedTask(claimed[i], handlers, leases[i])) processed++;
+        if (await this.executeClaimedTask(claimed[i], handlers, leases[i], options.invocationDeadlineAt)) processed++;
       }
     } finally {
       await Promise.all(leases.map((lease: LeaseHeartbeat) => lease.stop()));
@@ -552,7 +577,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
   }
 
   /** Execute one already-claimed task. Returns true when its handler completed it. */
-  private async executeClaimedTask(task: ClaimedTaskRow, handlers: Map<string, TaskHandler>, lease: LeaseHeartbeat): Promise<boolean> {
+  private async executeClaimedTask(task: ClaimedTaskRow, handlers: Map<string, TaskHandler>, lease: LeaseHeartbeat, invocationDeadlineAt?: number): Promise<boolean> {
     const wasReclaimed = task.previous_status === "running";
     await auditTaskEvent(
       wasReclaimed ? AUDIT_EVENTS.SCHEDULED_TASK_LEASE_RECLAIMED : AUDIT_EVENTS.SCHEDULED_TASK_CLAIMED,
@@ -567,6 +592,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       workspaceId: task.workspace_id,
       attempt: task.attempts,
       signal: lease.signal,
+      ...(invocationDeadlineAt !== undefined ? { invocationDeadlineAt } : {}),
     };
 
     if (lease.signal.aborted) {
