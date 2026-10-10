@@ -85,6 +85,9 @@ Intuit's developer pages could not be fetched from the build environment (no DNS
 * `report_date` is the UTC date, not the company's local date. Balance-sheet AR/AP is not yet reconciled against the aged totals or open invoice balances (only the balance equation, gross profit and aging sums are checked).
 * All mirror tables are internal-only: no route returns records or observations (only counts). Customer display names and document numbers are retained (e-mail, phone, address and notes are not).
 * Realm exclusivity across tenants is enforced by the existing partial unique index `qbo_connections_live_realm_key`.
+* Rows sharing one `LastUpdatedTime` second beyond a page (bulk import) are stepped through by offset inside that second; Intuit gives no documented stable order among equal timestamps, so this is verified at acceptance, not assumed.
+* The scheduler cron route declares no `maxDuration`; a platform-killed sync leaves a `RUNNING` run that the next lease acquisition marks `ABANDONED` (no data is lost: pages are persisted as they go and replays are idempotent).
+* A back-off never exceeds 23 h so a retry cannot slip a whole extra day behind the daily cron.
 * A tail-risk of the FULL reconcile is that it reads every Customer/Invoice/Bill; accounts beyond 500k records of one type fail loudly (`PAGINATION_LIMIT_REACHED`) rather than truncate.
 
 ## 10. Live acceptance procedure (NOT executed — requires explicit Preview authorization)

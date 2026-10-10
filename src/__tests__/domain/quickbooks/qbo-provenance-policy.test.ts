@@ -40,6 +40,10 @@ describe("QuickBooks provenance / precedence", () => {
     expect(resolveFinancialFieldPrecedence(base({ qbo: obs({ value: null }) }))).toMatchObject({ source: "NONE", reason: "NO_PROVIDER_VALUE" });
     expect(resolveFinancialFieldPrecedence(base({ qbo: null }))).toMatchObject({ source: "NONE", reason: "NO_PROVIDER_VALUE" });
   });
+  it("an observation that has not been RE-READ recently is not evidence even if its period is recent (the sync may have died; a closed period can be restated)", () => {
+    const old = new Date(now.getTime() - QBO_OBSERVATION_MAX_AGE_MS - 1000);
+    expect(resolveFinancialFieldPrecedence(base({ qbo: obs({ fetchedAt: old }) }))).toMatchObject({ source: "NONE", reason: "STALE" });
+  });
   it("a flow metric is adopted only from exactly the target period (a month is not a quarter, another month is not this month)", () => {
     expect(resolveFinancialFieldPrecedence(base({ qbo: obs({ periodStart: "2026-08-01", periodEnd: "2026-08-31" }) }))).toMatchObject({ source: "NONE", reason: "PERIOD_MISMATCH" });
     expect(resolveFinancialFieldPrecedence(base({ target: { periodStart: "2026-07-01", periodEnd: "2026-09-30" } }))).toMatchObject({ source: "NONE", reason: "PERIOD_MISMATCH" });

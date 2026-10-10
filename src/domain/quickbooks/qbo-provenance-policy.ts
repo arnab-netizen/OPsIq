@@ -123,6 +123,9 @@ function usableQbo(i: PrecedenceInput): { ok: true; value: number } | { ok: fals
   }
   // Staleness is about the as-of date of the data, not when it was last re-fetched.
   if (i.now.getTime() - day(q.periodEnd) > QBO_OBSERVATION_MAX_AGE_MS) return { ok: false, reason: "STALE" };
+  // ...and the observation must also have been RE-READ recently: a sync that died weeks ago must not keep feeding old numbers
+  // (a closed period can be restated).
+  if (i.now.getTime() - q.fetchedAt.getTime() > QBO_OBSERVATION_MAX_AGE_MS) return { ok: false, reason: "STALE" };
   const n = Number(q.value);
   if (!Number.isFinite(n)) return { ok: false, reason: "NO_PROVIDER_VALUE" };
   return { ok: true, value: n };

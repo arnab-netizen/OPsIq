@@ -4,6 +4,7 @@ import {
   computeSyncBackoffMs, isTerminalSyncFailure, completeMonthPeriods, chooseSyncMode, incrementalLowerBound, syncIdempotencyKey,
   syncFailureFromError, toQboInstant, scheduleBucket, QBO_SYNC_WATERMARK_OVERLAP_MS, QBO_SYNC_FULL_RECONCILE_MS, QBO_SYNC_FAILURE_CODES,
 } from "@/domain/quickbooks/qbo-sync-model";
+import { evaluateDueGate } from "@/domain/quickbooks/qbo-sync-model";
 import { mapSyncOutcome } from "@/domain/quickbooks/qbo-sync-outcomes";
 import { QboProviderError } from "@/domain/quickbooks/qbo-errors";
 import { QBO_READABLE_ENTITIES, QBO_REPORT_NAMES, buildQboQuery } from "@/domain/quickbooks/qbo-read-catalog";
@@ -54,11 +55,11 @@ describe("back-off", () => {
   });
   it("a company mismatch is persistent (24h ceiling), not terminal: it is re-checked daily, never hot-looped", () => {
     expect(isTerminalSyncFailure("COMPANY_MISMATCH")).toBe(false);
-    expect([1, 2, 3, 9].map((n) => computeSyncBackoffMs("COMPANY_MISMATCH", n))).toEqual([6, 12, 24, 24].map((x) => x * 3_600_000));
+    expect([1, 2, 3, 9].map((n) => computeSyncBackoffMs("COMPANY_MISMATCH", n))).toEqual([6, 12, 23, 23].map((x) => x * 3_600_000));
   });
-  it("persistent non-auth failures back off 6h doubling to a 24h ceiling", () => {
+  it("persistent non-auth failures back off 6h doubling to a 23h ceiling (never a whole skipped day)", () => {
     const m = (n: number) => computeSyncBackoffMs("PROVIDER_MALFORMED", n) as number;
-    expect([1, 2, 3, 9].map(m)).toEqual([6, 12, 24, 24].map((x) => x * 3_600_000));
+    expect([1, 2, 3, 9].map(m)).toEqual([6, 12, 23, 23].map((x) => x * 3_600_000));
   });
   it("honours Retry-After but never beyond the ceiling", () => {
     expect(computeSyncBackoffMs("PROVIDER_RATE_LIMITED", 1, 3_600_000)).toBe(3_600_000);
@@ -134,5 +135,31 @@ describe("failure mapping and public outcomes", () => {
     }
     const ok = mapSyncOutcome({ status: "SUCCEEDED", runId: UUID, mode: "FULL", changed: true, counts: { fetched: { Invoice: 3 }, inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, reportsFailed: 0, confirmedByRead: 0, markedMissing: 0 } });
     expect(ok.body.summary).toEqual({ inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, markedMissing: 0 });
+  });
+});
+
+describe("due gate (pure)", () => {
+  const now = new Date("2026-10-10T12:00:00Z");
+  const st = (o: Partial<Parameters<typeof evaluateDueGate>[1] & object> = {}) => ({ lastAttemptedAt: null, lastSucceededAt: null, nextAttemptNotBefore: null, webhookHintAt: null, ...o });
+  it("MANUAL: spaced by the cooldown only; back-off does not apply", () => {
+    expect(evaluateDueGate("MANUAL", st({ lastAttemptedAt: new Date(now.getTime() - 10_000) }), now, 60_000)).toEqual(new Date(now.getTime() + 50_000));
+    expect(evaluateDueGate("MANUAL", st({ lastAttemptedAt: new Date(now.getTime() - 61_000), nextAttemptNotBefore: new Date(now.getTime() + 1e9) }), now, 60_000)).toBeNull();
+    expect(evaluateDueGate("MANUAL", st({ lastAttemptedAt: now }), now, 0)).toBeNull();
+    expect(evaluateDueGate("MANUAL", null, now, 60_000)).toBeNull();
+  });
+  it("SCHEDULED: back-off wins; one success per UTC day unless an unserved webhook hint exists", () => {
+    const later = new Date(now.getTime() + 3_600_000);
+    expect(evaluateDueGate("SCHEDULED", st({ nextAttemptNotBefore: later }), now, 0)).toEqual(later);
+    const done = st({ lastSucceededAt: new Date("2026-10-10T03:00:00Z") });
+    expect(evaluateDueGate("SCHEDULED", done, now, 0)).toEqual(new Date("2026-10-11T00:00:00Z"));
+    expect(evaluateDueGate("SCHEDULED", { ...done, webhookHintAt: now }, now, 0)).toBeNull();
+    expect(evaluateDueGate("SCHEDULED", st({ lastSucceededAt: new Date("2026-10-09T03:00:00Z") }), now, 0)).toBeNull();
+  });
+  it("WEBHOOK: runs only for an unserved hint, and still respects back-off", () => {
+    expect(evaluateDueGate("WEBHOOK", st(), now, 0)).toEqual(now);
+    expect(evaluateDueGate("WEBHOOK", null, now, 0)).toEqual(now);
+    expect(evaluateDueGate("WEBHOOK", st({ webhookHintAt: now }), now, 0)).toBeNull();
+    const later = new Date(now.getTime() + 1000);
+    expect(evaluateDueGate("WEBHOOK", st({ webhookHintAt: now, nextAttemptNotBefore: later }), now, 0)).toEqual(later);
   });
 });

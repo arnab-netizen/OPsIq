@@ -42,6 +42,8 @@ const BRIDGEABLE_STATUSES = ["verified_improved", "verified_not_improved", "disp
 
 /** Bound on how many gaps one producer scan enqueues per invocation. */
 const MAX_ENQUEUE_PER_SCAN = 200;
+/** QuickBooks producer: pages of MAX_ENQUEUE_PER_SCAN scanned per invocation. */
+const QBO_MAX_PRODUCER_PAGES = 10;
 
 export interface ProducerScanResult {
   candidatesFound: number;
@@ -209,19 +211,26 @@ export async function enqueueDueQboReadSyncTasks(env: Record<string, string | un
   if (!resolved.available) return { candidatesFound: 0, enqueued: 0 };
   const scheduler = new DatabaseSchedulerProvider();
   const now = new Date();
-  const candidates = await listSchedulableConnections({ environment: resolved.config.environment, limit: MAX_ENQUEUE_PER_SCAN });
   const bucket = scheduleBucket(now);
+  // Page through ALL eligible connections (bounded: 10 pages x 200). A single fixed "first 200" would starve every connection
+  // beyond it, because enqueued connections stay eligible until their sync actually runs.
+  let candidatesFound = 0;
   let enqueued = 0;
-  for (const c of candidates) {
-    const r = await scheduler.scheduleIdempotent({
-      taskName: TASK_NAME_QBO_READ_SYNC,
-      payload: { connectionId: c.connectionId, trigger: "SCHEDULED" },
-      scheduledFor: now,
-      maxAttempts: 2,
-      workspaceId: c.workspaceId,
-      idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${bucket}`,
-    });
-    if (r.created) enqueued++;
+  for (let page = 0; page < QBO_MAX_PRODUCER_PAGES; page++) {
+    const candidates = await listSchedulableConnections({ environment: resolved.config.environment, limit: MAX_ENQUEUE_PER_SCAN, offset: page * MAX_ENQUEUE_PER_SCAN });
+    candidatesFound += candidates.length;
+    for (const c of candidates) {
+      const r = await scheduler.scheduleIdempotent({
+        taskName: TASK_NAME_QBO_READ_SYNC,
+        payload: { connectionId: c.connectionId, trigger: "SCHEDULED" },
+        scheduledFor: now,
+        maxAttempts: 2,
+        workspaceId: c.workspaceId,
+        idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${bucket}`,
+      });
+      if (r.created) enqueued++;
+    }
+    if (candidates.length < MAX_ENQUEUE_PER_SCAN) break;
   }
-  return { candidatesFound: candidates.length, enqueued };
+  return { candidatesFound, enqueued };
 }

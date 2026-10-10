@@ -23,6 +23,7 @@ import { isQboProviderError } from "@/domain/quickbooks/qbo-errors";
 import type { QboQuerySpec } from "@/domain/quickbooks/qbo-read-catalog";
 import {
   QBO_SYNC_MANUAL_COOLDOWN_MS,
+  evaluateDueGate,
   QBO_SYNC_MAX_PAGES_PER_ENTITY,
   QBO_SYNC_MISSING_CONFIRMATIONS_PER_ENTITY,
   QBO_SYNC_PAGE_SIZE,
@@ -33,7 +34,6 @@ import {
   emptySyncCounts,
   incrementalLowerBound,
   isTerminalSyncFailure,
-  scheduleBucket,
   syncFailureFromError,
   syncIdempotencyKey,
   toQboInstant,
@@ -137,34 +137,18 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
 
   // 3. due-gating and mode
   const state = await readSyncState(scope, deps);
-  if (input.trigger === "MANUAL") {
-    // Each run costs ~11 provider calls against a per-realm quota; a loop of fresh request ids must not burn it.
-    const cooldown = deps.manualCooldownMs ?? QBO_SYNC_MANUAL_COOLDOWN_MS;
-    const last = state?.lastAttemptedAt;
-    if (cooldown > 0 && last && now.getTime() - last.getTime() < cooldown) {
-      return { status: "NOT_DUE", nextAttemptNotBefore: new Date(last.getTime() + cooldown) };
-    }
-  } else {
-    if (state?.nextAttemptNotBefore && state.nextAttemptNotBefore.getTime() > now.getTime()) {
-      return { status: "NOT_DUE", nextAttemptNotBefore: state.nextAttemptNotBefore };
-    }
-    if (input.trigger === "SCHEDULED" && state?.lastSucceededAt && scheduleBucket(state.lastSucceededAt) === scheduleBucket(now)) {
-      // Cadence is one successful scheduled sync per UTC day.
-      return { status: "NOT_DUE", nextAttemptNotBefore: new Date(Date.parse(`${scheduleBucket(now)}T00:00:00Z`) + 86_400_000) };
-    }
-    if (input.trigger === "WEBHOOK" && !state?.webhookHintAt) {
-      // Every hint it was scheduled for has already been served by a later sync: nothing to do (this is what coalesces tasks).
-      return { status: "NOT_DUE", nextAttemptNotBefore: now };
-    }
-  }
+  const cooldownMs = deps.manualCooldownMs ?? QBO_SYNC_MANUAL_COOLDOWN_MS;
+  const notBefore = evaluateDueGate(input.trigger, state, now, cooldownMs);
+  if (notBefore) return { status: "NOT_DUE", nextAttemptNotBefore: notBefore };
   const watermarks = parseWatermarks(state?.watermarks);
   const mode = input.modeOverride ?? chooseSyncMode({ now, watermarks, lastFullSyncAt: state?.lastFullSyncAt ?? null });
 
   // 4. atomic replay / lease / run. The epoch in the key lets a retry after a failed / abandoned / crashed attempt run under a
   // fresh key while two triggers racing from the same state still collide and replay.
   const idempotencyKey = syncIdempotencyKey(input.trigger, now, input.requestId ?? null, state?.leaseEpoch ?? 0, deps.uuid ?? randomUUID);
-  const begun = await beginSyncRun({ ...scope, trigger: input.trigger, mode, idempotencyKey, requestedById: input.actorId }, deps);
+  const begun = await beginSyncRun({ ...scope, trigger: input.trigger, mode, idempotencyKey, requestedById: input.actorId, dueGate: { now, cooldownMs } }, deps);
   if (!begun.ok) {
+    if (begun.reason === "NOT_DUE") return { status: "NOT_DUE", nextAttemptNotBefore: begun.nextAttemptNotBefore };
     if (begun.reason === "BUSY") return { status: "BUSY", runId: begun.runId, leaseExpiresAt: begun.leaseExpiresAt };
     return { status: "ALREADY_COMPLETED", runId: begun.runId, runStatus: begun.runStatus };
   }

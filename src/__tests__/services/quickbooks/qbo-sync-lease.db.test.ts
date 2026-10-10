@@ -178,6 +178,31 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
     expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).webhookHintAt).toBeNull();
   });
 
+  it("the due gate is re-checked INSIDE the lease transaction: a trigger that lost a race gets NOT_DUE and leaves no lease, run or epoch behind", async () => {
+    const c = await seedConnected();
+    const args = { workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" as const };
+    expect((await runScheduledQboSync(args, testDeps(c, { now: () => NOW }))).status).toBe("SUCCEEDED");
+    const before = await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
+    // What a racer that passed the pre-check (it read the state before the first run finished) would now do:
+    const raced = await beginSyncRun(
+      { ...scopeOf(c), trigger: "SCHEDULED", mode: "INCREMENTAL", idempotencyKey: "scheduled:2026-10-10:racer", requestedById: null, dueGate: { now: new Date(NOW.getTime() + 60_000), cooldownMs: 0 } },
+      { now: () => new Date(NOW.getTime() + 60_000) },
+    );
+    expect(raced).toEqual({ ok: false, reason: "NOT_DUE", nextAttemptNotBefore: new Date("2026-10-11T00:00:00Z") });
+    const after = await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
+    expect({ epoch: after.leaseEpoch, token: after.leaseToken, attempted: after.lastAttemptedAt }).toEqual({ epoch: before.leaseEpoch, token: null, attempted: before.lastAttemptedAt });
+    expect(await db.qboSyncRun.count({ where: { connectionId: c.connectionId } })).toBe(1);
+  });
+
+  it("an unserved webhook hint lifts the same-day gate for the SCHEDULED run (a hint no task could serve is not stranded)", async () => {
+    const c = await seedConnected();
+    const args = { workspaceId: c.t.ws, connectionId: c.connectionId, trigger: "SCHEDULED" as const };
+    await runScheduledQboSync(args, testDeps(c, { now: () => NOW }));
+    expect((await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 3_600_000) }))).status).toBe("NOT_DUE");
+    await markWebhookHint(scopeOf(c), { now: () => new Date(NOW.getTime() + 3_700_000) });
+    expect((await runScheduledQboSync(args, testDeps(c, { now: () => new Date(NOW.getTime() + 7_200_000) }))).status).toBe("SUCCEEDED");
+  });
+
   it("MANUAL runs have a cooldown so a loop of fresh request ids cannot burn the realm's quota", async () => {
     const c = await seedConnected();
     const deps = (at: number) => testDeps(c, { now: () => new Date(NOW.getTime() + at), manualCooldownMs: 60_000 });

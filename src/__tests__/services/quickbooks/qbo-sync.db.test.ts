@@ -168,6 +168,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect((row.normalized as { balance: string }).balance).toBe("1");
     });
 
+    it("a standing set of >100 inactive customers cannot starve the confirmation of a deleted one (oldest-confirmed first)", async () => {
+      const c2 = await seedConnected();
+      for (let i = 1; i <= 105; i++) c2.fake.data.Customer.push(customer(`i${String(i).padStart(3, "0")}`, "2026-09-01T00:00:00Z"));
+      c2.fake.data.Customer.push(customer("z999", "2026-09-01T00:00:00Z")); // sorts after every inactive id
+      await run(c2);
+      const deactivated = c2.fake.data.Customer.splice(0, 105);
+      for (const r of deactivated) c2.fake.inactive.set(`Customer:${r.Id}`, { ...r, Active: false });
+      c2.fake.data.Customer.pop();
+      c2.fake.deleted.add("Customer:z999");
+      await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 3_600_000) });
+      await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 7_200_000) });
+      const states = await db.qboSyncedRecord.findMany({ where: { connectionId: c2.connectionId, entityType: "Customer" }, select: { providerEntityId: true, recordState: true } });
+      expect(states.find((r: { providerEntityId: string }) => r.providerEntityId === "z999")?.recordState).toBe("MISSING");
+      expect(states.filter((r: { recordState: string }) => r.recordState === "INACTIVE")).toHaveLength(105);
+    });
+
     it("an inactive customer Intuit's query omits is confirmed by id and stored INACTIVE, not MISSING", async () => {
       const gone = c.fake.data.Customer.splice(0, 1)[0];
       c.fake.inactive.set(`Customer:${gone.Id}`, { ...gone, Active: false });

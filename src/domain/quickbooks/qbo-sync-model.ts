@@ -121,7 +121,8 @@ export const QBO_SYNC_PAGE_SIZE = 1000;
 const TRANSIENT_BASE_DELAY_MS = 15 * 60 * 1000;
 const TRANSIENT_MAX_DELAY_MS = 6 * 60 * 60 * 1000;
 const PERSISTENT_BASE_DELAY_MS = 6 * 60 * 60 * 1000;
-const PERSISTENT_MAX_DELAY_MS = 24 * 60 * 60 * 1000;
+// 23h, not 24h: a back-off that ends a few seconds after the daily cron fires would slip the retry by a whole extra day.
+const PERSISTENT_MAX_DELAY_MS = 23 * 60 * 60 * 1000;
 
 const TRANSIENT_FAILURES: ReadonlySet<QboSyncFailureCode> = new Set<QboSyncFailureCode>([
   "PROVIDER_RATE_LIMITED",
@@ -297,4 +298,36 @@ export function syncIdempotencyKey(trigger: QboSyncTrigger, now: Date, requestId
     case "SCHEDULED": return `scheduled:${scheduleBucket(now)}:${leaseEpoch}`;
     case "WEBHOOK": return `webhook:${Math.floor(now.getTime() / (15 * 60 * 1000))}:${leaseEpoch}`;
   }
+}
+
+// ─── Due gate (pure; evaluated before AND inside the lease transaction) ─────
+
+export interface DueGateState {
+  lastAttemptedAt: Date | null;
+  lastSucceededAt: Date | null;
+  nextAttemptNotBefore: Date | null;
+  webhookHintAt: Date | null;
+}
+
+/**
+ * Is a run of this trigger due? null = yes, otherwise the earliest time it may run.
+ *  - MANUAL: spaced by the cooldown (a loop of fresh request ids must not burn the realm's quota).
+ *  - SCHEDULED / WEBHOOK: inside a failure back-off window they wait; SCHEDULED is one successful run per UTC day UNLESS an unserved
+ *    webhook hint exists (so a hint that a webhook task could not serve is still served by the next scheduler pass);
+ *    WEBHOOK runs only while an unserved hint exists (this is what coalesces many tasks for one burst into one sync).
+ */
+export function evaluateDueGate(trigger: QboSyncTrigger, state: DueGateState | null, now: Date, cooldownMs: number): Date | null {
+  if (!state) return trigger === "WEBHOOK" ? now : null;
+  if (trigger === "MANUAL") {
+    if (cooldownMs > 0 && state.lastAttemptedAt && now.getTime() - state.lastAttemptedAt.getTime() < cooldownMs) {
+      return new Date(state.lastAttemptedAt.getTime() + cooldownMs);
+    }
+    return null;
+  }
+  if (state.nextAttemptNotBefore && state.nextAttemptNotBefore.getTime() > now.getTime()) return state.nextAttemptNotBefore;
+  if (trigger === "SCHEDULED" && !state.webhookHintAt && state.lastSucceededAt && scheduleBucket(state.lastSucceededAt) === scheduleBucket(now)) {
+    return new Date(Date.parse(`${scheduleBucket(now)}T00:00:00Z`) + 86_400_000);
+  }
+  if (trigger === "WEBHOOK" && !state.webhookHintAt) return now;
+  return null;
 }

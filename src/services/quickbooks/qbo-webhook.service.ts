@@ -103,11 +103,11 @@ export async function handleQboWebhook(
 
   for (const c of hintedConnections.values()) {
     await markWebhookHint({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
-    // The task key carries the connection's lease epoch: hints that arrive before a sync starts coalesce into ONE task; once a
-    // sync has taken the lease (epoch + 1) a later hint — which that sync may have missed — gets a NEW task instead of being
-    // swallowed by an already-completed one. The sync itself runs only while an unserved hint exists (webhook_hint_at).
+    // The task key carries the lease epoch AND a 15-minute window: hints before a sync starts coalesce into ONE task; once a sync
+    // has taken the lease (epoch + 1), or the window moved on, a later hint — which a BUSY/NOT_DUE task could not serve — gets a NEW
+    // task. A hint no task manages to serve is still served by the next SCHEDULED run (the same-day gate is lifted while a hint exists). The sync itself runs only while an unserved hint exists (webhook_hint_at).
     const state = await readSyncState({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
-    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}` });
+    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}:${Math.floor(now.getTime() / (15 * 60 * 1000))}` });
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.QBO_WEBHOOK_HINT_RECORDED, workspaceId: c.workspaceId, actorType: "system",
       entityType: "qbo_connection", entityId: c.connectionId, visibility: "internal",

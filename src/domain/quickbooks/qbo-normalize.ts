@@ -35,17 +35,28 @@ export function contentHash(value: unknown): string {
   return createHash("sha256").update(canonicalJson(value), "utf8").digest("hex");
 }
 
-/** Exact decimal string with at most 4 fractional digits; null when the value is not a finite number. */
+/**
+ * Exact decimal string with at most 4 fractional digits (round half away from zero); null when the value is not a finite
+ * number. Integer arithmetic on the decimal digits (BigInt) — no float multiplication — so large-denomination currencies
+ * (VND, IDR) keep every digit the provider sent. Up to 15 integer digits and 8 fractional input digits are accepted.
+ */
 export function toDecimalString(value: unknown): string | null {
-  let n: number;
-  if (typeof value === "number") n = value;
-  else if (typeof value === "string" && /^-?\d{1,12}(\.\d{1,8})?$/.test(value.trim())) n = Number(value.trim());
-  else return null;
-  // 1e12 keeps value*10000 inside the exactly-representable integer range of a double.
-  if (!Number.isFinite(n) || Math.abs(n) > 1e12) return null;
-  const fixed = (Math.round(n * 10000) / 10000).toFixed(4);
-  const trimmed = fixed.replace(/\.?0+$/, "");
-  return trimmed === "-0" || trimmed === "" ? "0" : trimmed;
+  let text: string;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Math.abs(value) >= 1e15) return null;
+    text = value.toFixed(8);
+  } else if (typeof value === "string") {
+    text = value.trim();
+  } else return null;
+  const m = /^(-?)(\d{1,15})(?:\.(\d{1,8}))?$/.exec(text);
+  if (!m) return null;
+  const big = (n: string) => BigInt(n); // BigInt() calls (not literals): the project targets < ES2020 for literals
+  const scaled = big(m[2] + (m[3] ?? "").padEnd(8, "0")); // 8 fractional digits
+  const rounded = (scaled + big("5000")) / big("10000"); // 4 fractional digits
+  const whole = rounded / big("10000");
+  const frac = (rounded % big("10000")).toString().padStart(4, "0").replace(/0+$/, "");
+  const out = frac ? `${whole}.${frac}` : `${whole}`;
+  return m[1] === "-" && out !== "0" ? `-${out}` : out;
 }
 
 function text(v: unknown, max: number): string | null {

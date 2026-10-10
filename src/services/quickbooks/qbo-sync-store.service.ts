@@ -35,6 +35,7 @@ import { NotFoundError } from "@/infra/errors";
 import {
   QBO_SYNC_LEASE_MS,
   computeSyncBackoffMs,
+  evaluateDueGate,
   emptySyncCounts,
   type QboSyncCounts,
   type QboSyncFailureCode,
@@ -61,6 +62,13 @@ export interface SyncLease extends SyncScope {
   token: string;
   epoch: number;
   runId: string;
+}
+
+class NotDueRefusal extends Error {
+  constructor(readonly nextAttemptNotBefore: Date) {
+    super("NOT_DUE");
+    this.name = "NotDueRefusal";
+  }
 }
 
 export class QboLeaseLostError extends Error {
@@ -126,6 +134,7 @@ export function parseWatermarks(raw: unknown): Record<string, Date> {
 export type AcquireResult =
   | { ok: true; lease: SyncLease; recoveredAbandonedRun: boolean; priorState: QboSyncStateRow }
   | { ok: false; reason: "BUSY"; runId: string | null; leaseExpiresAt: Date | null }
+  | { ok: false; reason: "NOT_DUE"; nextAttemptNotBefore: Date }
   | { ok: false; reason: "REPLAY"; runId: string; runStatus: QboSyncRunStatus; errorCode: string | null };
 
 export interface BeginRunInput extends SyncScope {
@@ -133,6 +142,11 @@ export interface BeginRunInput extends SyncScope {
   mode: QboSyncMode;
   idempotencyKey: string;
   requestedById: string | null;
+  /**
+   * Re-evaluated INSIDE the lease transaction against the row we now hold the lock on: a trigger that passed the pre-check can
+   * lose a race (another run finished in between) and must then not start a second, redundant sync.
+   */
+  dueGate?: { now: Date; cooldownMs: number };
 }
 
 /**
@@ -175,8 +189,16 @@ export async function beginSyncRun(input: BeginRunInput, deps?: QboPersistenceDe
         const holder = await tx.qboSyncState.findFirst({ where: scope, select: { leaseRunId: true, leaseExpiresAt: true } });
         return { ok: false as const, reason: "BUSY" as const, runId: holder?.leaseRunId ?? null, leaseExpiresAt: holder?.leaseExpiresAt ?? null };
       }
-      const after = await tx.qboSyncState.findFirst({ where: scope, select: { leaseEpoch: true } });
-      const epoch = (after as { leaseEpoch: number }).leaseEpoch;
+      const after = (await tx.qboSyncState.findFirst({
+        where: scope,
+        select: { leaseEpoch: true, lastAttemptedAt: true, lastSucceededAt: true, nextAttemptNotBefore: true, webhookHintAt: true },
+      })) as { leaseEpoch: number; lastAttemptedAt: Date | null; lastSucceededAt: Date | null; nextAttemptNotBefore: Date | null; webhookHintAt: Date | null };
+      const epoch = after.leaseEpoch;
+      if (input.dueGate) {
+        // The conditional UPDATE above already stamped last_attempted_at = now; judge the gate on the state BEFORE this attempt.
+        const notBefore = evaluateDueGate(input.trigger, { ...after, lastAttemptedAt: prior.lastAttemptedAt }, input.dueGate.now, input.dueGate.cooldownMs);
+        if (notBefore) throw new NotDueRefusal(notBefore);
+      }
 
       let recovered = false;
       if (prior.leaseToken && prior.leaseRunId) {
@@ -209,6 +231,8 @@ export async function beginSyncRun(input: BeginRunInput, deps?: QboPersistenceDe
       return { ok: true as const, lease: { ...scope, token, epoch, runId }, recoveredAbandonedRun: recovered, priorState: prior };
     });
   } catch (e) {
+    // Rolling back the transaction also rolled back the lease acquisition above.
+    if (e instanceof NotDueRefusal) return { ok: false, reason: "NOT_DUE", nextAttemptNotBefore: e.nextAttemptNotBefore };
     if (isUniqueViolation(e)) {
       // A concurrent request with the same idempotency key won; the transaction (and its lease) rolled back.
       const raced = await replay(clientOf(deps));
@@ -355,7 +379,9 @@ export async function listUnseenRecordIds(lease: SyncLease, entityType: string, 
         entityType, recordState: { in: ["ACTIVE", "INACTIVE"] }, lastSeenRunId: { not: lease.runId },
       },
       select: { providerEntityId: true },
-      orderBy: { providerEntityId: "asc" },
+      // Oldest-confirmed first: a record re-read this run moves to the back, so a standing set of inactive customers cannot
+      // starve newly unseen (deleted) records of their confirmation.
+      orderBy: [{ fetchedAt: "asc" }, { providerEntityId: "asc" }],
       take: Math.max(1, limit) + 1,
     })) as Array<{ providerEntityId: string }>;
     return rows.map((r) => r.providerEntityId);
@@ -608,7 +634,7 @@ export interface SchedulableConnection {
  * window. Bounded; ordered by oldest success first so no connection starves.
  */
 export async function listSchedulableConnections(
-  input: { environment: "sandbox" | "production"; limit: number },
+  input: { environment: "sandbox" | "production"; limit: number; offset?: number },
   deps?: QboPersistenceDeps,
 ): Promise<SchedulableConnection[]> {
   const now = clock(deps);
@@ -627,6 +653,7 @@ export async function listSchedulableConnections(
     },
     select: { id: true, workspaceId: true, businessId: true },
     orderBy: [{ syncState: { lastSucceededAt: { sort: "asc", nulls: "first" } } }, { id: "asc" }],
+    skip: Math.max(0, input.offset ?? 0),
     take: Math.max(1, Math.min(input.limit, 500)),
   })) as Array<{ id: string; workspaceId: string; businessId: string }>;
   return rows.map((r) => ({ workspaceId: r.workspaceId, businessId: r.businessId, connectionId: r.id }));

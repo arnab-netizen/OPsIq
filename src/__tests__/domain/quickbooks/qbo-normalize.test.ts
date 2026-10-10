@@ -16,6 +16,13 @@ describe("decimal handling", () => {
     expect(toDecimalString(-0)).toBe("0");
     expect(toDecimalString("-12.3456789")).toBe("-12.3457"); // rounded to 4 places, never truncated silently into another unit
     expect(toDecimalString("1.123456789")).toBeNull(); // more precision than any currency uses is refused
+    // Large-denomination currencies (VND, IDR) keep every digit; there is no float multiplication in the path.
+    expect(toDecimalString("123456789012345.1234")).toBe("123456789012345.1234");
+    expect(toDecimalString("45000000000000")).toBe("45000000000000");
+    expect(toDecimalString(5_000_000_000_000.25)).toBe("5000000000000.25");
+    expect(toDecimalString("-0.00004")).toBe("0"); // rounds to zero without a "-0"
+    expect(toDecimalString("-0.00005")).toBe("-0.0001"); // half away from zero
+    expect(toDecimalString(1e15)).toBeNull();
     for (const bad of [NaN, Infinity, "abc", "1,000.00", null, undefined, {}, 1e16]) expect(toDecimalString(bad as never)).toBeNull();
   });
   it("hash is key-order independent", () => {

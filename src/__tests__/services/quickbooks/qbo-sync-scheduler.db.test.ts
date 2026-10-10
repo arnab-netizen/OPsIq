@@ -26,8 +26,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () =
     const b = await seedConnected();
     const first = await enqueueDueQboReadSyncTasks(SANDBOX);
     expect(first.enqueued).toBeGreaterThanOrEqual(2);
-    const again = await enqueueDueQboReadSyncTasks(SANDBOX);
-    expect(again.enqueued).toBe(0); // registration is idempotent: same keys replay, nothing new is created
+    await enqueueDueQboReadSyncTasks(SANDBOX); // idempotent: the same keys replay, nothing new is created for these connections
+    // (other test files seed connections concurrently in the shared database, so assert on OUR tenants, not on global counts)
     for (const x of [a, b]) {
       const tasks = await tasksFor(x.t.ws);
       expect(tasks).toHaveLength(1);
