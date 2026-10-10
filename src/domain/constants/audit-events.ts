@@ -665,6 +665,13 @@ export const AUDIT_EVENTS = {
   QBO_REALM_BINDING_CONFLICT: "qbo.realm_binding_conflict",
   QBO_AUTHORIZATION_DENIED: "qbo.authorization_denied",
   QBO_AUTHORIZATION_FAILED: "qbo.authorization_failed",
+  // QuickBooks Online — READ-ONLY synchronization (counts, codes and identifiers only; never tokens or provider payloads)
+  QBO_SYNC_STARTED: "qbo.sync_started",
+  QBO_SYNC_COMPLETED: "qbo.sync_completed",
+  QBO_SYNC_FAILED: "qbo.sync_failed",
+  QBO_SYNC_LEASE_RECOVERED: "qbo.sync_lease_recovered",
+  QBO_TOKENS_REFRESHED: "qbo.tokens_refreshed",
+  QBO_WEBHOOK_HINT_RECORDED: "qbo.webhook_hint_recorded",
 
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",

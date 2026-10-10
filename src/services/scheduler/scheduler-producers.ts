@@ -31,7 +31,10 @@
  */
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
+import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_QBO_READ_SYNC, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
+import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
+import { scheduleBucket } from "@/domain/quickbooks/qbo-sync-model";
+import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
 import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mapping";
 
 const EMAIL_MAX_ATTEMPTS = 3;
@@ -192,4 +195,33 @@ export async function enqueueDueRiskReviewScanTasks(): Promise<ProducerScanResul
   }
 
   return { candidatesFound: workspaceIds.length, enqueued };
+}
+
+/**
+ * Enqueue one qbo-read-sync task per ACTIVE QuickBooks connection that is eligible now: configured environment only, no
+ * live sync lease, and outside any back-off window (reauth-required / disconnected connections are not ACTIVE and never
+ * listed, so a dead grant is not hammered). Cadence: ONE task per connection per UTC day — the key embeds the day bucket,
+ * matching the daily scheduler cron — and registration is idempotent (scheduleIdempotent replays the key). The task
+ * carries only the connection id; the handler recovers workspace from the claimed row and business from the connection.
+ */
+export async function enqueueDueQboReadSyncTasks(env: Record<string, string | undefined> = process.env): Promise<ProducerScanResult> {
+  const resolved = resolveQboConfig(env);
+  if (!resolved.available) return { candidatesFound: 0, enqueued: 0 };
+  const scheduler = new DatabaseSchedulerProvider();
+  const now = new Date();
+  const candidates = await listSchedulableConnections({ environment: resolved.config.environment, limit: MAX_ENQUEUE_PER_SCAN });
+  const bucket = scheduleBucket(now);
+  let enqueued = 0;
+  for (const c of candidates) {
+    const r = await scheduler.scheduleIdempotent({
+      taskName: TASK_NAME_QBO_READ_SYNC,
+      payload: { connectionId: c.connectionId, trigger: "SCHEDULED" },
+      scheduledFor: now,
+      maxAttempts: 2,
+      workspaceId: c.workspaceId,
+      idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${bucket}`,
+    });
+    if (r.created) enqueued++;
+  }
+  return { candidatesFound: candidates.length, enqueued };
 }

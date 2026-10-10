@@ -17,11 +17,13 @@ import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
+import { runScheduledQboSync } from "@/services/quickbooks/qbo-sync.service";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
 export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
 export const TASK_NAME_RISK_REVIEW_SCAN = "risk-review-scan";
+export const TASK_NAME_QBO_READ_SYNC = "qbo-read-sync";
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -160,11 +162,41 @@ const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<Ha
 };
 
 /** The one production handler registry — pass to processDue() unmodified. */
+/**
+ * qbo-read-sync — READ-ONLY QuickBooks synchronization for one connection.
+ *
+ * The workspace comes from the claimed task row (context.workspaceId); the payload carries only the connection id and
+ * the business is recovered from the connection row. The sync owns its own lease, idempotency and back-off, so every
+ * outcome — including failures — completes the task: returning FAILED here would add a SECOND retry loop on top of the
+ * sync's bounded back-off (and a terminal failure such as REAUTH_REQUIRED must never be retried at all). A failed sync is
+ * reported as PARTIAL_FAILURE so it stays owner-visible on /owner/automation without being re-run.
+ */
+const qboReadSyncHandler: TaskHandler = async (payload, context): Promise<HandlerResult> => {
+  const connectionId = payload?.connectionId;
+  const trigger = payload?.trigger === "WEBHOOK" ? "WEBHOOK" : "SCHEDULED";
+  if (typeof connectionId !== "string" || !connectionId) {
+    throw new Error("qbo-read-sync task payload missing connectionId");
+  }
+  if (!context.workspaceId) {
+    throw new Error("qbo-read-sync task missing workspaceId — cannot enforce workspace isolation");
+  }
+  const outcome = await runScheduledQboSync({ workspaceId: context.workspaceId, connectionId, trigger }, { env: process.env, signal: context.signal });
+  switch (outcome.status) {
+    case "SUCCEEDED":
+      return { status: "SUCCESS", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged, reportsStored: outcome.counts.reportsStored } };
+    case "FAILED":
+      return { status: "PARTIAL_FAILURE", summary: `QuickBooks sync did not complete (${outcome.code}).`, counts: { failed: 1 } };
+    default:
+      return { status: "NO_WORK", summary: `QuickBooks sync skipped (${outcome.status}).` };
+  }
+};
+
 export function getProductionTaskHandlers(): Map<string, TaskHandler> {
   return new Map<string, TaskHandler>([
     [TASK_NAME_ALERT_EMAIL_RETRY, alertEmailRetryHandler],
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
     [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
     [TASK_NAME_RISK_REVIEW_SCAN, riskReviewScanHandler],
+    [TASK_NAME_QBO_READ_SYNC, qboReadSyncHandler],
   ]);
 }

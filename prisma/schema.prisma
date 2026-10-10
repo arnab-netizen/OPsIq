@@ -7140,7 +7140,6 @@ model OwnerOutcomeAssessment {
   @@map("owner_outcome_assessments")
 }
 
-
 // ─── QuickBooks Online — business-scoped connection persistence (read-only integration) ────────────────────
 // QBO-specific tables (not the generic External* tables): ExternalConnection is unique per (workspace, provider) and
 // carries no business / realm / environment, and ExternalOAuthToken has no rotation fence or refresh expiry, so a
@@ -7171,27 +7170,32 @@ model QboOAuthState {
 
 /// A business's binding to one Intuit realm in one environment. Rows are never deleted; DISCONNECTED is terminal-until-reconnect.
 model QboConnection {
-  id                String    @id @db.Uuid
-  workspaceId       String    @map("workspace_id") @db.Uuid
-  businessId        String    @map("business_id") @db.Uuid
-  environment       String
-  realmId           String    @map("realm_id")
-  status            String
-  connectedById     String    @map("connected_by_id") @db.Uuid
-  connectedAt       DateTime  @map("connected_at")
-  reauthRequiredAt  DateTime? @map("reauth_required_at")
-  lastErrorCode     String?   @map("last_error_code")
-  disconnectedAt    DateTime? @map("disconnected_at")
-  disconnectedById  String?   @map("disconnected_by_id") @db.Uuid
-  version           Int       @default(1)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id               String    @id @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  environment      String
+  realmId          String    @map("realm_id")
+  status           String
+  connectedById    String    @map("connected_by_id") @db.Uuid
+  connectedAt      DateTime  @map("connected_at")
+  reauthRequiredAt DateTime? @map("reauth_required_at")
+  lastErrorCode    String?   @map("last_error_code")
+  disconnectedAt   DateTime? @map("disconnected_at")
+  disconnectedById String?   @map("disconnected_by_id") @db.Uuid
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  business OwnerBusiness        @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
-  token    QboConnectionToken?
+  business           OwnerBusiness          @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  token              QboConnectionToken?
+  syncState          QboSyncState?
+  syncRuns           QboSyncRun[]
+  syncedRecords      QboSyncedRecord[]
+  reportObservations QboReportObservation[]
 
   @@unique([workspaceId, businessId, environment, realmId], map: "qbo_connections_binding_key")
   @@unique([id, workspaceId], map: "qbo_connections_tenant_key")
+  @@unique([id, workspaceId, businessId], map: "qbo_connections_tenant_business_key")
   @@index([workspaceId, businessId])
   @@index([environment, realmId])
   @@map("qbo_connections")
@@ -7219,4 +7223,149 @@ model QboConnectionToken {
   @@unique([connectionId, workspaceId], map: "qbo_connection_tokens_tenant_key")
   @@index([workspaceId])
   @@map("qbo_connection_tokens")
+}
+
+// ─── QuickBooks Online — READ-ONLY synchronization persistence (additive) ───────────────────────────────────
+// Provider mirror tables. They are written only by the read-only sync service, never hold tokens, and are never
+// joined into owner snapshots by this slice (see qbo-provenance-policy.ts). Every row is bound to its connection by a
+// composite FK that carries workspace AND business, so a row cannot name a connection of another tenant.
+
+/// One row per connection: the single sync lease (fenced by leaseEpoch + leaseToken), watermarks and outcome history.
+model QboSyncState {
+  connectionId         String    @id @map("connection_id") @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  businessId           String    @map("business_id") @db.Uuid
+  leaseToken           String?   @map("lease_token") @db.Uuid
+  leaseRunId           String?   @map("lease_run_id") @db.Uuid
+  leaseExpiresAt       DateTime? @map("lease_expires_at")
+  leaseEpoch           Int       @default(0) @map("lease_epoch")
+  lastAttemptedAt      DateTime? @map("last_attempted_at")
+  lastSucceededAt      DateTime? @map("last_succeeded_at")
+  lastFullSyncAt       DateTime? @map("last_full_sync_at")
+  lastOutcome          String?   @map("last_outcome")
+  lastErrorCode        String?   @map("last_error_code")
+  consecutiveFailures  Int       @default(0) @map("consecutive_failures")
+  nextAttemptNotBefore DateTime? @map("next_attempt_not_before")
+  /// { "<Entity>": "<ISO instant>" } — the cutoff up to which that entity was fully read by a successful run.
+  watermarks           Json      @default("{}")
+  lastChangeAt         DateTime? @map("last_change_at")
+  /// Set by a verified webhook hint; cleared by the next successful run that started after it.
+  webhookHintAt        DateTime? @map("webhook_hint_at")
+  version              Int       @default(1)
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
+
+  @@unique([connectionId, workspaceId, businessId], map: "qbo_sync_states_tenant_key")
+  @@index([workspaceId, businessId])
+  @@index([leaseExpiresAt])
+  @@map("qbo_sync_states")
+}
+
+/// One attempt to read from QuickBooks. (connectionId, idempotencyKey) is unique, so a repeated request/scheduler bucket replays.
+model QboSyncRun {
+  id             String    @id @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  businessId     String    @map("business_id") @db.Uuid
+  connectionId   String    @map("connection_id") @db.Uuid
+  trigger        String
+  mode           String
+  status         String
+  requestedById  String?   @map("requested_by_id") @db.Uuid
+  idempotencyKey String    @map("idempotency_key")
+  leaseEpoch     Int       @map("lease_epoch")
+  startedAt      DateTime  @map("started_at")
+  finishedAt     DateTime? @map("finished_at")
+  errorCode      String?   @map("error_code")
+  counts         Json      @default("{}")
+  changed        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
+
+  @@unique([connectionId, idempotencyKey], map: "qbo_sync_runs_idempotency_key")
+  @@index([workspaceId, businessId, startedAt])
+  @@index([connectionId, status])
+  @@map("qbo_sync_runs")
+}
+
+/// Normalized, PII-minimal copy of one provider object, keyed by (connection, entity type, provider id).
+model QboSyncedRecord {
+  id                String    @id @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String    @map("business_id") @db.Uuid
+  connectionId      String    @map("connection_id") @db.Uuid
+  entityType        String    @map("entity_type")
+  providerEntityId  String    @map("provider_entity_id")
+  providerSyncToken String?   @map("provider_sync_token")
+  providerUpdatedAt DateTime? @map("provider_updated_at")
+  recordState       String    @map("record_state")
+  normalized        Json
+  contentHash       String    @map("content_hash")
+  revision          Int       @default(1)
+  firstSeenRunId    String    @map("first_seen_run_id") @db.Uuid
+  lastSeenRunId     String    @map("last_seen_run_id") @db.Uuid
+  fetchedAt         DateTime  @map("fetched_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
+
+  @@unique([connectionId, entityType, providerEntityId], map: "qbo_synced_records_provider_key")
+  @@index([workspaceId, businessId, entityType])
+  @@map("qbo_synced_records")
+}
+
+/// A parsed report for one (report, period, basis). Metrics are decimal strings; absent metrics are absent, not zero.
+model QboReportObservation {
+  id                  String    @id @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String    @map("business_id") @db.Uuid
+  connectionId        String    @map("connection_id") @db.Uuid
+  reportName          String    @map("report_name")
+  periodStart         DateTime  @map("period_start") @db.Date
+  periodEnd           DateTime  @map("period_end") @db.Date
+  basis               String
+  currency            String?
+  metrics             Json
+  inconsistencies     Json      @default("[]")
+  contentHash         String    @map("content_hash")
+  revision            Int       @default(1)
+  providerGeneratedAt DateTime? @map("provider_generated_at")
+  firstSeenRunId      String    @map("first_seen_run_id") @db.Uuid
+  lastSeenRunId       String    @map("last_seen_run_id") @db.Uuid
+  fetchedAt           DateTime  @map("fetched_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict, map: "qbo_report_obs_connection_tenant_fkey")
+
+  @@unique([connectionId, reportName, periodStart, periodEnd, basis], map: "qbo_report_observations_period_key")
+  @@index([workspaceId, businessId, reportName], map: "qbo_report_obs_tenant_report_idx")
+  @@map("qbo_report_observations")
+}
+
+/// Deduplication ledger for verified webhook hints. Holds no payload: only identity, resolution and disposition.
+/// workspace/business/connection are NULL when the realm is unknown (never guessed), so this table is intentionally
+/// not in WORKSPACE_OWNED_MODELS (like AuditEvent).
+model QboWebhookEvent {
+  id                String    @id @db.Uuid
+  eventKey          String    @unique @map("event_key")
+  format            String
+  realmId           String    @map("realm_id")
+  entityName        String    @map("entity_name")
+  entityId          String    @map("entity_id")
+  operation         String
+  providerEventTime DateTime? @map("provider_event_time")
+  receivedAt        DateTime  @map("received_at")
+  disposition       String
+  workspaceId       String?   @map("workspace_id") @db.Uuid
+  businessId        String?   @map("business_id") @db.Uuid
+  connectionId      String?   @map("connection_id") @db.Uuid
+  processedAt       DateTime? @map("processed_at")
+
+  @@index([realmId, receivedAt])
+  @@index([connectionId])
+  @@map("qbo_webhook_events")
 }
