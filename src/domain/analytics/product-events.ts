@@ -55,6 +55,7 @@ const PROP_RULES: Record<string, { kind: "enum" } | { kind: "int"; max: number }
   confidenceTier: { kind: "enum" },
   interactionKind: { kind: "enum" },
   rating: { kind: "enum" },
+  verificationClass: { kind: "enum" },
   reason: { kind: "enum" },
   admissionMode: { kind: "enum" },
   questionsAnswered: { kind: "int", max: 50 },

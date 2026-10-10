@@ -100,7 +100,7 @@ allow-listed keys holding an enum token or a bounded whole number — **money, n
 | `first_result_action_accepted`, `first_result_corrected`, `first_result_improvement_requested` | the three result actions |
 | `first_trusted_decision_interaction` | activation derivation (once) |
 | `cockpit_reached` (once), `returning_owner` (≤ once/UTC day, after activation day) | cockpit visit |
-| `outcome_verification_started`, `outcome_verified` | **see Known limitations** |
+| `outcome_verification_started`, `outcome_verified` | process-execution `VERIFY_OUTCOME` (before the attempt / after commit) |
 
 Query example (funnel): `SELECT event_name, count(*) FROM audit_events WHERE event_name LIKE 'product.%' GROUP BY 1;`
 
@@ -123,13 +123,11 @@ Query example (funnel): `SELECT event_name, count(*) FROM audit_events WHERE eve
 
 ## 7. Known limitations (stated, not hidden)
 
-1. `outcome_verification_started` / `outcome_verified` are defined in the vocabulary but **not yet emitted** from the
-   existing verification service (changing that governed machinery was out of scope for this slice).
-2. Goals: the audit found goals do not influence canonical priority at all (display-only), so the optional prompt links to the
+1. Goals: the audit found goals do not influence canonical priority at all (display-only), so the optional prompt links to the
    existing goal page rather than creating a goal inline; REVENUE/PROFIT are the only supported families.
-3. The first Money read is deliberately finance-only. The Cockpit's canonical decision may rank a different item (e.g. a
+2. The first Money read is deliberately finance-only. The Cockpit's canonical decision may rank a different item (e.g. a
    compliance blocker) first — that is correct and unchanged.
-4. Legal pages (`/terms`, `/privacy`, `/beta`) switch only their descriptive "invite-only" phrases under OPEN_BETA; policy
+3. Legal pages (`/terms`, `/privacy`, `/beta`) switch only their descriptive "invite-only" phrases under OPEN_BETA; policy
    version strings are **unchanged**. If counsel treats that as a material change, bump the versions and re-consent.
-5. The remote test database in this environment was never touched; migration and DB tests ran against a throwaway local
+4. The remote test database in this environment was never touched; migration and DB tests ran against a throwaway local
    Postgres. The migration has **not** been applied to any shared database.
