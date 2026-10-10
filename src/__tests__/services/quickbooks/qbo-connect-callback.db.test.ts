@@ -40,6 +40,9 @@ const getCtx = (t: { ws: string; actor: string }, qs: Record<string, string>): C
 
 let fetchCalls: Array<{ url: string; body: string }> = [];
 let tokenResponder: () => Response;
+/** Answers the realm-verification GET companyinfo made with the freshly issued token. Default: the company reports the realm asked for. */
+let companyInfoResponder: (realm: string, id: string) => Response;
+const companyOk = (realm: string) => new Response(JSON.stringify({ CompanyInfo: { Id: realm, CompanyName: "Co", SyncToken: "0", MetaData: { LastUpdatedTime: "2026-01-01T00:00:00Z" } } }), { status: 200, headers: { "content-type": "application/json" } });
 let seq = 0;
 const nextRealm = () => `9341${String(Date.now()).slice(-6)}${++seq}`;
 const mkTokens = () => ({ access: `ACCESS-${randomUUID()}`, refresh: `REFRESH-${randomUUID()}` });
@@ -71,9 +74,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
     process.env.QUICKBOOKS_CLIENT_SECRET = SECRET;
     process.env.QUICKBOOKS_REDIRECT_URI = CALLBACK_URL;
     process.env.QUICKBOOKS_ENVIRONMENT = "sandbox";
-    fetchCalls = []; tokens = mkTokens(); tokenResponder = okResponse; logged = [];
+    fetchCalls = []; tokens = mkTokens(); tokenResponder = okResponse; companyInfoResponder = (realm) => companyOk(realm); logged = [];
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
       fetchCalls.push({ url: String(url), body: String(init?.body ?? "") });
+      const company = /\/v3\/company\/(\d+)\/companyinfo\/(\d+)/.exec(String(url));
+      if (company) return companyInfoResponder(company[1], company[2]);
       return tokenResponder();
     }));
     for (const m of ["log", "info", "warn", "error", "debug"] as const) {
@@ -94,6 +99,32 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
         await expect(asRoute(connectRoute.POST)(postCtx(t, { businessId: t.biz, environment: "sandbox", ...extra }))).rejects.toThrow();
       }
       expect(await db.qboOAuthState.count({ where: { workspaceId: t.ws } })).toBe(0);
+    });
+  });
+
+  describe("realm verification (the realm in the URL is client-relayed)", () => {
+    it("a realm the NEW token cannot read, or that reports a different company id, is never bound (INVALID_REALM, nothing created)", async () => {
+      for (const respond of [
+        () => new Response(JSON.stringify({ Fault: { Error: [{ code: "403" }] } }), { status: 403, headers: { "content-type": "application/json" } }),
+        () => companyOk("9999999999999999"),
+      ]) {
+        const t = await seedTenant();
+        const { state } = await startFlow(t);
+        companyInfoResponder = (realm) => respond(realm);
+        const r = await callback(t, { state, code: "AUTHCODE-" + randomUUID(), realmId: nextRealm() });
+        expect(JSON.stringify(r.body)).toContain("INVALID_REALM");
+        expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(0);
+      }
+    });
+    it("verification is one read-only GET on the claimed realm with the freshly issued token", async () => {
+      const t = await seedTenant();
+      const { state } = await startFlow(t);
+      const realm = nextRealm();
+      const r = await callback(t, { state, code: "AUTHCODE-" + randomUUID(), realmId: realm });
+      expect(r.status).toBeLessThan(400);
+      const probes = fetchCalls.filter((c) => c.url.includes(`/v3/company/${realm}/companyinfo/${realm}`));
+      expect(probes).toHaveLength(1);
+      expect(fetchCalls.filter((c) => !c.url.includes("oauth.platform.intuit.com") && c.body !== "")).toEqual([]);
     });
   });
 

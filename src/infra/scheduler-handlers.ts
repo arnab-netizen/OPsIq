@@ -11,20 +11,21 @@
  * (never from payload) and must use it — not any workspaceId that might
  * appear inside payload — for workspace isolation.
  */
-import type { TaskHandler, HandlerResult } from "@/infra/scheduler";
 import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
 import { runScheduledQboSync } from "@/services/quickbooks/qbo-sync.service";
-import { DatabaseSchedulerProvider } from "@/infra/scheduler";
+import { DatabaseSchedulerProvider, type TaskHandler, type HandlerResult } from "@/infra/scheduler";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
 export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
 export const TASK_NAME_RISK_REVIEW_SCAN = "risk-review-scan";
 export const TASK_NAME_QBO_READ_SYNC = "qbo-read-sync";
+/** A scheduled QuickBooks execution stops at its checkpoint after this long (the follow-up continues it), well inside the cron function ceiling. */
+export const QBO_SCHEDULED_EXECUTION_DEADLINE_MS = 120_000;
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -167,14 +168,14 @@ const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<Ha
  * idempotent, so the handler, the manual route and the producer safety net can all request it without ever creating a second
  * task for the same checkpoint. The task carries only the connection id (workspace comes from the task row).
  */
-export async function enqueueQboSyncContinuation(input: { workspaceId: string; connectionId: string; continuationKey: string }): Promise<boolean> {
+export async function enqueueQboSyncContinuation(input: { workspaceId: string; connectionId: string; continuationKey: string; dayBucket?: string }): Promise<boolean> {
   const r = await new DatabaseSchedulerProvider().scheduleIdempotent({
     taskName: TASK_NAME_QBO_READ_SYNC,
     payload: { connectionId: input.connectionId, trigger: "SCHEDULED" },
     scheduledFor: new Date(),
     maxAttempts: 2,
     workspaceId: input.workspaceId,
-    idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:cont:${input.connectionId}:${input.continuationKey}`,
+    idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:cont:${input.connectionId}:${input.continuationKey}${input.dayBucket ? `:${input.dayBucket}` : ""}`,
   });
   return r.created;
 }
@@ -198,7 +199,7 @@ const qboReadSyncHandler: TaskHandler = async (payload, context): Promise<Handle
   if (!context.workspaceId) {
     throw new Error("qbo-read-sync task missing workspaceId — cannot enforce workspace isolation");
   }
-  const outcome = await runScheduledQboSync({ workspaceId: context.workspaceId, connectionId, trigger }, { env: process.env, signal: context.signal });
+  const outcome = await runScheduledQboSync({ workspaceId: context.workspaceId, connectionId, trigger }, { env: process.env, signal: context.signal, deadlineMs: QBO_SCHEDULED_EXECUTION_DEADLINE_MS });
   switch (outcome.status) {
     case "SUCCEEDED":
       return { status: "SUCCESS", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged, reportsStored: outcome.counts.reportsStored } };

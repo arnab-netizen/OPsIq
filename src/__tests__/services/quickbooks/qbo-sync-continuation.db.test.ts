@@ -1,8 +1,8 @@
 /**
- * QuickBooks READ-ONLY sync — completeness and bounded-work proofs against real PostgreSQL with a hostile fake Intuit.
+ * QuickBooks READ-ONLY sync — completeness and bounded-work checks against real PostgreSQL with a hostile fake Intuit.
  *
  *  - equal-timestamp buckets larger than a page are read COMPLETELY even when the provider re-shuffles equal-timestamp rows
- *    between requests (closure is proven by the provider's count(*), never assumed from offset paging);
+ *    between requests (closure is by the two-round identity-inclusion check, never assumed from offset paging or a count comparison);
  *  - a dataset larger than any per-execution budget completes through persisted continuation (no page cap, no failure);
  *  - the durable watermark never moves before proven exhaustion, a crash cannot fabricate a completion, and late-indexed records
  *    inside the overlap are still picked up;
@@ -15,7 +15,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { runQboReadSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-sync.service";
 import { seedConnected, testDeps, scopeOf, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
-import { customer, invoice } from "@/__tests__/test-helpers/qbo-fake-intuit";
+import { customer, invoice, profitAndLossBody } from "@/__tests__/test-helpers/qbo-fake-intuit";
 import { QBO_SYNC_QUERY_ENTITIES, QBO_SYNC_TIE_MAX_STALLED_PASSES, parseContinuation } from "@/domain/quickbooks/qbo-sync-model";
 import { continuationTaskKey, markWebhookHint } from "@/services/quickbooks/qbo-sync-store.service";
 import { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation, getProductionTaskHandlers } from "@/infra/scheduler-handlers";
@@ -38,7 +38,7 @@ afterAll(async () => {
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (real Postgres, hostile fake)", () => {
   describe("equal LastUpdatedTime buckets larger than a page", () => {
-    it("EQUAL_TIMESTAMP_UNSTABLE_ORDER: the provider re-shuffles tied rows on EVERY request; every record is still stored and the bucket is closed by count", async () => {
+    it("EQUAL_TIMESTAMP_UNSTABLE_ORDER: the provider re-shuffles tied rows on EVERY request; every record is still stored and the bucket is closed by the identity-inclusion check", async () => {
       for (const seed of [1, 7, 42]) {
         const c = await seedConnected();
         c.fake.shuffleTies = { seed };
@@ -59,7 +59,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       }
     });
 
-    it("a stable provider needs no extra pass: one pass, one closing count, and the bucket's neighbours are untouched", async () => {
+    it("a stable provider needs no extra pass: one pass, one identity-inclusion check, and the bucket's neighbours are untouched", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 25; i++) c.fake.data.Customer.push(customer(`c${String(i).padStart(2, "0")}`, "2026-09-15T10:00:00Z"));
       c.fake.data.Customer.push(customer("later", "2026-09-20T10:00:00Z"));
@@ -478,6 +478,94 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       for (let i = 0; i < 10 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, pagesPerExecution: 2, now: () => new Date(NOW.getTime() + 240_000 + i * 1000) });
       expect(out.status).toBe("SUCCEEDED");
       expect((await stateOf(c)).webhookHintAt).not.toBeNull();
+    });
+  });
+
+  describe("audit-driven hardening", () => {
+    it("the re-evaluation marker is durable in the SAME transaction as the page that changed data (visible before any catch/finish runs)", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 25; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      const realFetch = c.fake.fetchImpl;
+      let snapshot: { changed?: boolean } | null = null;
+      let pages = 0;
+      const probe = async (input: string, init?: RequestInit) => {
+        const q = new URL(input).searchParams.get("query") ?? "";
+        if (q.startsWith("SELECT * FROM Customer") && ++pages === 2) {
+          snapshot = (await stateOf(c)).continuation as { changed?: boolean }; // read mid-run: no finish/catch has happened yet
+          return new Response("{}", { status: 500 });
+        }
+        return realFetch(input, init);
+      };
+      await run(c, { pageSize: 10, fetchImpl: probe, clientOptions: { maxRetries: 0, timeoutMs: 2000 } });
+      expect(snapshot).not.toBeNull();
+      expect((snapshot as unknown as { changed: boolean }).changed).toBe(true);
+    });
+
+    it("a report change stored before a LATER report fails still reaches the completion marker of the retry (records all unchanged by then)", async () => {
+      const c = await seedConnected();
+      expect((await run(c)).status).toBe("SUCCEEDED");
+      c.fake.reports.ProfitAndLoss = (p) => {
+        const body = profitAndLossBody(p, "USD", { income: "77777.00" }) as { Header: Record<string, unknown> };
+        return body;
+      };
+      const realReports = c.fake.reports;
+      c.fake.reports = { ...realReports, AgedPayables: () => ({ Header: {}, Rows: {} }) }; // a LATER report is malformed
+      const failed = await run(c, { now: () => new Date(NOW.getTime() + 3_600_000) });
+      expect(failed).toMatchObject({ status: "FAILED", code: "PROVIDER_MALFORMED" });
+      c.fake.reports = realReports;
+      const ok = await run(c, { now: () => new Date(NOW.getTime() + 7_200_000) });
+      expect(ok.status === "SUCCEEDED" && ok.changed).toBe(true);
+      const ev = await db.auditEvent.findMany({ where: { workspaceId: c.t.ws, eventName: "qbo.sync_completed" }, orderBy: { occurredAt: "desc" } });
+      expect((ev[0].payload as Record<string, unknown>).reevaluationCandidate).toBe(true);
+    });
+
+    it("a record the normalizer REJECTS inside an oversized bucket does not wedge it: accounted for by id, the bucket closes, the record is counted skipped", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 35; i++) c.fake.data.Invoice.push(invoice(`t${String(i).padStart(3, "0")}`, "2026-09-15T10:00:00Z"));
+      c.fake.data.Invoice.push({ Id: "bad1", MetaData: { LastUpdatedTime: new Date("2026-09-15T10:00:00Z").toISOString() } } as never); // no TotalAmt -> rejected
+      const out = await run(c, { pageSize: 10, pagesPerExecution: 1000 });
+      expect(out.status).toBe("SUCCEEDED");
+      expect(out.status === "SUCCEEDED" && out.counts.tieBucketsClosed).toBe(1);
+      expect(await stored(c, "Invoice")).toBe(35);
+    });
+
+    it("quiescent multi-batch bucket closes exactly once (the checks are not vacuous)", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 120; i++) c.fake.data.Invoice.push(invoice(`t${String(i).padStart(3, "0")}`, "2026-09-15T10:00:00Z"));
+      const out = await run(c, { pageSize: 25, pagesPerExecution: 1000 });
+      expect(out.status === "SUCCEEDED" && out.counts.tieBucketsClosed).toBe(1);
+      expect(queriesFor(c, "Invoice", "count").filter((r) => (r.url.searchParams.get("query") ?? "").includes(" Id IN ")).length).toBe(6);
+    });
+
+    it("a TRANSIENT token-refresh failure after a 401 is a retryable failure with back-off - the connection is NOT marked REAUTH_REQUIRED", async () => {
+      const c = await seedConnected();
+      c.fake.data.Customer.push(customer("1", "2026-09-01T00:00:00Z"));
+      c.fake.validAccessTokens = new Set(["never-valid"]); // every API call answers 401
+      c.fake.tokenResponses.push({ status: 500, body: {} }, { status: 500, body: {} }, { status: 500, body: {} }, { status: 500, body: {} });
+      const out = await run(c);
+      expect(out.status).toBe("FAILED");
+      expect(out.status === "FAILED" && out.code).not.toBe("REAUTH_REQUIRED");
+      expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("ACTIVE");
+    });
+
+    it("a wall-clock deadline ends the execution at its checkpoint (CONTINUING) after at least one unit of progress", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 40; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      const out = await run(c, { pageSize: 10, deadlineMs: 0 });
+      expect(out.status).toBe("CONTINUING");
+      expect(out.status === "CONTINUING" && out.counts.pages).toBe(1);
+      const cp = parseContinuation((await stateOf(c)).continuation);
+      expect(cp?.cursor).not.toBeNull();
+    });
+
+    it("the producer's safety-net key is day-scoped: a spent continuation task cannot strand the checkpoint, yet one day gets at most one task", async () => {
+      const c = await seedConnected();
+      const base = { workspaceId: c.t.ws, connectionId: c.connectionId, continuationKey: "sync-z:3:9" };
+      expect(await enqueueQboSyncContinuation(base)).toBe(true); // the handler's own (spent) task
+      expect(await enqueueQboSyncContinuation(base)).toBe(false);
+      expect(await enqueueQboSyncContinuation({ ...base, dayBucket: "2026-10-11" })).toBe(true);
+      expect(await enqueueQboSyncContinuation({ ...base, dayBucket: "2026-10-11" })).toBe(false);
+      expect(await enqueueQboSyncContinuation({ ...base, dayBucket: "2026-10-12" })).toBe(true);
     });
   });
 });

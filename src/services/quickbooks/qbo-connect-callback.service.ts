@@ -35,6 +35,8 @@ import {
   type QboPersistenceDeps,
 } from "./qbo-connection.service";
 import { exchangeQboAuthorizationCode } from "./qbo-oauth.service";
+import { createQboReadClient } from "./qbo-client";
+import { normalizeCompanyInfo } from "@/domain/quickbooks/qbo-normalize";
 import type { QboFetch } from "./qbo-http";
 
 export interface QboFlowDeps extends QboPersistenceDeps {
@@ -71,6 +73,8 @@ export async function startQboConnect(
 }
 
 // ─── Callback ────────────────────────────────────────────────────────────────
+
+class QboRealmNotProven extends Error {}
 
 export type CallbackResult =
   | { ok: true; businessId: string; environment: QboEnvironment; reconnected: boolean; next: typeof QBO_CALLBACK_SUCCESS_NEXT_PATH }
@@ -134,6 +138,21 @@ export async function completeQboCallback(
     const failure = classifyExchangeFailure(e);
     await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "TOKEN_EXCHANGE", reason: failure });
     return { ok: false, code: failure };
+  }
+
+  // The realm in the callback URL is client-relayed: bind it only if the NEW token can actually read that company and the company
+  // reports that same id. One read-only GET (companyinfo) with the just-issued token; nothing is persisted from it.
+  try {
+    const probe = createQboReadClient({
+      config, realmId: verifiedRealm, getAccessToken: async () => grant.accessToken,
+      fetchImpl: deps.fetchImpl, maxRetries: 1, timeoutMs: 15_000,
+    });
+    const company = normalizeCompanyInfo(await probe.companyInfo(), verifiedRealm);
+    if (!company.ok || company.record.normalized.reportedRealmId !== verifiedRealm) throw new QboRealmNotProven();
+  } catch (e) {
+    const transient = isQboProviderError(e) && (e.kind === "TIMEOUT" || e.kind === "TRANSIENT_PROVIDER_FAILURE" || e.kind === "RATE_LIMITED");
+    await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "REALM_VERIFICATION", reason: transient ? "PROVIDER_TEMPORARY" : "REALM_NOT_PROVEN" });
+    return { ok: false, code: transient ? "PROVIDER_TEMPORARY" : "INVALID_REALM" };
   }
 
   try {

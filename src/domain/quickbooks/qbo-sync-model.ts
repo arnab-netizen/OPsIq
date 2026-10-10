@@ -77,7 +77,7 @@ export const QBO_SYNC_FAILURE_CODES = [
   "PROVIDER_TIMEOUT",
   "PROVIDER_MALFORMED",
   "PROVIDER_REJECTED",
-  /** A window could not be PROVED complete (provider count disagrees with what could be read). Nothing was skipped silently. */
+  /** A window could not be confirmed complete by the identity-inclusion check (membership/count disagreed, or the bucket kept changing). Nothing was skipped silently. */
   "PROVIDER_INCOMPLETE",
   "COMPANY_MISMATCH",
   "LEASE_LOST",
@@ -378,6 +378,8 @@ export const QboContinuationSchema = z.object({
     offset: z.number().int().min(0),
     stalledPasses: z.number().int().min(0),
     lastSeen: z.number().int().min(0),
+    /** Ids (bounded) of records in this second that the normalizer REJECTED: never stored, but real members of the provider's count. */
+    rejected: z.array(z.string().max(128)).max(50).default([]),
     /** The provider's count for the bucket at the START of the current pass (null until probed). A pass never reads past it. */
     total: z.number().int().min(0).nullable(),
     /**
@@ -386,7 +388,7 @@ export const QboContinuationSchema = z.object({
      */
     verify: z.object({
       round: z.number().int().min(1).max(2),
-      after: z.string().max(64).nullable(),
+      after: z.string().max(128).nullable(),
       matched: z.number().int().min(0),
       total: z.number().int().min(0),
       /** Count of the entity's records stamped AFTER the sync cutoff when verification began: an edit anywhere changes it. */

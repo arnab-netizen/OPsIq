@@ -75,8 +75,29 @@ export async function qboHttp(url: string, init: RequestInit, opts: QboHttpOptio
     }
     let bodyText: string;
     try {
-      bodyText = await res.text();
-    } catch {
+      // Stream with a running BYTE count: a chunked/undeclared body can never be buffered past the cap.
+      const reader = res.body?.getReader();
+      if (!reader) bodyText = await res.text();
+      else {
+        const chunks: Uint8Array[] = [];
+        let total = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          total += value.byteLength;
+          if (total > opts.maxBodyBytes) {
+            await reader.cancel().catch(() => undefined);
+            throw new QboProviderError({ kind: "MALFORMED_RESPONSE", httpStatus: res.status, intuitTid: readIntuitTid(res.headers) });
+          }
+          chunks.push(value);
+        }
+        const all = new Uint8Array(total);
+        let at = 0;
+        for (const c of chunks) { all.set(c, at); at += c.byteLength; }
+        bodyText = new TextDecoder().decode(all);
+      }
+    } catch (e) {
+      if (e instanceof QboProviderError) throw e;
       if (timedOut) throw new QboProviderError({ kind: "TIMEOUT" });
       if (opts.signal?.aborted) throw new QboProviderError({ kind: "CANCELLED" });
       throw new QboProviderError({ kind: "TRANSIENT_PROVIDER_FAILURE", httpStatus: res.status });

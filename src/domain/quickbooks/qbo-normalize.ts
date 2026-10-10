@@ -356,9 +356,9 @@ export function parseAgedReport(body: unknown): ReportParseResult {
     if (Math.abs(Number(current) + bucketSum - Number(total)) > 0.011) inconsistencies.push("AGING_BUCKETS_DO_NOT_SUM_TO_TOTAL");
     // Credits / unapplied payments net into buckets; a negative "overdue" is not an overdue amount.
     if (bucketSum < 0) inconsistencies.push("NEGATIVE_OVERDUE_FROM_CREDITS");
-  } else if (isObject(body.Rows) && (all.length === 0 || all.every((n) => n.group === null && n.summary === null))) {
+  } else if (isObject(body.Rows) && all.length === 0) {
     // A company with nothing outstanding returns an EMPTY Rows object: zero is the truthful value there. A body with no Rows key
-    // at all is a truncated/odd response, not a zero.
+    // at all, or with customer rows but no grand-total section (truncated), is not a zero: it is MALFORMED.
     metrics.current = "0";
     metrics.total = "0";
     metrics.overdue = "0";

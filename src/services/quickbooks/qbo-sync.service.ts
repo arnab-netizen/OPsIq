@@ -21,6 +21,7 @@ import { resolveQboConfig, type QboProviderConfig } from "@/domain/quickbooks/qb
 import { createQboReadClient, type QboReadClient } from "./qbo-client";
 import { isQboProviderError } from "@/domain/quickbooks/qbo-errors";
 import { QBO_QUERY_IN_MAX_VALUES, type QboQuerySpec } from "@/domain/quickbooks/qbo-read-catalog";
+import { isSafeEntityId } from "@/domain/quickbooks/qbo-identifiers";
 import {
   QBO_SYNC_MANUAL_COOLDOWN_MS,
   evaluateDueGate,
@@ -100,6 +101,8 @@ export interface QboSyncDeps extends QboPersistenceDeps {
   configOverride?: QboProviderConfig;
   /** Minimum spacing between MANUAL runs of one connection. Default QBO_SYNC_MANUAL_COOLDOWN_MS. */
   manualCooldownMs?: number;
+  /** Wall-clock budget (ms) for one execution: it stops at a checkpoint when exceeded (scheduler/serverless time ceilings). */
+  deadlineMs?: number;
   /** Test seams for the bounded-work design: records per provider page and provider query calls per execution. */
   pageSize?: number;
   pagesPerExecution?: number;
@@ -175,6 +178,9 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
       seq: (begun.continuation?.seq ?? 0) + 1, changed: begun.continuation?.changed ?? false, restart: false,
     };
     track.cp = checkpoint;
+    // A fresh logical sync gets its (empty) checkpoint durably BEFORE any record is written, so the re-evaluation marker always has a
+    // row to be patched into inside the same transaction as the data that changed.
+    if (!resume) await saveContinuation(lease, checkpoint, deps);
     const stored = parseWatermarks(begun.priorState.watermarks);
     const result = await executeReads({ lease, connection, config, mode: begun.mode, watermarks: stored, counts, now, checkpoint, track, input, deps });
     if (result.status === "BUDGET") {
@@ -184,7 +190,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
       return { status: "CONTINUING", runId: lease.runId, mode: begun.mode, counts, changed: result.changed, continuationKey: continuationTaskKey(cp, lease.epoch) as string };
     }
     // A change persisted by ANY execution of this logical sync (or by an earlier failed attempt of it) counts for the whole sync.
-    const changedForSync = result.changed || checkpoint.changed || track.cp?.changed === true;
+    const changedForSync = result.changed || checkpoint.changed || track.cp?.changed === true || track.pager?.cp.changed === true;
     // Proven exhaustion of every entity (and the reports): ONLY now do the durable watermarks advance, to the sync's fixed cutoff.
     const newWatermarks = Object.fromEntries(QBO_SYNC_QUERY_ENTITIES.map((e) => [e, checkpoint.cutoff]));
     await finishSyncRunSuccess({ lease, mode: begun.mode, startedAt: new Date(checkpoint.cutoff), counts, changed: changedForSync, watermarks: newWatermarks, actorId: input.actorId }, deps);
@@ -195,7 +201,12 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
     const mapped = e instanceof SyncFailure ? { code: e.code, retryAfterMs: e.retryAfterMs } : syncFailureFromError(e);
     try {
       // Changes already persisted by this failed attempt must still reach re-evaluation once the sync completes.
-      await persistChangedMarker(lease, track, deps, mapped.code === "PROVIDER_INCOMPLETE").catch(() => undefined);
+      await persistChangedMarker(lease, track, deps, mapped.code === "PROVIDER_INCOMPLETE").catch((markerError) => {
+        // Only a lost lease is acceptable to ignore (another worker owns the state now); anything else must not silently drop the
+        // restart / re-evaluation flags.
+        if (markerError instanceof QboLeaseLostError) return undefined;
+        throw markerError;
+      });
       // Record the failure FIRST (lease-fenced): a stale worker then cannot go on to flip the connection state.
       const done = await finishSyncRunFailure({ lease, code: mapped.code, counts, retryAfterMs: mapped.retryAfterMs, actorId: input.actorId }, deps);
       if (mapped.code === "REAUTH_REQUIRED") {
@@ -284,7 +295,12 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
         if (forcedRefreshUsed) return null;
         forcedRefreshUsed = true;
         const again = await getUsableQboAccessToken({ workspaceId: lease.workspaceId, connectionId: lease.connectionId, forceRefresh: true, knownRevision: tokenRevision }, tokenDeps);
-        if (!again.ok) return null;
+        if (!again.ok) {
+          // Only a genuinely dead grant ends the attempt as an auth failure (-> REAUTH_REQUIRED). A transient refresh problem
+          // (token endpoint 5xx/429, timeout, claim wait) is a retryable failure with back-off, never a reconnect demand.
+          if (again.code === "REAUTH_REQUIRED" || again.code.startsWith("CONNECTION_") || again.code === "ENVIRONMENT_MISMATCH") return null;
+          throw new SyncFailure(again.code, again.retryAfterMs);
+        }
         accessToken = again.accessToken;
         tokenRevision = again.revision;
         return again.accessToken;
@@ -319,7 +335,8 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
       pageSize: Math.max(1, deps.pageSize ?? QBO_SYNC_PAGE_SIZE),
       budget: Math.max(1, deps.pagesPerExecution ?? QBO_SYNC_PAGES_PER_EXECUTION),
       units: 0,
-      cp: a.checkpoint,
+      cp: { ...a.checkpoint, changed: a.checkpoint.changed || changed },
+      deadlineAt: deps.deadlineMs !== undefined ? Date.now() + deps.deadlineMs : null,
       cutoff: new Date(a.checkpoint.cutoff),
       changed: false,
     };
@@ -338,7 +355,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
     }
     changed = changed || pager.changed;
 
-    changed = (await readReports(client, call, lease, counts, now, deps)) || changed;
+    changed = (await readReports(client, call, lease, counts, now, deps, async () => { if (!pager.cp.changed) await advance(pager, { changed: true }); })) || changed;
     return { status: "DONE", changed };
   } finally {
     deps.signal?.removeEventListener("abort", onParentAbort);
@@ -363,6 +380,8 @@ interface Pager {
   cp: QboContinuation;
   cutoff: Date;
   changed: boolean;
+  /** Wall-clock stop (epoch ms): the execution ends at its checkpoint when this passes, however few provider calls it has made. */
+  deadlineAt: number | null;
 }
 
 /** Persist a new checkpoint (lease-fenced) without a page. */
@@ -400,12 +419,12 @@ function stampsOf(records: readonly Record<string, unknown>[]): number[] {
  *
  * EQUAL-TIMESTAMP BUCKET LARGER THAN A PAGE: the provider documents no stable order inside one timestamp, so offset paging cannot
  * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only by the identity-inclusion check in tieStep (not by a count comparison); its provider `count(*)` for exactly
- * that second equals the number of distinct records this logical sync has stored for it. QBO_SYNC_TIE_MAX_STALLED_PASSES passes in
+ * that second is confirmed by the identity-inclusion check in tieStep. QBO_SYNC_TIE_MAX_STALLED_PASSES passes in
  * a row that find nothing new end the run as PROVIDER_INCOMPLETE — never a silent skip, never an endless loop.
  */
 async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): Promise<boolean> {
   for (;;) {
-    if (p.units >= p.budget) return false;
+    if (p.units >= p.budget || (p.deadlineAt !== null && p.units > 0 && Date.now() >= p.deadlineAt)) return false;
     if (p.cp.tie) {
       await tieStep(p, entity);
       continue;
@@ -426,8 +445,8 @@ async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): P
     }
     const newest = floorSecond(new Date(stamps[stamps.length - 1]));
     if (floorSecond(new Date(stamps[0])).getTime() === newest.getTime()) {
-      // The whole page shares ONE second: that second holds at least a page of records. Enumerate it with count-proven closure.
-      await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: { second: newest.toISOString(), offset: 0, stalledPasses: 0, lastSeen: 0, total: null, verify: null } });
+      // The whole page shares ONE second: that second holds at least a page of records. Enumerate it with identity-inclusion closure (see tieStep).
+      await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: { second: newest.toISOString(), offset: 0, stalledPasses: 0, lastSeen: 0, total: null, verify: null, rejected: rejectedIdsOf(entity, result.records) } });
       continue;
     }
     // Everything below `newest` is complete in this page; `newest` itself may continue, so the next page starts AT it.
@@ -435,6 +454,28 @@ async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): P
     await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: null });
   }
 }
+
+/**
+ * Ids of records the normalizer rejects on this page. They are never stored, yet the provider counts them in an oversized bucket, so
+ * the identity check must account for them by id (bounded). A rejected record whose id cannot be queried safely, or more than 50 of
+ * them, makes the bucket unprovable: fail closed (PROVIDER_INCOMPLETE).
+ */
+function rejectedIdsOf(entity: Entity, records: readonly Record<string, unknown>[]): string[] {
+  const out: string[] = [];
+  for (const raw of records) {
+    if (normalizeQueryRecord(entity, raw).ok) continue;
+    const id = raw.Id;
+    if (typeof id !== "string" || !isSafeEntityId(id)) throw new SyncFailure("PROVIDER_INCOMPLETE");
+    out.push(id);
+  }
+  return out;
+}
+
+const mergeRejected = (a: readonly string[], b: readonly string[]): string[] => {
+  const all = [...new Set([...a, ...b])];
+  if (all.length > 50) throw new SyncFailure("PROVIDER_INCOMPLETE");
+  return all;
+};
 
 /** Normalize + persist a page together with the checkpoint that describes the position after it (one transaction). */
 async function persistQueryPage(
@@ -451,8 +492,10 @@ async function persistQueryPage(
   }
   p.counts.fetched[entity] = (p.counts.fetched[entity] ?? 0) + records.length;
   const checkpoint: QboContinuation | undefined = next ? { ...p.cp, cursor: next.cursor, tie: next.tie, seq: p.cp.seq + 1 } : undefined;
-  if (await persistPage(p.lease, dedupeRecords(normalized), checkpoint, p.counts, p.deps)) p.changed = true;
-  if (checkpoint) p.cp = checkpoint;
+  const changedHere = await persistPage(p.lease, dedupeRecords(normalized), checkpoint, p.counts, p.deps);
+  if (changedHere) p.changed = true;
+  if (checkpoint) p.cp = changedHere ? { ...checkpoint, changed: true } : checkpoint;
+  else if (changedHere) p.cp = { ...p.cp, changed: true };
 }
 
 /**
@@ -493,9 +536,9 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
     p.units++;
     return n;
   };
-  const restartPass = async (stalledPasses: number, lastSeen: number, total: number | null): Promise<void> => {
+  const restartPass = async (stalledPasses: number, lastSeen: number, total: number | null, rejectedIds: string[] = tie.rejected): Promise<void> => {
     if (stalledPasses >= QBO_SYNC_TIE_MAX_STALLED_PASSES) throw new SyncFailure("PROVIDER_INCOMPLETE");
-    await advance(p, { tie: { second: tie.second, offset: 0, stalledPasses, lastSeen, total, verify: null } });
+    await advance(p, { tie: { second: tie.second, offset: 0, stalledPasses, lastSeen, total, verify: null, rejected: rejectedIds } });
   };
 
   if (tie.verify) {
@@ -508,7 +551,9 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
     }
     // Round finished: every provider member must be among the stored ids, and the bucket must not have changed size meanwhile.
     const now = await countWhere(windowWhere);
-    if (v.matched !== v.total || now !== v.total) return restartPass(tie.stalledPasses, tie.lastSeen, null);
+    // Rejected-by-normalizer records are provider members we hold by id only: confirm them the same way (inclusion by Id IN).
+    const rejectedMatched = tie.rejected.length > 0 ? await countWhere([...windowWhere, { field: "Id", op: "IN", value: tie.rejected }]) : 0;
+    if (v.matched + rejectedMatched !== v.total || now !== v.total) return restartPass(tie.stalledPasses, tie.lastSeen, null);
     // A record can only LEAVE a past second by being edited (its stamp moves forward), and an edit anywhere changes the number of
     // records stamped after the cutoff - a swap that leaves count(second) unchanged is therefore still visible here. (A record
     // ENTERING a past second is the late-visibility assumption, which no read can observe.) Any edit restarts the check.
@@ -531,9 +576,10 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
   p.units++;
   p.counts.pages++;
   stampsOf(result.records);
+  const rejected = mergeRejected(tie.rejected, rejectedIdsOf(entity, result.records));
   const consumed = tie.offset + result.records.length;
   if (result.records.length >= p.pageSize && consumed < tie.total) {
-    await persistQueryPage(p, entity, result.records, { cursor: p.cp.cursor, tie: { ...tie, offset: consumed } });
+    await persistQueryPage(p, entity, result.records, { cursor: p.cp.cursor, tie: { ...tie, offset: consumed, rejected } });
     return;
   }
   await persistQueryPage(p, entity, result.records, null);
@@ -542,8 +588,8 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
   const providerCount = await countWhere(windowWhere);
   const seen = await countSeenInWindow(p.lease, entity, from, to, p.deps);
   const stalledPasses = providerCount === tie.total && seen > tie.lastSeen ? 0 : tie.stalledPasses + 1;
-  if (providerCount !== tie.total) return restartPass(stalledPasses, seen, providerCount);
-  await advance(p, { tie: { second: tie.second, offset: tie.offset, stalledPasses, lastSeen: seen, total: providerCount, verify: { round: 1, after: null, matched: 0, total: providerCount, edits: await countWhere(editsWhere) } } });
+  if (providerCount !== tie.total) return restartPass(stalledPasses, seen, providerCount, rejected);
+  await advance(p, { tie: { second: tie.second, offset: tie.offset, stalledPasses, lastSeen: seen, total: providerCount, rejected, verify: { round: 1, after: null, matched: 0, total: providerCount, edits: await countWhere(editsWhere) } } });
 }
 
 /**
@@ -561,7 +607,7 @@ async function verifyUnseen(p: Pager, entity: Entity): Promise<void> {
       const raw = await p.call(() => p.client.readEntity(entity, id));
       const n = normalizeQueryRecord(entity, raw);
       if (n.ok) {
-        if (await persistPage(p.lease, [n.record], undefined, p.counts, p.deps)) p.changed = true;
+        if (await persistPage(p.lease, [n.record], undefined, p.counts, p.deps)) { p.changed = true; p.cp = { ...p.cp, changed: true }; }
       } else p.counts.unresolved++;
     } catch (e) {
       // Not found / fault 610 on a read: unresolved, never "deleted". Anything else (auth, rate limit, outage, timeout) is a real failure.
@@ -609,7 +655,7 @@ function planReports(now: Date): ReportJob[] {
  * Read and store every report. One malformed report does not discard the others: the rest are stored, and the run then ends
  * FAILED(PROVIDER_MALFORMED) so the problem is visible and the watermarks do not advance.
  */
-async function readReports(client: QboReadClient, call: Call, lease: SyncLease, counts: QboSyncCounts, now: Date, deps: QboSyncDeps): Promise<boolean> {
+async function readReports(client: QboReadClient, call: Call, lease: SyncLease, counts: QboSyncCounts, now: Date, deps: QboSyncDeps, onChanged: () => Promise<void>): Promise<boolean> {
   let changed = false;
   let malformed = false;
   for (const job of planReports(now)) {
@@ -642,6 +688,7 @@ async function readReports(client: QboReadClient, call: Call, lease: SyncLease, 
     );
     counts.reportsStored++;
     if (result.changed) {
+      await onChanged(); // durable re-evaluation marker, so a later failure of this run cannot lose it
       counts.reportsChanged++;
       changed = true;
     }

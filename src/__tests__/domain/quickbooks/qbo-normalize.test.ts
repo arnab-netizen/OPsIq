@@ -145,6 +145,12 @@ describe("report parsing", () => {
     const r = parseBalanceSheet(bs);
     expect(r.ok && r.report.inconsistencies).toEqual(["BALANCE_SHEET_DOES_NOT_BALANCE"]);
   });
+  it("an aged body with customer rows but NO grand-total section (truncated) is malformed - never a fabricated zero", () => {
+    const body = agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables") as { Rows: { Row: unknown[] } };
+    body.Rows.Row = body.Rows.Row.filter((r) => (r as { type: string }).type === "Data");
+    expect(body.Rows.Row.length).toBeGreaterThan(0);
+    expect(parseAgedReport(body).ok).toBe(false);
+  });
   it("an aged report with no rows at all is a truthful zero", () => {
     const r = parseAgedReport(agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables", { empty: true }));
     expect(r.ok && r.report.metrics).toEqual({ current: "0", total: "0", overdue: "0" });

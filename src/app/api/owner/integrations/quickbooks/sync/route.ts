@@ -32,7 +32,9 @@ export const POST = withCanonicalEnforcement(
     );
     // A large sync stops at a durable checkpoint inside this request; the rest runs as scheduled follow-up executions.
     if (outcome.status === "CONTINUING") {
-      await enqueueQboSyncContinuation({ workspaceId: ctx.verifiedWorkspaceId, connectionId: body.connectionId, continuationKey: outcome.continuationKey });
+      // Progress is already durable: a failure to queue the follow-up must not turn this accepted response into a 500 (the daily
+      // producer re-queues the checkpoint under a day-scoped key).
+      await enqueueQboSyncContinuation({ workspaceId: ctx.verifiedWorkspaceId, connectionId: body.connectionId, continuationKey: outcome.continuationKey }).catch(() => undefined);
     }
     const mapped = mapSyncOutcome(outcome);
     return canonicalJson(mapped.body, { status: mapped.httpStatus, headers: { "cache-control": "no-store" } });

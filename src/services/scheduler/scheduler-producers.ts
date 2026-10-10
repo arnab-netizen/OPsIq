@@ -223,7 +223,7 @@ export async function enqueueDueQboReadSyncTasks(env: Record<string, string | un
       // An unfinished sync (durable checkpoint) is continued under a key tied to its checkpoint, not to the day: the safety net for
       // a continuation task that was lost, without ever stacking a second task on the same checkpoint.
       const created = c.continuationKey !== null
-        ? await enqueueQboSyncContinuation({ workspaceId: c.workspaceId, connectionId: c.connectionId, continuationKey: c.continuationKey })
+        ? await enqueueQboSyncContinuation({ workspaceId: c.workspaceId, connectionId: c.connectionId, continuationKey: c.continuationKey, dayBucket: bucket })
         : (await scheduler.scheduleIdempotent({
             taskName: TASK_NAME_QBO_READ_SYNC,
             payload: { connectionId: c.connectionId, trigger: "SCHEDULED" },

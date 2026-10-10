@@ -77,6 +77,9 @@ function verifyCronSecret(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Explicit function ceiling (same as the owner sync route): a QuickBooks execution self-limits to 120 s and then continues in a follow-up. */
+export const maxDuration = 300;
+
 export async function GET(request: Request): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

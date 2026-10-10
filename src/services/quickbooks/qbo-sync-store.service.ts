@@ -302,6 +302,14 @@ export async function saveContinuation(lease: SyncLease, checkpoint: QboContinua
   }, TX_OPTIONS);
 }
 
+/** Durable re-evaluation marker for a write that carries no checkpoint of its own: patch `changed` into the existing one (fenced). */
+async function markCheckpointChanged(tx: Pick<Tx, "$executeRaw">, lease: SyncLease): Promise<void> {
+  await tx.$executeRaw`
+    UPDATE qbo_sync_states SET continuation = jsonb_set(continuation, '{changed}', 'true'::jsonb)
+    WHERE connection_id = ${lease.connectionId}::uuid AND workspace_id = ${lease.workspaceId}::uuid AND business_id = ${lease.businessId}::uuid
+      AND lease_token = ${lease.token}::uuid AND lease_epoch = ${lease.epoch} AND continuation IS NOT NULL`;
+}
+
 async function writeCheckpoint(tx: Pick<Tx, "qboSyncState">, lease: SyncLease, checkpoint: QboContinuation): Promise<void> {
   const r = await tx.qboSyncState.updateMany({
     where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, leaseToken: lease.token, leaseEpoch: lease.epoch },
@@ -328,8 +336,13 @@ export async function persistRecordsPageWithCheckpoint(
   }
   await clientOf(deps).$transaction(async (tx: Tx) => {
     await assertAndExtendLease(tx, lease, now);
-    if (checkpoint) await writeCheckpoint(tx, lease, checkpoint);
-    if (records.length === 0) return;
+    // The checkpoint (and the durable re-evaluation marker) are written LAST, after the page is classified, in this same transaction.
+    const finish = async (): Promise<void> => {
+      const changedHere = result.inserted > 0 || result.updated > 0;
+      if (checkpoint) await writeCheckpoint(tx, lease, changedHere ? { ...checkpoint, changed: true } : checkpoint);
+      else if (changedHere) await markCheckpointChanged(tx, lease);
+    };
+    if (records.length === 0) { await finish(); return; }
     const existing = (await tx.qboSyncedRecord.findMany({
       where: {
         connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
@@ -367,7 +380,7 @@ export async function persistRecordsPageWithCheckpoint(
             FROM jsonb_to_recordset(${JSON.stringify(staleSeen.map((r) => ({ entity_type: r.entityType, provider_entity_id: r.providerEntityId })))}::jsonb)
               AS x(entity_type text, provider_entity_id text))`;
     }
-    if (toWrite.length === 0) return;
+    if (toWrite.length === 0) { await finish(); return; }
 
     const rows = toWrite.map((r) => ({
       entity_type: r.entityType,
@@ -403,6 +416,7 @@ export async function persistRecordsPageWithCheckpoint(
         AND qbo_synced_records.business_id = EXCLUDED.business_id
         AND (qbo_synced_records.provider_updated_at IS NULL OR EXCLUDED.provider_updated_at IS NULL
              OR EXCLUDED.provider_updated_at >= qbo_synced_records.provider_updated_at)`;
+    await finish();
   }, TX_OPTIONS);
   return result;
 }
