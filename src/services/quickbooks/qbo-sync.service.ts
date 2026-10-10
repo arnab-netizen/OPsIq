@@ -42,6 +42,7 @@ import {
   toQboInstant,
   utcDate,
   type QboContinuation,
+  parseContinuation,
   type QboSyncCounts,
   type QboSyncFailureCode,
   type QboSyncMode,
@@ -152,7 +153,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
   // 3. due-gating and mode
   const state = await readSyncState(scope, deps);
   const cooldownMs = deps.manualCooldownMs ?? QBO_SYNC_MANUAL_COOLDOWN_MS;
-  const notBefore = evaluateDueGate(input.trigger, state, now, cooldownMs);
+  const notBefore = evaluateDueGate(input.trigger, state ? { ...state, continuationPending: parseContinuation(state.continuation) !== null } : state, now, cooldownMs);
   if (notBefore) return { status: "NOT_DUE", nextAttemptNotBefore: notBefore };
   const watermarks = parseWatermarks(state?.watermarks);
   const mode = input.modeOverride ?? chooseSyncMode({ now, watermarks, lastFullSyncAt: state?.lastFullSyncAt ?? null });
@@ -300,7 +301,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
         if (!again.ok) {
           // Only a genuinely dead grant ends the attempt as an auth failure (-> REAUTH_REQUIRED). A transient refresh problem
           // (token endpoint 5xx/429, timeout, claim wait) is a retryable failure with back-off, never a reconnect demand.
-          if (again.code === "REAUTH_REQUIRED" || again.code.startsWith("CONNECTION_") || again.code === "ENVIRONMENT_MISMATCH") return null;
+          if (again.code === "REAUTH_REQUIRED") return null;
           throw new SyncFailure(again.code, again.retryAfterMs);
         }
         accessToken = again.accessToken;
@@ -416,8 +417,8 @@ function stampsOf(records: readonly Record<string, unknown>[]): number[] {
  * first (the checkpoint then describes exactly where to resume).
  *
  * KEYSET: each page asks for `LastUpdatedTime >= cursor` from position 1, ordered by LastUpdatedTime ASC, so a change elsewhere
- * cannot shift the window. A full page proves every second BELOW its newest second is complete (the ordering puts them first), so
- * the cursor moves to the newest second; a short page proves the whole remaining window was returned in one response.
+ * cannot shift the window. A full page establishes that every second BELOW its newest second is complete (the ordering puts them first), so
+ * the cursor moves to the newest second; a short page establishes that the whole remaining window was returned in one response (assuming the provider honours ORDERBY/MAXRESULTS).
  *
  * EQUAL-TIMESTAMP BUCKET LARGER THAN A PAGE: the provider documents no stable order inside one timestamp, so offset paging cannot
  * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only by the identity-inclusion check in tieStep (never by
@@ -459,7 +460,7 @@ async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): P
 /**
  * Ids of records the normalizer rejects on this page. They are never stored, yet the provider counts them in an oversized bucket, so
  * the identity check must account for them by id (bounded). A rejected record whose id cannot be queried safely, or more than 50 of
- * them, makes the bucket unprovable: fail closed (PROVIDER_INCOMPLETE).
+ * them, makes the bucket not confirmable: fail closed (PROVIDER_INCOMPLETE).
  */
 function rejectedIdsOf(entity: Entity, records: readonly Record<string, unknown>[]): string[] {
   const out: string[] = [];

@@ -17,9 +17,10 @@ const QBO_DIRS = ["src/domain/quickbooks", "src/services/quickbooks"];
 function sourceFiles(dir: string): string[] {
   const abs = join(ROOT, dir);
   if (!existsSync(abs)) return [];
-  return readdirSync(abs)
-    .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
-    .map((f) => join(dir, f));
+  // Recursive: a file in a sub-folder must not escape the scans.
+  return readdirSync(abs, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? sourceFiles(join(dir, e.name)) : e.name.endsWith(".ts") || e.name.endsWith(".tsx") ? [join(dir, e.name)] : [],
+  );
 }
 const qboFiles = QBO_DIRS.flatMap(sourceFiles);
 
@@ -87,6 +88,7 @@ describe("QuickBooks foundation boundaries", () => {
       "src/app/api/integrations/quickbooks/webhook/route.ts",
       "src/infra/scheduler-handlers.ts",
       "src/infra/qbo-sync-tasks.ts",
+      "src/app/api/internal/cron/scheduler/route.ts",
       "src/services/scheduler/scheduler-producers.ts",
     ];
     for (const f of touchpoints) {
@@ -101,6 +103,28 @@ describe("QuickBooks foundation boundaries", () => {
       // (a type-only import of QboFetch is not a use of the sender)
       const withoutTypeImports = code(f).replace(/import\s+type\s[^;]*;/g, "");
       expect(withoutTypeImports, f).not.toMatch(/from\s+["']\.\/qbo-http["']|services\/quickbooks\/qbo-http/);
+    }
+  });
+
+  it("the public webhook route/service, the manual sync route and the task leaf never import the handler registry; and only reviewed modules import the transport layer anywhere in src", () => {
+    for (const f of [
+      "src/services/quickbooks/qbo-webhook.service.ts",
+      "src/app/api/integrations/quickbooks/webhook/route.ts",
+      "src/app/api/owner/integrations/quickbooks/sync/route.ts",
+      "src/infra/qbo-sync-tasks.ts",
+    ]) {
+      expect(code(f), f).not.toMatch(/scheduler-handlers/);
+    }
+    // No module outside src/services/quickbooks may import the sender, OAuth POSTs or the read client directly (tests excluded).
+    const walk = (dir: string): string[] => readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
+      const rel = join(dir, e.name);
+      if (e.isDirectory()) return e.name === "__tests__" || e.name === "generated" || e.name === "node_modules" ? [] : walk(rel);
+      return /\.(ts|tsx)$/.test(e.name) ? [rel] : [];
+    });
+    // The read client is legitimately used by the sync routes' services only through the QBO services; transport modules never elsewhere.
+    for (const f of walk("src")) {
+      if (f.startsWith(join("src", "services", "quickbooks"))) continue;
+      expect(code(f), f).not.toMatch(/services\/quickbooks\/(qbo-http|qbo-oauth\.service|qbo-client)["']/);
     }
   });
 

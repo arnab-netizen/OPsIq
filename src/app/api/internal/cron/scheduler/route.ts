@@ -127,17 +127,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     let tasksProcessed = 0;
     let schedulerPasses = 0;
 
-    // Repeat the bounded claim until a pass completes no work. A pass that
-    // completes nothing — including an unknown task type, which now fails
-    // closed (bounded retry, then dead-letter) rather than looping forever —
-    // returns 0 and ends the loop, so this can never spin on undeliverable work.
+    // Repeat the bounded claim until a pass claims nothing. A failing task (including an unknown task type, which fails closed:
+    // bounded retry, then dead-letter) is rescheduled, so it cannot spin the loop; MAX_DRAIN_PASSES and the time budget bound it anyway.
     for (; schedulerPasses < MAX_DRAIN_PASSES; schedulerPasses++) {
       if (Date.now() >= deadline) break;
       // Few tasks per pass: a QuickBooks execution may run ~100 s, so a pass of 2 stays well inside maxDuration and a platform kill can
       // strand at most 2 claimed rows (not a batch of 50).
       const passProcessed = await scheduler.processDue(handlers, { maxClaim: DRAIN_CLAIM_PER_PASS });
       tasksProcessed += passProcessed;
-      if (passProcessed === 0) break;
+      // Stop when nothing was CLAIMED (no due work). A pass whose tasks all failed claimed rows and moved them to retry/dead-letter, so the
+      // next pass sees different rows; the pass cap and time budget already bound the loop.
+      if (scheduler.lastClaimedCount === 0) break;
     }
 
     results.schedulerTasksProcessed = tasksProcessed;

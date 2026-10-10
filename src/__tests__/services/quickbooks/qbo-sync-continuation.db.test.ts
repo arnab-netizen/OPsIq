@@ -18,7 +18,8 @@ import { seedConnected, testDeps, scopeOf, type ConnectedTenant } from "@/__test
 import { customer, invoice, profitAndLossBody } from "@/__tests__/test-helpers/qbo-fake-intuit";
 import { QBO_SYNC_QUERY_ENTITIES, QBO_SYNC_TIE_MAX_STALLED_PASSES, parseContinuation } from "@/domain/quickbooks/qbo-sync-model";
 import { continuationTaskKey, markWebhookHint } from "@/services/quickbooks/qbo-sync-store.service";
-import { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation, getProductionTaskHandlers } from "@/infra/scheduler-handlers";
+import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
+import { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation } from "@/infra/qbo-sync-tasks";
 
 const NOW = new Date("2026-10-10T03:00:00Z");
 const manual = (c: ConnectedTenant, o: Partial<RunQboSyncInput> = {}): RunQboSyncInput => ({ ...scopeOf(c), trigger: "MANUAL", actorId: c.t.actor, requestId: randomUUID(), ...o });
@@ -396,7 +397,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       }
     });
 
-    it("the identity proof really is set inclusion: with ONLY the replacement (no other change) the old cardinality check would have closed, the new one does not", async () => {
+    it("a swap landing right before verification (count unchanged) is not closed on counts: it is re-enumerated and B is recovered or the run fails closed", async () => {
       const c = await seedConnected();
       seedBucket(c);
       // Replacement happens right after the enumeration pass finished and BEFORE verification starts (first IN-count request).
@@ -434,7 +435,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
         let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
         for (let i = 0; i < 8 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
         await assertNoSilentSkip(c, out);
-        if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
+        // Non-vacuous: a stable provider converges, and convergence required a RESTART (more identity reads than one clean 2 x 3 sweep).
+        expect(out.status, `flipAt=${flipAt}`).toBe("SUCCEEDED");
+        expect((await ids(c)).has("B-late"), `flipAt=${flipAt}`).toBe(true);
+        expect(queriesFor(c, "Invoice", "count").filter((r) => (r.url.searchParams.get("query") ?? "").includes(" Id IN ")).length, `flipAt=${flipAt}`).toBeGreaterThan(6);
       }
     });
 
@@ -642,6 +646,45 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(2);
       expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(2);
       expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(1);
+      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+    });
+
+    it("persistReportObservation writes the re-evaluation marker in its OWN transaction (no orchestrator involved), and refuses a change that has no checkpoint to carry it", async () => {
+      const { beginSyncRun, persistReportObservation, saveContinuation } = await import("@/services/quickbooks/qbo-sync-store.service");
+      const c = await seedConnected();
+      const deps = { now: () => NOW };
+      const begun = await beginSyncRun({ ...scopeOf(c), trigger: "MANUAL", mode: "FULL", idempotencyKey: `manual:${randomUUID()}`, requestedById: c.t.actor }, deps);
+      if (!begun.ok) throw new Error("lease");
+      const input = { reportName: "ProfitAndLoss", periodStart: new Date("2026-09-01T00:00:00Z"), periodEnd: new Date("2026-09-30T00:00:00Z"), basis: "Accrual", currency: "USD", metrics: { Income: "1" }, inconsistencies: [], contentHash: "a".repeat(64), providerGeneratedAt: null };
+      // No checkpoint row content yet -> the marker cannot be carried -> integrity failure, nothing committed.
+      await expect(persistReportObservation(begun.lease, input, deps)).rejects.toThrow();
+      expect(await db.qboReportObservation.count({ where: { connectionId: c.connectionId } })).toBe(0);
+      await saveContinuation(begun.lease, { v: 1, syncId: begun.lease.syncId, mode: "FULL", cutoff: NOW.toISOString(), entityIndex: 3, cursor: null, tie: null, reconciled: [], seq: 1, changed: false, restart: false }, deps);
+      expect((await persistReportObservation(begun.lease, input, deps)).changed).toBe(true);
+      expect(((await stateOf(c)).continuation as { changed: boolean }).changed).toBe(true);
+    });
+
+    it("a SCHEDULED continuation is not refused as 'already synced today' even when the pre-check sees a same-day success (continuationPending)", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 30; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      expect((await run(c)).status).toBe("SUCCEEDED"); // same-day success
+      c.fake.data.Customer.push(customer("late", "2026-10-10T02:59:00Z"));
+      const manualPartial = await run(c, { pageSize: 10, pagesPerExecution: 1, now: () => new Date(NOW.getTime() + 1_000_000) }, { modeOverride: "FULL" });
+      expect(manualPartial.status).toBe("CONTINUING");
+      const sched = await runQboReadSync({ ...scopeOf(c), trigger: "SCHEDULED", actorId: null }, testDeps(c, { now: () => new Date(NOW.getTime() + 1_100_000), pageSize: 10, pagesPerExecution: 1000 }));
+      expect(["SUCCEEDED", "CONTINUING"]).toContain(sched.status); // never NOT_DUE
+    });
+
+    it("the drain can tell 'nothing due' from 'claimed but failed': lastClaimedCount counts claimed rows", async () => {
+      const { DatabaseSchedulerProvider } = await import("@/infra/scheduler");
+      const sched = new DatabaseSchedulerProvider();
+      const name = "v26a-claimed-count-test";
+      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+      const c = await seedConnected();
+      await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 3, workspaceId: c.t.ws, idempotencyKey: `${name}:${c.connectionId}` });
+      const failing = new Map([[name, async () => { throw new Error("boom"); }]]);
+      expect(await sched.processDue(failing, { maxClaim: 2 })).toBe(0); // the handler failed...
+      expect(sched.lastClaimedCount).toBeGreaterThanOrEqual(1); // ...but a row WAS claimed, so a drain must not conclude there is no work
       await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
     });
   });

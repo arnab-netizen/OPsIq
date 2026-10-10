@@ -62,7 +62,8 @@ export async function qboHttp(url: string, init: RequestInit, opts: QboHttpOptio
   try {
     let res: Response;
     try {
-      res = await fetchImpl(url, { ...init, signal: controller.signal });
+      // redirect:"error": a 3xx on a credentialed request (bearer / client secret) is a failure, never followed.
+      res = await fetchImpl(url, { ...init, redirect: "error", signal: controller.signal });
     } catch {
       if (timedOut) throw new QboProviderError({ kind: "TIMEOUT" });
       if (opts.signal?.aborted) throw new QboProviderError({ kind: "CANCELLED" });

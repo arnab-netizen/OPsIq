@@ -423,6 +423,9 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
    * `maxClaim` (default 50) bounds how many tasks one pass claims. A caller with a wall-clock ceiling (the cron drain) claims few per
    * pass so a function kill can strand at most that many `running` rows instead of a whole batch.
    */
+  /** How many rows the most recent processDue() claimed (processed or not): lets a drain tell "nothing due" from "everything claimed failed". */
+  lastClaimedCount = 0;
+
   async processDue(handlers: Map<string, TaskHandler>, options: { maxClaim?: number } = {}): Promise<number> {
     const maxClaim = Math.max(1, Math.min(50, Math.floor(options.maxClaim ?? 50)));
     const now = new Date();
@@ -457,6 +460,8 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         t."id", t."task_name", t."payload", t."attempts", t."max_attempts",
         t."workspace_id", "to_claim"."previous_status"
     `;
+
+    this.lastClaimedCount = claimed.length;
 
     // A claimed batch runs sequentially, so a task late in the batch waits while earlier handlers
     // run. Its lease must be kept alive from the moment it was claimed, not from when it starts.

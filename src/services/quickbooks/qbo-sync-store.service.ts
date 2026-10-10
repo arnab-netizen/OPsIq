@@ -303,8 +303,8 @@ export async function saveContinuation(lease: SyncLease, checkpoint: QboContinua
 }
 
 /** Durable re-evaluation marker for a write that carries no checkpoint of its own: patch `changed` into the existing one (fenced). */
-async function markCheckpointChanged(tx: Pick<Tx, "$executeRaw">, lease: SyncLease): Promise<void> {
-  await tx.$executeRaw`
+async function markCheckpointChanged(tx: Pick<Tx, "$executeRaw">, lease: SyncLease): Promise<number> {
+  return await tx.$executeRaw`
     UPDATE qbo_sync_states SET continuation = jsonb_set(continuation, '{changed}', 'true'::jsonb)
     WHERE connection_id = ${lease.connectionId}::uuid AND workspace_id = ${lease.workspaceId}::uuid AND business_id = ${lease.businessId}::uuid
       AND lease_token = ${lease.token}::uuid AND lease_epoch = ${lease.epoch} AND continuation IS NOT NULL`;
@@ -473,7 +473,7 @@ export async function countSeenInWindow(lease: SyncLease, entityType: string, fr
 /**
  * Ids (ascending, keyset on the id) this logical sync stored for records whose stored provider timestamp lies in [from, to). A record
  * that has since LEFT the window at the provider still appears here (its stored copy is stale) - which is harmless for an inclusion
- * proof: it simply matches nothing in the provider's count.
+ * check: it simply matches nothing in the provider's count.
  */
 export async function listSeenIdsInWindow(lease: SyncLease, entityType: string, from: Date, to: Date, afterId: string | null, limit: number, deps?: QboPersistenceDeps): Promise<string[]> {
   const rows = (await clientOf(deps).qboSyncedRecord.findMany({
@@ -530,7 +530,8 @@ export async function persistReportObservation(lease: SyncLease, input: ReportOb
         if (prior && prior.contentHash === input.contentHash) changedHere = false;
       }
       // The durable re-evaluation marker is written in THIS transaction, with the observation it describes.
-      if (changedHere) await markCheckpointChanged(tx, lease);
+      // (a changed observation with no checkpoint to carry the marker is an integrity failure, not a silent skip)
+      if (changedHere && (await markCheckpointChanged(tx, lease)) !== 1) throw new QboLeaseLostError();
       return { changed: changedHere, created: true };
     }
     const changed = existing.contentHash !== input.contentHash;
@@ -545,7 +546,7 @@ export async function persistReportObservation(lease: SyncLease, input: ReportOb
           }
         : { lastSeenRunId: lease.runId, fetchedAt: now },
     });
-    if (changed) await markCheckpointChanged(tx, lease);
+    if (changed && (await markCheckpointChanged(tx, lease)) !== 1) throw new QboLeaseLostError();
     return { changed, created: false };
   }, TX_OPTIONS);
 }

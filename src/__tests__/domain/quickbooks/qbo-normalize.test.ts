@@ -145,6 +145,14 @@ describe("report parsing", () => {
     const r = parseBalanceSheet(bs);
     expect(r.ok && r.report.inconsistencies).toEqual(["BALANCE_SHEET_DOES_NOT_BALANCE"]);
   });
+  it("a CompanyInfo Id that is not a well-formed realm id is never stored (NUL / lone surrogate / oversize cannot poison jsonb)", () => {
+    for (const bad of ["12\u000034", "\ud800abc", "x".repeat(300), "12 34"]) {
+      const r = normalizeCompanyInfo({ Id: bad, CompanyName: "Co", SyncToken: "1", MetaData: { LastUpdatedTime: "2026-01-01T00:00:00Z" } }, "9341458068893772");
+      expect(r.ok && r.record.normalized.reportedRealmId).toBeNull();
+    }
+    const ok = normalizeCompanyInfo({ Id: "9341458068893772", CompanyName: "Co", SyncToken: "1", MetaData: { LastUpdatedTime: "2026-01-01T00:00:00Z" } }, "9341458068893772");
+    expect(ok.ok && ok.record.normalized.reportedRealmId).toBe("9341458068893772");
+  });
   it("an aged body with customer rows but NO grand-total section (truncated) is malformed - never a fabricated zero", () => {
     const body = agedBody(P({ report_date: "2026-10-10" }), "USD", "AgedReceivables") as { Rows: { Row: unknown[] } };
     body.Rows.Row = body.Rows.Row.filter((r) => (r as { type: string }).type === "Data");

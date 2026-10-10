@@ -21,8 +21,6 @@ import type { TaskHandler, HandlerResult } from "@/infra/scheduler";
 import { QBO_EXECUTION_DEADLINE_MS } from "@/domain/quickbooks/qbo-sync-model";
 import { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation } from "@/infra/qbo-sync-tasks";
 
-// Re-exported so existing importers keep working; new code imports the leaf module directly.
-export { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation };
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
@@ -189,7 +187,10 @@ const qboReadSyncHandler: TaskHandler = async (payload, context): Promise<Handle
       return { status: "SUCCESS", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged, reportsStored: outcome.counts.reportsStored } };
     case "CONTINUING":
       // A bounded execution reached its checkpoint: the sync is healthy and unfinished. Queue the next execution (idempotent per checkpoint).
-      await enqueueQboSyncContinuation({ workspaceId: context.workspaceId, connectionId, continuationKey: outcome.continuationKey });
+      // Progress is already durable: a failed enqueue must not fail (and then re-run) a healthy execution - the daily producer re-queues it.
+      if (!(await enqueueQboSyncContinuation({ workspaceId: context.workspaceId, connectionId, continuationKey: outcome.continuationKey }).then(() => true, () => false))) {
+        return { status: "PARTIAL_FAILURE", summary: "QuickBooks sync progressed; the follow-up could not be queued and will be re-queued by the daily producer.", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged, failed: 1 } };
+      }
       return { status: "SUCCESS", summary: "QuickBooks sync continues in a follow-up run.", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged } };
     case "FAILED":
       return { status: "PARTIAL_FAILURE", summary: `QuickBooks sync did not complete (${outcome.code}).`, counts: { failed: 1 } };

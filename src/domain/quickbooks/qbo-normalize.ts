@@ -11,7 +11,7 @@
  * strings (max 4 fractional digits) so no floating-point arithmetic leaks into stored values.
  */
 import { createHash } from "node:crypto";
-import { isSafeEntityId } from "./qbo-identifiers";
+import { isSafeEntityId, isValidRealmId } from "./qbo-identifiers";
 import type { QboSyncQueryEntity, QboRecordState } from "./qbo-sync-model";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -184,7 +184,8 @@ export function normalizeCompanyInfo(raw: unknown, realmId: string): NormalizeRe
     companyName: text(raw.CompanyName, 200),
     country,
     fiscalYearStartMonth: text(raw.FiscalYearStartMonth, 16),
-    reportedRealmId: typeof raw.Id === "string" ? raw.Id : null,
+    // Only a well-formed realm id is stored: a NUL/lone surrogate from the provider would make Postgres reject the jsonb forever.
+    reportedRealmId: typeof raw.Id === "string" && isValidRealmId(raw.Id) ? raw.Id : null,
   });
 }
 

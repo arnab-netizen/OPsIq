@@ -114,6 +114,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
         const r = await callback(t, { state, code: "AUTHCODE-" + randomUUID(), realmId: nextRealm() });
         expect(JSON.stringify(r.body)).toContain("INVALID_REALM");
         expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(0);
+        // The grant that was issued but not kept is revoked at Intuit (best effort).
+        expect(fetchCalls.some((c) => c.url.includes("/revoke"))).toBe(true);
       }
     });
     it("verification is one read-only GET on the claimed realm with the freshly issued token", async () => {

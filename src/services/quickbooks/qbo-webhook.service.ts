@@ -38,6 +38,9 @@ export type QboWebhookResult =
   | { httpStatus: 200; body: { received: true; hints: number; duplicates: number; ignored: number } }
   | { httpStatus: 400 | 401 | 413 | 503; body: { error: "BAD_REQUEST" | "UNAUTHORIZED" | "PAYLOAD_TOO_LARGE" | "NOT_CONFIGURED" } };
 
+/** Width of the webhook task-coalescing bucket (see the key below). */
+const WEBHOOK_TASK_BUCKET_MS = 6 * 60 * 60 * 1000;
+
 async function defaultEnqueue(task: { workspaceId: string; connectionId: string; idempotencyKey: string }, now: Date): Promise<boolean> {
   const r = await new DatabaseSchedulerProvider().scheduleIdempotent({
     taskName: TASK_NAME_QBO_READ_SYNC,
@@ -103,11 +106,11 @@ export async function handleQboWebhook(
 
   for (const c of hintedConnections.values()) {
     await markWebhookHint({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
-    // The task key carries the lease epoch AND a 15-minute window: hints before a sync starts coalesce into ONE task; once a sync
-    // has taken the lease (epoch + 1), or the window moved on, a later hint — which a BUSY/NOT_DUE task could not serve — gets a NEW
-    // task. A hint no task manages to serve is still served by the next SCHEDULED run (the same-day gate is lifted while a hint exists). The sync itself runs only while an unserved hint exists (webhook_hint_at).
+    // The task key carries the lease epoch AND a 6-hour bucket: hints before a sync starts coalesce into ONE task; once a sync has
+    // taken the lease (epoch + 1), or the bucket moved on, a later hint — which a BUSY/NOT_DUE task could not serve — gets a NEW
+    // task (so a spent task swallows hints for at most one bucket, and a busy company queues at most 4 tasks a day). A hint no task manages to serve is still served by the next SCHEDULED run (the same-day gate is lifted while a hint exists). The sync itself runs only while an unserved hint exists (webhook_hint_at).
     const state = await readSyncState({ workspaceId: c.workspaceId, businessId: c.businessId, connectionId: c.connectionId }, deps);
-    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}` });
+    const created = await enqueue({ workspaceId: c.workspaceId, connectionId: c.connectionId, idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:webhook:${c.connectionId}:${state?.leaseEpoch ?? 0}:${Math.floor(now.getTime() / WEBHOOK_TASK_BUCKET_MS)}` });
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.QBO_WEBHOOK_HINT_RECORDED, workspaceId: c.workspaceId, actorType: "system",
       entityType: "qbo_connection", entityId: c.connectionId, visibility: "internal",

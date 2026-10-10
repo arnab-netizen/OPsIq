@@ -150,6 +150,15 @@ describe("read operations", () => {
     expect(produced).toBeLessThan(40); // MAX_API_BODY_BYTES is 20 MiB: stopped shortly after the cap, not run to completion
   });
 
+  it("credentialed requests never follow redirects (redirect: error)", async () => {
+    let seenRedirect: unknown = "unset";
+    const { client } = harness([(call) => { void call; return json(200, queryBody("Invoice", [])); }], {
+      fetchImpl: async (_url: string, init?: RequestInit) => { seenRedirect = init?.redirect; return json(200, queryBody("Invoice", [])); },
+    });
+    await client.query({ entity: "Invoice" });
+    expect(seenRedirect).toBe("error");
+  });
+
   it("an empty page (entity key omitted by Intuit) is an empty list, not an error", async () => {
     const { client } = harness([json(200, queryBody("Invoice", []))]);
     expect((await client.query({ entity: "Invoice" })).records).toEqual([]);

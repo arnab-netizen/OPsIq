@@ -114,8 +114,6 @@ export const QBO_SYNC_FULL_RECONCILE_MS = 7 * 24 * 60 * 60 * 1000;
 export const QBO_SYNC_MANUAL_COOLDOWN_MS = 60 * 1000;
 /** Bound on unseen records re-read by id per entity per FULL sync (each sync rotates through the least recently verified). */
 export const QBO_SYNC_VERIFY_READS_PER_ENTITY = 100;
-/** Scheduled cadence: one run per connection per UTC day, matching the platform's daily scheduler cron. */
-export const QBO_SYNC_SCHEDULE_BUCKET_MS = 24 * 60 * 60 * 1000;
 /** Complete calendar months of period reports (ProfitAndLoss, BalanceSheet) kept current. */
 export const QBO_SYNC_REPORT_MONTHS = 3;
 /**
@@ -148,7 +146,7 @@ const TRANSIENT_FAILURES: ReadonlySet<QboSyncFailureCode> = new Set<QboSyncFailu
 /**
  * Bounded back-off before the scheduler may try a connection again after `consecutiveFailures` failures in a row.
  * Transient provider failures: 15m, 30m, 1h, 2h, 4h, then 6h. Persistent non-auth failures (forbidden, malformed,
- * rejected): 6h doubling to a 24h ceiling. Terminal failures return null — the connection leaves the schedule
+ * rejected): 6h doubling to a 23h ceiling. Terminal failures return null — the connection leaves the schedule
  * (it is no longer ACTIVE, or needs configuration) and is never retried automatically.
  */
 export function computeSyncBackoffMs(code: QboSyncFailureCode, consecutiveFailures: number, retryAfterMs: number | null = null): number | null {

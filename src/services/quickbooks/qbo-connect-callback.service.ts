@@ -34,7 +34,7 @@ import {
   finalizeQboConnection,
   type QboPersistenceDeps,
 } from "./qbo-connection.service";
-import { exchangeQboAuthorizationCode } from "./qbo-oauth.service";
+import { exchangeQboAuthorizationCode, revokeQboToken } from "./qbo-oauth.service";
 import { createQboReadClient } from "./qbo-client";
 import { normalizeCompanyInfo } from "@/domain/quickbooks/qbo-normalize";
 import type { QboFetch } from "./qbo-http";
@@ -140,6 +140,11 @@ export async function completeQboCallback(
     return { ok: false, code: failure };
   }
 
+  /** A grant OpsIQ will not keep must not stay live at Intuit: best-effort revocation of the refresh token (errors swallowed, nothing logged). */
+  const discardGrant = async (): Promise<void> => {
+    await revokeQboToken(config, grant.refreshToken, { fetchImpl: deps.fetchImpl }).catch(() => undefined);
+  };
+
   // The realm in the callback URL is client-relayed: bind it only if the NEW token can actually read that company and the company
   // reports that same id. One read-only GET (companyinfo) with the just-issued token; nothing is persisted from it.
   try {
@@ -151,13 +156,17 @@ export async function completeQboCallback(
     if (!company.ok || company.record.normalized.reportedRealmId !== verifiedRealm) throw new QboRealmNotProven();
   } catch (e) {
     const transient = isQboProviderError(e) && (e.kind === "TIMEOUT" || e.kind === "TRANSIENT_PROVIDER_FAILURE" || e.kind === "RATE_LIMITED");
+    await discardGrant();
     await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "REALM_VERIFICATION", reason: transient ? "PROVIDER_TEMPORARY" : "REALM_NOT_PROVEN" });
     return { ok: false, code: transient ? "PROVIDER_TEMPORARY" : "INVALID_REALM" };
   }
 
   try {
     const finalized = await finalizeQboConnection({ authorization, realmId: verifiedRealm, grant }, deps);
-    if (!finalized.ok) return { ok: false, code: mapFinalizeFailure(finalized.reason) };
+    if (!finalized.ok) {
+      await discardGrant();
+      return { ok: false, code: mapFinalizeFailure(finalized.reason) };
+    }
     return {
       ok: true, businessId: authorization.businessId, environment: authorization.environment,
       reconnected: finalized.reconnected, next: QBO_CALLBACK_SUCCESS_NEXT_PATH,
@@ -166,6 +175,7 @@ export async function completeQboCallback(
     // Owner-safe domain rejection (business archived or removed mid-flow): closed code, no detail. Anything else is a
     // genuine fault and is rethrown to the canonical wrapper, which reports it generically.
     if (e instanceof AppError && e.statusCode >= 400 && e.statusCode < 500) {
+      await discardGrant();
       await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "FINALIZE", reason: "BUSINESS_NOT_ELIGIBLE" });
       return { ok: false, code: "BUSINESS_NOT_ELIGIBLE" };
     }

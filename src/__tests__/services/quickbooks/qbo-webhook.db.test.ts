@@ -21,10 +21,10 @@ function recorder() {
   const calls: Array<{ workspaceId: string; connectionId: string; idempotencyKey: string }> = [];
   return { calls, enqueue: async (t: { workspaceId: string; connectionId: string; idempotencyKey: string }) => { calls.push(t); const created = !keys.has(t.idempotencyKey); keys.add(t.idempotencyKey); return created; } };
 }
-const deliver = (body: string, o: { signature?: string | null; env?: Record<string, string | undefined>; enqueue?: ReturnType<typeof recorder>["enqueue"]; declaredLength?: number | null } = {}) =>
+const deliver = (body: string, o: { signature?: string | null; env?: Record<string, string | undefined>; enqueue?: ReturnType<typeof recorder>["enqueue"]; declaredLength?: number | null; now?: () => Date } = {}) =>
   handleQboWebhook(
     { rawBody: new TextEncoder().encode(body), signature: o.signature === undefined ? sign(body) : o.signature, declaredLength: o.declaredLength ?? null },
-    { env: o.env ?? ENV, now: () => NOW, enqueue: o.enqueue ?? recorder().enqueue },
+    { env: o.env ?? ENV, now: o.now ?? (() => NOW), enqueue: o.enqueue ?? recorder().enqueue },
   );
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", () => {
@@ -61,7 +61,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     const body = legacy(A.realmId, [ent("1"), ent("2", { name: "Customer" })]);
     const res = await deliver(body, { enqueue: rec.enqueue });
     expect(res).toEqual({ httpStatus: 200, body: { received: true, hints: 2, duplicates: 0, ignored: 0 } });
-    expect(rec.calls).toEqual([{ workspaceId: A.t.ws, connectionId: A.connectionId, idempotencyKey: expect.stringMatching(/^qbo-read-sync:webhook:[0-9a-f-]+:0$/) }]);
+    expect(rec.calls).toEqual([{ workspaceId: A.t.ws, connectionId: A.connectionId, idempotencyKey: expect.stringMatching(/^qbo-read-sync:webhook:[0-9a-f-]+:0:\d+$/) }]);
     const rows = await db.qboWebhookEvent.findMany({ where: { realmId: A.realmId } });
     expect(rows).toHaveLength(2);
     expect(rows.every((r: { disposition: string; workspaceId: string; businessId: string; connectionId: string }) => r.disposition === "HINT_RECORDED" && r.workspaceId === A.t.ws && r.businessId === A.t.biz && r.connectionId === A.connectionId)).toBe(true);
@@ -166,12 +166,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     // A sync takes the lease (epoch 0 -> 1) and completes; a later hint must not be swallowed by the earlier task.
     await db.qboSyncState.update({ where: { connectionId: c.connectionId }, data: { leaseEpoch: 1 } });
     await deliver(legacy(c.realmId, [ent("2")]), { enqueue: rec.enqueue });
-    expect(rec.calls.map((x) => x.idempotencyKey.split(":").slice(-1)[0])).toEqual(["0", "1"]);
+    expect(rec.calls.map((x) => x.idempotencyKey.split(":").slice(-2)[0])).toEqual(["0", "1"]);
     // ...and within one lease epoch repeated hints COALESCE onto a single task (no per-15-minute fan-out).
     const again = recorder();
     await deliver(legacy(c.realmId, [ent("3")]), { enqueue: again.enqueue });
     await deliver(legacy(c.realmId, [ent("4")]), { enqueue: again.enqueue });
     expect(new Set(again.calls.map((x) => x.idempotencyKey)).size).toBe(1);
+  });
+
+  it("a hint in a LATER 6-hour bucket gets a new task even when the earlier task in the same lease epoch was spent without taking the lease", async () => {
+    const c = await seedConnected();
+    const rec = recorder();
+    await deliver(legacy(c.realmId, [ent("1")]), { enqueue: rec.enqueue, now: () => new Date("2026-10-10T01:00:00Z") });
+    await deliver(legacy(c.realmId, [ent("2")]), { enqueue: rec.enqueue, now: () => new Date("2026-10-10T03:00:00Z") }); // same bucket: coalesced
+    await deliver(legacy(c.realmId, [ent("3")]), { enqueue: rec.enqueue, now: () => new Date("2026-10-10T07:00:00Z") }); // next bucket: new task
+    expect(new Set(rec.calls.map((x) => x.idempotencyKey)).size).toBe(2);
   });
 
   it("unsupported entities are ignored without a ledger row; malformed events are counted and dropped", async () => {
