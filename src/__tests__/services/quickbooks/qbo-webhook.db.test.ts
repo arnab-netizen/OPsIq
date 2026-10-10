@@ -2,7 +2,7 @@
  * Intuit webhook receiver (event hints only) — real PostgreSQL. No Intuit configuration is touched; payloads are
  * generated and signed locally with a test verifier token. Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { createHmac } from "node:crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -28,6 +28,10 @@ const deliver = (body: string, o: { signature?: string | null; env?: Record<stri
   );
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", () => {
+  // These tests create durable qbo-read-sync ScheduledTasks. Left pending they would be claimed by the scheduler suites that
+  // run processDue() over the whole table later in the same database, so they are removed when this file is done.
+  afterAll(async () => { await db.scheduledTask.deleteMany({ where: { taskName: "qbo-read-sync" } }); });
+
   let A: ConnectedTenant;
   let B: ConnectedTenant;
   beforeAll(async () => { A = await seedConnected(); B = await seedConnected(); });

@@ -4,7 +4,7 @@
  * unconfigured in the test process, so it must fail closed instead of calling out).
  * Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -20,6 +20,10 @@ const tasksFor = (ws: string) => db.scheduledTask.findMany({ where: { workspaceI
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () => {
   afterEach(() => vi.unstubAllEnvs());
+  // These tests create durable qbo-read-sync ScheduledTasks. Left pending they would be claimed by the scheduler suites that
+  // run processDue() over the whole table later in the same database, so they are removed when this file is done.
+  afterAll(async () => { await db.scheduledTask.deleteMany({ where: { taskName: "qbo-read-sync" } }); });
+
 
   it("enqueues one task per eligible ACTIVE connection per UTC day, idempotently, carrying only the connection id", async () => {
     const a = await seedConnected();
