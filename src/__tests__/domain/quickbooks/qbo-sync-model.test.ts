@@ -172,7 +172,7 @@ describe("due gate (pure)", () => {
 });
 
 describe("continuation checkpoint and CONTINUING outcome", () => {
-  const cp = { v: 1, syncId: UUID, mode: "FULL", cutoff: "2026-10-10T03:00:00.000Z", entityIndex: 1, cursor: "2026-09-01T00:00:00.000Z", tie: { second: "2026-09-15T10:00:00.000Z", offset: 20, stalledPasses: 0, lastSeen: 20, total: 47 }, reconciled: ["Customer"], seq: 5, changed: false, restart: false };
+  const cp = { v: 1, syncId: UUID, mode: "FULL", cutoff: "2026-10-10T03:00:00.000Z", entityIndex: 1, cursor: "2026-09-01T00:00:00.000Z", tie: { second: "2026-09-15T10:00:00.000Z", offset: 20, stalledPasses: 0, lastSeen: 20, total: 47, verify: { round: 1, after: "130", matched: 12, total: 47 } }, reconciled: ["Customer"], seq: 5, changed: false, restart: false };
   it("round-trips a valid checkpoint and treats anything unreadable as ABSENT (restart cleanly, never trust garbage)", async () => {
     const { parseContinuation } = await import("@/domain/quickbooks/qbo-sync-model");
     expect(parseContinuation(cp)).toEqual(cp);

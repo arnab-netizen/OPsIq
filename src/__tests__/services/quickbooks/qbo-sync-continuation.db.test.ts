@@ -17,7 +17,7 @@ import { runQboReadSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-
 import { seedConnected, testDeps, scopeOf, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { customer, invoice } from "@/__tests__/test-helpers/qbo-fake-intuit";
 import { QBO_SYNC_QUERY_ENTITIES, QBO_SYNC_TIE_MAX_STALLED_PASSES, parseContinuation } from "@/domain/quickbooks/qbo-sync-model";
-import { continuationTaskKey } from "@/services/quickbooks/qbo-sync-store.service";
+import { continuationTaskKey, markWebhookHint } from "@/services/quickbooks/qbo-sync-store.service";
 import { TASK_NAME_QBO_READ_SYNC, enqueueQboSyncContinuation, getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 
 const NOW = new Date("2026-10-10T03:00:00Z");
@@ -340,6 +340,129 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(last?.status).toBe("SUCCEEDED");
       const ev = await db.auditEvent.findMany({ where: { workspaceId: c.t.ws, eventName: "qbo.sync_completed" } });
       expect((ev[0].payload as Record<string, unknown>).reevaluationCandidate).toBe(true);
+    });
+  });
+
+  describe("membership races inside an oversized equal-timestamp bucket (set equality, not cardinality)", () => {
+    const SECOND = "2026-09-15T10:00:00Z";
+    const seedBucket = (c: ConnectedTenant, n = 35) => { for (let i = 1; i <= n; i++) c.fake.data.Invoice.push(invoice(`t${String(i).padStart(3, "0")}`, SECOND)); };
+    /** A leaves the bucket (edited after the cutoff) while late-indexed B appears in it: the provider's count is unchanged. */
+    const replaceAB = (c: ConnectedTenant) => {
+      const at = c.fake.data.Invoice.findIndex((r) => r.Id === "t005");
+      c.fake.data.Invoice[at] = invoice("t005", "2026-10-10T03:30:00Z", { Balance: 1 });
+      c.fake.data.Invoice.push(invoice("B-late", SECOND));
+    };
+    const hook = (c: ConnectedTenant, when: (q: string, n: number) => boolean, then: () => void) => {
+      const realFetch = c.fake.fetchImpl;
+      let n = 0;
+      let fired = false;
+      return async (input: string, init?: RequestInit) => {
+        const res = await realFetch(input, init);
+        const q = new URL(input).searchParams.get("query") ?? "";
+        if (!fired && when(q, ++n)) { fired = true; then(); }
+        return res;
+      };
+    };
+    const ids = async (c: ConnectedTenant) => new Set((await db.qboSyncedRecord.findMany({ where: { connectionId: c.connectionId, entityType: "Invoice" }, select: { providerEntityId: true } })).map((r: { providerEntityId: string }) => r.providerEntityId));
+    /** The invariant: the run is never SUCCEEDED while a record the provider holds in the bucket is absent locally. */
+    const assertNoSilentSkip = async (c: ConnectedTenant, out: Awaited<ReturnType<typeof run>>) => {
+      if (out.status === "SUCCEEDED") {
+        const have = await ids(c);
+        for (const r of c.fake.data.Invoice) if (Date.parse(r.MetaData.LastUpdatedTime) <= NOW.getTime()) expect(have.has(r.Id)).toBe(true);
+      } else {
+        expect(["CONTINUING", "FAILED"]).toContain(out.status);
+        expect((await stateOf(c)).watermarks).toEqual({});
+      }
+    };
+
+    it("SAME_COUNT_MEMBERSHIP_REPLACEMENT_TEST: A leaves and B enters mid-enumeration with the count unchanged - B is recovered, A is reconciled by the next sync, completion is never declared with B missing", async () => {
+      for (const seed of [null, 5]) {
+        const c = await seedConnected();
+        if (seed !== null) c.fake.shuffleTies = { seed };
+        seedBucket(c);
+        const racing = hook(c, (q, n) => q.startsWith("SELECT * FROM Invoice") && q.includes("< '") && n >= 1, () => replaceAB(c));
+        let out = await run(c, { pageSize: 10, fetchImpl: racing });
+        for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, fetchImpl: racing });
+        await assertNoSilentSkip(c, out);
+        if (out.status === "SUCCEEDED") {
+          expect((await ids(c)).has("B-late")).toBe(true);
+          // A's NEW copy (after the cutoff) is picked up by the next incremental sync.
+          const next = await run(c, { pageSize: 10, now: () => new Date(NOW.getTime() + 2 * 3_600_000) });
+          expect(next.status).toBe("SUCCEEDED");
+          const a = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Invoice", providerEntityId: "t005" } });
+          expect((a.normalized as { balance?: string }).balance).toBe("1");
+        }
+      }
+    });
+
+    it("the identity proof really is set inclusion: with ONLY the replacement (no other change) the old cardinality check would have closed, the new one does not", async () => {
+      const c = await seedConnected();
+      seedBucket(c);
+      // Replacement happens right after the enumeration pass finished and BEFORE verification starts (first IN-count request).
+      const racing = hook(c, (q) => q.startsWith("SELECT count(*)") && q.includes(" Id IN "), () => replaceAB(c));
+      let out = await run(c, { pageSize: 10, fetchImpl: racing });
+      for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, fetchImpl: racing });
+      await assertNoSilentSkip(c, out);
+      expect(out.status === "SUCCEEDED" ? (await ids(c)).has("B-late") : true).toBe(true);
+      expect(queriesFor(c, "Invoice", "count").some((r) => (r.url.searchParams.get("query") ?? "").includes(" Id IN "))).toBe(true);
+    });
+
+    it("WATERMARK_MEMBERSHIP_RACE_TEST: a flip that happens BETWEEN verification batches is caught by the second round - never a false close", async () => {
+      const c = await seedConnected();
+      seedBucket(c, 120); // > one IN batch of 50 so the flip can land mid-round
+      let seenIn = 0;
+      const racing = hook(c, (q) => q.startsWith("SELECT count(*)") && q.includes(" Id IN ") && ++seenIn === 2, () => {
+        const at = c.fake.data.Invoice.findIndex((r) => r.Id === "t005");
+        c.fake.data.Invoice[at] = invoice("t005", "2026-12-31T00:00:00Z");
+        c.fake.data.Invoice.push(invoice("B-late", SECOND));
+      });
+      let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
+      for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
+      await assertNoSilentSkip(c, out);
+      if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
+    });
+
+    it("restart between the two observations / continuation worker takeover: the flip lands while the sync is PAUSED at its checkpoint inside the proof; the resuming execution still does not close falsely", async () => {
+      const c = await seedConnected();
+      seedBucket(c, 60);
+      // Budget small enough that an execution ends in the middle of enumeration/verification.
+      let out = await run(c, { pageSize: 10, pagesPerExecution: 9 });
+      expect(out.status).toBe("CONTINUING");
+      const cp = parseContinuation((await stateOf(c)).continuation);
+      expect(cp?.tie).not.toBeNull();
+      replaceAB(c); // while paused (no lease held)
+      for (let i = 0; i < 30 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, pagesPerExecution: 9, now: () => new Date(NOW.getTime() + 60_000 * (i + 1)) });
+      await assertNoSilentSkip(c, out);
+      if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
+    });
+
+    it("WATERMARK_NO_SILENT_SKIP: a provider that hides B for the whole sync (never serves it) can not be proven complete if it still COUNTS B", async () => {
+      const c = await seedConnected();
+      seedBucket(c, 35);
+      // The provider's COUNT includes a record its pages never return (an inconsistent provider): inclusion can never be established.
+      const realFetch = c.fake.fetchImpl;
+      const phantom = async (input: string, init?: RequestInit) => {
+        const res = await realFetch(input, init);
+        const q = new URL(input).searchParams.get("query") ?? "";
+        if (!q.startsWith("SELECT count(*) FROM Invoice") || q.includes(" Id IN ")) return res; // only the bucket total lies
+        const body = (await res.json()) as { QueryResponse: { totalCount: number } };
+        body.QueryResponse.totalCount += 1;
+        return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+      };
+      const out = await run(c, { pageSize: 10, fetchImpl: phantom });
+      expect(out).toMatchObject({ status: "FAILED", code: "PROVIDER_INCOMPLETE" });
+      expect((await stateOf(c)).watermarks).toEqual({});
+    });
+
+    it("a webhook hint that arrives DURING a multi-execution sync is not consumed by it (it post-dates the cutoff) and still triggers a follow-up", async () => {
+      const c = await seedConnected();
+      for (let i = 1; i <= 30; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      expect((await run(c, { pageSize: 10, pagesPerExecution: 2 })).status).toBe("CONTINUING");
+      await markWebhookHint(scopeOf(c), testDeps(c, { now: () => new Date(NOW.getTime() + 120_000) }));
+      let out = await run(c, { pageSize: 10, pagesPerExecution: 2, now: () => new Date(NOW.getTime() + 180_000) });
+      for (let i = 0; i < 10 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, pagesPerExecution: 2, now: () => new Date(NOW.getTime() + 240_000 + i * 1000) });
+      expect(out.status).toBe("SUCCEEDED");
+      expect((await stateOf(c)).webhookHintAt).not.toBeNull();
     });
   });
 });

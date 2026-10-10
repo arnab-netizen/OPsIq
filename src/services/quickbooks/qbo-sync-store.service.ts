@@ -455,6 +455,25 @@ export async function countSeenInWindow(lease: SyncLease, entityType: string, fr
   })) as number;
 }
 
+/**
+ * Ids (ascending, keyset on the id) this logical sync stored for records whose stored provider timestamp lies in [from, to). A record
+ * that has since LEFT the window at the provider still appears here (its stored copy is stale) - which is harmless for an inclusion
+ * proof: it simply matches nothing in the provider's count.
+ */
+export async function listSeenIdsInWindow(lease: SyncLease, entityType: string, from: Date, to: Date, afterId: string | null, limit: number, deps?: QboPersistenceDeps): Promise<string[]> {
+  const rows = (await clientOf(deps).qboSyncedRecord.findMany({
+    where: {
+      connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, entityType,
+      lastSeenSyncId: lease.syncId, providerUpdatedAt: { gte: from, lt: to },
+      ...(afterId !== null ? { providerEntityId: { gt: afterId } } : {}),
+    },
+    select: { providerEntityId: true },
+    orderBy: { providerEntityId: "asc" },
+    take: Math.max(1, limit),
+  })) as Array<{ providerEntityId: string }>;
+  return rows.map((r) => r.providerEntityId);
+}
+
 // ─── Report observations ─────────────────────────────────────────────────────
 
 export interface ReportObservationInput {

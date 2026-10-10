@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { runQboReadSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-sync.service";
 import { seedConnected, testDeps, scopeOf, countRows, nextRealm, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
-import { customer, invoice, bill, inst } from "@/__tests__/test-helpers/qbo-fake-intuit";
+import { customer, invoice, bill, inst, agedBody } from "@/__tests__/test-helpers/qbo-fake-intuit";
 import { QBO_SYNC_QUERY_ENTITIES, QBO_SYNC_REPORT_MONTHS } from "@/domain/quickbooks/qbo-sync-model";
 
 const NOW = new Date("2026-10-10T03:00:00Z");
@@ -248,13 +248,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer", recordState: "ACTIVE" } })).toBe(2500);
     });
 
-    it("more records than a page share ONE timestamp (bulk import): none are skipped or looped on", async () => {
+    it("more records than a page share ONE timestamp (bulk import): none are skipped or looped on (the identity proof may span executions)", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 2300; i++) c.fake.data.Invoice.push(invoice(String(i).padStart(5, "0"), "2026-09-15T10:00:00Z"));
-      const out = await run(c);
+      let out = await run(c);
+      for (let i = 0; i < 5 && out.status === "CONTINUING"; i++) out = await run(c);
       expect(out.status).toBe("SUCCEEDED");
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Invoice" } })).toBe(2300);
-      expect(c.fake.requests.filter((r) => /FROM Invoice/.test(r.url.searchParams.get("query") ?? "")).length).toBeLessThan(10);
+      expect(c.fake.requests.filter((r) => /^SELECT \* FROM Invoice/.test(r.url.searchParams.get("query") ?? "")).length).toBeLessThan(10);
     });
 
     it("an exact multiple of the page size ends with one short page (the boundary row re-read)", async () => {
@@ -330,6 +331,28 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(revised.every((o: { revision: number; metrics: unknown }) => o.revision === 2 && (o.metrics as { Income: string }).Income === "12345.67")).toBe(true);
       // One step of history is kept for governed re-evaluation: what the row held before the revision.
       expect(revised.every((o: { previousMetrics: unknown; previousContentHash: string | null }) => (o.previousMetrics as { Income: string }).Income === "10000" && /^[0-9a-f]{64}$/.test(o.previousContentHash ?? ""))).toBe(true);
+    });
+
+    it("a P&L/Balance Sheet header that omits the period it covers, or states another basis, fails closed (nothing filed); a missing basis is stored as UNKNOWN, never assumed Accrual", async () => {
+      const noPeriod = await seedConnected();
+      noPeriod.fake.reports.ProfitAndLoss = (p) => ({ Header: { Currency: "USD", ReportBasis: "Accrual" }, Columns: { Column: [] }, Rows: {} });
+      expect(await run(noPeriod)).toMatchObject({ status: "FAILED", code: "PROVIDER_MALFORMED" });
+      expect(await db.qboReportObservation.count({ where: { connectionId: noPeriod.connectionId, reportName: "ProfitAndLoss" } })).toBe(0);
+
+      const cash = await seedConnected();
+      cash.fake.reports.BalanceSheet = (p) => ({ Header: { StartPeriod: p.get("start_date"), EndPeriod: p.get("end_date"), Currency: "USD", ReportBasis: "Cash" }, Columns: { Column: [] }, Rows: {} });
+      expect(await run(cash)).toMatchObject({ status: "FAILED", code: "PROVIDER_MALFORMED" });
+      expect(await db.qboReportObservation.count({ where: { connectionId: cash.connectionId, reportName: "BalanceSheet", basis: "Cash" } })).toBe(0);
+
+      const unknown = await seedConnected();
+      unknown.fake.reports.AgedReceivables = (p) => {
+        const body = agedBody(p, "USD", "AgedReceivables") as { Header: Record<string, unknown> };
+        delete body.Header.ReportBasis;
+        return body;
+      };
+      const ok = await run(unknown);
+      expect(ok.status).toBe("SUCCEEDED");
+      expect((await db.qboReportObservation.findFirstOrThrow({ where: { connectionId: unknown.connectionId, reportName: "AgedReceivables" } })).basis).toBe("UNKNOWN");
     });
 
     it("a report for the wrong period fails the run as PROVIDER_MALFORMED, but the other reports are still stored and the watermarks do not advance", async () => {

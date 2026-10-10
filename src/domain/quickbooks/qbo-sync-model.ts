@@ -380,6 +380,16 @@ export const QboContinuationSchema = z.object({
     lastSeen: z.number().int().min(0),
     /** The provider's count for the bucket at the START of the current pass (null until probed). A pass never reads past it. */
     total: z.number().int().min(0).nullable(),
+    /**
+     * Identity-inclusion proof in progress. Two full rounds over the ids this sync stored for the second; each batch asks the provider
+     * for count(window AND Id IN batch). `matched` is the running sum; the bucket may close only when it equals the provider's `total`.
+     */
+    verify: z.object({
+      round: z.number().int().min(1).max(2),
+      after: z.string().max(64).nullable(),
+      matched: z.number().int().min(0),
+      total: z.number().int().min(0),
+    }).nullable().default(null),
   }).nullable(),
   /** Entities whose FULL reconciliation (verify reads) has finished. */
   reconciled: z.array(z.string()).max(8),

@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   QBO_READABLE_ENTITIES,
   buildQboQuery,
+  buildQboCountQuery,
+  QBO_QUERY_IN_MAX_VALUES,
   isReadableEntity,
   isReportName,
   quoteQboLiteral,
@@ -60,6 +62,16 @@ describe("quoteQboLiteral", () => {
 });
 
 describe("allowlists", () => {
+  it("IN takes a bounded parenthesised list of escaped literals (identity-inclusion proofs); count(*) shares the grammar", () => {
+    expect(buildQboCountQuery({ entity: "Invoice", where: [{ field: "Id", op: "IN", value: ["1", "2"] }] })).toBe("SELECT count(*) FROM Invoice WHERE Id IN ('1', '2')");
+    expect(buildQboQuery({ entity: "Invoice", where: [{ field: "Id", op: "IN", value: ["a'b"] }] })).toContain("Id IN ('a\\'b')");
+    const many = Array.from({ length: QBO_QUERY_IN_MAX_VALUES + 1 }, (_, i) => String(i));
+    expect(() => buildQboCountQuery({ entity: "Invoice", where: [{ field: "Id", op: "IN", value: many }] })).toThrow(RangeError);
+    expect(() => buildQboCountQuery({ entity: "Invoice", where: [{ field: "Id", op: "IN", value: [] }] })).toThrow(RangeError);
+    expect(() => buildQboCountQuery({ entity: "Invoice", where: [{ field: "Id", op: "=", value: ["1"] as never }] })).toThrow(RangeError);
+    expect(() => buildQboCountQuery({ entity: "Invoice", where: [{ field: "Id) OR (1", op: "IN", value: ["1"] }] })).toThrow(RangeError);
+  });
+
   it("entities and reports are fixed sets", () => {
     expect(isReadableEntity("Invoice")).toBe(true);
     expect(isReadableEntity("invoice")).toBe(false);

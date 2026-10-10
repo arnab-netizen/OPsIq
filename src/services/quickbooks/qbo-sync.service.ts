@@ -20,7 +20,7 @@ import { randomUUID } from "crypto";
 import { resolveQboConfig, type QboProviderConfig } from "@/domain/quickbooks/qbo-config";
 import { createQboReadClient, type QboReadClient } from "./qbo-client";
 import { isQboProviderError } from "@/domain/quickbooks/qbo-errors";
-import type { QboQuerySpec } from "@/domain/quickbooks/qbo-read-catalog";
+import { QBO_QUERY_IN_MAX_VALUES, type QboQuerySpec } from "@/domain/quickbooks/qbo-read-catalog";
 import {
   QBO_SYNC_MANUAL_COOLDOWN_MS,
   evaluateDueGate,
@@ -68,6 +68,7 @@ import {
   finishSyncRunSuccess,
   extendSyncLease,
   countSeenInWindow,
+  listSeenIdsInWindow,
   finishSyncRunPartial,
   listUnseenRecordIds,
   markVerifyAttempted,
@@ -426,7 +427,7 @@ async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): P
     const newest = floorSecond(new Date(stamps[stamps.length - 1]));
     if (floorSecond(new Date(stamps[0])).getTime() === newest.getTime()) {
       // The whole page shares ONE second: that second holds at least a page of records. Enumerate it with count-proven closure.
-      await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: { second: newest.toISOString(), offset: 0, stalledPasses: 0, lastSeen: 0, total: null } });
+      await persistQueryPage(p, entity, result.records, { cursor: newest.toISOString(), tie: { second: newest.toISOString(), offset: 0, stalledPasses: 0, lastSeen: 0, total: null, verify: null } });
       continue;
     }
     // Everything below `newest` is complete in this page; `newest` itself may continue, so the next page starts AT it.
@@ -455,28 +456,62 @@ async function persistQueryPage(
 }
 
 /**
- * One step of the enumeration of an oversized equal-timestamp bucket: a page of the pass, or (at the end of a pass) the count
- * probe that either closes the bucket or starts another pass.
+ * One step of the handling of an oversized equal-timestamp bucket (one whole second holding at least a page of records).
+ *
+ * COMPLETENESS PROOF (set inclusion, not cardinality). Counting alone proves nothing about WHICH records were read: a record
+ * that leaves the bucket while another enters it keeps both the provider's count and the stored count unchanged. So the bucket is
+ * closed only when, for the ids this logical sync stored for that second, the provider itself confirms
+ *     sum over batches of count(second AND Id IN batch)  ==  count(second)
+ * i.e. every record the provider currently holds in that second is one we already have (documented operators: count(*), IN on Id,
+ * range on LastUpdatedTime; no ordering assumption). Stored records that have since left the second match nothing and are harmless.
+ * The proof runs in two full rounds with the provider's count re-read after each, so a membership flip that straddles one round is
+ * caught by the next. Any shortfall or drift restarts the enumeration (new pass); passes that do not grow the stored set, or
+ * repeated drift, end the run PROVIDER_INCOMPLETE - the durable watermark is never advanced on an unproven bucket.
  */
 async function tieStep(p: Pager, entity: Entity): Promise<void> {
   const tie = p.cp.tie as NonNullable<QboContinuation["tie"]>;
   const from = new Date(tie.second);
   const to = new Date(from.getTime() + 1000);
-  const where: NonNullable<QboQuerySpec["where"]> = [
+  const windowWhere: NonNullable<QboQuerySpec["where"]> = [
     { field: "MetaData.LastUpdatedTime", op: ">=", value: toQboInstant(from) },
     { field: "MetaData.LastUpdatedTime", op: "<", value: toQboInstant(to) },
   ];
-  const countBucket = async (): Promise<number> => {
+  const countWhere = async (where: NonNullable<QboQuerySpec["where"]>): Promise<number> => {
     const n = await p.call(() => p.client.count({ entity, where }));
     p.units++;
     return n;
   };
-  if (tie.total === null) {
-    // Start of a pass: the provider's own size of the bucket bounds the pass, so a provider that ignores paging cannot keep it open.
-    await advance(p, { tie: { ...tie, total: await countBucket() } });
+  const restartPass = async (stalledPasses: number, lastSeen: number, total: number | null): Promise<void> => {
+    if (stalledPasses >= QBO_SYNC_TIE_MAX_STALLED_PASSES) throw new SyncFailure("PROVIDER_INCOMPLETE");
+    await advance(p, { tie: { second: tie.second, offset: 0, stalledPasses, lastSeen, total, verify: null } });
+  };
+
+  if (tie.verify) {
+    const v = tie.verify;
+    const ids = await listSeenIdsInWindow(p.lease, entity, from, to, v.after, QBO_QUERY_IN_MAX_VALUES, p.deps);
+    if (ids.length > 0) {
+      const m = await countWhere([...windowWhere, { field: "Id", op: "IN", value: ids }]);
+      await advance(p, { tie: { ...tie, verify: { ...v, after: ids[ids.length - 1], matched: v.matched + m } } });
+      return;
+    }
+    // Round finished: every provider member must be among the stored ids, and the bucket must not have changed size meanwhile.
+    const now = await countWhere(windowWhere);
+    if (v.matched !== v.total || now !== v.total) return restartPass(tie.stalledPasses, tie.lastSeen, null);
+    if (v.round === 1) {
+      await advance(p, { tie: { ...tie, verify: { round: 2, after: null, matched: 0, total: v.total } } });
+      return;
+    }
+    p.counts.tieBucketsClosed++;
+    await advance(p, { cursor: to.toISOString(), tie: null });
     return;
   }
-  const result = await p.call(() => p.client.query({ entity, where, orderBy: { field: "MetaData.LastUpdatedTime", direction: "ASC" }, startPosition: 1 + tie.offset, maxResults: p.pageSize }));
+
+  if (tie.total === null) {
+    // Start of a pass: the provider's own size of the bucket bounds the pass, so a provider that ignores paging cannot keep it open.
+    await advance(p, { tie: { ...tie, total: await countWhere(windowWhere) } });
+    return;
+  }
+  const result = await p.call(() => p.client.query({ entity, where: windowWhere, orderBy: { field: "MetaData.LastUpdatedTime", direction: "ASC" }, startPosition: 1 + tie.offset, maxResults: p.pageSize }));
   p.units++;
   p.counts.pages++;
   stampsOf(result.records);
@@ -487,21 +522,12 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
   }
   await persistQueryPage(p, entity, result.records, null);
 
-  // End of a pass. Compare the provider's own count for exactly this second with what this logical sync has stored for it.
-  const providerCount = await countBucket();
+  // End of an enumeration pass. A bucket whose size changed during the pass may have shifted offsets: enumerate again.
+  const providerCount = await countWhere(windowWhere);
   const seen = await countSeenInWindow(p.lease, entity, from, to, p.deps);
-  // Close only if the bucket did not change size DURING the pass (a record leaving it shifts every later offset, so a pass that
-  // straddles such a change may have skipped a record) AND the stored distinct records equal the provider's count. A drifting
-  // bucket restarts the pass; repeated drift or a count that never matches ends PROVIDER_INCOMPLETE and the next attempt starts a
-  // fresh logical sync (stale marks discarded).
-  if (providerCount === tie.total && seen === providerCount) {
-    p.counts.tieBucketsClosed++;
-    await advance(p, { cursor: to.toISOString(), tie: null });
-    return;
-  }
   const stalledPasses = providerCount === tie.total && seen > tie.lastSeen ? 0 : tie.stalledPasses + 1;
-  if (stalledPasses >= QBO_SYNC_TIE_MAX_STALLED_PASSES) throw new SyncFailure("PROVIDER_INCOMPLETE");
-  await advance(p, { tie: { second: tie.second, offset: 0, stalledPasses, lastSeen: seen, total: providerCount } });
+  if (providerCount !== tie.total) return restartPass(stalledPasses, seen, providerCount);
+  await advance(p, { tie: { second: tie.second, offset: tie.offset, stalledPasses, lastSeen: seen, total: providerCount, verify: { round: 1, after: null, matched: 0, total: providerCount } } });
 }
 
 /**
@@ -578,7 +604,9 @@ async function readReports(client: QboReadClient, call: Call, lease: SyncLease, 
     // The provider must answer for the period that was asked, otherwise the numbers would be filed under the wrong date.
     // A header that does not echo the requested period at all is as bad as one that echoes a different period: fail closed.
     const echoed = (job.verify.end && report.endPeriod !== job.periodEnd) || (job.verify.start && report.startPeriod !== job.params.start_date);
-    if (echoed) { malformed = true; counts.reportsFailed++; continue; }
+    // The basis the provider says it used must be the basis that was asked for (an echo of a different basis is another dataset).
+    const basisMismatch = job.params.accounting_method !== undefined && report.basis !== null && report.basis !== job.params.accounting_method;
+    if (echoed || basisMismatch) { malformed = true; counts.reportsFailed++; continue; }
     // A report that does not state its basis is NOT assumed to be Accrual: "UNKNOWN" is never adopted by the provenance policy.
     const basis = report.basis ?? "UNKNOWN";
     const result = await persistReportObservation(

@@ -102,16 +102,16 @@ export function validateReportParams(params: QboReportParams | undefined): Recor
 // ── Structured query ─────────────────────────────────────────────────────
 
 const FIELD_PATTERN = /^[A-Za-z][A-Za-z0-9_.]{0,63}$/;
-export const QBO_QUERY_OPERATORS = ["=", "<", ">", "<=", ">=", "LIKE"] as const;
+export const QBO_QUERY_OPERATORS = ["=", "<", ">", "<=", ">=", "LIKE", "IN"] as const;
+/** `IN` takes a parenthesised literal list (Intuit: parenthesised lists are supported for IN only). Bounded so a GET query string stays small. */
+export const QBO_QUERY_IN_MAX_VALUES = 50;
 export type QboQueryOperator = (typeof QBO_QUERY_OPERATORS)[number];
 
 export type QboQueryLiteral = string | number | boolean;
 
-export interface QboQueryPredicate {
-  field: string;
-  op: QboQueryOperator;
-  value: QboQueryLiteral;
-}
+export type QboQueryPredicate =
+  | { field: string; op: Exclude<QboQueryOperator, "IN">; value: QboQueryLiteral }
+  | { field: string; op: "IN"; value: readonly string[] };
 
 export interface QboQuerySpec {
   entity: QboReadableEntity;
@@ -136,16 +136,23 @@ export function quoteQboLiteral(value: QboQueryLiteral): string {
   return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
+function buildClause(p: QboQueryPredicate): string {
+  if (!FIELD_PATTERN.test(p.field)) throw new RangeError("Invalid query field");
+  if (!(QBO_QUERY_OPERATORS as readonly string[]).includes(p.op)) throw new RangeError("Invalid query operator");
+  if (p.op === "IN") {
+    if (!Array.isArray(p.value) || p.value.length === 0 || p.value.length > QBO_QUERY_IN_MAX_VALUES) throw new RangeError("Invalid IN list size");
+    return `${p.field} IN (${p.value.map((v) => quoteQboLiteral(v)).join(", ")})`;
+  }
+  if (Array.isArray(p.value)) throw new RangeError("List literal only valid for IN");
+  return `${p.field} ${p.op} ${quoteQboLiteral(p.value as QboQueryLiteral)}`;
+}
+
 /** Same grammar as {@link buildQboQuery} but `SELECT count(*)`: Intuit documents count(*) as returning the number of matching records. */
 export function buildQboCountQuery(spec: Pick<QboQuerySpec, "entity" | "where">): string {
   if (!isReadableEntity(spec.entity)) throw new RangeError("Entity not readable");
   const parts = [`SELECT count(*) FROM ${spec.entity}`];
   if (spec.where && spec.where.length > 0) {
-    const clauses = spec.where.map((p) => {
-      if (!FIELD_PATTERN.test(p.field)) throw new RangeError("Invalid query field");
-      if (!(QBO_QUERY_OPERATORS as readonly string[]).includes(p.op)) throw new RangeError("Invalid query operator");
-      return `${p.field} ${p.op} ${quoteQboLiteral(p.value)}`;
-    });
+    const clauses = spec.where.map(buildClause);
     parts.push(`WHERE ${clauses.join(" AND ")}`);
   }
   return parts.join(" ");
@@ -156,11 +163,7 @@ export function buildQboQuery(spec: QboQuerySpec): string {
   if (!isReadableEntity(spec.entity)) throw new RangeError("Entity not readable");
   const parts = [`SELECT * FROM ${spec.entity}`];
   if (spec.where && spec.where.length > 0) {
-    const clauses = spec.where.map((p) => {
-      if (!FIELD_PATTERN.test(p.field)) throw new RangeError("Invalid query field");
-      if (!(QBO_QUERY_OPERATORS as readonly string[]).includes(p.op)) throw new RangeError("Invalid query operator");
-      return `${p.field} ${p.op} ${quoteQboLiteral(p.value)}`;
-    });
+    const clauses = spec.where.map(buildClause);
     parts.push(`WHERE ${clauses.join(" AND ")}`);
   }
   if (spec.orderBy) {

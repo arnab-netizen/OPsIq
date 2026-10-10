@@ -199,6 +199,12 @@ export function createFakeIntuit(opts: { realmId: string; currency?: string; com
         const applyWhere = (rows: FakeRecord[], where: string | undefined): FakeRecord[] | null => {
           let filtered = [...rows];
           for (const c of (where ?? "").split(" AND ").filter(Boolean)) {
+            const inm = /^Id IN \((.+)\)$/.exec(c);
+            if (inm) {
+              const ids = new Set(inm[1].split(",").map((x) => x.trim().replace(/^'|'$/g, "")));
+              filtered = filtered.filter((r) => ids.has(r.Id));
+              continue;
+            }
             const cm = /^MetaData\.LastUpdatedTime (>=|<=|>|<) '([^']+)'$/.exec(c);
             if (!cm) return null;
             const bound = Date.parse(cm[2]);
