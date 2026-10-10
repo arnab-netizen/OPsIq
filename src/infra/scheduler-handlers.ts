@@ -25,7 +25,7 @@ export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
 export const TASK_NAME_RISK_REVIEW_SCAN = "risk-review-scan";
 export const TASK_NAME_QBO_READ_SYNC = "qbo-read-sync";
 /** A scheduled QuickBooks execution stops at its checkpoint after this long (the follow-up continues it), well inside the cron function ceiling. */
-export const QBO_SCHEDULED_EXECUTION_DEADLINE_MS = 120_000;
+export const QBO_SCHEDULED_EXECUTION_DEADLINE_MS = 100_000;
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -180,7 +180,6 @@ export async function enqueueQboSyncContinuation(input: { workspaceId: string; c
   return r.created;
 }
 
-/** The one production handler registry — pass to processDue() unmodified. */
 /**
  * qbo-read-sync — READ-ONLY QuickBooks synchronization for one connection.
  *
@@ -214,6 +213,7 @@ const qboReadSyncHandler: TaskHandler = async (payload, context): Promise<Handle
   }
 };
 
+/** The one production handler registry — pass to processDue() unmodified. */
 export function getProductionTaskHandlers(): Map<string, TaskHandler> {
   return new Map<string, TaskHandler>([
     [TASK_NAME_ALERT_EMAIL_RETRY, alertEmailRetryHandler],

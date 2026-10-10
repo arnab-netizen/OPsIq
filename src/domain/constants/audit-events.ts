@@ -671,7 +671,6 @@ export const AUDIT_EVENTS = {
   QBO_SYNC_CONTINUED: "qbo.sync_continued",
   QBO_SYNC_FAILED: "qbo.sync_failed",
   QBO_SYNC_LEASE_RECOVERED: "qbo.sync_lease_recovered",
-  QBO_TOKENS_REFRESHED: "qbo.tokens_refreshed",
   QBO_WEBHOOK_HINT_RECORDED: "qbo.webhook_hint_recorded",
 
   // Bundle 3.5 — Customer Complaint and Service Recovery

@@ -65,7 +65,10 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 const DRAIN_BUDGET_MS = 45_000;
 
 /** Hard cap on drain passes, so a pathological state cannot spin. */
-const MAX_DRAIN_PASSES = 25;
+const MAX_DRAIN_PASSES = 200;
+
+/** Tasks claimed per drain pass (see the call site). */
+const DRAIN_CLAIM_PER_PASS = 2;
 
 function verifyCronSecret(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -130,7 +133,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     // returns 0 and ends the loop, so this can never spin on undeliverable work.
     for (; schedulerPasses < MAX_DRAIN_PASSES; schedulerPasses++) {
       if (Date.now() >= deadline) break;
-      const passProcessed = await scheduler.processDue(handlers);
+      // Few tasks per pass: a QuickBooks execution may run ~100 s, so a pass of 2 stays well inside maxDuration and a platform kill can
+      // strand at most 2 claimed rows (not a batch of 50).
+      const passProcessed = await scheduler.processDue(handlers, { maxClaim: DRAIN_CLAIM_PER_PASS });
       tasksProcessed += passProcessed;
       if (passProcessed === 0) break;
     }

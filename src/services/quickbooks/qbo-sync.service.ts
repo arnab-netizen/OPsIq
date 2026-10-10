@@ -168,7 +168,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
   }
   const lease = begun.lease;
   const counts = emptySyncCounts();
-  const track: Track = { cp: null, pager: null, changed: false };
+  const track: Track = { cp: null, pager: null, changed: false, freshCheckpoint: null };
 
   try {
     // An unfinished sync resumes from its durable checkpoint; otherwise this execution starts a new logical sync whose cutoff is fixed now.
@@ -178,9 +178,9 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
       seq: (begun.continuation?.seq ?? 0) + 1, changed: begun.continuation?.changed ?? false, restart: false,
     };
     track.cp = checkpoint;
-    // A fresh logical sync gets its (empty) checkpoint durably BEFORE any record is written, so the re-evaluation marker always has a
-    // row to be patched into inside the same transaction as the data that changed.
-    if (!resume) await saveContinuation(lease, checkpoint, deps);
+    // A fresh logical sync's (empty) checkpoint is written in the SAME transaction as its first record (CompanyInfo), never earlier:
+    // a failure before any provider data was read leaves no checkpoint, so the next attempt starts a fresh sync with a fresh cutoff.
+    track.freshCheckpoint = resume ? null : checkpoint;
     const stored = parseWatermarks(begun.priorState.watermarks);
     const result = await executeReads({ lease, connection, config, mode: begun.mode, watermarks: stored, counts, now, checkpoint, track, input, deps });
     if (result.status === "BUDGET") {
@@ -225,6 +225,8 @@ interface Track {
   cp: QboContinuation | null;
   pager: Pager | null;
   changed: boolean;
+  /** Checkpoint of a fresh logical sync that has not been persisted yet (written together with the first record). */
+  freshCheckpoint: QboContinuation | null;
 }
 
 /**
@@ -327,7 +329,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
     if (company.record.normalized.reportedRealmId !== null && company.record.normalized.reportedRealmId !== connection.realmId) {
       throw new SyncFailure("COMPANY_MISMATCH");
     }
-    changed = (await persistPage(lease, [company.record], undefined, counts, deps)) || changed;
+    changed = (await persistPage(lease, [company.record], a.track.freshCheckpoint ?? undefined, counts, deps)) || changed;
     a.track.changed = changed;
 
     const pager: Pager = {
@@ -355,7 +357,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
     }
     changed = changed || pager.changed;
 
-    changed = (await readReports(client, call, lease, counts, now, deps, async () => { if (!pager.cp.changed) await advance(pager, { changed: true }); })) || changed;
+    changed = (await readReports(client, call, lease, counts, now, deps, async () => { a.track.changed = true; if (!pager.cp.changed) await advance(pager, { changed: true }); })) || changed;
     return { status: "DONE", changed };
   } finally {
     deps.signal?.removeEventListener("abort", onParentAbort);

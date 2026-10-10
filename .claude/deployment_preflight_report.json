@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-10-10T10:43:11.843Z",
-  "node_version": "v22.22.0",
-  "npm_version": "10.9.4",
+  "timestamp": "2026-09-25T12:38:27.619Z",
+  "node_version": "v22.22.2",
+  "npm_version": "10.9.7",
   "environment_checks": [
     {
       "name": "NODE_ENV",
@@ -75,12 +75,11 @@
     "node_modules_exists": true,
     "package_lock_exists": true
   },
-  "prisma_schema_valid": false,
+  "prisma_schema_valid": true,
   "prisma_migrations_status": "DATABASE_URL_NOT_SET",
   "overall_status": "BLOCKED",
   "blockers": [
-    "Required env DATABASE_URL not set",
-    "Prisma schema validation failed"
+    "Required env DATABASE_URL not set"
   ],
   "warnings": [
     "External runtime env NEXT_PUBLIC_APP_URL not set - will be needed at deployment"

@@ -519,7 +519,18 @@ export async function persistReportObservation(lease: SyncLease, input: ReportOb
           providerGeneratedAt: input.providerGeneratedAt, firstSeenRunId: lease.runId, lastSeenRunId: lease.runId, fetchedAt: now,
         },
       });
-      return { changed: true, created: true };
+      // An aged report is read "as of today": a new day's row with figures identical to the previous day's is not new evidence.
+      let changedHere = true;
+      if (input.reportName.startsWith("Aged") && input.periodStart.getTime() === input.periodEnd.getTime()) {
+        const prior = await tx.qboReportObservation.findFirst({
+          where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, reportName: input.reportName, basis: input.basis, periodEnd: { lt: input.periodEnd } },
+          orderBy: { periodEnd: "desc" }, select: { contentHash: true },
+        });
+        if (prior && prior.contentHash === input.contentHash) changedHere = false;
+      }
+      // The durable re-evaluation marker is written in THIS transaction, with the observation it describes.
+      if (changedHere) await markCheckpointChanged(tx, lease);
+      return { changed: changedHere, created: true };
     }
     const changed = existing.contentHash !== input.contentHash;
     await tx.qboReportObservation.update({
@@ -533,6 +544,7 @@ export async function persistReportObservation(lease: SyncLease, input: ReportOb
           }
         : { lastSeenRunId: lease.runId, fetchedAt: now },
     });
+    if (changed) await markCheckpointChanged(tx, lease);
     return { changed, created: false };
   }, TX_OPTIONS);
 }

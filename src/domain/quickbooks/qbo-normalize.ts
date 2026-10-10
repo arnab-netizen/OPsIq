@@ -340,8 +340,9 @@ export function parseAgedReport(body: unknown): ReportParseResult {
       if (raw === undefined) return null;
       return raw === "" ? "0" : toDecimalString(raw);
     };
+    // An empty BUCKET cell means zero, but an empty grand-TOTAL cell is absent (never a fabricated zero).
     const current = cell(currentIdx);
-    const total = cell(totalIdx);
+    const total = grand.summary?.[totalIdx] === "" ? null : cell(totalIdx);
     if (current === null || total === null) return { ok: false, reason: "MALFORMED" };
     let bucketSum = 0;
     for (let i = 1; i < titles.length; i++) {

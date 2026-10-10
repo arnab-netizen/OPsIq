@@ -419,7 +419,12 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     logger.info("Task cancelled", { taskId });
   }
 
-  async processDue(handlers: Map<string, TaskHandler>): Promise<number> {
+  /**
+   * `maxClaim` (default 50) bounds how many tasks one pass claims. A caller with a wall-clock ceiling (the cron drain) claims few per
+   * pass so a function kill can strand at most that many `running` rows instead of a whole batch.
+   */
+  async processDue(handlers: Map<string, TaskHandler>, options: { maxClaim?: number } = {}): Promise<number> {
+    const maxClaim = Math.max(1, Math.min(50, Math.floor(options.maxClaim ?? 50)));
     const now = new Date();
     const leaseExpiry = new Date(now.getTime() + this.leaseMs);
 
@@ -438,7 +443,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
           ("status" = 'running'  AND "lease_expires_at" < ${now})
         )
         ORDER BY "scheduled_for" ASC
-        LIMIT 50
+        LIMIT ${maxClaim}
         FOR UPDATE SKIP LOCKED
       )
       UPDATE "scheduled_tasks" t
