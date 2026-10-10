@@ -31,6 +31,15 @@ export interface FakeIntuit {
   deleted: Set<string>;
   /** Objects the QUERY omits but a read by id still returns (e.g. inactive customers). */
   inactive: Map<string, FakeRecord>;
+  /**
+   * HOSTILE ordering: when set, rows sharing one LastUpdatedTime are re-shuffled (seeded PRNG) on EVERY query request, so two
+   * consecutive pages of an equal-timestamp bucket are not slices of one stable order. The primary (timestamp) order is still honoured.
+   */
+  shuffleTies: { seed: number } | null;
+  /** HOSTILE: the provider ignores STARTPOSITION (every page is the first page) - an endless-paging trap. */
+  ignoreStartPosition: boolean;
+  /** Number of `SELECT count(*)` requests answered. */
+  countCalls: number;
   nonTokenPosts: () => RecordedRequest[];
   accountingRequests: () => RecordedRequest[];
 }
@@ -122,6 +131,9 @@ export function createFakeIntuit(opts: { realmId: string; currency?: string; com
     deleted: new Set<string>(),
     inactive: new Map<string, FakeRecord>(),
     reports: {},
+    shuffleTies: null,
+    ignoreStartPosition: false,
+    countCalls: 0,
     validAccessTokens: null,
     tokenResponses: [],
     tokenCalls: 0,
@@ -184,23 +196,45 @@ export function createFakeIntuit(opts: { realmId: string; currency?: string; com
       }
       if (rest === "query") {
         const q = url.searchParams.get("query") ?? "";
+        const applyWhere = (rows: FakeRecord[], where: string | undefined): FakeRecord[] | null => {
+          let filtered = [...rows];
+          for (const c of (where ?? "").split(" AND ").filter(Boolean)) {
+            const cm = /^MetaData\.LastUpdatedTime (>=|<=|>|<) '([^']+)'$/.exec(c);
+            if (!cm) return null;
+            const bound = Date.parse(cm[2]);
+            filtered = filtered.filter((r) => {
+              const t = Date.parse(r.MetaData.LastUpdatedTime);
+              return cm[1] === ">=" ? t >= bound : cm[1] === "<=" ? t <= bound : cm[1] === ">" ? t > bound : t < bound;
+            });
+          }
+          return filtered;
+        };
+        const cnt = /^SELECT count\(\*\) FROM (\w+)(?: WHERE (.*))?$/.exec(q);
+        if (cnt) {
+          const rows = fake.data[cnt[1] as keyof FakeIntuit["data"]];
+          if (!rows) return json(400, { Fault: { Error: [{ code: "4001" }] } });
+          const filtered = applyWhere(rows, cnt[2]);
+          if (!filtered) return json(400, { Fault: { Error: [{ code: "4002" }] } });
+          fake.countCalls++;
+          return json(200, { QueryResponse: { totalCount: filtered.length }, time: iso(new Date()) });
+        }
         const m = /^SELECT \* FROM (\w+)(?: WHERE (.*?))?(?: ORDERBY ([\w.]+)( DESC)?)? STARTPOSITION (\d+) MAXRESULTS (\d+)$/.exec(q);
         if (!m) return json(400, { Fault: { Error: [{ code: "4000" }] } });
         const entity = m[1] as keyof FakeIntuit["data"];
         const rows = fake.data[entity];
         if (!rows) return json(400, { Fault: { Error: [{ code: "4001" }] } });
-        let filtered = [...rows];
-        for (const c of (m[2] ?? "").split(" AND ").filter(Boolean)) {
-          const cm = /^MetaData\.LastUpdatedTime (>=|<=|>|<) '([^']+)'$/.exec(c);
-          if (!cm) return json(400, { Fault: { Error: [{ code: "4002" }] } });
-          const bound = Date.parse(cm[2]);
-          filtered = filtered.filter((r) => {
-            const t = Date.parse(r.MetaData.LastUpdatedTime);
-            return cm[1] === ">=" ? t >= bound : cm[1] === "<=" ? t <= bound : cm[1] === ">" ? t > bound : t < bound;
-          });
+        const filtered = applyWhere(rows, m[2]);
+        if (!filtered) return json(400, { Fault: { Error: [{ code: "4002" }] } });
+        if (fake.shuffleTies) {
+          // Seeded per request (request count) so a run is reproducible but every page sees a different tie order.
+          let x = (fake.shuffleTies.seed + fake.requests.length * 2654435761) >>> 0;
+          const rnd = () => { x = (Math.imul(x ^ (x >>> 15), 2246822507) + 0x9e3779b9) >>> 0; return x / 4294967296; };
+          const key = new Map(filtered.map((r) => [r, rnd()]));
+          filtered.sort((a, b) => Date.parse(a.MetaData.LastUpdatedTime) - Date.parse(b.MetaData.LastUpdatedTime) || (key.get(a) as number) - (key.get(b) as number));
+        } else {
+          filtered.sort((a, b) => Date.parse(a.MetaData.LastUpdatedTime) - Date.parse(b.MetaData.LastUpdatedTime) || a.Id.localeCompare(b.Id));
         }
-        filtered.sort((a, b) => Date.parse(a.MetaData.LastUpdatedTime) - Date.parse(b.MetaData.LastUpdatedTime) || a.Id.localeCompare(b.Id));
-        const start = Number(m[5]);
+        const start = fake.ignoreStartPosition ? 1 : Number(m[5]);
         const page = filtered.slice(start - 1, start - 1 + Number(m[6]));
         return json(200, { QueryResponse: page.length ? { [entity]: page, startPosition: start, maxResults: page.length } : {}, time: iso(new Date()) });
       }

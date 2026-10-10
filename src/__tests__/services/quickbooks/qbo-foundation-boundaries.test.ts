@@ -61,7 +61,7 @@ describe("QuickBooks foundation boundaries", () => {
     });
     if (!r.available) throw new Error("config");
     const client = createQboReadClient({ config: r.config, realmId: "123456", getAccessToken: async () => "t" });
-    expect(Object.keys(client).sort()).toEqual(["companyInfo", "paginate", "query", "readEntity", "realmId", "report"]);
+    expect(Object.keys(client).sort()).toEqual(["companyInfo", "count", "paginate", "query", "readEntity", "realmId", "report"]);
     expect(Object.keys(client).some((k) => /create|update|delete|void|post|put|patch|write|batch|upsert/i.test(k))).toBe(false);
   });
 
@@ -178,7 +178,7 @@ describe("QuickBooks foundation boundaries", () => {
     expect(sync).toContain("createQboReadClient");
     // The only provider calls are read-client methods (keyset pages use query, deletion confirmation uses readEntity).
     const providerCalls = [...sync.matchAll(/\bclient\.(\w+)\(/g)].map((m) => m[1]);
-    expect([...new Set(providerCalls)].sort()).toEqual(["companyInfo", "query", "readEntity", "report"]);
+    expect([...new Set(providerCalls)].sort()).toEqual(["companyInfo", "count", "query", "readEntity", "report"]);
     expect(sync).not.toMatch(/qbo-oauth\.service|qbo-http/);
     // Only the token-access service refreshes tokens (the separately reviewed OAuth POST), never the sync loop.
     expect(code("src/services/quickbooks/qbo-token-access.service.ts")).toContain("refreshQboTokens");

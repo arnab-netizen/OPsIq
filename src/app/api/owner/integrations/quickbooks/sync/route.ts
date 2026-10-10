@@ -14,6 +14,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { QboManualSyncRequestSchema } from "@/domain/quickbooks/qbo-sync-model";
 import { mapSyncOutcome } from "@/domain/quickbooks/qbo-sync-outcomes";
 import { runQboReadSync } from "@/services/quickbooks/qbo-sync.service";
+import { enqueueQboSyncContinuation } from "@/infra/scheduler-handlers";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,6 +30,10 @@ export const POST = withCanonicalEnforcement(
       },
       { env: process.env },
     );
+    // A large sync stops at a durable checkpoint inside this request; the rest runs as scheduled follow-up executions.
+    if (outcome.status === "CONTINUING") {
+      await enqueueQboSyncContinuation({ workspaceId: ctx.verifiedWorkspaceId, connectionId: body.connectionId, continuationKey: outcome.continuationKey });
+    }
     const mapped = mapSyncOutcome(outcome);
     return canonicalJson(mapped.body, { status: mapped.httpStatus, headers: { "cache-control": "no-store" } });
   },

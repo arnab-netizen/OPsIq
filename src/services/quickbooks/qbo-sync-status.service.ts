@@ -15,9 +15,11 @@ export interface QboSyncStatusDto {
   connectionStatus: "ACTIVE" | "REAUTH_REQUIRED" | "ERROR" | "DISCONNECTED" | null;
   reauthorizationRequired: boolean;
   syncRunning: boolean;
+  /** A large sync stopped at a checkpoint and continues automatically (not a failure). */
+  syncContinuing: boolean;
   lastAttemptedAt: string | null;
   lastSucceededAt: string | null;
-  lastOutcome: "SUCCEEDED" | "FAILED" | null;
+  lastOutcome: "SUCCEEDED" | "PARTIAL" | "FAILED" | null;
   lastErrorCode: QboSyncFailureCode | null;
   nextAttemptNotBefore: string | null;
   consecutiveFailures: number;
@@ -36,6 +38,7 @@ export async function getQboSyncStatus(input: { workspaceId: string; businessId:
     connectionStatus: v.connectionStatus,
     reauthorizationRequired: v.reauthorizationRequired,
     syncRunning: v.syncRunning,
+    syncContinuing: v.syncContinuing,
     lastAttemptedAt: iso(v.lastAttemptedAt),
     lastSucceededAt: iso(v.lastSucceededAt),
     lastOutcome: v.lastOutcome,

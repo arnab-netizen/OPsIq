@@ -136,6 +136,21 @@ export function quoteQboLiteral(value: QboQueryLiteral): string {
   return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
+/** Same grammar as {@link buildQboQuery} but `SELECT count(*)`: Intuit documents count(*) as returning the number of matching records. */
+export function buildQboCountQuery(spec: Pick<QboQuerySpec, "entity" | "where">): string {
+  if (!isReadableEntity(spec.entity)) throw new RangeError("Entity not readable");
+  const parts = [`SELECT count(*) FROM ${spec.entity}`];
+  if (spec.where && spec.where.length > 0) {
+    const clauses = spec.where.map((p) => {
+      if (!FIELD_PATTERN.test(p.field)) throw new RangeError("Invalid query field");
+      if (!(QBO_QUERY_OPERATORS as readonly string[]).includes(p.op)) throw new RangeError("Invalid query operator");
+      return `${p.field} ${p.op} ${quoteQboLiteral(p.value)}`;
+    });
+    parts.push(`WHERE ${clauses.join(" AND ")}`);
+  }
+  return parts.join(" ");
+}
+
 /** Build a SELECT statement from a structured spec. Throws RangeError on anything outside the allowlists. */
 export function buildQboQuery(spec: QboQuerySpec): string {
   if (!isReadableEntity(spec.entity)) throw new RangeError("Entity not readable");

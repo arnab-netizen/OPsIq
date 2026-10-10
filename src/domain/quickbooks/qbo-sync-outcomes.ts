@@ -20,6 +20,7 @@ const FAILURE_TABLE: Record<QboSyncFailureCode, { http: number; message: string;
   PROVIDER_TIMEOUT: { http: 504, message: "QuickBooks did not respond in time. It will be retried later.", retry: "LATER" },
   PROVIDER_MALFORMED: { http: 502, message: "QuickBooks returned data in an unexpected form. Nothing was changed.", retry: "LATER" },
   PROVIDER_REJECTED: { http: 502, message: "QuickBooks could not process the read request. Nothing was changed.", retry: "LATER" },
+  PROVIDER_INCOMPLETE: { http: 502, message: "QuickBooks data could not be confirmed complete. Nothing was skipped silently; it will be retried later.", retry: "LATER" },
   COMPANY_MISMATCH: { http: 409, message: "The QuickBooks company did not match this connection. Nothing was changed.", retry: "RECONNECT" },
   LEASE_LOST: { http: 409, message: "Another QuickBooks sync took over. Nothing was overwritten.", retry: "LATER" },
   CANCELLED: { http: 503, message: "The QuickBooks sync was cancelled. It will be retried later.", retry: "LATER" },
@@ -27,11 +28,11 @@ const FAILURE_TABLE: Record<QboSyncFailureCode, { http: number; message: string;
 };
 
 export interface PublicSyncBody {
-  status: "SUCCEEDED" | "ALREADY_COMPLETED" | "BUSY" | "NOT_DUE" | "FAILED";
+  status: "SUCCEEDED" | "CONTINUING" | "ALREADY_COMPLETED" | "BUSY" | "NOT_DUE" | "FAILED";
   runId?: string;
   mode?: "FULL" | "INCREMENTAL";
   changed?: boolean;
-  summary?: { inserted: number; updated: number; unchanged: number; skipped: number; reportsStored: number; reportsChanged: number; markedMissing: number };
+  summary?: { inserted: number; updated: number; unchanged: number; skipped: number; reportsStored: number; reportsChanged: number; pages: number; unresolved: number };
   runStatus?: string;
   code?: QboSyncFailureCode;
   message?: string;
@@ -41,18 +42,22 @@ export interface PublicSyncBody {
 
 export function mapSyncOutcome(outcome: QboSyncOutcome): { httpStatus: number; body: PublicSyncBody } {
   switch (outcome.status) {
-    case "SUCCEEDED": {
+    case "SUCCEEDED":
+    case "CONTINUING": {
       const c = outcome.counts;
       return {
-        httpStatus: 200,
+        httpStatus: outcome.status === "SUCCEEDED" ? 200 : 202,
         body: {
-          status: "SUCCEEDED", runId: outcome.runId, mode: outcome.mode, changed: outcome.changed,
-          summary: { inserted: c.inserted, updated: c.updated, unchanged: c.unchanged, skipped: c.skipped, reportsStored: c.reportsStored, reportsChanged: c.reportsChanged, markedMissing: c.markedMissing },
+          status: outcome.status, runId: outcome.runId, mode: outcome.mode, changed: outcome.changed,
+          summary: { inserted: c.inserted, updated: c.updated, unchanged: c.unchanged, skipped: c.skipped, reportsStored: c.reportsStored, reportsChanged: c.reportsChanged, pages: c.pages, unresolved: c.unresolved },
+          ...(outcome.status === "CONTINUING" ? { message: "A large QuickBooks sync is partly done and will continue automatically. Nothing has failed.", retry: "LATER" as const } : {}),
         },
       };
     }
     case "ALREADY_COMPLETED":
       // Only a SUCCEEDED run is a successful replay. Anything else must not look like success to a caller that only checks status.
+      // A PARTIAL run is a healthy, unfinished sync: replaying its request id must not look like a failure.
+      if (outcome.runStatus === "PARTIAL") return { httpStatus: 202, body: { status: "ALREADY_COMPLETED", runId: outcome.runId, runStatus: outcome.runStatus, message: "This request already ran part of a large QuickBooks sync; the rest continues automatically.", retry: "LATER" } };
       if (outcome.runStatus === "SUCCEEDED") return { httpStatus: 200, body: { status: "ALREADY_COMPLETED", runId: outcome.runId, runStatus: outcome.runStatus } };
       return {
         httpStatus: 409,

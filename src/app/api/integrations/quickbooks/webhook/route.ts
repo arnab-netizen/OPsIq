@@ -9,7 +9,7 @@
  * Intuit registration of this URL is a separate, explicitly authorized step and is NOT part of this code.
  */
 import { NextResponse } from "next/server";
-import { QBO_WEBHOOK_SIGNATURE_HEADER } from "@/domain/quickbooks/qbo-webhook";
+import { QBO_WEBHOOK_MAX_BODY_BYTES, QBO_WEBHOOK_SIGNATURE_HEADER } from "@/domain/quickbooks/qbo-webhook";
 import { handleQboWebhook } from "@/services/quickbooks/qbo-webhook.service";
 
 export const dynamic = "force-dynamic";
@@ -19,9 +19,29 @@ export async function POST(request: Request): Promise<NextResponse> {
   const lengthHeader = request.headers.get("content-length");
   const declared = lengthHeader !== null && /^\d{1,12}$/.test(lengthHeader) ? Number(lengthHeader) : null;
   // Raw BYTES: the HMAC is computed over exactly what Intuit sent (no UTF-8 decode/BOM normalisation first).
+  // Unauthenticated caller: never buffer more than the cap (declared length checked first, then a running byte count).
+  const tooLarge = () => NextResponse.json({ error: "PAYLOAD_TOO_LARGE" }, { status: 413, headers: { "cache-control": "no-store" } });
+  if (declared !== null && declared > QBO_WEBHOOK_MAX_BODY_BYTES) return tooLarge();
   let rawBody: Uint8Array;
   try {
-    rawBody = new Uint8Array(await request.arrayBuffer());
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const reader = request.body?.getReader();
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > QBO_WEBHOOK_MAX_BODY_BYTES) {
+          await reader.cancel().catch(() => undefined);
+          return tooLarge();
+        }
+        chunks.push(value);
+      }
+    }
+    rawBody = new Uint8Array(total);
+    let at = 0;
+    for (const c of chunks) { rawBody.set(c, at); at += c.byteLength; }
   } catch {
     return NextResponse.json({ error: "BAD_REQUEST" }, { status: 400, headers: { "cache-control": "no-store" } });
   }

@@ -668,6 +668,7 @@ export const AUDIT_EVENTS = {
   // QuickBooks Online — READ-ONLY synchronization (counts, codes and identifiers only; never tokens or provider payloads)
   QBO_SYNC_STARTED: "qbo.sync_started",
   QBO_SYNC_COMPLETED: "qbo.sync_completed",
+  QBO_SYNC_CONTINUED: "qbo.sync_continued",
   QBO_SYNC_FAILED: "qbo.sync_failed",
   QBO_SYNC_LEASE_RECOVERED: "qbo.sync_lease_recovered",
   QBO_TOKENS_REFRESHED: "qbo.tokens_refreshed",

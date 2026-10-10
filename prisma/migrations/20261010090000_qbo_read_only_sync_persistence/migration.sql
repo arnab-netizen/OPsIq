@@ -30,6 +30,7 @@ CREATE TABLE "qbo_sync_states" (
     "consecutive_failures" INTEGER NOT NULL DEFAULT 0,
     "next_attempt_not_before" TIMESTAMP(3),
     "watermarks" JSONB NOT NULL DEFAULT '{}',
+    "continuation" JSONB,
     "last_change_at" TIMESTAMP(3),
     "webhook_hint_at" TIMESTAMP(3),
     "refresh_claim_token" UUID,
@@ -52,6 +53,7 @@ CREATE TABLE "qbo_sync_runs" (
     "status" TEXT NOT NULL,
     "requested_by_id" UUID,
     "idempotency_key" TEXT NOT NULL,
+    "sync_id" UUID NOT NULL,
     "lease_epoch" INTEGER NOT NULL,
     "started_at" TIMESTAMP(3) NOT NULL,
     "finished_at" TIMESTAMP(3),
@@ -79,6 +81,8 @@ CREATE TABLE "qbo_synced_records" (
     "revision" INTEGER NOT NULL DEFAULT 1,
     "first_seen_run_id" UUID NOT NULL,
     "last_seen_run_id" UUID NOT NULL,
+    "last_seen_sync_id" UUID NOT NULL,
+    "last_verify_attempt_at" TIMESTAMP(3),
     "fetched_at" TIMESTAMP(3) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -142,6 +146,7 @@ CREATE INDEX "qbo_sync_runs_workspace_id_business_id_started_at_idx" ON "qbo_syn
 CREATE INDEX "qbo_sync_runs_connection_id_status_idx" ON "qbo_sync_runs"("connection_id", "status");
 CREATE UNIQUE INDEX "qbo_synced_records_provider_key" ON "qbo_synced_records"("connection_id", "entity_type", "provider_entity_id");
 CREATE INDEX "qbo_synced_records_workspace_id_business_id_entity_type_idx" ON "qbo_synced_records"("workspace_id", "business_id", "entity_type");
+CREATE INDEX "qbo_synced_records_window_idx" ON "qbo_synced_records"("connection_id", "entity_type", "provider_updated_at");
 CREATE UNIQUE INDEX "qbo_report_observations_period_key" ON "qbo_report_observations"("connection_id", "report_name", "period_start", "period_end", "basis");
 CREATE INDEX "qbo_report_obs_tenant_report_idx" ON "qbo_report_observations"("workspace_id", "business_id", "report_name");
 CREATE UNIQUE INDEX "qbo_webhook_events_event_key_key" ON "qbo_webhook_events"("event_key");
@@ -158,13 +163,13 @@ ALTER TABLE "qbo_report_observations" ADD CONSTRAINT "qbo_report_obs_connection_
 ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_lease_shape_check" CHECK (("lease_token" IS NULL) = ("lease_expires_at" IS NULL) AND ("lease_token" IS NULL) = ("lease_run_id" IS NULL));
 ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_refresh_claim_shape_check" CHECK (("refresh_claim_token" IS NULL) = ("refresh_claim_expires_at" IS NULL));
 ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_counters_check" CHECK ("lease_epoch" >= 0 AND "consecutive_failures" >= 0 AND "version" >= 1);
-ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_outcome_check" CHECK ("last_outcome" IS NULL OR "last_outcome" IN ('SUCCEEDED', 'FAILED'));
+ALTER TABLE "qbo_sync_states" ADD CONSTRAINT "qbo_sync_states_outcome_check" CHECK ("last_outcome" IS NULL OR "last_outcome" IN ('SUCCEEDED', 'PARTIAL', 'FAILED'));
 ALTER TABLE "qbo_sync_runs" ADD CONSTRAINT "qbo_sync_runs_trigger_check" CHECK ("trigger" IN ('MANUAL', 'SCHEDULED', 'WEBHOOK'));
 ALTER TABLE "qbo_sync_runs" ADD CONSTRAINT "qbo_sync_runs_mode_check" CHECK ("mode" IN ('FULL', 'INCREMENTAL'));
-ALTER TABLE "qbo_sync_runs" ADD CONSTRAINT "qbo_sync_runs_status_check" CHECK ("status" IN ('RUNNING', 'SUCCEEDED', 'FAILED', 'ABANDONED'));
+ALTER TABLE "qbo_sync_runs" ADD CONSTRAINT "qbo_sync_runs_status_check" CHECK ("status" IN ('RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'ABANDONED'));
 ALTER TABLE "qbo_sync_runs" ADD CONSTRAINT "qbo_sync_runs_finish_shape_check" CHECK (("status" = 'RUNNING') = ("finished_at" IS NULL));
 ALTER TABLE "qbo_synced_records" ADD CONSTRAINT "qbo_synced_records_entity_check" CHECK ("entity_type" IN ('CompanyInfo', 'Customer', 'Invoice', 'Bill'));
-ALTER TABLE "qbo_synced_records" ADD CONSTRAINT "qbo_synced_records_state_check" CHECK ("record_state" IN ('ACTIVE', 'INACTIVE', 'MISSING'));
+ALTER TABLE "qbo_synced_records" ADD CONSTRAINT "qbo_synced_records_state_check" CHECK ("record_state" IN ('ACTIVE', 'INACTIVE'));
 ALTER TABLE "qbo_synced_records" ADD CONSTRAINT "qbo_synced_records_hash_check" CHECK ("content_hash" ~ '^[0-9a-f]{64}$' AND "revision" >= 1);
 ALTER TABLE "qbo_report_observations" ADD CONSTRAINT "qbo_report_observations_report_check" CHECK ("report_name" IN ('ProfitAndLoss', 'BalanceSheet', 'AgedReceivables', 'AgedPayables'));
 ALTER TABLE "qbo_report_observations" ADD CONSTRAINT "qbo_report_observations_hash_check" CHECK ("content_hash" ~ '^[0-9a-f]{64}$' AND "revision" >= 1 AND "period_end" >= "period_start");

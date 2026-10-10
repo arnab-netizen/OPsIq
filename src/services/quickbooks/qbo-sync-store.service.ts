@@ -28,7 +28,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -44,6 +44,7 @@ import {
   type QboSyncStatusView,
   type QboSyncTrigger,
 } from "@/domain/quickbooks/qbo-sync-model";
+import { parseContinuation, type QboContinuation } from "@/domain/quickbooks/qbo-sync-model";
 import type { NormalizedRecord } from "@/domain/quickbooks/qbo-normalize";
 import type { QboPersistenceDeps } from "./qbo-connection.service";
 
@@ -62,6 +63,8 @@ export interface SyncLease extends SyncScope {
   token: string;
   epoch: number;
   runId: string;
+  /** The logical sync (stable across continuation executions). */
+  syncId: string;
 }
 
 class NotDueRefusal extends Error {
@@ -103,6 +106,7 @@ export interface QboSyncStateRow {
   consecutiveFailures: number;
   nextAttemptNotBefore: Date | null;
   watermarks: unknown;
+  continuation: unknown;
   lastChangeAt: Date | null;
   webhookHintAt: Date | null;
 }
@@ -132,7 +136,7 @@ export function parseWatermarks(raw: unknown): Record<string, Date> {
 // ─── Lease + run creation ────────────────────────────────────────────────────
 
 export type AcquireResult =
-  | { ok: true; lease: SyncLease; recoveredAbandonedRun: boolean; priorState: QboSyncStateRow }
+  | { ok: true; lease: SyncLease; recoveredAbandonedRun: boolean; priorState: QboSyncStateRow; continuation: QboContinuation | null; mode: QboSyncMode }
   | { ok: false; reason: "BUSY"; runId: string | null; leaseExpiresAt: Date | null }
   | { ok: false; reason: "NOT_DUE"; nextAttemptNotBefore: Date }
   | { ok: false; reason: "REPLAY"; runId: string; runStatus: QboSyncRunStatus; errorCode: string | null };
@@ -191,12 +195,19 @@ export async function beginSyncRun(input: BeginRunInput, deps?: QboPersistenceDe
       }
       const after = (await tx.qboSyncState.findFirst({
         where: scope,
-        select: { leaseEpoch: true, lastAttemptedAt: true, lastSucceededAt: true, nextAttemptNotBefore: true, webhookHintAt: true },
-      })) as { leaseEpoch: number; lastAttemptedAt: Date | null; lastSucceededAt: Date | null; nextAttemptNotBefore: Date | null; webhookHintAt: Date | null };
+        select: { leaseEpoch: true, lastAttemptedAt: true, lastSucceededAt: true, nextAttemptNotBefore: true, webhookHintAt: true, continuation: true },
+      })) as { leaseEpoch: number; lastAttemptedAt: Date | null; lastSucceededAt: Date | null; nextAttemptNotBefore: Date | null; webhookHintAt: Date | null; continuation: unknown };
       const epoch = after.leaseEpoch;
+      // An unfinished sync (checkpoint) is CONTINUED: same logical sync id, same mode, same fixed cutoff. Read here, under the lease.
+      const continuation = parseContinuation(after.continuation);
+      // A checkpoint flagged `restart` (its attempt ended PROVIDER_INCOMPLETE) is never resumed: a fresh logical sync starts, so stale
+      // 'seen' marks cannot be mistaken for reads of the new one.
+      const resumable = continuation && !continuation.restart ? continuation : null;
+      const syncId = resumable?.syncId ?? randomUUID();
+      const mode = resumable?.mode ?? input.mode;
       if (input.dueGate) {
         // The conditional UPDATE above already stamped last_attempted_at = now; judge the gate on the state BEFORE this attempt.
-        const notBefore = evaluateDueGate(input.trigger, { ...after, lastAttemptedAt: prior.lastAttemptedAt }, input.dueGate.now, input.dueGate.cooldownMs);
+        const notBefore = evaluateDueGate(input.trigger, { ...after, lastAttemptedAt: prior.lastAttemptedAt, continuationPending: continuation !== null }, input.dueGate.now, input.dueGate.cooldownMs);
         if (notBefore) throw new NotDueRefusal(notBefore);
       }
 
@@ -218,17 +229,17 @@ export async function beginSyncRun(input: BeginRunInput, deps?: QboPersistenceDe
 
       await tx.qboSyncRun.create({
         data: {
-          id: runId, ...scope, trigger: input.trigger, mode: input.mode, status: "RUNNING", requestedById: input.requestedById,
-          idempotencyKey: input.idempotencyKey, leaseEpoch: epoch, startedAt: now, counts: emptySyncCounts() as unknown as Prisma.InputJsonValue,
+          id: runId, ...scope, trigger: input.trigger, mode, status: "RUNNING", requestedById: input.requestedById,
+          idempotencyKey: input.idempotencyKey, syncId, leaseEpoch: epoch, startedAt: now, counts: emptySyncCounts() as unknown as Prisma.InputJsonValue,
         },
       });
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.QBO_SYNC_STARTED, workspaceId: scope.workspaceId,
         ...(input.requestedById ? { actorId: input.requestedById } : { actorType: "system" }),
         entityType: "qbo_sync_run", entityId: runId, visibility: "internal",
-        payload: { businessId: scope.businessId, connectionId: scope.connectionId, trigger: input.trigger, mode: input.mode, epoch },
+        payload: { businessId: scope.businessId, connectionId: scope.connectionId, trigger: input.trigger, mode, epoch, continuation: continuation !== null },
       }, tx);
-      return { ok: true as const, lease: { ...scope, token, epoch, runId }, recoveredAbandonedRun: recovered, priorState: prior };
+      return { ok: true as const, lease: { ...scope, token, epoch, runId, syncId }, recoveredAbandonedRun: recovered, priorState: prior, continuation, mode };
     });
   } catch (e) {
     // Rolling back the transaction also rolled back the lease acquisition above.
@@ -279,14 +290,46 @@ export interface PersistRecordsResult {
  * timestamp is OLDER than the stored copy are skipped (an out-of-order page can never roll data back).
  */
 export async function persistRecordsPage(lease: SyncLease, records: readonly NormalizedRecord[], deps?: QboPersistenceDeps): Promise<PersistRecordsResult> {
+  return persistRecordsPageWithCheckpoint(lease, records, undefined, deps);
+}
+
+/** Persist the checkpoint in a lease-fenced transaction of its own (state transitions that are not tied to a page). */
+export async function saveContinuation(lease: SyncLease, checkpoint: QboContinuation, deps?: QboPersistenceDeps): Promise<void> {
+  const now = clock(deps);
+  await clientOf(deps).$transaction(async (tx: Tx) => {
+    await assertAndExtendLease(tx, lease, now);
+    await writeCheckpoint(tx, lease, checkpoint);
+  }, TX_OPTIONS);
+}
+
+async function writeCheckpoint(tx: Pick<Tx, "qboSyncState">, lease: SyncLease, checkpoint: QboContinuation): Promise<void> {
+  const r = await tx.qboSyncState.updateMany({
+    where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, leaseToken: lease.token, leaseEpoch: lease.epoch },
+    data: { continuation: checkpoint as unknown as Prisma.InputJsonValue },
+  });
+  if (r.count !== 1) throw new QboLeaseLostError();
+}
+
+/**
+ * Persist one page AND (optionally) the checkpoint that describes it in the SAME transaction: after a crash the checkpoint
+ * always points exactly past the last page that is durably stored — never ahead of it, never behind it by more than that page.
+ */
+export async function persistRecordsPageWithCheckpoint(
+  lease: SyncLease,
+  records: readonly NormalizedRecord[],
+  checkpoint: QboContinuation | undefined,
+  deps?: QboPersistenceDeps,
+): Promise<PersistRecordsResult> {
   const now = clock(deps);
   const result: PersistRecordsResult = { inserted: 0, updated: 0, unchanged: 0, stale: 0 };
-  if (records.length === 0) {
+  if (records.length === 0 && !checkpoint) {
     await extendSyncLease(lease, deps);
     return result;
   }
   await clientOf(deps).$transaction(async (tx: Tx) => {
     await assertAndExtendLease(tx, lease, now);
+    if (checkpoint) await writeCheckpoint(tx, lease, checkpoint);
+    if (records.length === 0) return;
     const existing = (await tx.qboSyncedRecord.findMany({
       where: {
         connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
@@ -308,16 +351,16 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
         staleSeen.push(r);
         continue;
       }
-      // A record returning from MISSING (or changing state) is a real change even when its content is identical.
+      // A record changing state is a real change even when its content is identical.
       if (prior.contentHash === r.contentHash && prior.recordState === r.recordState) result.unchanged++;
       else result.updated++;
       toWrite.push(r);
     }
-    // A stale copy must not change the stored content, but the provider DID return the record: mark it seen so a FULL
-    // sync's missing-record reconciliation does not flag a live record as MISSING.
+    // A stale copy must not change the stored content, but the provider DID return the record: mark it seen (this sync) so
+    // the FULL reconciliation does not treat a live record as unseen.
     if (staleSeen.length > 0) {
       await tx.$executeRaw`
-        UPDATE qbo_synced_records SET last_seen_run_id = ${lease.runId}::uuid, fetched_at = ${now}::timestamp
+        UPDATE qbo_synced_records SET last_seen_run_id = ${lease.runId}::uuid, last_seen_sync_id = ${lease.syncId}::uuid, fetched_at = ${now}::timestamp
         WHERE connection_id = ${lease.connectionId}::uuid AND workspace_id = ${lease.workspaceId}::uuid AND business_id = ${lease.businessId}::uuid
           AND (entity_type, provider_entity_id) IN (
             SELECT x.entity_type, x.provider_entity_id
@@ -338,10 +381,10 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
     await tx.$executeRaw`
       INSERT INTO qbo_synced_records (
         id, workspace_id, business_id, connection_id, entity_type, provider_entity_id, provider_sync_token, provider_updated_at,
-        record_state, normalized, content_hash, revision, first_seen_run_id, last_seen_run_id, fetched_at, created_at, updated_at)
+        record_state, normalized, content_hash, revision, first_seen_run_id, last_seen_run_id, last_seen_sync_id, fetched_at, created_at, updated_at)
       SELECT gen_random_uuid(), ${lease.workspaceId}::uuid, ${lease.businessId}::uuid, ${lease.connectionId}::uuid,
         x.entity_type, x.provider_entity_id, x.provider_sync_token, x.provider_updated_at::timestamp,
-        x.record_state, x.normalized, x.content_hash, 1, ${lease.runId}::uuid, ${lease.runId}::uuid, ${now}::timestamp, ${now}::timestamp, ${now}::timestamp
+        x.record_state, x.normalized, x.content_hash, 1, ${lease.runId}::uuid, ${lease.runId}::uuid, ${lease.syncId}::uuid, ${now}::timestamp, ${now}::timestamp, ${now}::timestamp
       FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) AS x(
         entity_type text, provider_entity_id text, provider_sync_token text, provider_updated_at text,
         record_state text, normalized jsonb, content_hash text)
@@ -353,6 +396,7 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
         revision = CASE WHEN qbo_synced_records.content_hash <> EXCLUDED.content_hash OR qbo_synced_records.record_state <> EXCLUDED.record_state THEN qbo_synced_records.revision + 1 ELSE qbo_synced_records.revision END,
         content_hash = EXCLUDED.content_hash,
         last_seen_run_id = EXCLUDED.last_seen_run_id,
+        last_seen_sync_id = EXCLUDED.last_seen_sync_id,
         fetched_at = EXCLUDED.fetched_at,
         updated_at = EXCLUDED.updated_at
       WHERE qbo_synced_records.workspace_id = EXCLUDED.workspace_id
@@ -364,10 +408,9 @@ export async function persistRecordsPage(lease: SyncLease, records: readonly Nor
 }
 
 /**
- * After a FULL sync has read an entity to the end: records of that entity this run did not see are CANDIDATES for "deleted
- * or deactivated at Intuit". The list is capped (limit + 1 to detect overflow). The orchestrator re-reads each candidate by id
- * before anything is flagged, so a record that merely moved out of the query window (edited after the cutoff, paging race)
- * is never mislabeled.
+ * FULL reconciliation CANDIDATES: records of an entity that the current logical sync has not seen. Not a claim of deletion — the
+ * orchestrator re-reads them by id to refresh any that merely fell outside the query window or are inactive, and leaves the rest
+ * UNCHANGED. Ordered least-recently-attempted first (NULLs first) so a standing set it cannot resolve never starves the others.
  */
 export async function listUnseenRecordIds(lease: SyncLease, entityType: string, limit: number, deps?: QboPersistenceDeps): Promise<string[]> {
   const now = clock(deps);
@@ -376,33 +419,40 @@ export async function listUnseenRecordIds(lease: SyncLease, entityType: string, 
     const rows = (await tx.qboSyncedRecord.findMany({
       where: {
         connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
-        entityType, recordState: { in: ["ACTIVE", "INACTIVE"] }, lastSeenRunId: { not: lease.runId },
+        entityType, lastSeenSyncId: { not: lease.syncId },
       },
       select: { providerEntityId: true },
-      // Oldest-confirmed first: a record re-read this run moves to the back, so a standing set of inactive customers cannot
-      // starve newly unseen (deleted) records of their confirmation.
-      orderBy: [{ fetchedAt: "asc" }, { providerEntityId: "asc" }],
-      take: Math.max(1, limit) + 1,
+      orderBy: [{ lastVerifyAttemptAt: { sort: "asc", nulls: "first" } }, { providerEntityId: "asc" }],
+      take: Math.max(1, limit),
     })) as Array<{ providerEntityId: string }>;
     return rows.map((r) => r.providerEntityId);
   }, TX_OPTIONS);
 }
 
-/** Flag records the provider confirmed absent as MISSING (never a delete; a later sighting flips them back). */
-export async function markRecordsMissing(lease: SyncLease, entityType: string, providerEntityIds: readonly string[], deps?: QboPersistenceDeps): Promise<number> {
-  if (providerEntityIds.length === 0) return 0;
+/** Remember that a by-id verification was ATTEMPTED (whatever its result) so the rotation moves on. */
+export async function markVerifyAttempted(lease: SyncLease, entityType: string, providerEntityIds: readonly string[], deps?: QboPersistenceDeps): Promise<void> {
+  if (providerEntityIds.length === 0) return;
   const now = clock(deps);
-  return clientOf(deps).$transaction(async (tx: Tx) => {
+  await clientOf(deps).$transaction(async (tx: Tx) => {
     await assertAndExtendLease(tx, lease, now);
-    const r = await tx.qboSyncedRecord.updateMany({
-      where: {
-        connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId,
-        entityType, providerEntityId: { in: [...providerEntityIds] }, recordState: { in: ["ACTIVE", "INACTIVE"] }, lastSeenRunId: { not: lease.runId },
-      },
-      data: { recordState: "MISSING", revision: { increment: 1 }, updatedAt: now },
+    await tx.qboSyncedRecord.updateMany({
+      where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, entityType, providerEntityId: { in: [...providerEntityIds] } },
+      data: { lastVerifyAttemptAt: now },
     });
-    return r.count;
   }, TX_OPTIONS);
+}
+
+/**
+ * How many distinct records of an entity whose provider timestamp lies in [from, to) THIS logical sync has seen (across all of
+ * its executions). Compared with the provider's count(*) for the same window, equality PROVES the window was read completely.
+ */
+export async function countSeenInWindow(lease: SyncLease, entityType: string, from: Date, to: Date, deps?: QboPersistenceDeps): Promise<number> {
+  return (await clientOf(deps).qboSyncedRecord.count({
+    where: {
+      connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, entityType,
+      lastSeenSyncId: lease.syncId, providerUpdatedAt: { gte: from, lt: to },
+    },
+  })) as number;
 }
 
 // ─── Report observations ─────────────────────────────────────────────────────
@@ -462,9 +512,47 @@ export interface FinishSuccessInput {
   startedAt: Date;
   counts: QboSyncCounts;
   changed: boolean;
-  /** New watermarks for entities fully read this run (ISO instants). Merged over the stored map. */
+  /** New watermarks for entities fully read by this logical sync (ISO instants = the sync's fixed cutoff). Merged forward only. */
   watermarks: Record<string, string>;
   actorId: string | null;
+}
+
+export interface FinishPartialInput {
+  lease: SyncLease;
+  mode: QboSyncMode;
+  counts: QboSyncCounts;
+  changed: boolean;
+  actorId: string | null;
+}
+
+/**
+ * A bounded execution ends at its durable checkpoint: the lease is released, the run is PARTIAL (not a failure — the failure
+ * counter and back-off are reset), and the durable WATERMARKS ARE NOT TOUCHED. Only finishSyncRunSuccess may advance them.
+ */
+export async function finishSyncRunPartial(input: FinishPartialInput, deps?: QboPersistenceDeps): Promise<void> {
+  const now = clock(deps);
+  const { lease } = input;
+  await clientOf(deps).$transaction(async (tx: Tx) => {
+    const released = await tx.qboSyncState.updateMany({
+      where: { connectionId: lease.connectionId, workspaceId: lease.workspaceId, businessId: lease.businessId, leaseToken: lease.token, leaseEpoch: lease.epoch },
+      data: {
+        leaseToken: null, leaseRunId: null, leaseExpiresAt: null, lastOutcome: "PARTIAL", lastErrorCode: null,
+        consecutiveFailures: 0, nextAttemptNotBefore: null, ...(input.changed ? { lastChangeAt: now } : {}), version: { increment: 1 },
+      },
+    });
+    if (released.count !== 1) throw new QboLeaseLostError();
+    const closed = await tx.qboSyncRun.updateMany({
+      where: { id: lease.runId, workspaceId: lease.workspaceId, connectionId: lease.connectionId, status: "RUNNING" },
+      data: { status: "PARTIAL", finishedAt: now, counts: input.counts as unknown as Prisma.InputJsonValue, changed: input.changed },
+    });
+    if (closed.count !== 1) throw new QboLeaseLostError();
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.QBO_SYNC_CONTINUED, workspaceId: lease.workspaceId,
+      ...(input.actorId ? { actorId: input.actorId } : { actorType: "system" }),
+      entityType: "qbo_sync_run", entityId: lease.runId, visibility: "internal",
+      payload: { businessId: lease.businessId, connectionId: lease.connectionId, mode: input.mode, pages: input.counts.pages, inserted: input.counts.inserted, updated: input.counts.updated },
+    }, tx);
+  });
 }
 
 /** Release the lease and record success, atomically. A stale finisher (lease taken over) rolls back and gets LeaseLostError. */
@@ -489,6 +577,9 @@ export async function finishSyncRunSuccess(input: FinishSuccessInput, deps?: Qbo
       data: {
         leaseToken: null, leaseRunId: null, leaseExpiresAt: null, lastSucceededAt: now, lastOutcome: "SUCCEEDED", lastErrorCode: null,
         consecutiveFailures: 0, nextAttemptNotBefore: null, watermarks: merged as Prisma.InputJsonValue,
+        // Completion is only ever recorded here, after PROVEN exhaustion: the checkpoint is cleared in the same transaction that
+        // advances the durable watermarks, so there is no state in which one has happened without the other.
+        continuation: Prisma.DbNull,
         ...(input.mode === "FULL" ? { lastFullSyncAt: now } : {}), ...(input.changed ? { lastChangeAt: now } : {}),
         version: { increment: 1 },
       },
@@ -583,7 +674,7 @@ export async function readSyncStatusForBusiness(
   })) as { id: string; environment: string; status: string } | null;
   if (!conn) {
     return {
-      connected: false, connectionId: null, environment: null, connectionStatus: null, reauthorizationRequired: false, syncRunning: false,
+      connected: false, connectionId: null, environment: null, connectionStatus: null, reauthorizationRequired: false, syncRunning: false, syncContinuing: false,
       lastAttemptedAt: null, lastSucceededAt: null, lastOutcome: null, lastErrorCode: null, nextAttemptNotBefore: null,
       consecutiveFailures: 0, recordCounts: {}, reportObservationCount: 0,
     };
@@ -592,12 +683,12 @@ export async function readSyncStatusForBusiness(
     where: { connectionId: conn.id, workspaceId: input.workspaceId, businessId: input.businessId },
     select: {
       leaseToken: true, leaseExpiresAt: true, lastAttemptedAt: true, lastSucceededAt: true, lastOutcome: true, lastErrorCode: true,
-      nextAttemptNotBefore: true, consecutiveFailures: true,
+      nextAttemptNotBefore: true, consecutiveFailures: true, continuation: true,
     },
-  })) as Pick<QboSyncStateRow, "leaseToken" | "leaseExpiresAt" | "lastAttemptedAt" | "lastSucceededAt" | "lastOutcome" | "lastErrorCode" | "nextAttemptNotBefore" | "consecutiveFailures"> | null;
+  })) as Pick<QboSyncStateRow, "leaseToken" | "leaseExpiresAt" | "lastAttemptedAt" | "lastSucceededAt" | "lastOutcome" | "lastErrorCode" | "nextAttemptNotBefore" | "consecutiveFailures" | "continuation"> | null;
   const grouped = (await client.qboSyncedRecord.groupBy({
     by: ["entityType"],
-    where: { connectionId: conn.id, workspaceId: input.workspaceId, businessId: input.businessId, recordState: { not: "MISSING" } },
+    where: { connectionId: conn.id, workspaceId: input.workspaceId, businessId: input.businessId },
     _count: { _all: true },
   })) as Array<{ entityType: string; _count: { _all: number } }>;
   const observations = (await client.qboReportObservation.count({
@@ -612,7 +703,8 @@ export async function readSyncStatusForBusiness(
     syncRunning: Boolean(state?.leaseToken && state.leaseExpiresAt && state.leaseExpiresAt.getTime() > now.getTime()),
     lastAttemptedAt: state?.lastAttemptedAt ?? null,
     lastSucceededAt: state?.lastSucceededAt ?? null,
-    lastOutcome: (state?.lastOutcome as "SUCCEEDED" | "FAILED" | null) ?? null,
+    syncContinuing: parseContinuation(state?.continuation) !== null,
+    lastOutcome: (state?.lastOutcome as "SUCCEEDED" | "PARTIAL" | "FAILED" | null) ?? null,
     lastErrorCode: (state?.lastErrorCode as QboSyncFailureCode | null) ?? null,
     nextAttemptNotBefore: state?.nextAttemptNotBefore ?? null,
     consecutiveFailures: state?.consecutiveFailures ?? 0,
@@ -623,10 +715,21 @@ export async function readSyncStatusForBusiness(
 
 // ─── Scheduler / webhook support ─────────────────────────────────────────────
 
+/**
+ * Identity of one pending continuation step: logical sync + checkpoint position + lease epoch. The epoch moves on every lease
+ * acquisition, so a retry after a FAILED execution (same checkpoint) gets a fresh key, and the logical-sync id keeps the
+ * checkpoint sequence of one sync from colliding with the same number in another.
+ */
+export function continuationTaskKey(cp: QboContinuation | null, leaseEpoch: number): string | null {
+  return cp ? `${cp.syncId}:${cp.seq}:${leaseEpoch}` : null;
+}
+
 export interface SchedulableConnection {
   workspaceId: string;
   businessId: string;
   connectionId: string;
+  /** Set when an unfinished sync is waiting for its next execution: the producer enqueues that continuation, not the daily task. */
+  continuationKey: string | null;
 }
 
 /**
@@ -651,12 +754,15 @@ export async function listSchedulableConnections(
         ] } },
       ],
     },
-    select: { id: true, workspaceId: true, businessId: true },
+    select: { id: true, workspaceId: true, businessId: true, syncState: { select: { continuation: true, leaseEpoch: true } } },
     orderBy: [{ syncState: { lastSucceededAt: { sort: "asc", nulls: "first" } } }, { id: "asc" }],
     skip: Math.max(0, input.offset ?? 0),
     take: Math.max(1, Math.min(input.limit, 500)),
-  })) as Array<{ id: string; workspaceId: string; businessId: string }>;
-  return rows.map((r) => ({ workspaceId: r.workspaceId, businessId: r.businessId, connectionId: r.id }));
+  })) as Array<{ id: string; workspaceId: string; businessId: string; syncState: { continuation: unknown; leaseEpoch: number } | null }>;
+  return rows.map((r) => ({
+    workspaceId: r.workspaceId, businessId: r.businessId, connectionId: r.id,
+    continuationKey: continuationTaskKey(parseContinuation(r.syncState?.continuation), r.syncState?.leaseEpoch ?? 0),
+  }));
 }
 
 export type WebhookHintResolution =

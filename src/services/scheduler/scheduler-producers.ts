@@ -31,7 +31,7 @@
  */
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_QBO_READ_SYNC, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
+import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_QBO_READ_SYNC, TASK_NAME_REASSESSMENT_SCAN, enqueueQboSyncContinuation, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
 import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
 import { scheduleBucket } from "@/domain/quickbooks/qbo-sync-model";
 import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
@@ -220,15 +220,19 @@ export async function enqueueDueQboReadSyncTasks(env: Record<string, string | un
     const candidates = await listSchedulableConnections({ environment: resolved.config.environment, limit: MAX_ENQUEUE_PER_SCAN, offset: page * MAX_ENQUEUE_PER_SCAN });
     candidatesFound += candidates.length;
     for (const c of candidates) {
-      const r = await scheduler.scheduleIdempotent({
-        taskName: TASK_NAME_QBO_READ_SYNC,
-        payload: { connectionId: c.connectionId, trigger: "SCHEDULED" },
-        scheduledFor: now,
-        maxAttempts: 2,
-        workspaceId: c.workspaceId,
-        idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${bucket}`,
-      });
-      if (r.created) enqueued++;
+      // An unfinished sync (durable checkpoint) is continued under a key tied to its checkpoint, not to the day: the safety net for
+      // a continuation task that was lost, without ever stacking a second task on the same checkpoint.
+      const created = c.continuationKey !== null
+        ? await enqueueQboSyncContinuation({ workspaceId: c.workspaceId, connectionId: c.connectionId, continuationKey: c.continuationKey })
+        : (await scheduler.scheduleIdempotent({
+            taskName: TASK_NAME_QBO_READ_SYNC,
+            payload: { connectionId: c.connectionId, trigger: "SCHEDULED" },
+            scheduledFor: now,
+            maxAttempts: 2,
+            workspaceId: c.workspaceId,
+            idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${bucket}`,
+          })).created;
+      if (created) enqueued++;
     }
     if (candidates.length < MAX_ENQUEUE_PER_SCAN) break;
   }

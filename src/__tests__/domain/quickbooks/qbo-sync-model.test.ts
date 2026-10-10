@@ -133,8 +133,8 @@ describe("failure mapping and public outcomes", () => {
       expect(m.body.runStatus).toBe(runStatus);
       expect(m.body.message).toBeTruthy();
     }
-    const ok = mapSyncOutcome({ status: "SUCCEEDED", runId: UUID, mode: "FULL", changed: true, counts: { fetched: { Invoice: 3 }, inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, reportsFailed: 0, confirmedByRead: 0, markedMissing: 0 } });
-    expect(ok.body.summary).toEqual({ inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, markedMissing: 0 });
+    const ok = mapSyncOutcome({ status: "SUCCEEDED", runId: UUID, mode: "FULL", changed: true, counts: { fetched: { Invoice: 3 }, inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, reportsFailed: 0, pages: 4, tieBucketsClosed: 0, verifiedByRead: 0, unresolved: 0 } });
+    expect(ok.body.summary).toEqual({ inserted: 3, updated: 0, unchanged: 0, skipped: 0, reportsStored: 8, reportsChanged: 8, pages: 4, unresolved: 0 });
   });
 });
 
@@ -155,11 +155,52 @@ describe("due gate (pure)", () => {
     expect(evaluateDueGate("SCHEDULED", { ...done, webhookHintAt: now }, now, 0)).toBeNull();
     expect(evaluateDueGate("SCHEDULED", st({ lastSucceededAt: new Date("2026-10-09T03:00:00Z") }), now, 0)).toBeNull();
   });
+  it("an unfinished sync (continuationPending) is due for SCHEDULED/WEBHOOK even if a success happened today, but never overrides back-off", () => {
+    const done = st({ lastSucceededAt: new Date("2026-10-10T03:00:00Z"), continuationPending: true });
+    expect(evaluateDueGate("SCHEDULED", done, now, 0)).toBeNull();
+    expect(evaluateDueGate("WEBHOOK", { ...done, webhookHintAt: null }, now, 0)).toBeNull();
+    const later = new Date(now.getTime() + 1000);
+    expect(evaluateDueGate("SCHEDULED", { ...done, nextAttemptNotBefore: later }, now, 0)).toEqual(later);
+  });
   it("WEBHOOK: runs only for an unserved hint, and still respects back-off", () => {
     expect(evaluateDueGate("WEBHOOK", st(), now, 0)).toEqual(now);
     expect(evaluateDueGate("WEBHOOK", null, now, 0)).toEqual(now);
     expect(evaluateDueGate("WEBHOOK", st({ webhookHintAt: now }), now, 0)).toBeNull();
     const later = new Date(now.getTime() + 1000);
     expect(evaluateDueGate("WEBHOOK", st({ webhookHintAt: now, nextAttemptNotBefore: later }), now, 0)).toEqual(later);
+  });
+});
+
+describe("continuation checkpoint and CONTINUING outcome", () => {
+  const cp = { v: 1, syncId: UUID, mode: "FULL", cutoff: "2026-10-10T03:00:00.000Z", entityIndex: 1, cursor: "2026-09-01T00:00:00.000Z", tie: { second: "2026-09-15T10:00:00.000Z", offset: 20, stalledPasses: 0, lastSeen: 20, total: 47 }, reconciled: ["Customer"], seq: 5, changed: false, restart: false };
+  it("round-trips a valid checkpoint and treats anything unreadable as ABSENT (restart cleanly, never trust garbage)", async () => {
+    const { parseContinuation } = await import("@/domain/quickbooks/qbo-sync-model");
+    expect(parseContinuation(cp)).toEqual(cp);
+    expect(parseContinuation(null)).toBeNull();
+    expect(parseContinuation({ ...cp, v: 2 })).toBeNull();
+    expect(parseContinuation({ ...cp, entityIndex: 99 })).toBeNull();
+    expect(parseContinuation({ ...cp, cutoff: "yesterday" })).toBeNull();
+    expect(parseContinuation({ ...cp, tie: { second: "2026-09-15T10:00:00.000Z" } })).toBeNull();
+  });
+  it("floorSecond drops sub-second precision only", async () => {
+    const { floorSecond } = await import("@/domain/quickbooks/qbo-sync-model");
+    expect(floorSecond(new Date("2026-10-10T03:00:00.999Z")).toISOString()).toBe("2026-10-10T03:00:00.000Z");
+  });
+  it("CONTINUING maps to HTTP 202 (accepted, not failed) with counts only", () => {
+    const counts = { fetched: {}, inserted: 5, updated: 0, unchanged: 0, skipped: 0, reportsStored: 0, reportsChanged: 0, reportsFailed: 0, pages: 3, tieBucketsClosed: 0, verifiedByRead: 0, unresolved: 0 };
+    const m = mapSyncOutcome({ status: "CONTINUING", runId: UUID, mode: "FULL", changed: true, counts, continuationKey: `${UUID}:4:2` });
+    expect(m.httpStatus).toBe(202);
+    expect(m.body.status).toBe("CONTINUING");
+    expect(m.body.retry).toBe("LATER");
+    expect(JSON.stringify(m.body)).not.toMatch(/checkpoint|cursor|cutoff|syncId/i);
+  });
+  it("replaying a PARTIAL run's request id is an accepted, still-continuing sync - not a failure", () => {
+    const m = mapSyncOutcome({ status: "ALREADY_COMPLETED", runId: UUID, runStatus: "PARTIAL" });
+    expect(m.httpStatus).toBe(202);
+    expect(m.body.retry).toBe("LATER");
+  });
+  it("PROVIDER_INCOMPLETE is a retryable, non-terminal failure", () => {
+    expect(isTerminalSyncFailure("PROVIDER_INCOMPLETE")).toBe(false);
+    expect(mapSyncOutcome({ status: "FAILED", runId: null, code: "PROVIDER_INCOMPLETE", terminal: false, nextAttemptNotBefore: null }).httpStatus).toBe(502);
   });
 });

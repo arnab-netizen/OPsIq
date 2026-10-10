@@ -5,18 +5,19 @@
  * verifies the signature over the RAW body, validates the shape, deduplicates, and at most schedules a normal
  * READ-ONLY sync. No webhook body value is ever written to a financial table.
  *
- * What is established vs. unverified (Intuit documentation could not be fetched from the build environment; the
- * facts below come from search-result summaries of Intuit's developer pages and must be re-confirmed against
- * developer.intuit.com before the endpoint is registered at Intuit — registration is NOT part of this slice):
- *  - Signature: HMAC-SHA256 of the raw request payload keyed with the app's webhook verifier token, base64-encoded,
- *    compared with the `intuit-signature` header. (Documented for the legacy format. Whether the CloudEvents format
- *    uses the same header/algorithm is UNVERIFIED — the receiver fails closed: any other scheme is rejected.)
- *  - Payload formats: the legacy `eventNotifications[].dataChangeEvent.entities[]` shape and the CloudEvents v1.0
- *    shape (`type: qbo.<entity>.<operation>.v1`, `intuitaccountid` = realm, `intuitentityid` = entity id), the latter
- *    being the mandatory format after Intuit's migration deadline. Both are parsed; unknown shapes are rejected.
- *  - Delivery: at-least-once, no ordering guarantee, endpoint expected to acknowledge quickly (≈3s) with HTTP 200;
- *    Intuit retries unacknowledged deliveries. The design therefore deduplicates, tolerates reordering by never
- *    trusting event content, and does the actual reading asynchronously.
+ * Provider contract implemented here (Intuit's current webhook documentation; see docs/opsiq/product/QBO_READ_ONLY_SYNC.md §8,
+ * where each point is tied to a test in qbo-webhook-contract.test.ts):
+ *  - Payload: CloudEvents 1.0 — a JSON ARRAY of event objects with `specversion` ("1.0"), `id`, `source`, `type`
+ *    (`qbo.<entity>.<operation>.v<n>`), `datacontenttype`, `time`, `intuitentityid` (the changed entity's id),
+ *    `intuitaccountid` (the QBO company / realm id) and `data`. The legacy `eventNotifications[].dataChangeEvent.entities[]`
+ *    shape is still parsed for in-flight deliveries; any other shape is rejected.
+ *  - Signature: header `intuit-signature` = Base64( HMAC-SHA256( key = the app's webhook verifier token, message = the EXACT raw
+ *    request body ) ). Compared in constant time over the raw bytes, before anything is parsed.
+ *  - Environments: Development/Sandbox and Production webhooks are configured separately at Intuit, each with its own verifier
+ *    token. A deployment is bound to ONE environment (QUICKBOOKS_ENVIRONMENT) and ONE verifier token; a payload signed with the
+ *    other environment's token fails verification, and realms are only resolved within the configured environment.
+ *  - Delivery: at-least-once, unordered, expected to be acknowledged quickly with HTTP 200. The design deduplicates, never trusts
+ *    event content, and does the actual reading asynchronously through the normal GET-only sync.
  *  - Webhooks can be missed; the scheduled incremental sync is the safety net and the source of truth.
  */
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";

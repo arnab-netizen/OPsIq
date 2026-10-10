@@ -7248,6 +7248,8 @@ model QboSyncState {
   nextAttemptNotBefore  DateTime? @map("next_attempt_not_before")
   /// { "<Entity>": "<ISO instant>" } — the cutoff up to which that entity was fully read by a successful run.
   watermarks            Json      @default("{}")
+  /// Checkpoint of an UNFINISHED sync (see QboContinuationSchema); NULL when none. Written atomically with the page it describes.
+  continuation          Json?
   lastChangeAt          DateTime? @map("last_change_at")
   /// Set by a verified webhook hint; cleared by the next successful run that started after it.
   webhookHintAt         DateTime? @map("webhook_hint_at")
@@ -7277,6 +7279,8 @@ model QboSyncRun {
   status         String
   requestedById  String?   @map("requested_by_id") @db.Uuid
   idempotencyKey String    @map("idempotency_key")
+  /// The logical sync this execution belongs to (stable across continuation executions).
+  syncId         String    @map("sync_id") @db.Uuid
   leaseEpoch     Int       @map("lease_epoch")
   startedAt      DateTime  @map("started_at")
   finishedAt     DateTime? @map("finished_at")
@@ -7295,28 +7299,33 @@ model QboSyncRun {
 
 /// Normalized, PII-minimal copy of one provider object, keyed by (connection, entity type, provider id).
 model QboSyncedRecord {
-  id                String    @id @db.Uuid
-  workspaceId       String    @map("workspace_id") @db.Uuid
-  businessId        String    @map("business_id") @db.Uuid
-  connectionId      String    @map("connection_id") @db.Uuid
-  entityType        String    @map("entity_type")
-  providerEntityId  String    @map("provider_entity_id")
-  providerSyncToken String?   @map("provider_sync_token")
-  providerUpdatedAt DateTime? @map("provider_updated_at")
-  recordState       String    @map("record_state")
-  normalized        Json
-  contentHash       String    @map("content_hash")
-  revision          Int       @default(1)
-  firstSeenRunId    String    @map("first_seen_run_id") @db.Uuid
-  lastSeenRunId     String    @map("last_seen_run_id") @db.Uuid
-  fetchedAt         DateTime  @map("fetched_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String    @map("business_id") @db.Uuid
+  connectionId        String    @map("connection_id") @db.Uuid
+  entityType          String    @map("entity_type")
+  providerEntityId    String    @map("provider_entity_id")
+  providerSyncToken   String?   @map("provider_sync_token")
+  providerUpdatedAt   DateTime? @map("provider_updated_at")
+  recordState         String    @map("record_state")
+  normalized          Json
+  contentHash         String    @map("content_hash")
+  revision            Int       @default(1)
+  firstSeenRunId      String    @map("first_seen_run_id") @db.Uuid
+  lastSeenRunId       String    @map("last_seen_run_id") @db.Uuid
+  /// The logical sync that last saw this record (stable across continuation executions; drives reconciliation and tie-bucket closure).
+  lastSeenSyncId      String    @map("last_seen_sync_id") @db.Uuid
+  /// Last time a by-id verification read was ATTEMPTED for this record (rotation: least recently attempted first).
+  lastVerifyAttemptAt DateTime? @map("last_verify_attempt_at")
+  fetchedAt           DateTime  @map("fetched_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
 
   @@unique([connectionId, entityType, providerEntityId], map: "qbo_synced_records_provider_key")
   @@index([workspaceId, businessId, entityType])
+  @@index([connectionId, entityType, providerUpdatedAt], map: "qbo_synced_records_window_idx")
   @@map("qbo_synced_records")
 }
 

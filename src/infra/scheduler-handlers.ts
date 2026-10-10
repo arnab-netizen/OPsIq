@@ -18,6 +18,7 @@ import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.s
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
 import { runScheduledQboSync } from "@/services/quickbooks/qbo-sync.service";
+import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
@@ -161,6 +162,23 @@ const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<Ha
   return { status: "SUCCESS", summary: scanCounts(result) };
 };
 
+/**
+ * Enqueue the next bounded execution of an unfinished QuickBooks sync. One task per (connection, checkpoint sequence): the key is
+ * idempotent, so the handler, the manual route and the producer safety net can all request it without ever creating a second
+ * task for the same checkpoint. The task carries only the connection id (workspace comes from the task row).
+ */
+export async function enqueueQboSyncContinuation(input: { workspaceId: string; connectionId: string; continuationKey: string }): Promise<boolean> {
+  const r = await new DatabaseSchedulerProvider().scheduleIdempotent({
+    taskName: TASK_NAME_QBO_READ_SYNC,
+    payload: { connectionId: input.connectionId, trigger: "SCHEDULED" },
+    scheduledFor: new Date(),
+    maxAttempts: 2,
+    workspaceId: input.workspaceId,
+    idempotencyKey: `${TASK_NAME_QBO_READ_SYNC}:cont:${input.connectionId}:${input.continuationKey}`,
+  });
+  return r.created;
+}
+
 /** The one production handler registry — pass to processDue() unmodified. */
 /**
  * qbo-read-sync — READ-ONLY QuickBooks synchronization for one connection.
@@ -184,6 +202,10 @@ const qboReadSyncHandler: TaskHandler = async (payload, context): Promise<Handle
   switch (outcome.status) {
     case "SUCCEEDED":
       return { status: "SUCCESS", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged, reportsStored: outcome.counts.reportsStored } };
+    case "CONTINUING":
+      // A bounded execution reached its checkpoint: the sync is healthy and unfinished. Queue the next execution (idempotent per checkpoint).
+      await enqueueQboSyncContinuation({ workspaceId: context.workspaceId, connectionId, continuationKey: outcome.continuationKey });
+      return { status: "SUCCESS", summary: "QuickBooks sync continues in a follow-up run.", counts: { inserted: outcome.counts.inserted, updated: outcome.counts.updated, unchanged: outcome.counts.unchanged } };
     case "FAILED":
       return { status: "PARTIAL_FAILURE", summary: `QuickBooks sync did not complete (${outcome.code}).`, counts: { failed: 1 } };
     default:

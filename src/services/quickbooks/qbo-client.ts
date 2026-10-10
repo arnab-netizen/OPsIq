@@ -39,6 +39,7 @@ import {
   sanitizeProviderCode,
 } from "@/domain/quickbooks/qbo-errors";
 import {
+  buildQboCountQuery,
   buildQboQuery,
   isReadableEntity,
   isReportName,
@@ -112,6 +113,8 @@ export interface QboReadClient {
   companyInfo(options?: QboCallOptions): Promise<Record<string, unknown>>;
   readEntity(entity: QboReadableEntity, id: string, options?: QboCallOptions): Promise<Record<string, unknown>>;
   query(spec: QboQuerySpec, options?: QboCallOptions): Promise<QboQueryPage>;
+  /** Number of records matching a structured filter (`SELECT count(*)`, GET). Used to PROVE that a window has been read completely. */
+  count(spec: Pick<QboQuerySpec, "entity" | "where">, options?: QboCallOptions): Promise<number>;
   /** Pages through a query (1000 per page by default) until a short page, lazily. */
   paginate(spec: Omit<QboQuerySpec, "startPosition">, options?: QboCallOptions & { maxPages?: number }): AsyncGenerator<QboQueryPage, void, void>;
   report(name: QboReportName, params?: QboReportParams, options?: QboCallOptions): Promise<Record<string, unknown>>;
@@ -255,6 +258,23 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
     },
 
     query: runQuery,
+
+    async count(spec, call) {
+      let statement: string;
+      try {
+        statement = buildQboCountQuery(spec);
+      } catch {
+        throw new QboProviderError({ kind: "BAD_REQUEST", localReason: "INVALID_QUERY_SPEC" });
+      }
+      const { body, intuitTid } = await getJson(["query"], { query: statement }, call);
+      const qr = body.QueryResponse;
+      const total = typeof qr === "object" && qr !== null && !Array.isArray(qr) ? (qr as Record<string, unknown>).totalCount : undefined;
+      // An absent totalCount is NOT zero: without a number the window cannot be proven complete.
+      if (typeof total !== "number" || !Number.isInteger(total) || total < 0 || total > 1e9) {
+        throw new QboProviderError({ kind: "MALFORMED_RESPONSE", intuitTid });
+      }
+      return total;
+    },
 
     async *paginate(spec, call) {
       const pageSize = spec.maxResults ?? QBO_PROVIDER_LIMITS.queryMaxResults;

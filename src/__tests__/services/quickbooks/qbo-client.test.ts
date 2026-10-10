@@ -119,6 +119,21 @@ describe("read operations", () => {
     expect(page.intuitTid).toBe("tid-q");
   });
 
+  it("count issues SELECT count(*) as a GET and returns the provider's totalCount", async () => {
+    const { client, calls } = harness([json(200, { QueryResponse: { totalCount: 1234 }, time: "t" })]);
+    const n = await client.count({ entity: "Invoice", where: [{ field: "MetaData.LastUpdatedTime", op: ">=", value: "2026-09-15T10:00:00+00:00" }] });
+    expect(n).toBe(1234);
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].url.searchParams.get("query")).toBe("SELECT count(*) FROM Invoice WHERE MetaData.LastUpdatedTime >= '2026-09-15T10:00:00+00:00'");
+  });
+
+  it("count rejects a missing / negative / fractional / non-numeric totalCount as malformed (never guesses zero)", async () => {
+    for (const bad of [{}, { totalCount: -1 }, { totalCount: 1.5 }, { totalCount: "7" }, { totalCount: 2e9 }]) {
+      const { client } = harness([json(200, { QueryResponse: bad, time: "t" })]);
+      await expect(client.count({ entity: "Customer" })).rejects.toMatchObject({ kind: "MALFORMED_RESPONSE" });
+    }
+  });
+
   it("an empty page (entity key omitted by Intuit) is an empty list, not an error", async () => {
     const { client } = harness([json(200, queryBody("Invoice", []))]);
     expect((await client.query({ entity: "Invoice" })).records).toEqual([]);

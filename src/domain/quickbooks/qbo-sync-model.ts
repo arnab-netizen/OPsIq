@@ -56,10 +56,12 @@ export type QboSyncTrigger = (typeof QBO_SYNC_TRIGGERS)[number];
 export const QBO_SYNC_MODES = ["FULL", "INCREMENTAL"] as const;
 export type QboSyncMode = (typeof QBO_SYNC_MODES)[number];
 
-export const QBO_SYNC_RUN_STATUSES = ["RUNNING", "SUCCEEDED", "FAILED", "ABANDONED"] as const;
+/** PARTIAL: a bounded execution that stopped at a durable checkpoint; the sync continues in a later execution. Not a failure. */
+export const QBO_SYNC_RUN_STATUSES = ["RUNNING", "SUCCEEDED", "PARTIAL", "FAILED", "ABANDONED"] as const;
 export type QboSyncRunStatus = (typeof QBO_SYNC_RUN_STATUSES)[number];
 
-export const QBO_RECORD_STATES = ["ACTIVE", "INACTIVE", "MISSING"] as const;
+/** Mirror rows are never flagged "deleted": deletion detection needs a provider signal OpsIQ does not read (see QBO_READ_ONLY_SYNC.md §4). */
+export const QBO_RECORD_STATES = ["ACTIVE", "INACTIVE"] as const;
 export type QboRecordState = (typeof QBO_RECORD_STATES)[number];
 
 /** Closed set of sanitized failure codes. Nothing provider-supplied is ever stored beyond these. */
@@ -75,6 +77,8 @@ export const QBO_SYNC_FAILURE_CODES = [
   "PROVIDER_TIMEOUT",
   "PROVIDER_MALFORMED",
   "PROVIDER_REJECTED",
+  /** A window could not be PROVED complete (provider count disagrees with what could be read). Nothing was skipped silently. */
+  "PROVIDER_INCOMPLETE",
   "COMPANY_MISMATCH",
   "LEASE_LOST",
   "CANCELLED",
@@ -108,15 +112,21 @@ export const QBO_SYNC_WATERMARK_OVERLAP_MS = 10 * 60 * 1000;
 export const QBO_SYNC_FULL_RECONCILE_MS = 7 * 24 * 60 * 60 * 1000;
 /** Minimum spacing between MANUAL runs of one connection (each run costs ~11 provider calls). */
 export const QBO_SYNC_MANUAL_COOLDOWN_MS = 60 * 1000;
-/** Hard bound on provider records re-read by id to confirm "missing" per entity per FULL run. */
-export const QBO_SYNC_MISSING_CONFIRMATIONS_PER_ENTITY = 100;
+/** Bound on unseen records re-read by id per entity per FULL sync (each sync rotates through the least recently verified). */
+export const QBO_SYNC_VERIFY_READS_PER_ENTITY = 100;
 /** Scheduled cadence: one run per connection per UTC day, matching the platform's daily scheduler cron. */
 export const QBO_SYNC_SCHEDULE_BUCKET_MS = 24 * 60 * 60 * 1000;
 /** Complete calendar months of period reports (ProfitAndLoss, BalanceSheet) kept current. */
 export const QBO_SYNC_REPORT_MONTHS = 3;
-/** Hard bound on pages per entity per run; reaching it fails the run loudly rather than truncating. */
-export const QBO_SYNC_MAX_PAGES_PER_ENTITY = 500;
+/**
+ * Bounded WORK per execution: after this many provider pages an execution stops at a durable checkpoint and the sync CONTINUES in
+ * a later execution (scheduler re-enqueue). There is deliberately no dataset-size limit — only a per-execution work bound.
+ */
+export const QBO_SYNC_PAGES_PER_EXECUTION = 100;
+/** Intuit's documented maximum entities per query response. */
 export const QBO_SYNC_PAGE_SIZE = 1000;
+/** A timestamp-bucket enumeration that makes no progress for this many consecutive passes is declared incomplete (never looped on). */
+export const QBO_SYNC_TIE_MAX_STALLED_PASSES = 3;
 
 const TRANSIENT_BASE_DELAY_MS = 15 * 60 * 1000;
 const TRANSIENT_MAX_DELAY_MS = 6 * 60 * 60 * 1000;
@@ -205,17 +215,24 @@ export interface QboSyncCounts {
   reportsStored: number;
   reportsChanged: number;
   reportsFailed: number;
-  /** Records re-read by id to confirm they still exist / were really deleted. */
-  confirmedByRead: number;
-  markedMissing: number;
+  /** Provider query pages read (excluding count queries and by-id reads). */
+  pages: number;
+  /** Equal-timestamp buckets larger than a page that were enumerated to a PROVEN-complete close. */
+  tieBucketsClosed: number;
+  /** Unseen records re-read by id to refresh them (inactive / moved out of the query window). */
+  verifiedByRead: number;
+  /** Unseen records the provider could not positively confirm. Left UNCHANGED (never flagged deleted). */
+  unresolved: number;
 }
 
 export function emptySyncCounts(): QboSyncCounts {
-  return { fetched: {}, inserted: 0, updated: 0, unchanged: 0, skipped: 0, reportsStored: 0, reportsChanged: 0, reportsFailed: 0, confirmedByRead: 0, markedMissing: 0 };
+  return { fetched: {}, inserted: 0, updated: 0, unchanged: 0, skipped: 0, reportsStored: 0, reportsChanged: 0, reportsFailed: 0, pages: 0, tieBucketsClosed: 0, verifiedByRead: 0, unresolved: 0 };
 }
 
 export type QboSyncOutcome =
   | { status: "SUCCEEDED"; runId: string; mode: QboSyncMode; counts: QboSyncCounts; changed: boolean }
+  /** A bounded execution stopped at a durable checkpoint; the sync is NOT complete and continues later. */
+  | { status: "CONTINUING"; runId: string; mode: QboSyncMode; counts: QboSyncCounts; changed: boolean; continuationKey: string }
   | { status: "ALREADY_COMPLETED"; runId: string; runStatus: QboSyncRunStatus }
   | { status: "BUSY"; runId: string | null; leaseExpiresAt: Date | null }
   | { status: "NOT_DUE"; nextAttemptNotBefore: Date }
@@ -229,9 +246,11 @@ export interface QboSyncStatusView {
   connectionStatus: "ACTIVE" | "REAUTH_REQUIRED" | "ERROR" | "DISCONNECTED" | null;
   reauthorizationRequired: boolean;
   syncRunning: boolean;
+  /** A large sync stopped at a checkpoint and is waiting for its next execution (not a failure). */
+  syncContinuing: boolean;
   lastAttemptedAt: Date | null;
   lastSucceededAt: Date | null;
-  lastOutcome: "SUCCEEDED" | "FAILED" | null;
+  lastOutcome: "SUCCEEDED" | "PARTIAL" | "FAILED" | null;
   lastErrorCode: QboSyncFailureCode | null;
   nextAttemptNotBefore: Date | null;
   consecutiveFailures: number;
@@ -307,6 +326,8 @@ export interface DueGateState {
   lastSucceededAt: Date | null;
   nextAttemptNotBefore: Date | null;
   webhookHintAt: Date | null;
+  /** An unfinished sync (checkpoint) exists: its next execution is due regardless of the daily cadence or a missing hint. */
+  continuationPending?: boolean;
 }
 
 /**
@@ -325,9 +346,58 @@ export function evaluateDueGate(trigger: QboSyncTrigger, state: DueGateState | n
     return null;
   }
   if (state.nextAttemptNotBefore && state.nextAttemptNotBefore.getTime() > now.getTime()) return state.nextAttemptNotBefore;
+  if (state.continuationPending) return null;
   if (trigger === "SCHEDULED" && !state.webhookHintAt && state.lastSucceededAt && scheduleBucket(state.lastSucceededAt) === scheduleBucket(now)) {
     return new Date(Date.parse(`${scheduleBucket(now)}T00:00:00Z`) + 86_400_000);
   }
   if (trigger === "WEBHOOK" && !state.webhookHintAt) return now;
   return null;
+}
+
+// ─── Continuation checkpoint ─────────────────────────────────────────────────
+
+/**
+ * The durable position of an unfinished sync. Written in the SAME transaction as the page it describes, so a crash can neither
+ * lose a persisted page's progress nor record progress for a page that was not persisted. The durable per-entity WATERMARKS are
+ * not part of it and do not move until the sync has PROVEN exhaustion (all entities, then reports).
+ */
+export const QboContinuationSchema = z.object({
+  v: z.literal(1),
+  /** Identifies the logical sync across executions; mirror rows carry it as `last_seen_sync_id`. */
+  syncId: z.string().uuid(),
+  mode: z.enum(QBO_SYNC_MODES),
+  /** Fixed upper bound of the whole sync. Becomes every entity's watermark on completion. */
+  cutoff: z.string().datetime(),
+  /** Index into QBO_SYNC_QUERY_ENTITIES of the entity being read. */
+  entityIndex: z.number().int().min(0).max(QBO_SYNC_QUERY_ENTITIES.length),
+  /** Keyset cursor (floor-to-second ISO instant) within that entity, or null before the first page. */
+  cursor: z.string().datetime().nullable(),
+  /** In-progress enumeration of one equal-timestamp bucket. */
+  tie: z.object({
+    second: z.string().datetime(),
+    offset: z.number().int().min(0),
+    stalledPasses: z.number().int().min(0),
+    lastSeen: z.number().int().min(0),
+    /** The provider's count for the bucket at the START of the current pass (null until probed). A pass never reads past it. */
+    total: z.number().int().min(0).nullable(),
+  }).nullable(),
+  /** Entities whose FULL reconciliation (verify reads) has finished. */
+  reconciled: z.array(z.string()).max(8),
+  seq: z.number().int().min(0),
+  /** Some execution of this logical sync (or a failed attempt of it) persisted a provider change: the re-evaluation marker must survive resumes. */
+  changed: z.boolean().default(false),
+  /** The attempt ended PROVIDER_INCOMPLETE: do NOT resume this checkpoint; the next attempt starts a fresh logical sync (keeping `changed`). */
+  restart: z.boolean().default(false),
+});
+export type QboContinuation = z.infer<typeof QboContinuationSchema>;
+
+/** Parse a stored checkpoint; anything unreadable is treated as ABSENT (the sync restarts cleanly rather than trusting garbage). */
+export function parseContinuation(raw: unknown): QboContinuation | null {
+  const r = QboContinuationSchema.safeParse(raw);
+  return r.success ? r.data : null;
+}
+
+/** Floor a date to whole seconds (QuickBooks timestamps are second-precision; all window logic is in whole seconds). */
+export function floorSecond(d: Date): Date {
+  return new Date(Math.floor(d.getTime() / 1000) * 1000);
 }

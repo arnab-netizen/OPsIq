@@ -101,13 +101,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(recAfter.map((r: { revision: number; contentHash: string }) => [r.revision, r.contentHash])).toEqual(recBefore.map((r: { revision: number; contentHash: string }) => [r.revision, r.contentHash]));
     });
 
-    it("a repeated FULL sync is idempotent too and never flags live records missing", async () => {
+    it("a repeated FULL sync is idempotent too and never marks any record deleted", async () => {
       const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 120_000) });
       expect(out.status === "SUCCEEDED" && out.mode).toBe("FULL");
       expect(out.status === "SUCCEEDED" && out.counts.inserted).toBe(0);
       expect(out.status === "SUCCEEDED" && out.counts.updated).toBe(0);
       expect(out.status === "SUCCEEDED" && out.counts.unchanged).toBe(10);
-      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, recordState: "MISSING" } })).toBe(0);
+      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, recordState: { notIn: ["ACTIVE", "INACTIVE"] } } })).toBe(0);
       expect((await countRows(c)).records).toBe(10);
     });
   });
@@ -136,39 +136,42 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(kept.revision).toBe(2);
     });
 
-    it("a record Intuit really deleted is confirmed by a GET-by-id and flagged MISSING (never deleted); it returns when it reappears", async () => {
+    it("a record the provider can no longer return (fault 610 on the by-id read) is counted UNRESOLVED and left exactly as stored - never flagged deleted", async () => {
       const removed = c.fake.data.Customer.splice(0, 1)[0];
       c.fake.deleted.add(`Customer:${removed.Id}`);
+      const before = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } });
       const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 10_800_000) });
-      expect(out.status === "SUCCEEDED" && [out.changed, out.counts.markedMissing, out.counts.confirmedByRead]).toEqual([true, 1, 1]);
+      expect(out.status === "SUCCEEDED" && [out.counts.unresolved, out.counts.verifiedByRead]).toEqual([1, 1]);
       const row = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } });
-      expect(row.recordState).toBe("MISSING");
+      expect(row.recordState).toBe(before.recordState);
+      expect(row.revision).toBe(before.revision);
+      expect(row.contentHash).toBe(before.contentHash);
+      expect(row.lastVerifyAttemptAt).not.toBeNull();
       expect(c.fake.accountingRequests().every((r) => r.method === "GET")).toBe(true);
-      // An INCREMENTAL run cannot see deletions and must not flag or read anything by id.
-      const before = c.fake.requests.length;
+      // An INCREMENTAL run does not read anything by id.
+      const marker = c.fake.requests.length;
       const inc = await run(c, { modeOverride: "INCREMENTAL" }, { now: () => new Date(NOW.getTime() + 11_000_000) });
       expect(inc.status).toBe("SUCCEEDED");
-      expect(c.fake.requests.slice(before).some((r) => /\/customer\/\d+$/.test(r.path))).toBe(false);
+      expect(c.fake.requests.slice(marker).some((r) => /\/customer\/\d+$/.test(r.path))).toBe(false);
+      // When the provider returns it again it is refreshed through the normal path.
       c.fake.deleted.delete(`Customer:${removed.Id}`);
       c.fake.data.Customer.push(removed);
       const back = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 12_000_000) });
-      expect(back.status === "SUCCEEDED" && back.counts.updated).toBe(1); // MISSING -> ACTIVE counts as a change
-      const again = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } });
-      expect(again.recordState).toBe("ACTIVE");
-      expect(again.revision).toBeGreaterThanOrEqual(3);
+      expect(back.status).toBe("SUCCEEDED");
+      expect((await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: removed.Id } })).recordState).toBe("ACTIVE");
     });
 
-    it("a live record that merely fell outside the query window (edited after the cutoff) is re-read, kept ACTIVE and never flagged MISSING", async () => {
+    it("a live record that merely fell outside the query window (edited after the cutoff) is re-read and kept ACTIVE", async () => {
       const keep = c.fake.data.Invoice[1];
       c.fake.data.Invoice[1] = invoice(keep.Id, "2026-12-01T00:00:00Z", { Balance: 1 }); // edited AFTER the run's cutoff -> not returned by the query
       const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 13_000_000) });
-      expect(out.status === "SUCCEEDED" && [out.counts.markedMissing, out.counts.confirmedByRead]).toEqual([0, 1]);
+      expect(out.status === "SUCCEEDED" && [out.counts.unresolved, out.counts.verifiedByRead]).toEqual([0, 1]);
       const row = await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Invoice", providerEntityId: keep.Id } });
       expect(row.recordState).toBe("ACTIVE");
       expect((row.normalized as { balance: string }).balance).toBe("1");
     });
 
-    it("a standing set of >100 inactive customers cannot starve the confirmation of a deleted one (oldest-confirmed first)", async () => {
+    it("a standing set of >100 inactive customers cannot starve verification of a record the provider cannot return (least-recently-attempted first)", async () => {
       const c2 = await seedConnected();
       for (let i = 1; i <= 105; i++) c2.fake.data.Customer.push(customer(`i${String(i).padStart(3, "0")}`, "2026-09-01T00:00:00Z"));
       c2.fake.data.Customer.push(customer("z999", "2026-09-01T00:00:00Z")); // sorts after every inactive id
@@ -179,16 +182,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       c2.fake.deleted.add("Customer:z999");
       await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 3_600_000) });
       await run(c2, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 7_200_000) });
-      const states = await db.qboSyncedRecord.findMany({ where: { connectionId: c2.connectionId, entityType: "Customer" }, select: { providerEntityId: true, recordState: true } });
-      expect(states.find((r: { providerEntityId: string }) => r.providerEntityId === "z999")?.recordState).toBe("MISSING");
-      expect(states.filter((r: { recordState: string }) => r.recordState === "INACTIVE")).toHaveLength(105);
+      const rows = await db.qboSyncedRecord.findMany({ where: { connectionId: c2.connectionId, entityType: "Customer" }, select: { providerEntityId: true, recordState: true, lastVerifyAttemptAt: true } });
+      expect(rows.filter((r: { recordState: string }) => r.recordState === "INACTIVE")).toHaveLength(105);
+      const z = rows.find((r: { providerEntityId: string }) => r.providerEntityId === "z999");
+      expect(z?.lastVerifyAttemptAt).not.toBeNull(); // reached by the rotation within two runs
+      expect(z?.recordState).toBe("ACTIVE"); // and, with no positive answer, left unchanged
     });
 
-    it("an inactive customer Intuit's query omits is confirmed by id and stored INACTIVE, not MISSING", async () => {
+    it("an inactive customer Intuit's query omits is verified by id and stored INACTIVE", async () => {
       const gone = c.fake.data.Customer.splice(0, 1)[0];
       c.fake.inactive.set(`Customer:${gone.Id}`, { ...gone, Active: false });
       const out = await run(c, { modeOverride: "FULL" }, { now: () => new Date(NOW.getTime() + 14_000_000) });
-      expect(out.status === "SUCCEEDED" && out.counts.markedMissing).toBe(0);
+      expect(out.status === "SUCCEEDED" && out.counts.unresolved).toBe(0);
       expect((await db.qboSyncedRecord.findFirstOrThrow({ where: { connectionId: c.connectionId, entityType: "Customer", providerEntityId: gone.Id } })).recordState).toBe("INACTIVE");
       c.fake.inactive.delete(`Customer:${gone.Id}`);
       c.fake.data.Customer.push(gone);
@@ -241,7 +246,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       const out = await runQboReadSync(manual(c), testDeps(c, { now: () => NOW, fetchImpl: racing }));
       expect(out.status).toBe("SUCCEEDED");
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer", recordState: "ACTIVE" } })).toBe(2500);
-      expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, recordState: "MISSING" } })).toBe(0);
     });
 
     it("more records than a page share ONE timestamp (bulk import): none are skipped or looped on", async () => {
@@ -282,6 +286,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(first).toMatchObject({ status: "FAILED", code: "PROVIDER_UNAVAILABLE", terminal: false });
       const state = await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
       expect(state.watermarks).toEqual({});
+      expect(state.continuation).not.toBeNull(); // the position is durable; the watermark is not
       expect(state).toMatchObject({ lastOutcome: "FAILED", lastErrorCode: "PROVIDER_UNAVAILABLE", consecutiveFailures: 1, leaseToken: null });
       expect(state.nextAttemptNotBefore).not.toBeNull();
       const partial = await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer" } });
@@ -290,7 +295,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       const second = await runQboReadSync(manual(c), testDeps(c, { now: () => new Date(NOW.getTime() + 60_000), fetchImpl: flaky }));
       expect(second.status).toBe("SUCCEEDED");
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer" } })).toBe(1500);
-      expect(second.status === "SUCCEEDED" && second.counts.unchanged).toBeGreaterThanOrEqual(1000);
+      // The retry RESUMES from the durable checkpoint (same logical sync, same cutoff): only the boundary row is re-read, not page 1.
+      expect(second.status === "SUCCEEDED" && second.counts.unchanged).toBeLessThan(10);
+      expect(second.status === "SUCCEEDED" && second.counts.fetched.Customer).toBeLessThan(600);
+      expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).continuation).toBeNull();
       expect(await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).toMatchObject({ consecutiveFailures: 0, lastOutcome: "SUCCEEDED", nextAttemptNotBefore: null });
     });
   });
