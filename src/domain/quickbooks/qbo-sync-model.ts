@@ -124,7 +124,9 @@ export const QBO_SYNC_PAGES_PER_EXECUTION = 100;
 /** Intuit's documented maximum entities per query response. */
 export const QBO_SYNC_PAGE_SIZE = 1000;
 /** Wall-clock budget of ONE execution (scheduled or manual): it stops at its checkpoint when exceeded, inside the 300 s function ceiling. */
-export const QBO_EXECUTION_DEADLINE_MS = 100_000;
+export const QBO_EXECUTION_DEADLINE_MS = 45_000;
+/** After the soft deadline an in-flight provider call is aborted at this margin (the run then fails CANCELLED and resumes from its checkpoint). */
+export const QBO_EXECUTION_HARD_ABORT_GRACE_MS = 60_000;
 /** A timestamp-bucket enumeration that makes no progress for this many consecutive passes is declared incomplete (never looped on). */
 export const QBO_SYNC_TIE_MAX_STALLED_PASSES = 3;
 

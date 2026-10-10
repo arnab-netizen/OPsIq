@@ -145,7 +145,14 @@ export function resolveFinancialFieldPrecedence(i: PrecedenceInput): PrecedenceR
     field: i.field, source: "NONE", value: null, reason, conflict: false, suggestion, provenance: null, confidenceCap: null,
   });
 
-  if (!i.businessIsActive) return none("BUSINESS_ARCHIVED");
+  // An archived business never ADOPTS a QuickBooks figure - but an owner-entered value is still the owner's value: manual always wins,
+  // so it is returned untouched (never nulled), with no suggestion and no conflict.
+  if (!i.businessIsActive) {
+    if (i.manualValue !== null && Number.isFinite(i.manualValue)) {
+      return { field: i.field, source: "MANUAL", value: i.manualValue, reason: "MANUAL_VALUE_PRESENT", conflict: false, suggestion: null, provenance: null, confidenceCap: null };
+    }
+    return none("BUSINESS_ARCHIVED");
+  }
   const q = usableQbo(i);
 
   if (i.manualValue !== null && Number.isFinite(i.manualValue)) {

@@ -22,6 +22,20 @@ export function qboConfig(environment: QboEnvironment = "sandbox"): QboProviderC
   return r.config;
 }
 
+/**
+ * Scope cleanup of `qbo-read-sync` scheduler tasks to the rows a test FILE created: snapshot the existing ids in beforeAll, delete
+ * everything that appeared since in afterAll. (Producers scan every active connection in the database, so a workspace filter alone
+ * would leak rows for connections seeded by other files - and an unscoped delete would remove other files' rows.)
+ */
+export function trackQboTasks(): { snapshot: () => Promise<void>; cleanup: () => Promise<void> } {
+  let before = new Set<string>();
+  const ids = async (): Promise<string[]> => (await db.scheduledTask.findMany({ where: { taskName: "qbo-read-sync" }, select: { id: true } })).map((r: { id: string }) => r.id);
+  return {
+    snapshot: async () => { before = new Set(await ids()); },
+    cleanup: async () => { await db.scheduledTask.deleteMany({ where: { id: { in: (await ids()).filter((id) => !before.has(id)) } } }).catch(() => undefined); },
+  };
+}
+
 let realmSeq = 0;
 export const nextRealm = () => `9341${String(Date.now()).slice(-7)}${++realmSeq}`;
 

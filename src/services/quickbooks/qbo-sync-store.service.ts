@@ -285,14 +285,6 @@ export interface PersistRecordsResult {
   stale: number;
 }
 
-/**
- * Persist one page of already-normalized, already-deduplicated records under the lease. Records whose provider
- * timestamp is OLDER than the stored copy are skipped (an out-of-order page can never roll data back).
- */
-export async function persistRecordsPage(lease: SyncLease, records: readonly NormalizedRecord[], deps?: QboPersistenceDeps): Promise<PersistRecordsResult> {
-  return persistRecordsPageWithCheckpoint(lease, records, undefined, deps);
-}
-
 /** Persist the checkpoint in a lease-fenced transaction of its own (state transitions that are not tied to a page). */
 export async function saveContinuation(lease: SyncLease, checkpoint: QboContinuation, deps?: QboPersistenceDeps): Promise<void> {
   const now = clock(deps);
@@ -341,7 +333,7 @@ export async function persistRecordsPageWithCheckpoint(
     const finish = async (): Promise<void> => {
       const changedHere = result.inserted > 0 || result.updated > 0;
       if (checkpoint) await writeCheckpoint(tx, lease, changedHere ? { ...checkpoint, changed: true } : checkpoint);
-      else if (changedHere) await markCheckpointChanged(tx, lease);
+      else if (changedHere && (await markCheckpointChanged(tx, lease)) !== 1) throw new QboLeaseLostError(); // never a silently lost marker
     };
     if (records.length === 0) { await finish(); return; }
     const existing = (await tx.qboSyncedRecord.findMany({
@@ -750,7 +742,8 @@ export async function readSyncStatusForBusiness(
     syncRunning: Boolean(state?.leaseToken && state.leaseExpiresAt && state.leaseExpiresAt.getTime() > now.getTime()),
     lastAttemptedAt: state?.lastAttemptedAt ?? null,
     lastSucceededAt: state?.lastSucceededAt ?? null,
-    syncContinuing: parseContinuation(state?.continuation) !== null,
+    // (a checkpoint flagged `restart` is never resumed: the run FAILED and will start fresh, so it is not 'continuing')
+    syncContinuing: (() => { const cp = parseContinuation(state?.continuation); return cp !== null && !cp.restart; })(),
     lastOutcome: (state?.lastOutcome as "SUCCEEDED" | "PARTIAL" | "FAILED" | null) ?? null,
     lastErrorCode: (state?.lastErrorCode as QboSyncFailureCode | null) ?? null,
     nextAttemptNotBefore: state?.nextAttemptNotBefore ?? null,
@@ -879,7 +872,9 @@ export async function markWebhookHint(scope: SyncScope, deps?: QboPersistenceDep
   const now = clock(deps);
   await clientOf(deps).$transaction(async (tx: Tx) => {
     await ensureState(tx, scope);
-    await tx.qboSyncState.updateMany({ where: scope, data: { webhookHintAt: now } });
+    // Monotonic: a delivery that computed its timestamp earlier but committed later must not move the hint BACK (a sync whose cutoff
+    // lies between the two would then clear the newer hint unserved).
+    await tx.qboSyncState.updateMany({ where: { ...scope, OR: [{ webhookHintAt: null }, { webhookHintAt: { lt: now } }] }, data: { webhookHintAt: now } });
   });
 }
 

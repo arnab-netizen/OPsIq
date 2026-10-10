@@ -4,17 +4,17 @@
  *  - equal-timestamp buckets larger than a page are read COMPLETELY even when the provider re-shuffles equal-timestamp rows
  *    between requests (closure is by the two-round identity-inclusion check, never assumed from offset paging or a count comparison);
  *  - a dataset larger than any per-execution budget completes through persisted continuation (no page cap, no failure);
- *  - the durable watermark never moves before proven exhaustion, a crash cannot fabricate a completion, and late-indexed records
+ *  - the durable watermark never moves before confirmed exhaustion, a crash cannot fabricate a completion, and late-indexed records
  *    inside the overlap are still picked up;
- *  - a provider that cannot be proven complete ends as PROVIDER_INCOMPLETE and cannot loop.
+ *  - a provider that cannot be confirmed complete ends as PROVIDER_INCOMPLETE and cannot loop.
  * Requires TEST_WITH_DB=true and a migrated PostgreSQL. Self-skips otherwise.
  */
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { runQboReadSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-sync.service";
-import { seedConnected, testDeps, scopeOf, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { seedConnected, testDeps, scopeOf, trackQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { customer, invoice, profitAndLossBody } from "@/__tests__/test-helpers/qbo-fake-intuit";
 import { QBO_SYNC_QUERY_ENTITIES, QBO_SYNC_TIE_MAX_STALLED_PASSES, parseContinuation } from "@/domain/quickbooks/qbo-sync-model";
 import { continuationTaskKey, markWebhookHint } from "@/services/quickbooks/qbo-sync-store.service";
@@ -33,9 +33,9 @@ const queriesFor = (c: ConnectedTenant, entity: string, kind: "page" | "count" =
   });
 const stored = (c: ConnectedTenant, entityType: string) => db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType } });
 
-afterAll(async () => {
-  await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${TASK_NAME_QBO_READ_SYNC}'`).catch(() => undefined);
-});
+const qboTasks = trackQboTasks();
+beforeAll(qboTasks.snapshot);
+afterAll(qboTasks.cleanup);
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (real Postgres, hostile fake)", () => {
   describe("equal LastUpdatedTime buckets larger than a page", () => {
@@ -116,7 +116,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
   });
 
   describe("large datasets complete through persisted continuation (no page cap)", () => {
-    it("LARGE_DATASET_CONTINUATION_TEST: 260 records at a 3-call budget = far more than any single execution; CONTINUING until proven exhaustion, then SUCCEEDED", async () => {
+    it("LARGE_DATASET_CONTINUATION_TEST: 260 records at a 3-call budget = far more than any single execution; CONTINUING until confirmed exhaustion, then SUCCEEDED", async () => {
       const c = await seedConnected();
       // 150 customers on distinct seconds + a 60-record equal-timestamp bucket + 50 invoices; page size 10.
       for (let i = 1; i <= 150; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
@@ -424,22 +424,48 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 
-    it("ordinary single membership flips are detected at EVERY verification read from the start of verification to its last re-read (deterministic sweep): never a close with B missing", async () => {
-      // 3 IN-batches per round x 2 rounds = 6 identity reads; the flip lands right after read k (including after the LAST identity read,
-      // which only the post-cutoff edit count can still observe).
-      for (let flipAt = 1; flipAt <= 6; flipAt++) {
-        const c = await seedConnected();
-        seedBucket(c, 120);
-        let inCounts = 0;
-        const racing = hook(c, (q) => q.startsWith("SELECT count(*)") && q.includes(" Id IN ") && ++inCounts === flipAt, () => replaceAB(c));
-        let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
-        for (let i = 0; i < 8 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
-        await assertNoSilentSkip(c, out);
-        // Non-vacuous: a stable provider converges, and convergence required a RESTART (more identity reads than one clean 2 x 3 sweep).
-        expect(out.status, `flipAt=${flipAt}`).toBe("SUCCEEDED");
-        expect((await ids(c)).has("B-late"), `flipAt=${flipAt}`).toBe(true);
-        expect(queriesFor(c, "Invoice", "count").filter((r) => (r.url.searchParams.get("query") ?? "").includes(" Id IN ")).length, `flipAt=${flipAt}`).toBeGreaterThan(6);
+    it("membership-change sweep: {delete, arrival, edit-out, swap} injected after EVERY provider count read of the verification phase - never a SUCCEEDED run with a gap, and a stable provider always converges", async () => {
+      const kindOf = (q: string): "IN" | "EDITS" | "TOTAL" | null =>
+        !q.startsWith("SELECT count(*)") ? null : q.includes(" Id IN ") ? "IN" : /LastUpdatedTime > '/.test(q) ? "EDITS" : "TOTAL";
+      // Learn the provider-call sequence of one clean verification (from the first identity read to the end).
+      const clean = await seedConnected();
+      seedBucket(clean, 120);
+      expect((await run(clean, { pageSize: 25, pagesPerExecution: 1000 })).status).toBe("SUCCEEDED");
+      const seq = clean.fake.requests.map((r) => kindOf(r.url.searchParams.get("query") ?? "")).filter((k): k is "IN" | "EDITS" | "TOTAL" => k !== null);
+      const first = seq.indexOf("IN");
+      const phase = seq.slice(first);
+      const lastTotal = phase.lastIndexOf("TOTAL") + 1; // 1-based read number of the final bucket-size re-read
+      expect(lastTotal).toBeGreaterThan(6);
+      const inject = (c: ConnectedTenant, kind: "delete" | "arrival" | "edit-out" | "swap") => {
+        const at = c.fake.data.Invoice.findIndex((r) => r.Id === "t005");
+        if (kind === "delete") c.fake.data.Invoice.splice(at, 1);
+        if (kind === "edit-out" || kind === "swap") c.fake.data.Invoice[at] = invoice("t005", "2026-10-10T03:30:00Z", { Balance: 1 });
+        if (kind === "arrival" || kind === "swap") c.fake.data.Invoice.push(invoice("B-late", SECOND));
+      };
+      let runs = 0;
+      for (const kind of ["delete", "arrival", "edit-out", "swap"] as const) {
+        // A change landing after the last bucket-size re-read has nothing left to observe it (assumption R2 for arrivals), so the sweep
+        // covers every read BEFORE that one.
+        for (let k = 1; k < lastTotal; k++) {
+          const c = await seedConnected();
+          seedBucket(c, 120);
+          let count = 0;
+          let started = false;
+          const racing = hook(c, (q) => {
+            if (kindOf(q) === null) return false;
+            if (!started) { if (kindOf(q) !== "IN") return false; started = true; }
+            return ++count === k;
+          }, () => inject(c, kind));
+          let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
+          for (let i = 0; i < 8 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
+          const label = `${kind}@${k}`;
+          await assertNoSilentSkip(c, out);
+          expect(out.status, label).toBe("SUCCEEDED");
+          if (kind === "arrival" || kind === "swap") expect((await ids(c)).has("B-late"), label).toBe(true);
+          runs++;
+        }
       }
+      expect(runs).toBeGreaterThanOrEqual(4 * 8);
     });
 
     it("restart between the two observations / continuation worker takeover: the flip lands while the sync is PAUSED at its checkpoint inside the proof; the resuming execution still does not close falsely", async () => {
@@ -456,7 +482,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 
-    it("WATERMARK_NO_SILENT_SKIP: a provider that hides B for the whole sync (never serves it) can not be proven complete if it still COUNTS B", async () => {
+    it("WATERMARK_NO_SILENT_SKIP: a provider that hides B for the whole sync (never serves it) can not be confirmed complete if it still COUNTS B", async () => {
       const c = await seedConnected();
       seedBucket(c, 35);
       // The provider's COUNT includes a record its pages never return (an inconsistent provider): inclusion can never be established.
@@ -638,15 +664,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
     it("the cron drain claims a bounded number of tasks per pass (a platform kill can strand at most that many)", async () => {
       const { DatabaseSchedulerProvider } = await import("@/infra/scheduler");
       const sched = new DatabaseSchedulerProvider();
-      const name = "v26a-claim-bound-test";
-      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+      const name = `v26a-claim-bound-${randomUUID()}`;
       const c = await seedConnected();
-      for (let i = 0; i < 5; i++) await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 2, workspaceId: c.t.ws, idempotencyKey: `${name}:${c.connectionId}:${i}` });
+      for (let i = 0; i < 5; i++) await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 2, workspaceId: c.t.ws, idempotencyKey: `${name}:${i}` });
       const handlers = new Map([[name, async () => ({ status: "SUCCESS" as const })]]);
-      expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(2);
-      expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(2);
-      expect(await sched.processDue(handlers, { maxClaim: 2 })).toBe(1);
-      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+      const done = () => db.scheduledTask.count({ where: { taskName: name, status: "completed" } });
+      // Judged on OUR OWN rows only (our tasks sort first; a pass may also claim a foreign due row, which is not our assertion).
+      await sched.processDue(handlers, { maxClaim: 2 });
+      expect(await done()).toBe(2);
+      await sched.processDue(handlers, { maxClaim: 2 });
+      expect(await done()).toBe(4);
+      await sched.processDue(handlers, { maxClaim: 2 });
+      expect(await done()).toBe(5);
+      await db.scheduledTask.deleteMany({ where: { taskName: name } });
     });
 
     it("persistReportObservation writes the re-evaluation marker in its OWN transaction (no orchestrator involved), and refuses a change that has no checkpoint to carry it", async () => {
@@ -678,14 +708,37 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
     it("the drain can tell 'nothing due' from 'claimed but failed': lastClaimedCount counts claimed rows", async () => {
       const { DatabaseSchedulerProvider } = await import("@/infra/scheduler");
       const sched = new DatabaseSchedulerProvider();
-      const name = "v26a-claimed-count-test";
-      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+      const name = `v26a-claimed-count-${randomUUID()}`;
       const c = await seedConnected();
       await sched.scheduleIdempotent({ taskName: name, payload: {}, scheduledFor: new Date("2000-01-01T00:00:00Z"), maxAttempts: 3, workspaceId: c.t.ws, idempotencyKey: `${name}:${c.connectionId}` });
       const failing = new Map([[name, async () => { throw new Error("boom"); }]]);
-      expect(await sched.processDue(failing, { maxClaim: 2 })).toBe(0); // the handler failed...
-      expect(sched.lastClaimedCount).toBeGreaterThanOrEqual(1); // ...but a row WAS claimed, so a drain must not conclude there is no work
-      await db.$executeRawUnsafe(`DELETE FROM scheduled_tasks WHERE task_name = '${name}'`);
+      await sched.processDue(failing, { maxClaim: 2 });
+      expect(sched.lastClaimedCount).toBeGreaterThanOrEqual(1); // a row WAS claimed even though its handler failed
+      const row = await db.scheduledTask.findFirstOrThrow({ where: { taskName: name } });
+      expect(row.attempts).toBe(1); // ...so a drain must not conclude there is no work (the failed task is rescheduled, not lost)
+      await db.scheduledTask.deleteMany({ where: { taskName: name } });
+    });
+
+    it("a leftover checkpoint is re-queued by the daily producer under a DAY-scoped continuation key, once per day", async () => {
+      const { enqueueDueQboReadSyncTasks } = await import("@/services/scheduler/scheduler-producers");
+      const { QBO_TEST_ENV } = await import("@/__tests__/test-helpers/qbo-db-fixtures");
+      // The producer scans EVERY active connection in the database: remember what existed so only the rows this test caused are removed.
+      const before = new Set((await db.scheduledTask.findMany({ where: { taskName: TASK_NAME_QBO_READ_SYNC }, select: { id: true } })).map((r: { id: string }) => r.id));
+      const c = await seedConnected();
+      for (let i = 1; i <= 30; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
+      expect((await run(c, { pageSize: 10, pagesPerExecution: 1 })).status).toBe("CONTINUING");
+      try {
+      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox"));
+      const first = await db.scheduledTask.findMany({ where: { taskName: TASK_NAME_QBO_READ_SYNC, workspaceId: c.t.ws } });
+      const keys = first.map((t: { idempotencyKey: string }) => t.idempotencyKey);
+      expect(keys.filter((k: string) => k.includes(`:cont:${c.connectionId}:`) && /:\d{4}-\d{2}-\d{2}$/.test(k))).toHaveLength(1);
+      expect(keys.some((k: string) => k === `${TASK_NAME_QBO_READ_SYNC}:${c.connectionId}:${new Date().toISOString().slice(0, 10)}`)).toBe(false); // not the plain daily key
+      await enqueueDueQboReadSyncTasks(QBO_TEST_ENV("sandbox")); // same day again: idempotent
+      expect(await db.scheduledTask.count({ where: { taskName: TASK_NAME_QBO_READ_SYNC, workspaceId: c.t.ws } })).toBe(first.length);
+      } finally {
+        const after = await db.scheduledTask.findMany({ where: { taskName: TASK_NAME_QBO_READ_SYNC }, select: { id: true } });
+        await db.scheduledTask.deleteMany({ where: { id: { in: after.map((r: { id: string }) => r.id).filter((id: string) => !before.has(id)) } } });
+      }
     });
   });
 });

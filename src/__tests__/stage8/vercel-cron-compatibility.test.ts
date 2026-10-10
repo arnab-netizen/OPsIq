@@ -37,6 +37,7 @@ import path from "path";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const processDue = vi.fn();
+const claimedByLastPass = { value: 0 };
 const enqueueDueEmailRetryTasks = vi.fn();
 const enqueueDueFinanceLearningBridgeTasks = vi.fn();
 const enqueueDueReassessmentScanTasks = vi.fn();
@@ -46,6 +47,8 @@ const enqueueDueQboReadSyncTasks = vi.fn();
 vi.mock("@/infra/scheduler", () => ({
   DatabaseSchedulerProvider: class {
     processDue = processDue;
+    /** Rows claimed by the last pass (the real provider sets this); the drain stops only when nothing was CLAIMED and nothing processed. */
+    get lastClaimedCount(): number { return claimedByLastPass.value; }
   },
 }));
 
@@ -105,6 +108,7 @@ function runsAtMostOncePerDay(expression: string): boolean {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  claimedByLastPass.value = 0;
   processDue.mockResolvedValue(0);
   enqueueDueEmailRetryTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueFinanceLearningBridgeTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
@@ -298,7 +302,8 @@ describe("[stage8] 8. batch limits and drain-loop termination do not permanently
   });
 
   it("5/10. an endless backlog terminates at the pass cap, bounding DB calls", async () => {
-    const MAX_DRAIN_PASSES = 25;
+    const MAX_DRAIN_PASSES = Number(/MAX_DRAIN_PASSES\s*=\s*(\d+)/.exec(ROUTE_SRC)?.[1]);
+    expect(MAX_DRAIN_PASSES).toBeGreaterThan(0);
     processDue.mockResolvedValue(50);
 
     const { GET } = await loadRoute();
@@ -309,24 +314,44 @@ describe("[stage8] 8. batch limits and drain-loop termination do not permanently
   });
 
   it("6. the wall-clock budget terminates the drain before the pass cap", async () => {
-    const MAX_DRAIN_PASSES = 25;
-    // Virtual clock: each pass burns 20s of the 45s budget.
+    const MAX_DRAIN_PASSES = Number(/MAX_DRAIN_PASSES\s*=\s*(\d+)/.exec(ROUTE_SRC)?.[1]);
+    const BUDGET_MS = Number((/DRAIN_BUDGET_MS\s*=\s*([\d_]+)/.exec(ROUTE_SRC)?.[1] ?? "0").replace(/_/g, ""));
+    // Virtual clock: each pass burns ~45% of the budget, so exactly three passes start before it is spent.
+    const BURN = Math.floor(BUDGET_MS * 0.45);
     let clock = 1_700_000_000_000;
     const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => clock);
 
     processDue.mockImplementation(async () => {
-      clock += 20_000;
+      clock += BURN;
       return 50; // always more work — only the budget can stop this
     });
 
     const { GET } = await loadRoute();
     await (await GET(cronRequest(SECRET))).json();
 
-    // Passes at t=0, 20s, 40s; the 4th check sees 60s >= 45s deadline.
+    // Passes at t=0, 0.45B, 0.9B; the 4th check sees 1.35B >= B.
     expect(processDue).toHaveBeenCalledTimes(3);
     expect(processDue.mock.calls.length).toBeLessThan(MAX_DRAIN_PASSES);
 
     nowSpy.mockRestore();
+  });
+
+  it("9. a pass whose tasks were CLAIMED but all failed does not end the drain (the backlog behind poison tasks is still served)", async () => {
+    processDue.mockImplementation(async () => { claimedByLastPass.value = 2; return 0; });
+    processDue.mockImplementationOnce(async () => { claimedByLastPass.value = 2; return 0; });
+    processDue.mockImplementationOnce(async () => { claimedByLastPass.value = 2; return 0; });
+    processDue.mockImplementationOnce(async () => { claimedByLastPass.value = 0; return 0; }); // now nothing is due
+    const { GET } = await loadRoute();
+    await (await GET(cronRequest(SECRET))).json();
+    expect(processDue).toHaveBeenCalledTimes(3);
+    claimedByLastPass.value = 0;
+  });
+
+  it("10. every pass claims a bounded batch (maxClaim) so a platform kill strands at most that many tasks", async () => {
+    processDue.mockResolvedValue(0);
+    const { GET } = await loadRoute();
+    await GET(cronRequest(SECRET));
+    expect(processDue).toHaveBeenCalledWith(expect.anything(), { maxClaim: 2 });
   });
 
   it("7. a throw in the drain loop is contained and leaves work retryable", async () => {

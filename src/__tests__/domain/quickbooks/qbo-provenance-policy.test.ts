@@ -73,7 +73,8 @@ describe("QuickBooks provenance / precedence", () => {
   });
   it("archived businesses never adopt, even over a missing manual value; a non-finite manual value is not a value", () => {
     expect(resolveFinancialFieldPrecedence(base({ businessIsActive: false }))).toMatchObject({ source: "NONE", reason: "BUSINESS_ARCHIVED" });
-    expect(resolveFinancialFieldPrecedence(base({ businessIsActive: false, manualValue: 3 }))).toMatchObject({ source: "NONE", reason: "BUSINESS_ARCHIVED" });
+    // ...but an owner-entered value is never nulled: manual always wins, with no QuickBooks suggestion.
+    expect(resolveFinancialFieldPrecedence(base({ businessIsActive: false, manualValue: 3 }))).toMatchObject({ source: "MANUAL", value: 3, reason: "MANUAL_VALUE_PRESENT", conflict: false, suggestion: null });
     expect(resolveFinancialFieldPrecedence(base({ manualValue: Number.NaN }))).toMatchObject({ source: "QBO" });
   });
   it("is deterministic", () => {

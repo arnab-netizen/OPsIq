@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { runQboReadSync, runScheduledQboSync, type RunQboSyncInput } from "@/services/quickbooks/qbo-sync.service";
 import {
-  QboLeaseLostError, beginSyncRun, extendSyncLease, markWebhookHint, persistRecordsPage, finishSyncRunSuccess, finishSyncRunFailure, persistReportObservation,
+  QboLeaseLostError, beginSyncRun, extendSyncLease, markWebhookHint, persistRecordsPageWithCheckpoint, finishSyncRunSuccess, finishSyncRunFailure, persistReportObservation,
   type SyncLease,
 } from "@/services/quickbooks/qbo-sync-store.service";
 import { normalizeInvoice, type NormalizedRecord } from "@/domain/quickbooks/qbo-normalize";
@@ -32,6 +32,9 @@ function gated(c: ConnectedTenant) {
   };
   return { fetchImpl, release, inFlight };
 }
+
+/** A fresh logical sync's checkpoint (production always writes it together with the first record). */
+const ckpt = (l: SyncLease) => ({ v: 1 as const, syncId: l.syncId, mode: "FULL" as const, cutoff: NOW.toISOString(), entityIndex: 0, cursor: null, tie: null, reconciled: [] as string[], seq: 1, changed: false, restart: false });
 
 function lease(c: ConnectedTenant, r: Awaited<ReturnType<typeof beginSyncRun>>): SyncLease {
   if (!r.ok) throw new Error(`begin ${r.reason}`);
@@ -238,12 +241,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
       expect(fresh.epoch).toBe(stale.epoch + 1);
 
       // The new owner writes a result.
-      await persistRecordsPage(fresh, [inv("1", "2026-10-01T00:00:00Z")], { now: () => later });
+      await persistRecordsPageWithCheckpoint(fresh, [inv("1", "2026-10-01T00:00:00Z")], ckpt(fresh), { now: () => later });
       await finishSyncRunSuccess({ lease: fresh, mode: "FULL", startedAt: later, counts: emptySyncCounts(), changed: true, watermarks: { Invoice: later.toISOString() }, actorId: c.t.actor }, { now: () => later });
 
       // The stale worker wakes up and tries everything.
       const staleNow = { now: () => new Date(later.getTime() + 1000) };
-      await expect(persistRecordsPage(stale, [inv("2", "2026-10-02T00:00:00Z")], staleNow)).rejects.toBeInstanceOf(QboLeaseLostError);
+      await expect(persistRecordsPageWithCheckpoint(stale, [inv("2", "2026-10-02T00:00:00Z")], ckpt(stale), staleNow)).rejects.toBeInstanceOf(QboLeaseLostError);
       await expect(extendSyncLease(stale, staleNow)).rejects.toBeInstanceOf(QboLeaseLostError);
       await expect(persistReportObservation(stale, { reportName: "ProfitAndLoss", periodStart: new Date("2026-09-01"), periodEnd: new Date("2026-09-30"), basis: "Accrual", currency: "USD", metrics: {}, inconsistencies: [], contentHash: "a".repeat(64), providerGeneratedAt: null }, staleNow)).rejects.toBeInstanceOf(QboLeaseLostError);
       await expect(finishSyncRunSuccess({ lease: stale, mode: "FULL", startedAt: NOW, counts: emptySyncCounts(), changed: true, watermarks: { Invoice: "1999-01-01T00:00:00.000Z" }, actorId: null }, staleNow)).rejects.toBeInstanceOf(QboLeaseLostError);
@@ -262,7 +265,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
       const c = await seedConnected();
       const slow = lease(c, await beginSyncRun({ ...scopeOf(c), trigger: "MANUAL", mode: "FULL", idempotencyKey: "manual:slow", requestedById: c.t.actor }, { now: () => NOW }));
       const wellPastExpiry = new Date(NOW.getTime() + QBO_SYNC_LEASE_MS * 3);
-      await persistRecordsPage(slow, [inv("1", "2026-10-01T00:00:00Z")], { now: () => wellPastExpiry });
+      await persistRecordsPageWithCheckpoint(slow, [inv("1", "2026-10-01T00:00:00Z")], ckpt(slow), { now: () => wellPastExpiry });
       await finishSyncRunSuccess({ lease: slow, mode: "FULL", startedAt: NOW, counts: emptySyncCounts(), changed: true, watermarks: { Invoice: NOW.toISOString() }, actorId: c.t.actor }, { now: () => wellPastExpiry });
       expect(await db.qboSyncRun.findUniqueOrThrow({ where: { id: slow.runId } })).toMatchObject({ status: "SUCCEEDED" });
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId } })).toBe(1);
@@ -287,7 +290,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
       const c = await seedConnected();
       const l = lease(c, await beginSyncRun({ ...scopeOf(c), trigger: "MANUAL", mode: "FULL", idempotencyKey: "manual:long", requestedById: c.t.actor }, { now: () => NOW }));
       const t1 = new Date(NOW.getTime() + QBO_SYNC_LEASE_MS - 10_000);
-      await persistRecordsPage(l, [inv("1", "2026-10-01T00:00:00Z")], { now: () => t1 });
+      await persistRecordsPageWithCheckpoint(l, [inv("1", "2026-10-01T00:00:00Z")], ckpt(l), { now: () => t1 });
       // Past the ORIGINAL expiry but inside the extended one: still BUSY.
       const t2 = new Date(NOW.getTime() + QBO_SYNC_LEASE_MS + 60_000);
       expect(await beginSyncRun({ ...scopeOf(c), trigger: "MANUAL", mode: "FULL", idempotencyKey: "manual:other", requestedById: c.t.actor }, { now: () => t2 })).toMatchObject({ ok: false, reason: "BUSY" });

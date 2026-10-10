@@ -164,7 +164,10 @@ export async function completeQboCallback(
   try {
     const finalized = await finalizeQboConnection({ authorization, realmId: verifiedRealm, grant }, deps);
     if (!finalized.ok) {
-      await discardGrant();
+      // Revoke ONLY where the grant is certainly not held by any OpsIQ connection: a business already bound to another company.
+      // REALM_ALREADY_BOUND (another tenant holds this company - an Intuit revoke may be app/company-wide) and the state-race
+      // refusals (another request may have just stored this very grant) are NOT revoked: that could kill a working connection.
+      if (finalized.reason === "BUSINESS_BOUND_TO_OTHER_REALM") await discardGrant();
       return { ok: false, code: mapFinalizeFailure(finalized.reason) };
     }
     return {
@@ -179,6 +182,8 @@ export async function completeQboCallback(
       await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "FINALIZE", reason: "BUSINESS_NOT_ELIGIBLE" });
       return { ok: false, code: "BUSINESS_NOT_ELIGIBLE" };
     }
+    // Any other failure leaves it UNKNOWN whether the grant was stored (e.g. a commit that timed out): it is deliberately not revoked
+    // - killing a stored, working connection is the worse outcome; the consumed one-time state prevents reuse of the exchange.
     throw e;
   }
 }

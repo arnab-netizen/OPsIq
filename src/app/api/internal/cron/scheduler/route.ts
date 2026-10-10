@@ -62,7 +62,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  * still outstanding when the budget is spent stays `pending`/`dead_letter` and is
  * picked up by the next invocation.
  */
-const DRAIN_BUDGET_MS = 45_000;
+const DRAIN_BUDGET_MS = 80_000;
 
 /** Hard cap on drain passes, so a pathological state cannot spin. */
 const MAX_DRAIN_PASSES = 200;
@@ -131,13 +131,14 @@ export async function GET(request: Request): Promise<NextResponse> {
     // bounded retry, then dead-letter) is rescheduled, so it cannot spin the loop; MAX_DRAIN_PASSES and the time budget bound it anyway.
     for (; schedulerPasses < MAX_DRAIN_PASSES; schedulerPasses++) {
       if (Date.now() >= deadline) break;
-      // Few tasks per pass: a QuickBooks execution may run ~100 s, so a pass of 2 stays well inside maxDuration and a platform kill can
-      // strand at most 2 claimed rows (not a batch of 50).
+      // Few tasks per pass. Worst case for a pass of 2 QuickBooks executions is 2 x (45 s soft deadline + 60 s hard-abort grace) = 210 s,
+      // and a pass is only started inside the 80 s budget, so it ends inside maxDuration (300 s); a platform kill can strand at most 2
+      // claimed rows (not a batch of 50).
       const passProcessed = await scheduler.processDue(handlers, { maxClaim: DRAIN_CLAIM_PER_PASS });
       tasksProcessed += passProcessed;
       // Stop when nothing was CLAIMED (no due work). A pass whose tasks all failed claimed rows and moved them to retry/dead-letter, so the
       // next pass sees different rows; the pass cap and time budget already bound the loop.
-      if (scheduler.lastClaimedCount === 0) break;
+      if (passProcessed === 0 && (scheduler.lastClaimedCount ?? 0) === 0) break;
     }
 
     results.schedulerTasksProcessed = tasksProcessed;

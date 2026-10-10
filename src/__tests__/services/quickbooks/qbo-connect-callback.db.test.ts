@@ -317,6 +317,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       expect(JSON.stringify(r)).not.toContain(t.ws); expect(JSON.stringify(r)).not.toContain(t.biz);
       expect(await db.qboConnection.count({ where: { workspaceId: u.ws } })).toBe(0);
       expect(await db.qboConnectionToken.count({ where: { workspaceId: u.ws } })).toBe(0);
+      // A company held by ANOTHER tenant: the refused grant is NOT revoked (an Intuit revoke could take the holder's connection down).
+      const afterB = fetchCalls.length;
+      expect(fetchCalls.slice(0, afterB).filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
+    });
+    it("business no longer eligible (archived mid-flow) revokes the unused grant", async () => {
+      const t = await seedTenant();
+      const a = await startFlow(t);
+      await db.ownerBusiness.update({ where: { id: t.biz }, data: { isActive: false } });
+      const r = await callback(t, { state: a.state, code: "c0de", realmId: nextRealm() });
+      expect(r.body.code).toBe("BUSINESS_NOT_ELIGIBLE");
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(1);
+      expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(0);
     });
     it("business already bound to another company", async () => {
       const t = await seedTenant();
@@ -325,6 +337,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       const b = await startFlow(t);
       const r = await callback(t, { state: b.state, code: "c0de", realmId: nextRealm() });
       expect(r.body.code).toBe("BUSINESS_HAS_OTHER_COMPANY");
+      // Certainly not held by any OpsIQ connection -> the unused grant is revoked at Intuit (best effort).
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(1);
       expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(1);
       expect(await db.qboConnectionToken.count({ where: { workspaceId: t.ws } })).toBe(1);
     });

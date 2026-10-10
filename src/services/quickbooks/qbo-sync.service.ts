@@ -26,6 +26,7 @@ import {
   QBO_SYNC_MANUAL_COOLDOWN_MS,
   evaluateDueGate,
   QBO_SYNC_PAGES_PER_EXECUTION,
+  QBO_EXECUTION_HARD_ABORT_GRACE_MS,
   QBO_SYNC_PAGE_SIZE,
   QBO_SYNC_TIE_MAX_STALLED_PASSES,
   QBO_SYNC_VERIFY_READS_PER_ENTITY,
@@ -192,7 +193,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
     }
     // A change persisted by ANY execution of this logical sync (or by an earlier failed attempt of it) counts for the whole sync.
     const changedForSync = result.changed || checkpoint.changed || track.cp?.changed === true || track.pager?.cp.changed === true;
-    // Proven exhaustion of every entity (and the reports): ONLY now do the durable watermarks advance, to the sync's fixed cutoff.
+    // Exhaustion of every entity, confirmed under the documented provider assumptions R1/R2 (and the reports): ONLY now do the durable watermarks advance, to the sync's fixed cutoff.
     const newWatermarks = Object.fromEntries(QBO_SYNC_QUERY_ENTITIES.map((e) => [e, checkpoint.cutoff]));
     await finishSyncRunSuccess({ lease, mode: begun.mode, startedAt: new Date(checkpoint.cutoff), counts, changed: changedForSync, watermarks: newWatermarks, actorId: input.actorId }, deps);
     return { status: "SUCCEEDED", runId: lease.runId, mode: begun.mode, counts, changed: changedForSync };
@@ -284,6 +285,9 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
 
   const abort = new AbortController();
   const onParentAbort = () => abort.abort();
+  // Wall-clock backstop: a provider call (retries and back-off included) still in flight long after the soft deadline is aborted, so the
+  // function never reaches the platform kill. The run fails CANCELLED and resumes from its durable checkpoint.
+  const hardAbort = deps.deadlineMs !== undefined ? setTimeout(() => abort.abort(), deps.deadlineMs + QBO_EXECUTION_HARD_ABORT_GRACE_MS) : null;
   // An already-aborted parent never fires "abort" again, so honour it explicitly.
   if (deps.signal?.aborted) abort.abort();
   else deps.signal?.addEventListener("abort", onParentAbort, { once: true });
@@ -327,7 +331,8 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
     const info = await call(() => client.companyInfo());
     const company = normalizeCompanyInfo(info, connection.realmId);
     if (!company.ok) throw new SyncFailure("PROVIDER_MALFORMED");
-    if (company.record.normalized.reportedRealmId !== null && company.record.normalized.reportedRealmId !== connection.realmId) {
+    // The company must REPORT this connection's realm: a response with an absent or different id is not proof of identity.
+    if (company.record.normalized.reportedRealmId !== connection.realmId) {
       throw new SyncFailure("COMPANY_MISMATCH");
     }
     changed = (await persistPage(lease, [company.record], a.track.freshCheckpoint ?? undefined, counts, deps)) || changed;
@@ -351,7 +356,9 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
       if (!exhausted) return { status: "BUDGET", changed: changed || pager.changed };
       // Exhaustion of this entity is CONFIRMED (short page from the keyset window, or every oversized bucket closed by the two-round identity-inclusion check).
       if (mode === "FULL" && !pager.cp.reconciled.includes(entity)) {
-        await verifyUnseen(pager, entity);
+        // Stops at the wall-clock deadline: the rotation (markVerifyAttempted per id) keeps what was done, and the entity is NOT marked
+        // reconciled, so the next execution verifies the rest.
+        if (!(await verifyUnseen(pager, entity))) return { status: "BUDGET", changed: changed || pager.changed };
         await advance(pager, { reconciled: [...pager.cp.reconciled, entity] });
       }
       await advance(pager, { entityIndex: pager.cp.entityIndex + 1, cursor: null, tie: null });
@@ -362,6 +369,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
     return { status: "DONE", changed };
   } finally {
     deps.signal?.removeEventListener("abort", onParentAbort);
+    if (hardAbort) clearTimeout(hardAbort);
     abort.abort();
   }
 }
@@ -602,9 +610,10 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
  * deleted, because nothing in the read API documents that an error on a read means deletion. Bounded per entity; the rotation
  * (least recently attempted first) lets later syncs cover the rest.
  */
-async function verifyUnseen(p: Pager, entity: Entity): Promise<void> {
+async function verifyUnseen(p: Pager, entity: Entity): Promise<boolean> {
   const ids = await listUnseenRecordIds(p.lease, entity, QBO_SYNC_VERIFY_READS_PER_ENTITY, p.deps);
   for (const id of ids) {
+    if (p.deadlineAt !== null && p.units > 0 && Date.now() >= p.deadlineAt) return false;
     p.counts.verifiedByRead++;
     p.units++; // by-id reads are provider calls like any other: they count against the execution budget
     try {
@@ -625,6 +634,7 @@ async function verifyUnseen(p: Pager, entity: Entity): Promise<void> {
     }
     await markVerifyAttempted(p.lease, entity, [id], p.deps);
   }
+  return true;
 }
 
 async function persistPage(lease: SyncLease, records: NormalizedRecord[], checkpoint: QboContinuation | undefined, counts: QboSyncCounts, deps: QboSyncDeps): Promise<boolean> {

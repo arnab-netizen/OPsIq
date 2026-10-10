@@ -2,7 +2,7 @@
  * QuickBooks token access / refresh wired into real reads — real PostgreSQL, fake Intuit.
  * Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -10,7 +10,7 @@ import { getUsableQboAccessToken } from "@/services/quickbooks/qbo-token-access.
 import { runQboReadSync, runScheduledQboSync } from "@/services/quickbooks/qbo-sync.service";
 import { loadQboTokensForUse } from "@/services/quickbooks/qbo-connection.service";
 import { enqueueDueQboReadSyncTasks } from "@/services/scheduler/scheduler-producers";
-import { seedConnected, testDeps, qboConfig, scopeOf, grantOf, QBO_TEST_ENV, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { seedConnected, testDeps, qboConfig, scopeOf, grantOf, QBO_TEST_ENV, trackQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { customer } from "@/__tests__/test-helpers/qbo-fake-intuit";
 
 const NOW = new Date();
@@ -21,6 +21,11 @@ const get = (c: ConnectedTenant, extra: { forceRefresh?: boolean } = {}, deps = 
 const tokenRow = (c: ConnectedTenant) => db.qboConnectionToken.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO token access + refresh (real Postgres)", () => {
+  // The producer scan enqueues a task for EVERY active connection in the database: remove exactly the rows this file caused.
+  const qboTasks = trackQboTasks();
+  beforeAll(qboTasks.snapshot);
+  afterAll(qboTasks.cleanup);
+
   it("a valid access token is returned without any refresh", async () => {
     const c = await seedConnected({ grant: grantOf({ tag: "valid" }) });
     const r = await get(c);

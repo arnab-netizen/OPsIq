@@ -7,7 +7,7 @@ import { createHmac } from "node:crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { handleQboWebhook } from "@/services/quickbooks/qbo-webhook.service";
-import { QBO_TEST_ENV, seedConnected, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { QBO_TEST_ENV, seedConnected, trackQboTasks, type ConnectedTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
 
 const TOKEN = "test-verifier-token-0123456789";
 const ENV = { ...QBO_TEST_ENV("sandbox"), QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN: TOKEN };
@@ -30,7 +30,9 @@ const deliver = (body: string, o: { signature?: string | null; env?: Record<stri
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", () => {
   // These tests create durable qbo-read-sync ScheduledTasks. Left pending they would be claimed by the scheduler suites that
   // run processDue() over the whole table later in the same database, so they are removed when this file is done.
-  afterAll(async () => { await db.scheduledTask.deleteMany({ where: { taskName: "qbo-read-sync" } }); });
+  const qboTasks = trackQboTasks();
+  beforeAll(qboTasks.snapshot);
+  afterAll(qboTasks.cleanup);
 
   let A: ConnectedTenant;
   let B: ConnectedTenant;
@@ -181,6 +183,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO webhook receiver (real Postgres)", ()
     await deliver(legacy(c.realmId, [ent("2")]), { enqueue: rec.enqueue, now: () => new Date("2026-10-10T03:00:00Z") }); // same bucket: coalesced
     await deliver(legacy(c.realmId, [ent("3")]), { enqueue: rec.enqueue, now: () => new Date("2026-10-10T07:00:00Z") }); // next bucket: new task
     expect(new Set(rec.calls.map((x) => x.idempotencyKey)).size).toBe(2);
+  });
+
+  it("a hint timestamp never moves BACK (a late-committing older delivery cannot overwrite a newer hint)", async () => {
+    const c = await seedConnected();
+    const { markWebhookHint } = await import("@/services/quickbooks/qbo-sync-store.service");
+    const scope = { workspaceId: c.t.ws, businessId: c.t.biz, connectionId: c.connectionId };
+    await markWebhookHint(scope, { now: () => new Date("2026-10-10T05:00:00Z") });
+    await markWebhookHint(scope, { now: () => new Date("2026-10-10T04:00:00Z") }); // older delivery commits last
+    expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).webhookHintAt?.toISOString()).toBe("2026-10-10T05:00:00.000Z");
+    await markWebhookHint(scope, { now: () => new Date("2026-10-10T06:00:00Z") });
+    expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } })).webhookHintAt?.toISOString()).toBe("2026-10-10T06:00:00.000Z");
   });
 
   it("unsupported entities are ignored without a ledger row; malformed events are counted and dropped", async () => {

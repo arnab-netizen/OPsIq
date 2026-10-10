@@ -252,7 +252,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer", recordState: "ACTIVE" } })).toBe(2500);
     });
 
-    it("more records than a page share ONE timestamp (bulk import): none are skipped or looped on (the identity proof may span executions)", async () => {
+    it("more records than a page share ONE timestamp (bulk import): none are skipped or looped on (the identity check may span executions)", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 2300; i++) c.fake.data.Invoice.push(invoice(String(i).padStart(5, "0"), "2026-09-15T10:00:00Z"));
       let out = await run(c);
@@ -425,6 +425,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       // Persistent, not terminal: re-checked after a 6h+ back-off (never hot-looped, never silently dropped).
       expect(out).toMatchObject({ status: "FAILED", code: "COMPANY_MISMATCH", terminal: false, nextAttemptNotBefore: new Date(NOW.getTime() + 6 * 3_600_000) });
       expect((await countRows(c)).records).toBe(0);
+    });
+
+    it("a CompanyInfo that does not REPORT the realm id (absent / malformed Id) is not proof of identity: COMPANY_MISMATCH, nothing written", async () => {
+      const c = await seedConnected();
+      seedData(c);
+      for (const bad of ["", "99 9", "9".repeat(70)]) {
+        c.fake.companyId = bad; // Intuit's body carries no usable / a malformed Id
+        const out = await run(c);
+        expect(out, bad).toMatchObject({ status: "FAILED", code: "COMPANY_MISMATCH" });
+        expect((await countRows(c)).records).toBe(0);
+      }
     });
 
     it("a foreign realm path is refused by the provider (403) and surfaces as a closed failure", async () => {

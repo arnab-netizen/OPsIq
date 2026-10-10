@@ -128,6 +128,18 @@ describe("QuickBooks foundation boundaries", () => {
     }
   });
 
+  it("the V26 design document exists and keeps its load-bearing sections (it is referenced from code and from the connection-persistence doc)", () => {
+    const doc = readFileSync(join(ROOT, "docs/opsiq/product/QBO_READ_ONLY_SYNC.md"), "utf8");
+    expect(doc.length).toBeGreaterThan(20_000);
+    for (const heading of ["## 4. Lease, idempotency, resumption", "## 7. Owner-data safety / provenance rules", "## 8. Webhook", "## 9. Known limitations", "## 10. Live acceptance procedure", "## 11. Audit-driven additions"]) {
+      expect(doc, heading).toContain(heading);
+    }
+    // Every code comment that points at the document points at a file that exists and is non-empty.
+    for (const f of ["src/domain/quickbooks/qbo-webhook.ts", "src/domain/quickbooks/qbo-sync-model.ts"]) {
+      if (readFileSync(join(ROOT, f), "utf8").includes("QBO_READ_ONLY_SYNC.md")) expect(doc.length).toBeGreaterThan(0);
+    }
+  });
+
   it("both execution entry points bound an execution by wall clock (manual route and scheduler handler)", () => {
     expect(code("src/app/api/owner/integrations/quickbooks/sync/route.ts")).toMatch(/deadlineMs:\s*QBO_EXECUTION_DEADLINE_MS/);
     expect(code("src/infra/scheduler-handlers.ts")).toMatch(/deadlineMs:\s*QBO_EXECUTION_DEADLINE_MS/);

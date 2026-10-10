@@ -4,7 +4,7 @@
  * unconfigured in the test process, so it must fail closed instead of calling out).
  * Requires TEST_WITH_DB=true. Self-skips otherwise.
  */
-import { describe, it, expect, vi, afterEach, afterAll } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -12,7 +12,7 @@ import { enqueueDueQboReadSyncTasks } from "@/services/scheduler/scheduler-produ
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 import { TASK_NAME_QBO_READ_SYNC } from "@/infra/qbo-sync-tasks";
 import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
-import { QBO_TEST_ENV, seedConnected } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { QBO_TEST_ENV, seedConnected, trackQboTasks } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import * as webhookRoute from "@/app/api/integrations/quickbooks/webhook/route";
 import { createHmac } from "node:crypto";
 
@@ -23,7 +23,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () =
   afterEach(() => vi.unstubAllEnvs());
   // These tests create durable qbo-read-sync ScheduledTasks. Left pending they would be claimed by the scheduler suites that
   // run processDue() over the whole table later in the same database, so they are removed when this file is done.
-  afterAll(async () => { await db.scheduledTask.deleteMany({ where: { taskName: "qbo-read-sync" } }); });
+  const qboTasks = trackQboTasks();
+  beforeAll(qboTasks.snapshot);
+  afterAll(qboTasks.cleanup);
 
 
   it("enqueues one task per eligible ACTIVE connection per UTC day, idempotently, carrying only the connection id", async () => {
