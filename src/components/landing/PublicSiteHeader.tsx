@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
+import { PublicBetaCta } from "@/components/landing/PublicBetaCta";
 
 /**
  * Shared header for every logged-out public page (homepage, /about, ...) so the brand
  * treatment and primary nav (Sign in / Request beta access) stay identical across all of them,
  * not re-implemented per page.
  */
-export function PublicSiteHeader() {
+export function PublicSiteHeader({ admissionMode = null }: { admissionMode?: string | null } = {}) {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
       <Link href="/" className="shrink-0">
@@ -18,7 +18,7 @@ export function PublicSiteHeader() {
         <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
           Sign in
         </Link>
-        <BetaAccessCta triggerClassName="border-0 bg-transparent p-0 text-sm font-medium text-[var(--primary-text)] hover:underline" />
+        <PublicBetaCta triggerClassName="border-0 bg-transparent p-0 text-sm font-medium text-[var(--primary-text)] hover:underline" initialMode={admissionMode} />
       </nav>
     </header>
   );

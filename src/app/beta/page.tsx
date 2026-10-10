@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
 
 export const metadata = {
   title: "Beta Notice | OpsIQ",
-  description: "What to expect from the OpsIQ controlled beta.",
+  description: "What to expect from the OpsIQ beta.",
 };
 
 const POLICY_VERSION = "2026-09-17";
@@ -22,16 +23,33 @@ export default function BetaNoticePage() {
 
       <div className="mt-8 space-y-5 text-sm leading-relaxed text-muted-foreground">
         <section>
-          <h2 className="font-semibold text-foreground">OpsIQ is in a controlled, invite-only beta</h2>
+          <h2 className="font-semibold text-foreground"><PublicBetaText pick={(p) => p.betaNoticeHeading} /></h2>
           <p className="mt-1">
-            Access currently requires an invitation. If you don&rsquo;t have one, you can request
-            beta access from the homepage — submitting a request does not guarantee access; we
-            follow up by email if you&rsquo;re selected. If you&rsquo;ve been invited, you can
-            complete your account at{" "}
-            <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
-              /signup
-            </Link>
-            . The product is real and functional, but it is still early: features may change,
+            <PublicBetaSwitch
+              open={
+                <>
+                  You can create an account at{" "}
+                  <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+                    /signup
+                  </Link>
+                  , subject to the beta&rsquo;s capacity limit. If registration is full or paused, the
+                  signup page will say so.{" "}
+                </>
+              }
+              invite={
+                <>
+                  Access currently requires an invitation. If you don&rsquo;t have one, you can request
+                  beta access from the homepage — submitting a request does not guarantee access; we
+                  follow up by email if you&rsquo;re selected. If you&rsquo;ve been invited, you can
+                  complete your account at{" "}
+                  <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+                    /signup
+                  </Link>
+                  .{" "}
+                </>
+              }
+            />
+            The product is real and functional, but it is still early: features may change,
             bugs exist, and we are actively improving it based on what beta users tell us.
           </p>
         </section>

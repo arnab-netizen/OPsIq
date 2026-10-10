@@ -1,7 +1,7 @@
 import { getImageProps } from "next/image";
 import Link from "next/link";
 import { Badge } from "@/ui/primitives";
-import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
+import { PublicBetaCta, PublicBetaText } from "@/components/landing/PublicBetaCta";
 import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
 import { PublicSiteFooter } from "@/components/landing/PublicSiteFooter";
 
@@ -133,10 +133,10 @@ const { props: proofMobile } = getImageProps({
   sizes: "100vw",
 });
 
-export default function LandingPage() {
+export default function LandingPage({ admissionMode = null }: { admissionMode?: string | null } = {}) {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <PublicSiteHeader />
+      <PublicSiteHeader admissionMode={admissionMode} />
 
       {/* Hero + product proof, side by side at desktop so the proof is visible without scrolling
           (a first-time visitor sees the claim and the evidence for it in the same screen).
@@ -144,7 +144,7 @@ export default function LandingPage() {
       <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:py-16">
         <div className="text-center lg:text-left">
           <p className="mb-4 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-            Free controlled beta &middot; no credit card &middot; access by invitation
+            <PublicBetaText pick={(p) => p.heroBadge} initialMode={admissionMode} />
           </p>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Diagnose your business. Know your next move.
@@ -158,7 +158,7 @@ export default function LandingPage() {
             attention first.
           </p>
           <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
-            <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
+            <PublicBetaCta triggerClassName={`${primaryCta} w-full sm:w-auto`} initialMode={admissionMode} />
             <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
               Sign in
             </Link>
@@ -355,7 +355,7 @@ export default function LandingPage() {
           See what OpsIQ finds in your business.
         </h2>
         <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center">
-          <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
+          <PublicBetaCta triggerClassName={`${primaryCta} w-full sm:w-auto`} initialMode={admissionMode} />
           <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
             Sign in
           </Link>

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession, getPolicyContext } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import { resolveOwnerLoginHref } from "@/services/owner-first-run/first-run.service";
+import { presentationForAdmissionMode } from "@/domain/beta/public-presentation";
+import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
 import LandingPage from "@/components/landing/LandingPage";
 
 export const dynamic = "force-dynamic";
@@ -38,24 +40,26 @@ export const metadata: Metadata = {
   },
 };
 
-const softwareApplicationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "@id": `${SITE_URL}/#software`,
-  name: "OpsIQ",
-  url: `${SITE_URL}/`,
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  description:
-    "OpsIQ reads a business's day-to-day numbers and returns one prioritized, explained action at a time.",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "USD",
-    description: "Free invite-only beta, no credit card required",
-  },
-  publisher: { "@id": `${SITE_URL}/#organization` },
-};
+function softwareApplicationJsonLd(offerDescription: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "@id": `${SITE_URL}/#software`,
+    name: "OpsIQ",
+    url: `${SITE_URL}/`,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "OpsIQ reads a business's day-to-day numbers and returns one prioritized, explained action at a time.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: offerDescription,
+    },
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  };
+}
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -74,6 +78,8 @@ const organizationJsonLd = {
 
 export default async function HomePage() {
   const session = await getSession();
+  // Display-only: the offer wording follows the admission mode (fails closed to the invite-only wording).
+  const settingsMode = session ? null : await getPublicAdmissionMode();
 
   if (session) {
     // F4: a self-serve owner's canonical first-run/Home surface is /owner/cockpit (labeled "Home" in
@@ -96,13 +102,13 @@ export default async function HomePage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd(presentationForAdmissionMode(settingsMode).offerDescription)) }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <LandingPage />
+      <LandingPage admissionMode={settingsMode ?? "INVITE_ONLY"} />
     </>
   );
 }

@@ -3,8 +3,9 @@
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 import { PasswordInput } from "@/ui/primitives/password-input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { reportAnonymousProductEvent } from "@/lib/analytics/product-event-client";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,13 @@ export default function SignupPage() {
   const [betaEnabled, setBetaEnabled] = useState<boolean | null>(null);
   const [admissionMode, setAdmissionMode] = useState<string | null>(null);
   const [pendingVerification, setPendingVerification] = useState(false);
+  // signup_started: the first time the visitor engages with the form (once per page load, name only).
+  const startedReported = useRef(false);
+  function reportSignupStarted() {
+    if (startedReported.current) return;
+    startedReported.current = true;
+    reportAnonymousProductEvent("signup_started");
+  }
 
   // Display-only: the server independently re-checks real admission on every
   // POST /api/auth/signup regardless of what this returns, so this check can
@@ -169,6 +177,7 @@ export default function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={reportSignupStarted}
                 placeholder="you@company.com"
                 required
                 autoComplete="email"
