@@ -205,6 +205,9 @@ describe("FirstResultImprovement — progressive OBQ", () => {
     expect(q).toMatch(/break-even/);
     expect(q).toMatch(/It could change/);
     expect(q).toMatch(/About a minute/);
+    // Opening the panel is not a request: it is recorded when the owner sets out to supply the evidence.
+    expect(api.improve).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("first-result-improvement-add"));
     expect(api.improve).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByTestId("first-result-improvement-skip"));
     await waitFor(() => expect(screen.getByTestId("first-result-improvement-done")).toBeTruthy());

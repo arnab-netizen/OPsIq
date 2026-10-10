@@ -9,7 +9,9 @@ import { deriveNextMove, type NextMoveView } from "@/domain/owner-first-run/next
 export async function getAcceptedNextMove(workspaceId: string, businessId: string, now: Date = new Date()): Promise<NextMoveView | null> {
   const { chains } = await listOwnerOutcomeChains(workspaceId, businessId);
   // Most recently decided chain whose CURRENT decision is an acceptance (a later reject/defer supersedes it).
-  const open = chains.find((c) => c.currentDecision && (c.currentDecision.decisionState === "ACCEPTED" || c.currentDecision.decisionState === "MODIFIED"));
+  const accepted = chains.filter((c) => c.currentDecision && (c.currentDecision.decisionState === "ACCEPTED" || c.currentDecision.decisionState === "MODIFIED"));
+  // An accepted action still awaiting its check leads; once every accepted action has been assessed, the latest one is shown as done.
+  const open = accepted.find((c) => !c.currentAssessment) ?? accepted[0];
   const decision = open?.currentDecision;
   if (!open || !decision) return null;
 

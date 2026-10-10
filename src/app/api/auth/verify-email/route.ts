@@ -6,7 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { parseRequestBody } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { requirePgRateLimit, RateLimitError, EMAIL_VERIFICATION_RATE_LIMIT } from "@/infra/rate-limit";
+import { requirePgRateLimit, RateLimitError, VERIFY_REDEEM_RATE_LIMIT } from "@/infra/rate-limit";
 import { ValidationError, BadRequestError } from "@/infra/errors";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { randomUUID } from "crypto";
@@ -36,7 +36,7 @@ export const POST = async (request: NextRequest) => {
     const { token } = await parseRequestBody(request, verifyEmailSchema);
 
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-    await requirePgRateLimit(`verify-email-redeem:${ip}`, EMAIL_VERIFICATION_RATE_LIMIT);
+    await requirePgRateLimit(`verify-email-redeem:${ip}`, VERIFY_REDEEM_RATE_LIMIT);
 
     const tokenHash = createHash("sha256").update(token).digest("hex");
 

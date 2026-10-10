@@ -41,8 +41,6 @@ export function FirstResultImprovement({ businessId, onClose }: { businessId: st
   useEffect(() => {
     if (requested.current) return;
     requested.current = true;
-    // Asking to improve the read is itself recorded once (idempotent); a failure here must not block the question.
-    void firstRunApi.improve(businessId, attemptKey.current).catch(() => undefined);
     void load([]);
   }, [businessId, load]);
 
@@ -65,9 +63,17 @@ export function FirstResultImprovement({ businessId, onClose }: { businessId: st
           <p className="text-foreground">{view.result.question.why}</p>
           <p className="text-muted-foreground">It could change: {view.result.question.couldChange}</p>
           <p className="text-muted-foreground">Effort: {view.result.question.effortLabel}</p>
+          <p className="text-muted-foreground">When you&rsquo;ve added it, come back to your first read and tap &ldquo;Update my read&rdquo;.</p>
           <div className="flex flex-col gap-2 pt-1 sm:flex-row">
             {view.inputHref && (
-              <Link href={view.inputHref} className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground" data-testid="first-result-improvement-add">
+              <Link
+                href={view.inputHref}
+                // The improvement request is recorded when the owner actually sets out to supply the evidence (idempotent),
+                // not merely by opening this panel; a failure here must never block navigation.
+                onClick={() => void firstRunApi.improve(businessId, attemptKey.current).catch(() => undefined)}
+                className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+                data-testid="first-result-improvement-add"
+              >
                 {view.inputActionLabel ?? "Add this"}
               </Link>
             )}

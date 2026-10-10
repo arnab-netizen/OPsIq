@@ -17,8 +17,13 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { CashSemantics } from "@/domain/owner-finance/liquidity";
-import { isEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { isEvidenceQuality, resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
+
+/** True when an amendment changes any numeric figure (notes, reason and quality alone are not numbers). */
+function amendChangesNumbers(input: FinancialSnapshotAmendInput): boolean {
+  return Object.entries(input).some(([k, v]) => k !== "amendmentReason" && k !== "notes" && k !== "evidenceQuality" && typeof v === "number");
+}
 
 /** Map the validated API input to the engine input shape (refund/rework/complaint merged). */
 export function toFinanceInput(input: FinancialSnapshotCreateInput): FinancialSnapshotInput {
@@ -303,7 +308,7 @@ export async function amendFinancialSnapshot(
       periodStart: current.periodStart,
       periodEnd: current.periodEnd,
       currency: current.currency,
-      evidenceQuality: input.evidenceQuality ?? current.evidenceQuality ?? null,
+      evidenceQuality: resolveAmendedEvidenceQuality(current.evidenceQuality, input.evidenceQuality, amendChangesNumbers(input)),
       businessModelType: current.businessModelType,
       industryTemplate: current.industryTemplate,
       revenue: input.revenue ?? current.revenue,

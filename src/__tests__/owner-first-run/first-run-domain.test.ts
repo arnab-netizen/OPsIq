@@ -374,3 +374,82 @@ describe("returning owner: your next move", () => {
     expect(none.prompt).toBeNull();
   });
 });
+
+import { resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { parseQuickAmount } from "@/domain/owner-finance/quick-entry";
+import { verificationBaseUrlProblem } from "@/services/auth/verification-email-signal";
+
+describe("audit fixes: provenance on amend", () => {
+  it("an explicit reliability always wins", () => {
+    expect(resolveAmendedEvidenceQuality("ROUGH_ESTIMATE", "ACTUAL", true)).toBe("ACTUAL");
+    expect(resolveAmendedEvidenceQuality("ACTUAL", "ROUGH_ESTIMATE", false)).toBe("ROUGH_ESTIMATE");
+  });
+  it("changed numbers with no stated reliability can no longer be assumed ACTUAL", () => {
+    expect(resolveAmendedEvidenceQuality("ACTUAL", undefined, true)).toBe("GOOD_ESTIMATE");
+  });
+  it("unchanged numbers, or an estimate, or legacy keep what they had", () => {
+    expect(resolveAmendedEvidenceQuality("ACTUAL", undefined, false)).toBe("ACTUAL");
+    expect(resolveAmendedEvidenceQuality("ROUGH_ESTIMATE", undefined, true)).toBe("ROUGH_ESTIMATE");
+    expect(resolveAmendedEvidenceQuality(null, undefined, true)).toBeNull();
+    expect(resolveAmendedEvidenceQuality("nonsense", undefined, true)).toBeNull();
+  });
+});
+
+describe("audit fixes: read honesty", () => {
+  const action = { title: "Do it", description: "d", ownerRole: "owner", expectedTimeframeDays: 7, verificationMetric: "netMarginPct" };
+  const finding = { title: "x", summary: "y", sourceMetric: "netMarginPct", sourceValue: 5, evidence: [], missingData: [] };
+  const base = { finding, action, dataRequest: null, missingEvidence: [] as string[] };
+  it("an invalid-currency finding is a real finding, not a hidden data request", () => {
+    expect(selectFirstReadActions([{ findingCode: "FIN_INVALID_CURRENCY" }]).primary).not.toBeNull();
+  });
+  it("estimates and low confidence carry visible cautions but do not block on their own", () => {
+    const r = buildFirstMoneyRead({ ...base, confidenceScore: 40, evidenceQuality: "ROUGH_ESTIMATE" });
+    expect(r.canAccept).toBe(true);
+    expect(r.cautions.join(" ")).toMatch(/estimated numbers/);
+    expect(r.cautions.join(" ")).toMatch(/confidence is low/);
+  });
+  it("unconfirmed cash is called out, and missing critical inputs block acceptance", () => {
+    const r = buildFirstMoneyRead({ ...base, dataRequestCode: "FIN_LIQUIDITY_UNCONFIRMED", confidenceScore: 70, evidenceQuality: "ACTUAL" });
+    expect(r.cautions.join(" ")).toMatch(/how long your cash will last/);
+    const blocked = buildFirstMoneyRead({ ...base, criticalInputsMissing: true, confidenceScore: 70, evidenceQuality: "ACTUAL" });
+    expect(blocked.canAccept).toBe(false);
+  });
+  it("no caution is invented for a clean, high-confidence, actual read", () => {
+    expect(buildFirstMoneyRead({ ...base, confidenceScore: 90, evidenceQuality: "ACTUAL" }).cautions).toEqual([]);
+  });
+});
+
+describe("audit fixes: phone-style numbers", () => {
+  it("accepts a leading currency symbol and grouping, and still treats 0 as known and blank as unknown", () => {
+    expect(parseQuickAmount("£1,500")).toEqual({ kind: "value", value: 1500 });
+    expect(parseQuickAmount("$ 1 500.50")).toEqual({ kind: "value", value: 1500.5 });
+    expect(parseQuickAmount("0")).toEqual({ kind: "value", value: 0 });
+    expect(parseQuickAmount("  ")).toEqual({ kind: "blank" });
+  });
+  it("still rejects negatives, words, shorthand and absurd magnitudes", () => {
+    for (const bad of ["-5", "£-5", "five", "5k", "1.500,50", "99999999999999999"]) expect(parseQuickAmount(bad).kind, bad).toBe("invalid");
+  });
+});
+
+describe("audit fixes: sign-in routing for owners who predate first-run", () => {
+  const f = { hasBusiness: true, firstReadSufficient: false, hasDiagnosis: false, hasTrustedInteraction: false };
+  it("a recent, unfinished first run resumes; an older business is never pulled back into setup", () => {
+    expect(landingAfterLogin({ ...f, businessIsRecent: true })).toBe("/owner/first-run");
+    expect(landingAfterLogin({ ...f })).toBe("/owner/first-run"); // unknown age: resume (safe default for a brand-new owner)
+    expect(landingAfterLogin({ ...f, businessIsRecent: false })).toBe("/owner/cockpit");
+    expect(landingAfterLogin({ ...f, firstReadSufficient: true, businessIsRecent: false })).toBe("/owner/cockpit");
+  });
+  it("no business always means first-run, whatever the age flag", () => {
+    expect(landingAfterLogin({ hasBusiness: false, firstReadSufficient: false, hasDiagnosis: false, hasTrustedInteraction: false, businessIsRecent: false })).toBe("/owner/first-run");
+  });
+});
+
+describe("audit fixes: operator signal for unusable verification links", () => {
+  it("flags a localhost/unset base URL only in production", () => {
+    expect(verificationBaseUrlProblem("http://localhost:3000", "production")).toBe(true);
+    expect(verificationBaseUrlProblem("http://127.0.0.1:3001", "production")).toBe(true);
+    expect(verificationBaseUrlProblem("not a url", "production")).toBe(true);
+    expect(verificationBaseUrlProblem("https://app.example.com", "production")).toBe(false);
+    expect(verificationBaseUrlProblem("http://localhost:3000", "development")).toBe(false);
+  });
+});

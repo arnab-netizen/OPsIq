@@ -61,7 +61,6 @@ export const DATA_GATHERING_FINDING_CODES: ReadonlySet<string> = new Set([
   "FIN_OPP_DATA_QUALITY",
   "FIN_LIQUIDITY_UNCONFIRMED",
   "FIN_NOTABLE_OUTSTANDING_DEBT",
-  "FIN_INVALID_CURRENCY",
 ]);
 
 export function isDataGatheringFinding(code: string): boolean {
@@ -89,6 +88,10 @@ export interface FirstMoneyReadInput {
   action: FirstMoneyReadAction | null;
   /** The top ranked "supply this information" action, shown as what would sharpen the read. */
   dataRequest: FirstMoneyReadAction | null;
+  /** Finding code behind `dataRequest` (used for the caveat only). */
+  dataRequestCode?: string | null;
+  /** The snapshot lacks revenue, a cost or cash (the canonical critical inputs). */
+  criticalInputsMissing?: boolean;
   confidenceScore: number;
   evidenceQuality: EvidenceQuality | null;
   /** Critical/important inputs still missing from the snapshot (owner-facing labels). */
@@ -131,6 +134,8 @@ export interface FirstMoneyRead {
   /** False when confidence is BLOCKED (the repo's own tier contract: do not act on it yet) or there is no action. */
   canAccept: boolean;
   acceptNote: string | null;
+  /** Plain cautions shown with the read (estimates, unconfirmed cash, thin confidence). Never blocks on its own. */
+  cautions: string[];
 }
 
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
@@ -165,10 +170,17 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
     evidenceQualityNote: quality ? EVIDENCE_QUALITY_EXPLANATION[quality] : null,
     isEstimated: isEstimate(quality),
   };
-  const blocked = tier === "BLOCKED";
+  const criticalMissing = input.criticalInputsMissing === true;
+  const blocked = tier === "BLOCKED" || criticalMissing;
   const acceptNote = blocked
     ? "There isn't enough reliable information to act on this yet. Correct a number or add what is missing first."
     : null;
+  const cautions: string[] = [];
+  if (isEstimate(quality)) cautions.push("This rests on estimated numbers, so treat it as a first guide rather than a settled answer.");
+  if (input.dataRequestCode === "FIN_LIQUIDITY_UNCONFIRMED") {
+    cautions.push("OpsIQ can't yet confirm how long your cash will last, because your bank balance isn't known. That is a missing figure, not a sign you have no money.");
+  }
+  if (tier === "LOW") cautions.push("OpsIQ's confidence is low, so this points the direction without being certain.");
   const present = (a: FirstMoneyReadAction) => ({
     recommendedAction: a.title,
     actionDetail: a.description,
@@ -192,6 +204,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
       sharpenBy: input.dataRequest ? { title: input.dataRequest.title, detail: input.dataRequest.description } : null,
       canAccept: !blocked,
       acceptNote,
+      cautions,
     };
   }
 
@@ -208,6 +221,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
       sharpenBy: null,
       canAccept: !blocked,
       acceptNote,
+      cautions,
     };
   }
 
@@ -223,6 +237,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
     sharpenBy: null,
     canAccept: false,
     acceptNote: null,
+    cautions,
   };
 }
 
@@ -238,6 +253,7 @@ export function firstMoneyReadStrings(read: FirstMoneyRead): string[] {
     read.confidenceLabel,
     read.evidenceQualityNote,
     read.acceptNote,
+    ...read.cautions,
     read.sharpenBy?.title ?? null,
     read.sharpenBy?.detail ?? null,
   ].filter((s): s is string => typeof s === "string");

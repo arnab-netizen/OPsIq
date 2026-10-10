@@ -322,7 +322,7 @@ export function QuickFinancialPicture({
           {phase.kind === "diagnosis_failed" && (
             <div role="alert" className="mt-2 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="quick-diagnosis-failed">
               <p>{phase.message}</p>
-              <Button type="button" onClick={retry} className="mt-2">Try the first read again</Button>
+              <Button type="button" onClick={retry} className="mt-2 min-h-11">Try the first read again</Button>
             </div>
           )}
           {phase.kind === "error" && (
@@ -332,9 +332,16 @@ export function QuickFinancialPicture({
           )}
 
           {!locked && (
-            <Button type="submit" disabled={disabled} className="mt-3" data-testid="quick-primary-action">
-              {phase.kind === "working" ? "Working…" : "Show my first read"}
-            </Button>
+            <>
+              <Button type="submit" disabled={disabled} className="mt-3 min-h-11 w-full sm:w-auto" data-testid="quick-primary-action">
+                {phase.kind === "working" ? "Working…" : "Show my first read"}
+              </Button>
+              {qualityMissing && sufficient && !hasErrors && (
+                <p className="mt-1 text-sm text-foreground" data-testid="quick-quality-needed">
+                  Choose how reliable these numbers are to continue.
+                </p>
+              )}
+            </>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
             A first read is a rough picture, not the whole business — OpsIQ will tell you what would make it more reliable.
@@ -343,7 +350,7 @@ export function QuickFinancialPicture({
       )}
 
       <details className="mt-4 text-sm" data-testid="quick-more-detail">
-        <summary className="cursor-pointer font-medium text-foreground">Add more detail (optional)</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center font-medium text-foreground">Add more detail (optional)</summary>
         <ul className="mt-2 space-y-1 text-muted-foreground">
           {!omitMoneyLink && <li><Link href="/owner/finance" className="underline">Enter the full money picture</Link></li>}
           <li><Link href="/owner/manual-entry" className="underline">Add other business information</Link></li>

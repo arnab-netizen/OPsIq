@@ -43,7 +43,8 @@ export async function acceptFirstResultAction(
       commitmentDescription: action.title,
       verificationMetric: action.verificationMetric,
       observationWindowDays: Math.max(1, action.expectedTimeframeDays),
-      expectedMeasurementSource: "AUTHORITATIVE_SNAPSHOT",
+      // A read built on estimates is not authoritative evidence: later verification must not treat it as measured truth.
+      expectedMeasurementSource: view.read.isEstimated ? "OWNER_ENTERED" : "AUTHORITATIVE_SNAPSHOT",
     },
   });
   if (!result.replayed) {

@@ -53,3 +53,19 @@ export function applyEvidenceQualityToScore(score: number, quality: EvidenceQual
 export function isEstimate(quality: EvidenceQuality | null | undefined): boolean {
   return quality === "GOOD_ESTIMATE" || quality === "ROUGH_ESTIMATE";
 }
+
+/**
+ * The reliability recorded on an AMENDED snapshot. An explicit choice always wins. If the owner changed numbers but
+ * said nothing about how reliable the new ones are, "from my records" can no longer be assumed for the whole
+ * snapshot, so ACTUAL steps down to GOOD_ESTIMATE (never silently stays ACTUAL). Legacy (null) stays unspecified.
+ */
+export function resolveAmendedEvidenceQuality(
+  current: string | null | undefined,
+  requested: EvidenceQuality | undefined,
+  numbersChanged: boolean,
+): EvidenceQuality | null {
+  if (requested) return requested;
+  const cur = isEvidenceQuality(current) ? current : null;
+  if (numbersChanged && cur === "ACTUAL") return "GOOD_ESTIMATE";
+  return cur;
+}

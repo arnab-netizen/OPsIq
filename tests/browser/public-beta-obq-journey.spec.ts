@@ -208,7 +208,7 @@ test.describe("Public beta OBQ journey", () => {
       await expect(page.getByTestId("first-run-goal-prompt")).toContainText(/optional/i);
       if (viewport.mobile) await expectNoHorizontalScroll(page, "after accept");
 
-      await page.getByTestId("first-run-to-cockpit").click();
+      await page.getByTestId("first-run-skip-to-cockpit").click();
       await page.waitForURL(/\/owner\/cockpit/, { timeout: 20000 });
       await expect(page.getByText(/Set up your business to get your first assessment/)).toHaveCount(0);
       // The canonical Cockpit shows the action just accepted, with its timing.
@@ -237,7 +237,8 @@ test.describe("Public beta OBQ journey", () => {
       page.getByTestId("first-result-correction-submit").click(),
     ]);
     expect(res.status()).toBe(201);
-    await expect(page.getByTestId("first-result-changes")).toContainText(/cashOnHand/);
+    await expect(page.getByTestId("first-result-changes")).toContainText(/cash in hand/i);
+    await expect(page.getByTestId("first-result-changes")).not.toContainText(/cashOnHand|ROUGH_ESTIMATE|ACTUAL|LOW|MEDIUM/);
     await expect(page.getByTestId("first-money-read-quality")).toContainText("From my records");
     await expect(page.getByTestId("first-money-read")).toBeVisible();
 

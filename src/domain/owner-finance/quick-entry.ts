@@ -53,15 +53,27 @@ export type QuickAmount =
   | { kind: "invalid"; message: string };
 
 const PLAIN_NUMBER = /^\d+(\.\d+)?$/;
+/** Matches the server-side ceiling on any money figure (validation.ts). */
+const MAX_QUICK_AMOUNT = 1e12;
 
 /** Blank → unknown; "0" → known zero; a plain non-negative number → value; anything else → inline error. */
 export function parseQuickAmount(raw: string | null | undefined): QuickAmount {
   const text = (raw ?? "").trim();
   if (text === "") return { kind: "blank" };
   if (text.startsWith("-")) return { kind: "invalid", message: "This can't be negative. Enter 0 if there was none." };
-  const normalised = text.replace(/,/g, "");
+  // Phones autofill "£1,500" / "$ 1 500": a leading currency symbol and REAL thousands grouping are not part of the
+  // number. Anything else with a comma or space ("1,5", "1.500,50", "15 00") is ambiguous (it may be a European
+  // decimal) and is refused rather than guessed — a silently mis-read amount is worse than a retry.
+  const unsigned = text.replace(/^[$£€₹¥]\s*/, "");
+  const grouped =
+    /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(unsigned) || // 1,500,000
+    /^\d{1,2}(,\d{2})*,\d{3}(\.\d+)?$/.test(unsigned) || // 15,00,000 (Indian grouping)
+    /^\d{1,3}( \d{3})+(\.\d+)?$/.test(unsigned); // 1 500 000
+  if (/[,\s]/.test(unsigned) && !grouped) return { kind: "invalid", message: "Enter a number, like 150000." };
+  const normalised = grouped ? unsigned.replace(/[,\s]/g, "") : unsigned;
   if (!PLAIN_NUMBER.test(normalised)) return { kind: "invalid", message: "Enter a number, like 150000." };
   const value = Number(normalised);
+  if (Number.isFinite(value) && value > MAX_QUICK_AMOUNT) return { kind: "invalid", message: "That number is too large. Enter a smaller amount." };
   if (!Number.isFinite(value)) return { kind: "invalid", message: "Enter a number, like 150000." };
   return { kind: "value", value };
 }

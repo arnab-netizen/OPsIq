@@ -24,6 +24,11 @@ export interface FirstRunFacts {
   hasDiagnosis: boolean;
   /** A first-trusted-decision interaction exists (see activation.ts). */
   hasTrustedInteraction: boolean;
+  /**
+   * The business was created recently (default true when unknown). Used ONLY for sign-in landing: an owner whose
+   * business predates the first-run flow is not pulled back into setup on every visit.
+   */
+  businessIsRecent?: boolean;
 }
 
 export const FIRST_RUN_START_HREF = "/owner/first-run";
@@ -55,7 +60,7 @@ export function landingAfterVerification(facts: FirstRunFacts): string {
  */
 export function landingAfterLogin(facts: FirstRunFacts): string {
   const state = resolveFirstRunState(facts);
-  return state === "NEEDS_BUSINESS" || state === "NEEDS_EVIDENCE" || state === "NEEDS_DIAGNOSIS"
-    ? FIRST_RUN_START_HREF
-    : OWNER_COCKPIT_HREF;
+  if (state === "NEEDS_BUSINESS") return FIRST_RUN_START_HREF;
+  if ((state === "NEEDS_EVIDENCE" || state === "NEEDS_DIAGNOSIS") && facts.businessIsRecent !== false) return FIRST_RUN_START_HREF;
+  return OWNER_COCKPIT_HREF;
 }

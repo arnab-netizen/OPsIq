@@ -257,6 +257,27 @@ describe("[db] first-run: governed correction and activation", () => {
     expect(next.cashOnHand).toBe(400);
     expect((await getFirstRunContext(t.workspaceId)).state).toBe("ESTABLISHED");
   });
+  it("[db] changed numbers with no stated reliability step ACTUAL down; they never stay 'from my records' silently", async () => {
+    const t = await makeTenant();
+    const { business, snap } = await setUpToResult(t, "ACTUAL");
+    const out = await correctFirstResultEvidence(t.workspaceId, t.userId, business.id, snap.id, { amendmentReason: "guessed the cash", cashOnHand: 5000 } as any);
+    expect(out.after.read.evidenceQuality).toBe("GOOD_ESTIMATE");
+    const row: any = await db.ownerFinancialSnapshot.findFirst({ where: { id: out.newSnapshotId } });
+    expect(row.evidenceQuality).toBe("GOOD_ESTIMATE");
+  });
+  it("[db] an owner whose business predates first-run is not pulled back into setup on sign-in", async () => {
+    const t = await makeTenant();
+    const { business } = await createFirstBusiness(t.workspaceId, t.userId, { businessType: "laundry_local_service", currency: "GBP" });
+    expect((await getFirstRunContext(t.workspaceId)).loginHref).toBe("/owner/first-run");
+    await db.ownerBusiness.update({ where: { id: business.id }, data: { createdAt: new Date(Date.now() - 60 * 86_400_000) } });
+    const ctx = await getFirstRunContext(t.workspaceId);
+    expect(ctx.state).toBe("NEEDS_EVIDENCE");
+    expect(ctx.loginHref).toBe("/owner/cockpit");
+  });
+  it("[db] currency must be a real code, not a symbol", async () => {
+    const t = await makeTenant();
+    await expect(createFirstBusiness(t.workspaceId, t.userId, { businessType: "laundry_local_service", currency: "$" })).rejects.toBeInstanceOf(ValidationError);
+  });
   it("[db] correcting an already-superseded read is refused (no silent overwrite)", async () => {
     const t = await makeTenant();
     const { business, snap } = await setUpToResult(t);
@@ -314,8 +335,16 @@ describe("[db] first-run: governed correction and activation", () => {
     expect(events).toHaveLength(1);
     expect(events[0].payload.interactionKind).toBeTruthy();
     expect(events[0].payload.timeToFirstValueSeconds).toBeGreaterThanOrEqual(0);
-    const all = JSON.stringify(await db.auditEvent.findMany({ where: { workspaceId: t.workspaceId, eventName: { startsWith: "product." } } }));
-    expect(all).not.toMatch(/12000|7000|1500|Maple/); // no revenue/cash figures, no business name
+    // Inspect the PAYLOADS only (ids and timestamps legitimately contain digit runs): no revenue/cash figures, no names.
+    const rows: any[] = await db.auditEvent.findMany({ where: { workspaceId: t.workspaceId, eventName: { startsWith: "product." } } });
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) {
+      for (const [key, value] of Object.entries((r.payload ?? {}) as Record<string, unknown>)) {
+        expect(["timeToFirstValueSeconds", "interactionKind", "evidenceQuality", "confidenceTier", "rating", "reason", "verificationClass", "firstRunState", "admissionMode", "questionsAnswered"]).toContain(key);
+        if (typeof value === "string") expect(value).toMatch(/^[A-Z][A-Z0-9_]+$/);
+      }
+    }
+    expect(JSON.stringify(rows.map((r) => r.payload))).not.toMatch(/Maple|@firstrun\.test/);
   });
   it("[db] feedback: rating + structured reason, reason refused on USEFUL, idempotent", async () => {
     const t = await makeTenant();

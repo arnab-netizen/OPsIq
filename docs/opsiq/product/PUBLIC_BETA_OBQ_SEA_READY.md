@@ -57,13 +57,16 @@ already snapshot-wide. A field-level model can be added later without breaking t
 | Quality | Owner wording | Score effect (`applyEvidenceQualityToScore`) | Tier ceiling |
 |---|---|---|---|
 | `ACTUAL` | From my records | none | none |
-| `GOOD_ESTIMATE` | A good estimate | −10, capped at 84 | can't read HIGH |
-| `ROUGH_ESTIMATE` | A rough guess | −25, capped at 59 | can't read MEDIUM |
+| `GOOD_ESTIMATE` | A good estimate | −5, capped at 84 | can't read HIGH |
+| `ROUGH_ESTIMATE` | A rough guess | −15, capped at 59 | can't read MEDIUM |
 | NULL (legacy) | not shown | none (existing rows keep their stored score) | none |
 
 Stored in its own column, never in `notes`. Shown on the first result with its plain-language explanation.
 In first-run the owner must choose one before a read is made (one tap). Elsewhere it is optional and an unanswered
-control is *omitted* (stored as unspecified — never defaulted to actual). Correcting evidence may change the quality.
+control is *omitted* (stored as unspecified — never defaulted to actual). Correcting evidence may change the quality; if numbers
+are corrected without stating reliability, an ACTUAL snapshot steps down to GOOD_ESTIMATE (it cannot stay "from my records"
+for numbers nobody vouched for). The confidence shown on a read is the score the diagnosis actually used (`cycle`), and a read with
+critical inputs missing or BLOCKED confidence cannot be accepted; estimates and low confidence show visible cautions.
 
 ## 4. Activation — `FIRST_TRUSTED_DECISION_INTERACTION`
 
@@ -111,17 +114,65 @@ Query example (funnel): `SELECT event_name, count(*) FROM audit_events WHERE eve
   invite-only wording is replaced where it would contradict. The server remains the only admission authority.
 * Admission mode and capacity live in `platform_settings` (DB-authoritative once bootstrapped). Capacity is enforced by an
   advisory-locked reservation inside the signup transaction; the admin update takes the same lock. Nothing here was changed.
-* **Kill switch:** Administration → Beta programme (`/admin/beta-programme`, API `/api/admin/platform-settings`) → set
-  admission mode **CLOSED** (or WAITLIST). Takes effect on the next request; the signup route re-checks it, the homepage
-  and static pages fall back to request-access wording, no deploy needed. Capacity can be lowered to just above current usage.
-* **Recommended rollout:** `OPEN_BETA` at capacity **10** → watch → **25** → watch → **50** (capacity is configuration, not code;
-  hard ceiling 1000). Advance only when the previous stage shows: ≥ 60 % of verified owners reach a first result, median
-  `timeToFirstValueSeconds` < 600, no P0/P1 in `signup.refused_*`/errors, and feedback is not dominated by `NOT_USEFUL`.
-* Pre-flight before the owner leaves: confirm an email provider is configured in production (verification emails are
-  best-effort and silently skipped without one), `NEXT_PUBLIC_APP_URL` is correct, `/admin/beta-programme` works from a phone,
-  and the admission mode row exists (bootstrap).
+* **Kill switch:** Administration → Beta programme (`/admin/beta-programme`) → **Stop new signups now** (a dedicated panel
+  at the top; it sends *only* `admissionMode: CLOSED`, so a stale page can never overwrite a newer capacity). It loads
+  independently of the request list, so a failing list never hides it. It takes effect on the **next signup request**
+  (the signup route re-reads the mode under the capacity lock; a failed read fails closed). **It stops *new* signups only:**
+  accounts that already exist (pending or verified) keep working, and a visitor with the form already open gets a generic
+  refusal on submit. Reopen by saving the mode again. API: `/api/admin/platform-settings`.
+  *Pre-condition:* the `platform_settings` row must exist. If the page shows "Initialize platform settings first", run that
+  one-time bootstrap **before** the owner leaves — until then the switch cannot be saved (the page says so).
+* **Recommended rollout:** `OPEN_BETA` at capacity **10** → watch → **25** → watch → **50** (capacity is configuration, not
+  code; hard ceiling 1000). Advance only when the previous stage shows: most verified owners reach a first result, the
+  median `timeToFirstValueSeconds` is acceptable (see caveat below), no P0/P1, and feedback is not dominated by `NOT_USEFUL`.
+* **Pre-flight checklist (do these before the owner is unreachable):**
+  1. `NEXT_PUBLIC_APP_URL` is the real public https URL in **Production**. It defaults to `http://localhost:3000`; if unset,
+     every verification email links to localhost. The product now records `user.email_verification_not_sent` with reason
+     `BASE_URL_NOT_PUBLIC` whenever it detects this in production — but check it up front.
+  2. An email provider is configured (`RESEND_API_KEY` and the sender), plus `BETA_REQUEST_NOTIFICATION_EMAIL` for capacity
+     alerts. Without a provider, signup still answers "Check your email" and **no email is sent**; each skip now records
+     `user.email_verification_not_sent` (`NO_PROVIDER` / `SEND_FAILED`). Watch that event (query below).
+  3. The migration `20261010120000` is applied to the production database through the manual workflow **before** the code is
+     promoted (the production build gate refuses to build while a migration is pending). It is additive and nullable, so old
+     code on the new schema and a rollback are both safe.
+  4. `/admin/beta-programme` opens and the Stop button works from a phone; `platform_settings` is bootstrapped.
+* **Operating limits to know about** (not changed here — they are the existing, governed beta architecture):
+  * **Capacity counts accounts at signup, not at verification.** About ten junk or mistyped signups can fill a cap of 10 with
+    no way to free a slot except raising capacity. *Owner decision needed:* count only verified (or recent) accounts. Until
+    decided, run the first stage at 10 only while someone can raise it, or start at 25. Monitor with the SQL below.
+  * Per-IP limits apply to signup/login (10 per 15 min) and verification (30 per hour, raised from 5 so a small cohort behind
+    one office/mobile-carrier address cannot lock itself out; resend stays 5 per hour per address and per email).
+  * The production database pool is one connection per instance; a sudden spike queues and can return a retryable
+    "temporarily unavailable" on signup (fail-closed, nothing lost). At 10–50 owners this is unlikely.
+
+**Funnel and health SQL** (read-only; each `product.*` event is a row in `audit_events` with `workspace_id` and `occurred_at`).
+Once-guards are check-then-insert, so always count `DISTINCT workspace_id`, never raw events:
+```sql
+SELECT event_name, count(*) AS events, count(DISTINCT workspace_id) AS workspaces
+  FROM audit_events WHERE event_name LIKE 'product.%' AND occurred_at > now() - interval '7 days'
+ GROUP BY 1 ORDER BY 2 DESC;
+SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (payload->>'timeToFirstValueSeconds')::int) AS median_seconds
+  FROM audit_events WHERE event_name = 'product.first_trusted_decision_interaction';
+SELECT payload->>'reason' AS reason, count(*) FROM audit_events
+ WHERE event_name = 'user.email_verification_not_sent' GROUP BY 1;           -- emails that did NOT go out
+SELECT event_name, count(*) FROM audit_events WHERE event_name LIKE 'signup.refused%' GROUP BY 1;
+SELECT count(*) FILTER (WHERE email_verified_at IS NULL) AS unverified, count(*) AS total
+  FROM users WHERE created_at > now() - interval '7 days';                    -- signups that never verified
+```
+**Reading `timeToFirstValueSeconds` honestly:** it is *email verified → first accept / correction / improvement*. It includes the
+owner's own thinking time and is **not** the < 5 min "time to a trustworthy first read" target; there is no event for "first
+result shown" other than `first_result_viewed` (compare its `occurred_at` with `email_verified` per workspace for that).
 
 ## 7. Known limitations (stated, not hidden)
+
+0. **Later verification does not read evidence quality.** An accepted action built on an *estimated* read records
+   `expectedMeasurementSource = OWNER_ENTERED` (not `AUTHORITATIVE_SNAPSHOT`), but the existing outcome/verification
+   machinery itself does not look at `evidenceQuality` of the snapshot it later measures against. Wiring that is a change to
+   governed verification and is deliberately out of scope here.
+0b. Accepting a read is a stale-check followed by a decision write, not one transaction; a concurrent correction in between
+   could let a just-superseded read be accepted (the Cockpit's next-move card then reports "numbers changed").
+0c. An amendment cannot return a field to *unknown* (blank means "leave as is"); a deliberate known zero is preserved.
+0d. The key number on the read is shown with its metric label but no unit (it may be a ratio, days or an amount).
 
 1. Goals: the audit found goals do not influence canonical priority at all (display-only), so the optional prompt links to the
    existing goal page rather than creating a goal inline; REVENUE/PROFIT are the only supported families.

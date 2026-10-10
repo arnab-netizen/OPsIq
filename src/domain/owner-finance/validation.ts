@@ -11,7 +11,8 @@ import { EVIDENCE_QUALITIES } from "./evidence-quality";
 import { RECOVERY_ACTION_STATUSES } from "@/domain/founder-recovery/action-status";
 
 /** Non-negative optional monetary/count metric. */
-const nonNeg = z.number().min(0, "Value cannot be negative").optional();
+/** A sane upper bound (1e12): larger values only overflow downstream sums and are never a real business figure. */
+const nonNeg = z.number().min(0, "Value cannot be negative").max(1e12, "That number is too large").optional();
 
 export const financialSnapshotCreateSchema = z
   .object({

@@ -11,14 +11,17 @@ import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { firstRunApi } from "@/lib/owner-first-run-client";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
-const CURRENCIES = ["GBP", "USD", "EUR", "INR"] as const;
+const CURRENCIES = ["GBP", "USD", "EUR", "INR", "AUD", "CAD", "NZD", "SGD", "AED", "ZAR", "MYR", "IDR", "PHP", "NGN", "KES"] as const;
 
 export function FirstRunBusinessStep({
   suggestedName,
   onCreated,
+  onConflict,
 }: {
   suggestedName: string | null;
   onCreated: (business: { id: string; name: string }) => void;
+  /** The business already exists (another tab, or a retry): reload the step instead of repeating the failure. */
+  onConflict?: () => void;
 }) {
   const [businessType, setBusinessType] = useState("");
   const [currency, setCurrency] = useState("");
@@ -44,6 +47,10 @@ export function FirstRunBusinessStep({
       });
       onCreated(business);
     } catch (err) {
+      if ((err as { status?: number })?.status === 409) {
+        onConflict?.();
+        return;
+      }
       const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "save" });
       setError(`We couldn't set up your business yet. Nothing was lost. ${governed.recovery}`);
     } finally {
@@ -95,7 +102,7 @@ export function FirstRunBusinessStep({
           {error}
         </p>
       )}
-      <Button type="submit" disabled={!ready || busy} className="mt-4 w-full sm:w-auto" data-testid="first-run-business-submit">
+      <Button type="submit" disabled={!ready || busy} className="mt-4 min-h-11 w-full sm:w-auto" data-testid="first-run-business-submit">
         {busy ? "Setting up…" : "Continue"}
       </Button>
     </form>

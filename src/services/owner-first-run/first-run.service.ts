@@ -46,6 +46,9 @@ import type { AuditEventName } from "@/domain/constants/audit-events";
 
 type Json = Record<string, unknown>;
 
+/** A business younger than this still resumes first-run on sign-in; an older one never does. */
+const FIRST_RUN_RECENT_DAYS = 14;
+
 /** Server-side log text for a swallowed analytics failure (governed classifier; never shown to an owner). */
 function describeFailure(error: unknown): string {
   return classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).technicalDetails;
@@ -78,11 +81,11 @@ export interface FirstRunContext {
   goalFamilies: readonly string[];
 }
 
-async function firstRealBusiness(workspaceId: string): Promise<FirstRunBusiness | null> {
+async function firstRealBusiness(workspaceId: string): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
   const row = await db.ownerBusiness.findFirst({
     where: { workspaceId, isActive: true, isFixtureBusiness: false },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    select: { id: true, name: true, businessType: true, currency: true },
+    select: { id: true, name: true, businessType: true, currency: true, createdAt: true },
   });
   return row ?? null;
 }
@@ -152,6 +155,7 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
     firstReadSufficient,
     hasDiagnosis,
     hasTrustedInteraction: first !== null,
+    businessIsRecent: business ? Date.now() - business.createdAt.getTime() < FIRST_RUN_RECENT_DAYS * 86_400_000 : true,
   };
   const state = resolveFirstRunState(facts);
   return {
@@ -160,7 +164,7 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
     loginHref: landingAfterLogin(facts),
     facts,
     suggestedBusinessName: workspace?.name ?? null,
-    business,
+    business: business ? { id: business.id, name: business.name, businessType: business.businessType, currency: business.currency } : null,
     currentSnapshotId,
     latestCycleId: latestCycle?.id ?? null,
     diagnosisStale: Boolean(latestCycle && currentSnapshotId && latestCycle.snapshotId !== currentSnapshotId),
@@ -196,6 +200,9 @@ export async function createFirstBusiness(
 ): Promise<{ business: FirstRunBusiness; replayed: boolean }> {
   const workspace = await db.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } });
   if (!workspace) throw new NotFoundError("Workspace", workspaceId);
+  if (!/^[A-Za-z]{3,8}$/.test(input.currency.trim())) {
+    throw new ValidationError("Please choose your currency.", { fieldErrors: [{ path: "currency", message: "Not a valid currency code" }] });
+  }
   const parsed = businessCreateSchema.safeParse({
     name: (input.name ?? workspace.name).trim(),
     businessType: input.businessType,
@@ -297,7 +304,10 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
       : null,
     action: primary && finding ? asRead(primary) : null,
     dataRequest: dataRequest ? asRead(dataRequest) : null,
-    confidenceScore: Number(snapshot.dataConfidenceScore ?? 0),
+    // The score the diagnosis ACTUALLY used (it re-enriches with liquidity/intake and ages the period), not the one frozen at save.
+    confidenceScore: Number((cycle as { dataConfidenceScore?: number }).dataConfidenceScore ?? snapshot.dataConfidenceScore ?? 0),
+    dataRequestCode: dataRequest ? String((dataRequest as { findingCode?: string }).findingCode ?? "") : null,
+    criticalInputsMissing: jsonStringArray(snapshot.missingCriticalData).length > 0,
     evidenceQuality: quality,
     missingEvidence: missing.slice(0, 5).map((m) => m.field),
   });
@@ -513,7 +523,7 @@ export async function requestImprovement(
   });
   if (!cycle) throw new ValidationError("There is no first read to improve yet.", { fieldErrors: [] });
   const { created } = await insertInteractionOnce({
-    workspaceId, businessId, actorId, snapshotId: cycle.snapshotId, kind: "IMPROVEMENT_REQUESTED", idempotencyKey: `improve:${idempotencyKey}`,
+    workspaceId, businessId, actorId, snapshotId: cycle.snapshotId, kind: "IMPROVEMENT_REQUESTED", idempotencyKey: `improve:${businessId}:${idempotencyKey}`,
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED },
   });
   if (created) await recordActivationIfFirst(workspaceId, actorId, businessId);
@@ -535,7 +545,7 @@ export async function submitFirstValueFeedback(
   });
   const { created } = await insertInteractionOnce({
     workspaceId, businessId, actorId, snapshotId: cycle?.snapshotId ?? null, kind: "FEEDBACK",
-    rating: input.rating, reason: input.reason, idempotencyKey: `feedback:${input.idempotencyKey}`,
+    rating: input.rating, reason: input.reason, idempotencyKey: `feedback:${businessId}:${input.idempotencyKey}`,
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_VALUE_FEEDBACK, props: { rating: input.rating, ...(input.reason ? { reason: input.reason } : {}) } },
   });
   return { replayed: !created };

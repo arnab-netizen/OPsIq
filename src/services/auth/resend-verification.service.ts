@@ -6,6 +6,7 @@
  * The public route still owns rate-limiting/enumeration-resistant response
  * shaping; this function is the actual eligibility check + token + email.
  */
+import { recordVerificationEmailNotSent, verificationBaseUrlProblem } from "@/services/auth/verification-email-signal";
 import { randomBytes, createHash, randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
@@ -73,6 +74,9 @@ export async function resendVerificationEmailIfEligible(
     const provider = getEmailProvider();
     if (provider) {
       const verifyUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/verify-email?token=${rawToken}`;
+      if (verificationBaseUrlProblem(getConfig().NEXT_PUBLIC_APP_URL)) {
+        await recordVerificationEmailNotSent({ reason: "BASE_URL_NOT_PUBLIC", userId: user.id, workspaceId: membership?.workspaceId });
+      }
       await provider.send({
         to: user.email,
         subject: "Verify your OpsIQ account",
@@ -81,8 +85,10 @@ export async function resendVerificationEmailIfEligible(
       });
     } else {
       console.warn("[RESEND_VERIFICATION] No email provider configured — token created but not emailed", { userId: user.id });
+      await recordVerificationEmailNotSent({ reason: "NO_PROVIDER", userId: user.id, workspaceId: membership?.workspaceId });
     }
   } catch (emailError) {
+    await recordVerificationEmailNotSent({ reason: "SEND_FAILED", userId: user.id, workspaceId: membership?.workspaceId });
     console.error("[RESEND_VERIFICATION] Email dispatch failed", {
       userId: user.id,
       errorType: emailError instanceof Error ? emailError.constructor.name : "UnknownError",

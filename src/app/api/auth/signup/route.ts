@@ -16,6 +16,7 @@ import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableErro
 import { canAdmitSignup } from "@/domain/beta/admission";
 import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
 import { checkAndSendCapacityAlert } from "@/services/beta/capacity-alerts.service";
+import { recordVerificationEmailNotSent, verificationBaseUrlProblem } from "@/services/auth/verification-email-signal";
 import { recordProductEvent } from "@/services/analytics/product-events.service";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
@@ -356,6 +357,9 @@ const handleSignup = async (request: NextRequest) => {
       const provider = getEmailProvider();
       if (provider) {
         const verifyUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/verify-email?token=${rawVerificationToken}`;
+        if (verificationBaseUrlProblem(getConfig().NEXT_PUBLIC_APP_URL)) {
+          await recordVerificationEmailNotSent({ reason: "BASE_URL_NOT_PUBLIC", userId: user.id, workspaceId: workspace.id });
+        }
         await provider.send({
           to: user.email,
           subject: "Verify your OpsIQ account",
@@ -364,8 +368,10 @@ const handleSignup = async (request: NextRequest) => {
         });
       } else {
         console.warn("[SIGNUP] No email provider configured — verification token created but not emailed", { userId: user.id });
+        await recordVerificationEmailNotSent({ reason: "NO_PROVIDER", userId: user.id, workspaceId: workspace.id });
       }
     } catch (emailError) {
+      await recordVerificationEmailNotSent({ reason: "SEND_FAILED", userId: user.id, workspaceId: workspace.id });
       console.error("[SIGNUP] Verification email dispatch failed", { userId: user.id, errorType: emailError instanceof Error ? emailError.constructor.name : "UnknownError" });
     }
 

@@ -26,6 +26,9 @@ import {
 import { retryDiagnosis, type QuickStartApi } from "@/lib/owner-quick-start";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { QUICK_ENTRY_FIELDS } from "@/domain/owner-finance/quick-entry";
+import { EVIDENCE_QUALITY_LABEL, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { humanizeMetricKey } from "@/lib/metric-label";
 
 const diagnosisApi: QuickStartApi = async (path, init) => {
   const res = await fetch(path, { ...init, headers: { "Content-Type": "application/json" } });
@@ -35,6 +38,11 @@ const diagnosisApi: QuickStartApi = async (path, init) => {
 };
 
 type Mode = "result" | "correcting" | "improving";
+
+const TIER_WORDS = { HIGH: "high", MEDIUM: "moderate", LOW: "low", BLOCKED: "not enough to rely on" } as const;
+const fieldLabel = (key: string): string =>
+  key === "evidenceQuality" ? "how reliable the numbers are" : (QUICK_ENTRY_FIELDS.find((f) => f.name === key)?.label ?? humanizeMetricKey(key)).toLowerCase();
+const qualityWords = (q: EvidenceQuality | null): string => (q ? EVIDENCE_QUALITY_LABEL[q] : "not stated");
 
 function friendly(err: unknown, context: "load" | "save" | "action"): string {
   return classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context }).recovery;
@@ -91,7 +99,11 @@ export function FirstRunFlow() {
   }, [hasResult, loadResult]);
 
   const runDiagnosis = useCallback(async () => {
-    if (!businessId || !ctx?.currentSnapshotId || inFlight.current) return;
+    if (!businessId || inFlight.current) return;
+    if (!ctx?.currentSnapshotId) {
+      setDiagnosing("failed");
+      return;
+    }
     inFlight.current = true;
     setDiagnosing("running");
     try {
@@ -99,13 +111,14 @@ export function FirstRunFlow() {
       if (result.status === "diagnosed") {
         setDiagnosing("idle");
         await loadContext();
+        await loadResult();
       } else {
         setDiagnosing("failed");
       }
     } finally {
       inFlight.current = false;
     }
-  }, [businessId, ctx?.currentSnapshotId, loadContext]);
+  }, [businessId, ctx?.currentSnapshotId, loadContext, loadResult]);
 
   // State C: the evidence is enough, the read is missing — produce it through the canonical diagnosis path.
   const autoRan = useRef(false);
@@ -158,7 +171,7 @@ export function FirstRunFlow() {
         {!ctx && !loadError && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {ctx?.state === "NEEDS_BUSINESS" && (
-          <FirstRunBusinessStep suggestedName={ctx.suggestedBusinessName} onCreated={(b) => void onBusinessCreated(b)} />
+          <FirstRunBusinessStep suggestedName={ctx.suggestedBusinessName} onCreated={(b) => void onBusinessCreated(b)} onConflict={() => void loadContext()} />
         )}
 
         {ctx?.state === "NEEDS_EVIDENCE" && ctx.business && (
@@ -197,9 +210,13 @@ export function FirstRunFlow() {
               <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-result-changes" aria-live="polite">
                 <p className="font-medium text-foreground">What changed after your correction</p>
                 <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                  <li>Corrected: {correction.changedFields.join(", ")}</li>
-                  <li>Confidence: {correction.before.confidenceTier} → {correction.after.read.confidenceTier}</li>
-                  <li>Reliability: {correction.before.evidenceQuality ?? "not stated"} → {correction.after.read.evidenceQuality ?? "not stated"}</li>
+                  <li>Corrected: {correction.changedFields.map(fieldLabel).join(", ")}</li>
+                  <li>
+                    How sure OpsIQ is: {TIER_WORDS[correction.before.confidenceTier]} → {TIER_WORDS[correction.after.read.confidenceTier]}
+                  </li>
+                  <li>
+                    How reliable your numbers are: {qualityWords(correction.before.evidenceQuality)} → {qualityWords(correction.after.read.evidenceQuality)}
+                  </li>
                   <li>
                     Recommendation: {correction.before.recommendedAction ?? "none"}
                     {correction.before.recommendedAction === correction.after.read.recommendedAction ? " (unchanged)" : ` → ${correction.after.read.recommendedAction ?? "none"}`}
@@ -218,6 +235,15 @@ export function FirstRunFlow() {
               onCorrect={() => setMode("correcting")}
               onImprove={() => setMode("improving")}
             />
+            {(view.stale || ctx?.diagnosisStale) && (
+              <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-run-update-read">
+                <p className="text-foreground">You&rsquo;ve added or changed numbers since this read was made.</p>
+                <Button type="button" className="mt-2 min-h-11" disabled={diagnosing === "running"} onClick={() => void runDiagnosis()}>
+                  {diagnosing === "running" ? "Updating…" : "Update my read"}
+                </Button>
+                {diagnosing === "failed" && <p role="alert" className="mt-2 text-destructive">The update didn&rsquo;t run. Your numbers are saved &mdash; try again.</p>}
+              </div>
+            )}
             {actionError && <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="first-run-action-error">{actionError}</p>}
 
             {mode === "correcting" && (
@@ -231,6 +257,14 @@ export function FirstRunFlow() {
             )}
             {mode === "improving" && <FirstResultImprovement businessId={view.businessId} onClose={() => setMode("result")} />}
 
+            <Link
+              href="/owner/cockpit"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-foreground sm:w-auto"
+              data-testid="first-run-skip-to-cockpit"
+            >
+              {ctx?.state === "ESTABLISHED" ? "Go to my Cockpit" : "Skip to my Cockpit"}
+            </Link>
+
             {ctx?.state === "ESTABLISHED" && (
               <>
                 <FirstValueFeedback businessId={view.businessId} />
@@ -241,13 +275,6 @@ export function FirstRunFlow() {
                   </p>
                   <Link href="/owner/goals" className="mt-2 inline-flex min-h-11 items-center underline">Set a goal</Link>
                 </div>
-                <Link
-                  href="/owner/cockpit"
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground sm:w-auto"
-                  data-testid="first-run-to-cockpit"
-                >
-                  Go to my Cockpit
-                </Link>
               </>
             )}
           </>

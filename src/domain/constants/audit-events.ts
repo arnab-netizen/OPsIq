@@ -729,6 +729,8 @@ export const AUDIT_EVENTS = {
   EMAIL_VERIFICATION_REQUESTED: "user.email_verification_requested",
   EMAIL_VERIFICATION_RESENT: "user.email_verification_resent",
   EMAIL_VERIFIED: "user.email_verified",
+  // A verification email that could not be delivered (no provider, send failure, or a non-public link base). Payload: reason enum only.
+  EMAIL_VERIFICATION_NOT_SENT: "user.email_verification_not_sent",
   POLICY_ACCEPTED: "user.policy_accepted",
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",

@@ -62,6 +62,7 @@ interface LoadSetters {
   setError: (v: string | null) => void;
   setForbidden: (v: boolean) => void;
   setRows: (v: BetaRequestRow[]) => void;
+  setListFailed: (v: boolean) => void;
   setSettings: (v: Settings) => void;
   setCapacityInput: (v: string) => void;
   setModeInput: (v: string) => void;
@@ -74,15 +75,19 @@ async function loadBetaProgramme(setters: LoadSetters): Promise<void> {
   setters.setError(null);
   setters.setForbidden(false);
   try {
-    const [listRes, settingsRes, bootstrapRes] = await Promise.all([
-      fetch("/api/admin/beta-requests"),
+    // The admission controls are the critical part of this page (they are how signups are stopped from a phone), so
+    // they load independently of the request list: a failing or slow list must never hide the mode control.
+    const [settingsRes, bootstrapRes, listResult] = await Promise.all([
       fetch("/api/admin/platform-settings"),
       fetch("/api/admin/platform-settings/bootstrap"),
+      fetch("/api/admin/beta-requests")
+        .then((r) => jsonOrThrow(r, "Failed to load beta requests"))
+        .then((v) => ({ ok: true as const, v }), () => ({ ok: false as const })),
     ]);
-    const list = await jsonOrThrow(listRes, "Failed to load beta requests");
     const settingsData: Settings = await jsonOrThrow(settingsRes, "Failed to load settings");
     const bootstrapData: BootstrapPreview = await jsonOrThrow(bootstrapRes, "Failed to load bootstrap preview");
-    setters.setRows(list.betaRequests as BetaRequestRow[]);
+    setters.setRows(listResult.ok ? (listResult.v.betaRequests as BetaRequestRow[]) : []);
+    setters.setListFailed(!listResult.ok);
     setters.setSettings(settingsData);
     setters.setCapacityInput(String(settingsData.capacityLimit));
     setters.setModeInput(settingsData.admissionMode);
@@ -104,6 +109,7 @@ async function loadBetaProgramme(setters: LoadSetters): Promise<void> {
 export default function AdminBetaProgrammePage() {
   const [rows, setRows] = useState<BetaRequestRow[] | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [listFailed, setListFailed] = useState(false);
   const [bootstrapPreview, setBootstrapPreview] = useState<BootstrapPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
@@ -123,6 +129,7 @@ export default function AdminBetaProgrammePage() {
       setError,
       setForbidden,
       setRows,
+      setListFailed,
       setSettings,
       setCapacityInput,
       setModeInput,
@@ -155,7 +162,11 @@ export default function AdminBetaProgrammePage() {
     }
   };
 
-  const handleSaveSettings = async () => {
+  /**
+   * Sends ONLY what the operator changed. A page left open for hours must not overwrite a newer capacity or mode with
+   * stale form values, and "Stop new signups now" sends the mode alone.
+   */
+  const saveSettings = async (patch: { admissionMode?: string; capacityLimit?: number }) => {
     setSettingsSaving(true);
     setSettingsError(null);
     try {
@@ -163,10 +174,12 @@ export default function AdminBetaProgrammePage() {
       const res = await fetch("/api/admin/platform-settings", {
         method: "POST",
         headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
-        body: JSON.stringify({ admissionMode: modeInput, capacityLimit: Number(capacityInput) }),
+        body: JSON.stringify(patch),
       });
       const result: Settings = await jsonOrThrow(res, "Failed to update settings");
       setSettings(result);
+      setModeInput(result.admissionMode);
+      setCapacityInput(String(result.capacityLimit));
     } catch (e) {
       const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "action" });
       setSettingsError(governed.operatorMessage);
@@ -174,6 +187,16 @@ export default function AdminBetaProgrammePage() {
       setSettingsSaving(false);
     }
   };
+
+  const handleSaveSettings = () => {
+    const patch: { admissionMode?: string; capacityLimit?: number } = {};
+    if (settings && modeInput !== settings.admissionMode) patch.admissionMode = modeInput;
+    if (settings && Number(capacityInput) !== settings.capacityLimit) patch.capacityLimit = Number(capacityInput);
+    if (Object.keys(patch).length === 0) return Promise.resolve();
+    return saveSettings(patch);
+  };
+
+  const handleStopSignups = () => saveSettings({ admissionMode: "CLOSED" });
 
   const handleBootstrap = async () => {
     setBootstrapping(true);
@@ -191,6 +214,7 @@ export default function AdminBetaProgrammePage() {
         setError,
         setForbidden,
         setRows,
+        setListFailed,
         setSettings,
         setCapacityInput,
         setModeInput,
@@ -221,6 +245,7 @@ export default function AdminBetaProgrammePage() {
                 setError,
                 setForbidden,
                 setRows,
+                setListFailed,
                 setSettings,
                 setCapacityInput,
                 setModeInput,
@@ -285,6 +310,26 @@ export default function AdminBetaProgrammePage() {
         </section>
       )}
 
+      <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4" data-testid="stop-signups-panel">
+        <h2 className="text-lg font-semibold">Stop new signups</h2>
+        <p className="text-sm text-gray-700">
+          Closes registration immediately for new people. Accounts that already exist keep working. You can reopen it below.
+        </p>
+        <Button
+          className="min-h-11 w-full sm:w-auto"
+          onClick={() => void handleStopSignups()}
+          isLoading={settingsSaving}
+          disabled={settingsSaving || settings?.admissionMode === "CLOSED" || !bootstrapPreview?.alreadyInitialized}
+          data-testid="stop-signups-button"
+        >
+          {settings?.admissionMode === "CLOSED" ? "Signups are closed" : "Stop new signups now"}
+        </Button>
+        {!bootstrapPreview?.alreadyInitialized && (
+          <p className="text-xs text-gray-700">Initialize platform settings first (above) — until then this control cannot be saved.</p>
+        )}
+        {settingsError && <p className="text-sm text-destructive">{settingsError}</p>}
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Admission mode &amp; capacity</h2>
         <div className="flex flex-wrap items-end gap-4">
@@ -300,7 +345,7 @@ export default function AdminBetaProgrammePage() {
             <label className="mb-1 block text-sm font-medium">Capacity limit</label>
             <Input type="number" min={1} value={capacityInput} onChange={(e) => setCapacityInput(e.target.value)} className="w-32" />
           </div>
-          <Button onClick={() => void handleSaveSettings()} isLoading={settingsSaving} disabled={settingsSaving}>
+          <Button className="min-h-11" onClick={() => void handleSaveSettings()} isLoading={settingsSaving} disabled={settingsSaving}>
             Save
           </Button>
         </div>
@@ -314,6 +359,11 @@ export default function AdminBetaProgrammePage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Requests</h2>
+        {listFailed && (
+          <p role="alert" className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-gray-800">
+            The request list couldn&rsquo;t load. The admission controls above still work.
+          </p>
+        )}
         <Table
           columns={[
             { key: "name", header: "Name", render: (row: BetaRequestRow) => row.firstName ?? "—" },
