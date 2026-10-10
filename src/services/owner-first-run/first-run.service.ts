@@ -34,6 +34,7 @@ import { formatDomainActionCandidateId } from "@/domain/owner-spine/owner-decisi
 import { prefetchOwnerDomainRows } from "@/services/owner-mode/owner-db-providers";
 import { loadFirstReadSufficiency } from "@/services/owner-mode/owner-onboarding.service";
 import { getOwnerInputGuidance } from "@/services/owner-mode/owner-input-guidance.service";
+import { firstRunEvidence } from "@/services/owner-first-run/first-run-evidence.reader";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { listOwnerDecisions } from "@/services/owner-outcome/owner-decision.service";
@@ -90,6 +91,20 @@ async function firstRealBusiness(workspaceId: string): Promise<(FirstRunBusiness
   return row ?? null;
 }
 
+/**
+ * When this business's evidence was first corrected. Every snapshot amendment emits OWNER_FINANCE_SNAPSHOT_AMENDED
+ * carrying its businessId (the governed record of the mutation), so the audit trail answers it without a second
+ * reader of the snapshot table.
+ */
+async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string): Promise<Date | null> {
+  const row = await getAuditEventReadOnlyClient().findFirst({
+    where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_AMENDED, payload: { path: ["businessId"], equals: businessId } },
+    orderBy: { occurredAt: "asc" },
+    select: { occurredAt: true },
+  });
+  return row?.occurredAt ?? null;
+}
+
 async function trustedInteractionFacts(workspaceId: string, businessId: string): Promise<TrustedInteractionFact[]> {
   const [decision, amendment, improvement] = await Promise.all([
     db.ownerDecisionRecord.findFirst({
@@ -97,11 +112,7 @@ async function trustedInteractionFacts(workspaceId: string, businessId: string):
       orderBy: { decidedAt: "asc" },
       select: { decidedAt: true },
     }),
-    db.ownerFinancialSnapshot.findFirst({
-      where: { workspaceId, businessId, version: { gt: 1 } },
-      orderBy: { createdAt: "asc" },
-      select: { createdAt: true },
-    }),
+    firstSnapshotAmendmentAt(workspaceId, businessId),
     db.ownerFirstResultInteraction.findFirst({
       where: { workspaceId, businessId, kind: "IMPROVEMENT_REQUESTED" },
       orderBy: { createdAt: "asc" },
@@ -110,7 +121,7 @@ async function trustedInteractionFacts(workspaceId: string, businessId: string):
   ]);
   const facts: TrustedInteractionFact[] = [];
   if (decision) facts.push({ kind: "ACTION_ACCEPTED", at: decision.decidedAt.toISOString() });
-  if (amendment) facts.push({ kind: "EVIDENCE_CORRECTED", at: amendment.createdAt.toISOString() });
+  if (amendment) facts.push({ kind: "EVIDENCE_CORRECTED", at: amendment.toISOString() });
   if (improvement) facts.push({ kind: "IMPROVEMENT_REQUESTED", at: improvement.createdAt.toISOString() });
   return facts;
 }
@@ -122,33 +133,19 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
   ]);
 
   let firstReadSufficient = false;
-  let latestCycle: { id: string; snapshotId: string } | null = null;
-  let currentSnapshotId: string | null = null;
+  let evidence: Awaited<ReturnType<typeof firstRunEvidence>> = { headSnapshotId: null, runOnHead: null, hasAnyRun: false };
   let interactions: TrustedInteractionFact[] = [];
 
   if (business) {
     const deps = { db: db as unknown as PrismaClient, workspaceId, businessId: business.id, now: new Date() };
     const rows = await prefetchOwnerDomainRows(deps);
     firstReadSufficient = (await loadFirstReadSufficiency(deps, rows)).sufficient;
-    const [cycle, current, facts] = await Promise.all([
-      db.ownerFinanceCycle.findFirst({
-        where: { workspaceId, businessId: business.id },
-        orderBy: { sequenceNumber: "desc" },
-        select: { id: true, snapshotId: true },
-      }),
-      db.ownerFinancialSnapshot.findFirst({
-        where: { workspaceId, businessId: business.id, supersededById: null },
-        orderBy: [{ periodEnd: "desc" }, { version: "desc" }],
-        select: { id: true },
-      }),
-      trustedInteractionFacts(workspaceId, business.id),
-    ]);
-    latestCycle = cycle ?? null;
-    currentSnapshotId = current?.id ?? null;
+    const [ev, facts] = await Promise.all([firstRunEvidence(workspaceId, business.id, deps.now), trustedInteractionFacts(workspaceId, business.id)]);
+    evidence = ev;
     interactions = facts;
   }
 
-  const hasDiagnosis = latestCycle !== null;
+  const hasDiagnosis = evidence.hasAnyRun;
   const first = firstTrustedInteraction(hasDiagnosis, interactions);
   const facts: FirstRunFacts = {
     hasBusiness: business !== null,
@@ -165,9 +162,10 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
     facts,
     suggestedBusinessName: workspace?.name ?? null,
     business: business ? { id: business.id, name: business.name, businessType: business.businessType, currency: business.currency } : null,
-    currentSnapshotId,
-    latestCycleId: latestCycle?.id ?? null,
-    diagnosisStale: Boolean(latestCycle && currentSnapshotId && latestCycle.snapshotId !== currentSnapshotId),
+    currentSnapshotId: evidence.headSnapshotId,
+    latestCycleId: evidence.runOnHead?.id ?? null,
+    // The figures were amended after the last diagnosis and not yet re-diagnosed: there is no read on them yet.
+    diagnosisStale: evidence.hasAnyRun && evidence.runOnHead === null,
     firstTrustedInteractionAt: first?.at ?? null,
     businessTypes: BUSINESS_TYPES,
     goalFamilies: NEW_GOAL_TARGET_TYPES,
@@ -253,7 +251,6 @@ export interface FirstMoneyReadView {
   decisionState: string | null;
   /** The evidence was corrected after this read; it must be re-run before it is trusted. */
   stale: boolean;
-  previousSnapshotId: string | null;
 }
 
 function jsonStringArray(value: unknown): string[] {
@@ -263,12 +260,10 @@ function jsonStringArray(value: unknown): string[] {
 export async function getFirstMoneyRead(workspaceId: string, businessId: string): Promise<FirstMoneyReadView> {
   const business = await db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId }, select: { id: true, currency: true } });
   if (!business) throw new NotFoundError("OwnerBusiness", businessId);
-  const latest = await db.ownerFinanceCycle.findFirst({
-    where: { workspaceId, businessId },
-    orderBy: { sequenceNumber: "desc" },
-    select: { id: true },
-  });
-  if (!latest) throw new NotFoundError("OwnerFinanceCycle", businessId);
+  const evidence = await firstRunEvidence(workspaceId, businessId);
+  if (!evidence.hasAnyRun) throw new NotFoundError("Diagnosis", businessId);
+  if (!evidence.runOnHead) throw new ConflictError("Your numbers changed after your last read. Update your read first.");
+  const latest = evidence.runOnHead;
 
   const cycle = await getFinanceDiagnosis(latest.id, workspaceId);
   const snapshot = cycle.snapshot as Json & { id: string; supersededById: string | null };
@@ -321,16 +316,6 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     const latestDecision = [...decisions].sort((a, b) => b.sequence - a.sequence)[0];
     decisionState = latestDecision?.decisionState ?? null;
   }
-  const currentSnapshot = await db.ownerFinancialSnapshot.findFirst({
-    where: { workspaceId, businessId, supersededById: null },
-    orderBy: [{ periodEnd: "desc" }, { version: "desc" }],
-    select: { id: true },
-  });
-  const previous = await db.ownerFinancialSnapshot.findFirst({
-    where: { workspaceId, businessId, supersededById: snapshot.id },
-    select: { id: true },
-  });
-
   return {
     read,
     businessId,
@@ -340,8 +325,8 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     candidateId,
     presentedAction: presented ? { title: presented.title, verificationMetric: presented.verificationMetric, expectedTimeframeDays: presented.expectedTimeframeDays } : null,
     decisionState,
-    stale: Boolean(currentSnapshot && currentSnapshot.id !== snapshot.id),
-    previousSnapshotId: previous?.id ?? null,
+    // A read exists only on the CURRENT figures (see first-run-evidence.reader.ts), so it is never stale when returned.
+    stale: false,
   };
 }
 
@@ -481,9 +466,7 @@ export async function recordActivationIfFirst(workspaceId: string, actorId: stri
 }
 
 async function recordActivationIfFirstUnsafe(workspaceId: string, actorId: string, businessId: string): Promise<boolean> {
-  const hasDiagnosis = Boolean(
-    await db.ownerFinanceCycle.findFirst({ where: { workspaceId, businessId }, select: { id: true } }),
-  );
+  const hasDiagnosis = (await firstRunEvidence(workspaceId, businessId)).hasAnyRun;
   const first = firstTrustedInteraction(hasDiagnosis, await trustedInteractionFacts(workspaceId, businessId));
   if (!first) return false;
   const user = await db.user.findFirst({ where: { id: actorId }, select: { emailVerifiedAt: true } });
@@ -518,12 +501,10 @@ export async function requestImprovement(
   workspaceId: string, actorId: string, businessId: string, idempotencyKey: string,
 ): Promise<{ replayed: boolean }> {
   await assertBusiness(workspaceId, businessId);
-  const cycle = await db.ownerFinanceCycle.findFirst({
-    where: { workspaceId, businessId }, orderBy: { sequenceNumber: "desc" }, select: { snapshotId: true },
-  });
-  if (!cycle) throw new ValidationError("There is no first read to improve yet.", { fieldErrors: [] });
+  const evidence = await firstRunEvidence(workspaceId, businessId);
+  if (!evidence.hasAnyRun) throw new ValidationError("There is no first read to improve yet.", { fieldErrors: [] });
   const { created } = await insertInteractionOnce({
-    workspaceId, businessId, actorId, snapshotId: cycle.snapshotId, kind: "IMPROVEMENT_REQUESTED", idempotencyKey: `improve:${businessId}:${idempotencyKey}`,
+    workspaceId, businessId, actorId, snapshotId: evidence.headSnapshotId, kind: "IMPROVEMENT_REQUESTED", idempotencyKey: `improve:${businessId}:${idempotencyKey}`,
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED },
   });
   if (created) await recordActivationIfFirst(workspaceId, actorId, businessId);
@@ -540,11 +521,9 @@ export async function submitFirstValueFeedback(
       fieldErrors: [{ path: "reason", message: "Not applicable to a useful rating" }],
     });
   }
-  const cycle = await db.ownerFinanceCycle.findFirst({
-    where: { workspaceId, businessId }, orderBy: { sequenceNumber: "desc" }, select: { snapshotId: true },
-  });
+  const evidence = await firstRunEvidence(workspaceId, businessId);
   const { created } = await insertInteractionOnce({
-    workspaceId, businessId, actorId, snapshotId: cycle?.snapshotId ?? null, kind: "FEEDBACK",
+    workspaceId, businessId, actorId, snapshotId: evidence.headSnapshotId, kind: "FEEDBACK",
     rating: input.rating, reason: input.reason, idempotencyKey: `feedback:${businessId}:${input.idempotencyKey}`,
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_VALUE_FEEDBACK, props: { rating: input.rating, ...(input.reason ? { reason: input.reason } : {}) } },
   });

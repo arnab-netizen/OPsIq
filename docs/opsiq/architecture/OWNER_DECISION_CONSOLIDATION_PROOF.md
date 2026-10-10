@@ -174,6 +174,7 @@ Every reader of financial evidence in `src` — the snapshot model (dot, bracket
 | `src/services/owner-finance/recommendation-margin-safety.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-finance/snapshot.service.ts` | MODEL_SERVICE, HISTORICAL_LIST |
 | `src/services/owner-finance/verification.service.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
+| `src/services/owner-first-run/first-run-evidence.reader.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
 | `src/services/owner-guidance/owner-now-view.service.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-home/owner-candidate-builder.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-home/owner-change-facts.ts` | DIAGNOSIS_BOUND |

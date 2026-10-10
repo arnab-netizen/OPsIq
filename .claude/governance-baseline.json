@@ -42,7 +42,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 427,
+      "line": 433,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : \"Unknown error\";",
       "reason": "auth route server-side log/context string; not operator-rendered"
@@ -51,7 +51,7 @@
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 484,
+      "line": 490,
       "severity": "error",
       "code": "return Response.json({ success: false, error: message }, { status: 400 });",
       "reason": "auth route server-side log/context string; not operator-rendered"
@@ -60,7 +60,7 @@
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 495,
+      "line": 501,
       "severity": "error",
       "code": "return Response.json({ success: false, error: error.message }, { status: error.statusCode });",
       "reason": "auth route server-side log/context string; not operator-rendered"

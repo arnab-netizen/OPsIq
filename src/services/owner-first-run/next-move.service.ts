@@ -2,7 +2,7 @@
  * Returning-owner value: the action the owner accepted, from the canonical decision chains. Read-only; reuses
  * listOwnerOutcomeChains (workspace + business scoped) and the owner's own recorded commitment.
  */
-import { db } from "@/lib/db";
+import { cycleSnapshotSuperseded } from "@/services/owner-first-run/first-run-evidence.reader";
 import { listOwnerOutcomeChains } from "@/services/owner-outcome/owner-outcome-chain.service";
 import { deriveNextMove, type NextMoveView } from "@/domain/owner-first-run/next-move";
 
@@ -15,19 +15,9 @@ export async function getAcceptedNextMove(workspaceId: string, businessId: strin
   const decision = open?.currentDecision;
   if (!open || !decision) return null;
 
-  const snapshotAtDecision = (decision.recommendationSnapshot as { cycleId?: string | null } | null)?.cycleId ?? null;
-  let evidenceChangedSince = false;
-  if (snapshotAtDecision) {
-    const [cycle, current] = await Promise.all([
-      db.ownerFinanceCycle.findFirst({ where: { id: snapshotAtDecision, workspaceId, businessId }, select: { snapshotId: true } }),
-      db.ownerFinancialSnapshot.findFirst({
-        where: { workspaceId, businessId, supersededById: null },
-        orderBy: [{ periodEnd: "desc" }, { version: "desc" }],
-        select: { id: true },
-      }),
-    ]);
-    evidenceChangedSince = Boolean(cycle && current && cycle.snapshotId !== current.id);
-  }
+  const cycleAtDecision = (decision.recommendationSnapshot as { cycleId?: string | null } | null)?.cycleId ?? null;
+  // The numbers changed since the decision exactly when the diagnosis it was based on ran on a snapshot that was amended.
+  const evidenceChangedSince = cycleAtDecision ? await cycleSnapshotSuperseded(workspaceId, businessId, cycleAtDecision) : false;
 
   const snap = decision.recommendationSnapshot as { title?: string | null } | null;
   return deriveNextMove({

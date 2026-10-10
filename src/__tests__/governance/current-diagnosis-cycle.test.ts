@@ -69,6 +69,8 @@ const WRITE_PATH_ORDERED_READS: Readonly<Record<string, number>> = {
   "src/services/owner-finance/diagnosis.service.ts": 2,
   // the latest run on ONE given snapshot (by snapshotId) — not a choice between evidence
   "src/services/owner-finance/baseline.service.ts": 1,
+  // first-run: the latest run on ONE given snapshot (by snapshotId) — the snapshot itself is chosen by the canonical selectors
+  "src/services/owner-first-run/first-run-evidence.reader.ts": 1,
 };
 
 function sourceFiles(dir: string): string[] {

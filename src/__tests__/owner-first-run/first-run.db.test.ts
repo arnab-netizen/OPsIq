@@ -318,6 +318,23 @@ describe("[db] first-run: governed correction and activation", () => {
     const other = await makeTenant();
     await expect(getAcceptedNextMove(other.workspaceId, business.id)).rejects.toBeInstanceOf(NotFoundError);
   });
+  it("[db] after an amendment with no re-run there is no read on the new figures: the owner is asked to update it, then it returns", async () => {
+    const t = await makeTenant();
+    const { business, snap } = await setUpToResult(t);
+    const { amendFinancialSnapshot } = await import("@/services/owner-finance/snapshot.service");
+    const amended: any = await amendFinancialSnapshot(snap.id, { amendmentReason: "fix", revenue: 9000 } as any, t.userId, t.workspaceId);
+    const ctx = await getFirstRunContext(t.workspaceId);
+    expect(ctx.diagnosisStale).toBe(true);
+    expect(ctx.currentSnapshotId).toBe(amended.snapshot.id); // the head of the amendment chain, ready to diagnose
+    expect(ctx.latestCycleId).toBeNull();
+    await expect(getFirstMoneyRead(t.workspaceId, business.id)).rejects.toBeInstanceOf(ConflictError);
+    await runFinanceDiagnosis(business.id, ctx.currentSnapshotId!, t.userId, t.workspaceId);
+    const after = await getFirstRunContext(t.workspaceId);
+    expect(after.diagnosisStale).toBe(false);
+    const view = await getFirstMoneyRead(t.workspaceId, business.id);
+    expect(view.snapshotId).toBe(amended.snapshot.id);
+    expect(view.stale).toBe(false);
+  });
   it("[db] accept is refused while the evidence has changed since the read", async () => {
     const t = await makeTenant();
     const { business, snap } = await setUpToResult(t);

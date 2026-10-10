@@ -95,8 +95,8 @@ export function FirstRunFlow() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch when the result exists
-    if (hasResult) void loadResult();
-  }, [hasResult, loadResult]);
+    if (hasResult && !ctx?.diagnosisStale) void loadResult();
+  }, [hasResult, ctx?.diagnosisStale, loadResult]);
 
   const runDiagnosis = useCallback(async () => {
     if (!businessId || inFlight.current) return;
@@ -204,7 +204,18 @@ export function FirstRunFlow() {
           </div>
         )}
 
-        {hasResult && view && (
+        {hasResult && ctx?.diagnosisStale && (
+          <div className="rounded-lg border border-border bg-background p-4 text-sm" data-testid="first-run-update-read">
+            <p className="font-medium text-foreground">Your numbers have changed since your last read.</p>
+            <p className="mt-1 text-muted-foreground">Your earlier numbers are kept on record. OpsIQ will work out a fresh read from the new ones.</p>
+            <Button type="button" className="mt-3 min-h-11" disabled={diagnosing === "running"} onClick={() => void runDiagnosis()}>
+              {diagnosing === "running" ? "Updating…" : "Update my read"}
+            </Button>
+            {diagnosing === "failed" && <p role="alert" className="mt-2 text-destructive">The update didn&rsquo;t run. Your numbers are saved &mdash; try again.</p>}
+          </div>
+        )}
+
+        {hasResult && view && !ctx?.diagnosisStale && (
           <>
             {correction && (
               <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-result-changes" aria-live="polite">
@@ -235,15 +246,6 @@ export function FirstRunFlow() {
               onCorrect={() => setMode("correcting")}
               onImprove={() => setMode("improving")}
             />
-            {(view.stale || ctx?.diagnosisStale) && (
-              <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-run-update-read">
-                <p className="text-foreground">You&rsquo;ve added or changed numbers since this read was made.</p>
-                <Button type="button" className="mt-2 min-h-11" disabled={diagnosing === "running"} onClick={() => void runDiagnosis()}>
-                  {diagnosing === "running" ? "Updating…" : "Update my read"}
-                </Button>
-                {diagnosing === "failed" && <p role="alert" className="mt-2 text-destructive">The update didn&rsquo;t run. Your numbers are saved &mdash; try again.</p>}
-              </div>
-            )}
             {actionError && <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="first-run-action-error">{actionError}</p>}
 
             {mode === "correcting" && (
