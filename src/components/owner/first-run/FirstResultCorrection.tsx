@@ -91,7 +91,15 @@ export function FirstResultCorrection({
           ))}
         </div>
       </fieldset>
-      {error && <p role="alert" className="mt-3 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="first-result-correction-error">{error}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="mt-3 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+          data-testid="first-result-correction-error"
+        >
+          {error}
+        </p>
+      )}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Button type="submit" disabled={busy || hasErrors || !changes} className="min-h-11" data-testid="first-result-correction-submit">
           {busy ? "Working it out again…" : "Save correction and update the read"}

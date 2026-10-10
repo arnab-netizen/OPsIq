@@ -38,11 +38,18 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { listOwnerDecisions } from "@/services/owner-outcome/owner-decision.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { NEW_GOAL_TARGET_TYPES } from "@/services/owner-strategy/goal.service";
 import { recordProductEvent } from "@/services/analytics/product-events.service";
-import type { ProductEventName } from "@/domain/analytics/product-events";
+import { sanitiseProductEventProps, type ProductEventName } from "@/domain/analytics/product-events";
+import type { AuditEventName } from "@/domain/constants/audit-events";
 
 type Json = Record<string, unknown>;
+
+/** Server-side log text for a swallowed analytics failure (governed classifier; never shown to an owner). */
+function describeFailure(error: unknown): string {
+  return classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).technicalDetails;
+}
 
 export interface FirstRunBusiness {
   id: string;
@@ -362,6 +369,11 @@ export const FEEDBACK_REASONS = [
   "OTHER",
 ] as const;
 
+/**
+ * Append one first-result interaction exactly once per (workspace, idempotency key), with its audit event in the
+ * SAME transaction (a recorded interaction always has its audit event, and neither exists without the other).
+ * A repeat or a concurrent identical submit is the replay: nothing new is written.
+ */
 async function insertInteractionOnce(args: {
   workspaceId: string;
   businessId: string;
@@ -371,6 +383,7 @@ async function insertInteractionOnce(args: {
   rating?: string;
   reason?: string;
   idempotencyKey: string;
+  audit: { eventName: AuditEventName; props?: Record<string, unknown> };
 }): Promise<{ created: boolean }> {
   const existing = await db.ownerFirstResultInteraction.findFirst({
     where: { workspaceId: args.workspaceId, idempotencyKey: args.idempotencyKey },
@@ -378,18 +391,32 @@ async function insertInteractionOnce(args: {
   });
   if (existing) return { created: false };
   try {
-    await db.ownerFirstResultInteraction.create({
-      data: {
-        id: randomUUID(),
-        workspaceId: args.workspaceId,
-        businessId: args.businessId,
-        snapshotId: args.snapshotId,
-        kind: args.kind,
-        rating: args.rating ?? null,
-        reason: args.reason ?? null,
-        idempotencyKey: args.idempotencyKey,
-        createdBy: args.actorId,
-      },
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.ownerFirstResultInteraction.create({
+        data: {
+          id: randomUUID(),
+          workspaceId: args.workspaceId,
+          businessId: args.businessId,
+          snapshotId: args.snapshotId,
+          kind: args.kind,
+          rating: args.rating ?? null,
+          reason: args.reason ?? null,
+          idempotencyKey: args.idempotencyKey,
+          createdBy: args.actorId,
+        },
+      });
+      await emitAuditEvent(
+        {
+          eventName: args.audit.eventName,
+          workspaceId: args.workspaceId,
+          actorId: args.actorId,
+          entityType: "OwnerBusiness",
+          entityId: args.businessId,
+          payload: sanitiseProductEventProps(args.audit.props),
+          visibility: "internal",
+        },
+        tx,
+      );
     });
     return { created: true };
   } catch (error) {
@@ -425,7 +452,7 @@ export async function recordProductEventOnce(args: {
     await recordProductEvent({ name: args.name, workspaceId: args.workspaceId, actorId: args.actorId, businessId: args.businessId, props: args.props });
     return true;
   } catch (error) {
-    logger.warn("product milestone not recorded", undefined, { event: args.name, error: error instanceof Error ? error.message : String(error) });
+    logger.warn("product milestone not recorded", undefined, { event: args.name, error: describeFailure(error) });
     return false;
   }
 }
@@ -438,7 +465,7 @@ export async function recordActivationIfFirst(workspaceId: string, actorId: stri
   try {
     return await recordActivationIfFirstUnsafe(workspaceId, actorId, businessId);
   } catch (error) {
-    logger.warn("activation not recorded", undefined, { error: error instanceof Error ? error.message : String(error) });
+    logger.warn("activation not recorded", undefined, { error: describeFailure(error) });
     return false;
   }
 }
@@ -468,17 +495,13 @@ async function assertBusiness(workspaceId: string, businessId: string): Promise<
 
 export async function recordFirstResultViewed(workspaceId: string, actorId: string, businessId: string): Promise<void> {
   const view = await getFirstMoneyRead(workspaceId, businessId);
-  const { created } = await insertInteractionOnce({
+  await insertInteractionOnce({
     workspaceId, businessId, actorId, snapshotId: view.snapshotId, kind: "RESULT_VIEWED", idempotencyKey: `viewed:${view.cycleId}`,
-  });
-  if (created) {
-    await recordProductEventOnce({
-      name: "first_result_viewed",
+    audit: {
       eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_VIEWED,
-      workspaceId, actorId, businessId,
       props: { evidenceQuality: view.read.evidenceQuality ?? undefined, confidenceTier: view.read.confidenceTier },
-    });
-  }
+    },
+  });
 }
 
 export async function requestImprovement(
@@ -491,14 +514,9 @@ export async function requestImprovement(
   if (!cycle) throw new ValidationError("There is no first read to improve yet.", { fieldErrors: [] });
   const { created } = await insertInteractionOnce({
     workspaceId, businessId, actorId, snapshotId: cycle.snapshotId, kind: "IMPROVEMENT_REQUESTED", idempotencyKey: `improve:${idempotencyKey}`,
+    audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED },
   });
-  if (created) {
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED, workspaceId, actorId,
-      entityType: "OwnerBusiness", entityId: businessId, payload: {}, visibility: "internal",
-    });
-    await recordActivationIfFirst(workspaceId, actorId, businessId);
-  }
+  if (created) await recordActivationIfFirst(workspaceId, actorId, businessId);
   return { replayed: !created };
 }
 
@@ -518,13 +536,8 @@ export async function submitFirstValueFeedback(
   const { created } = await insertInteractionOnce({
     workspaceId, businessId, actorId, snapshotId: cycle?.snapshotId ?? null, kind: "FEEDBACK",
     rating: input.rating, reason: input.reason, idempotencyKey: `feedback:${input.idempotencyKey}`,
+    audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_VALUE_FEEDBACK, props: { rating: input.rating, ...(input.reason ? { reason: input.reason } : {}) } },
   });
-  if (created) {
-    await recordProductEvent({
-      name: "first_value_feedback", workspaceId, actorId, businessId,
-      props: { rating: input.rating, ...(input.reason ? { reason: input.reason } : {}) },
-    });
-  }
   return { replayed: !created };
 }
 

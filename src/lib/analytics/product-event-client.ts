@@ -8,12 +8,10 @@ import type { ProductEventName } from "@/domain/analytics/product-events";
 
 export function reportAnonymousProductEvent(name: Extract<ProductEventName, "public_start_free_clicked" | "signup_started">): void {
   try {
-    const body = JSON.stringify({ name });
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const ok = navigator.sendBeacon("/api/product-events", new Blob([body], { type: "application/json" }));
-      if (ok) return;
-    }
-    void fetch("/api/product-events", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => undefined);
+    // sendBeacon is a fire-and-forget delivery that survives navigation; browsers without it simply skip the event
+    // (analytics must never affect the page, and there is deliberately no retry or fallback request).
+    if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return;
+    navigator.sendBeacon("/api/product-events", new Blob([JSON.stringify({ name })], { type: "application/json" }));
   } catch {
     /* analytics must never affect the page */
   }

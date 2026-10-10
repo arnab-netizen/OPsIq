@@ -5,6 +5,7 @@
  */
 import { emitAuditEvent } from "@/infra/audit";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   PRODUCT_EVENTS,
   sanitiseProductEventProps,
@@ -33,6 +34,9 @@ export async function recordProductEvent(input: RecordProductEventInput): Promis
       visibility: "internal",
     });
   } catch (error) {
-    logger.warn("product event not recorded", undefined, { event: input.name, error: error instanceof Error ? error.message : String(error) });
+    logger.warn("product event not recorded", undefined, {
+      event: input.name,
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).technicalDetails,
+    });
   }
 }

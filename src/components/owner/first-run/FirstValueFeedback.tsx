@@ -69,7 +69,11 @@ export function FirstValueFeedback({ businessId }: { businessId: string }) {
           </div>
         </div>
       )}
-      {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
