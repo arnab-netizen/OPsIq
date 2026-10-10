@@ -86,6 +86,7 @@
 | `QUICKBOOKS_CLIENT_SECRET` | `OPTIONAL_FEATURE` | Same |
 | `QUICKBOOKS_REDIRECT_URI` | `OPTIONAL_FEATURE` | Must match |
 | `QUICKBOOKS_ENVIRONMENT` | `OPTIONAL_FEATURE` | `sandbox` or `production` |
+| `QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN` | `OPTIONAL_FEATURE` | Absent → webhook endpoint answers 503 (fail-closed); signature secret, never logged |
 | `SLACK_BOT_TOKEN` | `OPTIONAL_FEATURE` | Absent → Slack alert delivery disabled |
 | `SLACK_DEFAULT_CHANNEL` | `OPTIONAL_FEATURE` | Same |
 

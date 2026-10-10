@@ -1,6 +1,6 @@
 # QuickBooks Online — business-scoped connection persistence
 
-`QBO_READ_ONLY` · `PRODUCTION_MIGRATION_REQUIRED=YES` (`20261008090000_qbo_connection_tenancy_persistence`, additive) · `NO_OWNER_SURFACE` · `NO_SYNC` · `NO_EVIDENCE_ADOPTION` · `NO_WRITE_API`
+`QBO_READ_ONLY` · `PRODUCTION_MIGRATION_REQUIRED=YES` (`20261008090000_qbo_connection_tenancy_persistence`, additive) · `NO_EVIDENCE_ADOPTION` · `NO_WRITE_API` — _the original `NO_OWNER_SURFACE` / `NO_SYNC` limits were lifted by the reviewed read-only sync slice; see `QBO_READ_ONLY_SYNC.md`_
 
 ## Architecture decision: `QBO_SPECIFIC`
 The generic `ExternalConnection` is unique per `(workspace, provider)` and has no business, realm or environment; `ExternalOAuthToken` has no rotation fence or refresh expiry. Per-business realms cannot be represented there without changing legacy Google Sheets connector semantics, so three QBO tables are added and the shared `encryptOAuthToken()` / `decryptOAuthToken()` (AES-256-GCM, workspace-bound HKDF key) is reused unchanged. No second crypto, no parallel generic framework.
@@ -29,7 +29,7 @@ Enforced by service checks under advisory locks AND by partial unique indexes `q
 Additive only; three new empty tables; no existing uniqueness changes (no preflight data dependency). Tested only on throwaway loopback Postgres. NOT applied to production here; production application goes through the owner-approved `migrate-production.yml` workflow before this change is deployed.
 
 ## Known limitations
-- No routes/callback, no UI, no scheduler: `refreshQboTokens` is not invoked anywhere.
+- (Superseded by `QBO_READ_ONLY_SYNC.md`: `refreshQboTokens` is now invoked by `getUsableQboAccessToken`; sync, status and webhook routes and the `qbo-read-sync` scheduler task exist. Still no UI.)
 - Revoking the grant at Intuit is the caller's step; `disconnectQboConnection` is local and removes the token ciphertext.
 - A state consumed but whose code exchange fails is burned (the user restarts authorization).
 - No business-condition re-evaluation hook yet: nothing consumes QBO data until the sync/evidence slice.

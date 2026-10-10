@@ -49,7 +49,6 @@ export function toDecimalString(value: unknown): string | null {
 
 function text(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null;
-  // eslint-disable-next-line no-control-regex
   const cleaned = v.replace(/[\u0000-\u001f\u007f]/g, " ").trim();
   return cleaned.length === 0 ? null : cleaned.slice(0, max);
 }
