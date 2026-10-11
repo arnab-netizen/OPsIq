@@ -25,12 +25,32 @@ const run = (c: ConnectedTenant, at: Date, extra: Parameters<typeof testDeps>[1]
   runQboReadSync(manual(c, o), testDeps(c, { now: () => at, ...extra }));
 const stateOf = (c: ConnectedTenant) => db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
 const cpOf = async (c: ConnectedTenant) => parseContinuation((await stateOf(c)).continuation);
-/** A tiny deadline and grace: the hard abort fires ~40 ms after the invocation starts. */
-const TINY = { deadlineMs: 10, hardAbortGraceMs: 30 } as const;
-const ELAPSED_BOUND_MS = 3_000;
+/**
+ * Short but not racy: the hard abort fires 500 ms after the invocation starts (soft 250 + grace 250), long enough for the few database
+ * steps that precede the first provider / token request, short enough that nothing waits for the production 75 s.
+ */
+const TINY = { deadlineMs: 250, hardAbortGraceMs: 250 } as const;
+const ELAPSED_BOUND_MS = 4_000;
+const DAY = 86_400_000;
+/**
+ * Deterministic token clock. The sync runs on the INJECTED clock (`now: () => T0`), so token expiry is expressed relative to T0, never to
+ * the wall clock: "expired" is T0 - 1 s (a refresh MUST happen), "valid" is T0 + 30 days (no refresh may happen).
+ */
+const expiredAtT0 = (tag: string) => ({ ...grantOf({ tag }), accessTokenExpiresAt: new Date(T0.getTime() - 1_000) });
+const validAtT0 = (tag: string) => ({ ...grantOf({ tag }), accessTokenExpiresAt: new Date(T0.getTime() + 30 * DAY) });
+
+/** Records every request together with its abort signal, then delegates to the fake Intuit. Proves the intended path was ENTERED and that the in-flight request was really aborted. */
+function spyFetch(c: ConnectedTenant) {
+  const seen: Array<{ path: string; signal: AbortSignal | null }> = [];
+  const fetchImpl = async (input: string, init?: RequestInit) => {
+    seen.push({ path: new URL(input).pathname, signal: (init?.signal as AbortSignal | undefined) ?? null });
+    return c.fake.fetchImpl(input, init);
+  };
+  const of = (suffix: string) => seen.filter((r) => r.path.endsWith(suffix));
+  return { fetchImpl, seen, of };
+}
 
 const qboTasks = ownedQboTasks();
-afterAll(qboTasks.cleanup);
 
 describe("documented bound is derived from the exported constants (no hand-copied numbers)", () => {
   it("worst case = soft deadline + hard-abort grace + finalisation allowance", () => {
@@ -57,12 +77,19 @@ describe("documented bound is derived from the exported constants (no hand-copie
 });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every provider-work path (real Postgres)", () => {
-  it("a STALLED token refresh (token endpoint never answers) hits the hard abort: CANCELLED, connection ACTIVE, lease released, nothing partially written", async () => {
-    const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "stall" }) });
+  // DB-owned cleanup is registered ONLY inside the DB-gated suite: in a non-DB run no hook executes and nothing touches Prisma (a failing cleanup still fails loudly - it is never swallowed).
+  afterAll(qboTasks.cleanup);
+
+  it("a STALLED token refresh hits the hard abort: the refresh request WAS made, its signal WAS aborted, the run ends CANCELLED, connection ACTIVE, lease released, nothing partially written", async () => {
+    const c = await seedConnected({ grant: expiredAtT0("stall") });
     c.fake.inject("tokens/bearer", "TIMEOUT");
+    const spy = spyFetch(c);
     const t = Date.now();
-    const out = await run(c, T0, TINY);
+    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
+    expect(spy.of("/tokens/bearer")).toHaveLength(1); // the refresh path was entered (the stored token is expired at T0)
+    expect(spy.of("/tokens/bearer")[0].signal?.aborted).toBe(true); // ...and the in-flight request received the abort
+    expect(spy.seen.filter((r) => !r.path.endsWith("/tokens/bearer"))).toHaveLength(0); // nothing else ran before the refresh gave up
     expect(out).toMatchObject({ status: "FAILED", code: "CANCELLED" });
     expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("ACTIVE");
     const st = await stateOf(c);
@@ -71,45 +98,58 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
     expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId } })).toBe(0);
   });
 
-  it("a refresh claim wait is cut short by the same deadline (another refresher holds the claim)", async () => {
-    const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "wait" }) });
+  it("a refresh CLAIM WAIT is cut short by the same deadline: the wait loop WAS entered (sleeps), Intuit was never called, CANCELLED", async () => {
+    const c = await seedConnected({ grant: expiredAtT0("wait") });
     await db.qboSyncState.upsert({
       where: { connectionId: c.connectionId },
-      update: { refreshClaimToken: randomUUID(), refreshClaimExpiresAt: new Date(Date.now() + 120_000) },
-      create: { connectionId: c.connectionId, workspaceId: c.t.ws, businessId: c.t.biz, refreshClaimToken: randomUUID(), refreshClaimExpiresAt: new Date(Date.now() + 120_000) },
+      update: { refreshClaimToken: randomUUID(), refreshClaimExpiresAt: new Date(T0.getTime() + 60 * DAY) },
+      create: { connectionId: c.connectionId, workspaceId: c.t.ws, businessId: c.t.biz, refreshClaimToken: randomUUID(), refreshClaimExpiresAt: new Date(T0.getTime() + 60 * DAY) },
     });
+    const spy = spyFetch(c);
+    let sleeps = 0;
+    const sleep = async () => { sleeps++; await new Promise((r) => setTimeout(r, 5)); }; // a real (tiny) pause: the loop must not spin hot
     const t = Date.now();
-    const out = await run(c, T0, { ...TINY, claimPollMs: 1_000 });
+    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl, sleep });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS); // the real wait would have been 30 s
+    expect(sleeps).toBeGreaterThanOrEqual(1); // the claim-wait path was entered
+    expect(spy.seen).toHaveLength(0); // the token endpoint and the API were never reached
     expect(out).toMatchObject({ status: "FAILED", code: "CANCELLED" });
-    expect(c.fake.tokenCalls).toBe(0);
+    expect((await stateOf(c)).leaseToken).toBeNull();
   });
 
-  it("a HANGING in-flight provider query is aborted: CANCELLED, the lease is released, the checkpoint is intact and the next execution resumes and succeeds", async () => {
-    const c = await seedConnected();
+  it("a HANGING in-flight provider query is aborted (its signal WAS aborted): CANCELLED, lease released, checkpoint intact, and the next execution resumes and succeeds", async () => {
+    const c = await seedConnected({ grant: validAtT0("hang") });
     for (let i = 1; i <= 3; i++) c.fake.data.Customer.push(customer(`h${i}`, `2026-09-1${i}T10:00:00Z`));
     c.fake.inject("query", "TIMEOUT");
+    const spy = spyFetch(c);
     const t = Date.now();
-    const out = await run(c, T0, TINY);
+    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
+    expect(spy.of("/tokens/bearer")).toHaveLength(0); // the token was valid: no refresh path
+    const queries = spy.of("/query");
+    expect(queries.length).toBeGreaterThanOrEqual(1); // the query path was entered...
+    expect(queries[0].signal?.aborted).toBe(true); // ...and the hanging request was aborted
     expect(out).toMatchObject({ status: "FAILED", code: "CANCELLED" });
     const st = await stateOf(c);
     expect(st).toMatchObject({ leaseToken: null, lastErrorCode: "CANCELLED" });
     expect(st.watermarks).toEqual({});
-    const cp = await cpOf(c);
-    expect(cp).toMatchObject({ restart: false, entityIndex: 0 }); // resumable, cutoff fixed
+    expect(await cpOf(c)).toMatchObject({ restart: false, entityIndex: 0 }); // resumable, cutoff fixed
     const next = await run(c, hour(1));
     expect(next.status).toBe("SUCCEEDED");
     expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer" } })).toBe(3);
   });
 
-  it("a HANGING by-id verification read is aborted; the entity is not marked reconciled and the next execution carries on", async () => {
-    const c = await seedConnected();
+  it("a HANGING by-id verification read is aborted (its signal WAS aborted); the entity is not marked reconciled and the next execution carries on", async () => {
+    const c = await seedConnected({ grant: validAtT0("byid") });
     c.fake.data.Customer.push(customer("v1", "2026-09-01T10:00:00Z"));
     expect((await run(c, T0)).status).toBe("SUCCEEDED");
     c.fake.data.Customer.length = 0;
     c.fake.inject("/customer/v1", "TIMEOUT");
-    const out = await run(c, hour(1), TINY, { modeOverride: "FULL" });
+    const spy = spyFetch(c);
+    const out = await run(c, hour(1), { ...TINY, fetchImpl: spy.fetchImpl }, { modeOverride: "FULL" });
+    const byId = spy.of("/customer/v1");
+    expect(byId).toHaveLength(1); // the verification path was entered
+    expect(byId[0].signal?.aborted).toBe(true);
     expect(out).toMatchObject({ status: "FAILED", code: "CANCELLED" });
     const cp = await cpOf(c);
     expect(cp?.reconciled).not.toContain("Customer");
@@ -121,7 +161,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
   });
 
   it("verifyUnseen deadline path: with an already-expired soft deadline each execution advances the checkpoint and verifies at most one candidate, ends CONTINUING, and the sync still completes", async () => {
-    const c = await seedConnected();
+    const c = await seedConnected({ grant: validAtT0("verify") });
     for (let i = 1; i <= 4; i++) c.fake.data.Customer.push(customer(`p${i}`, `2026-09-0${i}T10:00:00Z`));
     expect((await run(c, T0)).status).toBe("SUCCEEDED");
     c.fake.data.Customer.length = 0;
@@ -143,19 +183,24 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
     expect(reads()).toBe(4); // each candidate was read exactly once in this logical sync
   });
 
-  it("the forced refresh after an API 401 obeys the same deadline: a stalled token endpoint ends CANCELLED, never REAUTH_REQUIRED", async () => {
-    const c = await seedConnected();
-    c.fake.validAccessTokens = new Set(["not-the-stored-token"]); // every call answers 401
+  it("the forced refresh after an API 401 obeys the same deadline: the 401 happened, the refresh request WAS made and aborted, CANCELLED, never REAUTH_REQUIRED", async () => {
+    const c = await seedConnected({ grant: validAtT0("force") });
+    c.fake.validAccessTokens = new Set(["not-the-stored-token"]); // every API call answers 401
     c.fake.inject("tokens/bearer", "TIMEOUT");
+    const spy = spyFetch(c);
     const t = Date.now();
-    const out = await run(c, T0, TINY);
+    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
+    const order = spy.seen.map((r) => (r.path.endsWith("/tokens/bearer") ? "TOKEN" : "API"));
+    expect(order[0]).toBe("API"); // the API rejected the stored token first (401) ...
+    expect(order).toContain("TOKEN"); // ... which triggered the forced refresh
+    expect(spy.of("/tokens/bearer")[0].signal?.aborted).toBe(true); // the in-flight refresh received the abort
     expect(out).toMatchObject({ status: "FAILED", code: "CANCELLED" });
     expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("ACTIVE");
   });
 
   it("without any deadline configured nothing is aborted (the soft/hard timers exist only when a deadline is given)", async () => {
-    const c = await seedConnected();
+    const c = await seedConnected({ grant: validAtT0("none") });
     c.fake.data.Customer.push(customer("n1", "2026-09-01T10:00:00Z"));
     expect((await run(c, T0)).status).toBe("SUCCEEDED");
   });

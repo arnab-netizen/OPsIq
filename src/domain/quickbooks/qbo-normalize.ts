@@ -61,30 +61,42 @@ export function toDecimalString(value: unknown): string | null {
 
 /**
  * Exchange-rate normalizer. A rate is NOT a monetary amount: it needs more fractional digits than the 4 kept for amounts (USD per VND is
- * about 0.00004). Keeps up to 8 fractional digits (rounded half away from zero beyond that) and never turns a NON-ZERO rate into "0":
- * a positive value too small to represent in 8 digits is rejected (null) instead of being stored as a fabricated zero.
+ * about 0.00004). Keeps up to 8 fractional digits (rounded half away from zero beyond that) and NEVER turns a NON-ZERO rate into "0":
+ * a non-zero value too small to represent in 8 fractional digits is rejected (null) instead of being stored as a fabricated zero.
+ *
+ * The decision is made on the DECIMAL DIGITS of the input, never on a float formatting: a JS number is read through its shortest
+ * round-trip text (String(v)), which may use scientific notation ("1e-21", "5e-21", "1.5e-8"); both that and plain decimals are expanded
+ * by exact digit arithmetic (BigInt), so no formatting step can flush a tiny value to zero.
  */
 export function toExchangeRateString(value: unknown): string | null {
   let text: string;
   if (typeof value === "number") {
     if (!Number.isFinite(value) || Math.abs(value) >= 1e15) return null;
-    // toFixed(20) is exact enough to see a sub-1e-8 value as non-zero; the digits are then rounded below.
-    text = value.toFixed(20);
+    text = String(value);
   } else if (typeof value === "string") {
     text = value.trim();
   } else return null;
-  const m = /^(-?)(\d{1,15})(?:\.(\d+))?$/.exec(text);
-  if (!m || (m[3] ?? "").length > 30) return null;
-  const frac = m[3] ?? "";
-  const kept = BigInt(m[2] + frac.slice(0, 8).padEnd(8, "0"));
-  const roundUp = frac.length > 8 && frac.charCodeAt(8) >= 53; // '5'
+  const m = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(text);
+  if (!m || text.length > 64) return null;
+  const exp = m[4] === undefined ? 0 : Number(m[4]);
+  if (!Number.isInteger(exp) || Math.abs(exp) > 400) return null;
+  const digits = m[2] + (m[3] ?? "");
+  const pointAt = m[2].length + exp; // number of digits left of the decimal point
+  let whole: string;
+  let frac: string;
+  if (pointAt <= 0) { whole = "0"; frac = "0".repeat(-pointAt) + digits; }
+  else if (pointAt >= digits.length) { whole = digits + "0".repeat(pointAt - digits.length); frac = ""; }
+  else { whole = digits.slice(0, pointAt); frac = digits.slice(pointAt); }
+  whole = whole.replace(/^0+(?=\d)/, "");
+  if (whole.length > 15) return null;
+  const nonZero = /[1-9]/.test(digits);
+  const kept = BigInt(whole + frac.slice(0, 8).padEnd(8, "0"));
+  const roundUp = frac.length > 8 && frac.charCodeAt(8) >= 53; // first dropped digit '5'..'9'
   const scaled = kept + BigInt(roundUp ? "1" : "0");
-  const inputNonZero = /[1-9]/.test(m[2] + frac);
-  if (scaled === BigInt("0")) return inputNonZero ? null : "0";
+  if (scaled === BigInt("0")) return nonZero ? null : "0";
   const unit = BigInt("100000000");
-  const whole = scaled / unit;
   const fracOut = (scaled % unit).toString().padStart(8, "0").replace(/0+$/, "");
-  const out = fracOut ? `${whole}.${fracOut}` : `${whole}`;
+  const out = fracOut ? `${scaled / unit}.${fracOut}` : `${scaled / unit}`;
   return m[1] === "-" ? `-${out}` : out;
 }
 

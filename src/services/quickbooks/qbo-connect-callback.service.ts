@@ -132,7 +132,9 @@ export async function completeQboCallback(
 
   // Both are non-null and shape-valid here (checked above, before any side effect).
   const authorizationCode = code as string;
-  const verifiedRealm = realmId as string;
+  // The realm in the URL is CLIENT-RELAYED: until the provider proves it, it is only a claim and must never inform a safety decision.
+  const claimedRealm = realmId as string;
+  let provenRealm: string | null = null;
 
   // Fail closed BEFORE Intuit issues a long-lived refresh token that this deployment could not store (missing / short encryption key).
   try {
@@ -153,14 +155,18 @@ export async function completeQboCallback(
   }
 
   /**
-   * A grant OpsIQ will not keep should not stay live at Intuit, but an Intuit revocation may be app/company-wide: it is attempted ONLY when
-   * no not-disconnected connection holds the verified company. If that cannot be established (the lookup fails) the grant is NOT
-   * revoked - leaving an unrecorded token is the lesser harm than killing a working connection (an operator revokes it at Intuit;
-   * see QBO_CONNECTION_PERSISTENCE.md, "Grant revocation"). Revocation errors are swallowed; nothing is logged.
+   * A grant OpsIQ will not keep should not stay live at Intuit, but an Intuit revocation may be app/company-wide: it is attempted ONLY
+   * when the company the grant belongs to has been PROVEN by the provider (`provenRealm`) AND no not-disconnected connection holds that
+   * company. While the realm is only the client's claim (verification failed, was temporary, was malformed or named another company)
+   * there is no trustworthy company to ask about, so the grant is NOT revoked: the claimed realm is attacker-controllable and a holder
+   * check against it could clear a revoke of a grant that belongs to a company another tenant holds. If the holder lookup itself fails the
+   * grant is not revoked either. Leaving an unrecorded token is the lesser harm; an operator revokes it at Intuit (see
+   * QBO_CONNECTION_PERSISTENCE.md, "Known limitations"). Revocation errors are swallowed; nothing is logged.
    */
   const discardGrant = async (): Promise<void> => {
+    if (provenRealm === null) return;
     try {
-      if (await isQboRealmHeldLive({ environment: authorization.environment, realmId: verifiedRealm }, deps)) return;
+      if (await isQboRealmHeldLive({ environment: authorization.environment, realmId: provenRealm }, deps)) return;
       await revokeQboToken(config, grant.refreshToken, { fetchImpl: deps.fetchImpl });
     } catch {
       // best effort only
@@ -171,20 +177,21 @@ export async function completeQboCallback(
   // reports that same id. One read-only GET (companyinfo) with the just-issued token; nothing is persisted from it.
   try {
     const probe = createQboReadClient({
-      config, realmId: verifiedRealm, getAccessToken: async () => grant.accessToken,
+      config, realmId: claimedRealm, getAccessToken: async () => grant.accessToken,
       fetchImpl: deps.fetchImpl, maxRetries: 1, timeoutMs: 15_000,
     });
-    const company = normalizeCompanyInfo(await probe.companyInfo(), verifiedRealm);
-    if (!company.ok || company.record.normalized.reportedRealmId !== verifiedRealm) throw new QboRealmNotProven();
+    const company = normalizeCompanyInfo(await probe.companyInfo(), claimedRealm);
+    if (!company.ok || company.record.normalized.reportedRealmId !== claimedRealm) throw new QboRealmNotProven();
+    provenRealm = claimedRealm; // the provider itself reported this company id for this token
   } catch (e) {
     const transient = isQboProviderError(e) && (e.kind === "TIMEOUT" || e.kind === "TRANSIENT_PROVIDER_FAILURE" || e.kind === "RATE_LIMITED");
-    await discardGrant();
+    // Realm NOT proven: no revoke (see discardGrant) - the issued grant is left for an operator, never judged by the claimed realm.
     await audit(AUDIT_EVENTS.QBO_AUTHORIZATION_FAILED, { stage: "REALM_VERIFICATION", reason: transient ? "PROVIDER_TEMPORARY" : "REALM_NOT_PROVEN" });
     return { ok: false, code: transient ? "PROVIDER_TEMPORARY" : "INVALID_REALM" };
   }
 
   try {
-    const finalized = await finalizeQboConnection({ authorization, realmId: verifiedRealm, grant }, deps);
+    const finalized = await finalizeQboConnection({ authorization, realmId: claimedRealm, grant }, deps);
     if (!finalized.ok) {
       // Revoke ONLY for a business already bound to another company (and then only if no live connection holds the verified company,
       // see discardGrant). REALM_ALREADY_BOUND (another connection holds this company - an Intuit revoke may be app/company-wide) and

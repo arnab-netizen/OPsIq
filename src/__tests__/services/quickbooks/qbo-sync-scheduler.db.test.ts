@@ -14,13 +14,13 @@ import { seedTenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 import { TASK_NAME_QBO_READ_SYNC } from "@/infra/qbo-sync-tasks";
 import { listSchedulableConnections } from "@/services/quickbooks/qbo-sync-store.service";
-import { QBO_TEST_ENV, seedConnected, ownedQboTasks, ownedQboWorkspaceIds } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { QBO_TEST_ENV, seedConnected, ownedQboTasks, produceOwnedQboTasks } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import * as webhookRoute from "@/app/api/integrations/quickbooks/webhook/route";
 import { createHmac } from "node:crypto";
 
 const SANDBOX = QBO_TEST_ENV("sandbox");
-/** The producer scan is global by default; every call here is restricted to the workspaces THIS file seeded, so it never creates a task for a row it does not own. */
-const enqueueDueQboReadSyncTasks = (env: Record<string, string | undefined>) => produce(env, { onlyWorkspaceIds: ownedQboWorkspaceIds() });
+/** Every producer call in this file goes through produceOwnedQboTasks: the scan is restricted to the workspaces THIS file seeded (proved in qbo-task-ownership.db.test.ts). */
+const enqueueDueQboReadSyncTasks = produceOwnedQboTasks;
 const tasksFor = (ws: string) => db.scheduledTask.findMany({ where: { workspaceId: ws, taskName: TASK_NAME_QBO_READ_SYNC } });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO scheduled sync (real Postgres)", () => {

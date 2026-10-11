@@ -89,6 +89,26 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync lease / concurrency (real Postgr
     expect(await db.qboSyncRun.count({ where: { connectionId: c.connectionId } })).toBe(1);
   });
 
+  it("PRODUCTION COOLDOWN (60 s): a replay of the same request id INSIDE the cooldown answers NOT_DUE (the cooldown is checked first); after the cooldown the same id replays as ALREADY_COMPLETED; a new id runs", async () => {
+    const c = await seedConnected();
+    const requestId = randomUUID();
+    const cooldown = { manualCooldownMs: 60_000 }; // the production value - NOT the suite's default of 0
+    const a = await runQboReadSync(manual(c, { requestId }), testDeps(c, { now: () => NOW, ...cooldown }));
+    expect(a.status).toBe("SUCCEEDED");
+    const requests = c.fake.requests.length;
+    const inside = await runQboReadSync(manual(c, { requestId }), testDeps(c, { now: () => new Date(NOW.getTime() + 10_000), ...cooldown }));
+    expect(inside).toMatchObject({ status: "NOT_DUE" });
+    expect((inside as { nextAttemptNotBefore: Date }).nextAttemptNotBefore.getTime()).toBe(NOW.getTime() + 60_000);
+    expect(c.fake.requests.length).toBe(requests);
+    const after = new Date(NOW.getTime() + 61_000);
+    const replay = await runQboReadSync(manual(c, { requestId }), testDeps(c, { now: () => after, ...cooldown }));
+    expect(replay).toEqual({ status: "ALREADY_COMPLETED", runId: a.status === "SUCCEEDED" ? a.runId : "", runStatus: "SUCCEEDED" });
+    expect(c.fake.requests.length).toBe(requests);
+    const fresh = await runQboReadSync(manual(c, { requestId: randomUUID() }), testDeps(c, { now: () => after, ...cooldown }));
+    expect(fresh.status).toBe("SUCCEEDED");
+    expect(await db.qboSyncRun.count({ where: { connectionId: c.connectionId } })).toBe(2);
+  });
+
   it("concurrent duplicates of the SAME request id still produce exactly one run row", async () => {
     const c = await seedConnected();
     const requestId = randomUUID();

@@ -30,10 +30,11 @@ const begin = async (c: ConnectedTenant, now: Date): Promise<SyncLease> => {
 const ckpt = (l: SyncLease) => ({ v: 1 as const, syncId: l.syncId, mode: "FULL" as const, cutoff: NOW.toISOString(), entityIndex: 0, cursor: null, tie: null, reconciled: [] as string[], seq: 1, changed: false, restart: false, reportFailures: 0 });
 
 const owned = ownedQboTasks();
-afterAll(owned.cleanup);
 afterEach(() => vi.restoreAllMocks());
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("lease-loss, stale finish and marker paths (real Postgres)", () => {
+  // DB-owned cleanup is registered ONLY inside the DB-gated suite: in a non-DB run no hook executes and nothing touches Prisma (a failing cleanup still fails loudly - it is never swallowed).
+  afterAll(owned.cleanup);
   it("a worker taken over MID-RUN ends LEASE_LOST, writes no page after the takeover, and leaves the new owner's lease intact", async () => {
     const c = await seedConnected();
     for (let i = 1; i <= 3; i++) c.fake.data.Customer.push(customer(`l${i}`, `2026-09-1${i}T10:00:00Z`));

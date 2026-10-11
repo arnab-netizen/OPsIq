@@ -112,7 +112,11 @@ export const QBO_SYNC_WATERMARK_OVERLAP_MS = 10 * 60 * 1000;
 export const QBO_SYNC_FULL_RECONCILE_MS = 7 * 24 * 60 * 60 * 1000;
 /** Minimum spacing between MANUAL runs of one connection (each run costs ~11 provider calls). */
 export const QBO_SYNC_MANUAL_COOLDOWN_MS = 60 * 1000;
-/** Bound on unseen records re-read by id per entity per FULL sync (each sync rotates through the least recently verified). */
+/**
+ * BATCH SIZE of the by-id verification of records a FULL sync did not see (listUnseenRecordIds). It is NOT a cap per sync: batches repeat
+ * until no candidate that has not yet been attempted in this logical sync is left (an attempted id is not selected again), bounded per
+ * EXECUTION by the call budget and the wall-clock deadline, so a sync continues over as many executions as needed.
+ */
 export const QBO_SYNC_VERIFY_READS_PER_ENTITY = 100;
 /** Complete calendar months of period reports (ProfitAndLoss, BalanceSheet) kept current. */
 export const QBO_SYNC_REPORT_MONTHS = 3;

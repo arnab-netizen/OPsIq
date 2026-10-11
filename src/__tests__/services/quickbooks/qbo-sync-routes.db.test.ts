@@ -134,6 +134,28 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync + status routes (real wrapper, r
     expect(A.fake.requests.length).toBe(requests);
   });
 
+  it("route with the PRODUCTION cooldown: the same request id inside 60 s answers 200 NOT_DUE; after the cooldown it replays as 200 ALREADY_COMPLETED", async () => {
+    await asMember(A.t);
+    const T = new Date("2026-10-12T03:00:00Z").getTime();
+    const requestId = randomUUID();
+    syncSpy.extra = { manualCooldownMs: 60_000, now: () => new Date(T) };
+    try {
+      const first = await post({ businessId: A.t.biz, connectionId: A.connectionId, requestId });
+      expect(first.status).toBe(200);
+      expect((await first.json()).status).toBe("SUCCEEDED");
+      syncSpy.extra = { manualCooldownMs: 60_000, now: () => new Date(T + 10_000) };
+      const inside = await post({ businessId: A.t.biz, connectionId: A.connectionId, requestId });
+      expect(inside.status).toBe(200);
+      expect((await inside.json()).status).toBe("NOT_DUE");
+      syncSpy.extra = { manualCooldownMs: 60_000, now: () => new Date(T + 61_000) };
+      const after = await post({ businessId: A.t.biz, connectionId: A.connectionId, requestId });
+      expect(after.status).toBe(200);
+      expect((await after.json()).status).toBe("ALREADY_COMPLETED");
+    } finally {
+      syncSpy.extra = {};
+    }
+  });
+
   it("tenancy: another workspace's owner cannot sync, learn about, or probe this connection (uniform 404, zero provider traffic)", async () => {
     await asMember(B.t);
     const before = A.fake.requests.length;

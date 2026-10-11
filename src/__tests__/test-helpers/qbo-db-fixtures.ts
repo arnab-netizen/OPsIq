@@ -8,6 +8,7 @@ import type { QboTokenGrant } from "@/services/quickbooks/qbo-oauth.service";
 import type { QboSyncDeps } from "@/services/quickbooks/qbo-sync.service";
 import { QboRealmRateLimiter } from "@/services/quickbooks/qbo-rate-limiter";
 import { createFakeIntuit, type FakeIntuit } from "./qbo-fake-intuit";
+import { enqueueDueQboReadSyncTasks } from "@/services/scheduler/scheduler-producers";
 
 export const QBO_TEST_ENV = (environment: QboEnvironment = "sandbox"): Record<string, string> => ({
   QUICKBOOKS_CLIENT_ID: "cid-test",
@@ -30,6 +31,15 @@ export function qboConfig(environment: QboEnvironment = "sandbox"): QboProviderC
  */
 const ownedWorkspaces = new Set<string>();
 export const ownedQboWorkspaceIds = (): string[] => [...ownedWorkspaces];
+
+/**
+ * The producer scan restricted to the workspaces THIS test file seeded (the production scan is global). Every producer call in a test
+ * file goes through this helper, so it can never create a task for a connection another file owns.
+ */
+export const produceOwnedQboTasks = (env: Record<string, string | undefined>) => enqueueDueQboReadSyncTasks(env, { onlyWorkspaceIds: ownedQboWorkspaceIds() });
+
+/** Test-only: make a workspace look like it belongs to ANOTHER test file (used to prove ownership scoping). */
+export function releaseOwnershipForTest(workspaceId: string): void { ownedWorkspaces.delete(workspaceId); }
 
 export function ownedQboTasks(): { cleanup: () => Promise<void> } {
   return {

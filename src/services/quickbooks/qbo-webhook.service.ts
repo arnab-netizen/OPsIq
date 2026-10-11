@@ -7,7 +7,8 @@
  * for dedup) and the fact that "something changed". The actual data is then fetched by the normal GET-only sync.
  *
  *  - A realm is resolved to a connection ONLY through qbo_connections for the CONFIGURED environment, to its single live
- *    connection. An unknown realm is recorded as such and ignored; a realm held by a non-ACTIVE connection is ignored.
+ *    connection. A delivery for an unknown realm, or for a realm held by a non-ACTIVE connection, is COUNTED in the response and
+ *    NOT stored (no ledger row, no hint, no task).
  *    The workspace/business never come from the payload.
  *  - Duplicate deliveries (Intuit is at-least-once) are absorbed by the unique event key in the ledger.
  *  - Ordering is irrelevant by construction: every hint collapses into "run a sync", and the sync reads current state.

@@ -34,9 +34,10 @@ const queriesFor = (c: ConnectedTenant, entity: string, kind: "page" | "count" =
 const stored = (c: ConnectedTenant, entityType: string) => db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType } });
 
 const qboTasks = ownedQboTasks();
-afterAll(qboTasks.cleanup);
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (real Postgres, hostile fake)", () => {
+  // DB-owned cleanup is registered ONLY inside the DB-gated suite: in a non-DB run no hook executes and nothing touches Prisma (a failing cleanup still fails loudly - it is never swallowed).
+  afterAll(qboTasks.cleanup);
   describe("equal LastUpdatedTime buckets larger than a page", () => {
     it("EQUAL_TIMESTAMP_UNSTABLE_ORDER: the provider re-shuffles tied rows on EVERY request; every record is still stored and the bucket is closed by the identity-inclusion check", async () => {
       for (const seed of [1, 7, 42]) {
@@ -183,8 +184,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
     });
   });
 
-  describe("the watermark cannot skip data", () => {
-    it("WATERMARK_NO_SKIP: a crash/failure mid-continuation leaves a checkpoint but NO watermark and NO completed state; the resume completes with the ORIGINAL cutoff", async () => {
+  describe("the durable watermark moves only on confirmed exhaustion (tested against the fake provider, under assumptions R1/R2)", () => {
+    it("WATERMARK_ADVANCES_ONLY_ON_CONFIRMED_EXHAUSTION: a crash/failure mid-continuation leaves a checkpoint but NO watermark and NO completed state; the resume completes with the ORIGINAL cutoff", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 50; i++) c.fake.data.Customer.push(customer(`d${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));
       const first = await run(c, { pageSize: 10, pagesPerExecution: 3 });
@@ -291,7 +292,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect((await stateOf(c)).continuation).toBeNull();
     });
 
-    it("a record leaving an oversized bucket MID-PASS can never produce a false 'complete': the run either ends PROVIDER_INCOMPLETE or has stored every record still present", async () => {
+    it("a record leaving an oversized bucket MID-PASS is never reported complete in the tested membership-change races: the run either ends PROVIDER_INCOMPLETE or has stored every record still present", async () => {
       const c = await seedConnected();
       for (let i = 1; i <= 35; i++) c.fake.data.Invoice.push(invoice(`t${String(i).padStart(3, "0")}`, "2026-09-15T10:00:00Z"));
       const realFetch = c.fake.fetchImpl;
@@ -408,7 +409,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(queriesFor(c, "Invoice", "count").some((r) => (r.url.searchParams.get("query") ?? "").includes(" Id IN "))).toBe(true);
     });
 
-    it("WATERMARK_MEMBERSHIP_RACE_TEST: a flip that happens BETWEEN verification batches is caught by the second round - never a false close", async () => {
+    it("WATERMARK_MEMBERSHIP_RACE_TEST: a flip that happens BETWEEN verification batches is caught by the second round (no close on this tested race)", async () => {
       const c = await seedConnected();
       seedBucket(c, 120); // > one IN batch of 50 so the flip can land mid-round
       let seenIn = 0;
@@ -495,7 +496,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 
-    it("WATERMARK_NO_SILENT_SKIP: a provider that hides B for the whole sync (never serves it) can not be confirmed complete if it still COUNTS B", async () => {
+    it("WATERMARK_INCOMPLETE_BUCKET_FAILS_CLOSED: a provider that hides B for the whole sync (never serves it) is not confirmed complete if it still COUNTS B", async () => {
       const c = await seedConnected();
       seedBucket(c, 35);
       // The provider's COUNT includes a record its pages never return (an inconsistent provider): inclusion can never be established.

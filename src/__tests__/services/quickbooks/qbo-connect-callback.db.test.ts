@@ -114,8 +114,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
         const r = await callback(t, { state, code: "AUTHCODE-" + randomUUID(), realmId: nextRealm() });
         expect(JSON.stringify(r.body)).toContain("INVALID_REALM");
         expect(await db.qboConnection.count({ where: { workspaceId: t.ws } })).toBe(0);
-        // The grant that was issued but not kept is revoked at Intuit (best effort).
-        expect(fetchCalls.some((c) => c.url.includes("/revoke"))).toBe(true);
+        // The realm was never proven, so there is no trustworthy company to judge a revoke by: the grant is left for an operator, never revoked.
+        expect(fetchCalls.some((c) => c.url.includes("/revoke"))).toBe(false);
       }
     });
     it("verification is one read-only GET on the claimed realm with the freshly issued token", async () => {
@@ -340,7 +340,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
       expect(await db.qboConnection.count({ where: { workspaceId: t.ws, status: "ACTIVE" } })).toBe(1);
     });
-    it("RC10: a TRANSIENT verification failure revokes the fresh grant only when no live connection holds that company", async () => {
+    it("RC10: a TRANSIENT verification failure never revokes (the claimed realm is not trusted), whether or not a live connection holds the CLAIMED company", async () => {
       const t = await seedTenant(); const realm = nextRealm();
       const first = await startFlow(t);
       expect((await callback(t, { state: first.state, code: "c0de", realmId: realm })).status).toBe(200);
@@ -348,11 +348,23 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       companyInfoResponder = () => new Response("down", { status: 503 });
       const held = await callback(t, { state: reconnect.state, code: "c0de", realmId: realm });
       expect(held.body.code).toBe("PROVIDER_TEMPORARY");
-      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0); // the working connection survives
       const u = await seedTenant(); const free = await startFlow(u);
       const notHeld = await callback(u, { state: free.state, code: "c0de", realmId: nextRealm() });
       expect(notHeld.body.code).toBe("PROVIDER_TEMPORARY");
-      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(1); // nobody holds it: the unused grant is discarded
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
+      expect(await db.qboConnection.count({ where: { workspaceId: t.ws, status: "ACTIVE" } })).toBe(1); // the working connection survives
+    });
+    it("RC10 hostile: a TAMPERED realm naming a company another tenant holds + failed verification => the holder's connection is untouched and nothing is revoked", async () => {
+      const holder = await seedTenant(); const heldRealm = nextRealm();
+      const h = await startFlow(holder);
+      expect((await callback(holder, { state: h.state, code: "c0de", realmId: heldRealm })).status).toBe(200);
+      const attacker = await seedTenant(); const a = await startFlow(attacker);
+      companyInfoResponder = () => new Response(JSON.stringify({ Fault: { Error: [{ code: "403" }] } }), { status: 403, headers: { "content-type": "application/json" } });
+      const r = await callback(attacker, { state: a.state, code: "c0de", realmId: heldRealm });
+      expect(JSON.stringify(r.body)).toContain("INVALID_REALM");
+      expect(fetchCalls.filter((c2) => c2.url.includes("/revoke"))).toHaveLength(0);
+      expect(await db.qboConnection.count({ where: { workspaceId: holder.ws, status: "ACTIVE" } })).toBe(1);
+      expect(await db.qboConnection.count({ where: { workspaceId: attacker.ws } })).toBe(0);
     });
     it("RC10: a missing token-encryption key fails BEFORE the authorization code is exchanged (no refresh token is ever issued)", async () => {
       const t = await seedTenant(); const { state } = await startFlow(t);

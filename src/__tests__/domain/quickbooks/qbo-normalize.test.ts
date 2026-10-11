@@ -50,6 +50,24 @@ describe("exchange-rate normalization (RC11: a rate is not a money amount)", () 
     expect(toExchangeRateString(null)).toBeNull();
     expect(toExchangeRateString(1e15)).toBeNull();
   });
+  it("extreme magnitudes: a NON-ZERO rate is never \"0\" - it is either kept exactly or rejected (null)", () => {
+    for (const v of [1e-20, 5e-21, 1e-21, 1e-30, 1e-300, 4.9e-324, 0.000000004, "1e-25", "5E-21", "0.00000000000000000001", -1e-21]) {
+      const out = toExchangeRateString(v);
+      expect(out, String(v)).not.toBe("0");
+      expect(out, String(v)).toBeNull(); // below the documented 8-digit precision: fail closed
+    }
+    // Scientific notation that IS representable is expanded exactly.
+    expect(toExchangeRateString(1e-8)).toBe("0.00000001");
+    expect(toExchangeRateString(1.5e-7)).toBe("0.00000015");
+    expect(toExchangeRateString("2.5e-5")).toBe("0.000025");
+    expect(toExchangeRateString(1e-7)).toBe("0.0000001");
+    expect(toExchangeRateString("1E2")).toBe("100");
+    expect(toExchangeRateString(123456789012345)).toBe("123456789012345");
+    // A genuine zero is a provider statement and stays zero; non-finite and out-of-contract inputs are rejected.
+    expect(toExchangeRateString(0)).toBe("0");
+    expect(toExchangeRateString("0e-9")).toBe("0");
+    for (const bad of [Infinity, -Infinity, Number.NaN, 1e15, "1e999", "1e-999", "", "1.2.3", "0x10", {}, [], true]) expect(toExchangeRateString(bad), String(bad)).toBeNull();
+  });
   it("an invoice keeps a USD-per-VND rate, while amounts keep their 4-digit behaviour", () => {
     const fx = normalizeInvoice(invoice("22", "2026-10-02T00:00:00Z", { CurrencyRef: { value: "VND" }, ExchangeRate: 0.0000417, TotalAmt: 1000000.12345 }));
     expect(fx.ok && fx.record.normalized).toMatchObject({ currency: "VND", exchangeRate: "0.0000417", totalAmt: "1000000.1235" });

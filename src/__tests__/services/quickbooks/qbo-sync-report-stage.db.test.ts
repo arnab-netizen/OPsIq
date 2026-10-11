@@ -29,7 +29,6 @@ const has = (c: ConnectedTenant, id: string) => db.qboSyncedRecord.count({ where
 const BAD_REPORT = () => ({ Header: { ReportName: "ProfitAndLoss" }, Rows: "not-a-report" });
 
 const qboTasks = ownedQboTasks();
-afterAll(qboTasks.cleanup);
 
 describe("reportStageFailureDisposition (pure policy)", () => {
   it("permanent causes restart at once; transient causes resume until the bound, then restart; terminal causes keep the checkpoint", () => {
@@ -44,6 +43,8 @@ describe("reportStageFailureDisposition (pure policy)", () => {
 });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("RC1 report-stage failure never freezes entity reads at an old cutoff (real Postgres)", () => {
+  // DB-owned cleanup is registered ONLY inside the DB-gated suite: in a non-DB run no hook executes and nothing touches Prisma (a failing cleanup still fails loudly - it is never swallowed).
+  afterAll(qboTasks.cleanup);
   async function seeded(): Promise<ConnectedTenant> {
     const c = await seedConnected();
     for (let i = 1; i <= 3; i++) c.fake.data.Customer.push(customer(`c${i}`, `2026-09-1${i}T10:00:00Z`));
@@ -162,6 +163,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("RC1 report-stage failure never freezes en
 });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("RC12 unseen-record verification terminates and never reads an id twice in one logical sync (real Postgres)", () => {
+  // DB-owned cleanup is registered ONLY inside the DB-gated suite: in a non-DB run no hook executes and nothing touches Prisma (a failing cleanup still fails loudly - it is never swallowed).
+  afterAll(qboTasks.cleanup);
   it("150 unresolved ids, a tiny wall-clock deadline and a slow provider: bounded forward progress, completion, no false deletion", async () => {
     const c = await seedConnected();
     for (let i = 1; i <= 150; i++) c.fake.data.Customer.push(customer(`u${String(i).padStart(3, "0")}`, new Date(Date.UTC(2026, 8, 1) + i * 1000).toISOString()));

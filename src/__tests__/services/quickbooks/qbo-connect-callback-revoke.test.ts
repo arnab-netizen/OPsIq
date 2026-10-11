@@ -99,19 +99,67 @@ describe("grant revocation decision matrix", () => {
     expect(m.revoke).not.toHaveBeenCalled();
   });
 
-  it("a transient verification failure returns PROVIDER_TEMPORARY and revokes only when the company is not held live", async () => {
-    m.companyInfo.mockRejectedValue(new QboProviderError({ kind: "TIMEOUT" }));
-    expect(await call()).toMatchObject({ ok: false, code: "PROVIDER_TEMPORARY" });
-    expect(m.revoke).toHaveBeenCalledTimes(1);
-    m.revoke.mockClear(); m.held.mockResolvedValue(true);
-    expect(await call()).toMatchObject({ ok: false, code: "PROVIDER_TEMPORARY" });
-    expect(m.revoke).not.toHaveBeenCalled();
-  });
+  describe("RC10: the CLIENT-RELAYED realm never informs a revoke decision (realm not proven => fail closed, no holder lookup, no revoke)", () => {
+    const TAMPERED = "9341999999999"; // a company another tenant holds live; the attacker's grant actually belongs to another company
+    const tampered = () => completeQboCallback({ ...input, query: new URLSearchParams({ state: STATE, code: "AUTHCODE", realmId: TAMPERED }) }, { env: ENV });
+    const holderOnlyOf = (realm: string) => m.held.mockImplementation(async (i: { realmId: string }) => i.realmId === realm);
 
-  it("an unproven realm (permanent verification failure) returns INVALID_REALM", async () => {
-    m.companyInfo.mockResolvedValue({ Id: "999", CompanyName: "X", SyncToken: "0", MetaData: { LastUpdatedTime: "2026-01-01T00:00:00Z" } });
-    expect(await call()).toMatchObject({ ok: false, code: "INVALID_REALM" });
-    expect(m.revoke).toHaveBeenCalledTimes(1);
+    it("tampered realm + provider verification fails (403): INVALID_REALM, the holder of the tampered realm is never consulted, nothing is revoked", async () => {
+      holderOnlyOf(TAMPERED);
+      m.companyInfo.mockRejectedValue(new QboProviderError({ kind: "FORBIDDEN" }));
+      expect(await tampered()).toMatchObject({ ok: false, code: "INVALID_REALM" });
+      expect(m.held).not.toHaveBeenCalled();
+      expect(m.revoke).not.toHaveBeenCalled();
+      expect(m.finalize).not.toHaveBeenCalled();
+    });
+
+    it("tampered realm + provider verification temporarily fails (timeout / 5xx / 429): PROVIDER_TEMPORARY, no holder lookup, no revoke", async () => {
+      holderOnlyOf(TAMPERED);
+      for (const kind of ["TIMEOUT", "TRANSIENT_PROVIDER_FAILURE", "RATE_LIMITED"] as const) {
+        m.companyInfo.mockRejectedValue(new QboProviderError({ kind }));
+        expect(await tampered()).toMatchObject({ ok: false, code: "PROVIDER_TEMPORARY" });
+      }
+      expect(m.held).not.toHaveBeenCalled();
+      expect(m.revoke).not.toHaveBeenCalled();
+    });
+
+    it("tampered realm + MALFORMED provider response: INVALID_REALM, no holder lookup, no revoke", async () => {
+      m.companyInfo.mockResolvedValue({ garbage: true });
+      expect(await tampered()).toMatchObject({ ok: false, code: "INVALID_REALM" });
+      m.companyInfo.mockResolvedValue(null);
+      expect(await tampered()).toMatchObject({ ok: false, code: "INVALID_REALM" });
+      expect(m.held).not.toHaveBeenCalled();
+      expect(m.revoke).not.toHaveBeenCalled();
+    });
+
+    it("the provider reports a DIFFERENT company than the claimed one: not proven, no holder lookup, no revoke", async () => {
+      m.companyInfo.mockResolvedValue({ Id: "9341555555555", CompanyName: "Other", SyncToken: "0", MetaData: { LastUpdatedTime: "2026-01-01T00:00:00Z" } });
+      expect(await tampered()).toMatchObject({ ok: false, code: "INVALID_REALM" });
+      expect(m.held).not.toHaveBeenCalled();
+      expect(m.revoke).not.toHaveBeenCalled();
+    });
+
+    it("no live holder's grant is revoked on ANY verification failure, whatever the holder lookup would say", async () => {
+      for (const holds of [true, false]) {
+        m.held.mockResolvedValue(holds);
+        for (const err of [new QboProviderError({ kind: "FORBIDDEN" }), new QboProviderError({ kind: "TIMEOUT" }), new Error("boom")]) {
+          m.companyInfo.mockRejectedValue(err);
+          expect((await tampered()).ok).toBe(false);
+        }
+      }
+      expect(m.revoke).not.toHaveBeenCalled();
+    });
+
+    it("a PROVEN realm still follows the revoke policy, and the holder lookup is made for the PROVEN realm only", async () => {
+      m.finalize.mockResolvedValue({ ok: false, reason: "BUSINESS_BOUND_TO_OTHER_REALM" });
+      expect(await call()).toMatchObject({ ok: false, code: "BUSINESS_HAS_OTHER_COMPANY" });
+      expect(m.held).toHaveBeenCalledWith(expect.objectContaining({ realmId: REALM }), expect.anything());
+      expect(m.revoke).toHaveBeenCalledTimes(1); // proven realm, no live holder
+      m.revoke.mockClear();
+      m.held.mockImplementation(async (i: { realmId: string }) => i.realmId === REALM);
+      expect(await call()).toMatchObject({ ok: false, code: "BUSINESS_HAS_OTHER_COMPANY" });
+      expect(m.revoke).not.toHaveBeenCalled(); // proven realm with a live holder: never
+    });
   });
 
   it("if the holder lookup itself fails, the grant is NOT revoked (the lesser harm)", async () => {
