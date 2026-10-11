@@ -183,7 +183,7 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
   }
   const lease = begun.lease;
   const counts = emptySyncCounts();
-  const track: Track = { cp: null, pager: null, changed: false, freshCheckpoint: null };
+  const track: Track = { cp: null, pager: null, changed: false, freshCheckpoint: null, tokenRevision: null };
 
   try {
     // An unfinished sync resumes from its durable checkpoint; otherwise this execution starts a new logical sync whose cutoff is fixed now.
@@ -224,9 +224,11 @@ export async function runQboReadSync(input: RunQboSyncInput, deps: QboSyncDeps):
       });
       // Record the failure FIRST (lease-fenced): a stale worker then cannot go on to flip the connection state.
       const done = await finishSyncRunFailure({ lease, code: mapped.code, counts, retryAfterMs: mapped.retryAfterMs, actorId: input.actorId }, deps);
-      if (mapped.code === "REAUTH_REQUIRED") {
-        // An access token rejected even after a forced refresh, or a dead refresh token: the owner must reconnect.
-        await markQboReauthorizationRequired({ workspaceId: lease.workspaceId, connectionId: lease.connectionId, reasonCode: REAUTH_REASON_ACCESS_REJECTED }, deps);
+      if (mapped.code === "REAUTH_REQUIRED" && track.tokenRevision !== null) {
+        // An access token rejected even after a forced refresh: the owner must reconnect. The mark is fenced on the token revision this
+        // execution actually presented, so a rotation persisted meanwhile by another worker is never overwritten by a stale verdict.
+        // (A REAUTH raised by the token layer itself is already marked there, fenced on the revision it observed.)
+        await markQboReauthorizationRequired({ workspaceId: lease.workspaceId, connectionId: lease.connectionId, reasonCode: REAUTH_REASON_ACCESS_REJECTED, expectedTokenRevision: track.tokenRevision }, deps);
       }
       return failed(mapped.code, lease.runId, done.nextAttemptNotBefore);
     } catch (finishError) {
@@ -242,6 +244,8 @@ interface Track {
   changed: boolean;
   /** Checkpoint of a fresh logical sync that has not been persisted yet (written together with the first record). */
   freshCheckpoint: QboContinuation | null;
+  /** Token revision this execution last presented to the provider; fences a REAUTH_REQUIRED transition against a newer rotation. */
+  tokenRevision: number | null;
 }
 
 /**
@@ -345,6 +349,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
     if (first.realmId !== connection.realmId) throw new SyncFailure("COMPANY_MISMATCH");
     let accessToken = first.accessToken;
     let tokenRevision = first.revision;
+    a.track.tokenRevision = tokenRevision;
     let forcedRefreshUsed = false;
 
     const client: QboReadClient = createQboReadClient({
@@ -365,6 +370,7 @@ async function executeReads(a: ExecuteArgs): Promise<ExecuteResult> {
         }
         accessToken = again.accessToken;
         tokenRevision = again.revision;
+        a.track.tokenRevision = tokenRevision;
         return again.accessToken;
       },
       fetchImpl: deps.fetchImpl,
@@ -485,7 +491,7 @@ function stampsOf(records: readonly Record<string, unknown>[]): number[] {
  *
  * EQUAL-TIMESTAMP BUCKET LARGER THAN A PAGE: the provider documents no stable order inside one timestamp, so offset paging cannot
  * by itself guarantee coverage. The bucket is enumerated in passes and CLOSED only by the identity-inclusion check in tieStep (never by
- * a count comparison alone). QBO_SYNC_TIE_MAX_STALLED_PASSES passes in a row that find nothing new end the run as PROVIDER_INCOMPLETE — never a silent skip, never an endless loop.
+ * a count comparison alone). QBO_SYNC_TIE_MAX_STALLED_PASSES passes in a row that find nothing new end the run as PROVIDER_INCOMPLETE — fail-closed under the documented assumptions R1/R2, and never an endless loop.
  */
 async function readEntityKeyset(p: Pager, entity: Entity, lower: Date | null): Promise<boolean> {
   for (;;) {
@@ -662,8 +668,9 @@ async function tieStep(p: Pager, entity: Entity): Promise<void> {
  * FULL sync reconciliation. Records the provider did NOT return in this logical sync are only CANDIDATES (an inactive record, one
  * moved out of the window, or a deleted one — a query cannot tell them apart). Each is re-read by id (GET): a record the provider
  * returns is refreshed. A record it cannot positively return is counted `unresolved` and LEFT UNCHANGED — it is never flagged
- * deleted, because nothing in the read API documents that an error on a read means deletion. Bounded per entity; the rotation
- * (least recently attempted first) lets later syncs cover the rest.
+ * deleted, because nothing in the read API documents that an error on a read means deletion. Candidates are read in batches of
+ * QBO_SYNC_VERIFY_READS_PER_ENTITY (a batch size, not a per-sync cap): the loop continues until no candidate that was not yet attempted
+ * in this logical sync remains, or the execution's soft deadline / budget stops it at the checkpoint (it resumes there).
  */
 async function verifyUnseen(p: Pager, entity: Entity): Promise<boolean> {
   // Batches until no unattempted candidate is left FOR THIS LOGICAL SYNC (attempted ones are excluded by the query), so reconciliation

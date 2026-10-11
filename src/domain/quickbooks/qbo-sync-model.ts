@@ -233,7 +233,7 @@ export function syncFailureFromError(err: unknown): { code: QboSyncFailureCode; 
 export const QboManualSyncRequestSchema = z.strictObject({
   businessId: z.string().uuid(),
   connectionId: z.string().uuid(),
-  /** Optional client-generated id: repeating the same id replays the same run instead of starting another. */
+  /** Optional client-generated id: repeating the same id (after the manual cooldown; inside it the answer is NOT_DUE) replays the same run instead of starting another. */
   requestId: z.string().uuid().optional(),
 });
 export type QboManualSyncRequest = z.infer<typeof QboManualSyncRequestSchema>;
@@ -344,7 +344,7 @@ export function incrementalLowerBound(mode: QboSyncMode, watermark: Date | undef
 }
 
 /**
- * Idempotency key by trigger. MANUAL is replayable by requestId. SCHEDULED is one per UTC day per lease epoch and WEBHOOK
+ * Idempotency key by trigger. MANUAL is replayable by requestId once the manual cooldown has passed. SCHEDULED is one per UTC day per lease epoch and WEBHOOK
  * coalesces per 15 minutes per lease epoch. The epoch (it increments on every lease acquisition) makes a retry after a
  * failed / abandoned / crashed attempt run under a fresh key, while two triggers racing from the SAME state still collide on
  * the unique key and replay. Same-day duplicate scheduled runs after a SUCCESS are refused by the service (NOT_DUE), not by the key.

@@ -844,7 +844,8 @@ export type WebhookRecordResult = "NEW" | "RETRY_PENDING" | "DUPLICATE";
  * Insert-if-absent into the dedup ledger. NEW: this call recorded it. DUPLICATE: already seen and fully handled.
  * RETRY_PENDING: seen before but its hint/task was never completed (the earlier delivery crashed mid-way), so the
  * redelivery must finish the job — a recorded-but-unserved hint can never be lost. Never overwrites a recorded disposition.
- * Hints are written unprocessed (processed_at NULL) and completed by markWebhookEventsProcessed(); ignored events need no work.
+ * Hints are written unprocessed (processed_at NULL) and completed by markWebhookEventsProcessed(). Deliveries for an unknown or
+ * non-active realm are never recorded (the webhook service counts them), so the IGNORED_* dispositions are unused reserve.
  */
 export async function recordWebhookEvent(input: WebhookLedgerInput, deps?: QboPersistenceDeps): Promise<WebhookRecordResult> {
   const now = clock(deps);

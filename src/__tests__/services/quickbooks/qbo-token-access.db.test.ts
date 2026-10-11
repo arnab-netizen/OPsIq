@@ -179,6 +179,97 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO token access + refresh (real Postgres
       expect((await db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } })).status).toBe("REAUTH_REQUIRED");
     });
 
+    // Race harness: a persistence client whose reads/marks let ANOTHER worker rotate the stored token at an exact point.
+    const rotateTo = (c: ConnectedTenant, revision: number) => db.qboConnectionToken.update({
+      where: { connectionId: c.connectionId },
+      data: { revision, accessTokenExpiresAt: new Date(Date.now() + 3_600_000), refreshTokenExpiresAt: new Date(Date.now() + 8_000_000_000) },
+    });
+    /** Runs `afterTokenRead(n)` right after the n-th token read returns (its result is then stale for the caller). */
+    const racingReads = (afterTokenRead: (n: number) => Promise<void>) => {
+      let n = 0;
+      return new Proxy(db, {
+        get(target, prop, receiver) {
+          const v = Reflect.get(target, prop, receiver);
+          if (prop !== "qboConnectionToken") return typeof v === "function" ? v.bind(target) : v;
+          return new Proxy(v, {
+            get(d, m) {
+              const f = Reflect.get(d, m);
+              if (m !== "findFirst") return typeof f === "function" ? f.bind(d) : f;
+              return async (...a: unknown[]) => { const out = await (f as (...x: unknown[]) => Promise<unknown>).apply(d, a); await afterTokenRead(++n); return out; };
+            },
+          });
+        },
+      }) as typeof db;
+    };
+    /** Runs `beforeMark()` immediately before the REAUTH mark's transaction opens (it is the only transaction that writes reauthRequiredAt). */
+    const racingMark = (beforeMark: () => Promise<void>) => new Proxy(db, {
+      get(target, prop, receiver) {
+        const v = Reflect.get(target, prop, receiver);
+        if (prop !== "$transaction") return typeof v === "function" ? v.bind(target) : v;
+        return async (fn: unknown, ...rest: unknown[]) => {
+          if (typeof fn === "function" && fn.toString().includes("reauthRequiredAt")) await beforeMark();
+          return (v as (...x: unknown[]) => Promise<unknown>).call(target, fn, ...rest);
+        };
+      },
+    }) as typeof db;
+    const connectionOf = (c: ConnectedTenant) => db.qboConnection.findUniqueOrThrow({ where: { id: c.connectionId } });
+    const reauthEvents = (c: ConnectedTenant) => db.auditEvent.count({ where: { workspaceId: c.t.ws, eventName: "qbo.reauthorization_required" } });
+
+    it("REAUTH fence, dead refresh token seen on the first read: a rotation persisted after that read wins - stays ACTIVE, adopts the newer tokens", async () => {
+      const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, refreshInMs: -1000, tag: "stale-first" }) });
+      const client = racingReads(async (n) => { if (n === 1) await rotateTo(c, 2); });
+      const r = await get(c, {}, { ...tokenDeps(c), client });
+      expect(r).toMatchObject({ ok: true, revision: 2 });
+      expect((await connectionOf(c)).status).toBe("ACTIVE");
+      expect(await reauthEvents(c)).toBe(0);
+    });
+
+    it("REAUTH fence, dead refresh token seen under the refresh claim: a rotation persisted after that read wins - stays ACTIVE", async () => {
+      const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "stale-claim" }) });
+      const client = racingReads(async (n) => {
+        if (n === 1) await db.qboConnectionToken.update({ where: { connectionId: c.connectionId }, data: { refreshTokenExpiresAt: new Date(Date.now() - 1000) } });
+        if (n === 2) await rotateTo(c, 2);
+      });
+      const r = await get(c, {}, { ...tokenDeps(c), client });
+      expect(r).toMatchObject({ ok: true, revision: 2 });
+      expect(c.fake.tokenCalls).toBe(0);
+      expect((await connectionOf(c)).status).toBe("ACTIVE");
+      expect(await reauthEvents(c)).toBe(0);
+    });
+
+    it("REAUTH fence, control: a dead refresh token at the current revision still marks REAUTH_REQUIRED (first read and under the claim)", async () => {
+      const first = await seedConnected({ grant: grantOf({ accessInMs: -1000, refreshInMs: -1000, tag: "ctl-first" }) });
+      expect(await get(first)).toEqual({ ok: false, code: "REAUTH_REQUIRED", retryAfterMs: null });
+      expect((await connectionOf(first)).lastErrorCode).toBe("REFRESH_TOKEN_EXPIRED");
+      const claim = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "ctl-claim" }) });
+      const client = racingReads(async (n) => { if (n === 1) await db.qboConnectionToken.update({ where: { connectionId: claim.connectionId }, data: { refreshTokenExpiresAt: new Date(Date.now() - 1000) } }); });
+      expect(await get(claim, {}, { ...tokenDeps(claim), client })).toEqual({ ok: false, code: "REAUTH_REQUIRED", retryAfterMs: null });
+      expect((await connectionOf(claim)).status).toBe("REAUTH_REQUIRED");
+      expect(await reauthEvents(first) + await reauthEvents(claim)).toBe(2);
+    });
+
+    it("REAUTH fence, sync path: an access token rejected after the forced refresh does NOT mark REAUTH over a newer rotation; at the presented revision it does", async () => {
+      const runSync = (c: ConnectedTenant, client?: typeof db) =>
+        runQboReadSync({ ...scopeOf(c), trigger: "MANUAL", actorId: c.t.actor, requestId: randomUUID() }, testDeps(c, { now: () => NOW, ...(client ? { client } : {}) }));
+      // Stale: the forced refresh produced revision 2, which the API still rejects; ANOTHER worker then persists revision 3.
+      const stale = await seedConnected({ grant: grantOf({ accessInMs: 3_600_000, tag: "sync-stale" }) });
+      stale.fake.validAccessTokens = new Set(["never-valid"]);
+      stale.fake.tokenResponses.push({ status: 200, body: tokenBody(1) });
+      const out = await runSync(stale, racingMark(async () => { await rotateTo(stale, 3); }));
+      expect(out.status === "FAILED" && out.code).toBe("REAUTH_REQUIRED");
+      expect((await connectionOf(stale)).status).toBe("ACTIVE");
+      expect((await tokenRow(stale)).revision).toBe(3);
+      expect(await reauthEvents(stale)).toBe(0);
+      // Control: nothing rotated meanwhile - the genuine rejection still demands a reconnect.
+      const ctl = await seedConnected({ grant: grantOf({ accessInMs: 3_600_000, tag: "sync-ctl" }) });
+      ctl.fake.validAccessTokens = new Set(["never-valid"]);
+      ctl.fake.tokenResponses.push({ status: 200, body: tokenBody(1) });
+      const outCtl = await runSync(ctl);
+      expect(outCtl.status === "FAILED" && outCtl.code).toBe("REAUTH_REQUIRED");
+      expect((await connectionOf(ctl)).status).toBe("REAUTH_REQUIRED");
+      expect(await reauthEvents(ctl)).toBe(1);
+    }, 30_000);
+
     it("invalid_grant for the CURRENT revision still ends in REAUTH_REQUIRED (unchanged behaviour)", async () => {
       const c = await seedConnected({ grant: grantOf({ accessInMs: -1000, tag: "current" }) });
       c.fake.tokenResponses.push({ status: 400, body: { error: "invalid_grant" } });

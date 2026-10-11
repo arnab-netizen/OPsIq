@@ -5,7 +5,7 @@
  * canonical session context. There is no field for tokens, realm, environment, base URL, workspace or actor: those are
  * server-controlled, and an extra key is rejected. The connection must belong to the session's workspace AND the stated
  * business; anything else reads as "not found". The sync issues GET requests to QuickBooks only — it makes zero write
- * requests to QuickBooks. A concurrent run returns 409 BUSY; repeating a requestId replays the same run.
+ * requests to QuickBooks. A concurrent run returns 409 BUSY; repeating a requestId after the 60 s manual cooldown replays the same run; inside the cooldown any MANUAL request answers NOT_DUE.
  */
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";

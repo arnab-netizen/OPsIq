@@ -490,6 +490,16 @@ export async function markQboReauthorizationRequired(
   const client = deps.client ?? db;
   const now = (deps.now ?? (() => new Date()))();
   return client.$transaction(async (tx: Tx) => {
+    if (v.expectedTokenRevision !== undefined) {
+      // Take the token row's lock first (a no-op write of the same revision). A rotation (rotateQboTokens) compare-and-swaps that same row,
+      // so the two serialise: a rotation that committed first makes this predicate fail (nothing marked), and one that has not yet
+      // committed makes this wait. A cross-table read alone would be write skew under READ COMMITTED.
+      const held = await tx.qboConnectionToken.updateMany({
+        where: { connectionId: v.connectionId, workspaceId: v.workspaceId, revision: v.expectedTokenRevision },
+        data: { revision: v.expectedTokenRevision },
+      });
+      if (held.count !== 1) return { changed: false };
+    }
     const r = await tx.qboConnection.updateMany({
       where: {
         id: v.connectionId, workspaceId: v.workspaceId, status: QBO_CONNECTION_STATUS.ACTIVE,

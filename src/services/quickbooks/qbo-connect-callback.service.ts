@@ -160,8 +160,8 @@ export async function completeQboCallback(
    * company. While the realm is only the client's claim (verification failed, was temporary, was malformed or named another company)
    * there is no trustworthy company to ask about, so the grant is NOT revoked: the claimed realm is attacker-controllable and a holder
    * check against it could clear a revoke of a grant that belongs to a company another tenant holds. If the holder lookup itself fails the
-   * grant is not revoked either. Leaving an unrecorded token is the lesser harm; an operator revokes it at Intuit (see
-   * QBO_CONNECTION_PERSISTENCE.md, "Known limitations"). Revocation errors are swallowed; nothing is logged.
+   * grant is not revoked either. Leaving an unrecorded token is the lesser harm; it lapses on its own or ends when the company's admin disconnects the
+   * app at Intuit (the token is not stored, so it cannot be revoked later; see QBO_CONNECTION_PERSISTENCE.md, "Known limitations"). Revocation errors are swallowed; nothing is logged.
    */
   const discardGrant = async (): Promise<void> => {
     if (provenRealm === null) return;

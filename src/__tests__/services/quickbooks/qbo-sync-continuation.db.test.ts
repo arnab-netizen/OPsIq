@@ -365,8 +365,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       };
     };
     const ids = async (c: ConnectedTenant) => new Set((await db.qboSyncedRecord.findMany({ where: { connectionId: c.connectionId, entityType: "Invoice" }, select: { providerEntityId: true } })).map((r: { providerEntityId: string }) => r.providerEntityId));
-    /** The invariant: the run is never SUCCEEDED while a record the provider holds in the bucket is absent locally. */
-    const assertNoSilentSkip = async (c: ConnectedTenant, out: Awaited<ReturnType<typeof run>>) => {
+    /** The bounded invariant (single injected change, fake provider, assumptions R1/R2): the run is not SUCCEEDED while a record the provider holds in the bucket is absent locally. */
+    const assertNoGapUnderAssumptions = async (c: ConnectedTenant, out: Awaited<ReturnType<typeof run>>) => {
       if (out.status === "SUCCEEDED") {
         const have = await ids(c);
         for (const r of c.fake.data.Invoice) if (Date.parse(r.MetaData.LastUpdatedTime) <= NOW.getTime()) expect(have.has(r.Id)).toBe(true);
@@ -384,7 +384,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
         const racing = hook(c, (q, n) => q.startsWith("SELECT * FROM Invoice") && q.includes("< '") && n >= 1, () => replaceAB(c));
         let out = await run(c, { pageSize: 10, fetchImpl: racing });
         for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, fetchImpl: racing });
-        await assertNoSilentSkip(c, out);
+        await assertNoGapUnderAssumptions(c, out);
         if (seed === null) expect(out.status).toBe("SUCCEEDED"); // a stable provider with one swap converges (restart + re-enumeration), it does not just fail closed
         if (out.status === "SUCCEEDED") {
           expect((await ids(c)).has("B-late")).toBe(true);
@@ -404,7 +404,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       const racing = hook(c, (q) => q.startsWith("SELECT count(*)") && q.includes(" Id IN "), () => replaceAB(c));
       let out = await run(c, { pageSize: 10, fetchImpl: racing });
       for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, fetchImpl: racing });
-      await assertNoSilentSkip(c, out);
+      await assertNoGapUnderAssumptions(c, out);
       expect(out.status === "SUCCEEDED" ? (await ids(c)).has("B-late") : true).toBe(true);
       expect(queriesFor(c, "Invoice", "count").some((r) => (r.url.searchParams.get("query") ?? "").includes(" Id IN "))).toBe(true);
     });
@@ -420,7 +420,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       });
       let out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
       for (let i = 0; i < 6 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 25, pagesPerExecution: 1000, fetchImpl: racing });
-      await assertNoSilentSkip(c, out);
+      await assertNoGapUnderAssumptions(c, out);
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 
@@ -470,11 +470,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(runs).toBeGreaterThanOrEqual(4 * 7);
     };
 
-    it("membership-change sweep from the PASS-END total: {delete, arrival, edit-out, swap} injected after EVERY provider count read - never a SUCCEEDED run with a gap, and a stable provider always converges", async () => {
+    it("membership-change sweep from the PASS-END total: {delete, arrival, edit-out, swap} injected after each provider count read of the sweep (single changes, fake provider, R1/R2) - no SUCCEEDED run with a gap, and a stable provider converges", async () => {
       await sweep("plain", (c) => seedBucket(c, 120), () => true);
     });
 
-    it("membership-change sweep with normalizer-REJECTED ids in the bucket (they are confirmed by id, never stored): same invariant at every boundary", async () => {
+    it("membership-change sweep with normalizer-REJECTED ids in the bucket (they are confirmed by id, never stored): same bounded invariant at each swept boundary", async () => {
       const withRejected = (c: ConnectedTenant) => {
         seedBucket(c, 120);
         for (const id of ["bad1", "bad2"]) c.fake.data.Invoice.push({ Id: id, MetaData: { LastUpdatedTime: new Date(SECOND).toISOString() } } as never); // no TotalAmt -> rejected
@@ -492,7 +492,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync completeness and bounded work (r
       expect(cp?.tie).not.toBeNull();
       replaceAB(c); // while paused (no lease held)
       for (let i = 0; i < 30 && out.status === "CONTINUING"; i++) out = await run(c, { pageSize: 10, pagesPerExecution: 9, now: () => new Date(NOW.getTime() + 60_000 * (i + 1)) });
-      await assertNoSilentSkip(c, out);
+      await assertNoGapUnderAssumptions(c, out);
       if (out.status === "SUCCEEDED") expect((await ids(c)).has("B-late")).toBe(true);
     });
 

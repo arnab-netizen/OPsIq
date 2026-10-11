@@ -171,7 +171,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       expect((row.normalized as { balance: string }).balance).toBe("1");
     });
 
-    it("a standing set of >100 inactive customers cannot starve verification of a record the provider cannot return (least-recently-attempted first)", async () => {
+    it("a standing set of >100 inactive customers does not starve verification: candidates are read in batches until none is left unattempted", async () => {
       const c2 = await seedConnected();
       for (let i = 1; i <= 105; i++) c2.fake.data.Customer.push(customer(`i${String(i).padStart(3, "0")}`, "2026-09-01T00:00:00Z"));
       c2.fake.data.Customer.push(customer("z999", "2026-09-01T00:00:00Z")); // sorts after every inactive id
@@ -189,7 +189,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO read-only sync (real Postgres)", () =
       const rows = await db.qboSyncedRecord.findMany({ where: { connectionId: c2.connectionId, entityType: "Customer" }, select: { providerEntityId: true, recordState: true, lastVerifyAttemptAt: true } });
       expect(rows.filter((r: { recordState: string }) => r.recordState === "INACTIVE")).toHaveLength(105);
       const z = rows.find((r: { providerEntityId: string }) => r.providerEntityId === "z999");
-      expect(z?.lastVerifyAttemptAt).not.toBeNull(); // reached by the rotation within two runs
+      expect(z?.lastVerifyAttemptAt).not.toBeNull(); // reached by the batch loop of the logical sync
       expect(z?.recordState).toBe("ACTIVE"); // and, with no positive answer, left unchanged
     });
 

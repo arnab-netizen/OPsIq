@@ -26,11 +26,12 @@ const run = (c: ConnectedTenant, at: Date, extra: Parameters<typeof testDeps>[1]
 const stateOf = (c: ConnectedTenant) => db.qboSyncState.findUniqueOrThrow({ where: { connectionId: c.connectionId } });
 const cpOf = async (c: ConnectedTenant) => parseContinuation((await stateOf(c)).continuation);
 /**
- * Short but not racy: the hard abort fires 500 ms after the invocation starts (soft 250 + grace 250), long enough for the few database
- * steps that precede the first provider / token request, short enough that nothing waits for the production 75 s.
+ * Deterministic abort: the invocation's parent signal (`deps.signal`, the same signal the hard-abort timer feeds) is fired from INSIDE the
+ * fetch spy the moment the target request is seen. The abort therefore lands exactly while that request is in flight, whatever the
+ * database latency of the setup steps before it. One test (the hard-abort timer itself) uses real timers with a wide margin.
  */
-const TINY = { deadlineMs: 250, hardAbortGraceMs: 250 } as const;
-const ELAPSED_BOUND_MS = 4_000;
+const TIMER = { deadlineMs: 2_000, hardAbortGraceMs: 2_000 } as const;
+const ELAPSED_BOUND_MS = 8_000;
 const DAY = 86_400_000;
 /**
  * Deterministic token clock. The sync runs on the INJECTED clock (`now: () => T0`), so token expiry is expressed relative to T0, never to
@@ -39,15 +40,22 @@ const DAY = 86_400_000;
 const expiredAtT0 = (tag: string) => ({ ...grantOf({ tag }), accessTokenExpiresAt: new Date(T0.getTime() - 1_000) });
 const validAtT0 = (tag: string) => ({ ...grantOf({ tag }), accessTokenExpiresAt: new Date(T0.getTime() + 30 * DAY) });
 
-/** Records every request together with its abort signal, then delegates to the fake Intuit. Proves the intended path was ENTERED and that the in-flight request was really aborted. */
-function spyFetch(c: ConnectedTenant) {
+/**
+ * Records every request together with its abort signal, then delegates to the fake Intuit. Proves the intended path was ENTERED and that
+ * the in-flight request was really aborted. `abortOn(suffix)` fires the returned parent signal as soon as a request path ends with `suffix`.
+ */
+function spyFetch(c: ConnectedTenant, abortOn?: string) {
   const seen: Array<{ path: string; signal: AbortSignal | null }> = [];
+  const parent = new AbortController();
   const fetchImpl = async (input: string, init?: RequestInit) => {
-    seen.push({ path: new URL(input).pathname, signal: (init?.signal as AbortSignal | undefined) ?? null });
-    return c.fake.fetchImpl(input, init);
+    const path = new URL(input).pathname;
+    seen.push({ path, signal: (init?.signal as AbortSignal | undefined) ?? null });
+    const pending = c.fake.fetchImpl(input, init); // in flight (its abort listener is attached) BEFORE the abort lands
+    if (abortOn !== undefined && path.endsWith(abortOn)) parent.abort();
+    return pending;
   };
   const of = (suffix: string) => seen.filter((r) => r.path.endsWith(suffix));
-  return { fetchImpl, seen, of };
+  return { fetchImpl, seen, of, signal: parent.signal, abort: () => parent.abort() };
 }
 
 const qboTasks = ownedQboTasks();
@@ -83,9 +91,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
   it("a STALLED token refresh hits the hard abort: the refresh request WAS made, its signal WAS aborted, the run ends CANCELLED, connection ACTIVE, lease released, nothing partially written", async () => {
     const c = await seedConnected({ grant: expiredAtT0("stall") });
     c.fake.inject("tokens/bearer", "TIMEOUT");
-    const spy = spyFetch(c);
+    const spy = spyFetch(c, "/tokens/bearer");
     const t = Date.now();
-    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl });
+    const out = await run(c, T0, { signal: spy.signal, fetchImpl: spy.fetchImpl });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
     expect(spy.of("/tokens/bearer")).toHaveLength(1); // the refresh path was entered (the stored token is expired at T0)
     expect(spy.of("/tokens/bearer")[0].signal?.aborted).toBe(true); // ...and the in-flight request received the abort
@@ -107,9 +115,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
     });
     const spy = spyFetch(c);
     let sleeps = 0;
-    const sleep = async () => { sleeps++; await new Promise((r) => setTimeout(r, 5)); }; // a real (tiny) pause: the loop must not spin hot
+    const sleep = async () => { sleeps++; spy.abort(); await new Promise((r) => setTimeout(r, 5)); }; // the first pause of the wait loop is where the abort lands
     const t = Date.now();
-    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl, sleep });
+    const out = await run(c, T0, { signal: spy.signal, fetchImpl: spy.fetchImpl, sleep });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS); // the real wait would have been 30 s
     expect(sleeps).toBeGreaterThanOrEqual(1); // the claim-wait path was entered
     expect(spy.seen).toHaveLength(0); // the token endpoint and the API were never reached
@@ -121,9 +129,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
     const c = await seedConnected({ grant: validAtT0("hang") });
     for (let i = 1; i <= 3; i++) c.fake.data.Customer.push(customer(`h${i}`, `2026-09-1${i}T10:00:00Z`));
     c.fake.inject("query", "TIMEOUT");
-    const spy = spyFetch(c);
+    const spy = spyFetch(c, "/query");
     const t = Date.now();
-    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl });
+    const out = await run(c, T0, { signal: spy.signal, fetchImpl: spy.fetchImpl });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
     expect(spy.of("/tokens/bearer")).toHaveLength(0); // the token was valid: no refresh path
     const queries = spy.of("/query");
@@ -139,14 +147,28 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
     expect(await db.qboSyncedRecord.count({ where: { connectionId: c.connectionId, entityType: "Customer" } })).toBe(3);
   });
 
+  it("the hard-abort TIMER itself (no parent signal): a hanging query is aborted by the invocation's own timer and the run ends CANCELLED", async () => {
+    const c = await seedConnected({ grant: validAtT0("timer") });
+    c.fake.data.Customer.push(customer("m1", "2026-09-01T10:00:00Z"));
+    c.fake.inject("query", "TIMEOUT");
+    const spy = spyFetch(c);
+    const t = Date.now();
+    const out = await run(c, T0, { ...TIMER, fetchImpl: spy.fetchImpl });
+    expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
+    expect(spy.of("/query").length).toBeGreaterThanOrEqual(1);
+    expect(spy.of("/query")[0].signal?.aborted).toBe(true);
+    expect(out).toMatchObject({ status: "FAILED", code: "CANCELLED" });
+    expect((await stateOf(c)).leaseToken).toBeNull();
+  });
+
   it("a HANGING by-id verification read is aborted (its signal WAS aborted); the entity is not marked reconciled and the next execution carries on", async () => {
     const c = await seedConnected({ grant: validAtT0("byid") });
     c.fake.data.Customer.push(customer("v1", "2026-09-01T10:00:00Z"));
     expect((await run(c, T0)).status).toBe("SUCCEEDED");
     c.fake.data.Customer.length = 0;
     c.fake.inject("/customer/v1", "TIMEOUT");
-    const spy = spyFetch(c);
-    const out = await run(c, hour(1), { ...TINY, fetchImpl: spy.fetchImpl }, { modeOverride: "FULL" });
+    const spy = spyFetch(c, "/customer/v1");
+    const out = await run(c, hour(1), { signal: spy.signal, fetchImpl: spy.fetchImpl }, { modeOverride: "FULL" });
     const byId = spy.of("/customer/v1");
     expect(byId).toHaveLength(1); // the verification path was entered
     expect(byId[0].signal?.aborted).toBe(true);
@@ -187,9 +209,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("invocation-level deadline reaches every p
     const c = await seedConnected({ grant: validAtT0("force") });
     c.fake.validAccessTokens = new Set(["not-the-stored-token"]); // every API call answers 401
     c.fake.inject("tokens/bearer", "TIMEOUT");
-    const spy = spyFetch(c);
+    const spy = spyFetch(c, "/tokens/bearer");
     const t = Date.now();
-    const out = await run(c, T0, { ...TINY, fetchImpl: spy.fetchImpl });
+    const out = await run(c, T0, { signal: spy.signal, fetchImpl: spy.fetchImpl });
     expect(Date.now() - t).toBeLessThan(ELAPSED_BOUND_MS);
     const order = spy.seen.map((r) => (r.path.endsWith("/tokens/bearer") ? "TOKEN" : "API"));
     expect(order[0]).toBe("API"); // the API rejected the stored token first (401) ...

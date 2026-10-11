@@ -7362,7 +7362,8 @@ model QboReportObservation {
 }
 
 /// Deduplication ledger for verified webhook hints. Holds no payload: only identity, resolution and disposition.
-/// workspace/business/connection are NULL when the realm is unknown (never guessed), so this table is intentionally
+/// Only deliveries for a realm held by an ACTIVE connection are stored (unknown / non-active realms are counted in the response and
+/// never persisted), so the tenant columns are filled on every written row; they stay nullable as reserve. The table is intentionally
 /// not in WORKSPACE_OWNED_MODELS (like AuditEvent).
 model QboWebhookEvent {
   id                String    @id @db.Uuid

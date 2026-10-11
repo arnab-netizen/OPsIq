@@ -77,13 +77,25 @@ export async function getUsableQboAccessToken(
   const usable = (t: QboTokensForUse): boolean =>
     input.forceRefresh ? input.knownRevision !== undefined && t.revision > input.knownRevision && accessStillValid(t, now, skewMs) : accessStillValid(t, now, skewMs);
 
+  /** A newer stored revision than the one this refresh started from => someone else rotated: use it (or back off), never REAUTH. */
+  const supersededBy = async (startedFrom: number): Promise<QboTokenAccessResult | null> => {
+    const latest = await loadQboTokensForUse(ref, deps);
+    if (!latest.ok || latest.tokens.revision <= startedFrom) return null;
+    return accessStillValid(latest.tokens, now, skewMs) ? ok(latest.tokens, true) : fail("PROVIDER_UNAVAILABLE");
+  };
+
   const loaded = await loadQboTokensForUse(ref, deps);
   if (!loaded.ok) return fail(loaded.reason === "NOT_FOUND" ? "CONNECTION_NOT_FOUND" : "CONNECTION_NOT_ACTIVE");
   // Credentials are per environment; never present sandbox tokens to the production host or vice versa.
   if (loaded.tokens.environment !== deps.config.environment) return fail("ENVIRONMENT_MISMATCH");
   if (usable(loaded.tokens)) return ok(loaded.tokens, false);
   if (refreshTokenDead(loaded.tokens, now)) {
-    await markQboReauthorizationRequired({ ...ref, reasonCode: "REFRESH_TOKEN_EXPIRED" }, deps);
+    // Fenced on the revision observed: a rotation persisted meanwhile by another worker wins over this stale verdict.
+    const marked = await markQboReauthorizationRequired({ ...ref, reasonCode: "REFRESH_TOKEN_EXPIRED", expectedTokenRevision: loaded.tokens.revision }, deps);
+    if (!marked.changed) {
+      const raced = await supersededBy(loaded.tokens.revision);
+      if (raced) return raced;
+    }
     return fail("REAUTH_REQUIRED");
   }
 
@@ -115,16 +127,14 @@ export async function getUsableQboAccessToken(
     const tokens = again.tokens;
     if (usable(tokens)) return ok(tokens, true);
     if (refreshTokenDead(tokens, now)) {
-      await markQboReauthorizationRequired({ ...ref, reasonCode: "REFRESH_TOKEN_EXPIRED" }, deps);
+      const marked = await markQboReauthorizationRequired({ ...ref, reasonCode: "REFRESH_TOKEN_EXPIRED", expectedTokenRevision: tokens.revision }, deps);
+      if (!marked.changed) {
+        const raced = await supersededBy(tokens.revision);
+        if (raced) return raced;
+      }
       return fail("REAUTH_REQUIRED");
     }
 
-    /** A newer stored revision than the one this refresh started from => someone else rotated: use it (or back off), never REAUTH. */
-    const supersededBy = async (startedFrom: number): Promise<QboTokenAccessResult | null> => {
-      const latest = await loadQboTokensForUse(ref, deps);
-      if (!latest.ok || latest.tokens.revision <= startedFrom) return null;
-      return accessStillValid(latest.tokens, now, skewMs) ? ok(latest.tokens, true) : fail("PROVIDER_UNAVAILABLE");
-    };
 
     let grant;
     try {

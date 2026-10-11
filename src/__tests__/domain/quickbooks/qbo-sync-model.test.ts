@@ -53,7 +53,7 @@ describe("back-off", () => {
     const m = (n: number) => computeSyncBackoffMs("PROVIDER_UNAVAILABLE", n) as number;
     expect([1, 2, 3, 4, 5, 6, 12, 50].map(m)).toEqual([15, 30, 60, 120, 240, 360, 360, 360].map((x) => x * 60_000));
   });
-  it("a company mismatch is persistent (24h ceiling), not terminal: it is re-checked daily, never hot-looped", () => {
+  it("a company mismatch is persistent (23h ceiling), not terminal: it is re-checked daily, never hot-looped", () => {
     expect(isTerminalSyncFailure("COMPANY_MISMATCH")).toBe(false);
     expect([1, 2, 3, 9].map((n) => computeSyncBackoffMs("COMPANY_MISMATCH", n))).toEqual([6, 12, 23, 23].map((x) => x * 3_600_000));
   });
