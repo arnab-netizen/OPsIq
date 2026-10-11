@@ -280,6 +280,30 @@ test.describe("Public beta OBQ journey", () => {
     });
   }
 
+  test("bank balance from the first read opens Cashflow already dated to the read's period, so it counts toward that read (390px)", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const { businessName } = await signUpAndVerify(page, { mobile: true });
+    await completeBusinessStep(page, businessName, { mobile: true });
+    await fillEvidence(page, { revenue: "12000", fixedCosts: "7000", variableCosts: "4000", cashOnHand: "1500" });
+    await chooseQualityAndRead(page, "From my records");
+    const read = page.getByTestId("first-money-read");
+    await expect(read).toBeVisible();
+    const link = read.locator('a[href*="/owner/cashflow"]');
+    await expect(link, "an unconfirmed bank balance must offer a way to add it").toHaveCount(1);
+    const href = (await link.getAttribute("href")) ?? "";
+    expect(href).toMatch(/periodStart=\d{4}-\d{2}-\d{2}&periodEnd=\d{4}-\d{2}-\d{2}/);
+    expect(href).toContain("returnTo=first-run");
+    const start = /periodStart=(\d{4}-\d{2}-\d{2})/.exec(href)![1];
+    const end = /periodEnd=(\d{4}-\d{2}-\d{2})/.exec(href)![1];
+    await link.click();
+    await expect(page.getByTestId("cashflow-prefilled-period")).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('input[name="periodStart"]')).toHaveValue(start);
+    await expect(page.locator('input[name="periodEnd"]')).toHaveValue(end);
+    await expectNoHorizontalScroll(page, "cashflow prefilled");
+    await context.close();
+  });
+
   test("correction: nothing overwritten, read re-run, changes shown (mobile width)", async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const page = await context.newPage();

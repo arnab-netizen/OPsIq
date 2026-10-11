@@ -124,6 +124,18 @@ export default function OwnerCashflowPage() {
   const [busy, setBusy] = useState(false);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  // Arriving from the first read: the period the read covers, so a balance added here counts toward that read.
+  const [prefillPeriod, setPrefillPeriod] = useState<{ start: string; end: string } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const start = q.get("periodStart") ?? "";
+    const end = q.get("periodEnd") ?? "";
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (iso.test(start) && iso.test(end) && start <= end) {
+      setPrefillPeriod({ start, end });
+      setShowSnapshotForm(true);
+    }
+  }, []);
   const requestSeq = useRef(0);
 
   const load = useCallback(async (businessId: string) => {
@@ -373,8 +385,8 @@ export default function OwnerCashflowPage() {
                 Cashflow snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
               <div className="grid grid-cols-2 gap-3">
-                <Input name="periodStart" label="Period start" type="date" required />
-                <Input name="periodEnd" label="Period end" type="date" required />
+                <Input key={`ps-${prefillPeriod?.start ?? ""}`} name="periodStart" label="Period start" type="date" defaultValue={prefillPeriod?.start} required />
+                <Input key={`pe-${prefillPeriod?.end ?? ""}`} name="periodEnd" label="Period end" type="date" defaultValue={prefillPeriod?.end} required />
                 <Select
                   name="businessModel"
                   label="Business model"
@@ -391,6 +403,11 @@ export default function OwnerCashflowPage() {
                   <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
                 ))}
               </div>
+              {prefillPeriod && (
+                <p className="text-xs text-muted-foreground" data-testid="cashflow-prefilled-period">
+                  These dates are the period your first read covers, so what you add here counts toward it.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Leave fields blank if unknown — missing data is reported, never invented.
               </p>

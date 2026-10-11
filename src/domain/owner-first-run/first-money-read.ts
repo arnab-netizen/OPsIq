@@ -78,6 +78,20 @@ export function formatMetricValue(sourceMetric: string, value: number | null, cu
 /** Where an owner can supply the information a known "what would sharpen this" request asks for. */
 const SHARPEN_TARGETS: Record<string, string> = { FIN_LIQUIDITY_UNCONFIRMED: "/owner/cashflow" };
 
+/**
+ * A bank balance only counts toward a read when its period does not end after the read's Finance period (canonical
+ * selectUsableBankBalance). The target is therefore opened with the read's own period, so what the owner adds is dated to
+ * the period it will be used for instead of "today" (which the diagnosis would silently ignore). Plain dates only.
+ */
+function sharpenHref(target: string | undefined, period: Pick<FirstReadPeriod, "start" | "end">): string | null {
+  if (!target) return null;
+  const day = (v: string) => (/^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null);
+  const start = day(period.start);
+  const end = day(period.end);
+  if (!start || !end || start > end) return target;
+  return `${target}?periodStart=${start}&periodEnd=${end}`;
+}
+
 export const FIRST_MONEY_READ_HEADING = FIRST_READ_SCOPE_COPY.FINANCIAL_FIRST_READ.heading;
 export const FIRST_MONEY_READ_SCOPE = FIRST_READ_SCOPE_COPY.FINANCIAL_FIRST_READ.scope;
 
@@ -329,7 +343,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
       whyItMatters: finding.summary,
       ...present(action),
       sharpenBy: input.dataRequest
-        ? { title: input.dataRequest.title, detail: input.dataRequest.description, href: (input.dataRequestCode && SHARPEN_TARGETS[input.dataRequestCode]) || null }
+        ? { title: input.dataRequest.title, detail: input.dataRequest.description, href: sharpenHref(input.dataRequestCode ? SHARPEN_TARGETS[input.dataRequestCode] : undefined, input.period) }
         : null,
       canAccept: !blocked,
       acceptNote,

@@ -90,7 +90,10 @@ export function QuickFinancialPicture({
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<QuickEntryDraft>({});
-  const periods = useMemo(() => quickReportingPeriods(new Date()), []);
+  // A period that has not STARTED (by the server's UTC day) is never evidence: a read can never be made on it, which would leave the
+  // owner with no way forward. Such a period is not offered, and custom dates are bounded to today.
+  const todayUtc = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const periods = useMemo(() => quickReportingPeriods(new Date()).filter((p) => p.start <= todayUtc), [todayUtc]);
   const [periodChoice, setPeriodChoice] = useState<string>(periods[0]?.id ?? "custom");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -145,7 +148,8 @@ export function QuickFinancialPicture({
       ? { start: customStart, end: customEnd, provisional: false }
       : periods.find((p) => p.id === periodId) ?? null;
   const periodTaken = Boolean(period && takenKey(period.start, period.end));
-  const periodValid = Boolean(period && period.start && period.end && period.end >= period.start) && !periodTaken;
+  const periodNotStarted = Boolean(period && period.start && period.start > todayUtc);
+  const periodValid = Boolean(period && period.start && period.end && period.end >= period.start) && !periodTaken && !periodNotStarted;
   const hasErrors = Object.keys(assessment.errors).length > 0;
   const sufficient = assessment.sufficiency?.sufficient === true;
   const currencyMissing = !(currency ?? "").trim();
@@ -291,9 +295,14 @@ export function QuickFinancialPicture({
             </div>
             {periodId === "custom" && (
               <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input name="periodStart" label="From" type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+                <Input name="periodStart" label="From" type="date" max={todayUtc} value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
                 <Input name="periodEnd" label="To" type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
               </div>
+            )}
+            {periodNotStarted && (
+              <p role="alert" className="mt-1 text-xs text-destructive" data-testid="quick-period-future">
+                That period hasn&rsquo;t started yet, so there is nothing to read. Pick dates that have already begun.
+              </p>
             )}
             {periodTaken && (
               <p role="alert" className="mt-1 text-xs text-destructive" data-testid="quick-period-taken">

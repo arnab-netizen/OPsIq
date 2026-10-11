@@ -276,7 +276,11 @@ describe("review fixes — domain", () => {
   });
   it("a known data request links to where it is supplied; an unknown one does not invent a link", () => {
     const withLink = buildFirstMoneyRead(input({ dataRequest: action, dataRequestCode: "FIN_LIQUIDITY_UNCONFIRMED" }));
-    expect(withLink.sharpenBy?.href).toBe("/owner/cashflow");
+    // The link carries the read's own period, so a balance added there is dated to the period it will be used for.
+    expect(withLink.sharpenBy?.href).toBe(`/owner/cashflow?periodStart=${PERIOD.start.slice(0, 10)}&periodEnd=${PERIOD.end.slice(0, 10)}`);
+    // A period that is not a plain date range never produces a malformed query: the bare target is used.
+    expect(buildFirstMoneyRead(input({ dataRequest: action, dataRequestCode: "FIN_LIQUIDITY_UNCONFIRMED", period: { ...PERIOD, start: "garbage" } })).sharpenBy?.href).toBe("/owner/cashflow");
+    expect(buildFirstMoneyRead(input({ dataRequest: action, dataRequestCode: "FIN_LIQUIDITY_UNCONFIRMED", period: { ...PERIOD, start: "2026-10-31", end: "2026-10-01" } })).sharpenBy?.href).toBe("/owner/cashflow");
     expect(buildFirstMoneyRead(input({ dataRequest: action, dataRequestCode: "FIN_MISSING_CRITICAL_DATA" })).sharpenBy?.href).toBeNull();
   });
   it("first-run error text promises nothing it does not do and never mentions a workspace", () => {
