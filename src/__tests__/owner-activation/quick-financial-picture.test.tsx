@@ -284,6 +284,8 @@ describe("business switching never leaks a draft (14, 15)", () => {
     await waitFor(() => expect((document.querySelector('input[name="revenue"]') as HTMLInputElement).value).toBe(""));
     expect(screen.getByTestId("quick-financial-picture-form").textContent).toContain(otherId === "b2" ? "(GBP)" : "(INR)");
     type("revenue", "5"); type("fixedCosts", "5"); type("cashOnHand", "5");
+    // My Business asks how reliable the numbers are before a read is made (provenance), so the owner chooses one.
+    fireEvent.click(screen.getByLabelText("From my records"));
     fireEvent.click(primary());
     await waitFor(() => expect(routerPush).toHaveBeenCalled());
     expect(posts("/snapshots")[0].url).toBe(`/api/owner/finance/businesses/${otherId}/snapshots`);
