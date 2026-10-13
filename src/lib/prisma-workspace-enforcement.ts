@@ -38,7 +38,7 @@ export const WORKSPACE_OWNED_MODELS: ReadonlySet<string> = new Set<string>([
   "OverrideRecord", "OwnerActionOutcome", "OwnerApprovalMemory", "OwnerArchetypeMetric", "OwnerAttentionEvent", "OwnerBudgetAction", "OwnerBudgetOverride",
   "OwnerBusiness", "QboOAuthState", "QboConnection", "QboConnectionToken", "OwnerCapacitySnapshot", "OwnerCashflowAction", "OwnerCashflowCycle", "OwnerCashflowFinding", "OwnerCashflowSnapshot",
   "OwnerCashflowVerification", "OwnerComplianceItem", "OwnerDataIntake", "OwnerDecisionRecord", "OwnerDoNotRepeatRule", "OwnerEmployeeWorkloadSnapshot", "OwnerEquipment",
-  "OwnerFinanceAction", "OwnerFinanceCycle", "OwnerFinanceFinding", "OwnerFinanceVerification", "OwnerFinancialSnapshot", "OwnerGuidanceSnapshot",
+  "OwnerFinanceAction", "OwnerFinanceCycle", "OwnerFinanceFinding", "OwnerFinanceVerification", "OwnerFinancialSnapshot", "OwnerFirstResultInteraction", "OwnerGuidanceSnapshot",
   "OwnerInputQualityAssessment", "OwnerInputRecord", "OwnerMarketingAction", "OwnerMarketingCycle", "OwnerMarketingFinding", "OwnerMarketingSnapshot",
   "OwnerMarketingVerification", "OwnerMetricSnapshot", "OwnerOperationsAction", "OwnerOperationsCycle", "OwnerOperationsFinding", "OwnerOperationsSnapshot",
   "OwnerOperationsVerification", "OwnerOutcomeAssessment", "OwnerProcess", "OwnerReassessmentEvent", "OwnerSalesAction", "OwnerSalesCycle", "OwnerSalesFinding",

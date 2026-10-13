@@ -21,6 +21,8 @@ import {
   buildQuickSnapshotPayload,
   type QuickEntryDraft,
 } from "@/domain/owner-finance/quick-entry";
+import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
 import { firstReadSufficiencyFromRow, type CriticalFinanceRow } from "@/domain/owner-finance/first-read-sufficiency";
 import {
@@ -70,6 +72,7 @@ export function QuickFinancialPicture({
   onSaved,
   onFirstRead,
   omitMoneyLink,
+  requireEvidenceQuality,
 }: {
   businessId: string;
   currency: string | null | undefined;
@@ -82,14 +85,20 @@ export function QuickFinancialPicture({
   onFirstRead?: () => void;
   /** Hosts that are the Money page omit the "full money picture" link (it would point at itself). */
   omitMoneyLink?: boolean;
+  /** First-run: the owner must say how reliable the numbers are before the first read is made. */
+  requireEvidenceQuality?: boolean;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<QuickEntryDraft>({});
-  const periods = useMemo(() => quickReportingPeriods(new Date()), []);
+  // A period that has not STARTED (by the server's UTC day) is never evidence: a read can never be made on it, which would leave the
+  // owner with no way forward. Such a period is not offered, and custom dates are bounded to today.
+  const todayUtc = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const periods = useMemo(() => quickReportingPeriods(new Date()).filter((p) => p.start <= todayUtc), [todayUtc]);
   const [periodChoice, setPeriodChoice] = useState<string>(periods[0]?.id ?? "custom");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+  const [quality, setQuality] = useState<EvidenceQuality | null>(null);
   // A synchronous guard: React state updates are async, so two fast clicks would both pass a
   // `phase === "working"` check. The ref closes that window (no duplicate submission).
   const inFlight = useRef(false);
@@ -139,12 +148,14 @@ export function QuickFinancialPicture({
       ? { start: customStart, end: customEnd, provisional: false }
       : periods.find((p) => p.id === periodId) ?? null;
   const periodTaken = Boolean(period && takenKey(period.start, period.end));
-  const periodValid = Boolean(period && period.start && period.end && period.end >= period.start) && !periodTaken;
+  const periodNotStarted = Boolean(period && period.start && period.start > todayUtc);
+  const periodValid = Boolean(period && period.start && period.end && period.end >= period.start) && !periodTaken && !periodNotStarted;
   const hasErrors = Object.keys(assessment.errors).length > 0;
   const sufficient = assessment.sufficiency?.sufficient === true;
   const currencyMissing = !(currency ?? "").trim();
   const locked = savedSnapshotId !== null;
-  const disabled = phase.kind === "working" || locked || !sufficient || hasErrors || !periodValid || currencyMissing;
+  const qualityMissing = Boolean(requireEvidenceQuality) && quality === null;
+  const disabled = phase.kind === "working" || locked || !sufficient || hasErrors || !periodValid || currencyMissing || qualityMissing;
 
   function conclude(result: QuickStartResult) {
     if (!mounted.current) return;
@@ -169,7 +180,8 @@ export function QuickFinancialPicture({
     if (error instanceof HttpResponseError && error.status === 409) {
       setPhase({
         kind: "error",
-        message: "You've already saved numbers for that period. Pick a different period, or update the saved numbers on the Money page.",
+        // The Money page has no editor for saved numbers; the real correction path is the first read's "Something here is wrong".
+        message: "You've already saved numbers for that period, so nothing new was saved. Pick a different period, or open your first read and use “Something here is wrong” to correct the saved numbers.",
       });
       return;
     }
@@ -183,7 +195,7 @@ export function QuickFinancialPicture({
     inFlight.current = true;
     setPhase({ kind: "working" });
     try {
-      const built = buildQuickSnapshotPayload({ values: assessment.values, period, currency });
+      const built = buildQuickSnapshotPayload({ values: assessment.values, period, currency, evidenceQuality: quality });
       if (!built.ok) {
         setPhase({ kind: "error", message: built.reason === "currency_missing" ? "Your business needs a currency first." : "Enter at least one number." });
         return;
@@ -260,25 +272,38 @@ export function QuickFinancialPicture({
             ))}
           </div>
 
+          <EvidenceQualityFieldset
+            testId="quick-evidence-quality"
+            value={quality}
+            onChange={setQuality}
+            disabled={locked}
+            hint={requireEvidenceQuality ? "Pick one so OpsIQ can say how far to trust the read." : "Optional — it tells OpsIQ how far to trust the read."}
+          />
+
           <fieldset className="mt-4">
             <legend className="text-sm font-medium text-foreground">These numbers are for</legend>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               {periods.map((p) => (
-                <label key={p.id} className="flex items-center gap-1.5">
+                <label key={p.id} className="flex min-h-11 items-center gap-2">
                   <input type="radio" name="period" checked={periodId === p.id} disabled={takenKey(p.start, p.end)} onChange={() => setPeriodChoice(p.id)} />
                   {p.label}{takenKey(p.start, p.end) ? " (already saved)" : ""}
                 </label>
               ))}
-              <label className="flex items-center gap-1.5">
+              <label className="flex min-h-11 items-center gap-2">
                 <input type="radio" name="period" checked={periodId === "custom"} onChange={() => setPeriodChoice("custom")} />
                 Choose dates
               </label>
             </div>
             {periodId === "custom" && (
               <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input name="periodStart" label="From" type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+                <Input name="periodStart" label="From" type="date" max={todayUtc} value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
                 <Input name="periodEnd" label="To" type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
               </div>
+            )}
+            {periodNotStarted && (
+              <p role="alert" className="mt-1 text-xs text-destructive" data-testid="quick-period-future">
+                That period hasn&rsquo;t started yet, so there is nothing to read. Pick dates that have already begun.
+              </p>
             )}
             {periodTaken && (
               <p role="alert" className="mt-1 text-xs text-destructive" data-testid="quick-period-taken">
@@ -298,7 +323,7 @@ export function QuickFinancialPicture({
           {phase.kind === "diagnosis_failed" && (
             <div role="alert" className="mt-2 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="quick-diagnosis-failed">
               <p>{phase.message}</p>
-              <Button type="button" onClick={retry} className="mt-2">Try the first read again</Button>
+              <Button type="button" onClick={retry} className="mt-2 min-h-11">Try the first read again</Button>
             </div>
           )}
           {phase.kind === "error" && (
@@ -308,9 +333,16 @@ export function QuickFinancialPicture({
           )}
 
           {!locked && (
-            <Button type="submit" disabled={disabled} className="mt-3" data-testid="quick-primary-action">
-              {phase.kind === "working" ? "Working…" : "Show my first read"}
-            </Button>
+            <>
+              <Button type="submit" disabled={disabled} className="mt-3 min-h-11 w-full sm:w-auto" data-testid="quick-primary-action">
+                {phase.kind === "working" ? "Working…" : "Show my first read"}
+              </Button>
+              {qualityMissing && sufficient && !hasErrors && (
+                <p className="mt-1 text-sm text-foreground" data-testid="quick-quality-needed">
+                  Choose how reliable these numbers are to continue.
+                </p>
+              )}
+            </>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
             A first read is a rough picture, not the whole business — OpsIQ will tell you what would make it more reliable.
@@ -319,7 +351,7 @@ export function QuickFinancialPicture({
       )}
 
       <details className="mt-4 text-sm" data-testid="quick-more-detail">
-        <summary className="cursor-pointer font-medium text-foreground">Add more detail (optional)</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center font-medium text-foreground">Add more detail (optional)</summary>
         <ul className="mt-2 space-y-1 text-muted-foreground">
           {!omitMoneyLink && <li><Link href="/owner/finance" className="underline">Enter the full money picture</Link></li>}
           <li><Link href="/owner/manual-entry" className="underline">Add other business information</Link></li>

@@ -25,9 +25,9 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn().mockResolvedValue({ set: mockCookieSet }),
 }));
 
-/** Every signup body in this file must carry all three consents — the route requires exactly `true` for each. */
+/** Signup carries only { email, workspaceName }: no password and no consent before email ownership is proven. */
 function signupBody(overrides: Record<string, unknown>) {
-  return { acceptTerms: true, acceptPrivacy: true, acceptBetaNotice: true, ...overrides };
+  return { ...overrides };
 }
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account graph", () => {
@@ -74,17 +74,23 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     const email = `graph-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
     createdEmails.push(email);
 
-    const res = await signup({ email, password: "password123", workspaceName: "Acme Corp" });
+    const res = await signup({ email, workspaceName: "Acme Corp" });
     expect(res.status).toBe(201);
     const json = await res.json();
     expect(json.pendingVerification).toBe(true);
 
-    const userId = json.user.id as string;
-    const workspaceId = json.workspace.id as string;
+    // The response discloses no identifiers; resolve the graph from the DB.
+    expect(json.user).toBeUndefined();
+    expect(json.workspace).toBeUndefined();
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(1);
-    expect(users[0].id).toBe(userId);
+    const userId = users[0].id;
+    // No credential exists until the mailbox is proven.
+    expect(users[0].hashedPassword).toBeNull();
+    const ownWorkspaces = await db.workspaceMembership.findMany({ where: { userId } });
+    expect(ownWorkspaces).toHaveLength(1);
+    const workspaceId = ownWorkspaces[0].workspaceId;
     // Open-beta signup never grants unrestricted access before verification.
     expect(users[0].requiresEmailVerification).toBe(true);
     expect(users[0].emailVerifiedAt).toBeNull();
@@ -109,35 +115,41 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     expect(verificationTokens[0].usedAt).toBeNull();
     expect(verificationTokens[0].expiresAt.getTime()).toBeGreaterThan(Date.now());
 
+    // Consent is recorded only after ownership is proven (reset-password setup), never at signup.
     const acceptances = await db.policyAcceptance.findMany({ where: { userId } });
-    expect(acceptances.map((a: { policyType: string }) => a.policyType).sort()).toEqual(
-      ["BETA_NOTICE", "PRIVACY", "TERMS"]
-    );
+    expect(acceptances).toHaveLength(0);
 
     const workspaces = await db.workspace.findMany({ where: { id: workspaceId } });
     expect(workspaces).toHaveLength(1);
     expect(workspaces[0].signupSource).toBe("PUBLIC_BETA");
   });
 
-  it("[db] a duplicate email conflicts and creates no second account graph", async () => {
+  it("[db] a repeated signup for a still-unverified email is not a conflict and creates no second account graph", async () => {
     const email = `dup-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
     createdEmails.push(email);
 
-    const first = await signup({ email, password: "password123", workspaceName: "First Co" });
+    const first = await signup({ email, workspaceName: "First Co" });
     expect(first.status).toBe(201);
 
-    const second = await signup({ email, password: "password123", workspaceName: "Second Co" });
-    expect(second.status).toBe(409);
+    const second = await signup({ email, workspaceName: "Second Co" });
+    expect(second.status).toBe(201);
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(1);
     const workspaces = await db.workspace.findMany({ where: { createdBy: users[0].id } });
     expect(workspaces).toHaveLength(1);
+    expect(workspaces[0].name).toBe("First Co");
+
+    // Once the mailbox is proven the same request is today's explicit conflict.
+    await db.user.update({ where: { id: users[0].id }, data: { emailVerifiedAt: new Date() } });
+    const third = await signup({ email, workspaceName: "Third Co" });
+    expect(third.status).toBe(409);
+    expect(await db.user.count({ where: { email } })).toBe(1);
   });
 
   it("[db] a whitespace-only workspace name is rejected outright (nothing to slug)", async () => {
     const email = `empty-name-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
-    const res = await signup({ email, password: "password123", workspaceName: "   " });
+    const res = await signup({ email, workspaceName: "   " });
     expect(res.status).toBe(400);
 
     const users = await db.user.findMany({ where: { email } });
@@ -147,10 +159,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
   it("[db] a name with surrounding whitespace is stored trimmed", async () => {
     const email = `trim-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
     createdEmails.push(email);
-    const res = await signup({ email, password: "password123", workspaceName: "  Acme Corp  " });
+    const res = await signup({ email, workspaceName: "  Acme Corp  " });
     expect(res.status).toBe(201);
-    const json = await res.json();
-    expect(json.workspace.name).toBe("Acme Corp");
+    const users = await db.user.findMany({ where: { email } });
+    const membership = await db.workspaceMembership.findFirst({ where: { userId: users[0].id } });
+    const workspace = await db.workspace.findUnique({ where: { id: membership!.workspaceId } });
+    expect(workspace!.name).toBe("Acme Corp");
   });
 
   it("[db] degenerate-but-non-empty workspace names (punctuation/emoji, still valid display names) never collide", async () => {
@@ -161,7 +175,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
       const email = `slug-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
       emails.push(email);
       createdEmails.push(email);
-      const res = await signup({ email, password: "password123", workspaceName: name });
+      const res = await signup({ email, workspaceName: name });
       expect(res.status).toBe(201);
     }
 
@@ -179,16 +193,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     createdEmails.push(email);
 
     const responses = await Promise.all([
-      signup({ email, password: "password123", workspaceName: "Racer A" }),
-      signup({ email, password: "password123", workspaceName: "Racer B" }),
+      signup({ email, workspaceName: "Racer A" }),
+      signup({ email, workspaceName: "Racer B" }),
     ]);
 
-    // Both requests resolve (the loser gets a governed 409, not a thrown/rejected
-    // promise) -- exactly one must have actually created the account.
-    const succeeded = responses.filter((r) => r.status === 201);
-    const conflicted = responses.filter((r) => r.status === 409);
-    expect(succeeded.length).toBe(1);
-    expect(conflicted.length).toBe(1);
+    // Both requests resolve with the SAME success answer (the loser is treated as a repeated signup for a
+    // still-pending account, not a conflict and not a thrown/rejected promise) -- yet exactly one account graph
+    // is created and exactly one verification link stays live.
+    expect(responses.map((r) => r.status)).toEqual([201, 201]);
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(1);
@@ -196,5 +208,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     expect(workspaces).toHaveLength(1);
     const memberships = await db.workspaceMembership.findMany({ where: { userId: users[0].id } });
     expect(memberships).toHaveLength(1);
+    expect(await db.emailVerificationToken.count({ where: { userId: users[0].id, usedAt: null } })).toBe(1);
   });
 });

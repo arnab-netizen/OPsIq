@@ -10,6 +10,8 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { runFinanceDiagnosisSchema } from "@/domain/owner-finance/validation";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { reconcileDataGapTasksAfterDiagnosis } from "@/services/owner-mode/process-execution-bridge.service";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { recordProductEventOnce } from "@/services/owner-first-run/first-run.service";
 import { checkDiagnosisRateLimit } from "@/middleware/rate-limit";
 import { checkPgRateLimit } from "@/infra/rate-limiter-pg";
 
@@ -51,6 +53,13 @@ export const POST = withCanonicalEnforcement(
     );
     // The diagnosis changed the evidence: retire generated data-gap tasks it has resolved (best-effort, own errors).
     await reconcileDataGapTasksAfterDiagnosis(ctx.verifiedWorkspaceId, params.businessId, ctx.verifiedActorId);
+    await recordProductEventOnce({
+      name: "first_diagnosis_completed",
+      eventName: AUDIT_EVENTS.PRODUCT_FIRST_DIAGNOSIS_COMPLETED,
+      workspaceId: ctx.verifiedWorkspaceId,
+      actorId: ctx.verifiedActorId,
+      businessId: params.businessId,
+    });
     return canonicalJson(cycle, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

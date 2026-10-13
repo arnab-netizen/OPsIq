@@ -70,7 +70,7 @@ export const MANUAL_ENTRY_SECTIONS: readonly ManualEntrySection[] = [
     fields: [NOTE("e.g. late deliveries this week on several orders"), EVIDENCE_FIELD, MISSING_FIELD] },
   { id: "cash_cost", title: "Cash / cost pressure", category: "cash_debt", essential: false,
     helper: "Owner-supplied aggregates only. No bank details, no counterparties. This note is context only — it doesn't count toward your Money setup. For that, add a snapshot on the Money page.",
-    fields: [NOTE("e.g. cash is tight this month", { optionalWithNumber: true }), { key: "cashInHand", label: "Cash in hand (aggregate, optional)", kind: "amount", placeholder: "25000" }, { key: "overdueReceivables", label: "Overdue receivables (aggregate, optional)", kind: "amount" }, MISSING_FIELD] },
+    fields: [NOTE("e.g. cash is tight this month", { optionalWithNumber: true }), { key: "cashInHand", label: "Cash in hand, not in the bank (aggregate, optional)", kind: "amount", placeholder: "25000" }, { key: "overdueReceivables", label: "Overdue receivables (aggregate, optional)", kind: "amount" }, MISSING_FIELD] },
   { id: "customer_quality", title: "Customer / quality issue", category: "complaints_reviews", essential: false,
     helper: "Describe the complaint/rework pattern operationally. Use placeholders for people.",
     fields: [NOTE("e.g. repeat complaints about staining after service"), EVIDENCE_FIELD, MISSING_FIELD] },

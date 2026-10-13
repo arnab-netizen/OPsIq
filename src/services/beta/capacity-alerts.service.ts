@@ -35,7 +35,7 @@ import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
-import { readEffectiveSettings, countExternalBetaWorkspaces } from "@/services/beta/platform-settings.service";
+import { readEffectiveSettings, countCapacityUsage } from "@/services/beta/platform-settings.service";
 
 type Tier = 0 | 80 | 100;
 
@@ -98,7 +98,7 @@ async function sendCapacityAlertEmail(tier: Tier, count: number, capacityLimit: 
 export async function checkAndSendCapacityAlert(): Promise<void> {
   try {
     const settings = await readEffectiveSettings();
-    const count = await countExternalBetaWorkspaces();
+    const count = (await countCapacityUsage()).consumed;
     const crossed = computeTier(count, settings.capacityLimit);
 
     const shouldAlert = await transitionAlertTier(crossed);

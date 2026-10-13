@@ -7,6 +7,8 @@
  * value. `null` on a derived metric means "not computable from provided data".
  */
 
+import type { EvidenceQuality } from "./evidence-quality";
+
 export const FINANCIAL_BUSINESS_MODELS = ["service", "inventory", "hybrid"] as const;
 export type FinancialBusinessModel = (typeof FINANCIAL_BUSINESS_MODELS)[number];
 
@@ -23,6 +25,8 @@ export interface FinancialSnapshotInput {
   periodStart: string; // ISO date
   periodEnd: string; // ISO date
   currency: string;
+  /** Provenance of the numbers (ACTUAL / GOOD_ESTIMATE / ROUGH_ESTIMATE). Absent = legacy/unspecified. */
+  evidenceQuality?: EvidenceQuality | null;
   businessModel?: FinancialBusinessModel;
   industryTemplate?: string;
 

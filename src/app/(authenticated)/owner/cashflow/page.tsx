@@ -13,6 +13,11 @@ import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
+import { CashflowSnapshotFields } from "@/components/owner/cashflow/CashflowSnapshotFields";
+import { OVERDRAFT_BANK_BALANCE_SENTENCE } from "@/domain/owner-cashflow/overdraft-copy";
+import { CashflowEntryEditor } from "@/components/owner/cashflow/CashflowEntryEditor";
+import { classifyCashflowWriteFailure, cashflowEditHrefFor, parseEditParam } from "@/domain/owner-cashflow/edit-flow";
+import { CASHFLOW_PERIOD_EXISTS_MESSAGE } from "@/domain/owner-cashflow/amend";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -124,11 +129,32 @@ export default function OwnerCashflowPage() {
   const [busy, setBusy] = useState(false);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  // Arriving from the first read: the period the read covers, so a balance added here counts toward that read.
+  const [prefillPeriod, setPrefillPeriod] = useState<{ start: string; end: string } | null>(null);
+  // `?edit=<id>`: edit the figures of an existing entry (the entry's current values are shown first).
+  const [editId, setEditId] = useState<string | null>(null);
+  const [fromFirstRun, setFromFirstRun] = useState(false);
+  // A create was refused because the period already has an entry: offer that entry for editing instead.
+  const [existingEntry, setExistingEntry] = useState<{ id: string; message: string } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setFromFirstRun(q.get("returnTo") === "first-run");
+    const edit = parseEditParam(q.get("edit"));
+    if (edit) { setEditId(edit); return; }
+    const start = q.get("periodStart") ?? "";
+    const end = q.get("periodEnd") ?? "";
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (iso.test(start) && iso.test(end) && start <= end) {
+      setPrefillPeriod({ start, end });
+      setShowSnapshotForm(true);
+    }
+  }, []);
   const requestSeq = useRef(0);
 
-  const load = useCallback(async (businessId: string) => {
+  const load = useCallback(async (businessId: string, opts: { silent?: boolean } = {}) => {
     const seq = ++requestSeq.current;
-    setLoading(true);
+    // A silent refresh keeps the page (and an open editor with its "saved" message) on screen instead of the skeleton.
+    if (!opts.silent) setLoading(true);
     setError(null);
     try {
       const data = await api(`/api/owner/cashflow/dashboard?businessId=${businessId}`);
@@ -200,10 +226,22 @@ export default function OwnerCashflowPage() {
       if (v && typeof v === "string" && v.trim()) body[f.name] = parseFloat(v);
     }
     try {
-      await api(`/api/owner/cashflow/businesses/${activeBusinessId}/snapshots`, {
+      const res = await fetch(`/api/owner/cashflow/businesses/${activeBusinessId}/snapshots`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // The server's machine code decides: an existing entry for this period is OPENED for editing, never retried as an add.
+        const failure = classifyCashflowWriteFailure(res.status, data);
+        if (failure.kind === "PERIOD_EXISTS" && failure.snapshotId) {
+          setExistingEntry({ id: failure.snapshotId, message: failure.message || CASHFLOW_PERIOD_EXISTS_MESSAGE });
+          return;
+        }
+        throw httpResponseErrorFromBody(res.status, data);
+      }
+      setExistingEntry(null);
       setShowSnapshotForm(false);
       await load(activeBusinessId);
     } catch (e) {
@@ -211,6 +249,18 @@ export default function OwnerCashflowPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function openEntryForEdit(id: string) {
+    setExistingEntry(null);
+    setShowSnapshotForm(false);
+    setEditId(id);
+    window.history.replaceState(null, "", cashflowEditHrefFor(id, fromFirstRun));
+  }
+
+  function closeEditor() {
+    setEditId(null);
+    window.history.replaceState(null, "", fromFirstRun ? "/owner/cashflow?returnTo=first-run" : "/owner/cashflow");
   }
 
   async function runDiagnosis() {
@@ -367,14 +417,32 @@ export default function OwnerCashflowPage() {
             </Button>
           </div>
 
-          {showSnapshotForm && (
+          {editId && (
+            <CashflowEntryEditor
+              key={editId}
+              snapshotId={editId}
+              onClose={closeEditor}
+              onSaved={() => { if (activeBusinessId) void load(activeBusinessId, { silent: true }); }}
+            />
+          )}
+
+          {existingEntry && (
+            <div role="alert" className="mb-6 rounded-md border border-border bg-card p-4 text-sm" data-testid="cashflow-period-exists">
+              <p className="font-medium text-foreground">{existingEntry.message}</p>
+              <Button type="button" className="mt-3 min-h-11" onClick={() => openEntryForEdit(existingEntry.id)} data-testid="cashflow-open-existing">
+                Edit the existing entry
+              </Button>
+            </div>
+          )}
+
+          {showSnapshotForm && !editId && (
             <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">
                 Cashflow snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Input name="periodStart" label="Period start" type="date" required />
-                <Input name="periodEnd" label="Period end" type="date" required />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input key={`ps-${prefillPeriod?.start ?? ""}`} name="periodStart" label="Period start" type="date" defaultValue={prefillPeriod?.start} required />
+                <Input key={`pe-${prefillPeriod?.end ?? ""}`} name="periodEnd" label="Period end" type="date" defaultValue={prefillPeriod?.end} required />
                 <Select
                   name="businessModel"
                   label="Business model"
@@ -386,11 +454,12 @@ export default function OwnerCashflowPage() {
                   ]}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {CASHFLOW_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
-                ))}
-              </div>
+              <CashflowSnapshotFields fields={CASHFLOW_FIELDS} essentialFirst={prefillPeriod !== null} />
+              {prefillPeriod && (
+                <p className="text-xs text-muted-foreground" data-testid="cashflow-prefilled-period">
+                  These dates are the period your first read covers, so what you add here counts toward it.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Leave fields blank if unknown — missing data is reported, never invented.
               </p>
@@ -481,7 +550,7 @@ function CashflowCycleView({
           <strong>Total cash isn&apos;t confirmed yet.</strong>{" "}
           Your {cashPosition.missing.map((m) => (m === "bankBalance" ? "bank balance" : "cash in hand")).join(" and ")} {cashPosition.missing.length > 1 ? "are" : "is"} not recorded in this check, so
           OpsIQ does not show a cash runway or cash-pressure figures and does not treat this reading as a measure of cash safety or cash danger.
-          Record a Cash flow check with both cash in hand and the bank balance (enter 0 if there is none), then re-run the diagnosis.
+          Record a Cash flow check with both cash in hand and the bank balance (enter 0 if there is none), then re-run the diagnosis. {OVERDRAFT_BANK_BALANCE_SENTENCE}
         </div>
       )}
 

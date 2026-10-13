@@ -28,6 +28,7 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { db } from "@/lib/db";
+import * as bcrypt from "bcryptjs";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
@@ -77,22 +78,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Password reset — real end-to-end j
     const res = await POST(
       jsonRequest("http://localhost/api/auth/signup", {
         email,
-        password,
         workspaceName: "Reset Co",
-        acceptTerms: true,
-        acceptPrivacy: true,
-        acceptBetaNotice: true,
       }) as never
     );
     // This file's subject is the password-reset journey, not email
     // verification (covered by verify-email.db.test.ts) — open-beta signup
     // itself creates no session and login refuses an unverified account, so
     // every test below that logs in after signing up needs a verified
-    // account. Mark it verified directly on success, exactly the state
-    // POST /api/auth/verify-email would have produced.
+    // account WITH a password. Signup stores no credential, so reproduce the finished journey directly:
+    // verified mailbox + the password chosen at the setup step.
     if (res.status === 201) {
-      const { user } = await res.clone().json();
-      await db.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
+      await db.user.update({
+        where: { email },
+        data: { emailVerifiedAt: new Date(), hashedPassword: await bcrypt.hash(password, 4) },
+      });
     }
     return res;
   }

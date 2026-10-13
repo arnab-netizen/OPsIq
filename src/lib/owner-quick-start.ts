@@ -64,6 +64,18 @@ export function quickReportingPeriods(now: Date): QuickPeriodOption[] {
     .map((c) => ({ id: c.id, label: c.label, start: c.start, end: c.end, provisional: c.provisional }));
 }
 
+/**
+ * The last full calendar month from the owner's own device clock, as date-only strings built from LOCAL calendar parts.
+ * (`toISOString()` converts to UTC first and shifts the date by a day for any timezone east of UTC — "2026-09-01" in India
+ * became "2026-08-31" — saving the wrong period.)
+ */
+export function lastFullCalendarMonth(now: Date): { start: string; end: string } {
+  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate(); // day 0 of this month = last day of the previous one
+  const ym = `${String(first.getFullYear()).padStart(4, "0")}-${String(first.getMonth() + 1).padStart(2, "0")}`;
+  return { start: `${ym}-01`, end: `${ym}-${String(lastDay).padStart(2, "0")}` };
+}
+
 export type QuickStartApi = (path: string, init: { method: "POST"; body: string }) => Promise<unknown>;
 
 export type QuickStartResult =

@@ -83,6 +83,14 @@ export const EMAIL_VERIFICATION_RATE_LIMIT: RateLimitConfig = {
   maxAttempts: 5,
 };
 
+// Verification REDEEM (clicking the emailed link). Deliberately more generous than the resend limits: it sends no
+// email and a token is single-use, but every attempt (including a valid one) consumes a slot, so a small cohort
+// behind one shared office/CGNAT address must not lock itself out of verifying within the hour.
+export const VERIFY_REDEEM_RATE_LIMIT: RateLimitConfig = {
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxAttempts: 30,
+};
+
 // Same enumeration-resistant public-endpoint risk profile as
 // PASSWORD_RESET_RATE_LIMIT / EMAIL_VERIFICATION_RATE_LIMIT: no email is sent
 // from this endpoint, but every accepted request creates a durable

@@ -16,6 +16,7 @@
  *   - Completing a correction/SOP/training/reassessment task opens a governed reassessment (idempotent).
  */
 
+import { recordProductEvent } from "@/services/analytics/product-events.service";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { detectFakeCompletion } from "@/services/execution/verification-engine";
 import type { BridgedExecutionRoute, ProcessExecutionBridgeAnalysis, ExecutionRoute } from "@/domain/owner-mode/process-execution-bridge";
@@ -702,6 +703,8 @@ export async function applyProcessExecutionAction(
       return { ok: false, reason: "No outcome has been recorded for this task. Use RECORD_OUTCOME first.", code: "MISSING_INPUT" };
     }
     const { verifyOwnerActionOutcome, triggerPostVerificationSideEffects } = await import("@/services/owner-mode/owner-outcome-verification.service");
+    // Funnel milestone (non-throwing, enum/id only): the owner has asked for this outcome to be verified.
+    await recordProductEvent({ name: "outcome_verification_started", workspaceId: input.workspaceId, actorId: input.actorId ?? undefined });
     let verificationClassification: string;
     let selfVerified = false;
     try {
@@ -749,6 +752,10 @@ export async function applyProcessExecutionAction(
           visibility: "internal", occurredAt: now,
         },
       });
+    });
+    await recordProductEvent({
+      name: "outcome_verified", workspaceId: input.workspaceId, actorId: input.actorId ?? undefined,
+      props: { verificationClass: String(verificationClassification).toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 40) },
     });
     // Best-effort post-verification side effects (reassessment + learning)
     const businessId = input.businessId?.trim() ?? task.sourceFindingKey;

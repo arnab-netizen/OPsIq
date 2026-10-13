@@ -43,6 +43,7 @@ const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]
   "src/services/owner-finance/recommendation-margin-safety.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-finance/snapshot.service.ts": ["MODEL_SERVICE", "HISTORICAL_LIST"],
   "src/services/owner-finance/verification.service.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
+  "src/services/owner-first-run/first-run-evidence.reader.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
   "src/services/owner-guidance/owner-now-view.service.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-home/owner-candidate-builder.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-home/owner-change-facts.ts": ["DIAGNOSIS_BOUND"],
@@ -174,6 +175,10 @@ describe("financial snapshot selection is centralised", () => {
       // business, unordered — cash-semantics resolution only. It selects no "latest" and no "current".
       "listFinancialSnapshotVersions",
       "listFinancialSnapshots",
+      // Reviewed (compare-at-write): a share lock on ONE snapshot row by id, scoped by workspace + business, that
+      // reports whether it is still un-superseded. It selects no "latest" and no "current"; it serialises a decision
+      // against a concurrent amendment (which takes the same row FOR UPDATE).
+      "lockUnsupersededFinancialSnapshotShared",
       "resolveCurrentSnapshotId",
       "rowToFinanceInput",
       "toFinanceInput",

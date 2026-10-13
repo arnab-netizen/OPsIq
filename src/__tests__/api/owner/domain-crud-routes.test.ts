@@ -42,6 +42,9 @@ const CYCLE_ID = "e5f6a7b8-c9d0-4e1f-8a2b-c3d4e5f6a7b8";
 const ACTION_ID = "f6a7b8c9-d0e1-4f2a-8b3c-d4e5f6a7b8c9";
 const INVALID_ID = "not-a-uuid";
 
+/** A mocked canonical route handler: (ctx, params?) -> result. */
+type RouteHandler = (ctx: Record<string, unknown>, params?: Record<string, string>) => Promise<unknown>;
+
 // ---------------------------------------------------------------------------
 // withCanonicalEnforcement mock
 // ---------------------------------------------------------------------------
@@ -62,6 +65,13 @@ vi.mock("@/lib/canonical-json-response", () => ({
 }));
 
 vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
+
+// The finance snapshot route asks the first-run service whether the evidence must state its reliability; that contract
+// is proven in owner-first-run/snapshot-route-evidence-quality.test.ts and first-run-repair.db.test.ts.
+vi.mock("@/services/owner-first-run/first-run.service", () => ({
+  assertEvidenceQualityStatedForFirstEvidence: vi.fn().mockResolvedValue(undefined),
+  recordProductEventOnce: vi.fn().mockResolvedValue(true),
+}));
 
 // ---------------------------------------------------------------------------
 // Service mocks (per domain) — use string literals, not constants (mocks are hoisted)
@@ -413,20 +423,20 @@ describe("cashflow domain routes", () => {
   it("biz snapshots POST — rejects invalid businessId", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
     await expect(
-      (cashflowBizSnapshotsPost as Function)(ctx, { businessId: INVALID_ID })
+      (cashflowBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: INVALID_ID })
     ).rejects.toThrow();
   });
 
   it("biz snapshots POST — rejects missing currency", async () => {
     const ctx = makeCtx({ periodStart: "2024-01-01", periodEnd: "2024-01-31" });
     await expect(
-      (cashflowBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID })
+      (cashflowBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID })
     ).rejects.toThrow();
   });
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
-    const res = await (cashflowBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (cashflowBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
@@ -435,21 +445,21 @@ describe("cashflow domain routes", () => {
 
   it("biz diagnoses POST — accepts valid snapshotId", async () => {
     const ctx = makeCtx({ snapshotId: SNAP_ID });
-    const res = await (cashflowBizDiagnosesPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (cashflowBizDiagnosesPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
   it("biz diagnoses POST — rejects invalid snapshotId", async () => {
     const ctx = makeCtx({ snapshotId: INVALID_ID });
     await expect(
-      (cashflowBizDiagnosesPost as Function)(ctx, { businessId: BIZ_ID })
+      (cashflowBizDiagnosesPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID })
     ).rejects.toThrow();
   });
 
   it("snapshot GET — OWNER_VIEW", () => expectOwnerView(cashflowSnapshotGet as WrappedHandler));
   it("snapshot GET — rejects invalid snapshotId", async () => {
     await expect(
-      (cashflowSnapshotGet as Function)(makeGetCtx(), { snapshotId: INVALID_ID })
+      (cashflowSnapshotGet as unknown as RouteHandler)(makeGetCtx(), { snapshotId: INVALID_ID })
     ).rejects.toThrow();
   });
 
@@ -465,20 +475,20 @@ describe("cashflow domain routes", () => {
   it("action PATCH — rejects invalid actionId", async () => {
     const ctx = makeCtx({ status: "in_progress" });
     await expect(
-      (cashflowActionPatch as Function)(ctx, { actionId: INVALID_ID })
+      (cashflowActionPatch as unknown as RouteHandler)(ctx, { actionId: INVALID_ID })
     ).rejects.toThrow();
   });
 
   it("verify POST — OWNER_MANAGE", () => expectOwnerManage(cashflowVerifyPost as WrappedHandler));
   it("verify POST — accepts valid body", async () => {
     const ctx = makeCtx({ beforeValue: 1000, afterValue: 1200, targetDirection: "up" });
-    const res = await (cashflowVerifyPost as Function)(ctx, { actionId: ACTION_ID });
+    const res = await (cashflowVerifyPost as unknown as RouteHandler)(ctx, { actionId: ACTION_ID });
     expect(res.status).toBe(201);
   });
   it("verify POST — rejects invalid targetDirection", async () => {
     const ctx = makeCtx({ beforeValue: 0, afterValue: 0, targetDirection: "sideways" });
     await expect(
-      (cashflowVerifyPost as Function)(ctx, { actionId: ACTION_ID })
+      (cashflowVerifyPost as unknown as RouteHandler)(ctx, { actionId: ACTION_ID })
     ).rejects.toThrow();
   });
 });
@@ -497,14 +507,14 @@ describe("finance domain routes", () => {
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
-    const res = await (financeBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (financeBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
   it("biz snapshots POST — rejects invalid businessId", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
     await expect(
-      (financeBizSnapshotsPost as Function)(ctx, { businessId: INVALID_ID })
+      (financeBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: INVALID_ID })
     ).rejects.toThrow();
   });
 
@@ -514,7 +524,7 @@ describe("finance domain routes", () => {
   it("biz diagnoses POST — rejects missing snapshotId", async () => {
     const ctx = makeCtx({});
     await expect(
-      (financeBizDiagnosesPost as Function)(ctx, { businessId: BIZ_ID })
+      (financeBizDiagnosesPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID })
     ).rejects.toThrow();
   });
 
@@ -532,7 +542,7 @@ describe("finance domain routes", () => {
 
   it("verify POST — accepts valid body", async () => {
     const ctx = makeCtx({ beforeValue: 0, afterValue: 500, targetDirection: "up" });
-    const res = await (financeVerifyPost as Function)(ctx, { actionId: ACTION_ID });
+    const res = await (financeVerifyPost as unknown as RouteHandler)(ctx, { actionId: ACTION_ID });
     expect(res.status).toBe(201);
   });
 });
@@ -548,7 +558,7 @@ describe("marketing domain routes", () => {
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
-    const res = await (marketingBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (marketingBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
@@ -558,7 +568,7 @@ describe("marketing domain routes", () => {
   it("snapshot GET — OWNER_VIEW", () => expectOwnerView(marketingSnapshotGet as WrappedHandler));
   it("snapshot GET — rejects invalid id", async () => {
     await expect(
-      (marketingSnapshotGet as Function)(makeGetCtx(), { snapshotId: INVALID_ID })
+      (marketingSnapshotGet as unknown as RouteHandler)(makeGetCtx(), { snapshotId: INVALID_ID })
     ).rejects.toThrow();
   });
 
@@ -589,7 +599,7 @@ describe("sales domain routes", () => {
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
-    const res = await (salesBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (salesBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
@@ -609,7 +619,7 @@ describe("sales domain routes", () => {
   it("verify POST — OWNER_MANAGE", () => expectOwnerManage(salesVerifyPost as WrappedHandler));
   it("verify POST — accepts valid body", async () => {
     const ctx = makeCtx({ beforeValue: null, afterValue: 100, targetDirection: "up" });
-    const res = await (salesVerifyPost as Function)(ctx, { actionId: ACTION_ID });
+    const res = await (salesVerifyPost as unknown as RouteHandler)(ctx, { actionId: ACTION_ID });
     expect(res.status).toBe(201);
   });
 });
@@ -625,7 +635,7 @@ describe("sop domain routes", () => {
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
-    const res = await (sopBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (sopBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
@@ -659,14 +669,14 @@ describe("strategy domain routes (non-dashboard)", () => {
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx(SNAP_BODY_BASE);
-    const res = await (strategyBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (strategyBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
   it("biz snapshots POST — rejects missing periodStart", async () => {
     const ctx = makeCtx({ periodEnd: "2024-01-31", currency: "GBP" });
     await expect(
-      (strategyBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID })
+      (strategyBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID })
     ).rejects.toThrow();
   });
 
@@ -676,7 +686,7 @@ describe("strategy domain routes (non-dashboard)", () => {
   it("snapshot GET — OWNER_VIEW", () => expectOwnerView(strategySnapshotGet as WrappedHandler));
   it("snapshot GET — rejects invalid id", async () => {
     await expect(
-      (strategySnapshotGet as Function)(makeGetCtx(), { snapshotId: INVALID_ID })
+      (strategySnapshotGet as unknown as RouteHandler)(makeGetCtx(), { snapshotId: INVALID_ID })
     ).rejects.toThrow();
   });
 
@@ -711,13 +721,13 @@ describe("recovery domain routes", () => {
       businessType: "laundry_local_service",
       currency: "GBP",
     });
-    const res = await (recoveryBusinessesPost as Function)(ctx, {});
+    const res = await (recoveryBusinessesPost as unknown as RouteHandler)(ctx, {});
     expect(res.status).toBe(201);
   });
 
   it("businesses POST — rejects missing name", async () => {
     const ctx = makeCtx({ businessType: "laundry", currency: "GBP" });
-    await expect((recoveryBusinessesPost as Function)(ctx, {})).rejects.toThrow();
+    await expect((recoveryBusinessesPost as unknown as RouteHandler)(ctx, {})).rejects.toThrow();
   });
 
   it("business detail GET — OWNER_VIEW", () =>
@@ -725,7 +735,7 @@ describe("recovery domain routes", () => {
 
   it("business detail GET — rejects invalid businessId", async () => {
     await expect(
-      (recoveryBusinessGet as Function)(makeGetCtx(), { businessId: INVALID_ID })
+      (recoveryBusinessGet as unknown as RouteHandler)(makeGetCtx(), { businessId: INVALID_ID })
     ).rejects.toThrow();
   });
 
@@ -734,7 +744,7 @@ describe("recovery domain routes", () => {
 
   it("business detail PATCH — accepts partial update", async () => {
     const ctx = makeCtx({ name: "Updated Laundry" });
-    await (recoveryBusinessPatch as Function)(ctx, { businessId: BIZ_ID });
+    await (recoveryBusinessPatch as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
   });
 
   it("biz snapshots GET — OWNER_VIEW", () =>
@@ -745,14 +755,14 @@ describe("recovery domain routes", () => {
 
   it("biz snapshots POST — accepts valid body", async () => {
     const ctx = makeCtx({ periodStart: "2024-01-01", periodEnd: "2024-01-31", currency: "GBP" });
-    const res = await (recoveryBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (recoveryBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
   it("biz snapshots POST — rejects periodEnd before periodStart", async () => {
     const ctx = makeCtx({ periodStart: "2024-02-01", periodEnd: "2024-01-01", currency: "GBP" });
     await expect(
-      (recoveryBizSnapshotsPost as Function)(ctx, { businessId: BIZ_ID })
+      (recoveryBizSnapshotsPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID })
     ).rejects.toThrow();
   });
 
@@ -764,14 +774,14 @@ describe("recovery domain routes", () => {
 
   it("biz cycles POST — accepts valid snapshotId", async () => {
     const ctx = makeCtx({ snapshotId: SNAP_ID });
-    const res = await (recoveryBizCyclesPost as Function)(ctx, { businessId: BIZ_ID });
+    const res = await (recoveryBizCyclesPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID });
     expect(res.status).toBe(201);
   });
 
   it("biz cycles POST — rejects invalid snapshotId", async () => {
     const ctx = makeCtx({ snapshotId: INVALID_ID });
     await expect(
-      (recoveryBizCyclesPost as Function)(ctx, { businessId: BIZ_ID })
+      (recoveryBizCyclesPost as unknown as RouteHandler)(ctx, { businessId: BIZ_ID })
     ).rejects.toThrow();
   });
 
@@ -780,7 +790,7 @@ describe("recovery domain routes", () => {
 
   it("cycle detail GET — rejects invalid cycleId", async () => {
     await expect(
-      (recoveryCycleGet as Function)(makeGetCtx(), { cycleId: INVALID_ID })
+      (recoveryCycleGet as unknown as RouteHandler)(makeGetCtx(), { cycleId: INVALID_ID })
     ).rejects.toThrow();
   });
 
@@ -792,19 +802,19 @@ describe("recovery domain routes", () => {
   it("action PATCH — requires version field", async () => {
     const ctx = makeCtx({ status: "in_progress" });
     await expect(
-      (recoveryActionPatch as Function)(ctx, { actionId: ACTION_ID })
+      (recoveryActionPatch as unknown as RouteHandler)(ctx, { actionId: ACTION_ID })
     ).rejects.toThrow();
   });
 
   it("action PATCH — accepts valid update with version", async () => {
     const ctx = makeCtx({ status: "in_progress", version: 1 });
-    await (recoveryActionPatch as Function)(ctx, { actionId: ACTION_ID });
+    await (recoveryActionPatch as unknown as RouteHandler)(ctx, { actionId: ACTION_ID });
   });
 
   it("action PATCH — rejects invalid status", async () => {
     const ctx = makeCtx({ status: "INVALID_STATUS", version: 1 });
     await expect(
-      (recoveryActionPatch as Function)(ctx, { actionId: ACTION_ID })
+      (recoveryActionPatch as unknown as RouteHandler)(ctx, { actionId: ACTION_ID })
     ).rejects.toThrow();
   });
 
@@ -813,14 +823,14 @@ describe("recovery domain routes", () => {
 
   it("verify POST — accepts valid body", async () => {
     const ctx = makeCtx({ afterValue: 500 });
-    const res = await (recoveryVerifyPost as Function)(ctx, { actionId: ACTION_ID });
+    const res = await (recoveryVerifyPost as unknown as RouteHandler)(ctx, { actionId: ACTION_ID });
     expect(res.status).toBe(201);
   });
 
   it("verify POST — rejects missing afterValue", async () => {
     const ctx = makeCtx({ evidence: "done" });
     await expect(
-      (recoveryVerifyPost as Function)(ctx, { actionId: ACTION_ID })
+      (recoveryVerifyPost as unknown as RouteHandler)(ctx, { actionId: ACTION_ID })
     ).rejects.toThrow();
   });
 });

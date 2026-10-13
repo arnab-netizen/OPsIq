@@ -6,6 +6,7 @@
  */
 import { clampScore } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput } from "./types";
+import { applyEvidenceQualityToScore } from "./evidence-quality";
 
 /** A finite, present number (missing/NaN/Infinity → not present). */
 function present(x: number | undefined | null): boolean {
@@ -231,7 +232,7 @@ export function isStaleSnapshot(periodEnd: string, now: Date, staleDays: number)
 /**
  * Confidence starts at 100 and is reduced by: 30 per missing critical input,
  * 5 per missing important field, 10 if currency is invalid, and 15 if the
- * snapshot is stale. Clamped to [0, 100].
+ * snapshot is stale, then reduced and capped when the evidence is an estimate. Clamped to [0, 100].
  *
  * Returns confidence score, tier, staleness, age in days, and freshness tier.
  */
@@ -257,6 +258,9 @@ export function calculateDataConfidence(
   const ageDays = Number.isNaN(endMs) ? null : (now.getTime() - endMs) / (1000 * 60 * 60 * 24);
   const stale = ageDays === null ? true : ageDays > staleDays;
   if (stale) score -= 15;
+
+  // Estimates never carry the same weight as actual records (see evidence-quality.ts).
+  score = applyEvidenceQualityToScore(score, input.evidenceQuality);
 
   const finalScore = clampScore(score);
   return {

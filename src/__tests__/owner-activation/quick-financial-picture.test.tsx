@@ -146,6 +146,22 @@ describe("field semantics and truthful feedback (6–8)", () => {
     type("revenue", "1"); type("variableCosts", "1"); type("cashOnHand", "1");
     expect(primary().disabled).toBe(false);
   });
+  it("a period that has not started can never be saved: no read can be made on it, so the form refuses it with a reason and caps the date", () => {
+    mountComponent();
+    type("revenue", "5"); type("variableCosts", "5"); type("cashOnHand", "5");
+    fireEvent.click(screen.getByLabelText("Choose dates"));
+    const future = new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10);
+    const later = new Date(Date.now() + 70 * 86_400_000).toISOString().slice(0, 10);
+    expect((document.querySelector('input[name="periodStart"]') as HTMLInputElement).max).toBe(new Date().toISOString().slice(0, 10));
+    type("periodStart", future); type("periodEnd", later);
+    expect(primary().disabled).toBe(true);
+    expect(screen.getByTestId("quick-period-future")).toBeTruthy();
+    const past = new Date(Date.now() - 40 * 86_400_000).toISOString().slice(0, 10);
+    const pastEnd = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
+    type("periodStart", past); type("periodEnd", pastEnd);
+    expect(screen.queryByTestId("quick-period-future")).toBeNull();
+    expect(primary().disabled).toBe(false);
+  });
   it("known zeros (G/H/I) are accepted and SENT as 0; blanks are omitted", async () => {
     happyApi();
     mountComponent();
@@ -232,7 +248,11 @@ describe("one action: save → diagnose → route (6, 9, 10, 12, 13)", () => {
     mountComponent();
     type("revenue", "5"); type("variableCosts", "5"); type("cashOnHand", "5");
     fireEvent.click(primary());
-    expect((await screen.findByTestId("quick-error")).textContent).toMatch(/already saved numbers for that period/i);
+    const text = (await screen.findByTestId("quick-error")).textContent ?? "";
+    expect(text).toMatch(/already saved numbers for that period/i);
+    // It points at a path that EXISTS (the first read's correction), never at an editor the Money page does not have.
+    expect(text).toMatch(/Something here is wrong/);
+    expect(text).not.toMatch(/Money page|update the saved numbers/i);
     expect(posts("/snapshots")).toHaveLength(1);
     expect(posts("/diagnoses")).toHaveLength(0);
   });
@@ -268,6 +288,8 @@ describe("business switching never leaks a draft (14, 15)", () => {
     await waitFor(() => expect((document.querySelector('input[name="revenue"]') as HTMLInputElement).value).toBe(""));
     expect(screen.getByTestId("quick-financial-picture-form").textContent).toContain(otherId === "b2" ? "(GBP)" : "(INR)");
     type("revenue", "5"); type("fixedCosts", "5"); type("cashOnHand", "5");
+    // My Business asks how reliable the numbers are before a read is made (provenance), so the owner chooses one.
+    fireEvent.click(screen.getByLabelText("From my records"));
     fireEvent.click(primary());
     await waitFor(() => expect(routerPush).toHaveBeenCalled());
     expect(posts("/snapshots")[0].url).toBe(`/api/owner/finance/businesses/${otherId}/snapshots`);

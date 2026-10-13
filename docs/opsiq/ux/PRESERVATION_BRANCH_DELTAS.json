@@ -10,14 +10,6 @@
       "reason": "This branch reclassified /owner/compliance/[id] and /owner/first-value (first-value.page.tsx was retired to a workspace-scope-free stub, compliance/[id] dropped its workspace-only business-context reference) away from WORKSPACE_ONLY, shifting this classification bucket's count by 1 relative to main; unrelated to any independent classification change main has made."
     },
     {
-      "path": "businessContextClassificationCounts.NOT_APPLICABLE",
-      "acceptedMainValue": 5,
-      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
-      "branchDelta": 1,
-      "expectedBranchValue": 6,
-      "reason": "This branch reclassified /owner/compliance/[id] and /owner/first-value (first-value.page.tsx was retired to a workspace-scope-free stub, compliance/[id] dropped its workspace-only business-context reference) away from WORKSPACE_ONLY, shifting this classification bucket's count by 1 relative to main; unrelated to any independent classification change main has made."
-    },
-    {
       "path": "businessContextClassificationCounts.WORKSPACE_ONLY",
       "acceptedMainValue": 3,
       "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
@@ -59,11 +51,11 @@
     },
     {
       "path": "ownerPageRoutes[route=/owner/cockpit].componentTreeFileCount",
-      "acceptedMainValue": 5,
-      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
-      "branchDelta": 2,
-      "expectedBranchValue": 7,
-      "reason": "This branch's own changes to /owner/cockpit's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+      "acceptedMainValue": 7,
+      "acceptedMainSha": "ce8b242c68e3d0776188f069e0f4fb27c5690d2e",
+      "branchDelta": 1,
+      "expectedBranchValue": 8,
+      "reason": "Re-anchored to main tip ce8b242c (value measured by generating the baseline from that commit): this branch's own changes to /owner/cockpit's component tree (public-beta first-run imports) contribute a net +1 file(s) relative to that tip; unrelated to any independent change main has made."
     },
     {
       "path": "ownerPageRoutes[route=/owner/execution].componentTreeFileCount",
@@ -75,11 +67,11 @@
     },
     {
       "path": "ownerPageRoutes[route=/owner/finance].componentTreeFileCount",
-      "acceptedMainValue": 6,
-      "acceptedMainSha": "548908a8501e45a587b90fffeaa286fcfbc7d6a9",
-      "branchDelta": 2,
-      "expectedBranchValue": 8,
-      "reason": "This branch's own changes to /owner/finance's component tree (imports this branch added/changed) contribute a net +2 file(s) relative to main's current tip; unrelated to any independent change main has made to the same route."
+      "acceptedMainValue": 9,
+      "acceptedMainSha": "ce8b242c68e3d0776188f069e0f4fb27c5690d2e",
+      "branchDelta": 1,
+      "expectedBranchValue": 10,
+      "reason": "Re-anchored to main tip ce8b242c (value measured by generating the baseline from that commit): this branch's own changes to /owner/finance's component tree (public-beta first-run imports) contribute a net +1 file(s) relative to that tip; unrelated to any independent change main has made."
     },
     {
       "path": "ownerPageRoutes[route=/owner/home].componentTreeFileCount",

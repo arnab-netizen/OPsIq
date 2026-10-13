@@ -115,6 +115,8 @@ async function fillAndSubmit(fields: { revenue?: string; fixedCosts?: string; va
   if (fields.variableCosts) setField("variableCosts", fields.variableCosts);
   if (fields.cashOnHand) setField("cashOnHand", fields.cashOnHand);
   if (fields.bankBalance) setField("bankBalance", fields.bankBalance);
+  // The essential-numbers form asks how reliable the numbers are before a read is made (provenance).
+  fireEvent.click(form.querySelector('input[name="evidenceQuality"][value="ACTUAL"]') as HTMLInputElement);
   fireEvent.click(screen.getByText("See my first result"));
 }
 

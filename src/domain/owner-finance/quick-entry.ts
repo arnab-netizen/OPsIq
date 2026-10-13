@@ -13,6 +13,8 @@
  * Whether the numbers suffice for a first read is NOT decided here: it is asked of the canonical
  * `evaluateFirstReadSufficiency`, the same rule onboarding, My Business and Start Here consume.
  */
+import { OVERDRAFT_BANK_BALANCE_SENTENCE } from "@/domain/owner-cashflow/overdraft-copy";
+import type { EvidenceQuality } from "./evidence-quality";
 import {
   evaluateFirstReadSufficiency,
   type FirstReadSufficiency,
@@ -27,13 +29,13 @@ import {
  */
 export const CASH_IN_HAND_COPY = {
   label: "Cash in hand",
-  hint: "Physical cash the business holds outside the bank (till, safe). Don't include money in the bank. If there is none, enter 0.",
+  hint: "Physical cash the business holds outside the bank (till, safe). Don't include money in the bank: that is a separate figure. If there is none, enter 0 — OpsIQ won't read that as having no money, only as no cash on hand.",
 } as const;
 
 /** The separate bank figure (written to Cashflow, never to the Finance snapshot). */
 export const BANK_BALANCE_COPY = {
   label: "Money in the bank",
-  hint: "Bank balance right now, across all accounts. Optional. If you already track this in Cashflow for this month, enter it only there or only here — never both, or it is counted twice.",
+  hint: `Bank balance right now, across all accounts. Optional. If you already track this in Cashflow for this month, enter it only there or only here — never both, or it is counted twice. ${OVERDRAFT_BANK_BALANCE_SENTENCE}`,
 } as const;
 
 export const QUICK_ENTRY_FIELDS = [
@@ -52,15 +54,36 @@ export type QuickAmount =
   | { kind: "invalid"; message: string };
 
 const PLAIN_NUMBER = /^\d+(\.\d+)?$/;
+/** Matches the server-side ceiling on any money figure (validation.ts). */
+const MAX_QUICK_AMOUNT = 1e12;
 
 /** Blank → unknown; "0" → known zero; a plain non-negative number → value; anything else → inline error. */
-export function parseQuickAmount(raw: string | null | undefined): QuickAmount {
+export function parseQuickAmount(raw: string | null | undefined, opts: { bankBalance?: boolean } = {}): QuickAmount {
   const text = (raw ?? "").trim();
   if (text === "") return { kind: "blank" };
-  if (text.startsWith("-")) return { kind: "invalid", message: "This can't be negative. Enter 0 if there was none." };
-  const normalised = text.replace(/,/g, "");
+  if (text.startsWith("-")) return { kind: "invalid", message: opts.bankBalance ? `A bank balance can't be negative. ${OVERDRAFT_BANK_BALANCE_SENTENCE}` : "This can't be negative. Enter 0 if there was none." };
+  // Phones autofill "£1,500" / "$ 1 500": a leading currency symbol and REAL thousands grouping are not part of the
+  // number. Anything else with a comma or space ("1,5", "1.500,50", "15 00") is ambiguous (it may be a European
+  // decimal) and is refused rather than guessed — a silently mis-read amount is worse than a retry.
+  const unsigned = text.replace(/^[$£€₹¥]\s*/, "");
+  // "0,500" is 500 in a thousands-grouping reading and 0.5 in a comma-decimal one; a real thousands group never starts with
+  // zero, so a leading-zero first group is refused rather than guessed (the sibling "0.500" is unambiguous: 0.5).
+  if (/^0\d*,/.test(unsigned)) return { kind: "invalid", message: "Enter the number without commas, like 500 or 0.5." };
+  const grouped =
+    /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(unsigned) || // 1,500,000
+    /^\d{1,2}(,\d{2})*,\d{3}(\.\d+)?$/.test(unsigned) || // 15,00,000 (Indian grouping)
+    /^\d{1,3}( \d{3})+(\.\d+)?$/.test(unsigned); // 1 500 000
+  if (/[,\s]/.test(unsigned) && !grouped) return { kind: "invalid", message: "Enter a number, like 150000." };
+  // "1.500" / "12.345": a lone dot followed by exactly three digits after 1-3 leading digits is a decimal in one
+  // locale and a thousands separator in another, and the browser locale is deliberately not guessed. Refuse it and
+  // ask for the plain number ("1500" or "1.5"). "0.500", "1.50", "1500.00" and "1234.567" cannot be read two ways.
+  if (/^[1-9]\d{0,2}\.\d{3}$/.test(unsigned)) {
+    return { kind: "invalid", message: "Enter the number without a dot as a thousands separator, like 1500." };
+  }
+  const normalised = grouped ? unsigned.replace(/[,\s]/g, "") : unsigned;
   if (!PLAIN_NUMBER.test(normalised)) return { kind: "invalid", message: "Enter a number, like 150000." };
   const value = Number(normalised);
+  if (Number.isFinite(value) && value > MAX_QUICK_AMOUNT) return { kind: "invalid", message: "That number is too large. Enter a smaller amount." };
   if (!Number.isFinite(value)) return { kind: "invalid", message: "Enter a number, like 150000." };
   return { kind: "value", value };
 }
@@ -101,6 +124,8 @@ export interface QuickSnapshotPayload {
   fixedCosts?: number;
   variableCosts?: number;
   cashOnHand?: number;
+  /** Provenance of the numbers; omitted when the owner did not say (stored as unspecified, never as actual). */
+  evidenceQuality?: EvidenceQuality;
 }
 
 /**
@@ -112,11 +137,13 @@ export function buildQuickSnapshotPayload(args: {
   values: QuickEntryAssessment["values"];
   period: { start: string; end: string };
   currency: string | null | undefined;
+  evidenceQuality?: EvidenceQuality | null;
 }): { ok: true; payload: QuickSnapshotPayload } | { ok: false; reason: "currency_missing" | "nothing_entered" } {
   const currency = (args.currency ?? "").trim();
   if (!currency) return { ok: false, reason: "currency_missing" };
   if (Object.keys(args.values).length === 0) return { ok: false, reason: "nothing_entered" };
   const payload: QuickSnapshotPayload = { periodStart: args.period.start, periodEnd: args.period.end, currency };
+  if (args.evidenceQuality) payload.evidenceQuality = args.evidenceQuality;
   for (const field of QUICK_ENTRY_FIELDS) {
     const v = args.values[field.name];
     if (v !== undefined) payload[field.name] = v;

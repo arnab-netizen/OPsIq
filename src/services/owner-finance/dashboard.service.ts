@@ -17,7 +17,7 @@ import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisS
 import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
-import { BANK_BALANCE_FRESHNESS_DAYS } from "@/domain/owner-finance/liquidity";
+import { cashPositionChangedSince } from "@/services/owner-finance/liquidity.service";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -217,7 +217,7 @@ export async function getFinanceDashboard(
     ? await db.ownerFinanceCycle.findFirst({
         where: { businessId: selectedBusinessId, workspaceId, snapshotId: diagnosisTargetSnapshot.id },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        select: { id: true, createdAt: true, survivalState: true },
+        select: { id: true, createdAt: true, generatedAt: true, survivalState: true },
       })
     : null;
 
@@ -230,7 +230,7 @@ export async function getFinanceDashboard(
           : "completed"
         : "provisional";
 
-  // Finance diagnosis dependency tracking: bank-balance enrichment (ownerCashflowSnapshot, within the
+  // Finance diagnosis dependency tracking: bank-balance enrichment (the Cashflow snapshot, within the
   // liquidity contract's BANK_BALANCE_FRESHNESS_DAYS window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
   // snapshot itself (diagnosis.service.ts). A newer eligible one arriving after the last cycle ran means
   // the existing diagnosis was not computed from all currently-available evidence — recommend a re-run
@@ -240,16 +240,10 @@ export async function getFinanceDashboard(
     const snapshotEnd = diagnosisTargetSnapshot.periodEnd instanceof Date
       ? diagnosisTargetSnapshot.periodEnd
       : new Date(diagnosisTargetSnapshot.periodEnd as string);
-    const freshnessFloor = new Date(snapshotEnd.getTime() - BANK_BALANCE_FRESHNESS_DAYS * 86_400_000);
     const [newerCashflow, newerIntake] = await Promise.all([
-      db.ownerCashflowSnapshot.findFirst({
-        where: {
-          workspaceId, businessId: selectedBusinessId,
-          periodEnd: { lte: snapshotEnd, gte: freshnessFloor },
-          createdAt: { gt: targetCycle.createdAt },
-        },
-        select: { id: true },
-      }),
+      // The cash position this diagnosis depends on, through the ONE selector: a new OR EDITED bank balance on the
+      // effective Cashflow row(s) for this Finance period since the diagnosis gathered its evidence.
+      cashPositionChangedSince(workspaceId, selectedBusinessId, snapshotEnd, targetCycle.generatedAt),
       diagnosisTargetSnapshot.totalDebtOutstanding == null || diagnosisTargetSnapshot.debtPayments == null
         ? db.ownerDataIntake.findFirst({
             where: {
@@ -260,7 +254,7 @@ export async function getFinanceDashboard(
           })
         : null,
     ]);
-    return Boolean(newerCashflow || newerIntake);
+    return newerCashflow || Boolean(newerIntake);
   })();
 
   return {

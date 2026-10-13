@@ -231,7 +231,7 @@ describe("[db] Owner Cashflow services", () => {
     await createCashflowSnapshot(businessId, crisisSnapshot(), actor, workspaceId);
     await expect(
       createCashflowSnapshot(businessId, crisisSnapshot(), actor, workspaceId)
-    ).rejects.toThrow(/already exists/i);
+    ).rejects.toThrow(/already have a cashflow entry/i);
 
     await teardownOwnerBusiness(businessId);
   });

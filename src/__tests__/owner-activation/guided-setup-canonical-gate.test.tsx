@@ -40,11 +40,13 @@ function setup() {
 }
 
 async function form() { return waitFor(() => screen.getByTestId("onboarding-essential-numbers")); }
-async function enter(values: Record<string, string>) {
+async function enter(values: Record<string, string>, options: { withoutQuality?: boolean } = {}) {
   const f = await form();
   for (const [name, v] of Object.entries(values)) {
     fireEvent.change(f.querySelector(`input[name="${name}"]`) as HTMLInputElement, { target: { value: v } });
   }
+  // The form asks how reliable the numbers are before a read is made (provenance); these tests are about the numbers.
+  if (!options.withoutQuality) fireEvent.click(f.querySelector('input[name="evidenceQuality"][value="ACTUAL"]') as HTMLInputElement);
 }
 const button = () => screen.getByText("See my first result") as HTMLButtonElement;
 const feedback = () => screen.getByTestId("onboarding-first-read-feedback").textContent ?? "";
@@ -54,6 +56,17 @@ const writes = (calls: Call[]) => calls.filter((c) => c.method === "POST");
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Guided setup canonical gate", () => {
+  it("0. sufficient numbers without a stated reliability → button disabled, submit posts nothing (provenance is required)", async () => {
+    const calls = setup();
+    render(<OwnerOnboardingPage />);
+    await enter({ revenue: "600000", fixedCosts: "200000", cashOnHand: "180000" }, { withoutQuality: true });
+    expect(button().disabled).toBe(true);
+    await submit();
+    expect(writes(calls)).toEqual([]);
+    fireEvent.click((await form()).querySelector('input[name="evidenceQuality"][value="ACTUAL"]') as HTMLInputElement);
+    await waitFor(() => expect(button().disabled).toBe(false));
+  });
+
   it("1. all blank → button disabled, submit posts nothing (no snapshot, no diagnosis)", async () => {
     const calls = setup();
     render(<OwnerOnboardingPage />);

@@ -266,7 +266,7 @@ export default function OwnerIntakePage() {
           {showUpload && (
             <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">Paste spreadsheet data</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Select name="targetDomain" label="What kind of data is this?" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: DOMAIN_LABEL[d] ?? d }))} />
                 <Select name="source" label="Where did this data come from?" required options={SOURCES} />
               </div>
@@ -276,7 +276,7 @@ export default function OwnerIntakePage() {
                 name="csvText"
                 required
                 rows={6}
-                className="w-full border rounded-md p-2 font-mono text-xs"
+                className="w-full rounded-md border p-3 font-mono text-base sm:p-2 sm:text-xs"
                 placeholder={"periodStart,periodEnd,currency,revenue,fixedCosts\n2026-05-01,2026-05-31,INR,100000,40000"}
               />
               <Input name="notes" label="Notes (optional)" />

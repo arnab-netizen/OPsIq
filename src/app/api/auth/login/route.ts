@@ -14,6 +14,9 @@ import * as bcrypt from "bcryptjs";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+/** Valid bcrypt hash (cost 10) of an unrelated constant; used only to equalise timing for accounts with no usable credential. */
+const DUMMY_PASSWORD_HASH = "$2b$10$pEpGbgwOTelKQJ1f52v3u.9PSFUq6Itb1SJPwyI936l8v1uGG9D6G";
+
 const loginSchema = z.object({
   email: identityEmailSchema,
   password: z.string().min(1),
@@ -60,6 +63,10 @@ export const POST = async (request: NextRequest) => {
 
     if (!user || !user.isActive || !user.hashedPassword) {
       console.log("[LOGIN] USER_VALIDATION_FAILED", { found: !!user, active: user?.isActive, hasPassword: !!user?.hashedPassword });
+      // A missing, inactive or credential-less (pending / setup-not-done) account must cost the same bcrypt work as a
+      // wrong password, so response timing never separates "wrong password" from "no usable credential". bcrypt is
+      // never called with a null hash: the comparison is against a fixed, valid, unrelated dummy hash.
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
         payload: { email, reason: "user_not_found_or_inactive" },

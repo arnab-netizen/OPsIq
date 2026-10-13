@@ -148,6 +148,9 @@ async function materializeFinance(
       variableCosts: num(r.variableCosts),
     };
     try {
+      // Imported rows deliberately carry NO evidence quality: whether a spreadsheet is "from records" is not something an
+      // import can know, so they stay NULL = legacy-unknown (conservative: never authoritative, shown as "Not stated").
+      // The first-run rule that forces a stated quality applies to the owner-facing snapshot route, not to imports.
       await createFinancialSnapshot(businessId, input, actorId, workspaceId);
       materialized++;
     } catch (e) {

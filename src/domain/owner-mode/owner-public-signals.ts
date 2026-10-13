@@ -149,7 +149,7 @@ export function mapPublicSignals(
       topPublicSignalAction: null,
       whyThisMatters: opts.hadRawButNoValid
         ? "Public signals were received but could not be safely interpreted — more internal data is needed before any decision."
-        : "No outside signals are present for this workspace right now.",
+        : "No outside signals are present for your business right now.",
       sourceQualitySummary: "UNKNOWN", evidenceStrengthSummary: "INSUFFICIENT",
       uncertaintyCaveat: UNCERTAINTY, missingData: [], validationRequired: opts.hadRawButNoValid,
       ownerApprovalRequired: false, evidenceRequired: [],

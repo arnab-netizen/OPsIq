@@ -8,6 +8,7 @@
  * owner empty state routes to My Business, and that one click saves exactly one snapshot and lands on
  * a Money read. Screenshots are written to docs/opsiq/evidence/owner-minimum-effort-input/.
  */
+import { completeFirstRunBusinessStep, verifyEmailAndChoosePassword } from "./first-run-helpers";
 import { test, expect, type Page, type Browser } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
@@ -35,15 +36,13 @@ async function db<T>(fn: (c: Client) => Promise<T>): Promise<T> {
 async function signupAndLogin(page: Page, email: string, password: string, workspace: string) {
   await page.goto("/signup", { waitUntil: "networkidle" });
   await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Business name").fill(workspace);
-  for (const cb of await page.locator('input[type="checkbox"]').all()) if (!(await cb.isChecked())) await cb.check();
   const [res] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/auth/signup") && r.request().method() === "POST"),
     page.click('button[type="submit"]'),
   ]);
   expect(res.status(), "signup must succeed").toBe(201);
-  await db((c) => c.query("UPDATE users SET email_verified_at = now() WHERE email = $1", [email]));
+  await verifyEmailAndChoosePassword(page, { email, password, databaseUrl: DATABASE_URL });
   await page.goto("/login", { waitUntil: "networkidle" });
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -51,22 +50,20 @@ async function signupAndLogin(page: Page, email: string, password: string, works
   await page.waitForURL(/\/owner/, { timeout: 20000 });
 }
 
-async function createBusinessViaUi(page: Page, name: string, currency: string) {
+async function createBusinessViaUi(page: Page, _name: string, currency: string) {
+  // The name is inherited from signup (typed once); first-run asks only type + currency. The quick picture under
+  // test is then reached on the Money-data page, where it is the first-input surface for an existing business.
+  await completeFirstRunBusinessStep(page, { currency });
   await page.goto("/owner/data", { waitUntil: "networkidle" });
-  await page.locator('[data-testid="data-hub-business-name"]').fill(name);
-  await page.locator('select[name="businessType"]').selectOption({ index: 1 });
-  await page.locator('select[name="currency"]').selectOption(currency);
-  const [res] = await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/api/owner/recovery/businesses") && r.request().method() === "POST"),
-    page.getByRole("button", { name: /save business profile/i }).click(),
-  ]);
-  expect(res.status()).toBe(201);
   await expect(page.getByTestId("quick-financial-picture-form")).toBeVisible({ timeout: 15000 });
 }
 
 const fill = (page: Page, name: string, v: string) => page.locator(`[data-testid="quick-financial-picture-form"] input[name="${name}"]`).fill(v);
 const clear = async (page: Page) => { for (const n of ["revenue", "fixedCosts", "variableCosts", "cashOnHand"]) await fill(page, n, ""); };
 const cta = (page: Page) => page.getByTestId("quick-primary-action");
+// First evidence must state how reliable it is (enforced by the server; the control is required on every first-evidence form).
+const chooseQuality = (page: Page) => page.getByTestId("quick-evidence-quality").getByLabel("From my records").check();
+const gchooseQuality = (page: Page) => page.getByTestId("onboarding-evidence-quality").getByLabel("From my records").check();
 const CASH_HINT = /Physical cash the business holds outside the bank/;
 const BANK_INCLUSIVE = /cash and bank|bank (balance )?(and|\+|or) (till|cash)|bank balance you could use/i;
 async function assertCashCopy(page: Page, scope = page.locator("body")) {
@@ -124,7 +121,9 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
   const rand = randomUUID().slice(0, 8);
   const password = "correct-horse-battery-staple";
   const email = `min-effort-${rand}@example.com`;
-  const bizA = `Desktop Bakery ${rand}`;
+  // The first business inherits the name typed once at signup (no second name prompt exists).
+  const wsA = `MinEffort WS ${rand}`;
+  const bizA = wsA;
   const bizB = `Money Route Cafe ${rand}`;
 
   async function newPage(browser: Browser, width: number, height: number, mobile = false) {
@@ -134,7 +133,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
 
   test("desktop 1440: My Business quick path, truthful eligibility, one click, no duplicate; Money route; empty state", async ({ browser }) => {
     const { ctx, page } = await newPage(browser, 1440, 900);
-    await signupAndLogin(page, email, password, `MinEffort WS ${rand}`);
+    await signupAndLogin(page, email, password, wsA);
 
     // Owner empty state (no business yet) → My Business, never the legacy Money flow.
     await page.goto("/owner", { waitUntil: "networkidle" });
@@ -166,6 +165,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await expect(page.getByTestId("quick-feedback")).toContainText("Still needed for a first read: one cost figure");
     await expect(cta(page)).toBeDisabled();
     await shot(page, "desktop-3-partial-feedback");
+    await chooseQuality(page);
     // fixed-cost-only → eligible
     await fill(page, "fixedCosts", "200000");
     await expect(page.getByTestId("quick-feedback")).toContainText("enough for a first read");
@@ -265,6 +265,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await shot(page, "desktop-8-guided-setup-partial");
     expect(await snapshotCount(bizG), "nothing saved while incomplete").toBe(0);
     await gfill(page, "cashOnHand", "0"); // known zero is valid
+    await gchooseQuality(page);
     await expect(gcta(page)).toBeEnabled();
     await gcta(page).click();
     await expect(page.getByTestId("onboarding-first-result")).toBeVisible({ timeout: 30000 });
@@ -331,9 +332,10 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await page.getByTestId("quick-more-detail").locator("summary").click();
     // primary CTA visible without zoom and the journey completes
     await fill(page, "variableCosts", "30");
+    await chooseQuality(page);
     await cta(page).scrollIntoViewIfNeeded();
     const vp = await cta(page).evaluate((e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, b: r.bottom, h: r.height }; });
-    expect(vp.l).toBeGreaterThanOrEqual(0); expect(vp.r).toBeLessThanOrEqual(390); expect(vp.h).toBeGreaterThanOrEqual(36);
+    expect(vp.l).toBeGreaterThanOrEqual(0); expect(vp.r).toBeLessThanOrEqual(390); expect(vp.h).toBeGreaterThanOrEqual(44);
     await cta(page).click();
     await page.waitForURL(/\/owner\/finance/, { timeout: 30000 });
     await page.waitForLoadState("networkidle");
@@ -367,6 +369,7 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
     await assertNoHorizontalScroll(page, "Guided setup partial (mobile)");
     await shot(page, "mobile-9-guided-setup-partial");
     await gfill(page, "variableCosts", "30");
+    await gchooseQuality(page);
     await gcta(page).scrollIntoViewIfNeeded();
     await expect(gcta(page)).toBeEnabled();
     await gcta(page).click();
@@ -380,9 +383,10 @@ test.describe("Owner minimum-effort first input (real browser)", () => {
 
   test("direct Money on mobile for a no-data business shows the shared quick start without overflow", async ({ browser }) => {
     const { ctx, page } = await newPage(browser, 390, 844, true);
-    const bizC = `Mobile Money ${rand}`;
+    const wsC = `MinEffort WS2 ${rand}`;
+    const bizC = wsC;
     const email2 = `min-effort-b-${rand}@example.com`;
-    await signupAndLogin(page, email2, password, `MinEffort WS2 ${rand}`);
+    await signupAndLogin(page, email2, password, wsC);
     // owner empty state on mobile → My Business
     await page.goto("/owner", { waitUntil: "networkidle" });
     await expect(page.getByTestId("owner-empty-setup-cta")).toBeVisible();

@@ -4,38 +4,43 @@ import type { Prisma } from "@/generated/prisma/client";
 import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { AppError, ConflictError } from "@/infra/errors";
+import { ConflictError } from "@/infra/errors";
 import { randomUUID, randomBytes, createHash } from "crypto";
 import { z } from "zod/v4";
-import * as bcrypt from "bcryptjs";
 import { ROLES } from "@/domain/constants/roles";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { describeAuthFailureForOperator, PUBLIC_AUTH_GENERIC_FAILURE, toPublicAuthError } from "@/lib/public-auth-error";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { isBetaRequestInvited, PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE, CURRENT_POLICY_VERSIONS } from "@/lib/beta";
-import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableError, BetaAdmissionRefusedError } from "@/services/auth/beta-cap";
+import { isBetaRequestInvited, PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
+import { reservePublicBetaCapacity, BetaCapExceededError, BetaPendingFromSourceError, BetaCapUnavailableError, BetaAdmissionRefusedError } from "@/services/auth/beta-cap";
 import { canAdmitSignup } from "@/domain/beta/admission";
 import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
 import { checkAndSendCapacityAlert } from "@/services/beta/capacity-alerts.service";
+import { recordVerificationEmailNotSent, verificationBaseUrlProblem } from "@/services/auth/verification-email-signal";
+import { recordProductEvent } from "@/services/analytics/product-events.service";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { publicAdmissionRefusal } from "@/lib/public-admission-response";
+import { trustedClientAddress } from "@/lib/client-address";
+import { EMAIL_VERIFICATION_TTL_MS, isAwaitingEmailOwnership } from "@/services/auth/email-ownership.service";
+import { resendVerificationEmailIfEligible } from "@/services/auth/resend-verification.service";
+import { requirePgRateLimit, RateLimitError, EMAIL_VERIFICATION_RATE_LIMIT } from "@/infra/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/** One week — generous enough that a real user finds and reads the email, bounded so an unredeemed link doesn't linger forever. */
-const EMAIL_VERIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 /**
- * `z.literal(true)` rather than `z.boolean()`: a request that sends `false`,
- * omits the field, or sends a truthy-but-non-boolean value (e.g. the string
- * `"true"`) is rejected identically. There is no server-side default that
- * ever substitutes a missing checkbox with acceptance — every one of the
- * three consents must be explicitly and exactly `true` in the parsed body.
+ * Signup deliberately accepts NO password and NO policy consents. Before the
+ * mailbox is proven, no attacker-selected secret may become a trusted login
+ * credential for that email, and a consent given by an unproven party is not
+ * the mailbox owner's consent. The password and the three policy acceptances
+ * are collected AFTER ownership is proven (verify-email -> one-time setup
+ * token -> /api/auth/reset-password). Zod's default object behaviour strips
+ * unknown keys, so a stale client that still sends `password` / `accept*` has
+ * them discarded before any code can read or store them.
  */
 const signupSchema = z.object({
   email: identityEmailSchema,
-  password: z.string().min(8, "Password must be at least 8 characters"),
   // Trimmed before length checks, so a whitespace-only name is rejected as
   // empty rather than accepted verbatim. 100 matches the bound already
   // established for workspace names elsewhere in this domain (see the
@@ -48,12 +53,51 @@ const signupSchema = z.object({
   workspaceName: z
     .string()
     .trim()
-    .min(1, "Workspace name is required")
-    .max(100, "Workspace name must be 100 characters or fewer"),
-  acceptTerms: z.literal(true, "You must accept the Terms of Service"),
-  acceptPrivacy: z.literal(true, "You must accept the Privacy Notice"),
-  acceptBetaNotice: z.literal(true, "You must accept the Beta Notice"),
+    .min(1, "Business name is required")
+    .max(100, "Business name must be 100 characters or fewer"),
 });
+
+/**
+ * The one success body for a fresh signup AND for a repeated signup against an
+ * account that is still awaiting verification. It carries no user or workspace
+ * id, so the response is byte-identical in both cases and never discloses the
+ * identifiers of an account the caller does not own.
+ */
+const SIGNUP_PENDING_RESPONSE = {
+  success: true,
+  pendingVerification: true,
+  message: "Check your email to confirm your address. You'll choose your password after you confirm.",
+} as const;
+
+/** Verified accounts (and legacy accounts that never required verification) keep today's explicit conflict. */
+const EXISTING_ACCOUNT_CONFLICT_TEXT = "An account already exists for this email. Sign in, or use Forgot your password if you never chose one.";
+
+/**
+ * Repeated signup for an email whose account has not proven its mailbox yet:
+ * rotate the verification (every earlier unused link dies, one fresh link is
+ * emailed) and answer exactly as a fresh signup does. Nothing else about the
+ * existing account (workspace, name, credentials) is touched. The per-email
+ * email budget is shared with /api/auth/resend-verification; when it is
+ * exhausted the send is skipped silently, because a 429 here would reveal that
+ * a pending account exists (a fresh signup is never throttled per email).
+ */
+async function respondForPendingSignup(email: string, ip: string): Promise<Response> {
+  let withinBudget = true;
+  try {
+    await requirePgRateLimit(`verify-email-resend:${email}`, EMAIL_VERIFICATION_RATE_LIMIT);
+  } catch (error) {
+    if (!(error instanceof RateLimitError)) throw error;
+    withinBudget = false;
+  }
+  if (withinBudget) {
+    await resendVerificationEmailIfEligible(email, {
+      ip,
+      auditEventName: AUDIT_EVENTS.EMAIL_VERIFICATION_RESENT,
+      rotate: true,
+    });
+  }
+  return Response.json(SIGNUP_PENDING_RESPONSE, { status: 201 });
+}
 
 // Bounds the Postgres-side statement_timeout applied inside the account-graph
 // transaction below (see withStatementTimeout in @/lib/db) — simple inserts
@@ -122,6 +166,9 @@ async function extractNormalizedEmailForGate(request: NextRequest): Promise<stri
 
 const handleSignup = async (request: NextRequest) => {
   let currentStage = "unknown";
+  // The validated canonical email, kept in scope so the concurrent-signup unique-violation handler can re-resolve
+  // the race winner (the request body stream is already consumed by then).
+  let validatedEmail: string | null = null;
   try {
     // The admission-mode gate. Server-side, authoritative — reads the
     // governed effective settings (DB-backed once Administration's bootstrap
@@ -142,6 +189,12 @@ const handleSignup = async (request: NextRequest) => {
       const gateInvited = gateEmail !== null && (await isBetaRequestInvited(gateEmail));
       const wouldAdmit = canAdmitSignup(preFilterSettings.admissionMode, gateInvited, true);
       if (!wouldAdmit) {
+        // Recorded so the operator's failure view reflects every refusal, not only the rare in-transaction race.
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_DISABLED,
+          payload: { reason: preFilterSettings.admissionMode === "WAITLIST" ? "admission_waitlist" : preFilterSettings.admissionMode === "CLOSED" ? "admission_closed" : "not_invited" },
+          visibility: "internal",
+        });
         return publicAdmissionRefusal("/api/auth/signup", BETA_CLOSED_RESPONSE, 403);
       }
       // Pre-filter passed (admitted pending only a capacity check). Fall
@@ -153,10 +206,11 @@ const handleSignup = async (request: NextRequest) => {
 
     // Parse and validate request
     currentStage = "validation";
-    const { email, password, workspaceName } = await parseRequestBody(
+    const { email, workspaceName } = await parseRequestBody(
       request,
       signupSchema
     );
+    validatedEmail = email;
 
     // Check if user already exists (fast pre-check; the User.email unique
     // constraint inside the transaction below is what actually guarantees
@@ -164,19 +218,12 @@ const handleSignup = async (request: NextRequest) => {
     currentStage = "user_lookup";
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
-      // Distinguish "you already have a working account" from "you started signing up but never
-      // verified" -- "sign in instead" is the wrong instruction for the latter, since an
-      // unverified account can't sign in yet.
-      throw new ConflictError(
-        existingUser.emailVerifiedAt
-          ? "An account already exists for this email. Sign in instead."
-          : "Check your email to finish creating your account."
-      );
+      if (!isAwaitingEmailOwnership(existingUser)) {
+        throw new ConflictError(EXISTING_ACCOUNT_CONFLICT_TEXT);
+      }
+      currentStage = "pending_verification_rotation";
+      return await respondForPendingSignup(email, request.headers.get("x-forwarded-for") ?? "unknown");
     }
-
-    // Hash password
-    currentStage = "bcrypt_hash";
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Generate ids and timestamps up front so every write below is
     // deterministic and the workspace slug can be made collision-proof.
@@ -184,6 +231,8 @@ const handleSignup = async (request: NextRequest) => {
     const workspaceId = randomUUID();
     const now = new Date();
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+    // The per-source bound on unverified signups keys on the PLATFORM-set address, never the caller-influenced list.
+    const clientAddress = trustedClientAddress(request.headers);
 
     // Workspace slug is internal routing metadata, not a human-facing
     // uniqueness promise. Always suffixing with the workspace's own id makes
@@ -212,8 +261,9 @@ const handleSignup = async (request: NextRequest) => {
     currentStage = "invite_check";
     const isInvited = await isBetaRequestInvited(email);
 
-    // User, Workspace, WorkspaceMembership, UserRoleAssignment, the three
-    // PolicyAcceptance rows, and the EmailVerificationToken are the durable
+    // User (hashedPassword NULL — no credential exists until ownership is
+    // proven), Workspace, WorkspaceMembership, UserRoleAssignment and the
+    // EmailVerificationToken are the durable
     // initial-account-graph invariant for an open-beta signup: either all of
     // them commit together, or none do. Deliberately NO Session row and NO
     // cookie here — an open-beta account is not usable until the email
@@ -231,13 +281,13 @@ const handleSignup = async (request: NextRequest) => {
       db,
       SIGNUP_TRANSACTION_TIMEOUT_MS,
       async (tx: Prisma.TransactionClient) => {
-        await reservePublicBetaCapacity(tx, isInvited);
+        await reservePublicBetaCapacity(tx, isInvited, isInvited ? null : clientAddress);
 
         const user = await tx.user.create({
           data: {
             id: userId,
             email,
-            hashedPassword,
+            hashedPassword: null,
             isActive: true,
             requiresEmailVerification: true,
             updatedAt: now,
@@ -277,25 +327,13 @@ const handleSignup = async (request: NextRequest) => {
           },
         });
 
-        for (const policyType of Object.keys(CURRENT_POLICY_VERSIONS) as Array<keyof typeof CURRENT_POLICY_VERSIONS>) {
-          await tx.policyAcceptance.create({
-            data: {
-              id: randomUUID(),
-              userId: user.id,
-              policyType,
-              version: CURRENT_POLICY_VERSIONS[policyType],
-              ipAddress: ip !== "unknown" ? ip : null,
-            },
-          });
-        }
-
         await tx.emailVerificationToken.create({
           data: {
             id: randomUUID(),
             userId: user.id,
             tokenHash: verificationTokenHash,
             expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
-            ipAddress: ip !== "unknown" ? ip : null,
+            ipAddress: clientAddress ?? (ip !== "unknown" ? ip : null),
           },
         });
 
@@ -318,13 +356,6 @@ const handleSignup = async (request: NextRequest) => {
         visibility: "internal",
       });
       await emitAuditEvent({
-        eventName: AUDIT_EVENTS.POLICY_ACCEPTED,
-        actorId: user.id,
-        workspaceId: workspace.id,
-        payload: { versions: CURRENT_POLICY_VERSIONS },
-        visibility: "internal",
-      });
-      await emitAuditEvent({
         eventName: AUDIT_EVENTS.EMAIL_VERIFICATION_REQUESTED,
         actorId: user.id,
         workspaceId: workspace.id,
@@ -332,6 +363,7 @@ const handleSignup = async (request: NextRequest) => {
         entityId: user.id,
         visibility: "internal",
       });
+      await recordProductEvent({ name: "signup_completed", workspaceId: workspace.id, actorId: user.id });
     } catch (auditError) {
       const governed = classifyOperatorError(
         auditError instanceof Error ? auditError : new Error(String(auditError)),
@@ -354,30 +386,26 @@ const handleSignup = async (request: NextRequest) => {
       const provider = getEmailProvider();
       if (provider) {
         const verifyUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/verify-email?token=${rawVerificationToken}`;
+        if (verificationBaseUrlProblem(getConfig().NEXT_PUBLIC_APP_URL)) {
+          await recordVerificationEmailNotSent({ reason: "BASE_URL_NOT_PUBLIC", userId: user.id, workspaceId: workspace.id });
+        }
         await provider.send({
           to: user.email,
           subject: "Verify your OpsIQ account",
-          html: `<p>Welcome to the OpsIQ beta.</p><p><a href="${verifyUrl}">Verify your email to activate your account</a></p><p>This link expires in 7 days. Never share it — it grants access to your account.</p>`,
-          text: `Verify your OpsIQ account: ${verifyUrl}\n\nThis link expires in 7 days. Never share it — it grants access to your account.`,
+          html: `<p>Welcome to the OpsIQ beta.</p><p><a href="${verifyUrl}">Confirm your email</a> and you'll then choose your password.</p><p>This link expires in 7 days. If you didn't ask for an OpsIQ account, ignore this email — nothing is activated until you confirm. Never share this link.</p>`,
+          text: `Confirm your email for OpsIQ: ${verifyUrl}\n\nYou'll choose your password after you confirm. This link expires in 7 days. If you didn't ask for an OpsIQ account, ignore this email — nothing is activated until you confirm. Never share this link.`,
         });
       } else {
         console.warn("[SIGNUP] No email provider configured — verification token created but not emailed", { userId: user.id });
+        await recordVerificationEmailNotSent({ reason: "NO_PROVIDER", userId: user.id, workspaceId: workspace.id });
       }
     } catch (emailError) {
+      await recordVerificationEmailNotSent({ reason: "SEND_FAILED", userId: user.id, workspaceId: workspace.id });
       console.error("[SIGNUP] Verification email dispatch failed", { userId: user.id, errorType: emailError instanceof Error ? emailError.constructor.name : "UnknownError" });
     }
 
     currentStage = "response";
-    return Response.json(
-      {
-        success: true,
-        pendingVerification: true,
-        message: "Account created. Check your email to verify your account before signing in.",
-        user: { id: user.id, email: user.email },
-        workspace: { id: workspace.id, name: workspace.name },
-      },
-      { status: 201 }
-    );
+    return Response.json(SIGNUP_PENDING_RESPONSE, { status: 201 });
   } catch (error) {
     if (error instanceof BetaCapExceededError) {
       console.warn("[SIGNUP_REFUSED] beta cap reached");
@@ -389,7 +417,7 @@ const handleSignup = async (request: NextRequest) => {
       // emitAuditEvent failure regardless.
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_CAP,
-        payload: { reason: "beta_cap_reached" },
+        payload: { reason: error instanceof BetaPendingFromSourceError ? "pending_from_source" : "beta_cap_reached" },
         visibility: "internal",
       });
       return Response.json(
@@ -422,7 +450,7 @@ const handleSignup = async (request: NextRequest) => {
     }
 
     const errorName = error instanceof Error ? error.name : "UnknownError";
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = describeAuthFailureForOperator(error);
     let prismaCode: string | null = null;
     let classification = "unknown_error";
 
@@ -440,6 +468,13 @@ const handleSignup = async (request: NextRequest) => {
     }
 
     console.error(`[SIGNUP_FAILURE] stage=${currentStage} errorName=${errorName} safeMessage=${errorMessage} prismaCode=${prismaCode || "none"} classification=${classification}`);
+
+    // Server-log-only technical detail via the governed classifier (same pattern as the audit-failure path
+    // above); length-bounded, never part of any response body.
+    console.error(
+      "[SIGNUP_FAILURE_DETAIL]",
+      classifyOperatorError(error, { context: "load" }).technicalDetails.slice(0, 1000)
+    );
 
     // Check if request has diagnostic key for protected detailed response
     const hasDiagnosticAccess = verifyDiagnosticKeyFromRequest(request);
@@ -477,27 +512,34 @@ const handleSignup = async (request: NextRequest) => {
     // AppError, using its own real statusCode/message -- both are constructed safe-by-design (see
     // AppError's subclasses in infra/errors.ts) -- same shape as the BetaCapExceededError/
     // BetaCapUnavailableError branches above.
-    if (error instanceof z.ZodError) {
-      const message = `Validation error: ${error.issues.map((i) => i.message).join(", ")}`;
-      return Response.json({ success: false, error: message }, { status: 400 });
+    const validationFailure = error instanceof z.ZodError ? toPublicAuthError(error) : null;
+    if (validationFailure) {
+      return Response.json(validationFailure.body, { status: validationFailure.status });
     }
 
     // A concurrent double-submit can lose the email uniqueness race inside the transaction (the
     // pre-check above only catches the common case) — surface it as the same friendly conflict
     // rather than letting the raw Prisma error fall through to the generic AppError branch below.
     if (isEmailUniqueViolation(error)) {
-      return Response.json({ success: false, error: "An account already exists for this email. Sign in instead." }, { status: 409 });
+      // The race winner may be an account that is still awaiting verification: treat the loser exactly like a
+      // repeated signup for it (rotate + same success body) rather than a misleading "sign in instead".
+      const winner = validatedEmail ? await db.user.findUnique({ where: { email: validatedEmail } }) : null;
+      if (validatedEmail && winner && isAwaitingEmailOwnership(winner)) {
+        return respondForPendingSignup(validatedEmail, request.headers.get("x-forwarded-for") ?? "unknown");
+      }
+      return Response.json({ success: false, error: EXISTING_ACCOUNT_CONFLICT_TEXT }, { status: 409 });
     }
 
-    if (error instanceof AppError) {
-      return Response.json({ success: false, error: error.message }, { status: error.statusCode });
+    const publicFailure = toPublicAuthError(error);
+    if (publicFailure) {
+      return Response.json(publicFailure.body, { status: publicFailure.status });
     }
 
     // CM-SEC-02: never surface a raw internal error (Prisma text, stack, internal
-    // hostnames) to a public signup caller. The full detail is already captured in
-    // the server log above and reachable via the diagnostic-key-gated branch; the
+    // hostnames) to a public signup caller. The technical detail is captured in
+    // the server log above ([SIGNUP_FAILURE_DETAIL]); the diagnostic-key-gated branch carries only error name/code; the
     // client gets a stable, generic message.
-    return Response.json({ success: false, error: "We couldn't create your account right now. Please try again." }, { status: 500 });
+    return Response.json({ success: false, error: PUBLIC_AUTH_GENERIC_FAILURE }, { status: 500 });
   }
 };
 

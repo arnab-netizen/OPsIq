@@ -1,6 +1,6 @@
 # OpsIQ
 
-> OpsIQ is a business operating and decision-support tool for small and mid-size service business owners. It reads a business's day-to-day numbers and returns one prioritized, explained action at a time — with the exact data, calculation, and confidence behind it. Currently in an invite-only controlled beta, free, no credit card required.
+> OpsIQ is a business operating and decision-support tool for small and mid-size service business owners. It reads a business's day-to-day numbers and returns one prioritized, explained action at a time — with the exact data, calculation, and confidence behind it. Currently in a free beta, no credit card required; how access works is described at /beta.
 
 ## What OpsIQ is not
 Not a CRM, not an enterprise ops platform, not a coaching service — despite sharing the name "OpsIQ" with several unrelated companies.

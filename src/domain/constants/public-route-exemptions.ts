@@ -68,6 +68,7 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
     "/api/auth/beta-status", // Display-only: whether public registration is open. Carries no authority — signup independently re-checks the flag server-side
     "/api/auth/verify-email", // Email-verification redemption - authorized by the single-use, hashed, expiring verification token, not session auth
     "/api/auth/resend-verification", // Verification-resend request - public and enumeration-resistant by design, rate-limited per IP and email
+    "/api/product-events", // Anonymous, name-only funnel beacon (closed allowlist, no payload, no identity); per-IP and global write caps
   ],
   WEBHOOK_SIGNED: [
     "/api/webhooks/stripe", // Signature verification is mandatory
@@ -118,6 +119,7 @@ export const EXEMPTION_REASONS = {
   "/api/auth/reset-password": "Password-reset redemption endpoint - authorized by the single-use, sha256-hashed, 1-hour-expiring reset token from the emailed link, not session auth; rate-limited per IP",
   "/api/auth/beta-status": "Display-only open-beta flag read - carries no authority, signup independently re-checks the flag server-side",
   "/api/auth/verify-email": "Email-verification redemption endpoint - authorized by the single-use, sha256-hashed, 7-day-expiring verification token from the emailed link, not session auth; rate-limited per IP",
+  "/api/product-events": "Anonymous name-only funnel beacon from the public site - closed two-name allowlist, no payload or identity, size-limited, per-IP and global write-capped, always answers 204",
   "/api/auth/resend-verification": "Verification-resend request endpoint - public and enumeration-resistant by design; rate-limited per IP and email",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
   "/api/webhooks/resend": "Email webhook with HMAC-SHA256 (svix) signature verification + timestamp tolerance - fail-closed when RESEND_WEBHOOK_SECRET unset",

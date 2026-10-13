@@ -336,6 +336,8 @@ export const AUDIT_EVENTS = {
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",
+  /** A recorded Cashflow figure (bank balance / cash in hand) was added to, changed or cleared; payload keeps before/after. */
+  CASHFLOW_SNAPSHOT_AMENDED: "owner.cashflow_snapshot_amended",
   OWNER_CASHFLOW_DIAGNOSIS_RUN: "owner.cashflow_diagnosis_run",
   OWNER_CASHFLOW_ACTION_UPDATED: "owner.cashflow_action_updated",
   OWNER_CASHFLOW_ACTION_COMPLETED: "owner.cashflow_action_completed",
@@ -729,9 +731,35 @@ export const AUDIT_EVENTS = {
   EMAIL_VERIFICATION_REQUESTED: "user.email_verification_requested",
   EMAIL_VERIFICATION_RESENT: "user.email_verification_resent",
   EMAIL_VERIFIED: "user.email_verified",
+  // A verification email that could not be delivered (no provider, send failure, or a non-public link base). Payload: reason enum only.
+  EMAIL_VERIFICATION_NOT_SENT: "user.email_verification_not_sent",
+  /** A forgot-password setup/reset email that could not be sent (enum reason only, no address). */
+  PASSWORD_EMAIL_NOT_SENT: "user.password_email_not_sent",
   POLICY_ACCEPTED: "user.policy_accepted",
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",
+
+  // Public-beta product funnel (src/domain/analytics/product-events.ts). Payloads carry enums/durations only.
+  PRODUCT_PUBLIC_START_FREE_CLICKED: "product.public_start_free_clicked",
+  PRODUCT_SIGNUP_STARTED: "product.signup_started",
+  PRODUCT_SIGNUP_COMPLETED: "product.signup_completed",
+  PRODUCT_EMAIL_VERIFIED: "product.email_verified",
+  PRODUCT_PASSWORD_SET: "product.password_set",
+  PRODUCT_FIRST_RUN_STARTED: "product.first_run_started",
+  PRODUCT_BUSINESS_PROFILE_COMPLETED: "product.business_profile_completed",
+  PRODUCT_FIRST_EVIDENCE_SAVED: "product.first_evidence_saved",
+  PRODUCT_FIRST_DIAGNOSIS_COMPLETED: "product.first_diagnosis_completed",
+  PRODUCT_FIRST_RESULT_VIEWED: "product.first_result_viewed",
+  PRODUCT_FIRST_RESULT_ACTION_ACCEPTED: "product.first_result_action_accepted",
+  PRODUCT_FIRST_RESULT_CORRECTED: "product.first_result_corrected",
+  PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED: "product.first_result_improvement_requested",
+  PRODUCT_FIRST_RESULT_QUESTION_SKIPPED: "product.first_result_question_skipped",
+  PRODUCT_FIRST_TRUSTED_DECISION_INTERACTION: "product.first_trusted_decision_interaction",
+  PRODUCT_FIRST_VALUE_FEEDBACK: "product.first_value_feedback",
+  PRODUCT_COCKPIT_REACHED: "product.cockpit_reached",
+  PRODUCT_RETURNING_OWNER: "product.returning_owner",
+  PRODUCT_OUTCOME_VERIFICATION_STARTED: "product.outcome_verification_started",
+  PRODUCT_OUTCOME_VERIFIED: "product.outcome_verified",
 
   // Controlled-beta homepage capture
   BETA_REQUEST_CREATED: "beta_request.created",
