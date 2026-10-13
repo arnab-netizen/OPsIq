@@ -590,11 +590,15 @@ export interface MarkBetaRequestInvitedInput {
   actorId: string;
 }
 
+/** What happened to the applicant approval email on this call. FAILED / NO_PROVIDER mean the state change is durable but nothing was sent. */
+export type BetaApprovalEmailOutcome = "SENT" | "FAILED" | "NO_PROVIDER" | "NOT_ATTEMPTED";
+
 export interface MarkBetaRequestInvitedResult {
   id: string;
   status: string;
   invitedAt: string | null;
   invitedBy: string | null;
+  emailDelivery: BetaApprovalEmailOutcome;
 }
 
 /**
@@ -605,10 +609,13 @@ export interface MarkBetaRequestInvitedResult {
  * the state mutation above is already durably committed, so a delivery
  * failure here must never surface as a failed invite.
  */
-async function sendBetaApprovalEmail(email: string): Promise<void> {
+async function sendBetaApprovalEmail(email: string): Promise<BetaApprovalEmailOutcome> {
   try {
     const provider = getEmailProvider();
-    if (!provider) return;
+    if (!provider) {
+      console.error("[BETA_REQUEST_INVITE] Approval email NOT sent: no email provider configured");
+      return "NO_PROVIDER";
+    }
     const signupUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/signup`;
     await provider.send({
       to: email,
@@ -616,11 +623,18 @@ async function sendBetaApprovalEmail(email: string): Promise<void> {
       html: `<p>Your OpsIQ beta access is ready.</p><p><a href="${signupUrl}">Sign up now</a> using this same email address (${escapeHtml(email)}) to activate your account.</p>`,
       text: `Your OpsIQ beta access is ready. Sign up now using this same email address (${email}): ${signupUrl}`,
     });
+    return "SENT";
   } catch (emailError) {
+    // The provider's own status/message (e.g. "Resend API error 403: ...") is what an operator needs to act; the
+    // recipient address is removed so the log line carries no personal data.
+    const detail =
+      emailError instanceof Error ? emailError.message.split(email).join("[recipient]").slice(0, 300) : "non-Error thrown";
     console.error(
       "[BETA_REQUEST_INVITE] Approval email dispatch failed",
-      emailError instanceof Error ? emailError.constructor.name : "UnknownError"
+      emailError instanceof Error ? emailError.constructor.name : "UnknownError",
+      detail
     );
+    return "FAILED";
   }
 }
 
@@ -706,11 +720,12 @@ export async function markBetaRequestInvited(
     return updated.count === 1;
   });
 
+  let emailDelivery: BetaApprovalEmailOutcome = "NOT_ATTEMPTED";
   if (transitioned) {
     // Only on the actual transition, and only after the transaction above
     // has successfully committed — never on an idempotent replay, and
     // never able to roll back the already-durable state change.
-    await sendBetaApprovalEmail(existing.email);
+    emailDelivery = await sendBetaApprovalEmail(existing.email);
   }
 
   const finalRow = await db.betaRequest.findUnique({
@@ -726,6 +741,7 @@ export async function markBetaRequestInvited(
     status: finalRow.status,
     invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
     invitedBy: finalRow.invitedBy,
+    emailDelivery,
   };
 }
 
@@ -859,8 +875,9 @@ export async function reopenAndInviteBetaRequest(
     return updated.count === 1;
   });
 
+  let emailDelivery: BetaApprovalEmailOutcome = "NOT_ATTEMPTED";
   if (transitioned) {
-    await sendBetaApprovalEmail(existing.email);
+    emailDelivery = await sendBetaApprovalEmail(existing.email);
   }
 
   const finalRow = await db.betaRequest.findUniqueOrThrow({
@@ -872,5 +889,6 @@ export async function reopenAndInviteBetaRequest(
     status: finalRow.status,
     invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
     invitedBy: finalRow.invitedBy,
+    emailDelivery,
   };
 }

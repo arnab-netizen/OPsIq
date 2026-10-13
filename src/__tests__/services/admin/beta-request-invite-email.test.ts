@@ -135,4 +135,42 @@ describe("markBetaRequestInvited — approval email", () => {
     expect(result.status).toBe("INVITED");
     expect(result.id).toBe(REQUEST_ID);
   });
+
+  it("reports the outcome and logs the provider's status without the recipient when dispatch fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.send.mockRejectedValueOnce(new Error("Resend API error 403: domain invitee@example.com is not verified"));
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+
+    expect(result.emailDelivery).toBe("FAILED");
+    const logged = JSON.stringify(errorSpy.mock.calls);
+    expect(logged).toContain("Resend API error 403");
+    expect(logged).not.toContain("invitee@example.com");
+    errorSpy.mockRestore();
+  });
+
+  it("reports SENT on success, NO_PROVIDER when unconfigured, NOT_ATTEMPTED on a replay", async () => {
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("SENT");
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getEmailProvider.mockReturnValue(null);
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NO_PROVIDER");
+
+    mocks.updateMany.mockResolvedValue({ count: 0 });
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NOT_ATTEMPTED");
+  });
 });
