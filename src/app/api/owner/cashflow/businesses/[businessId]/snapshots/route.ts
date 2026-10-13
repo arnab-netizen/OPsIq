@@ -8,6 +8,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { cashflowSnapshotCreateSchema } from "@/domain/owner-cashflow/validation";
 import { createCashflowSnapshot, listCashflowSnapshots } from "@/services/owner-cashflow/snapshot.service";
+import { CashflowConflictError } from "@/services/owner-cashflow/cashflow-conflict";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,13 +25,19 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     parseOrThrow(uuidSchema, params.businessId);
     const input = await parseRequestBody(ctx.request!, cashflowSnapshotCreateSchema);
-    const snapshot = await createCashflowSnapshot(
-      params.businessId,
-      input,
-      ctx.verifiedActorId,
-      ctx.verifiedWorkspaceId
-    );
-    return canonicalJson(snapshot, { status: 201 });
+    try {
+      const snapshot = await createCashflowSnapshot(
+        params.businessId,
+        input,
+        ctx.verifiedActorId,
+        ctx.verifiedWorkspaceId
+      );
+      return canonicalJson(snapshot, { status: 201 });
+    } catch (error) {
+      // CASHFLOW_PERIOD_EXISTS carries the existing entry's id + updatedAt so the owner can open it to edit.
+      if (error instanceof CashflowConflictError) return canonicalJson(error.responseBody, { status: 409 });
+      throw error;
+    }
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

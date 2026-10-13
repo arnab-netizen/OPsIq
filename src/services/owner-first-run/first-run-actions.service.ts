@@ -9,9 +9,10 @@ import { ConflictError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { READ_STALE_CODE, READ_STALE_MESSAGE as STALE_READ_COPY } from "@/domain/owner-first-run/read-staleness";
 import { isReadCurrentForWrite } from "@/services/owner-first-run/first-run-evidence.reader";
+import { amendmentChangesNothing } from "@/domain/owner-first-run/improve-target";
 import { isAuthoritativeEvidence } from "@/domain/owner-finance/evidence-quality";
 import type { FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
-import { amendFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import { amendFinancialSnapshot, getFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { reconcileDataGapTasksAfterDiagnosis } from "@/services/owner-mode/process-execution-bridge.service";
 import { recordOwnerDecision } from "@/services/owner-outcome/owner-decision.service";
@@ -91,6 +92,8 @@ async function readForAcceptance(workspaceId: string, businessId: string, readCy
     throw error;
   }
   if (view.cycleId !== readCycleId) throw readStale();
+  // The very read on screen, but a figure it depends on (the bank balance) changed after it was made.
+  if (view.staleReason) throw readStale();
   return view;
 }
 
@@ -125,6 +128,11 @@ export async function correctFirstResultEvidence(
   const beforeView = await getFirstMoneyRead(workspaceId, businessId);
   if (beforeView.snapshotId !== snapshotId) {
     throw new ConflictError("This read has already been corrected. Reload to see the latest.");
+  }
+  // A "correction" that restates what is already saved would mint an identical version and a false "corrected" signal.
+  const recorded = await getFinancialSnapshot(snapshotId, workspaceId);
+  if (recorded.businessId === businessId && amendmentChangesNothing(recorded as unknown as Record<string, unknown>, amend as unknown as Record<string, unknown>)) {
+    throw new ValidationError("Those numbers are the same as the ones already saved, so there is nothing to correct.", { fieldErrors: [] });
   }
   const rate = await checkPgRateLimit(`diag:${businessId}`, { capacity: 10, refillPerSecond: 10 / 3600 });
   if (!rate.allowed) {

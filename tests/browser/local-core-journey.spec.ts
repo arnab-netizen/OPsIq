@@ -14,10 +14,9 @@
  * contract itself (token issuance, expiry, resend) is covered separately by
  * src/__tests__/**\/*.test.ts and is not what this test is proving.
  */
-import { completeFirstRunBusinessStep } from "./first-run-helpers";
+import { completeFirstRunBusinessStep, verifyEmailAndChoosePassword } from "./first-run-helpers";
 import { test, expect } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
-import { Client } from "pg";
 import { randomUUID } from "crypto";
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
@@ -43,24 +42,14 @@ test.describe("Local core journey: signup through Home, Priorities, Actions", ()
     // PUBLIC_BETA_ENABLED must be "true" in this local environment for signup to accept new
     // accounts (see src/lib/beta.ts) -- the same env this whole local journey already depends on.
     await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByLabel("Business name", { exact: true }).fill(workspaceName);
-    for (const cb of await page.locator('input[type="checkbox"]').all()) {
-      if (!(await cb.isChecked())) await cb.check();
-    }
     await page.click('button:has-text("Create Account")');
     await expect(page.getByText(/check your email|verify your account/i)).toBeVisible({ timeout: 15000 });
   });
 
-  test("verify (local DB shortcut) and login", async ({ page }) => {
-    const client = new Client({ connectionString: DATABASE_URL });
-    await client.connect();
-    try {
-      const result = await client.query('UPDATE users SET email_verified_at = now() WHERE email = $1 RETURNING id', [email]);
-      expect(result.rowCount).toBe(1);
-    } finally {
-      await client.end();
-    }
+  test("verify (explicit click), choose the password, then log in", async ({ page }) => {
+    // The mailbox is proven by the explicit "Verify my email" click; the password is chosen after that.
+    await verifyEmailAndChoosePassword(page, { email, password, databaseUrl: DATABASE_URL });
 
     await page.goto("/login", { waitUntil: "networkidle" });
     await page.fill('input[type="email"]', email);

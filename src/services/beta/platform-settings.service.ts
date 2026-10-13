@@ -155,7 +155,7 @@ export async function countExternalBetaWorkspaces(client: SettingsClient = db): 
  *
  * A lapsed unverified signup stops holding a slot without any row being deleted or rewritten, so abuse is a temporary
  * slowdown, never a permanent exhaustion. A single source address may also hold only PENDING_SIGNUPS_PER_SOURCE_LIMIT
- * pending places at once (see countPendingFromSource), which makes occupying the pending hold take many addresses.
+ * pending places at once (attributed through the first verification token's recorded address, see countPendingFromSource), which makes occupying the pending hold take many addresses.
  * If a lapsed signup's owner clicks the link later, verification re-checks capacity under the same advisory lock (see the
  * verify-email route), so the limit can never be exceeded by a late verifier either.
  */
@@ -187,18 +187,26 @@ export async function countCapacityUsage(client: SettingsClient = db, now: Date 
 }
 
 /**
- * Unverified signups still inside their hold that were made from this source address (the address recorded on the policy
- * acceptances written at signup). Zero for an unknown source: the per-source bound is skipped when there is no address.
+ * Unverified signups still inside their hold that were made from this source address. Signup writes no policy
+ * acceptance (consents are collected after the mailbox is proven), so the source is read from the one record signup does
+ * write: the user's FIRST (earliest created) EmailVerificationToken, whose ip_address is the platform-trusted client
+ * address the signup route recorded. Only the first token counts, so a rotation token issued by someone else (a repeated
+ * signup or a resend for the same email from another address) can never move a user to a different source. Zero for an
+ * unknown source: the per-source bound is skipped when there is no address.
  */
 export async function countPendingFromSource(client: SettingsClient, sourceIp: string | null, now: Date = new Date()): Promise<number> {
   if (!sourceIp || sourceIp === "unknown") return 0;
   const cutoff = new Date(now.getTime() - PENDING_SIGNUP_HOLD_MS);
   const rows = await client.$queryRaw<Array<{ n: bigint }>>`
-    SELECT COUNT(DISTINCT u.id) AS n
+    SELECT COUNT(*) AS n
     FROM users u
-    JOIN policy_acceptances p ON p.user_id = u.id
     WHERE u.requires_email_verification = true AND u.email_verified_at IS NULL AND u.created_at > ${cutoff}
-      AND p.ip_address = ${sourceIp}
+      AND (
+        SELECT t.ip_address FROM email_verification_tokens t
+        WHERE t.user_id = u.id
+        ORDER BY t.created_at ASC, t.id ASC
+        LIMIT 1
+      ) = ${sourceIp}
   `;
   return Number(rows[0]?.n ?? 0);
 }

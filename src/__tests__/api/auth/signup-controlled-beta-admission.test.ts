@@ -13,7 +13,7 @@
  * DB-free: only db.betaRequest.findUnique is mocked. db.user.findUnique and
  * the account-graph transaction are never reached by any test here — every
  * denied case short-circuits before request-body validation runs, and the
- * one admitted case uses a body that is otherwise invalid (missing consents,
+ * one admitted case uses a body that is otherwise invalid (empty business name,
  * exactly the same trick beta-kill-switch.test.ts uses for the enabled case)
  * so the test can observe "reached validation" without needing to mock the
  * full account-creation transaction.
@@ -52,11 +52,7 @@ function signupRequest(body: unknown, opts: { rawJson?: string } = {}): Request 
 
 const VALID_BODY = {
   email: "invitee@example.com",
-  password: "password123",
   workspaceName: "Invitee Co",
-  acceptTerms: true,
-  acceptPrivacy: true,
-  acceptBetaNotice: true,
 };
 
 describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABLED=false)", () => {
@@ -97,10 +93,10 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
   it("admits the request past the gate when the BetaRequest is INVITED — falls through to real validation", async () => {
     mocks.findUniqueBetaRequest.mockResolvedValue({ status: "INVITED", invitedAt: new Date() });
     const { POST } = await import("@/app/api/auth/signup/route");
-    // Otherwise-invalid body (missing all three consents): if the gate had
+    // Otherwise-invalid body (empty business name): if the gate had
     // refused, this would be a 403 beta_disabled. Observing the validation
     // stage's 400 instead is the proof the gate admitted it.
-    const invalidButAdmissible = { email: VALID_BODY.email, password: VALID_BODY.password, workspaceName: VALID_BODY.workspaceName };
+    const invalidButAdmissible = { email: VALID_BODY.email, workspaceName: "" };
     const res = await POST(signupRequest(invalidButAdmissible) as never);
     expect(res.status).toBe(400);
     const json = await res.json();
@@ -114,8 +110,7 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
     const { POST } = await import("@/app/api/auth/signup/route");
     const invalidButAdmissible = {
       email: "  Invitee@Example.com  ",
-      password: VALID_BODY.password,
-      workspaceName: VALID_BODY.workspaceName,
+      workspaceName: "",
     };
     await POST(signupRequest(invalidButAdmissible) as never);
     expect(mocks.findUniqueBetaRequest).toHaveBeenCalledWith({
@@ -166,7 +161,7 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
   it("this gate never runs the BetaRequest lookup while public beta is enabled (unchanged behavior)", async () => {
     process.env.PUBLIC_BETA_ENABLED = "true";
     const { POST } = await import("@/app/api/auth/signup/route");
-    const invalidBody = { email: VALID_BODY.email, password: VALID_BODY.password, workspaceName: VALID_BODY.workspaceName };
+    const invalidBody = { email: VALID_BODY.email, workspaceName: "" };
     const res = await POST(signupRequest(invalidBody) as never);
     expect(res.status).toBe(400); // reaches validation exactly as before this change
     expect(mocks.findUniqueBetaRequest).not.toHaveBeenCalled();

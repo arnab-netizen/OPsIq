@@ -336,6 +336,8 @@ export const AUDIT_EVENTS = {
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",
+  /** A recorded Cashflow figure (bank balance / cash in hand) was added to, changed or cleared; payload keeps before/after. */
+  CASHFLOW_SNAPSHOT_AMENDED: "owner.cashflow_snapshot_amended",
   OWNER_CASHFLOW_DIAGNOSIS_RUN: "owner.cashflow_diagnosis_run",
   OWNER_CASHFLOW_ACTION_UPDATED: "owner.cashflow_action_updated",
   OWNER_CASHFLOW_ACTION_COMPLETED: "owner.cashflow_action_completed",
@@ -731,6 +733,8 @@ export const AUDIT_EVENTS = {
   EMAIL_VERIFIED: "user.email_verified",
   // A verification email that could not be delivered (no provider, send failure, or a non-public link base). Payload: reason enum only.
   EMAIL_VERIFICATION_NOT_SENT: "user.email_verification_not_sent",
+  /** A forgot-password setup/reset email that could not be sent (enum reason only, no address). */
+  PASSWORD_EMAIL_NOT_SENT: "user.password_email_not_sent",
   POLICY_ACCEPTED: "user.policy_accepted",
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",
@@ -740,6 +744,7 @@ export const AUDIT_EVENTS = {
   PRODUCT_SIGNUP_STARTED: "product.signup_started",
   PRODUCT_SIGNUP_COMPLETED: "product.signup_completed",
   PRODUCT_EMAIL_VERIFIED: "product.email_verified",
+  PRODUCT_PASSWORD_SET: "product.password_set",
   PRODUCT_FIRST_RUN_STARTED: "product.first_run_started",
   PRODUCT_BUSINESS_PROFILE_COMPLETED: "product.business_profile_completed",
   PRODUCT_FIRST_EVIDENCE_SAVED: "product.first_evidence_saved",

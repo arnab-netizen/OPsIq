@@ -248,7 +248,11 @@ describe("one action: save → diagnose → route (6, 9, 10, 12, 13)", () => {
     mountComponent();
     type("revenue", "5"); type("variableCosts", "5"); type("cashOnHand", "5");
     fireEvent.click(primary());
-    expect((await screen.findByTestId("quick-error")).textContent).toMatch(/already saved numbers for that period/i);
+    const text = (await screen.findByTestId("quick-error")).textContent ?? "";
+    expect(text).toMatch(/already saved numbers for that period/i);
+    // It points at a path that EXISTS (the first read's correction), never at an editor the Money page does not have.
+    expect(text).toMatch(/Something here is wrong/);
+    expect(text).not.toMatch(/Money page|update the saved numbers/i);
     expect(posts("/snapshots")).toHaveLength(1);
     expect(posts("/diagnoses")).toHaveLength(0);
   });

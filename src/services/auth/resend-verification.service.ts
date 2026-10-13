@@ -7,21 +7,34 @@
  * shaping; this function is the actual eligibility check + token + email.
  */
 import { recordVerificationEmailNotSent, verificationBaseUrlProblem } from "@/services/auth/verification-email-signal";
-import { randomBytes, createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
+import {
+  EMAIL_VERIFICATION_TTL_MS,
+  invalidateUnusedVerificationTokens,
+  isAwaitingEmailOwnership,
+  lockUserRow,
+  newOpaqueToken,
+} from "@/services/auth/email-ownership.service";
 import { emitAuditEvent } from "@/infra/audit";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
-
-/** Same 7-day window as the token issued at signup — a resend is not a shorter-lived grant. */
-const EMAIL_VERIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface ResendVerificationOptions {
   ip?: string | null;
   /** Overrides the audit event name/actor for an operator-initiated resend (vs. the user's own self-serve request). */
   auditEventName: AuditEventName;
   actorId?: string;
+  /**
+   * When true every still-unused earlier verification link of the account is
+   * invalidated in the same transaction that issues the new one, so only the
+   * newest emailed link works. Used by a repeated signup for a pending
+   * account (an older link may sit in an inbox the legitimate owner no longer
+   * trusts). Defaults to false: a plain resend leaves earlier links valid.
+   */
+  rotate?: boolean;
 }
 
 /**
@@ -38,22 +51,47 @@ export async function resendVerificationEmailIfEligible(
 ): Promise<{ sent: boolean }> {
   const user = await db.user.findUnique({ where: { email } });
 
-  if (!user || !user.isActive || !user.requiresEmailVerification || user.emailVerifiedAt) {
+  if (!user || !user.isActive || !isAwaitingEmailOwnership(user)) {
     return { sent: false };
   }
 
-  const rawToken = randomBytes(32).toString("hex");
-  const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+  const { raw: rawToken, hash: tokenHash } = newOpaqueToken();
+  const ipAddress = options.ip && options.ip !== "unknown" ? options.ip : null;
 
-  await db.emailVerificationToken.create({
-    data: {
-      id: randomUUID(),
-      userId: user.id,
-      tokenHash,
-      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
-      ipAddress: options.ip && options.ip !== "unknown" ? options.ip : null,
-    },
-  });
+  if (options.rotate) {
+    // Lock the user row, re-check eligibility under the lock (a concurrent redemption may have just verified the
+    // account), kill every unused link, then issue the new one — all or nothing.
+    const issued = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await lockUserRow(tx, user.id);
+      const fresh = await tx.user.findUnique({
+        where: { id: user.id },
+        select: { isActive: true, requiresEmailVerification: true, emailVerifiedAt: true },
+      });
+      if (!fresh || !fresh.isActive || !isAwaitingEmailOwnership(fresh)) return false;
+      await invalidateUnusedVerificationTokens(tx, user.id, new Date());
+      await tx.emailVerificationToken.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+          ipAddress,
+        },
+      });
+      return true;
+    });
+    if (!issued) return { sent: false };
+  } else {
+    await db.emailVerificationToken.create({
+      data: {
+        id: randomUUID(),
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+        ipAddress,
+      },
+    });
+  }
 
   const membership = await db.workspaceMembership.findFirst({
     where: { userId: user.id, isActive: true },
@@ -80,8 +118,8 @@ export async function resendVerificationEmailIfEligible(
       await provider.send({
         to: user.email,
         subject: "Verify your OpsIQ account",
-        html: `<p><a href="${verifyUrl}">Verify your email to activate your account</a></p><p>This link expires in 7 days. If you didn't request this, you can safely ignore this email.</p>`,
-        text: `Verify your OpsIQ account: ${verifyUrl}\n\nThis link expires in 7 days. If you didn't request this, you can safely ignore this email.`,
+        html: `<p><a href="${verifyUrl}">Confirm your email</a> and you'll then choose your password.</p><p>This link expires in 7 days. If you didn't request this, you can safely ignore this email — nothing is activated until you confirm.</p>`,
+        text: `Confirm your email for OpsIQ: ${verifyUrl}\n\nYou'll choose your password after you confirm. This link expires in 7 days. If you didn't request this, you can safely ignore this email — nothing is activated until you confirm.`,
       });
     } else {
       console.warn("[RESEND_VERIFICATION] No email provider configured — token created but not emailed", { userId: user.id });

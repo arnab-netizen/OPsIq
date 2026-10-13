@@ -180,7 +180,8 @@ export function QuickFinancialPicture({
     if (error instanceof HttpResponseError && error.status === 409) {
       setPhase({
         kind: "error",
-        message: "You've already saved numbers for that period. Pick a different period, or update the saved numbers on the Money page.",
+        // The Money page has no editor for saved numbers; the real correction path is the first read's "Something here is wrong".
+        message: "You've already saved numbers for that period, so nothing new was saved. Pick a different period, or open your first read and use “Something here is wrong” to correct the saved numbers.",
       });
       return;
     }

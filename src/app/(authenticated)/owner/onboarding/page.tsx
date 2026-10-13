@@ -147,7 +147,7 @@ function EssentialNumbersForm({
   const inFlight = useRef(false);
 
   const assessment = useMemo(() => assessQuickEntry(draft), [draft]);
-  const bank = parseQuickAmount(bankText);
+  const bank = parseQuickAmount(bankText, { bankBalance: true });
   const hasErrors = Object.keys(assessment.errors).length > 0 || bank.kind === "invalid";
   const sufficient = assessment.sufficiency?.sufficient === true;
   const disabled = busy || hasErrors || !sufficient || quality === null;

@@ -13,6 +13,7 @@
  * Whether the numbers suffice for a first read is NOT decided here: it is asked of the canonical
  * `evaluateFirstReadSufficiency`, the same rule onboarding, My Business and Start Here consume.
  */
+import { OVERDRAFT_BANK_BALANCE_SENTENCE } from "@/domain/owner-cashflow/overdraft-copy";
 import type { EvidenceQuality } from "./evidence-quality";
 import {
   evaluateFirstReadSufficiency,
@@ -34,7 +35,7 @@ export const CASH_IN_HAND_COPY = {
 /** The separate bank figure (written to Cashflow, never to the Finance snapshot). */
 export const BANK_BALANCE_COPY = {
   label: "Money in the bank",
-  hint: "Bank balance right now, across all accounts. Optional. If you already track this in Cashflow for this month, enter it only there or only here — never both, or it is counted twice.",
+  hint: `Bank balance right now, across all accounts. Optional. If you already track this in Cashflow for this month, enter it only there or only here — never both, or it is counted twice. ${OVERDRAFT_BANK_BALANCE_SENTENCE}`,
 } as const;
 
 export const QUICK_ENTRY_FIELDS = [
@@ -57,10 +58,10 @@ const PLAIN_NUMBER = /^\d+(\.\d+)?$/;
 const MAX_QUICK_AMOUNT = 1e12;
 
 /** Blank → unknown; "0" → known zero; a plain non-negative number → value; anything else → inline error. */
-export function parseQuickAmount(raw: string | null | undefined): QuickAmount {
+export function parseQuickAmount(raw: string | null | undefined, opts: { bankBalance?: boolean } = {}): QuickAmount {
   const text = (raw ?? "").trim();
   if (text === "") return { kind: "blank" };
-  if (text.startsWith("-")) return { kind: "invalid", message: "This can't be negative. Enter 0 if there was none." };
+  if (text.startsWith("-")) return { kind: "invalid", message: opts.bankBalance ? `A bank balance can't be negative. ${OVERDRAFT_BANK_BALANCE_SENTENCE}` : "This can't be negative. Enter 0 if there was none." };
   // Phones autofill "£1,500" / "$ 1 500": a leading currency symbol and REAL thousands grouping are not part of the
   // number. Anything else with a comma or space ("1,5", "1.500,50", "15 00") is ambiguous (it may be a European
   // decimal) and is refused rather than guessed — a silently mis-read amount is worse than a retry.

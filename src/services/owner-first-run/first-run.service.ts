@@ -27,16 +27,20 @@ import {
 import { buildFirstMoneyRead, selectFirstReadActions, type FirstMoneyRead } from "@/domain/owner-first-run/first-money-read";
 import { MAX_PROGRESSIVE_QUESTIONS, selectNextQuestion, type NextQuestionResult } from "@/domain/owner-first-run/next-question";
 import { OWNER_INPUT_CATEGORIES } from "@/domain/owner-mode/input-catalog";
-import { withFirstRunReturn } from "@/domain/owner-first-run/first-run-return";
-import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
+import type { ImproveTarget } from "@/domain/owner-first-run/improve-target";
+import type { ReadStaleReason } from "@/domain/owner-first-run/read-staleness";
 import { computeMissingInputsWithPriority } from "@/domain/owner-finance/data-confidence";
 import { isEvidenceQuality, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { QUICK_ENTRY_FIELDS } from "@/domain/owner-finance/quick-entry";
 import { formatDomainActionCandidateId } from "@/domain/owner-spine/owner-decision-record";
 import { prefetchOwnerDomainRows } from "@/services/owner-mode/owner-db-providers";
 import { loadFirstReadSufficiency } from "@/services/owner-mode/owner-onboarding.service";
 import { getOwnerInputGuidance } from "@/services/owner-mode/owner-input-guidance.service";
 import { evidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 import { firstRunEvidence } from "@/services/owner-first-run/first-run-evidence.reader";
+import { resolveBankBalanceTarget, resolveImproveTarget } from "@/services/owner-first-run/improve-target.service";
+import { loadEffectiveCashflowRow } from "@/services/owner-cashflow/effective-cashflow.service";
+import { selectUsableBankBalance } from "@/domain/owner-finance/liquidity";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { listOwnerDecisions } from "@/services/owner-outcome/owner-decision.service";
@@ -78,6 +82,8 @@ export interface FirstRunContext {
   latestCycleId: string | null;
   /** The evidence changed after the last diagnosis: the read on screen is out of date. */
   diagnosisStale: boolean;
+  /** Why it is out of date (server-decided: corrected figures, or a changed bank balance); null while current. */
+  staleReason: ReadStaleReason | null;
   firstTrustedInteractionAt: string | null;
   businessTypes: readonly string[];
   /** The goal families the product supports today (never invented in the UI). */
@@ -135,14 +141,17 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
   ]);
 
   let firstReadSufficient = false;
-  let evidence: Awaited<ReturnType<typeof firstRunEvidence>> = { headSnapshotId: null, runOnHead: null, hasAnyRun: false };
+  let evidence: Awaited<ReturnType<typeof firstRunEvidence>> = { headSnapshotId: null, headPeriod: null, head: null, runOnHead: null, hasAnyRun: false, staleReason: null };
   let interactions: TrustedInteractionFact[] = [];
 
   if (business) {
     const deps = { db: db as unknown as PrismaClient, workspaceId, businessId: business.id, now: new Date() };
     const rows = await prefetchOwnerDomainRows(deps);
     firstReadSufficient = (await loadFirstReadSufficiency(deps, rows)).sufficient;
-    const [ev, facts] = await Promise.all([firstRunEvidence(workspaceId, business.id, deps.now), trustedInteractionFacts(workspaceId, business.id)]);
+    const [ev, facts] = await Promise.all([
+      firstRunEvidence(workspaceId, business.id, deps.now, undefined, { cashStaleness: true }),
+      trustedInteractionFacts(workspaceId, business.id),
+    ]);
     evidence = ev;
     interactions = facts;
   }
@@ -166,8 +175,10 @@ export async function getFirstRunContext(workspaceId: string): Promise<FirstRunC
     business: business ? { id: business.id, name: business.name, businessType: business.businessType, currency: business.currency } : null,
     currentSnapshotId: evidence.headSnapshotId,
     latestCycleId: evidence.runOnHead?.id ?? null,
-    // The figures were amended after the last diagnosis and not yet re-diagnosed: there is no read on them yet.
-    diagnosisStale: evidence.hasAnyRun && evidence.runOnHead === null,
+    // Out of date: the figures were amended after the last diagnosis (no read on them yet), or the bank balance the
+    // read rests on was added/edited after the read gathered its evidence.
+    diagnosisStale: evidence.staleReason !== null,
+    staleReason: evidence.staleReason,
     firstTrustedInteractionAt: first?.at ?? null,
     businessTypes: BUSINESS_TYPES,
     goalFamilies: NEW_GOAL_TARGET_TYPES,
@@ -251,6 +262,10 @@ export interface FirstMoneyReadView {
   /** The presented action's own verification facts (used to build the outcome contract on accept). */
   presentedAction: { title: string; verificationMetric: string; expectedTimeframeDays: number } | null;
   decisionState: string | null;
+  /** What is recorded now on the figures the read is about (null = not recorded), shown before any correction. */
+  figures: Record<string, number | null>;
+  /** Set when this read is no longer current (e.g. the bank balance changed since it was made): it must not be acted on. */
+  staleReason: ReadStaleReason | null;
 }
 
 function toIso(value: unknown): string {
@@ -261,10 +276,25 @@ function jsonStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
 
+/**
+ * The Cashflow bank balance the diagnosis' liquidity used for this read's Finance period, if any: the SAME selector the
+ * diagnosis uses (the canonical effective row, accepted only when usable). A read already flagged stale because the cash
+ * position changed is not described from today's rows (they are not what it used); it is withdrawn and re-run instead.
+ */
+async function cashflowBalanceUsedByRead(
+  workspaceId: string, businessId: string, financePeriodEnd: Date, staleReason: ReadStaleReason | null,
+): Promise<{ asOfPeriodEnd: string } | null> {
+  if (staleReason !== null) return null;
+  const row = await loadEffectiveCashflowRow(workspaceId, businessId, financePeriodEnd);
+  if (!row) return null;
+  const usable = selectUsableBankBalance({ financePeriodEnd, cashflow: row });
+  return usable === undefined ? null : { asOfPeriodEnd: toIso(row.periodEnd) };
+}
+
 export async function getFirstMoneyRead(workspaceId: string, businessId: string): Promise<FirstMoneyReadView> {
   const business = await db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId }, select: { id: true, currency: true } });
   if (!business) throw new NotFoundError("OwnerBusiness", businessId);
-  const evidence = await firstRunEvidence(workspaceId, businessId);
+  const evidence = await firstRunEvidence(workspaceId, businessId, new Date(), undefined, { cashStaleness: true });
   if (!evidence.hasAnyRun) throw new NotFoundError("Diagnosis", businessId);
   if (!evidence.runOnHead) throw new ConflictError("Your numbers changed after your last read. Update your read first.");
   const latest = evidence.runOnHead;
@@ -322,7 +352,16 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
           : "provisional",
     },
     missingEvidence: missing.slice(0, 5).map((m) => m.field),
+    cashflowBalance: await cashflowBalanceUsedByRead(workspaceId, businessId, snapshot.periodEnd as Date, evidence.staleReason),
   });
+
+  // "Add your bank balance" goes where the SERVER says: the Cashflow entry that already speaks for this read's period
+  // (open it), or a new one dated to that period — never an add form that would be refused or silently ignored.
+  if (read.sharpenBy?.href && read.sharpenBy.href.startsWith("/owner/cashflow")) {
+    const bank = await resolveBankBalanceTarget(workspaceId, businessId);
+    const href = bank.kind === "NOT_USED_BY_READ" ? (bank.next?.kind === "EDIT_CASHFLOW" || bank.next?.kind === "ADD" ? bank.next.href : bank.addHref) : bank.kind === "EDIT_FINANCE" ? null : bank.href;
+    if (href) read.sharpenBy = { ...read.sharpenBy, href };
+  }
 
   // The candidate is the action the read actually presents (server-resolved; the client never names one).
   const presented = read.status === "NO_ATTENTION_FOUND" ? null : action;
@@ -342,16 +381,14 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     candidateId,
     presentedAction: presented ? { title: presented.title, verificationMetric: presented.verificationMetric, expectedTimeframeDays: presented.expectedTimeframeDays } : null,
     decisionState,
+    figures: Object.fromEntries(
+      QUICK_ENTRY_FIELDS.map((f) => [f.name, typeof snapshot[f.name] === "number" && Number.isFinite(snapshot[f.name] as number) ? (snapshot[f.name] as number) : null]),
+    ),
+    staleReason: evidence.staleReason,
   };
 }
 
 // ── Progressive OBQ ────────────────────────────────────────────────────────────────────────────────────────────
-
-export interface NextQuestionView {
-  result: NextQuestionResult;
-  inputHref: string | null;
-  inputActionLabel: string | null;
-}
 
 /**
  * Progressive-question progress is PERSISTED (OwnerFirstResultInteraction), never held by the browser: a category the
@@ -377,22 +414,39 @@ export async function getQuestionProgress(workspaceId: string, businessId: strin
 
 export interface NextQuestionView {
   result: NextQuestionResult;
+  /**
+   * The server's answer to "where does the owner go, and what is the button called" for this question (add / edit the
+   * existing Finance or Cashflow entry / saved-but-not-used). The screen renders ONLY this; it never decides add vs edit.
+   * Null when the question is done.
+   */
+  target: ImproveTarget | null;
+  /** The destination and label of `target` (kept flat for simple consumers). */
   inputHref: string | null;
   inputActionLabel: string | null;
   /** How many questions have been handled so far, and the hard ceiling (it can be reached). */
   progress: { handled: number; max: number };
 }
 
+/** The href a target's primary control opens (EDIT_FINANCE opens the existing first-run Correct flow). */
+export function improveTargetHref(target: ImproveTarget): string {
+  if (target.kind === "NOT_USED_BY_READ") return target.next?.href ?? target.addHref;
+  return target.href;
+}
+
 export async function getNextQuestionView(workspaceId: string, businessId: string): Promise<NextQuestionView> {
   await assertBusiness(workspaceId, businessId);
   const { handled } = await getQuestionProgress(workspaceId, businessId);
+  const progress = { handled: handled.length, max: MAX_PROGRESSIVE_QUESTIONS };
+  // Without a first read there is nothing to improve and no evidence to be "already there": never offer an add form.
+  if (!(await firstRunEvidence(workspaceId, businessId)).hasAnyRun) {
+    return { result: { done: true, reason: "FIRST_READ_NOT_READY" }, target: null, inputHref: null, inputActionLabel: null, progress };
+  }
   const guidance = await getOwnerInputGuidance({ db: db as unknown as PrismaClient, workspaceId, businessId, now: new Date() });
   if (!guidance.found) throw new NotFoundError("OwnerBusiness", businessId);
   const result = selectNextQuestion({ guidance, skipped: handled, answeredCount: handled.length });
-  const progress = { handled: handled.length, max: MAX_PROGRESSIVE_QUESTIONS };
-  if (result.done) return { result, inputHref: null, inputActionLabel: null, progress };
-  const target = inputTargetForCategory(result.question.category);
-  return { result, inputHref: withFirstRunReturn(target.href), inputActionLabel: target.actionLabel, progress };
+  if (result.done) return { result, target: null, inputHref: null, inputActionLabel: null, progress };
+  const target = await resolveImproveTarget(workspaceId, businessId, result.question.category);
+  return { result, target, inputHref: improveTargetHref(target), inputActionLabel: target.actionLabel, progress };
 }
 
 // ── Interactions: viewed, improvement requested, feedback ──────────────────────────────────────────────────────
@@ -570,7 +624,7 @@ function assertQuestionCategory(category: string): void {
  */
 export async function requestImprovement(
   workspaceId: string, actorId: string, businessId: string, category: string,
-): Promise<{ replayed: boolean }> {
+): Promise<{ replayed: boolean; target: ImproveTarget }> {
   assertQuestionCategory(category);
   await assertBusiness(workspaceId, businessId);
   const evidence = await firstRunEvidence(workspaceId, businessId);
@@ -581,7 +635,8 @@ export async function requestImprovement(
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED },
   });
   if (created) await recordActivationIfFirst(workspaceId, actorId, businessId);
-  return { replayed: !created };
+  // The server's answer is returned with the acknowledgement, so the screen that follows it has nothing to decide.
+  return { replayed: !created, target: await resolveImproveTarget(workspaceId, businessId, category) };
 }
 
 /** The owner does not have this evidence: persisted so the question is not asked again and counts toward the limit. */

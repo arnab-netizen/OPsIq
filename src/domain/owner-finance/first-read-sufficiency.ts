@@ -124,6 +124,25 @@ export function firstReadSufficiencyFromSnapshots(snapshots: {
 }
 
 /**
+ * WHICH snapshot a first read is about, by the very rule `firstReadSufficiencyFromSnapshots` uses to say "enough":
+ * a sufficient COMPLETED snapshot, else a sufficient PROVISIONAL one, else (nothing sufficient) the completed one, else
+ * the provisional one. Sufficiency and the read's head therefore cannot disagree: when "enough evidence" is true, the
+ * snapshot that makes it true is the one the read — and the owner's Correct / Improve screens — are about.
+ */
+export function selectFirstReadHead<T extends CriticalFinanceRow>(snapshots: {
+  completed: T | null | undefined;
+  provisional: T | null | undefined;
+}): { head: T | null; basis: FirstReadSufficiency["basis"] } {
+  const completed = firstReadSufficiencyFromRow(snapshots.completed, "completed");
+  if (snapshots.completed && completed.sufficient) return { head: snapshots.completed, basis: "completed" };
+  const provisional = firstReadSufficiencyFromRow(snapshots.provisional, "provisional");
+  if (snapshots.provisional && provisional.sufficient) return { head: snapshots.provisional, basis: "provisional" };
+  if (snapshots.completed) return { head: snapshots.completed, basis: "completed" };
+  if (snapshots.provisional) return { head: snapshots.provisional, basis: "provisional" };
+  return { head: null, basis: "none" };
+}
+
+/**
  * Adapter for callers that only know category PRESENCE (no snapshot): maps category presence onto the
  * same three facts. Used solely where a snapshot is unavailable; the sufficiency rule itself is still
  * `evaluateFirstReadSufficiency`.

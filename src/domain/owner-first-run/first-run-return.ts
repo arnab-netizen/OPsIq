@@ -14,6 +14,8 @@ export function withFirstRunReturn(href: string): string {
   const hashAt = href.indexOf("#");
   const path = hashAt === -1 ? href : href.slice(0, hashAt);
   const hash = hashAt === -1 ? "" : href.slice(hashAt);
+  // Idempotent: a destination the server already marked as a first-read return keeps exactly one marker.
+  if (new RegExp(`[?&]${FIRST_RUN_RETURN_PARAM}=${FIRST_RUN_RETURN_VALUE}(&|$)`).test(path)) return href;
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}${FIRST_RUN_RETURN_PARAM}=${FIRST_RUN_RETURN_VALUE}${hash}`;
 }
@@ -29,4 +31,12 @@ export interface FirstRunBeforeSummary {
   evidenceQuality: string | null;
   missingEvidence: string[];
   questionLabel: string;
+  /** The question's category, so the return re-asks the SERVER whether what was saved is used by the read. */
+  category?: string;
+  /** The read the owner left (its cycle), to tell a genuinely new read from the same one. */
+  cycleId?: string;
+  /** What OpsIQ noticed / asked to sharpen it / cautioned, as the owner saw them (tokens for an honest comparison). */
+  noticed?: string;
+  sharpenBy?: string | null;
+  cautions?: string[];
 }

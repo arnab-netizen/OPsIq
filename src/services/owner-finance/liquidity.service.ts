@@ -3,19 +3,25 @@
  * Every Finance-based consumer builds its engine input here, so cash semantics and the usable bank
  * balance are resolved ONCE and identically for the diagnosis, the Budget forecast and the budget plan.
  */
-import { db } from "@/lib/db";
 import {
+  BANK_BALANCE_FRESHNESS_DAYS,
   resolveCashSemanticsFromLineage,
   selectUsableBankBalance,
   type CashLineageNode,
   type CashSemantics,
 } from "@/domain/owner-finance/liquidity";
+import {
+  loadEffectiveCashflowCandidates,
+  loadEffectiveCashflowRow,
+  type CashflowReadClient,
+} from "@/services/owner-cashflow/effective-cashflow.service";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import { listFinancialSnapshotVersions, rowToFinanceInput } from "./snapshot.service";
 
 /**
- * Latest Cashflow snapshot ending at or before the Finance period end, accepted only through
- * `selectUsableBankBalance` (fresh, not future, finite). `undefined` means "unknown" — never 0.
+ * The effective Cashflow snapshot for the Finance period end (the canonical selector: greatest `periodEnd` at or before
+ * it, ties resolved by `pickEffectiveCashflowRow`), accepted only through `selectUsableBankBalance` (fresh, not future,
+ * finite). `undefined` means "unknown" — never 0.
  */
 export async function loadUsableBankBalance(
   workspaceId: string,
@@ -24,12 +30,34 @@ export async function loadUsableBankBalance(
 ): Promise<number | undefined> {
   const end = financePeriodEnd instanceof Date ? financePeriodEnd : new Date(financePeriodEnd);
   if (Number.isNaN(end.getTime())) return undefined;
-  const cashflowRow = await db.ownerCashflowSnapshot.findFirst({
-    where: { workspaceId, businessId, periodEnd: { lte: end } },
-    orderBy: { periodEnd: "desc" },
-    select: { bankBalance: true, periodEnd: true },
-  });
+  const cashflowRow = await loadEffectiveCashflowRow(workspaceId, businessId, end);
   return selectUsableBankBalance({ financePeriodEnd: end, cashflow: cashflowRow });
+}
+
+/**
+ * Whether the cash position a Finance read depends on changed after `since` (the instant the read's evidence was
+ * gathered — the cycle's `generatedAt`). True when any candidate row of the effective `periodEnd` for that Finance
+ * period was created or edited at or after `since`: a new row can win the selection, an edit can change or clear the
+ * balance, and an edit to the winner can hand the selection to a tied sibling, so every candidate counts — not only
+ * the current winner. Nothing else counts: a balance for a later period, or one outside the freshness window (unknown
+ * both before and after), cannot change what the read used. `>=` is deliberate: a write in the same millisecond as the
+ * read's evidence gathering cannot be ordered, and an unneeded "update your read" is harmless where a missed one is not.
+ */
+export async function cashPositionChangedSince(
+  workspaceId: string,
+  businessId: string,
+  financePeriodEnd: Date | string,
+  since: Date | string,
+  client?: CashflowReadClient
+): Promise<boolean> {
+  const end = financePeriodEnd instanceof Date ? financePeriodEnd : new Date(financePeriodEnd);
+  const sinceMs = (since instanceof Date ? since : new Date(since)).getTime();
+  if (Number.isNaN(end.getTime()) || Number.isNaN(sinceMs)) return false;
+  const candidates = await loadEffectiveCashflowCandidates(workspaceId, businessId, end, { client });
+  if (candidates.length === 0) return false;
+  const winnerEnd = new Date(candidates[0].periodEnd).getTime();
+  if ((end.getTime() - winnerEnd) / 86_400_000 > BANK_BALANCE_FRESHNESS_DAYS) return false; // unusable before and after
+  return candidates.some((r) => Math.max(new Date(r.updatedAt).getTime(), new Date(r.createdAt).getTime()) >= sinceMs);
 }
 
 const MAX_LINEAGE_DEPTH = 200;

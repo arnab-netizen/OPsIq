@@ -21,7 +21,15 @@ describe("funnel definition", () => {
     for (const name of FUNNEL_EVENT_NAMES) expect(known.has(name), name).toBe(true);
     const productNames = new Set<string>(Object.values(PRODUCT_EVENTS));
     for (const step of FUNNEL_STEPS) expect(productNames.has(step.eventName), step.key).toBe(true);
-    expect(FAILURE_CATEGORIES.map((f) => f.key)).toEqual(["signup_refused_closed", "signup_refused_capacity", "verification_email_not_sent"]);
+    expect(FAILURE_CATEGORIES.map((f) => f.key)).toEqual(["signup_refused_closed", "signup_refused_capacity", "verification_email_not_sent", "password_email_not_sent"]);
+  });
+  it("'Chose a password' sits between email verified and first run, as a workspace step", () => {
+    const keys = FUNNEL_STEPS.map((s) => s.key);
+    expect(keys.indexOf("password_set")).toBe(keys.indexOf("email_verified") + 1);
+    expect(keys.indexOf("first_run_started")).toBe(keys.indexOf("password_set") + 1);
+    const step = FUNNEL_STEPS.find((s) => s.key === "password_set")!;
+    expect(step.label).toBe("Chose a password");
+    expect(step.unit).toBe("workspaces");
   });
   it("the two anonymous pre-account steps are labelled approximate (a spammable beacon feeds them)", () => {
     for (const key of ["start_free_clicked", "signup_started"]) {

@@ -40,6 +40,12 @@ export function readBeforeSummary(): FirstRunBeforeSummary | null {
       evidenceQuality: typeof v.evidenceQuality === "string" ? v.evidenceQuality : null,
       missingEvidence: v.missingEvidence.filter((m): m is string => typeof m === "string"),
       questionLabel: v.questionLabel,
+      // Optional comparison tokens (older records lack them; an absent token is simply not compared).
+      ...(typeof v.category === "string" ? { category: v.category } : {}),
+      ...(typeof v.cycleId === "string" ? { cycleId: v.cycleId } : {}),
+      ...(typeof v.noticed === "string" ? { noticed: v.noticed } : {}),
+      ...(v.sharpenBy === null || typeof v.sharpenBy === "string" ? { sharpenBy: v.sharpenBy } : {}),
+      ...(Array.isArray(v.cautions) ? { cautions: v.cautions.filter((c): c is string => typeof c === "string") } : {}),
     };
   } catch {
     return null;

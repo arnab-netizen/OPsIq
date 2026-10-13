@@ -133,13 +133,14 @@ async function signUpAndVerify(page: Page, opts: { mobile?: boolean } = {}) {
 
   // The business name is typed here, ONCE.
   await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Business name", { exact: true }).fill(businessName);
-  for (const cb of await page.locator('input[type="checkbox"]').all()) if (!(await cb.isChecked())) await cb.check();
+  // Email ownership before credential trust: signup asks for NO password and NO consent.
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
+  await expect(page.locator('input[type="checkbox"]')).toHaveCount(0);
   if (opts.mobile) {
     await expectNoHorizontalScroll(page, "signup");
     await expectNoZoomInputs(page, "form", "signup");
-    await expectFingerSizedControls(page, 'form button[type="submit"], form label:has(input[type="checkbox"])', "signup");
+    await expectFingerSizedControls(page, 'form button[type="submit"]', "signup");
   }
   const [signupRes] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/auth/signup") && r.request().method() === "POST"),
@@ -161,9 +162,27 @@ async function signUpAndVerify(page: Page, opts: { mobile?: boolean } = {}) {
     );
   });
   await page.goto(`/verify-email?token=${raw}`);
-  await expect(page.getByText(/email verified/i)).toBeVisible({ timeout: 15000 });
-  if (opts.mobile) await expectNoHorizontalScroll(page, "verification landing");
-  await page.waitForURL(/\/owner\/first-run/, { timeout: 15000 });
+  // Loading the link verifies nothing: a scanner that opens it burns nothing. Only the explicit click redeems.
+  const verifyButton = page.getByRole("button", { name: "Verify my email" });
+  await expect(verifyButton).toBeVisible({ timeout: 15000 });
+  if (opts.mobile) {
+    await expectNoHorizontalScroll(page, "verification landing");
+    await expectFingerSizedControls(page, '[data-testid="verify-email-button"]', "verification landing");
+  }
+  await verifyButton.click();
+
+  // Mailbox proven -> choose the password, accept the policies, and land signed in on first-run.
+  await page.waitForURL(/\/reset-password\?.*setup=1/, { timeout: 15000 });
+  await expect(page.getByText("Choose your password")).toBeVisible();
+  if (opts.mobile) {
+    await expectNoHorizontalScroll(page, "choose password");
+    await expectFingerSizedControls(page, 'form button[type="submit"], form label:has(input[type="checkbox"])', "choose password");
+  }
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm password", { exact: true }).fill(password);
+  for (const cb of await page.locator('input[type="checkbox"]').all()) if (!(await cb.isChecked())) await cb.check();
+  await page.getByRole("button", { name: /set password and continue/i }).click();
+  await page.waitForURL(/\/owner\/first-run/, { timeout: 20000 });
   return { email, password, businessName };
 }
 
@@ -301,6 +320,11 @@ test.describe("Public beta OBQ journey", () => {
     await expect(page.locator('input[name="periodStart"]')).toHaveValue(start);
     await expect(page.locator('input[name="periodEnd"]')).toHaveValue(end);
     await expectNoHorizontalScroll(page, "cashflow prefilled");
+    // Opened from the first read: the two essential figures first, the rest behind a disclosure; the bank balance is wide enough to type in.
+    await expect(page.getByTestId("cashflow-fields-essential").locator("input[name]")).toHaveCount(2);
+    await expect(page.getByTestId("cashflow-more-details").locator("summary")).toHaveText("More cashflow details");
+    const prefilledBox = await page.locator('input[name="bankBalance"]').boundingBox();
+    expect(prefilledBox?.width ?? 0, "the bank balance input must be usable on a phone").toBeGreaterThanOrEqual(240);
     await context.close();
   });
 
@@ -343,7 +367,7 @@ test.describe("Public beta OBQ journey", () => {
     await context.close();
   });
 
-  test("improve: persisted progress, skip is remembered, Add this returns and shows what changed (390px)", async ({ browser }) => {
+  test("improve: persisted progress, skip is remembered; the SERVER decides add vs edit and the return tells the truth (390px)", async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     const { businessName } = await signUpAndVerify(page);
@@ -379,25 +403,169 @@ test.describe("Public beta OBQ journey", () => {
         expect((await again.locator("p").first().innerText()).trim(), "a skipped question must not be asked again").not.toBe(asked);
       }
 
-      // "Add this" goes to the existing input surface with a way back; returning re-runs the read and says what changed.
+      // The destination and the button label are the SERVER's answer for this question (never "always add").
       const add = page.getByTestId("first-result-improvement-add");
-      await expect(add, "\"Add this\" must be offered for a question with an input surface").toBeVisible();
-      {
+      await expect(add, "the server's answer must offer a control for a question with an input surface").toBeVisible();
+      const kind = await page.getByTestId("first-result-improvement-question").getAttribute("data-target-kind");
+      expect(["ADD", "EDIT_FINANCE", "EDIT_CASHFLOW", "NOT_USED_BY_READ"]).toContain(kind);
+      const label = (await add.innerText()).trim();
+      if (kind === "EDIT_FINANCE") {
+        // The evidence lives on the figures this read is about: the existing Correct flow opens in place, with the CURRENT values shown.
+        expect(["Add this", "Edit this"]).toContain(label);
+        await expect(page.getByTestId("first-result-improvement-current")).toBeVisible();
+        await add.click();
+        await expect(page.getByTestId("first-result-correction")).toBeVisible();
+        await expect(page.getByTestId("first-result-correction")).toContainText(/Recorded now:/);
+        await expectNoHorizontalScroll(page, "correction opened from Improve");
+        // Restating what is recorded is not a correction.
+        await page.locator('[data-testid="first-result-correction"] input[name="revenue"]').fill("12000");
+        await expect(page.getByTestId("first-result-correction-submit")).toBeDisabled();
+        await expect(page.getByTestId("first-result-correction-same")).toBeVisible();
+        await page.locator('[data-testid="first-result-correction"] input[name="revenue"]').fill("11000");
+        const [res] = await Promise.all([
+          page.waitForResponse((r) => r.url().includes("/api/owner/first-run/correct") && r.request().method() === "POST"),
+          page.getByTestId("first-result-correction-submit").click(),
+        ]);
+        expect(res.status()).toBe(201);
+        await expect(page.getByTestId("first-result-changes")).toContainText(/revenue/i);
+      } else {
+        // Add / edit a Cashflow entry / "saved but not used": a link to an existing input surface carrying the return marker.
+        if (kind === "ADD") expect(label).toBe("Add this");
+        if (kind === "NOT_USED_BY_READ") await expect(page.getByTestId("first-result-improvement-not-used")).toContainText(/won't change this recommendation|doesn't use it/);
         await add.click();
         await page.waitForURL(/returnTo=first-run/);
         const bar = page.getByTestId("first-run-return-bar");
         await expect(bar).toBeVisible();
         await expectFingerSizedControls(page, '[data-testid="first-run-return-link"]', "return bar");
         await expectNoHorizontalScroll(page, "input surface with return bar");
+        // The owner saves nothing here and comes straight back: the read is re-run, and the screen must NOT claim an improvement.
         await page.getByTestId("first-run-return-link").click();
         await page.waitForURL(/\/owner\/first-run/, { timeout: 20000 });
-        await expect(page.getByTestId("first-result-improved")).toBeVisible({ timeout: 30000 });
+        const summary = page.getByTestId("first-result-improved");
+        await expect(summary).toBeVisible({ timeout: 30000 });
         await expect(page.getByTestId("first-money-read")).toBeVisible();
         expect(page.url(), "the update flag is consumed").not.toMatch(/update=1/);
+        await expect(summary).toHaveAttribute("data-outcome", /^(UNCHANGED|NOT_USED|CHANGED)$/);
+        if ((await summary.getAttribute("data-outcome")) === "UNCHANGED") {
+          await expect(page.getByTestId("first-result-improved-headline")).toHaveText("Nothing changed in your read");
+        }
+        await expect(summary).not.toContainText(/re-run on your latest information/i);
       }
     }
     const later = page.getByTestId("first-result-improvement-later");
     if (await later.isVisible().catch(() => false)) await later.click();
+    await context.close();
+  });
+
+  test("bank balance: add it to the existing entry, edit it with an explicit confirmation, and the read goes stale and cannot be accepted until updated (375px)", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 375, height: 667 } });
+    const page = await context.newPage();
+    const { businessName } = await signUpAndVerify(page);
+    await completeBusinessStep(page, businessName);
+    await fillEvidence(page, { revenue: "12000", fixedCosts: "7000", variableCosts: "4000", cashOnHand: "1500" });
+    await chooseQualityAndRead(page, "From my records");
+    const info = await (await context.request.get("/api/owner/first-run")).json();
+    const businessId: string = info.business.id;
+
+    // The owner already has a Cashflow entry for the read's period (cash in hand only): the server must send them TO IT.
+    const addHref = (await page.getByTestId("first-money-read-sharpen-link").getAttribute("href")) ?? "";
+    const start = /periodStart=(\d{4}-\d{2}-\d{2})/.exec(addHref)![1];
+    const end = /periodEnd=(\d{4}-\d{2}-\d{2})/.exec(addHref)![1];
+    const created = await context.request.post(`/api/owner/cashflow/businesses/${businessId}/snapshots`, { data: { periodStart: start, periodEnd: end, currency: "GBP", cashInHand: 200 } });
+    expect(created.status()).toBe(201);
+    const entry = await created.json();
+
+    // A second add for that period is refused with a truthful message and the existing entry's id.
+    const dup = await context.request.post(`/api/owner/cashflow/businesses/${businessId}/snapshots`, { data: { periodStart: start, periodEnd: end, currency: "GBP", bankBalance: 900 } });
+    expect(dup.status()).toBe(409);
+    expect(await dup.json()).toMatchObject({ code: "CASHFLOW_PERIOD_EXISTS", snapshotId: entry.id, error: "You already have a cashflow entry for this period. Open it to edit." });
+
+    // The read the owner is looking at is now out of date, with the reason; it cannot be accepted.
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByTestId("first-run-update-read-headline")).toHaveText("Your cash figures changed since this read.");
+    await expect(page.getByTestId("first-run-accept")).toHaveCount(0);
+    await expectNoHorizontalScroll(page, "stale read");
+    await page.getByRole("button", { name: /update my read/i }).click();
+    await expect(page.getByTestId("first-money-read")).toBeVisible({ timeout: 30000 });
+
+    // "Add your bank balance" now opens THAT entry (server-resolved), not an add form.
+    const link = page.getByTestId("first-money-read-sharpen-link");
+    await expect(link).toHaveAttribute("href", new RegExp(`/owner/cashflow\\?edit=${entry.id}&returnTo=first-run`));
+    await link.click();
+    const editor = page.getByTestId("cashflow-entry-editor");
+    await expect(editor).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId("cashflow-current-bankBalance")).toContainText("Not recorded");
+    await expect(page.getByTestId("cashflow-current-cashInHand")).toContainText("GBP 200");
+    await expectNoHorizontalScroll(page, "cashflow edit");
+    const editBox = await page.locator('[data-testid="cashflow-entry-editor"] input[name="bankBalance"]').boundingBox();
+    expect(editBox?.width ?? 0, "the bank balance input must be at least 240px wide at 375px").toBeGreaterThanOrEqual(240);
+    await expectNoZoomInputs(page, '[data-testid="cashflow-entry-editor"]', "cashflow edit");
+    await expectFingerSizedControls(page, '[data-testid="cashflow-entry-editor"] button', "cashflow edit");
+    await page.locator('[data-testid="cashflow-entry-editor"] input[name="bankBalance"]').fill("2500");
+    await page.getByTestId("cashflow-edit-save").click(); // filling a blank needs no confirmation
+    await expect(page.getByTestId("cashflow-edit-saved")).toBeVisible();
+
+    // Back to the read: re-run, and the summary says what changed (from the read's own tokens).
+    await page.getByTestId("first-run-return-link").click();
+    await page.waitForURL(/\/owner\/first-run/, { timeout: 20000 });
+    const summary = page.getByTestId("first-result-improved");
+    await expect(summary).toBeVisible({ timeout: 30000 });
+    await expect(summary).toHaveAttribute("data-outcome", "CHANGED");
+    await expect(summary).toContainText(/bank balance/i);
+
+    // Replacing a RECORDED balance needs an explicit confirmation, and the audit keeps before/after.
+    await page.goto(`/owner/cashflow?edit=${entry.id}&returnTo=first-run`, { waitUntil: "networkidle" });
+    await expect(page.getByTestId("cashflow-current-bankBalance")).toContainText("GBP 2,500");
+    await page.locator('[data-testid="cashflow-entry-editor"] input[name="bankBalance"]').fill("4000");
+    await page.getByTestId("cashflow-edit-save").click();
+    await expect(page.getByTestId("cashflow-edit-confirm")).toContainText("Replace Bank balance GBP 2,500 with GBP 4,000?");
+    await expectNoHorizontalScroll(page, "cashflow replace confirmation");
+    await page.getByTestId("cashflow-edit-confirm-yes").click();
+    await expect(page.getByTestId("cashflow-edit-saved")).toBeVisible();
+
+    // The earlier read is stale again and refuses Accept until updated.
+    const stale = await (await context.request.get("/api/owner/first-run")).json();
+    expect(stale.staleReason).toBe("CASH_POSITION_CHANGED");
+    const readNow = await (await context.request.get(`/api/owner/first-run/result?businessId=${businessId}`)).json();
+    const refused = await context.request.post("/api/owner/first-run/accept", { data: { businessId, readCycleId: readNow.cycleId, idempotencyKey: "browser-stale-key-0001" } });
+    expect(refused.status()).toBe(409);
+
+    // API guards (POST /amend): a stale token is refused even with confirmReplace; a fresh token still needs confirmReplace; a foreign id is 404.
+    const cur = await (await context.request.get(`/api/owner/cashflow/snapshots/${entry.id}`)).json();
+    const staleTry = await context.request.post(`/api/owner/cashflow/snapshots/${entry.id}/amend`, { data: { expectedUpdatedAt: entry.updatedAt, confirmReplace: true, bankBalance: 1 } });
+    expect(staleTry.status()).toBe(409);
+    expect(await staleTry.json()).toMatchObject({ code: "CASHFLOW_STALE", current: { bankBalance: 4000 } });
+    const noConfirm = await context.request.post(`/api/owner/cashflow/snapshots/${entry.id}/amend`, { data: { expectedUpdatedAt: cur.updatedAt, bankBalance: 1 } });
+    expect(noConfirm.status()).toBe(409);
+    expect((await noConfirm.json()).code).toBe("CASHFLOW_REPLACEMENT_CONFIRMATION_REQUIRED");
+    const foreign = await browser.newContext();
+    const other = await foreign.newPage();
+    await signUpAndVerify(other);
+    const foreignTry = await foreign.request.post(`/api/owner/cashflow/snapshots/${entry.id}/amend`, { data: { expectedUpdatedAt: cur.updatedAt, bankBalance: 1, confirmReplace: true } });
+    expect(foreignTry.status()).toBe(404);
+    await foreign.close();
+
+    const events = await db((c) =>
+      c.query(
+        `SELECT payload FROM audit_events WHERE event_name = 'owner.cashflow_snapshot_amended' AND entity_id = $1 ORDER BY occurred_at`,
+        [entry.id],
+      ),
+    );
+    expect(events.rows.map((r) => r.payload.changedFields.bankBalance)).toEqual([{ before: null, after: 2500 }, { before: 2500, after: 4000 }]);
+    const rows = await db((c) => c.query("SELECT bank_balance, currency, period_start, period_end FROM owner_cashflow_snapshots WHERE id = $1", [entry.id]));
+    expect(rows.rows[0].bank_balance).toBe(4000);
+    expect(rows.rows[0].currency).toBe("GBP");
+
+    // Update the read: it is current again and can be accepted.
+    await page.goto("/owner/first-run", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("first-run-update-read-headline")).toHaveText("Your cash figures changed since this read.");
+    await page.getByRole("button", { name: /update my read/i }).click();
+    await expect(page.getByTestId("first-money-read")).toBeVisible({ timeout: 30000 });
+    const [acceptRes] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/owner/first-run/accept") && r.request().method() === "POST"),
+      page.getByTestId("first-run-accept").click(),
+    ]);
+    expect(acceptRes.status()).toBe(201);
     await context.close();
   });
 
@@ -582,7 +750,7 @@ test.describe("Admin beta control on a phone (390px)", () => {
     await resetLocalRateLimits();
     const anon = await browser.newContext();
     const refused = await anon.request.post("/api/auth/signup", {
-      data: { email: `late-${randomUUID().slice(0, 8)}@example.com`, password: "correct-horse-battery-staple", workspaceName: "Too Late", acceptTerms: true, acceptPrivacy: true, acceptBetaNotice: true },
+      data: { email: `late-${randomUUID().slice(0, 8)}@example.com`, workspaceName: "Too Late" },
     });
     expect(refused.status()).toBe(403);
     const home = await anon.newPage();

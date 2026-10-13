@@ -9,6 +9,7 @@
  * persisted data only — no mock, nothing invented.
  */
 import { db } from "@/lib/db";
+import { loadLatestStartedCashflowRow } from "@/services/owner-cashflow/effective-cashflow.service";
 import { projectCashflowCycleRow, type CashPositionEvidence } from "@/domain/owner-cashflow/cycle-projection";
 import { missingCriticalCashflowInputs } from "@/domain/owner-cashflow/data-confidence";
 import { rowToCashflowInput } from "@/domain/owner-cashflow/row-input";
@@ -91,10 +92,8 @@ export async function getCashflowDashboard(
   const [latestSnapshot, latestCycleRow, cycles] = await Promise.all([
     // The latest snapshot that has STARTED (the one the owner can diagnose): a genuinely future period is
     // never shown; an in-progress one is labelled (latestSnapshotPeriodState).
-    db.ownerCashflowSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId, periodStart: { lte: dashboardNow } },
-      orderBy: { periodEnd: "desc" },
-    }),
+    // Through the one Cashflow selector (candidates = rows that have started; ties on periodEnd by the domain rule).
+    loadLatestStartedCashflowRow(workspaceId, selectedBusinessId, dashboardNow),
     db.ownerCashflowCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(dashboardNow) },
       orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,

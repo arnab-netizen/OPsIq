@@ -27,11 +27,7 @@ function signupRequest(email: string): Request {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       email,
-      password: "password123",
       workspaceName: "Lock Race Co",
-      acceptTerms: true,
-      acceptPrivacy: true,
-      acceptBetaNotice: true,
     }),
   });
 }

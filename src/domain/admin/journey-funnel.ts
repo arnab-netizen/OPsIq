@@ -14,6 +14,7 @@ export const FUNNEL_STEPS: readonly FunnelStepDef[] = [
   { key: "signup_started", label: "Signup form opens (anonymous, approximate)", eventName: AUDIT_EVENTS.PRODUCT_SIGNUP_STARTED, unit: "attempts" },
   { key: "signup_completed", label: "Signed up", eventName: AUDIT_EVENTS.PRODUCT_SIGNUP_COMPLETED, unit: "workspaces" },
   { key: "email_verified", label: "Verified email", eventName: AUDIT_EVENTS.PRODUCT_EMAIL_VERIFIED, unit: "workspaces" },
+  { key: "password_set", label: "Chose a password", eventName: AUDIT_EVENTS.PRODUCT_PASSWORD_SET, unit: "workspaces" },
   { key: "first_run_started", label: "Started first run", eventName: AUDIT_EVENTS.PRODUCT_FIRST_RUN_STARTED, unit: "workspaces" },
   { key: "business_profile_completed", label: "Set up the business", eventName: AUDIT_EVENTS.PRODUCT_BUSINESS_PROFILE_COMPLETED, unit: "workspaces" },
   { key: "first_evidence_saved", label: "Saved first numbers", eventName: AUDIT_EVENTS.PRODUCT_FIRST_EVIDENCE_SAVED, unit: "workspaces" },
@@ -28,6 +29,7 @@ export const FAILURE_CATEGORIES: ReadonlyArray<{ key: string; label: string; eve
   { key: "signup_refused_closed", label: "Signup refused: registration closed", eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_DISABLED },
   { key: "signup_refused_capacity", label: "Signup refused: beta full", eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_CAP },
   { key: "verification_email_not_sent", label: "Verification email could not be sent", eventName: AUDIT_EVENTS.EMAIL_VERIFICATION_NOT_SENT },
+  { key: "password_email_not_sent", label: "Password setup/reset email could not be sent", eventName: AUDIT_EVENTS.PASSWORD_EMAIL_NOT_SENT },
 ];
 
 export const FUNNEL_EVENT_NAMES: readonly string[] = [...FUNNEL_STEPS.map((s) => s.eventName), ...FAILURE_CATEGORIES.map((f) => f.eventName)];

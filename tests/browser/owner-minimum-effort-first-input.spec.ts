@@ -8,7 +8,7 @@
  * owner empty state routes to My Business, and that one click saves exactly one snapshot and lands on
  * a Money read. Screenshots are written to docs/opsiq/evidence/owner-minimum-effort-input/.
  */
-import { completeFirstRunBusinessStep } from "./first-run-helpers";
+import { completeFirstRunBusinessStep, verifyEmailAndChoosePassword } from "./first-run-helpers";
 import { test, expect, type Page, type Browser } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
 import { Client } from "pg";
@@ -36,15 +36,13 @@ async function db<T>(fn: (c: Client) => Promise<T>): Promise<T> {
 async function signupAndLogin(page: Page, email: string, password: string, workspace: string) {
   await page.goto("/signup", { waitUntil: "networkidle" });
   await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Business name").fill(workspace);
-  for (const cb of await page.locator('input[type="checkbox"]').all()) if (!(await cb.isChecked())) await cb.check();
   const [res] = await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/auth/signup") && r.request().method() === "POST"),
     page.click('button[type="submit"]'),
   ]);
   expect(res.status(), "signup must succeed").toBe(201);
-  await db((c) => c.query("UPDATE users SET email_verified_at = now() WHERE email = $1", [email]));
+  await verifyEmailAndChoosePassword(page, { email, password, databaseUrl: DATABASE_URL });
   await page.goto("/login", { waitUntil: "networkidle" });
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);

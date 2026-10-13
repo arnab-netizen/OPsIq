@@ -81,11 +81,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] public-beta workspace cap — real c
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         email,
-        password: "password123",
         workspaceName: "Race Co",
-        acceptTerms: true,
-        acceptPrivacy: true,
-        acceptBetaNotice: true,
       }),
     });
   }

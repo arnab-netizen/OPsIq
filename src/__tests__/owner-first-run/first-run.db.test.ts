@@ -393,7 +393,11 @@ describe("[db] first-run: progressive OBQ is bounded and its progress is persist
       if (v.result.done) { expect(v.result.reason).toBeTruthy(); return; }
       expect(seen).not.toContain(v.result.question.category);
       expect(v.result.question.why.length).toBeGreaterThan(0);
-      expect(v.inputHref).toMatch(/returnTo=first-run/);
+      // The destination is the SERVER's answer: the existing Correct flow for the read's own figures, or an input surface
+      // carrying the return marker — never an unmarked add form.
+      expect(v.target).not.toBeNull();
+      expect(v.inputHref).toBe(v.target?.kind === "NOT_USED_BY_READ" ? (v.target.next?.href ?? v.target.addHref) : (v.target as { href: string }).href);
+      expect(v.inputHref).toMatch(v.target?.kind === "EDIT_FINANCE" ? /^\/owner\/first-run\?correct=/ : /returnTo=first-run/);
       seen.push(v.result.question.category);
       await skipQuestion(t.workspaceId, t.userId, business.id, v.result.question.category);
     }

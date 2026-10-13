@@ -90,9 +90,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] beta capacity — unverified signups
           createdAt: new Date(Date.now() - (opts.ageMs ?? 0)),
         },
       });
-      if (opts.ip) {
-        await tx.policyAcceptance.create({ data: { id: randomUUID(), userId, policyType: "TERMS", version: "test", ipAddress: opts.ip } });
-      }
+      // Signup writes no policy acceptance; the source address lives on the first verification token.
+      await tx.emailVerificationToken.create({
+        data: { id: randomUUID(), userId, tokenHash: createHash("sha256").update(randomBytes(16)).digest("hex"), expiresAt: new Date(Date.now() + 3_600_000), ipAddress: opts.ip ?? null, createdAt: new Date(Date.now() - (opts.ageMs ?? 0)) },
+      });
     });
     users.push(userId);
     workspaces.push(workspaceId);
@@ -144,6 +145,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] beta capacity — unverified signups
     const aged = new Date(Date.now() - 25 * 3600 * 1000);
     await db.user.updateMany({ where: { id: { in: mine } }, data: { createdAt: aged } });
     expect(await countPendingFromSource(db as never, ip)).toBeLessThanOrEqual(1);
+  });
+
+  it("[db] the source is the FIRST verification token: a later token from another address never moves the user, and a user with no token has no source", async () => {
+    const base = await countCapacityUsage();
+    await setCapacity(base.consumed + 20);
+    const ip = ipN();
+    const mine = await signup({ ip });
+    const ip2 = `${ip}-rot`;
+    await db.emailVerificationToken.create({
+      data: { id: randomUUID(), userId: mine.userId, tokenHash: createHash("sha256").update(randomBytes(16)).digest("hex"), expiresAt: new Date(Date.now() + 3_600_000), ipAddress: ip2, createdAt: new Date(Date.now() + 1000) },
+    });
+    expect(await countPendingFromSource(db as never, ip)).toBe(1);
+    expect(await countPendingFromSource(db as never, ip2)).toBe(0);
+    await signup(); // no address recorded: attributable to no source
+    expect(await countPendingFromSource(db as never, "")).toBe(0);
   });
 
   it("[db] a lapsed pending hold stops counting without any row being deleted", async () => {
@@ -237,7 +253,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] beta capacity — unverified signups
     const res = await POST(new Request("http://localhost/api/auth/signup", {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": `10.77.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
-      body: JSON.stringify({ email: `closed-${randomUUID()}@example.com`, password: "password123", workspaceName: "Closed Co", acceptTerms: true, acceptPrivacy: true, acceptBetaNotice: true }),
+      body: JSON.stringify({ email: `closed-${randomUUID()}@example.com`, workspaceName: "Closed Co" }),
     }) as never);
     expect(res.status).toBe(403);
     expect(await db.auditEvent.count({ where: { eventName: "signup.refused_beta_disabled" } })).toBe(before + 1);

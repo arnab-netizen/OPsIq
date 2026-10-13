@@ -4,6 +4,7 @@
  * Reuses buildInputGuidance's CategoryGuidance (INPUT_CATALOG + archetype tiers + confidence projection);
  * adds only a skip-aware ranking and a stop rule. No second taxonomy. Pure.
  */
+import { categoryConsumedByRead } from "@/domain/owner-first-run/improve-target";
 import type { CategoryGuidance, InputGuidance } from "@/domain/owner-mode/input-guidance";
 
 /** Hard ceiling on questions per improvement session: the flow can never loop forever. */
@@ -57,6 +58,9 @@ function isMoneyDomain(g: CategoryGuidance): boolean {
 }
 
 function changesThisRead(g: CategoryGuidance): boolean {
+  // The read must actually CONSUME that kind of evidence (the same knowledge `decideImproveTarget` answers from): a minimum-tier
+  // category the money read does not use (e.g. stock records) would spend a question on something it cannot change.
+  if (!categoryConsumedByRead(g.category)) return false;
   return isMoneyDomain(g) || g.tier === "minimum";
 }
 

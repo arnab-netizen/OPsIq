@@ -65,9 +65,20 @@ function ResendVerificationForm() {
         </div>
 
         {submitted ? (
-          <p className="text-center text-sm text-muted-foreground">
-            If an account is awaiting verification for that email, we&rsquo;ve sent a new link.
-          </p>
+          <div className="space-y-3 text-center text-sm text-muted-foreground">
+            <p>If an account is awaiting verification for that email, we&rsquo;ve sent a new link.</p>
+            <p>
+              Already confirmed your email?{" "}
+              <Link href="/login" className="inline-flex min-h-11 items-center text-[var(--primary-text)] hover:underline">
+                Sign in
+              </Link>{" "}
+              or{" "}
+              <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-[var(--primary-text)] hover:underline">
+                reset your password
+              </Link>
+              .
+            </p>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input

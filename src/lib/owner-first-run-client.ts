@@ -4,11 +4,12 @@
  */
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import type { FirstRunContext, FirstMoneyReadView, NextQuestionView } from "@/services/owner-first-run/first-run.service";
+import type { ImproveTarget } from "@/domain/owner-first-run/improve-target";
 import type { CorrectionResult } from "@/services/owner-first-run/first-run-actions.service";
 
 import type { NextMoveView } from "@/domain/owner-first-run/next-move";
 
-export type { NextMoveView, FirstRunContext, FirstMoneyReadView, NextQuestionView, CorrectionResult };
+export type { NextMoveView, FirstRunContext, FirstMoneyReadView, NextQuestionView, CorrectionResult, ImproveTarget };
 
 const TIMEOUT_MS = 20_000;
 const BASE = "/api/owner/first-run";
@@ -46,7 +47,9 @@ export const firstRunApi = {
   accept: (businessId: string, readCycleId: string, idempotencyKey: string) =>
     post<{ replayed: boolean }>("/accept", { businessId, readCycleId, idempotencyKey }),
   correct: (body: Record<string, unknown>) => post<CorrectionResult>("/correct", body),
-  improve: (businessId: string, category: string) => post<{ replayed: boolean }>("/improve", { businessId, category }),
+  improve: (businessId: string, category: string) => post<{ replayed: boolean; target: ImproveTarget }>("/improve", { businessId, category }),
+  improveTarget: (businessId: string, category: string) =>
+    call<{ target: ImproveTarget }>(`/improve-target?businessId=${encodeURIComponent(businessId)}&category=${encodeURIComponent(category)}`),
   skipQuestion: (businessId: string, category: string) => post<{ replayed: boolean }>("/skip-question", { businessId, category }),
   nextQuestion: (businessId: string) => call<NextQuestionView>(`/next-question?businessId=${encodeURIComponent(businessId)}`),
   feedback: (body: { businessId: string; rating: string; reason?: string; idempotencyKey: string }) => post<{ replayed: boolean }>("/feedback", body),

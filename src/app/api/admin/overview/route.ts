@@ -10,6 +10,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { readEffectiveSettings, countCapacityUsage } from "@/services/beta/platform-settings.service";
+import { countVerifiedWithoutPassword } from "@/services/admin/limbo-accounts.service";
 import { getJourneyFunnel } from "@/services/admin/journey-funnel.service";
 import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
 import { ensureCriticalReadiness } from "@/infra/critical-readiness";
@@ -29,7 +30,7 @@ export const GET = withCanonicalEnforcement(
     // "Registered" / "awaiting verification" / "active" are derived from the
     // real account/workspace rows admitted through either external signup
     // path — never denormalized onto BetaRequest.
-    const [registeredCount, awaitingVerificationCount, activeCount] = await Promise.all([
+    const [registeredCount, awaitingVerificationCount, activeCount, verifiedNoPasswordCount] = await Promise.all([
       db.user.count({
         where: { workspaceMemberships: { some: { workspace: { signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] } } } } },
       }),
@@ -47,6 +48,8 @@ export const GET = withCanonicalEnforcement(
           workspaceMemberships: { some: { workspace: { signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] } } } },
         },
       }),
+      // Limbo (mailbox proven, no password yet): read-only; capacity accounting is unchanged.
+      countVerifiedWithoutPassword(),
     ]);
 
     // Aggregates only (no payloads, emails or money). A failure here must not hide the admission/capacity controls.
@@ -68,7 +71,7 @@ export const GET = withCanonicalEnforcement(
       },
       journey,
       requests: { requested: requestedCount, invited: invitedCount, revoked: revokedCount, rejected: rejectedCount },
-      customers: { registered: registeredCount, awaitingVerification: awaitingVerificationCount, active: activeCount },
+      customers: { registered: registeredCount, awaitingVerification: awaitingVerificationCount, active: activeCount, verifiedNoPassword: verifiedNoPasswordCount },
       readiness,
     };
   },

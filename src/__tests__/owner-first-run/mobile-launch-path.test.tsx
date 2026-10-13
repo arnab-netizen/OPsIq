@@ -65,10 +65,10 @@ describe("launch-path surfaces avoid sub-standard tap targets in source", () => 
     expect(src).not.toMatch(/padding: "4px 8px", border: "1px solid var\(--border\)", borderRadius: 4, fontSize: 12/);
     expect(src).toMatch(/minHeight: 44/);
   });
-  it("signup consent checkboxes sit in 44px rows and the recovery link is a 44px control", () => {
-    const src = read("src/app/signup/page.tsx");
-    expect(src).toMatch(/label className="flex min-h-11/);
-    expect(src).toMatch(/data-testid="signup-resend-link"/);
+  it("the consent checkboxes (now on the choose-password step) sit in 44px rows, the signup recovery link and the verify button are 44px controls", () => {
+    expect(read("src/app/reset-password/page.tsx")).toMatch(/label className="flex min-h-11/);
+    expect(read("src/app/signup/page.tsx")).toMatch(/data-testid="signup-resend-link"/);
+    expect(read("src/app/verify-email/page.tsx")).toMatch(/data-testid="verify-email-button"[\s\S]*min-h-11 w-full/);
   });
   it("the admin request list never relies on a sideways-scrolling table on phones", () => {
     const src = read("src/app/(authenticated)/admin/beta-programme/page.tsx");

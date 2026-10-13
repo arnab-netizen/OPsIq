@@ -38,3 +38,32 @@ export async function recordVerificationEmailNotSent(args: {
     /* the signal must never turn a real signup into a failure */
   }
 }
+
+export type PasswordEmailFailureReason =
+  | "SETUP_NO_PROVIDER" | "SETUP_SEND_FAILED" | "SETUP_BASE_URL_NOT_PUBLIC"
+  | "RESET_NO_PROVIDER" | "RESET_SEND_FAILED" | "RESET_BASE_URL_NOT_PUBLIC";
+
+/**
+ * Operator-visible signal for a forgot-password email (first-time password setup link or ordinary reset link) that did
+ * NOT go out. The route answers with the same generic body regardless (enumeration resistance), so this is the only
+ * trace beyond a console line. Never throws; payload carries an enum reason only (no address, no link).
+ */
+export async function recordPasswordEmailNotSent(args: {
+  reason: PasswordEmailFailureReason;
+  userId: string;
+  workspaceId?: string;
+}): Promise<void> {
+  try {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.PASSWORD_EMAIL_NOT_SENT,
+      actorId: args.userId,
+      workspaceId: args.workspaceId,
+      entityType: "user",
+      entityId: args.userId,
+      payload: { reason: args.reason },
+      visibility: "internal",
+    });
+  } catch {
+    /* the signal must never change the generic forgot-password response */
+  }
+}

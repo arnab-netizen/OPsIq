@@ -21,6 +21,7 @@ import {
 } from "./owner-domain-ingestion";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { cashflowTotalCash } from "@/domain/owner-finance/liquidity";
+import { loadEffectiveCashflowRow, type CashflowReadClient } from "@/services/owner-cashflow/effective-cashflow.service";
 
 export interface OwnerDbProviderDeps {
   db: PrismaClient;
@@ -75,7 +76,8 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
   // legacy null-business rows reports those domains as missing (it never inflates REAL_DB readiness).
   // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
   const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes, reputationRow] = await Promise.all([
-    db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId, periodEnd: { lte: new Date() } }, orderBy: { periodEnd: "desc" } }),
+    // The current Cashflow row through the ONE selector (latest period at or before now; ties by the domain rule).
+    loadEffectiveCashflowRow(workspaceId, businessId, new Date(), db as unknown as CashflowReadClient),
     db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId })),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
     db.ownerCapacitySnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" } }),

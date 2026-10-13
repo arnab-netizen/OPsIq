@@ -12,7 +12,7 @@
  * process.env plus, when disabled, a BetaRequest lookup — never db.user.findUnique
  * or the account-creation transaction, which these tests prove by using a
  * body that WOULD otherwise fail differently at a later stage (invalid
- * consent, in Test B) — if the beta gate ran after validation, Test B would
+ * business name, in Test B) — if the beta gate ran after validation, Test B would
  * observe a validation error instead of proceeding, so seeing the validation
  * error is itself the proof that the gate does not block a valid request
  * when enabled).
@@ -53,11 +53,7 @@ function signupRequest(body: Record<string, unknown>): Request {
 
 const VALID_BODY = {
   email: "kill-switch-test@example.com",
-  password: "password123",
   workspaceName: "Kill Switch Co",
-  acceptTerms: true,
-  acceptPrivacy: true,
-  acceptBetaNotice: true,
 };
 
 describe("POST /api/auth/signup — PUBLIC_BETA_ENABLED kill switch", () => {
@@ -102,7 +98,7 @@ describe("POST /api/auth/signup — PUBLIC_BETA_ENABLED kill switch", () => {
   it("BETA_ENABLED_SIGNUP_ALLOWED_TO_CONTINUE: with the flag \"true\", execution proceeds past the gate into validation rather than stopping at beta_disabled", async () => {
     process.env.PUBLIC_BETA_ENABLED = "true";
     const { POST } = await import("@/app/api/auth/signup/route");
-    // A body missing all three consents is invalid — but proving it fails at
+    // A body with an empty business name is invalid — but proving it fails at
     // VALIDATION (not at the beta gate) is exactly what shows the gate let it
     // through. If the gate ran after validation this test would be unable to
     // tell the two failure modes apart; because the gate runs first, seeing a
@@ -114,7 +110,7 @@ describe("POST /api/auth/signup — PUBLIC_BETA_ENABLED kill switch", () => {
     // previously escaped to Next.js's default handler as an unparseable
     // generic 500, silently discarding the safe validation message) -- so
     // this asserts the resolved Response, not a rejection.
-    const invalidBody = { email: VALID_BODY.email, password: VALID_BODY.password, workspaceName: VALID_BODY.workspaceName };
+    const invalidBody = { email: VALID_BODY.email, workspaceName: "" };
     const res = await POST(signupRequest(invalidBody) as never);
     expect(res.status).toBe(400);
     const json = await res.json();

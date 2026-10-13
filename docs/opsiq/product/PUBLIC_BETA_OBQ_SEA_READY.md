@@ -3,7 +3,7 @@
 Branch `claude/public-beta-obq-sea-ready`, from `origin/main` `ce8b242c68e3d0776188f069e0f4fb27c5690d2e`.
 Independent of the QBO hardening branch. Not merged, not deployed, `OPEN_BETA` **not** enabled, billing untouched.
 
-Goal: a stranger goes homepage → **Start free** → signup → verify email → first run → first useful, honestly
+Goal: a stranger goes homepage → **Start free** → signup (email + business name only) → click **Verify my email** (a page load never verifies) → choose password + accept the policies → first run → first useful, honestly
 scoped, evidence-and-confidence-labelled result → one accepted action → Cockpit, with no founder help.
 Metric: `TIME_TO_TRUSTWORTHY_VALUE` (target < 5 min, ceiling < 10), not questionnaire completion.
 
@@ -83,7 +83,7 @@ Hostile audit of the definition:
   on the event so cohorts can be split.
 * Derived only from persisted rows, never from a client claim, so it cannot be spoofed and survives a lost event.
 * Emitted once per business (`recordActivationIfFirst`), carrying `timeToFirstValueSeconds` =
-  `user.emailVerifiedAt → first qualifying interaction` (`TIME_TO_FIRST_VALUE`).
+  `user.emailVerifiedAt → first qualifying interaction` (`TIME_TO_FIRST_VALUE`). That window includes the owner choosing a password and accepting the three consents (the step after "Verify my email"); the separate `password_set` event ("Chose a password" in the operator funnel) marks it, so a long time-to-first-value can be split into password-step delay versus first-run delay.
 
 ## 5. Analytics
 
@@ -202,7 +202,13 @@ result shown" other than `first_result_viewed` (compare its `occurred_at` with `
    compliance blocker) first — that is correct and unchanged.
 3. Legal pages (`/terms`, `/privacy`, `/beta`) switch only their descriptive "invite-only" phrases under OPEN_BETA; policy
    version strings are **unchanged**. If counsel treats that as a material change, bump the versions and re-consent.
-4. The remote test database in this environment was never touched; migration and DB tests ran against a throwaway local
+4. **Email ownership before credential trust.** Signup stores `users.hashed_password = NULL` and no `policy_acceptances`;
+   verification (explicit POST from the "Verify my email" button) returns a one-time 60-minute setup token (a hashed
+   `password_reset_tokens` row) and issues no session; `/api/auth/reset-password` then requires the three consents when
+   the account has no password, sets the password and signs the proven owner in. A lost setup link is re-issued by
+   forgot-password (verified accounts only). A repeated signup for a still-unverified email rotates the verification link
+   instead of failing. A legacy pending account's pre-ownership password is discarded at verification.
+5. The remote test database in this environment was never touched; migration and DB tests ran against a throwaway local
    Postgres. The migration has **not** been applied to any shared database.
 5. Accepted residual items from the repair-round hostile reviews (P3, none blocks): spreadsheet **imports** create evidence with no
    stated quality (stays "Not stated", conservative); server date validation still accepts non-calendar strings such as

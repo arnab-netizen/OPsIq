@@ -24,6 +24,7 @@ import { FirstMoneyReadCard } from "@/components/owner/first-run/FirstMoneyReadC
 import { FirstResultCorrection } from "@/components/owner/first-run/FirstResultCorrection";
 import { FirstResultImprovement } from "@/components/owner/first-run/FirstResultImprovement";
 import { FirstValueFeedback } from "@/components/owner/first-run/FirstValueFeedback";
+import { correctionFields } from "@/domain/owner-first-run/correction-form";
 import { buildFirstMoneyRead, findOverclaims } from "@/domain/owner-first-run/first-money-read";
 import { HttpResponseError } from "@/lib/operator-safe-errors";
 import { CORRECTION_UNCONFIRMED_MESSAGE } from "@/domain/owner-first-run/read-staleness";
@@ -176,6 +177,29 @@ describe("FirstResultCorrection", () => {
       evidenceQuality: "ACTUAL",
     });
   });
+  it("shows what is recorded NOW beside each figure, offers the extra figures a question is about, and sends them under the amendment field names", async () => {
+    api.correct.mockResolvedValue({ changedFields: ["salaryPayroll"] });
+    const onDone = vi.fn();
+    const fields = correctionFields([{ name: "salaryPayroll", label: "Payroll / staff cost" }]);
+    render(<FirstResultCorrection businessId="b1" snapshotId="s1" currency="GBP" fields={fields} recorded={{ revenue: 12000, fixedCosts: null, variableCosts: 4000, cashOnHand: 1500, salaryPayroll: null }} onDone={onDone} onCancel={vi.fn()} />);
+    expect(screen.getByText("Recorded now: GBP 12,000")).toBeTruthy();
+    expect(screen.getAllByText("Recorded now: nothing yet")).toHaveLength(2); // fixed costs + payroll
+    fireEvent.change(screen.getByLabelText(/payroll \/ staff cost/i), { target: { value: "3000" } });
+    fireEvent.click(screen.getByTestId("first-result-correction-submit"));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(api.correct).toHaveBeenCalledWith({ businessId: "b1", snapshotId: "s1", amendmentReason: expect.any(String), salaryPayroll: 3000 });
+  });
+  it("entering exactly what is already recorded is not a correction: it says so and sends nothing", () => {
+    render(<FirstResultCorrection businessId="b1" snapshotId="s1" currency="GBP" recorded={{ revenue: 12000 }} onDone={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/revenue/i), { target: { value: "12000" } });
+    expect((screen.getByTestId("first-result-correction-submit") as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId("first-result-correction-same").textContent).toMatch(/already recorded/);
+    expect(api.correct).not.toHaveBeenCalled();
+    // A real change (or a stated reliability) re-enables it.
+    fireEvent.change(screen.getByLabelText(/revenue/i), { target: { value: "12001" } });
+    expect((screen.getByTestId("first-result-correction-submit") as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId("first-result-correction-same")).toBeNull();
+  });
   it("rejects negative or non-numeric text inline and does not submit", () => {
     render(<FirstResultCorrection businessId="b1" snapshotId="s1" currency="GBP" onDone={vi.fn()} onCancel={vi.fn()} />);
     fireEvent.change(screen.getByLabelText(/cash in hand/i), { target: { value: "-5" } });
@@ -209,13 +233,16 @@ describe("FirstResultCorrection", () => {
 
 describe("FirstResultImprovement — progressive OBQ", () => {
   const readOnScreen = buildFirstMoneyRead({ period: PERIOD, finding: null, action: null, dataRequest: null, confidenceScore: 55, evidenceQuality: "GOOD_ESTIMATE", missingEvidence: ["Fixed costs"] });
-  const question = (category: string, handled = 0) => ({
+  // The destination and the button label are the SERVER's answer (`target`); the screen only renders it.
+  const ADD_TARGET = { kind: "ADD", category: "fixed_costs", actionLabel: "Add this", why: "w", readPeriodLabel: "September 2026", href: "/owner/cashflow?periodStart=2026-09-01&periodEnd=2026-09-30&returnTo=first-run" };
+  const question = (category: string, handled = 0, target: Record<string, unknown> = ADD_TARGET) => ({
     result: { done: false, question: { category, label: "Fixed costs", request: "Fixed costs", why: "Fixed costs decide your break-even.", couldChange: "the break-even recommendation", effort: "low", effortLabel: "About a minute" } },
-    inputHref: "/owner/finance?returnTo=first-run",
-    inputActionLabel: "Add snapshot",
+    target,
+    inputHref: (target as { href?: string }).href ?? null,
+    inputActionLabel: (target as { actionLabel?: string }).actionLabel ?? null,
     progress: { handled, max: 3 },
   });
-  const done = (reason: string, handled: number) => ({ result: { done: true, reason }, inputHref: null, inputActionLabel: null, progress: { handled, max: 3 } });
+  const done = (reason: string, handled: number) => ({ result: { done: true, reason }, target: null, inputHref: null, inputActionLabel: null, progress: { handled, max: 3 } });
 
   it("records the request once per category, shows one explained question, and persists a skip instead of holding it in the browser", async () => {
     api.improve.mockResolvedValue({ replayed: false });
@@ -270,6 +297,95 @@ describe("FirstResultImprovement — progressive OBQ", () => {
     const stored = JSON.parse(window.sessionStorage.getItem("opsiq:first-run:before") ?? "{}");
     expect(stored).toMatchObject({ confidenceTier: readOnScreen.confidenceTier, evidenceQuality: "GOOD_ESTIMATE", missingEvidence: ["Fixed costs"], questionLabel: "Fixed costs" });
     expect(JSON.stringify(stored)).not.toMatch(/\d{4,}/); // no amounts
+    expect(stored.category).toBe("fixed_costs"); // so the return re-asks the SERVER whether what was saved is used
+  });
+
+  describe("the server's answer decides the destination and the label", () => {
+    const FIN = {
+      kind: "EDIT_FINANCE", category: "payroll", actionLabel: "Edit this", why: "w", readPeriodLabel: "September 2026", snapshotId: "s1",
+      href: "/owner/first-run?correct=payroll", currency: "GBP", hasValue: true,
+      currentValues: [{ field: "salaryPayroll", label: "Payroll / staff cost", value: 4200 }],
+    };
+    const CASH = {
+      kind: "EDIT_CASHFLOW", category: "cash_debt", actionLabel: "Edit this", why: "w", readPeriodLabel: "September 2026", snapshotId: "c1",
+      updatedAt: "2026-10-01T00:00:00.000Z", href: "/owner/cashflow?edit=c1&returnTo=first-run", currency: "GBP", hasValue: true, entryPeriodLabel: "September 2026",
+      currentValues: [{ field: "bankBalance", label: "Bank balance", value: 1500 }, { field: "cashInHand", label: "Cash in hand", value: null }],
+    };
+    it("NOT_USED: never claims it could change the recommendation (the card's own explanation says it won't)", async () => {
+      const notUsed = { kind: "NOT_USED_BY_READ", category: "cash_debt", reason: "PERIOD_MISMATCH", actionLabel: "Add this", why: "w", readPeriodLabel: "September 2026",
+        explanation: "Saved, but this read doesn't use it, because it covers October 2026 and your read covers September 2026.", afterExplanation: "x", addHref: "/owner/cashflow", next: null };
+      api.nextQuestion.mockResolvedValue(question("cash_debt", 0, notUsed));
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+      await screen.findByTestId("first-result-improvement-not-used");
+      const text = screen.getByTestId("first-result-improvement-question").textContent ?? "";
+      expect(text).not.toMatch(/It could change/);
+      expect(text).toMatch(/doesn't use it/);
+    });
+    it("EDIT_FINANCE keeps no 'before' for a round trip that is not happening", async () => {
+      api.improve.mockResolvedValue({ replayed: false });
+      api.nextQuestion.mockResolvedValue(question("payroll", 0, FIN));
+      window.sessionStorage.clear();
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onEditFinance={vi.fn()} onClose={vi.fn()} />);
+      fireEvent.click(await screen.findByTestId("first-result-improvement-add"));
+      expect(window.sessionStorage.getItem("opsiq:first-run:before")).toBeNull();
+      expect(window.sessionStorage.getItem("opsiq:first-run:round-trip")).toBeNull();
+    });
+    it("ADD: an 'Add this' link to the dated add form", async () => {
+      api.nextQuestion.mockResolvedValue(question("fixed_costs"));
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+      const add = await screen.findByTestId("first-result-improvement-add");
+      expect(add.textContent).toBe("Add this");
+      expect(add.getAttribute("href")).toMatch(/periodStart=2026-09-01&periodEnd=2026-09-30&returnTo=first-run/);
+    });
+    it("EDIT_FINANCE: shows the CURRENT value first, says 'Edit this', and opens the existing Correct flow (no navigation)", async () => {
+      api.improve.mockResolvedValue({ replayed: false });
+      api.nextQuestion.mockResolvedValue(question("payroll", 0, FIN));
+      const onEditFinance = vi.fn();
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onEditFinance={onEditFinance} onClose={vi.fn()} />);
+      const btn = await screen.findByTestId("first-result-improvement-add");
+      expect(screen.getByTestId("first-result-improvement-current").textContent).toMatch(/Payroll \/ staff cost: GBP 4,200/);
+      expect(btn.textContent).toBe("Edit this");
+      expect(btn.tagName).toBe("BUTTON");
+      fireEvent.click(btn);
+      expect(onEditFinance).toHaveBeenCalledWith(expect.objectContaining({ kind: "EDIT_FINANCE", snapshotId: "s1" }));
+      await waitFor(() => expect(api.improve).toHaveBeenCalledWith("b1", "payroll"));
+    });
+    it("EDIT_FINANCE with nothing recorded: 'Add this' to the existing figures, and says nothing is recorded yet", async () => {
+      api.nextQuestion.mockResolvedValue(question("payroll", 0, { ...FIN, hasValue: false, actionLabel: "Add this", currentValues: [{ field: "salaryPayroll", label: "Payroll / staff cost", value: null }] }));
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onEditFinance={vi.fn()} onClose={vi.fn()} />);
+      const btn = await screen.findByTestId("first-result-improvement-add");
+      expect(btn.textContent).toBe("Add this");
+      expect(screen.getByTestId("first-result-improvement-current").textContent).toMatch(/Not recorded/);
+      expect(screen.getByTestId("first-result-improvement-where").textContent).toMatch(/don't have this yet/);
+    });
+    it("EDIT_CASHFLOW: current balance first, 'Edit this', and a link that opens THAT entry", async () => {
+      api.nextQuestion.mockResolvedValue(question("cash_debt", 0, CASH));
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+      const link = await screen.findByTestId("first-result-improvement-add");
+      expect(screen.getByTestId("first-result-improvement-current").textContent).toMatch(/Bank balance: GBP 1,500/);
+      expect(screen.getByTestId("first-result-improvement-current").textContent).toMatch(/Cash in hand: Not recorded/);
+      expect(link.textContent).toBe("Edit this");
+      expect(link.getAttribute("href")).toBe("/owner/cashflow?edit=c1&returnTo=first-run");
+    });
+    it("EDIT_CASHFLOW with a blank balance: 'Add this' to the existing entry", async () => {
+      api.nextQuestion.mockResolvedValue(question("cash_debt", 0, { ...CASH, hasValue: false, actionLabel: "Add this", currentValues: [{ field: "bankBalance", label: "Bank balance", value: null }] }));
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+      const link = await screen.findByTestId("first-result-improvement-add");
+      expect(link.textContent).toBe("Add this");
+      expect(screen.getByTestId("first-result-improvement-where").textContent).toMatch(/without a bank balance/);
+    });
+    it("NOT_USED_BY_READ says plainly that saving will not change this read, and still allows adding", async () => {
+      api.nextQuestion.mockResolvedValue(question("marketing", 0, {
+        kind: "NOT_USED_BY_READ", category: "inventory_stock", reason: "CATEGORY_NOT_READ", actionLabel: "Add it anyway", why: "w", readPeriodLabel: "September 2026",
+        explanation: "You can add this and it will be saved, but your first money read doesn't use it yet, so it won't change this recommendation.",
+        afterExplanation: "x", addHref: "/owner/intake?returnTo=first-run", next: null,
+      }));
+      render(<FirstResultImprovement businessId="b1" read={readOnScreen} onClose={vi.fn()} />);
+      const link = await screen.findByTestId("first-result-improvement-add");
+      expect(screen.getByTestId("first-result-improvement-not-used").textContent).toMatch(/won't change this recommendation/);
+      expect(link.textContent).toBe("Add it anyway");
+      expect(link.getAttribute("href")).toBe("/owner/intake?returnTo=first-run");
+    });
   });
 });
 

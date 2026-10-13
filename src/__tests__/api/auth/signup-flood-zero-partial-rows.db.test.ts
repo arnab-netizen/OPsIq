@@ -49,11 +49,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] signup flood creates zero partial ro
       headers: { "content-type": "application/json", "x-forwarded-for": ip },
       body: JSON.stringify({
         email,
-        password: "password123",
         workspaceName: `Flood Co ${email}`,
-        acceptTerms: true,
-        acceptPrivacy: true,
-        acceptBetaNotice: true,
       }),
     });
   }

@@ -48,7 +48,10 @@ function makeDb(s: Scenario = {}): PrismaClient {
   const fin = s.finState ? { survivalState: s.finState, dataConfidenceScore: 90, snapshot: { periodEnd: PERIOD_END, supersededById: null }, findings: s.finFindings ?? [] } : null;
   const cash = s.cashState ? { cashflowState: s.cashState, dataConfidenceScore: 90, generatedAt: PERIOD_END, snapshot: { periodEnd: PERIOD_END } } : null;
   const db: Record<string, unknown> = {
-    ownerCashflowSnapshot: { findFirst: ff({ periodEnd: PERIOD_END, cashInHand: s.cashInHand ?? 250_000, bankBalance: 0, receivables: 20_000, receivablesOverdue: s.receivablesOverdue ?? 0, payables: 10_000 }) },
+    ownerCashflowSnapshot: (() => {
+      const row = { id: "cf-1", periodStart: PERIOD_END, periodEnd: PERIOD_END, updatedAt: PERIOD_END, cashInHand: s.cashInHand ?? 250_000, bankBalance: 0, receivables: 20_000, receivablesOverdue: s.receivablesOverdue ?? 0, payables: 10_000 };
+      return { findFirst: ff(row), findMany: fm([row]) };
+    })(),
     ownerFinancialSnapshot: { findFirst: ff({ periodEnd: PERIOD_END, revenue: s.revenue ?? 400_000, costOfGoods: s.costOfGoods ?? 160_000, fixedCosts: 60_000, variableCosts: 20_000, dataConfidenceScore: 90 }) },
     ownerWorkingCapitalItem: { findMany: fm([]) },
     ownerCapacitySnapshot: { findFirst: ff({ bottleneckUtilization: 0.5, growthSafe: true, safeUtilization: 0.7, createdAt: NOW, expansionTriggered: false }) },

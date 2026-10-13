@@ -21,7 +21,7 @@ interface OverviewData {
     failures: Array<{ key: string; label: string; count: number }>;
   } | null;
   requests: { requested: number; invited: number; revoked: number; rejected: number };
-  customers: { registered: number; awaitingVerification: number; active: number };
+  customers: { registered: number; awaitingVerification: number; active: number; verifiedNoPassword: number };
   readiness: { status: string; checks: Record<string, boolean> };
 }
 
@@ -122,6 +122,7 @@ export default function AdminOverviewPage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <StatTile label="Registered" value={customers.registered} />
           <StatTile label="Awaiting verification" value={customers.awaitingVerification} />
+          <StatTile label="Verified, no password" value={customers.verifiedNoPassword} sublabel="Confirmed their email but never chose a password" />
           <StatTile label="Active" value={customers.active} />
         </div>
       </section>

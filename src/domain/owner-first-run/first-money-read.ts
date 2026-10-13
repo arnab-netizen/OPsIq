@@ -121,6 +121,18 @@ export function periodLabel(period: Pick<FirstReadPeriod, "start" | "end">): str
   return `${fmt(a)} to ${fmt(b)}`;
 }
 
+/** "30 September 2026" (UTC), or null when the date is not valid. */
+export function longDateLabel(iso: string): string | null {
+  const p = utcParts(iso);
+  return p ? `${p.d} ${MONTHS[p.m]} ${p.y}` : null;
+}
+
+/** The caution shown when the runway rests on a Cashflow bank balance: a statement of where it came from, not of how good it is. */
+export function cashflowBalanceCaution(asOfPeriodEnd: string): string {
+  const asOf = longDateLabel(asOfPeriodEnd);
+  return `Your bank balance${asOf ? ` (as of ${asOf})` : ""} comes from a Cashflow entry. OpsIQ doesn't grade how reliable it is, so the cash runway rests partly on your own figure.`;
+}
+
 /** e.g. "Based on your September 2026 figures · a good estimate", "…October 2026 figures so far · still in progress (provisional)". */
 export function basisLine(period: FirstReadPeriod, qualityLabel: string): string {
   const label = periodLabel(period);
@@ -213,6 +225,11 @@ export interface FirstMoneyReadInput {
   scope?: FirstReadScope;
   /** Critical/important inputs still missing from the snapshot (owner-facing labels). */
   missingEvidence: readonly string[];
+  /**
+   * Present when the diagnosis' liquidity used a bank balance from a Cashflow entry (not a Finance figure). Cashflow records
+   * no source or reliability for it, so the read says so; it never changes the confidence score or tier.
+   */
+  cashflowBalance?: { asOfPeriodEnd: string } | null;
 }
 
 export type FirstMoneyReadStatus = "READY" | "NEEDS_MORE_EVIDENCE" | "NO_ATTENTION_FOUND";
@@ -319,6 +336,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
   if (input.dataRequestCode === "FIN_LIQUIDITY_UNCONFIRMED") {
     cautions.push("OpsIQ can't yet confirm how long your cash will last, because your bank balance isn't known. That is a missing figure, not a sign you have no money.");
   }
+  if (input.cashflowBalance) cautions.push(cashflowBalanceCaution(input.cashflowBalance.asOfPeriodEnd));
   if (input.period.state === "provisional") cautions.push("This covers a period that is still in progress, so the read may change as the period completes.");
   if (tier === "LOW") cautions.push("OpsIQ's confidence is low, so this points the direction without being certain.");
   const present = (a: FirstMoneyReadAction) => ({

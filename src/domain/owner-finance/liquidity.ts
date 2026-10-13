@@ -154,6 +154,66 @@ export function selectUsableBankBalance(args: {
   return balance;
 }
 
+/** The persisted Cashflow columns the current-row selection reads. */
+export interface CashflowSelectionRow {
+  id: string;
+  periodStart: Date | string;
+  periodEnd: Date | string;
+  updatedAt: Date | string;
+  bankBalance: number | null | undefined;
+}
+
+function msOrNegInf(d: Date | string): number {
+  const t = toMs(d);
+  return Number.isNaN(t) ? Number.NEGATIVE_INFINITY : t;
+}
+
+/**
+ * Total order of Cashflow rows for "which row is the current one" (best first; negative = `a` is better):
+ *   0. latest `periodEnd` — a bank balance is a point-in-time fact as of a row's `periodEnd`, so the row that
+ *      speaks for the latest instant wins (unchanged semantics);
+ *   several rows may legitimately share that `periodEnd` (different `periodStart`), and then "the owner's most
+ *   recent statement of that as-of balance wins":
+ *   1. a row WITH a finite bank balance before a row without one (an empty row never shadows a recorded balance);
+ *   2. latest `updatedAt` (the owner's most recent statement);
+ *   3. latest `periodStart`;
+ *   4. `id` descending — only the last, purely deterministic tie-break, never the domain rule.
+ */
+export function compareCashflowRows(a: CashflowSelectionRow, b: CashflowSelectionRow): number {
+  const byEnd = msOrNegInf(b.periodEnd) - msOrNegInf(a.periodEnd);
+  if (byEnd !== 0 && !Number.isNaN(byEnd)) return byEnd < 0 ? -1 : 1;
+  const hasA = finiteOrNull(a.bankBalance) !== null ? 0 : 1;
+  const hasB = finiteOrNull(b.bankBalance) !== null ? 0 : 1;
+  if (hasA !== hasB) return hasA - hasB;
+  const byUpdated = msOrNegInf(b.updatedAt) - msOrNegInf(a.updatedAt);
+  if (byUpdated !== 0 && !Number.isNaN(byUpdated)) return byUpdated < 0 ? -1 : 1;
+  const byStart = msOrNegInf(b.periodStart) - msOrNegInf(a.periodStart);
+  if (byStart !== 0 && !Number.isNaN(byStart)) return byStart < 0 ? -1 : 1;
+  return a.id === b.id ? 0 : a.id > b.id ? -1 : 1;
+}
+
+/** The best row of a candidate set under `compareCashflowRows` (null when empty). Input order never matters. */
+export function pickLatestCashflowRow<T extends CashflowSelectionRow>(rows: readonly T[]): T | null {
+  let best: T | null = null;
+  for (const r of rows) if (best === null || compareCashflowRows(r, best) < 0) best = r;
+  return best;
+}
+
+/**
+ * The Cashflow row that speaks for a Finance period ending at `financePeriodEnd`: among the rows whose
+ * `periodEnd` is at or before it (a later balance never alters an earlier read), the one with the greatest
+ * `periodEnd`, ties broken by `compareCashflowRows`. Whether its balance is USABLE (fresh, finite) is still
+ * decided only by `selectUsableBankBalance`. An unparseable Finance end selects nothing (fail closed).
+ */
+export function pickEffectiveCashflowRow<T extends CashflowSelectionRow>(rows: readonly T[], financePeriodEnd: Date | string): T | null {
+  const end = toMs(financePeriodEnd);
+  if (Number.isNaN(end)) return null;
+  return pickLatestCashflowRow(rows.filter((r) => {
+    const t = toMs(r.periodEnd);
+    return !Number.isNaN(t) && t <= end;
+  }));
+}
+
 export type LiquidityStatus =
   /** Both parts known (or a legacy `cashOnHand` taken as entered): total liquid funds is a fact. */
   | "COMPLETE"

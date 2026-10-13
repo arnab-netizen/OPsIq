@@ -24,7 +24,9 @@ import {
   type FirstRunContext,
 } from "@/lib/owner-first-run-client";
 import { retryDiagnosis, type QuickStartApi } from "@/lib/owner-quick-start";
-import { CORRECTION_SAVED_READ_PENDING_MESSAGE, READ_REFRESHED_AFTER_STALE_MESSAGE, READ_STALE_MESSAGE, isReadStaleMessage } from "@/domain/owner-first-run/read-staleness";
+import { CORRECTION_SAVED_READ_PENDING_MESSAGE, READ_REFRESHED_AFTER_STALE_MESSAGE, READ_STALE_MESSAGE, isReadStaleMessage, staleReadHeadline, staleReadNote } from "@/domain/owner-first-run/read-staleness";
+import { buildImproveOutcome, financeFieldsForCategory, type ImproveOutcome, type ImproveTarget } from "@/domain/owner-first-run/improve-target";
+import { correctionFields } from "@/domain/owner-first-run/correction-form";
 import { clearRoundTrip, readBeforeSummary, saveBeforeSummary } from "@/lib/first-run-return-storage";
 import { HttpResponseError } from "@/lib/operator-safe-errors";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
@@ -64,8 +66,10 @@ export function FirstRunFlow() {
   const [diagnosing, setDiagnosing] = useState<"idle" | "running" | "failed">("idle");
   /** The corrected numbers were saved but the read could not be re-run: the previous read must not be shown or used. */
   const [correctionSavedPending, setCorrectionSavedPending] = useState(false);
-  /** What changed after the owner supplied evidence for "Improve this recommendation". */
-  const [improvedLines, setImprovedLines] = useState<string[] | null>(null);
+  /** What happened after the owner supplied evidence for "Improve this recommendation" (built from before/after read tokens). */
+  const [improved, setImproved] = useState<ImproveOutcome | null>(null);
+  /** The server's Improve answer the Correct form was opened from (its fields and current values). */
+  const [correctionTarget, setCorrectionTarget] = useState<Extract<ImproveTarget, { kind: "EDIT_FINANCE" }> | null>(null);
   const viewedFor = useRef<string | null>(null);
   const inFlight = useRef(false);
   const acceptKey = useRef(newIdempotencyKey());
@@ -89,6 +93,9 @@ export function FirstRunFlow() {
 
   const businessId = ctx?.business?.id ?? null;
   const hasResult = ctx?.state === "FIRST_RESULT" || ctx?.state === "ESTABLISHED";
+  // Out of date (decided by the server): figures corrected after the read, or the bank balance it rests on changed.
+  const staleReason = ctx?.staleReason ?? view?.staleReason ?? null;
+  const stale = Boolean(ctx?.diagnosisStale) || staleReason !== null;
 
   const loadResult = useCallback(async () => {
     if (!businessId) return;
@@ -178,7 +185,11 @@ export function FirstRunFlow() {
   }
 
   async function afterCorrection(result: CorrectionResult) {
-    setImprovedLines(null);
+    // An in-place edit re-ran the read itself and shows its own "what changed": any "before" kept for a round trip is now
+    // stale and must not nag on other pages or feed a later "Update my read" comparison.
+    clearRoundTrip();
+    setImproved(null);
+    setCorrectionTarget(null);
     setMode("result");
     if (result.diagnosisFailed || !result.after) {
       // The amendment committed; only the re-run failed. The old read no longer applies, so it is withdrawn from the
@@ -231,32 +242,54 @@ export function FirstRunFlow() {
       try {
         const next = await firstRunApi.result(businessId);
         setView(next);
-        if (before) {
-          const stillMissing = before.missingEvidence.filter((m) => next.read.missingEvidence.includes(m));
-          const nowFilled = before.missingEvidence.filter((m) => !next.read.missingEvidence.includes(m));
-          const lines = [`You went to add: ${before.questionLabel.toLowerCase()}`];
-          lines.push(`How sure OpsIQ is: ${TIER_WORDS[before.confidenceTier as keyof typeof TIER_WORDS] ?? before.confidenceTier} → ${TIER_WORDS[next.read.confidenceTier]}`);
-          lines.push(
-            nowFilled.length > 0
-              ? `No longer missing: ${nowFilled.map((m) => humanizeMetricKey(m).toLowerCase()).join(", ")}`
-              : stillMissing.length > 0
-                ? "The information still missing is unchanged"
-                : "Nothing important is missing now",
-          );
-          lines.push(
-            before.recommendedAction === next.read.recommendedAction
-              ? `Recommendation: ${next.read.recommendedAction ?? "none"} (unchanged)`
-              : `Recommendation: ${before.recommendedAction ?? "none"} → ${next.read.recommendedAction ?? "none"}`,
-          );
-          setImprovedLines(lines);
-        } else {
-          setImprovedLines(["Your read has been re-run on your latest information."]);
+        // The server's CURRENT answer about the evidence the owner went to supply: is it used by this read, still missing,
+        // or saved for a period the read does not use? (A failed lookup only means no extra claim is made.)
+        let target: ImproveTarget | null = null;
+        if (before?.category) {
+          target = await firstRunApi.improveTarget(businessId, before.category).then((r) => r.target).catch(() => null);
         }
+        // Built only from the before/after read tokens: an identical read is never described as improved.
+        setImproved(
+          buildImproveOutcome({
+            questionLabel: before?.questionLabel ?? null,
+            before,
+            after: {
+              noticed: next.read.noticed,
+              recommendedAction: next.read.recommendedAction,
+              confidenceTier: next.read.confidenceTier,
+              evidenceQuality: next.read.evidenceQuality,
+              missingEvidence: next.read.missingEvidence,
+              sharpenBy: next.read.sharpenBy?.title ?? null,
+              cautions: next.read.cautions,
+            },
+            target,
+            humanize: humanizeMetricKey,
+          }),
+        );
       } catch (err) {
         setLoadError(`We couldn't load your updated read. Your numbers are saved. ${friendly(err, "load")}`);
       }
     })();
   }, [ctx, businessId, loadContext]);
+
+  // Deep link into the existing Correct flow on the evidence a question is about (`?correct=<category>`): the SERVER
+  // says which figures and current values, and only an EDIT_FINANCE answer opens the form.
+  const correctLinkHandled = useRef(false);
+  useEffect(() => {
+    if (!view || correctLinkHandled.current || typeof window === "undefined") return;
+    const category = new URLSearchParams(window.location.search).get("correct");
+    if (!category) return;
+    correctLinkHandled.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    void firstRunApi.improveTarget(view.businessId, category).then(({ target }) => {
+      if (target.kind === "EDIT_FINANCE") openCorrection(target);
+    }).catch(() => undefined);
+  }, [view]);
+
+  function openCorrection(target: Extract<ImproveTarget, { kind: "EDIT_FINANCE" }> | null) {
+    setCorrectionTarget(target);
+    setMode("correcting");
+  }
 
   return (
     <PageContainer>
@@ -304,11 +337,11 @@ export function FirstRunFlow() {
           </div>
         )}
 
-        {hasResult && ctx?.diagnosisStale && (
+        {hasResult && stale && (
           <div className="rounded-lg border border-border bg-background p-4 text-sm" data-testid="first-run-update-read">
-            <p className="font-medium text-foreground">Your numbers have changed since your last read.</p>
+            <p className="font-medium text-foreground" data-testid="first-run-update-read-headline" data-stale-reason={staleReason ?? "FIGURES_CHANGED"}>{staleReadHeadline(staleReason ?? "FIGURES_CHANGED")}</p>
             <p className="mt-1 text-muted-foreground" data-testid="first-run-update-read-note">
-              {correctionSavedPending ? CORRECTION_SAVED_READ_PENDING_MESSAGE : "Your earlier numbers are kept on record. OpsIQ will work out a fresh read from the new ones."}
+              {correctionSavedPending ? CORRECTION_SAVED_READ_PENDING_MESSAGE : staleReadNote(staleReason ?? "FIGURES_CHANGED")}
             </p>
             <Button type="button" className="mt-3 min-h-11" disabled={diagnosing === "running"} onClick={() => void runDiagnosis()}>
               {diagnosing === "running" ? "Updating…" : "Update my read"}
@@ -322,7 +355,7 @@ export function FirstRunFlow() {
         )}
 
         {/* Corrected numbers are saved but there is neither a read nor the stale panel (e.g. the follow-up reload failed). */}
-        {hasResult && !view && !ctx?.diagnosisStale && correctionSavedPending && (
+        {hasResult && !view && !stale && correctionSavedPending && (
           <div role="status" className="rounded-lg border border-border bg-background p-4 text-sm" data-testid="first-run-correction-pending">
             <p className="text-foreground">{CORRECTION_SAVED_READ_PENDING_MESSAGE}</p>
             <Button type="button" className="mt-3 min-h-11" onClick={() => void runDiagnosis()}>Update my read</Button>
@@ -330,17 +363,17 @@ export function FirstRunFlow() {
         )}
 
         {/* The round trip back from "Add this" re-runs the read: show that it is happening (and let it be retried). */}
-        {hasResult && view && !ctx?.diagnosisStale && diagnosing === "running" && (
+        {hasResult && view && !stale && diagnosing === "running" && (
           <p role="status" className="rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="first-run-updating">Updating your read with your latest information…</p>
         )}
-        {hasResult && view && !ctx?.diagnosisStale && diagnosing === "failed" && (
+        {hasResult && view && !stale && diagnosing === "failed" && (
           <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="first-run-update-failed">
             <p>The update didn&rsquo;t run, so the read below may be out of date. Your numbers are saved.</p>
             <Button type="button" variant="secondary" className="mt-2 min-h-11" onClick={() => void runDiagnosis()}>Try the update again</Button>
           </div>
         )}
 
-        {hasResult && view && !ctx?.diagnosisStale && (
+        {hasResult && view && !stale && (
           <>
             {correction?.after && (
               <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-result-changes" aria-live="polite">
@@ -362,11 +395,11 @@ export function FirstRunFlow() {
               </div>
             )}
 
-            {improvedLines && (
-              <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-result-improved" aria-live="polite">
-                <p className="font-medium text-foreground">What changed after you added that</p>
+            {improved && (
+              <div className="rounded-lg border border-border bg-background p-3 text-sm" data-testid="first-result-improved" data-outcome={improved.kind} aria-live="polite">
+                <p className="font-medium text-foreground" data-testid="first-result-improved-headline">{improved.headline}</p>
                 <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                  {improvedLines.map((l) => <li key={l}>{l}</li>)}
+                  {improved.lines.map((l) => <li key={l}>{l}</li>)}
                 </ul>
               </div>
             )}
@@ -383,10 +416,15 @@ export function FirstRunFlow() {
                   evidenceQuality: view.read.evidenceQuality,
                   missingEvidence: view.read.missingEvidence,
                   questionLabel: view.read.sharpenBy?.title ?? "more information",
+                  category: "cash_debt",
+                  cycleId: view.cycleId,
+                  noticed: view.read.noticed,
+                  sharpenBy: view.read.sharpenBy?.title ?? null,
+                  cautions: view.read.cautions,
                 });
               }}
               onAccept={() => void accept()}
-              onCorrect={() => setMode("correcting")}
+              onCorrect={() => openCorrection(null)}
               onImprove={() => setMode("improving")}
             />
             {actionError && <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="first-run-action-error">{actionError}</p>}
@@ -396,11 +434,26 @@ export function FirstRunFlow() {
                 businessId={view.businessId}
                 snapshotId={view.snapshotId}
                 currency={view.currency}
+                fields={correctionFields(correctionTarget ? financeFieldsForCategory(correctionTarget.category) : [])}
+                recorded={{ ...view.figures, ...Object.fromEntries((correctionTarget?.currentValues ?? []).map((v) => [v.field, v.value])) }}
                 onDone={(r) => void afterCorrection(r)}
-                onCancel={() => setMode("result")}
+                onCancel={() => {
+                  // Cancelling an edit opened from "Improve" abandons that round trip (a plain "Correct" never started one).
+                  if (correctionTarget) clearRoundTrip();
+                  setCorrectionTarget(null);
+                  setMode("result");
+                }}
               />
             )}
-            {mode === "improving" && <FirstResultImprovement businessId={view.businessId} read={view.read} onClose={() => setMode("result")} />}
+            {mode === "improving" && (
+              <FirstResultImprovement
+                businessId={view.businessId}
+                read={view.read}
+                cycleId={view.cycleId}
+                onEditFinance={(target) => openCorrection(target)}
+                onClose={() => setMode("result")}
+              />
+            )}
 
             <Link
               href="/owner/cockpit"

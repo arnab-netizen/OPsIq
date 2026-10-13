@@ -21,7 +21,8 @@ function mockDb(data: MockData, wheres: unknown[]) {
   const many = (rows: unknown[]) => ({ findMany: async (a: { where: unknown }) => (wheres.push(a.where), rows) });
   const count = (n: number) => ({ count: async (a: { where: unknown }) => (wheres.push(a.where), n) });
   return {
-    ownerCashflowSnapshot: first(data.cashflow),
+    // The current Cashflow row is read as a candidate LIST through the one selector.
+    ownerCashflowSnapshot: { ...first(data.cashflow), findMany: async (a: { where: unknown }) => (wheres.push(a.where), data.cashflow ? [data.cashflow] : []) },
     ownerFinancialSnapshot: first(data.finance),
     ownerWorkingCapitalItem: many(data.wcItems ?? []),
     ownerCapacitySnapshot: first(data.capacity),

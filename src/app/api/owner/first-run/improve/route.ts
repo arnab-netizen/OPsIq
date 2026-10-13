@@ -1,6 +1,7 @@
 /**
  * POST /api/owner/first-run/improve — "Improve this recommendation": the owner chose to supply one specific piece of
  * evidence (an input category). Recorded once per (business, category) and counted toward the persisted question limit.
+ * The response carries the SERVER-resolved target (add / edit Finance / edit Cashflow / not used by this read).
  */
 import { z } from "zod/v4";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";

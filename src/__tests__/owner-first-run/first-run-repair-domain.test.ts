@@ -310,3 +310,12 @@ describe("the last full month is built from local calendar parts (never shifted 
     expect(lastFullCalendarMonth(new Date(2026, 2, 31))).toEqual({ start: "2026-02-01", end: "2026-02-28" });
   });
 });
+
+describe("stale-read wording is true when only cash in hand changed", () => {
+  it("a cash-position change is described as 'cash figures', not specifically the bank balance", async () => {
+    const m = await import("@/domain/owner-first-run/read-staleness");
+    expect(m.staleReadHeadline("CASH_POSITION_CHANGED")).toBe("Your cash figures changed since this read.");
+    expect(m.staleReadNote("CASH_POSITION_CHANGED")).not.toMatch(/bank balance/i);
+    expect(m.staleReadHeadline("FIGURES_CHANGED")).toBe("Your numbers have changed since your last read.");
+  });
+});

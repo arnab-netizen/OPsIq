@@ -7,7 +7,7 @@
 Direct code inspection of the public self-registration path (`src/app/api/auth/signup/route.ts` and `src/app/signup/page.tsx`) confirms:
 
 - No Stripe, Lemon Squeezy, or any other payment-provider import, call, or reference anywhere on the signup path.
-- No payment method, card, or billing field is collected at signup (the request schema is `email`, `password`, `workspaceName`, `acceptTerms`, `acceptPrivacy`, `acceptBetaNotice` — nothing else).
+- No payment method, card, or billing field is collected at signup (the request schema is `email` and `workspaceName` — nothing else; the password and the three policy acceptances are collected after the mailbox is proven, on `/reset-password?setup=1`).
 - The `Workspace` model (`prisma/schema.prisma`) carries no subscription tier, plan, or entitlement field that signup (or any code reachable from signup) sets. A newly created open-beta workspace has no billing state of any kind — there is nothing to default to a paid tier, because there is no tier field to default.
 - No automatic paid entitlement is granted to a signup-created account or workspace. The only grants signup makes are the `owner` `WorkspaceMembership` role and the `admin_or_portfolio_manager` `UserRoleAssignment` scoped to that one workspace (access-control roles, not billing entitlements).
 

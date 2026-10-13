@@ -2,7 +2,6 @@
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
-import { PasswordInput } from "@/ui/primitives/password-input";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { reportAnonymousProductEvent } from "@/lib/analytics/product-event-client";
@@ -17,11 +16,7 @@ const SIGNUP_FAILURE_FALLBACK = "We couldn't create your account right now. Plea
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
-  const [acceptBetaNotice, setAcceptBetaNotice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [betaEnabled, setBetaEnabled] = useState<boolean | null>(null);
@@ -81,11 +76,7 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          password,
           workspaceName,
-          acceptTerms,
-          acceptPrivacy,
-          acceptBetaNotice,
         }),
       });
 
@@ -116,7 +107,7 @@ export default function SignupPage() {
         <div className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-background p-8 text-center shadow-sm">
           <h1 className="text-2xl font-bold text-primary">Check your email</h1>
           <p className="text-sm text-muted-foreground">
-            We sent a verification link to <strong className="break-all">{email}</strong>. Open it and you&rsquo;ll be taken straight in.
+            We sent a link to <strong className="break-all">{email}</strong>. Open it to confirm your email, then you&rsquo;ll choose your password and finish setting up.
           </p>
           <p className="text-sm text-muted-foreground">Didn&rsquo;t get it? Check your spam folder, or</p>
           <Link
@@ -183,16 +174,6 @@ export default function SignupPage() {
                 autoComplete="email"
                 disabled={betaEnabled === null}
               />
-              <PasswordInput
-                label="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                required
-                autoComplete="new-password"
-                minLength={8}
-                disabled={betaEnabled === null}
-              />
               <Input
                 label="Business name"
                 type="text"
@@ -203,54 +184,10 @@ export default function SignupPage() {
                 disabled={betaEnabled === null}
               />
 
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <label className="flex min-h-11 items-start gap-3 py-1">
-                  <input
-                    type="checkbox"
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    required
-                    className="mt-0.5 h-5 w-5 shrink-0"
-                  />
-                  <span>
-                    I accept the{" "}
-                    <Link href="/terms" target="_blank" className="text-[var(--primary-text)] hover:underline">
-                      Terms
-                    </Link>
-                  </span>
-                </label>
-                <label className="flex min-h-11 items-start gap-3 py-1">
-                  <input
-                    type="checkbox"
-                    checked={acceptPrivacy}
-                    onChange={(e) => setAcceptPrivacy(e.target.checked)}
-                    required
-                    className="mt-0.5 h-5 w-5 shrink-0"
-                  />
-                  <span>
-                    I accept the{" "}
-                    <Link href="/privacy" target="_blank" className="text-[var(--primary-text)] hover:underline">
-                      Privacy notice
-                    </Link>
-                  </span>
-                </label>
-                <label className="flex min-h-11 items-start gap-3 py-1">
-                  <input
-                    type="checkbox"
-                    checked={acceptBetaNotice}
-                    onChange={(e) => setAcceptBetaNotice(e.target.checked)}
-                    required
-                    className="mt-0.5 h-5 w-5 shrink-0"
-                  />
-                  <span>
-                    I accept the{" "}
-                    <Link href="/beta" target="_blank" className="text-[var(--primary-text)] hover:underline">
-                      Beta notice
-                    </Link>{" "}
-                    (free during beta, no guaranteed outcomes)
-                  </span>
-                </label>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                We&rsquo;ll email you a link to confirm your address. You&rsquo;ll choose your password and
+                accept the Terms, Privacy notice and Beta notice after confirming your email.
+              </p>
 
               {error && (
                 <div role="alert" className="rounded bg-destructive/10 p-3 text-sm text-destructive">
@@ -262,7 +199,7 @@ export default function SignupPage() {
                 type="submit"
                 isLoading={loading}
                 className="w-full"
-                disabled={betaEnabled !== true || !acceptTerms || !acceptPrivacy || !acceptBetaNotice}
+                disabled={betaEnabled !== true}
               >
                 Create Account
               </Button>

@@ -20,7 +20,7 @@ not replace it, it applies it to the one migration this release carries) and `PU
 | 2 | Your operator account holds the narrow `ADMINISTRATION_OPERATOR` role | GitHub → Actions → *Provision ADMINISTRATION_OPERATOR*. Inputs: `mode` (run **DRY_RUN** first, then **APPLY**), `target_email` (your account), `workspace_id` (your primary workspace UUID — Neon SQL editor: `select workspace_id from workspace_memberships m join users u on u.id=m.user_id where u.email='…'`), `expected_database_host` (bare production host, direct/non-pooled), `expected_main_sha` (the exact current `main` head, 40 hex), `confirm` (APPLY only: exactly `GRANT ADMINISTRATION OPERATOR`) | `/admin/beta-programme` opens on the phone |
 | 3 | `platform_settings` is **initialised** | OpsIQ → Administration → Beta programme → *Initialize platform settings* → *Confirm initialization* | the amber "Initialize platform settings" box is gone |
 | 4 | The **Stop new signups now** button has been exercised once on the phone (then re-opened) | same page | mode shows `CLOSED`, then your normal mode again |
-| 5 | `NEXT_PUBLIC_APP_URL` is the real public https URL in Vercel **Production**; an email provider is configured | Vercel → Settings → Environment Variables | a test signup email arrives with a working link |
+| 5 | `NEXT_PUBLIC_APP_URL` is the real public https URL in Vercel **Production**; an email provider is configured | Vercel → Settings → Environment Variables | a test signup email arrives with a working link: open it, tap **Verify my email**, then **choose a password and tick the three consents** (Terms, Privacy notice, Beta notice) on the next screen; you land in the first run |
 | 6 | Capacity is set to the first stage (**10**) | Beta programme → Capacity limit → Save | page shows "Places used: n of 10" |
 
 If any row is not done, **do not leave**: rows 2–4 are what let you stop signups from a phone.
@@ -42,7 +42,7 @@ pending migrations to it — and because that workflow checks out the branch you
 PR's branch** so the PR's migration is the one applied. If the Preview database is neither, do not guess: leave Preview unmigrated
 and review the PR only.
 
-After applying to Preview: open the Preview URL, sign up with a throwaway address, verify, and walk the first run once.
+After applying to Preview: open the Preview URL, sign up with a throwaway address (business name and email only — signup takes no password), open the emailed link and tap **Verify my email**, then on the next screen **choose a password and tick the three consents** (Terms, Privacy notice, Beta notice) — only then are you signed in — and walk the first run once.
 
 ### 1b. Production — `PINNED_PREDEPLOY`
 
@@ -134,9 +134,10 @@ invite-only, so addresses with a live invitation can still sign up.
 
 **Administration → Overview** (`/admin/overview`) now shows, for the last 7 days: taps on *Start free* and opens of the signup form
 (**anonymous and approximate** — raw counts from a public, rate-capped beacon that can be inflated), then the people-level steps
-(distinct accounts): signed up, verified, started first run, set up the business, saved numbers, got a first diagnosis, saw the
+(distinct accounts): signed up, verified, **chose a password**, started first run, set up the business, saved numbers, got a first diagnosis, saw the
 first read, were **activated** (acted on it) and reached the Cockpit; plus **things that went wrong** (signup refused because
-registration is closed / waitlist / not invited, signup refused because the beta is full, verification email could not be sent).
+registration is closed / waitlist / not invited, signup refused because the beta is full, verification email could not be sent, password setup/reset email could not be sent).
+The Customers block also shows **Verified, no password**: accounts that proved their email but never chose a password.
 It is a rolling 7-day window, not a cohort, so compare steps as rough ratios only. It also shows capacity: verified + waiting-to-verify against the limit.
 Counts only — no names, emails or financial figures appear anywhere on that page.
 
@@ -146,7 +147,8 @@ How to read it:
 |---|---|---|
 | "Verification email could not be sent" > 0 | email provider or `NEXT_PUBLIC_APP_URL` is wrong; people are stuck at "check your email" | **Stop signups** (§2), fix the Vercel env var / provider, **redeploy and promote** (env changes only reach a new deployment; an Instant Rollback keeps the old env), send yourself a test signup, then reopen |
 | Signed up ≫ Verified | emails not arriving or being ignored | check spam/provider; do not raise capacity yet |
-| Verified ≫ Saw the first read | something breaks in first run | open Vercel → Logs, filter for `/api/owner/first-run`; stop signups if errors are widespread |
+| Verified ≫ Chose a password, or **Verified, no password** > 0 | owners confirmed their email but never finished choosing a password (lost/expired one-hour setup link, or they stopped at the consents). This is the drop-off *before* first run | look at the **Chose a password** funnel step and the **Verified, no password** count; if **Password setup/reset email could not be sent** > 0 the "Forgot your password" recovery mail is failing (provider or `NEXT_PUBLIC_APP_URL`, same fix as the verification row above). Otherwise tell the owner to use **Forgot your password** on the sign-in page for a fresh link; these accounts already count as verified places, so capacity is unchanged |
+| Chose a password ≫ Saw the first read | something breaks in first run | open Vercel → Logs, filter for `/api/owner/first-run`; stop signups if errors are widespread |
 | "Signup refused: beta full" > 0 while verified places are well below the limit | unverified signups are holding places (see §5) | they lapse after 24 h; stop signups (§2) if it keeps repeating |
 
 Deeper checks (optional, Neon console → SQL Editor, read-only): the funnel queries in `PUBLIC_BETA_OBQ_SEA_READY.md` §6.

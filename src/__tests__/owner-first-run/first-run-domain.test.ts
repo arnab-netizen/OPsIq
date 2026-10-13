@@ -19,6 +19,7 @@ import {
   FIRST_MONEY_READ_HEADING,
 } from "@/domain/owner-first-run/first-money-read";
 import { selectNextQuestion, MAX_PROGRESSIVE_QUESTIONS } from "@/domain/owner-first-run/next-question";
+import { categoryConsumedByRead } from "@/domain/owner-first-run/improve-target";
 import { SMB_ARCHETYPES } from "@/domain/owner-mode/smb-archetype";
 import { buildInputGuidance } from "@/domain/owner-mode/input-guidance";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
@@ -233,6 +234,8 @@ describe("progressive OBQ question selection", () => {
 
 describe("progressive OBQ relevance", () => {
   const supplied = ["revenue_sales", "expenses", "cash_debt"] as never;
+  const g_isMinimum = (t: string, category: string) =>
+    buildInputGuidance({ profileType: t as never, ownerRole: "owner_operated", suppliedCategories: supplied, firstRead: { sufficient: true } as never }).guidance.find((x) => x.category === category)?.tier === "minimum";
   it("never asks about categories that cannot change a money read (e.g. proof of completion)", () => {
     for (const t of SMB_ARCHETYPES) {
       const g = buildInputGuidance({ profileType: t, ownerRole: "owner_operated", suppliedCategories: supplied, firstRead: { sufficient: true } as never });
@@ -247,7 +250,7 @@ describe("progressive OBQ relevance", () => {
       }
     }
   });
-  it("a B2B contract firm is asked about its contracts (archetype minimum) while a storefront is not", () => {
+  it("a B2B contract firm is NOT asked about its contracts here: they are a minimum-tier category the money read does not consume", () => {
     const ask = (t: string) => {
       const g = buildInputGuidance({ profileType: t as never, ownerRole: "owner_operated", suppliedCategories: supplied, firstRead: { sufficient: true } as never });
       const seen: string[] = [];
@@ -258,8 +261,29 @@ describe("progressive OBQ relevance", () => {
       }
       return seen;
     };
-    expect(ask("b2b_project_contract_service")).toContain("b2b_contracts");
+    expect(g_isMinimum("b2b_project_contract_service", "b2b_contracts")).toBe(true); // it IS required for the archetype...
+    expect(ask("b2b_project_contract_service")).not.toContain("b2b_contracts"); // ...but cannot change THIS read, so it is not asked
     expect(ask("retail_storefront")).not.toContain("b2b_contracts");
+  });
+  it("every category it asks is one the read consumes (same knowledge as decideImproveTarget), for every business type", () => {
+    for (const t of SMB_ARCHETYPES) {
+      const g = buildInputGuidance({ profileType: t, ownerRole: "owner_operated", suppliedCategories: supplied, firstRead: { sufficient: true } as never });
+      const seen: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        const r = selectNextQuestion({ guidance: g, skipped: seen, answeredCount: 0 });
+        if (r.done) break;
+        expect(categoryConsumedByRead(r.question.category)).toBe(true);
+        seen.push(r.question.category);
+      }
+    }
+  });
+  it("a business type whose minimum-tier categories are NOT consumed gets the existing 'nothing worth asking' stop, not a wasted question", () => {
+    // Every category the read does not consume is skipped out of play; what is left must still be only consumed categories.
+    const t = "b2b_project_contract_service";
+    const g = buildInputGuidance({ profileType: t as never, ownerRole: "owner_operated", suppliedCategories: ["revenue_sales", "expenses", "cash_debt", "fixed_costs", "payroll", "marketing"] as never, firstRead: { sufficient: true } as never });
+    const minimumNotRead = g.guidance.filter((x) => x.status === "missing" && x.tier === "minimum" && !categoryConsumedByRead(x.category));
+    expect(minimumNotRead.length).toBeGreaterThan(0); // the type does have minimum-tier categories the read cannot use
+    expect(selectNextQuestion({ guidance: g, skipped: [], answeredCount: 0 })).toEqual({ done: true, reason: "NOTHING_WORTH_ASKING" });
   });
   it("money evidence is asked before an archetype's non-money minimum, then higher value before lower", () => {
     const g = buildInputGuidance({ profileType: "b2b_project_contract_service", ownerRole: "owner_operated", suppliedCategories: supplied, firstRead: { sufficient: true } as never });
@@ -275,7 +299,7 @@ describe("progressive OBQ relevance", () => {
     expect(order.length).toBeGreaterThan(0);
     // every money-domain question precedes every non-money one
     if (firstNonMoney >= 0) expect(order.slice(firstNonMoney).every((c) => !money.includes(domainOf(c)))).toBe(true);
-    expect(order).toContain("b2b_contracts"); // the archetype's own requirement is still reached
+    expect(order).not.toContain("b2b_contracts"); // not consumed by the money read, so never spent a question on
   });
 });
 
@@ -452,5 +476,44 @@ describe("audit fixes: operator signal for unusable verification links", () => {
     expect(verificationBaseUrlProblem("not a url", "production")).toBe(true);
     expect(verificationBaseUrlProblem("https://app.example.com", "production")).toBe(false);
     expect(verificationBaseUrlProblem("http://localhost:3000", "development")).toBe(false);
+  });
+});
+
+describe("first read: a Cashflow bank balance is described for what it is (provenance, never reliability)", () => {
+  const base = {
+    period: { start: "2026-09-01T00:00:00.000Z", end: "2026-09-30T00:00:00.000Z", state: "completed" as const },
+    finding: null, action: null, dataRequest: null, confidenceScore: 55, missingEvidence: [],
+  };
+  const CAUTION = "Your bank balance (as of 30 September 2026) comes from a Cashflow entry. OpsIQ doesn't grade how reliable it is, so the cash runway rests partly on your own figure.";
+  it("adds the exact caution when the runway used a Cashflow balance, for every evidence-quality label including legacy NULL", () => {
+    for (const evidenceQuality of ["ACTUAL", "GOOD_ESTIMATE", "ROUGH_ESTIMATE", null] as const) {
+      const read = buildFirstMoneyRead({ ...base, evidenceQuality, cashflowBalance: { asOfPeriodEnd: "2026-09-30T00:00:00.000Z" } });
+      expect(read.cautions, String(evidenceQuality)).toContain(CAUTION);
+      expect(findOverclaims(firstMoneyReadStrings(read))).toEqual([]);
+    }
+  });
+  it("says nothing about a Cashflow balance when none was used", () => {
+    for (const cashflowBalance of [undefined, null]) {
+      const read = buildFirstMoneyRead({ ...base, evidenceQuality: "ACTUAL", cashflowBalance });
+      expect(read.cautions.join(" ")).not.toMatch(/Cashflow entry/);
+    }
+  });
+  it("never raises, lowers or otherwise changes the confidence score, tier, label or quality", () => {
+    for (const evidenceQuality of ["ACTUAL", "GOOD_ESTIMATE", null] as const) {
+      const without = buildFirstMoneyRead({ ...base, evidenceQuality });
+      const withBalance = buildFirstMoneyRead({ ...base, evidenceQuality, cashflowBalance: { asOfPeriodEnd: "2026-09-30T00:00:00.000Z" } });
+      const { cautions: a, ...restWithout } = without;
+      const { cautions: b, ...restWith } = withBalance;
+      expect(restWith).toEqual(restWithout);
+      expect(b.length).toBe(a.length + 1);
+    }
+  });
+  it("does not claim reliability or that the balance was checked", () => {
+    const read = buildFirstMoneyRead({ ...base, evidenceQuality: "ACTUAL", cashflowBalance: { asOfPeriodEnd: "2026-09-30T00:00:00.000Z" } });
+    expect(read.cautions.join(" ")).not.toMatch(/verified|confirmed|accurate|reliable and/i);
+  });
+  it("an unreadable date leaves the sentence without an invented date", () => {
+    const read = buildFirstMoneyRead({ ...base, evidenceQuality: "ACTUAL", cashflowBalance: { asOfPeriodEnd: "not a date" } });
+    expect(read.cautions.join(" ")).toContain("Your bank balance comes from a Cashflow entry.");
   });
 });

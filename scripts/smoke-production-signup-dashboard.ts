@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 /**
- * Dashboard Smoke Test — STAGING / DEVELOPMENT ONLY
+ * Signup Smoke Test (pending-verification response) — STAGING / DEVELOPMENT ONLY
+ *
+ * Signup no longer accepts a password and no longer signs anyone in: it answers 201 "pending verification" and the
+ * owner proves the mailbox, then chooses a password from the emailed link. This script cannot read a mailbox, so it
+ * stops after asserting that 201 response. The dashboard steps need a real signed-in owner: use the browser journey
+ * (tests/browser/public-beta-obq-journey.spec.ts) or scripts/seed-e2e-owner.ts for that.
  *
  * This script creates a user and workspace in the target database. It MUST NOT
  * run against a production database without a deliberate cleanup contract.
@@ -18,8 +23,7 @@
  *   SMOKE_ALLOW_PRODUCTION_WRITES=true BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-signup-dashboard.ts
  *
  * MUTATION CLASSIFICATION:
- *   - SESSION_MUTATION: session row created on signup (persists until expiry)
- *   - USER_WORKSPACE_CREATION: user and workspace rows created (permanent records)
+ *   - USER_WORKSPACE_CREATION: an unverified user and workspace row are created (they hold a capacity place for 24h)
  *
  * CLEANUP: Records created by this script must be removed via the admin panel
  * or database console. No automated cleanup is performed.
@@ -46,30 +50,15 @@ if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
 
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
-const testPassword = "ProductionTest123!";
 const testWorkspace = `Smoke Test ${timestamp}`;
 
-// Mask sensitive IDs for safe logging
-function maskId(id: string): string {
-  if (!id || id.length < 8) return "***";
-  return `${id.substring(0, 4)}...${id.substring(id.length - 4)}`;
-}
-
 interface SignupResponse {
-  success: boolean;
-  user?: { id: string; email: string };
-  workspace?: { id: string; name: string };
+  success?: boolean;
+  pendingVerification?: boolean;
+  message?: string;
   error?: string;
-}
-
-interface DashboardResponse {
-  workspaceId?: string;
-  engagementCount?: number;
-  actionQueueSize?: number;
-  topRisks?: unknown[];
-  recommendedActions?: unknown[];
-  criticalActions?: unknown[];
-  [key: string]: unknown;
+  user?: unknown;
+  workspace?: unknown;
 }
 
 async function smokeTest(): Promise<void> {
@@ -84,10 +73,6 @@ async function smokeTest(): Promise<void> {
     console.log("⚠️  OPSIQ_DIAGNOSTIC_KEY not available in environment");
     console.log("   Diagnostic output will be limited");
   }
-
-  let userId: string | null = null;
-  let workspaceId: string | null = null;
-  let sessionCookie: string = "";
 
   try {
     // STEP 0: Verify deployment is healthy
@@ -119,7 +104,6 @@ async function smokeTest(): Promise<void> {
       headers: signupHeaders,
       body: JSON.stringify({
         email: testEmail,
-        password: testPassword,
         workspaceName: testWorkspace,
       }),
     });
@@ -131,7 +115,7 @@ async function smokeTest(): Promise<void> {
       console.log("❌ SIGNUP_FAILED");
 
       // Try to parse diagnostic response
-      let signupDiagnostic: any = null;
+      let signupDiagnostic: { reason?: string; stage?: string; errorName?: string; prismaCode?: string | null; safeMessage?: string; classification?: string } | null = null;
       try {
         signupDiagnostic = await signupResponse.json();
       } catch {
@@ -183,191 +167,31 @@ async function smokeTest(): Promise<void> {
 
     const signupData: SignupResponse = await signupResponse.json();
 
-    if (!signupData.success || !signupData.user?.id || !signupData.workspace?.id) {
+    if (signupData.success !== true || signupData.pendingVerification !== true) {
       console.log("❌ SIGNUP_RESPONSE_INVALID");
       console.log(`   success: ${signupData.success}`);
-      console.log(`   user.id present: ${!!signupData.user?.id}`);
-      console.log(`   workspace.id present: ${!!signupData.workspace?.id}`);
+      console.log(`   pendingVerification: ${signupData.pendingVerification}`);
+      process.exit(1);
+    }
+    if (signupData.user !== undefined || signupData.workspace !== undefined) {
+      console.log("❌ SIGNUP_RESPONSE_DISCLOSES_IDENTIFIERS");
+      console.log("   The pending-verification response must carry no user or workspace object.");
+      process.exit(1);
+    }
+    if (signupResponse.headers.get("set-cookie")) {
+      console.log("❌ SIGNUP_SET_A_SESSION_COOKIE");
+      console.log("   Signup must not sign anyone in before the mailbox is verified.");
       process.exit(1);
     }
 
-    userId = signupData.user.id;
-    workspaceId = signupData.workspace.id;
-
-    console.log(`   ✓ User created: ${maskId(userId)}`);
-    console.log(`   ✓ Workspace created: ${maskId(workspaceId)}`);
-    console.log(`   ✓ Email: ${testEmail}`);
-    console.log(`   ✓ Workspace: ${testWorkspace}`);
-
-    // Extract session cookie
-    const setCookieHeader = signupResponse.headers.get("set-cookie");
-    if (!setCookieHeader) {
-      console.log("❌ NO_SESSION_COOKIE");
-      console.log("   set-cookie header missing from signup response");
-      process.exit(1);
-    }
-
-    sessionCookie = setCookieHeader.split(";")[0].trim();
-    console.log(`   ✓ Session cookie: ${maskId(sessionCookie)}\n`);
-
-    // STEP 2: Load dashboard page
-    console.log("2️⃣  GET /dashboard (dashboard page)");
-    const dashboardPageResponse = await fetch(`${baseUrl}/dashboard`, {
-      method: "GET",
-      headers: { Cookie: sessionCookie },
-    });
-
-    const dashboardPageStatus = dashboardPageResponse.status;
-    console.log(`   Status: ${dashboardPageStatus}`);
-
-    if (dashboardPageStatus === 200) {
-      console.log(`   ✓ Dashboard page loads\n`);
-    } else if (dashboardPageStatus === 401 || dashboardPageStatus === 403) {
-      console.log(`   ⚠️  Unauthorized (${dashboardPageStatus}) - may require workspace context\n`);
-    } else {
-      console.log(`❌ UNEXPECTED_DASHBOARD_PAGE_STATUS (${dashboardPageStatus})\n`);
-    }
-
-    // STEP 3: Call owner dashboard API
-    console.log("3️⃣  GET /api/owner/dashboard (real data API)");
-    const dashboardApiResponse = await fetch(`${baseUrl}/api/owner/dashboard`, {
-      method: "GET",
-      headers: { Cookie: sessionCookie },
-    });
-
-    const dashboardApiStatus = dashboardApiResponse.status;
-    console.log(`   Status: ${dashboardApiStatus}`);
-
-    if (dashboardApiStatus !== 200) {
-      console.log(`❌ DASHBOARD_API_FAILED (${dashboardApiStatus})`);
-      const errorText = await dashboardApiResponse.text();
-      console.log(`   Response: ${errorText.substring(0, 200)}`);
-
-      // Call runtime diagnostic endpoint
-      console.log("\n🔍 CALLING OWNER DASHBOARD RUNTIME DIAGNOSTIC ENDPOINT");
-      const diagnosticHeaders: Record<string, string> = {};
-      if (diagnosticKey) {
-        diagnosticHeaders["x-opsiq-diagnostic-key"] = diagnosticKey;
-      }
-      const runtimeDiagnosticResponse = await fetch(`${baseUrl}/api/internal/owner-dashboard-runtime-proof`, {
-        method: "GET",
-        headers: diagnosticHeaders,
-      });
-
-      if (runtimeDiagnosticResponse.status === 200) {
-        const diagnostic = await runtimeDiagnosticResponse.json();
-        console.log("📋 RUNTIME DIAGNOSTIC RESULTS:");
-        console.log(`   classification: ${diagnostic.classification}`);
-        if (diagnostic.stages && diagnostic.stages.length > 0) {
-          const failedStage = diagnostic.stages.find((s: any) => !s.succeeded);
-          if (failedStage) {
-            console.log(`   ⚠️  Failed at stage: ${failedStage.stage}`);
-          }
-          console.log(`   Completed stages: ${diagnostic.stages.filter((s: any) => s.succeeded).length}/${diagnostic.stages.length}`);
-        }
-        console.log(`   engagementCount: ${diagnostic.engagementCount}`);
-        console.log(`   actionCount: ${diagnostic.actionCount}`);
-        console.log(`   kpiCount: ${diagnostic.kpiCount}`);
-        if (diagnostic.errorName) {
-          console.log(`   errorName: ${diagnostic.errorName}`);
-          console.log(`   safeErrorMessage: ${diagnostic.safeErrorMessage}`);
-        }
-      } else if (runtimeDiagnosticResponse.status === 404) {
-        console.log("   Runtime diagnostic endpoint not available (404)");
-      } else {
-        console.log(`   Runtime diagnostic returned status ${runtimeDiagnosticResponse.status}`);
-      }
-
-      process.exit(1);
-    }
-
-    const dashboardData: DashboardResponse = await dashboardApiResponse.json();
-
-    // Verify response is object
-    if (typeof dashboardData !== "object" || dashboardData === null) {
-      console.log("❌ DASHBOARD_RESPONSE_NOT_OBJECT");
-      console.log(`   Type: ${typeof dashboardData}`);
-      process.exit(1);
-    }
-
-    console.log(`   ✓ Response is object`);
-
-    // VERIFY: No hardcoded mock data
-    const responseString = JSON.stringify(dashboardData);
-    const hasMockUuid = responseString.includes("550e8400-e29b-41d4-a716-446655440000");
-    const hasMockEngagements = responseString.includes("mockEngagementSnapshots");
-    const hasMockActions = responseString.includes("mockActions");
-    const hasMockKPIs = responseString.includes("mockKPIs");
-
-    if (hasMockUuid) {
-      console.log("❌ MOCK_UUID_DETECTED");
-      console.log("   Response contains hardcoded 550e8400-e29b-41d4-a716-446655440000");
-      process.exit(1);
-    }
-    console.log(`   ✓ No hardcoded UUID 550e8400`);
-
-    if (hasMockEngagements || hasMockActions || hasMockKPIs) {
-      console.log("❌ MOCK_ARRAY_DETECTED");
-      console.log(`   mockEngagementSnapshots: ${hasMockEngagements}`);
-      console.log(`   mockActions: ${hasMockActions}`);
-      console.log(`   mockKPIs: ${hasMockKPIs}`);
-      process.exit(1);
-    }
-    console.log(`   ✓ No mock arrays (mockEngagementSnapshots, mockActions, mockKPIs)`);
-
-    // VERIFY: Workspace ID matches signup (if returned)
-    if (dashboardData.workspaceId && dashboardData.workspaceId !== workspaceId) {
-      console.log("❌ WORKSPACE_ID_MISMATCH");
-      console.log(`   Signup workspace: ${maskId(workspaceId)}`);
-      console.log(`   Dashboard workspace: ${maskId(dashboardData.workspaceId)}`);
-      process.exit(1);
-    }
-    if (dashboardData.workspaceId) {
-      console.log(`   ✓ Workspace ID matches: ${maskId(workspaceId)}`);
-    }
-
-    // VERIFY: Empty-state fields are safe
-    const engagementCount = dashboardData.engagementCount;
-    const actionQueueSize = dashboardData.actionQueueSize;
-    const topRisks = dashboardData.topRisks;
-    const recommendedActions = dashboardData.recommendedActions;
-
-    if (typeof engagementCount !== "number") {
-      console.log(`❌ ENGAGEMENT_COUNT_INVALID (${typeof engagementCount})`);
-      process.exit(1);
-    }
-    console.log(`   ✓ engagementCount is number: ${engagementCount}`);
-
-    if (typeof actionQueueSize !== "number") {
-      console.log(`❌ ACTION_QUEUE_SIZE_INVALID (${typeof actionQueueSize})`);
-      process.exit(1);
-    }
-    console.log(`   ✓ actionQueueSize is number: ${actionQueueSize}`);
-
-    if (!Array.isArray(topRisks)) {
-      console.log(`❌ TOP_RISKS_NOT_ARRAY (${typeof topRisks})`);
-      process.exit(1);
-    }
-    console.log(`   ✓ topRisks is array: ${topRisks.length} items`);
-
-    if (!Array.isArray(recommendedActions)) {
-      console.log(`❌ RECOMMENDED_ACTIONS_NOT_ARRAY (${typeof recommendedActions})`);
-      process.exit(1);
-    }
-    console.log(`   ✓ recommendedActions is array: ${recommendedActions.length} items\n`);
-
-    // SUCCESS
-    console.log("✅ SIGNUP_AND_REAL_DASHBOARD_PRODUCTION_VERIFIED");
+    console.log("   ✓ 201 pending verification (no password accepted, no session cookie, no identifiers)");
     console.log("");
-    console.log("Test Summary:");
-    console.log(`   Email: ${testEmail}`);
-    console.log(`   User ID: ${maskId(userId)}`);
-    console.log(`   Workspace ID: ${maskId(workspaceId)}`);
-    console.log(`   Session: ${maskId(sessionCookie)}`);
-    console.log(`   Dashboard page: ${dashboardPageStatus}`);
-    console.log(`   Dashboard API: ${dashboardApiStatus}`);
-    console.log(`   Mock data: ✗ (none detected)`);
-    console.log(`   Empty state: ✓ (safe)`);
+    console.log("✅ SIGNUP_PENDING_VERIFICATION_VERIFIED");
+    console.log("");
+    console.log("Stopping here on purpose: this script cannot read the mailbox, so it cannot click the");
+    console.log("'Verify my email' link or choose a password. Complete those two steps by hand with the");
+    console.log(`verification email sent to ${testEmail} (a real inbox is required), or use the browser journey.`);
+    console.log(`   Workspace name used: ${testWorkspace}`);
     console.log("");
 
     process.exit(0);

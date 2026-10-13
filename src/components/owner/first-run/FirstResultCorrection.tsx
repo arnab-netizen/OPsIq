@@ -7,7 +7,8 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "@/ui/primitives";
-import { QUICK_ENTRY_FIELDS, assessQuickEntry, type QuickEntryDraft } from "@/domain/owner-finance/quick-entry";
+import { assessCorrectionDraft, correctionFields, type CorrectionField } from "@/domain/owner-first-run/correction-form";
+import { formatCashflowAmount } from "@/domain/owner-cashflow/edit-flow";
 import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { firstRunApi, type CorrectionResult } from "@/lib/owner-first-run-client";
@@ -19,16 +20,23 @@ export function FirstResultCorrection({
   businessId,
   snapshotId,
   currency,
+  fields,
+  recorded,
   onDone,
   onCancel,
 }: {
   businessId: string;
   snapshotId: string;
   currency: string;
+  /** The figures offered (defaults to the four quick-entry figures; Improve adds the ones its question is about). */
+  fields?: readonly CorrectionField[];
+  /** What is recorded NOW for each figure (null = not recorded), shown before the owner changes anything. */
+  recorded?: Readonly<Record<string, number | null>>;
   onDone: (result: CorrectionResult) => void;
   onCancel: () => void;
 }) {
-  const [draft, setDraft] = useState<QuickEntryDraft>({});
+  const offered = useMemo(() => fields ?? correctionFields(), [fields]);
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [quality, setQuality] = useState<EvidenceQuality | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +44,12 @@ export function FirstResultCorrection({
   const headingRef = useRef<HTMLHeadingElement>(null);
   // The panel opens below the read: move focus to it so keyboard and screen-reader users land on the form.
   useEffect(() => { headingRef.current?.focus(); }, []);
-  const assessment = useMemo(() => assessQuickEntry(draft), [draft]);
+  const assessment = useMemo(() => assessCorrectionDraft(draft, offered, recorded), [draft, offered, recorded]);
   const hasErrors = Object.keys(assessment.errors).length > 0;
-  const changes = Object.keys(assessment.values).length > 0 || quality !== null;
+  const enteredCount = Object.keys(assessment.values).length;
+  // Entering what is already recorded changes nothing: it is not a correction (the server refuses it too).
+  const changes = enteredCount > assessment.sameAsRecorded.length || quality !== null;
+  const onlySame = enteredCount > 0 && enteredCount === assessment.sameAsRecorded.length && quality === null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,7 +93,7 @@ export function FirstResultCorrection({
         Change only what is wrong and leave the rest blank. Your earlier numbers are kept on record, and OpsIQ will work out the read again.
       </p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {QUICK_ENTRY_FIELDS.map((f) => (
+        {offered.map((f) => (
           <Input
             key={f.name}
             name={f.name}
@@ -91,12 +102,18 @@ export function FirstResultCorrection({
             inputMode="decimal"
             autoComplete="off"
             placeholder="Blank = leave as is"
+            hint={recorded && f.name in recorded ? (recorded[f.name] === null ? "Recorded now: nothing yet" : `Recorded now: ${formatCashflowAmount(recorded[f.name], currency)}`) : undefined}
             value={draft[f.name] ?? ""}
             error={assessment.errors[f.name]}
             onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
           />
         ))}
       </div>
+      {onlySame && (
+        <p role="status" className="mt-3 text-sm text-muted-foreground" data-testid="first-result-correction-same">
+          That is what is already recorded, so there is nothing to correct. Change a figure to update your read.
+        </p>
+      )}
       <EvidenceQualityFieldset
         legend="How reliable are the corrected numbers?"
         name="correctionQuality"

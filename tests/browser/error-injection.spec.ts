@@ -12,10 +12,9 @@
  * SAFETY: refuses to run except against an explicit local Postgres DATABASE_URL, same guard as
  * the other journey specs in this directory.
  */
-import { completeFirstRunBusinessStep } from "./first-run-helpers";
+import { completeFirstRunBusinessStep, verifyEmailAndChoosePassword } from "./first-run-helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
-import { Client } from "pg";
 import { randomUUID } from "crypto";
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
@@ -40,22 +39,12 @@ async function signUpFreshOwner(page: Page): Promise<{ email: string; password: 
   const password = "correct-horse-battery-staple";
   await page.goto("/signup", { waitUntil: "networkidle" });
   await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Business name", { exact: true }).fill(`Error Inject Workspace ${rand}`);
-  for (const cb of await page.locator('input[type="checkbox"]').all()) {
-    if (!(await cb.isChecked())) await cb.check();
-  }
   await Promise.all([
     page.waitForResponse((r) => r.url().includes("/api/auth/signup") && r.request().method() === "POST"),
     page.click('button[type="submit"]'),
   ]);
-  const client = new Client({ connectionString: DATABASE_URL });
-  await client.connect();
-  try {
-    await client.query("UPDATE users SET email_verified_at = now() WHERE email = $1", [email]);
-  } finally {
-    await client.end();
-  }
+  await verifyEmailAndChoosePassword(page, { email, password, databaseUrl: DATABASE_URL });
   return { email, password };
 }
 
