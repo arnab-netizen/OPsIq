@@ -48,7 +48,7 @@ vi.mock("@/lib/config", () => ({
   getConfig: () => ({ NEXT_PUBLIC_APP_URL: "https://app.opsiq.example" }),
 }));
 
-import { markBetaRequestInvited } from "@/services/admin/admin-operability.service";
+import { markBetaRequestInvited, sanitizeProviderErrorForLog } from "@/services/admin/admin-operability.service";
 
 const ACTOR_ID = "actor-1";
 const REQUEST_ID = "beta-request-1";
@@ -172,5 +172,16 @@ describe("markBetaRequestInvited — approval email", () => {
       .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
       .mockResolvedValueOnce(finalRow());
     expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NOT_ATTEMPTED");
+  });
+
+  it("sanitizes provider error text: recipient removed case-insensitively, control characters removed, capped at 300", () => {
+    const recipient = "Invitee@Example.com";
+    const raw = `Resend API error 403: ${recipient.toUpperCase()} and invitee@example.com\nforged line\r\u0000\u001b[31m ${"x".repeat(400)}`;
+    const out = sanitizeProviderErrorForLog(new Error(raw), recipient);
+    expect(out.toLowerCase()).not.toContain("invitee@example.com");
+    expect(out).toContain("[recipient]");
+    expect(out).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/);
+    expect(out.length).toBeLessThanOrEqual(300);
+    expect(sanitizeProviderErrorForLog("not an error", recipient)).toBe("non-Error thrown");
   });
 });

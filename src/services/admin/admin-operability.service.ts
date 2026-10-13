@@ -25,6 +25,7 @@ import type { AuditEventName } from "@/domain/constants/audit-events";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/integrations/email-html";
+import type { BetaApprovalEmailOutcome } from "@/domain/admin/beta-approval-email-notice";
 import { INVITE_TTL_DAYS } from "@/lib/beta";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
@@ -591,7 +592,7 @@ export interface MarkBetaRequestInvitedInput {
 }
 
 /** What happened to the applicant approval email on this call. FAILED / NO_PROVIDER mean the state change is durable but nothing was sent. */
-export type BetaApprovalEmailOutcome = "SENT" | "FAILED" | "NO_PROVIDER" | "NOT_ATTEMPTED";
+export type { BetaApprovalEmailOutcome };
 
 export interface MarkBetaRequestInvitedResult {
   id: string;
@@ -609,6 +610,20 @@ export interface MarkBetaRequestInvitedResult {
  * the state mutation above is already durably committed, so a delivery
  * failure here must never surface as a failed invite.
  */
+/**
+ * Provider error text for the server log: the recipient address is removed (case-insensitively), control characters
+ * (including newlines, so the text cannot forge log lines) are collapsed to single spaces, and the result is capped.
+ */
+export function sanitizeProviderErrorForLog(error: unknown, recipient: string): string {
+  if (!(error instanceof Error)) return "non-Error thrown";
+  const escaped = recipient.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const providerText = String(error.message);
+  return providerText
+    .replace(new RegExp(escaped, "gi"), "[recipient]")
+    .replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ")
+    .slice(0, 300);
+}
+
 async function sendBetaApprovalEmail(email: string): Promise<BetaApprovalEmailOutcome> {
   try {
     const provider = getEmailProvider();
@@ -627,8 +642,7 @@ async function sendBetaApprovalEmail(email: string): Promise<BetaApprovalEmailOu
   } catch (emailError) {
     // The provider's own status/message (e.g. "Resend API error 403: ...") is what an operator needs to act; the
     // recipient address is removed so the log line carries no personal data.
-    const detail =
-      emailError instanceof Error ? emailError.message.split(email).join("[recipient]").slice(0, 300) : "non-Error thrown";
+    const detail = sanitizeProviderErrorForLog(emailError, email);
     console.error(
       "[BETA_REQUEST_INVITE] Approval email dispatch failed",
       emailError instanceof Error ? emailError.constructor.name : "UnknownError",

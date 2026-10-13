@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, LoadingState, Table, Input, Select } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
+import { betaApprovalEmailNotice, type BetaApprovalEmailNotice } from "@/domain/admin/beta-approval-email-notice";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createClientIdempotencyKey } from "@/lib/client-idempotency";
 
@@ -124,6 +125,7 @@ export default function AdminBetaProgrammePage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [rowNotices, setRowNotices] = useState<Record<string, BetaApprovalEmailNotice>>({});
   const [capacityInput, setCapacityInput] = useState("");
   const [modeInput, setModeInput] = useState("");
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -164,6 +166,11 @@ export default function AdminBetaProgrammePage() {
       delete next[id];
       return next;
     });
+    setRowNotices((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     try {
       const idempotencyKey = createClientIdempotencyKey(`beta-${action}-${id}`);
       const res = await fetch(`/api/admin/beta-requests/${id}/${action}`, {
@@ -171,6 +178,9 @@ export default function AdminBetaProgrammePage() {
         headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
       });
       const result = await jsonOrThrow(res, `Failed to ${action} this request`);
+      if (action === "invite" || action === "reopen") {
+        setRowNotices((prev) => ({ ...prev, [id]: betaApprovalEmailNotice(result.emailDelivery) }));
+      }
       setRows((prev) => prev?.map((r) => (r.id === id ? { ...r, status: result.status, invitedAt: result.invitedAt ?? r.invitedAt } : r)) ?? null);
     } catch (e) {
       const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "action" });
@@ -288,6 +298,15 @@ export default function AdminBetaProgrammePage() {
         )}
       </div>
       {rowErrors[row.id] && <p className="text-xs text-destructive">{rowErrors[row.id]}</p>}
+      {rowNotices[row.id] && (
+        <p
+          role="status"
+          data-testid="invite-email-notice"
+          className={rowNotices[row.id].tone === "success" ? "text-xs text-green-700" : "text-xs text-amber-700"}
+        >
+          {rowNotices[row.id].text}
+        </p>
+      )}
     </div>
   );
 
