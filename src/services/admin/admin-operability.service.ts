@@ -614,7 +614,7 @@ export interface MarkBetaRequestInvitedResult {
  * Provider error text for the server log: the recipient address is removed (case-insensitively), control characters
  * (including newlines, so the text cannot forge log lines) are collapsed to single spaces, and the result is capped.
  */
-export function sanitizeProviderErrorForLog(error: unknown, recipient: string): string {
+function sanitizeProviderErrorForLog(error: unknown, recipient: string): string {
   if (!(error instanceof Error)) return "non-Error thrown";
   const escaped = recipient.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const providerText = String(error.message);
