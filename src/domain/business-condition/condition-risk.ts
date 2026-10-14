@@ -56,3 +56,19 @@ export function highestConditionRisk(condition: Readonly<Record<string, string |
   }
   return worst;
 }
+
+const HEADLINE_LABEL: Readonly<Record<ConditionRiskLevel, string>> = {
+  CRITICAL: "Critical", HIGH: "High", MEDIUM: "Medium", LOW: "Low", unknown: "—",
+};
+
+/**
+ * The owner-facing collapsed headline for the Business condition panel. A rating is only an OVERALL rating when
+ * every dimension has evidence; with partial evidence it is scoped to the known dimensions and the number still
+ * unassessed is visible before expansion; with no known dimension there is no rating at all.
+ */
+export function conditionHeadline(highest: ConditionRiskLevel, knownCount: number, unknownCount: number): string {
+  if (knownCount <= 0 || highest === "unknown") return "Business condition — not enough data yet";
+  const rating = HEADLINE_LABEL[highest];
+  if (unknownCount <= 0) return `Business condition — highest risk: ${rating}`;
+  return `Business condition — highest known risk: ${rating} · ${unknownCount} ${unknownCount === 1 ? "dimension needs" : "dimensions need"} data`;
+}

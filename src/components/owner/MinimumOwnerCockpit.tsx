@@ -24,7 +24,7 @@ import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import { conditionRiskLevel, highestConditionRisk } from "@/domain/business-condition/condition-risk";
+import { conditionHeadline, conditionRiskLevel, highestConditionRisk } from "@/domain/business-condition/condition-risk";
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -976,8 +976,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
   return (
     <details data-testid="cockpit-business-condition-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
       <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
-        Business condition
-        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
+        {conditionHeadline(worstLevel, knownFields.length, unknownCount)}
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
         {knownFields.length === 0 ? (
