@@ -22,11 +22,9 @@ import type { Prisma } from "@/generated/prisma/client";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import type { AuditEventName } from "@/domain/constants/audit-events";
-import { getEmailProvider } from "@/lib/integrations/email-provider";
-import { getConfig } from "@/lib/config";
-import { escapeHtml } from "@/lib/integrations/email-html";
 import type { BetaApprovalEmailOutcome } from "@/domain/admin/beta-approval-email-notice";
-import { INVITE_TTL_DAYS } from "@/lib/beta";
+import { dispatchBetaInviteEmail, recordBetaInviteEmailAttempt } from "@/services/admin/beta-invite-email.service";
+import { INVITE_TTL_DAYS, isInviteExpired } from "@/lib/beta";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 const DEFAULT_LIMIT = 100;
@@ -484,6 +482,8 @@ export interface AdminBetaRequestSummary {
   referrerHost: string | null;
   invitedAt: string | null;
   invitedBy: string | null;
+  /** True when status is INVITED but the invitation entitlement has lapsed (server-derived; the UI never computes it). */
+  inviteExpired: boolean;
   createdAt: string;
 }
 
@@ -568,6 +568,7 @@ export async function listBetaRequestsForAdmin(opts: {
       referrerHost: r.referrerHost,
       invitedAt: r.invitedAt ? r.invitedAt.toISOString() : null,
       invitedBy: r.invitedBy,
+      inviteExpired: r.status === "INVITED" && r.invitedAt !== null && isInviteExpired(r.invitedAt),
       createdAt: r.createdAt.toISOString(),
     })
   );
@@ -600,56 +601,8 @@ export interface MarkBetaRequestInvitedResult {
   invitedAt: string | null;
   invitedBy: string | null;
   emailDelivery: BetaApprovalEmailOutcome;
-}
-
-/**
- * Best-effort applicant email on the actual REQUESTED -> INVITED transition.
- * Reuses the same getEmailProvider() plumbing and NEXT_PUBLIC_APP_URL
- * mechanism already used for the verify-email/reset-password links (see
- * src/app/api/auth/signup/route.ts) — never a hardcoded host. Never throws:
- * the state mutation above is already durably committed, so a delivery
- * failure here must never surface as a failed invite.
- */
-/**
- * Provider error text for the server log: the recipient address is removed (case-insensitively), control characters
- * (including newlines, so the text cannot forge log lines) are collapsed to single spaces, and the result is capped.
- */
-function sanitizeProviderErrorForLog(error: unknown, recipient: string): string {
-  if (!(error instanceof Error)) return "non-Error thrown";
-  const escaped = recipient.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const providerText = String(error.message);
-  return providerText
-    .replace(new RegExp(escaped, "gi"), "[recipient]")
-    .replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ")
-    .slice(0, 300);
-}
-
-async function sendBetaApprovalEmail(email: string): Promise<BetaApprovalEmailOutcome> {
-  try {
-    const provider = getEmailProvider();
-    if (!provider) {
-      console.error("[BETA_REQUEST_INVITE] Approval email NOT sent: no email provider configured");
-      return "NO_PROVIDER";
-    }
-    const signupUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/signup`;
-    await provider.send({
-      to: email,
-      subject: "Your OpsIQ beta access is ready",
-      html: `<p>Your OpsIQ beta access is ready.</p><p><a href="${signupUrl}">Sign up now</a> using this same email address (${escapeHtml(email)}) to activate your account.</p>`,
-      text: `Your OpsIQ beta access is ready. Sign up now using this same email address (${email}): ${signupUrl}`,
-    });
-    return "SENT";
-  } catch (emailError) {
-    // The provider's own status/message (e.g. "Resend API error 403: ...") is what an operator needs to act; the
-    // recipient address is removed so the log line carries no personal data.
-    const detail = sanitizeProviderErrorForLog(emailError, email);
-    console.error(
-      "[BETA_REQUEST_INVITE] Approval email dispatch failed",
-      emailError instanceof Error ? emailError.constructor.name : "UnknownError",
-      detail
-    );
-    return "FAILED";
-  }
+  /** Safe, human-readable explanation of the email outcome (never provider text, an address or a token). */
+  emailDeliveryReason: string | null;
 }
 
 /**
@@ -735,11 +688,16 @@ export async function markBetaRequestInvited(
   });
 
   let emailDelivery: BetaApprovalEmailOutcome = "NOT_ATTEMPTED";
+  let emailDeliveryReason: string | null =
+    "this invitation is already active, so no state change was made; use Resend invitation email to send it again";
   if (transitioned) {
-    // Only on the actual transition, and only after the transaction above
-    // has successfully committed — never on an idempotent replay, and
-    // never able to roll back the already-durable state change.
-    emailDelivery = await sendBetaApprovalEmail(existing.email);
+    // Only on the actual transition, and only after the transaction above has successfully committed — never on an
+    // idempotent replay. The email is a separate side effect: its failure is reported explicitly and never rolls back
+    // the already-durable state change.
+    await recordBetaInviteEmailAttempt({ betaRequestId, action: "INVITE", actorId });
+    const attempt = await dispatchBetaInviteEmail({ betaRequestId, email: existing.email, action: "INVITE", actorId });
+    emailDelivery = attempt.outcome;
+    emailDeliveryReason = attempt.reason;
   }
 
   const finalRow = await db.betaRequest.findUnique({
@@ -756,6 +714,7 @@ export async function markBetaRequestInvited(
     invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
     invitedBy: finalRow.invitedBy,
     emailDelivery,
+    emailDeliveryReason,
   };
 }
 
@@ -890,8 +849,12 @@ export async function reopenAndInviteBetaRequest(
   });
 
   let emailDelivery: BetaApprovalEmailOutcome = "NOT_ATTEMPTED";
+  let emailDeliveryReason: string | null = "this request was not in REJECTED state, so nothing was reopened";
   if (transitioned) {
-    emailDelivery = await sendBetaApprovalEmail(existing.email);
+    await recordBetaInviteEmailAttempt({ betaRequestId, action: "INVITE", actorId });
+    const attempt = await dispatchBetaInviteEmail({ betaRequestId, email: existing.email, action: "INVITE", actorId });
+    emailDelivery = attempt.outcome;
+    emailDeliveryReason = attempt.reason;
   }
 
   const finalRow = await db.betaRequest.findUniqueOrThrow({
@@ -904,5 +867,6 @@ export async function reopenAndInviteBetaRequest(
     invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
     invitedBy: finalRow.invitedBy,
     emailDelivery,
+    emailDeliveryReason,
   };
 }

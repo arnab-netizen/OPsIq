@@ -135,18 +135,39 @@ describe("beta programme — invitation email outcome", () => {
 
   it("a failed re-invite send is reported as not delivered, never as sent", async () => {
     const notice = await act("REVOKED", /re-invite/i, "invite", "FAILED");
-    expect(notice.textContent).toMatch(/could not be delivered/i);
-    expect(notice.textContent).not.toMatch(/email sent/i);
+    expect(notice.textContent).toMatch(/could not be sent/i);
+    expect(notice.textContent).not.toMatch(/accepted by provider/i);
   });
 
   it("re-open & invite reports a successful send", async () => {
     const notice = await act("REJECTED", /re-open/i, "reopen", "SENT");
-    expect(notice.textContent).toMatch(/invitation email sent/i);
+    expect(notice.textContent).toMatch(/accepted by provider/i);
   });
 
   it("no provider and not-attempted outcomes are described truthfully", async () => {
     expect((await act("REQUESTED", /^invite$/i, "invite", "NO_PROVIDER")).textContent).toMatch(/no email provider is configured/i);
     cleanup();
-    expect((await act("REQUESTED", /^invite$/i, "invite", "NOT_ATTEMPTED")).textContent).toMatch(/no invitation email was sent/i);
+    expect((await act("REQUESTED", /^invite$/i, "invite", "NOT_ATTEMPTED")).textContent).toMatch(/no email was sent/i);
+  });
+
+  it("an active INVITED request shows Resend invitation email; an expired one shows Re-invite; resend reports its explicit outcome", async () => {
+    requests = [{ ...row("INVITED"), invitedAt: "2026-01-02T00:00:00.000Z", inviteExpired: false }];
+    route({
+      "POST /api/admin/beta-requests/r1/resend-invite": () =>
+        ok({ id: "r1", status: "INVITED", invitedAt: "2026-01-02T00:00:00.000Z", invitedBy: "a", emailDelivery: "NOT_ATTEMPTED", emailDeliveryReason: "an email attempt was just made; wait 30 seconds before resending" }),
+    });
+    render(<AdminBetaProgrammePage />);
+    const resend = (await screen.findAllByRole("button", { name: /resend invitation email/i }))[0];
+    expect(screen.queryAllByRole("button", { name: /re-invite/i })).toHaveLength(0);
+    fireEvent.click(resend);
+    const notice = (await screen.findAllByTestId("invite-email-notice"))[0];
+    expect(notice.textContent).toMatch(/No email was sent: an email attempt was just made/);
+    cleanup();
+
+    requests = [{ ...row("INVITED"), inviteExpired: true }];
+    route();
+    render(<AdminBetaProgrammePage />);
+    expect((await screen.findAllByRole("button", { name: /re-invite/i })).length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("button", { name: /resend invitation email/i })).toHaveLength(0);
   });
 });

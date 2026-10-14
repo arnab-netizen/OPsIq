@@ -768,6 +768,13 @@ export const AUDIT_EVENTS = {
   BETA_REQUEST_REVOKED: "beta_request.revoked",
   BETA_REQUEST_REJECTED: "beta_request.rejected",
   BETA_REQUEST_REOPENED: "beta_request.reopened",
+  // Invitation EMAIL side effect (separate from the invite state). "accepted_by_provider" means the provider took the
+  // submission; it never claims delivery.
+  BETA_INVITE_EMAIL_ATTEMPTED: "beta_request.invite_email_attempted",
+  BETA_INVITE_EMAIL_ACCEPTED_BY_PROVIDER: "beta_request.invite_email_accepted_by_provider",
+  BETA_INVITE_EMAIL_FAILED: "beta_request.invite_email_failed",
+  BETA_INVITE_EMAIL_NO_PROVIDER: "beta_request.invite_email_no_provider",
+  BETA_INVITE_EMAIL_RESENT: "beta_request.invite_email_resent",
 
   // Administration V1 — beta operating control plane
   PLATFORM_SETTINGS_INITIALIZED: "platform_settings.initialized",
