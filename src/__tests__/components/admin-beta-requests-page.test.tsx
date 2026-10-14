@@ -124,4 +124,54 @@ describe("AdminBetaRequestsPage", () => {
     // Row status is unchanged -- still shows the original REQUESTED state, not INVITED.
     expect(screen.queryByText("INVITED")).toBeNull();
   });
+
+  describe("invite email outcome", () => {
+    async function inviteWith(emailDelivery: unknown) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string, init?: { method?: string }) => {
+          if (init?.method === "POST") {
+            return jsonResponse({
+              id: "req-1",
+              status: "INVITED",
+              invitedAt: "2026-01-02T00:00:00.000Z",
+              invitedBy: "actor",
+              ...(emailDelivery === undefined ? {} : { emailDelivery }),
+            });
+          }
+          return jsonResponse(ONE_ROW);
+        })
+      );
+      render(<AdminBetaRequestsPage />);
+      await waitFor(() => expect(screen.getByText("ada@example.com")).toBeTruthy());
+      fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
+      return await screen.findByTestId("invite-email-notice");
+    }
+
+    it("SENT: reports the email was sent", async () => {
+      const notice = await inviteWith("SENT");
+      expect(notice.textContent).toMatch(/invitation email sent/i);
+    });
+
+    it("FAILED: the invite state changes but the operator is told the email was not delivered", async () => {
+      const notice = await inviteWith("FAILED");
+      expect(notice.textContent).toMatch(/could not be delivered/i);
+      expect(notice.textContent).not.toMatch(/email sent/i);
+      await waitFor(() => expect(screen.getByText("INVITED")).toBeTruthy());
+    });
+
+    it("NO_PROVIDER: states that no provider is configured", async () => {
+      const notice = await inviteWith("NO_PROVIDER");
+      expect(notice.textContent).toMatch(/no email provider is configured/i);
+      await waitFor(() => expect(screen.getByText("INVITED")).toBeTruthy());
+    });
+
+    it("NOT_ATTEMPTED and a missing field never claim a send", async () => {
+      const notice = await inviteWith("NOT_ATTEMPTED");
+      expect(notice.textContent).toMatch(/no invitation email was sent/i);
+      cleanup();
+      const unknown = await inviteWith(undefined);
+      expect(unknown.textContent).not.toMatch(/email sent/i);
+    });
+  });
 });

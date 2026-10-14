@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, LoadingState, Table } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
+import { betaApprovalEmailNotice, type BetaApprovalEmailNotice } from "@/domain/admin/beta-approval-email-notice";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createClientIdempotencyKey } from "@/lib/client-idempotency";
 
@@ -78,6 +79,7 @@ export default function AdminBetaRequestsPage() {
   const [state, setState] = useState<ListState>({ rows: null, loading: true, error: null, forbidden: false });
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [inviteNotices, setInviteNotices] = useState<Record<string, BetaApprovalEmailNotice>>({});
 
   useEffect(() => {
     void loadAndApply(setState);
@@ -92,6 +94,11 @@ export default function AdminBetaRequestsPage() {
       delete next[betaRequestId];
       return next;
     });
+    setInviteNotices((prev) => {
+      const next = { ...prev };
+      delete next[betaRequestId];
+      return next;
+    });
     try {
       const idempotencyKey = createClientIdempotencyKey(`beta-invite-${betaRequestId}`);
       const res = await fetch(`/api/admin/beta-requests/${betaRequestId}/invite`, {
@@ -102,6 +109,7 @@ export default function AdminBetaRequestsPage() {
         throw new Error("Failed to invite this request");
       }
       const result = await res.json();
+      setInviteNotices((prev) => ({ ...prev, [betaRequestId]: betaApprovalEmailNotice(result.emailDelivery) }));
       setState((s) => ({
         ...s,
         rows:
@@ -194,6 +202,15 @@ export default function AdminBetaRequestsPage() {
                   {row.status === "INVITED" ? "Invited" : "Invite"}
                 </Button>
                 {inviteErrors[row.id] && <p className="text-xs text-destructive">{inviteErrors[row.id]}</p>}
+                {inviteNotices[row.id] && (
+                  <p
+                    role="status"
+                    data-testid="invite-email-notice"
+                    className={inviteNotices[row.id].tone === "success" ? "text-xs text-green-700" : "text-xs text-amber-700"}
+                  >
+                    {inviteNotices[row.id].text}
+                  </p>
+                )}
               </div>
             ),
           },

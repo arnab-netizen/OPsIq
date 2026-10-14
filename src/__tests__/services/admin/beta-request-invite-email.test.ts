@@ -135,4 +135,63 @@ describe("markBetaRequestInvited — approval email", () => {
     expect(result.status).toBe("INVITED");
     expect(result.id).toBe(REQUEST_ID);
   });
+
+  it("reports the outcome and logs the provider's status without the recipient when dispatch fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.send.mockRejectedValueOnce(new Error("Resend API error 403: domain invitee@example.com is not verified"));
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+
+    expect(result.emailDelivery).toBe("FAILED");
+    const logged = JSON.stringify(errorSpy.mock.calls);
+    expect(logged).toContain("Resend API error 403");
+    expect(logged).not.toContain("invitee@example.com");
+    errorSpy.mockRestore();
+  });
+
+  it("reports SENT on success, NO_PROVIDER when unconfigured, NOT_ATTEMPTED on a replay", async () => {
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("SENT");
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getEmailProvider.mockReturnValue(null);
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NO_PROVIDER");
+
+    mocks.updateMany.mockResolvedValue({ count: 0 });
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NOT_ATTEMPTED");
+  });
+
+  it("sanitizes logged provider error text: recipient removed case-insensitively, control characters removed, capped at 300", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const raw = `Resend API error 403: INVITEE@EXAMPLE.COM and invitee@example.com\nforged line\r\u0000\u001b[31m ${"x".repeat(400)}`;
+    mocks.send.mockRejectedValueOnce(new Error(raw));
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "Invitee@Example.com" })
+      .mockResolvedValueOnce(finalRow());
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+
+    const call = errorSpy.mock.calls.find((c) => String(c[0]).includes("Approval email dispatch failed"));
+    expect(call).toBeTruthy();
+    const detail = String(call![2]);
+    expect(detail.toLowerCase()).not.toContain("invitee@example.com");
+    expect(detail).toContain("[recipient]");
+    expect(detail).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/);
+    expect(detail.length).toBeLessThanOrEqual(300);
+    errorSpy.mockRestore();
+  });
 });

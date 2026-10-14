@@ -114,3 +114,39 @@ describe("beta programme — kill switch", () => {
     expect(cards[0].querySelector("p.break-all")).toBeTruthy();
   });
 });
+
+describe("beta programme — invitation email outcome", () => {
+  const row = (status: string) => ({
+    id: "r1", email: "ada@example.com", firstName: "Ada", status, utmSource: null, utmCampaign: null,
+    invitedAt: null, invitedBy: null, createdAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  async function act(status: string, button: RegExp, endpoint: string, emailDelivery?: string) {
+    requests = [row(status)];
+    route({
+      [`POST /api/admin/beta-requests/r1/${endpoint}`]: () =>
+        ok({ id: "r1", status: "INVITED", invitedAt: "2026-01-02T00:00:00.000Z", invitedBy: "a", ...(emailDelivery ? { emailDelivery } : {}) }),
+    });
+    render(<AdminBetaProgrammePage />);
+    const buttons = await screen.findAllByRole("button", { name: button });
+    fireEvent.click(buttons[0]);
+    return (await screen.findAllByTestId("invite-email-notice"))[0];
+  }
+
+  it("a failed re-invite send is reported as not delivered, never as sent", async () => {
+    const notice = await act("REVOKED", /re-invite/i, "invite", "FAILED");
+    expect(notice.textContent).toMatch(/could not be delivered/i);
+    expect(notice.textContent).not.toMatch(/email sent/i);
+  });
+
+  it("re-open & invite reports a successful send", async () => {
+    const notice = await act("REJECTED", /re-open/i, "reopen", "SENT");
+    expect(notice.textContent).toMatch(/invitation email sent/i);
+  });
+
+  it("no provider and not-attempted outcomes are described truthfully", async () => {
+    expect((await act("REQUESTED", /^invite$/i, "invite", "NO_PROVIDER")).textContent).toMatch(/no email provider is configured/i);
+    cleanup();
+    expect((await act("REQUESTED", /^invite$/i, "invite", "NOT_ATTEMPTED")).textContent).toMatch(/no invitation email was sent/i);
+  });
+});

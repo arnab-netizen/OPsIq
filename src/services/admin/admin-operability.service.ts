@@ -25,6 +25,7 @@ import type { AuditEventName } from "@/domain/constants/audit-events";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/integrations/email-html";
+import type { BetaApprovalEmailOutcome } from "@/domain/admin/beta-approval-email-notice";
 import { INVITE_TTL_DAYS } from "@/lib/beta";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
@@ -590,11 +591,15 @@ export interface MarkBetaRequestInvitedInput {
   actorId: string;
 }
 
+/** What happened to the applicant approval email on this call. FAILED / NO_PROVIDER mean the state change is durable but nothing was sent. */
+export type { BetaApprovalEmailOutcome };
+
 export interface MarkBetaRequestInvitedResult {
   id: string;
   status: string;
   invitedAt: string | null;
   invitedBy: string | null;
+  emailDelivery: BetaApprovalEmailOutcome;
 }
 
 /**
@@ -605,10 +610,27 @@ export interface MarkBetaRequestInvitedResult {
  * the state mutation above is already durably committed, so a delivery
  * failure here must never surface as a failed invite.
  */
-async function sendBetaApprovalEmail(email: string): Promise<void> {
+/**
+ * Provider error text for the server log: the recipient address is removed (case-insensitively), control characters
+ * (including newlines, so the text cannot forge log lines) are collapsed to single spaces, and the result is capped.
+ */
+function sanitizeProviderErrorForLog(error: unknown, recipient: string): string {
+  if (!(error instanceof Error)) return "non-Error thrown";
+  const escaped = recipient.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const providerText = String(error.message);
+  return providerText
+    .replace(new RegExp(escaped, "gi"), "[recipient]")
+    .replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ")
+    .slice(0, 300);
+}
+
+async function sendBetaApprovalEmail(email: string): Promise<BetaApprovalEmailOutcome> {
   try {
     const provider = getEmailProvider();
-    if (!provider) return;
+    if (!provider) {
+      console.error("[BETA_REQUEST_INVITE] Approval email NOT sent: no email provider configured");
+      return "NO_PROVIDER";
+    }
     const signupUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/signup`;
     await provider.send({
       to: email,
@@ -616,11 +638,17 @@ async function sendBetaApprovalEmail(email: string): Promise<void> {
       html: `<p>Your OpsIQ beta access is ready.</p><p><a href="${signupUrl}">Sign up now</a> using this same email address (${escapeHtml(email)}) to activate your account.</p>`,
       text: `Your OpsIQ beta access is ready. Sign up now using this same email address (${email}): ${signupUrl}`,
     });
+    return "SENT";
   } catch (emailError) {
+    // The provider's own status/message (e.g. "Resend API error 403: ...") is what an operator needs to act; the
+    // recipient address is removed so the log line carries no personal data.
+    const detail = sanitizeProviderErrorForLog(emailError, email);
     console.error(
       "[BETA_REQUEST_INVITE] Approval email dispatch failed",
-      emailError instanceof Error ? emailError.constructor.name : "UnknownError"
+      emailError instanceof Error ? emailError.constructor.name : "UnknownError",
+      detail
     );
+    return "FAILED";
   }
 }
 
@@ -706,11 +734,12 @@ export async function markBetaRequestInvited(
     return updated.count === 1;
   });
 
+  let emailDelivery: BetaApprovalEmailOutcome = "NOT_ATTEMPTED";
   if (transitioned) {
     // Only on the actual transition, and only after the transaction above
     // has successfully committed — never on an idempotent replay, and
     // never able to roll back the already-durable state change.
-    await sendBetaApprovalEmail(existing.email);
+    emailDelivery = await sendBetaApprovalEmail(existing.email);
   }
 
   const finalRow = await db.betaRequest.findUnique({
@@ -726,6 +755,7 @@ export async function markBetaRequestInvited(
     status: finalRow.status,
     invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
     invitedBy: finalRow.invitedBy,
+    emailDelivery,
   };
 }
 
@@ -859,8 +889,9 @@ export async function reopenAndInviteBetaRequest(
     return updated.count === 1;
   });
 
+  let emailDelivery: BetaApprovalEmailOutcome = "NOT_ATTEMPTED";
   if (transitioned) {
-    await sendBetaApprovalEmail(existing.email);
+    emailDelivery = await sendBetaApprovalEmail(existing.email);
   }
 
   const finalRow = await db.betaRequest.findUniqueOrThrow({
@@ -872,5 +903,6 @@ export async function reopenAndInviteBetaRequest(
     status: finalRow.status,
     invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
     invitedBy: finalRow.invitedBy,
+    emailDelivery,
   };
 }
