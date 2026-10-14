@@ -24,6 +24,7 @@ import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
+import { conditionRiskLevel, highestConditionRisk } from "@/domain/business-condition/condition-risk";
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -970,12 +971,7 @@ function BusinessOperatingSystemSection({
 function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
-  const worstLevel = CONDITION_FIELD_ORDER
-    .map((k) => condition[k])
-    .reduce<string>((worst, level) => {
-      const rank: Record<string, number> = { CRITICAL: 4, BLOCKED: 3, HIGH: 3, MEDIUM: 2, LOW: 1, unknown: 0 };
-      return (rank[level] ?? 0) > (rank[worst] ?? 0) ? level : worst;
-    }, "LOW");
+  const worstLevel = highestConditionRisk(condition as unknown as Record<string, string>);
 
   return (
     <details data-testid="cockpit-business-condition-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
@@ -990,7 +986,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 12px" }}>
             {knownFields.map((k) => (
               <span key={k} style={{ display: "flex", gap: 6, alignItems: "center" }} data-testid={`cockpit-condition-${k}`}>
-                <Badge variant={RISK_VARIANT(condition[k])}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
+                <Badge variant={RISK_VARIANT(conditionRiskLevel(k, condition[k]))}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{CONDITION_FIELD_LABEL[k]}</span>
               </span>
             ))}

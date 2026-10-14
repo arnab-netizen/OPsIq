@@ -878,7 +878,7 @@ export async function assembleGuidanceContext(
    * business (never ready).
    */
   gateInput?: OwnerGateConstraints | null
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; financeFacts: FinanceCashProfitFacts | null; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; cashSignalState: CashRiskState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; financeDriver?: "cash" | "profit" | null; financeFacts: FinanceCashProfitFacts | null; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; cashSignalState: CashRiskState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
@@ -1176,6 +1176,8 @@ export async function assembleGuidanceContext(
     ctx, state, ag,
     raw: {
       cashState, finState, financeFacts,
+      // No findings at all = nothing to judge by: the legacy state mapping applies (risk is never hidden for want of findings).
+      financeDriver: cashFinanceResolution.financeCurrent && fin && (fin.findings?.length ?? 0) > 0 ? financeSurvivalDriver(fin.findings) : undefined,
       discountAmount: metric?.discountAmount ?? null, revenue: metric?.revenue ?? null,
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
@@ -2723,6 +2725,9 @@ export async function getOwnerNowView(
     // An incomplete cash position is UNKNOWN to the business-condition signals (never a proxy state / resilience).
     cashState: state.cashRunwayMeasured === false ? undefined : raw.cashState,
     finState: raw.finState,
+    // The current Finance diagnosis's own driver (canonical financeSurvivalDriver): null when its findings are only
+    // evidence conditions (liquidity unconfirmed, data quality) — then the state is not a margin reading.
+    financeDriver: raw.financeDriver,
     cashRunwayDays: state.cashRunwayMeasured === false ? 0 : state.cashRunwayDays,
     supplierInventoryRiskScore: state.supplierInventoryRiskScore,
     ownerLoadPct: state.ownerLoadPct,

@@ -387,6 +387,13 @@ const CONDITION_STATE_TO_PRESSURE: Record<string, string> = {
 export interface BusinessConditionSignalInputs {
   cashState?: string | null;
   finState?: string | null;
+  /**
+   * What the CURRENT Finance diagnosis's own findings say drives its state (financeSurvivalDriver). A Finance state
+   * with no cash-survival or profit/margin finding behind it (null) is an evidence condition (e.g. liquidity
+   * unconfirmed), not a margin reading — it stays "unknown" instead of becoming a margin-pressure level.
+   * Omitted (undefined) = findings not available to the caller: the legacy state mapping applies.
+   */
+  financeDriver?: "cash" | "profit" | null;
   cashRunwayDays: number;
   supplierInventoryRiskScore: number;
   ownerLoadPct: number;
@@ -420,7 +427,7 @@ export function deriveBusinessConditionSignals(
   input: BusinessConditionSignalInputs,
 ): DerivedBusinessConditionSignals {
   const {
-    cashState, finState, cashRunwayDays, supplierInventoryRiskScore,
+    cashState, finState, financeDriver, cashRunwayDays, supplierInventoryRiskScore,
     ownerLoadPct, staffOverloadPct, ownerOverloaded, staffOverloaded,
     capacityUtilizationPct, complaintsCount, reworkCount, overdueProofCount,
     outcomeChecksDue, churnRiskScore, growthReadinessTier,
@@ -432,7 +439,7 @@ export function deriveBusinessConditionSignals(
     ? (CONDITION_STATE_TO_PRESSURE[cashState] ?? "unknown")
     : "unknown";
 
-  const marginPressureLevel = finState
+  const marginPressureLevel = finState && financeDriver !== null
     ? (CONDITION_STATE_TO_PRESSURE[finState] ?? "unknown")
     : "unknown";
 

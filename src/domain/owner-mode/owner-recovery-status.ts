@@ -198,7 +198,7 @@ export function buildOwnerRecoveryStatus(
 }
 
 // ── Conservative crisis derivation from live signal severities ─────────────────────────────────────────
-// Absence of a signal → NONE pressure → no fabricated crisis. Never invents constraints (so it never
+// Absence of a signal (or only LOW signals) → no fabricated crisis. Never invents constraints (so it never
 // fabricates unrecoverability either).
 
 export interface CrisisSignalSeverities {
@@ -214,6 +214,24 @@ export interface CrisisSignalSeverities {
 
 const SEV_TO_PRESSURE: Record<string, Pressure> = { CRITICAL: "CRITICAL", HIGH: "HIGH", MEDIUM: "MEDIUM", LOW: "LOW" };
 const pressure = (s?: string | null): Pressure => (s && SEV_TO_PRESSURE[s.toUpperCase()]) || "NONE";
+const SEVERITY_ORDER: readonly string[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+/**
+ * The severity that may feed CASH pressure from Cash/Profit Protection signals: the most severe signal whose
+ * category is CASH (a measured or state-derived cash danger). A signal's category is its meaning — a MARGIN,
+ * PRICING, COST, WORKING_CAPITAL or DATA signal being the sort-order "top signal" never makes it cash pressure,
+ * and a missing-evidence (DATA) signal is a request for evidence, never a crisis. Null when there is no cash signal.
+ */
+export function cashSeverityFromProtectionSignals(
+  signals: ReadonlyArray<{ category?: unknown; severity?: unknown }> | null | undefined,
+): string | null {
+  let best = -1;
+  for (const s of signals ?? []) {
+    if (s?.category !== "CASH" || typeof s.severity !== "string") continue;
+    best = Math.max(best, SEVERITY_ORDER.indexOf(s.severity.toUpperCase()));
+  }
+  return best >= 0 ? SEVERITY_ORDER[best] : null;
+}
 
 /** Derive a conservative CrisisInput from live signal severities. Returns null when there is no signal at
  *  all (clean workspace) so the recovery status is honestly NONE. */
@@ -233,7 +251,8 @@ export function deriveCrisisInput(sig: CrisisSignalSeverities): CrisisInput | nu
     opportunityTemptation: "NONE",
     missingData: sig.missingData?.slice(0, 20) ?? [],
   };
+  // A LOW signal is an observation, not a crisis: only MEDIUM-or-worse pressure opens a recovery case.
   const anyPressure = [crisis.cashPressure, crisis.customerPressure, crisis.qualityPressure, crisis.operationalPressure, crisis.ownerWorkloadPressure]
-    .some((p) => p !== "NONE");
+    .some((p) => p === "MEDIUM" || p === "HIGH" || p === "CRITICAL");
   return anyPressure ? crisis : null;
 }
