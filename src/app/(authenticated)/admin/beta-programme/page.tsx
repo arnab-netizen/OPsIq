@@ -27,6 +27,7 @@ interface BetaRequestRow {
   utmCampaign: string | null;
   invitedAt: string | null;
   invitedBy: string | null;
+  inviteExpired?: boolean;
   createdAt: string;
 }
 
@@ -159,7 +160,7 @@ export default function AdminBetaProgrammePage() {
     // renders, so this intentionally has no other dependencies.
   }, []);
 
-  const handleAction = async (id: string, action: "invite" | "revoke" | "reject" | "reopen") => {
+  const handleAction = async (id: string, action: "invite" | "resend-invite" | "revoke" | "reject" | "reopen") => {
     setBusyId(id);
     setRowErrors((prev) => {
       const next = { ...prev };
@@ -178,10 +179,10 @@ export default function AdminBetaProgrammePage() {
         headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
       });
       const result = await jsonOrThrow(res, `Failed to ${action} this request`);
-      if (action === "invite" || action === "reopen") {
-        setRowNotices((prev) => ({ ...prev, [id]: betaApprovalEmailNotice(result.emailDelivery) }));
+      if (action === "invite" || action === "resend-invite" || action === "reopen") {
+        setRowNotices((prev) => ({ ...prev, [id]: betaApprovalEmailNotice(result.emailDelivery, result.emailDeliveryReason) }));
       }
-      setRows((prev) => prev?.map((r) => (r.id === id ? { ...r, status: result.status, invitedAt: result.invitedAt ?? r.invitedAt } : r)) ?? null);
+      setRows((prev) => prev?.map((r) => (r.id === id ? { ...r, status: result.status, invitedAt: result.invitedAt ?? r.invitedAt, inviteExpired: action === "resend-invite" ? r.inviteExpired : false } : r)) ?? null);
     } catch (e) {
       const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "action" });
       setRowErrors((prev) => ({ ...prev, [id]: governed.operatorMessage }));
@@ -281,9 +282,15 @@ export default function AdminBetaProgrammePage() {
             <Button size="sm" variant="outline" className={stacked ? "w-full" : ""} disabled={busyId === row.id} onClick={() => void handleAction(row.id, "revoke")}>
               Revoke
             </Button>
-            <Button size="sm" variant="secondary" className={stacked ? "w-full" : ""} disabled={busyId === row.id} onClick={() => void handleAction(row.id, "invite")}>
-              Re-invite
-            </Button>
+            {row.inviteExpired ? (
+              <Button size="sm" variant="secondary" className={stacked ? "w-full" : ""} disabled={busyId === row.id} onClick={() => void handleAction(row.id, "invite")}>
+                Re-invite (expired)
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" className={stacked ? "w-full" : ""} disabled={busyId === row.id} isLoading={busyId === row.id} onClick={() => void handleAction(row.id, "resend-invite")}>
+                Resend invitation email
+              </Button>
+            )}
           </>
         )}
         {row.status === "REVOKED" && (

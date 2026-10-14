@@ -136,9 +136,10 @@ describe("markBetaRequestInvited — approval email", () => {
     expect(result.id).toBe(REQUEST_ID);
   });
 
-  it("reports the outcome and logs the provider's status without the recipient when dispatch fails", async () => {
+  it("provider failure: invite stays successful, outcome FAILED with a safe reason, sanitized structured log", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.send.mockRejectedValueOnce(new Error("Resend API error 403: domain invitee@example.com is not verified"));
+    const err = Object.assign(new Error("Resend API error 403: domain invitee@example.com is not verified"), { status: 403 });
+    mocks.send.mockRejectedValueOnce(err);
     mocks.findUnique
       .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
       .mockResolvedValueOnce(finalRow());
@@ -146,38 +147,66 @@ describe("markBetaRequestInvited — approval email", () => {
 
     const result = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
 
+    expect(result.status).toBe("INVITED");
     expect(result.emailDelivery).toBe("FAILED");
-    const logged = JSON.stringify(errorSpy.mock.calls);
-    expect(logged).toContain("Resend API error 403");
-    expect(logged).not.toContain("invitee@example.com");
+    expect(result.emailDeliveryReason).toMatch(/HTTP 403/);
+    expect(result.emailDeliveryReason).not.toContain("invitee@example.com");
+    const names = mocks.emitAuditEvent.mock.calls.map((c) => c[0].eventName);
+    expect(names).toContain("beta_request.invite_email_attempted");
+    expect(names).toContain("beta_request.invite_email_failed");
+    expect(names).not.toContain("beta_request.invite_email_accepted_by_provider");
+    const line = JSON.parse(String(errorSpy.mock.calls.find((c) => String(c[0]).includes("BETA_INVITE_EMAIL_PROVIDER_RESULT"))![0]));
+    expect(line).toMatchObject({ outcome: "FAILED", action: "INVITE", provider: "resend", providerHttpStatus: 403, providerMessageIdPresent: false });
+    expect(JSON.stringify(line).toLowerCase()).not.toContain("invitee@example.com");
     errorSpy.mockRestore();
   });
 
-  it("reports SENT on success, NO_PROVIDER when unconfigured, NOT_ATTEMPTED on a replay", async () => {
+  it("success: provider acceptance is recorded as accepted-by-provider (never delivered) and the message id is kept internally", async () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    mocks.send.mockResolvedValueOnce({ accepted: true, id: "msg_123", httpStatus: 200 });
     mocks.findUnique
       .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
       .mockResolvedValueOnce(finalRow());
     mocks.updateMany.mockResolvedValue({ count: 1 });
-    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("SENT");
 
+    const result = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+
+    expect(result.emailDelivery).toBe("SENT");
+    const accepted = mocks.emitAuditEvent.mock.calls.map((c) => c[0]).find((e) => e.eventName === "beta_request.invite_email_accepted_by_provider");
+    expect(accepted.payload.providerMessageId).toBe("msg_123");
+    expect(JSON.stringify(mocks.emitAuditEvent.mock.calls)).not.toMatch(/delivered/i);
+    const line = JSON.parse(String(infoSpy.mock.calls.find((c) => String(c[0]).includes("BETA_INVITE_EMAIL_PROVIDER_RESULT"))![0]));
+    expect(line).toMatchObject({ outcome: "SENT", providerMessageIdPresent: true, providerHttpStatus: 200 });
+    expect(JSON.stringify(line)).not.toContain("msg_123");
+    infoSpy.mockRestore();
+  });
+
+  it("NO_PROVIDER is explicit and audited; a replay is NOT_ATTEMPTED with a reason and emits no email audit events", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.getEmailProvider.mockReturnValue(null);
     mocks.findUnique
       .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
       .mockResolvedValueOnce(finalRow());
-    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NO_PROVIDER");
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+    const none = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+    expect(none.emailDelivery).toBe("NO_PROVIDER");
+    expect(mocks.emitAuditEvent.mock.calls.map((c) => c[0].eventName)).toContain("beta_request.invite_email_no_provider");
 
+    mocks.emitAuditEvent.mockClear();
     mocks.updateMany.mockResolvedValue({ count: 0 });
     mocks.findUnique
       .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
       .mockResolvedValueOnce(finalRow());
-    expect((await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID })).emailDelivery).toBe("NOT_ATTEMPTED");
+    const replay = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+    expect(replay.emailDelivery).toBe("NOT_ATTEMPTED");
+    expect(replay.emailDeliveryReason).toMatch(/already active/i);
+    expect(mocks.emitAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("sanitizes logged provider error text: recipient removed case-insensitively, control characters removed, capped at 300", async () => {
+  it("sanitizes the logged provider detail: recipient removed case-insensitively, control characters removed, capped at 300", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const raw = `Resend API error 403: INVITEE@EXAMPLE.COM and invitee@example.com\nforged line\r\u0000\u001b[31m ${"x".repeat(400)}`;
-    mocks.send.mockRejectedValueOnce(new Error(raw));
+    mocks.send.mockRejectedValueOnce(Object.assign(new Error(raw), { status: 403 }));
     mocks.findUnique
       .mockResolvedValueOnce({ id: REQUEST_ID, email: "Invitee@Example.com" })
       .mockResolvedValueOnce(finalRow());
@@ -185,13 +214,33 @@ describe("markBetaRequestInvited — approval email", () => {
 
     await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
 
-    const call = errorSpy.mock.calls.find((c) => String(c[0]).includes("Approval email dispatch failed"));
-    expect(call).toBeTruthy();
-    const detail = String(call![2]);
+    const line = JSON.parse(String(errorSpy.mock.calls.find((c) => String(c[0]).includes("BETA_INVITE_EMAIL_PROVIDER_RESULT"))![0]));
+    const detail = String(line.detail);
     expect(detail.toLowerCase()).not.toContain("invitee@example.com");
     expect(detail).toContain("[recipient]");
     expect(detail).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/);
     expect(detail.length).toBeLessThanOrEqual(300);
+    errorSpy.mockRestore();
+  });
+
+  it("a provider 2xx stays SENT even if the follow-up audit write fails (no false FAILED, no duplicate-inviting message)", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.send.mockResolvedValueOnce({ accepted: true, id: "msg_9", httpStatus: 200 });
+    mocks.emitAuditEvent.mockImplementation(async (event: { eventName: string }) => {
+      if (event.eventName === "beta_request.invite_email_accepted_by_provider") throw new Error("audit db down");
+      return "audit-1";
+    });
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: REQUEST_ID, email: "invitee@example.com" })
+      .mockResolvedValueOnce(finalRow());
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await markBetaRequestInvited({ betaRequestId: REQUEST_ID, actorId: ACTOR_ID });
+
+    expect(result.emailDelivery).toBe("SENT");
+    expect(mocks.emitAuditEvent.mock.calls.map((c) => c[0].eventName)).not.toContain("beta_request.invite_email_failed");
+    expect(errorSpy.mock.calls.some((c) => String(c[0]).includes("BETA_INVITE_EMAIL_AUDIT_WRITE_FAILED"))).toBe(true);
     errorSpy.mockRestore();
   });
 });
