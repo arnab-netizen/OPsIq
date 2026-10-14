@@ -71,17 +71,27 @@ describe("UNCONFIRMED_LIQUIDITY_NEVER_IMPLIES_MARGIN_HIGH", () => {
       expect(deriveBusinessConditionSignals({ ...base, finState, financeDriver: null }).marginPressureLevel).toBe("unknown");
     }
   });
-  it("a profit-driven or cash-driven Finance state keeps its margin mapping (genuine risk not lowered)", () => {
+  it("PROFIT_DRIVER_CAN_SET_MARGIN_PRESSURE: a profit-driven Finance state keeps its margin mapping (genuine risk not lowered)", () => {
     expect(deriveBusinessConditionSignals({ ...base, finState: "AT_RISK", financeDriver: "profit" }).marginPressureLevel).toBe("HIGH");
     expect(deriveBusinessConditionSignals({ ...base, finState: "CRITICAL", financeDriver: "profit" }).marginPressureLevel).toBe("CRITICAL");
-    expect(deriveBusinessConditionSignals({ ...base, finState: "AT_RISK", financeDriver: "cash" }).marginPressureLevel).toBe("HIGH");
+    expect(deriveBusinessConditionSignals({ ...base, finState: "WATCH", financeDriver: "profit" }).marginPressureLevel).toBe("MEDIUM");
+  });
+  it("CASH_DRIVER_NEVER_MASQUERADES_AS_MARGIN: a cash-driven Finance state alone is not margin pressure (cash-only AT_RISK fixture)", () => {
+    // Finance AT_RISK, canonical driver = cash, no profit/margin finding.
+    const cashOnly = deriveBusinessConditionSignals({ ...base, finState: "AT_RISK", financeDriver: "cash" });
+    expect(cashOnly.marginPressureLevel).toBe("unknown");
+    for (const finState of ["WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]) {
+      expect(deriveBusinessConditionSignals({ ...base, finState, financeDriver: "cash" }).marginPressureLevel).toBe("unknown");
+    }
+    // Cash pressure comes from the cash source, not from the Finance state.
+    expect(deriveBusinessConditionSignals({ ...base, cashState: "AT_RISK", finState: "AT_RISK", financeDriver: "cash" })).toMatchObject({ cashPressureLevel: "HIGH", marginPressureLevel: "unknown" });
   });
   it("findings unavailable to the caller (undefined driver) keep the legacy mapping — risk is never hidden for want of findings", () => {
     expect(deriveBusinessConditionSignals({ ...base, finState: "AT_RISK" }).marginPressureLevel).toBe("HIGH");
   });
 });
 
-describe("Cockpit 'highest risk' reads risk, not maturity", () => {
+describe("CONDITION_POLARITY_MATRIX: Cockpit 'highest risk' reads risk, not maturity", () => {
   it("HIGH maturity / resilience / headroom / growth-ready are LOW risk", () => {
     for (const f of ["processMaturityLevel", "managementMaturityLevel", "resilienceLevel", "executionCapacityLevel", "growthReadinessLevel"]) {
       expect(conditionRiskLevel(f, "HIGH")).toBe("LOW");
@@ -97,6 +107,9 @@ describe("Cockpit 'highest risk' reads risk, not maturity", () => {
     expect(conditionRiskLevel("cashPressureLevel", "CRITICAL")).toBe("CRITICAL");
     expect(conditionRiskLevel("marginPressureLevel", "HIGH")).toBe("HIGH");
     expect(conditionRiskLevel("ownerDependencyRisk", "MEDIUM")).toBe("MEDIUM");
+    expect(conditionRiskLevel("cashPressureLevel", "HIGH")).toBe("HIGH");
+    expect(conditionRiskLevel("marginPressureLevel", "CRITICAL")).toBe("CRITICAL");
+    expect(conditionRiskLevel("cashPressureLevel", "unknown")).toBe("unknown");
   });
   it("the healthy-profit, unknown-bank condition reads no HIGH risk; real danger still does", () => {
     const healthy = { cashPressureLevel: "unknown", marginPressureLevel: "unknown", processMaturityLevel: "HIGH", managementMaturityLevel: "HIGH", growthReadinessLevel: "unknown" };

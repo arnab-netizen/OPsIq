@@ -388,9 +388,10 @@ export interface BusinessConditionSignalInputs {
   cashState?: string | null;
   finState?: string | null;
   /**
-   * What the CURRENT Finance diagnosis's own findings say drives its state (financeSurvivalDriver). A Finance state
-   * with no cash-survival or profit/margin finding behind it (null) is an evidence condition (e.g. liquidity
-   * unconfirmed), not a margin reading — it stays "unknown" instead of becoming a margin-pressure level.
+   * What the CURRENT Finance diagnosis's own findings say drives its state (financeSurvivalDriver). Only a
+   * profit/margin-driven state ("profit") is a margin reading. A cash-driven state ("cash") is a cash danger and an
+   * evidence-only state (null: e.g. liquidity unconfirmed) is a data gap — neither becomes a margin-pressure level;
+   * both stay "unknown" here (a real profit finding stays visible via Cash/Profit Protection and the Owner Decision).
    * Omitted (undefined) = findings not available to the caller: the legacy state mapping applies.
    */
   financeDriver?: "cash" | "profit" | null;
@@ -439,7 +440,7 @@ export function deriveBusinessConditionSignals(
     ? (CONDITION_STATE_TO_PRESSURE[cashState] ?? "unknown")
     : "unknown";
 
-  const marginPressureLevel = finState && financeDriver !== null
+  const marginPressureLevel = finState && (financeDriver === "profit" || financeDriver === undefined)
     ? (CONDITION_STATE_TO_PRESSURE[finState] ?? "unknown")
     : "unknown";
 

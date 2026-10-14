@@ -108,6 +108,8 @@ describe("[db] P2: unknown bank balance is a data gap, never a survival crisis",
     expect(recovery.status.recoveryStatus).not.toBe("NONE");
     expect(recovery.status.stabilizationGate).toBe("BLOCKED");
     expect(recovery.status.thriveGate).toBe("BLOCKED");
+    // CASH_DRIVER_NEVER_MASQUERADES_AS_MARGIN: the cash-driven Finance state is not reported as margin pressure.
+    expect(nv.derivedBusinessCondition.marginPressureLevel).toBe("unknown");
     await teardownOwnerBusiness(t.businessId);
   }, 120000);
 
