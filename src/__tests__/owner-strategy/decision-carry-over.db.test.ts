@@ -28,6 +28,20 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 const actor = randomUUID();
 
+/**
+ * Evidence periods are derived from ONE anchor (UTC midnight today) so they stay inside Owner Home's 45-day
+ * evidence window (OWNER_DECISION_STALE_EVIDENCE_DAYS) on whatever day the suite runs. Hard-coded calendar dates
+ * silently turned "current" into "out of date" once the real date passed their window, and the cycle-2 read
+ * became "Update the figures in Strategy…". The real staleness logic is exercised unchanged; only the fixture moves.
+ * Every period has ended (never a future period) and ends >= 1 day and <= 41 days before the anchor.
+ */
+const DAY_MS = 86_400_000;
+const ANCHOR_UTC_MS = Math.floor(Date.now() / DAY_MS) * DAY_MS;
+const daysAgo = (n: number) => new Date(ANCHOR_UTC_MS - n * DAY_MS).toISOString().slice(0, 10);
+const CYCLE_1 = { periodStart: daysAgo(71), periodEnd: daysAgo(41) };
+const CYCLE_2 = { periodStart: daysAgo(40), periodEnd: daysAgo(10) };
+const CYCLE_3 = { periodStart: daysAgo(9), periodEnd: daysAgo(1) };
+
 beforeAll(async () => {
   if (!process.env["TEST_WITH_DB"]) return;
   await db.user.upsert({
@@ -63,7 +77,7 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       // Cycle 1: a strong, affordable option (GO) evaluated earlier.
       const s1 = await createStrategySnapshot(
         businessId,
-        { ...common, periodStart: "2026-07-01", periodEnd: "2026-07-31", optionName: "Second van", expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 150000, cashAvailable: 400000, riskLevel: "low" },
+        { ...common, ...CYCLE_1, optionName: "Second van", expectedRevenueChange: 60000, costChange: 12000, investmentRequired: 150000, cashAvailable: 400000, riskLevel: "low" },
         actor,
         workspaceId
       );
@@ -83,7 +97,7 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       // Cycle 2: the known case — Not yet, ₹50,000 short.
       const s2 = await createStrategySnapshot(
         businessId,
-        { ...common, periodStart: "2026-08-01", periodEnd: "2026-08-31", optionName: "Second van", expectedRevenueChange: 30000, costChange: 12000, investmentRequired: 150000, cashAvailable: 100000, riskLevel: "medium" },
+        { ...common, ...CYCLE_2, optionName: "Second van", expectedRevenueChange: 30000, costChange: 12000, investmentRequired: 150000, cashAvailable: 100000, riskLevel: "medium" },
         actor,
         workspaceId
       );
@@ -147,7 +161,7 @@ describe("[db] Strategy decision — carried actions and coherent recommendation
       await updateStrategyAction(dash.recommendedNextAction.id, { status: "assigned" }, actor, workspaceId);
       const s3 = await createStrategySnapshot(
         businessId,
-        { ...common, periodStart: "2026-09-01", periodEnd: "2026-09-30", optionName: "Second van", expectedRevenueChange: 30000, costChange: 12000, investmentRequired: 150000, cashAvailable: 120000, riskLevel: "medium" },
+        { ...common, ...CYCLE_3, optionName: "Second van", expectedRevenueChange: 30000, costChange: 12000, investmentRequired: 150000, cashAvailable: 120000, riskLevel: "medium" },
         actor,
         workspaceId
       );
