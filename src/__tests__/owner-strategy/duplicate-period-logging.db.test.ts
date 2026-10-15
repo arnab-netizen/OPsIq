@@ -150,4 +150,30 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] duplicate-period 409 — REAL route 
     expect((call![1] as Error).message).toBe("simulated storage failure");
     expect(call![2]).toEqual(expect.objectContaining({ statusCode: 500 }));
   });
+
+  it("[db] OBQ safe-errors: a raw Prisma-shaped 500 returns only a calm message + correlationId; detail stays in the log", async () => {
+    const snapshotService = await import("@/services/owner-strategy/snapshot.service");
+    const raw = Object.assign(
+      new Error('Unique constraint failed on the constraint: `owner_strategy_snapshots_pkey` (user@example.com)'),
+      { name: "PrismaClientKnownRequestError", code: "P2002", meta: { target: ["id"] } },
+    );
+    vi.spyOn(snapshotService, "createStrategySnapshot").mockRejectedValueOnce(raw);
+    const { POST } = await import("@/app/api/owner/strategy/businesses/[businessId]/snapshots/route");
+    const error = vi.spyOn(logger, "error");
+    const res = await POST(post(`/api/owner/strategy/businesses/${businessId}/snapshots`, SCENARIO), { params: Promise.resolve({ businessId }) });
+    expect(res.status).toBe(500);
+    const text = await res.text();
+    const body = JSON.parse(text);
+    expect(body.error).toBe("Something went wrong on our side. Nothing was saved. Please try again.");
+    expect(typeof body.correlationId).toBe("string");
+    for (const k of ["prismaCode", "safeMessage", "safeMetaKeys", "errorName", "driverAdapterErrorMessage", "handlerName", "serviceImportPath", "operation"]) {
+      expect(body).not.toHaveProperty(k);
+    }
+    expect(text).not.toMatch(/Prisma|P2002|constraint|owner_strategy_snapshots|user@example\.com/i);
+    // Operators keep the real error server-side, joinable by the same correlation id.
+    const call = error.mock.calls.find((c) => c[0] === "[WRAPPER_FAILED]");
+    expect(call).toBeDefined();
+    expect((call![1] as Error).message).toContain("Unique constraint failed");
+    expect(call![2]).toEqual(expect.objectContaining({ correlationId: body.correlationId }));
+  });
 });

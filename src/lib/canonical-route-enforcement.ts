@@ -894,18 +894,23 @@ export function withCanonicalEnforcement(
         }
       }
 
-      // Include safe error name for diagnostics
-      if (safErrorName && safErrorName !== "unknown") {
+      // Technical diagnostics (exception class, Prisma/driver codes and first-line messages, handler paths) are
+      // operator-only: a client without the timing-safe diagnostic key never receives them. Everything an operator
+      // needs remains in the server log ([WRAPPER_FAILED]) and is joined to the response by correlationId.
+      const hasDiagnosticAccess = verifyDiagnosticKey(req.headers.get("x-opsiq-diagnostic-key"));
+
+      if (hasDiagnosticAccess && safErrorName && safErrorName !== "unknown") {
         responseBody.errorName = safErrorName;
       }
 
-      // Include operation if provided
-      if (operationName) {
+      if (hasDiagnosticAccess && operationName) {
         responseBody.operation = operationName;
       }
 
-      // Include safe Prisma details if available (allowlisted keys only)
-      const safeDetails = (classifiedError as { safeDetails?: Record<string, unknown> }).safeDetails;
+      // Include safe Prisma details if available (allowlisted keys only) — diagnostic-key holders only
+      const safeDetails = hasDiagnosticAccess
+        ? (classifiedError as { safeDetails?: Record<string, unknown> }).safeDetails
+        : undefined;
       if (safeDetails && typeof safeDetails === "object") {
         const allowlistedKeys = [
           "prismaCode",

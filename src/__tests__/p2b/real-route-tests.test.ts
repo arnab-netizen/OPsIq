@@ -420,13 +420,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", ()
        */
       expect(response.status).toBe(500); // ← Route error caught by wrapper
       const responseBody = await response.json() as any;
-      expect(responseBody.errorName || responseBody.error).toBeDefined();
-      // Canonical wrapper returns error in response body, not thrown
-      expect(
-        responseBody.errorName?.toLowerCase().includes("error") ||
-        responseBody.error?.toLowerCase().includes("outcome") ||
-        JSON.stringify(responseBody).toLowerCase().includes("outcome notes")
-      ).toBe(true); // ← Validation error message in response
+      // The wrapper answers an unclassified failure with a calm, non-technical body and a correlation id: the raw
+      // exception (class, message, stack) is never returned to a client — it stays in the server log. That the
+      // validation really executed is proven by the unchanged database record below.
+      expect(typeof responseBody.error).toBe("string");
+      expect(typeof responseBody.correlationId).toBe("string");
+      expect(responseBody).not.toHaveProperty("errorName");
+      expect(JSON.stringify(responseBody)).not.toMatch(/actualOutcome|stack/i);
 
       // Database should NOT be updated (validation prevents write)
       const dbRecord = await db.operatorItem.findUnique({
