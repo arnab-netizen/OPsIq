@@ -52,7 +52,7 @@ async function seedFinance(workspaceId: string, businessId: string, cashOnHand: 
     data: {
       id: randomUUID(), workspaceId, businessId,
       periodStart: new Date("2026-05-01"), periodEnd: new Date("2026-05-31"), currency: "INR",
-      revenue: 500000, costOfGoods: 250000, fixedCosts: 150000, cashOnHand,
+      revenue: 500000, costOfGoods: 250000, deliveryCost: 0, fixedCosts: 150000, cashOnHand,
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });

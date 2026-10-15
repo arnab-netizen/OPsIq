@@ -34,7 +34,7 @@ async function scenario(cashOnHand: number | undefined) {
   const periodEnd = new Date(Date.now() - 10 * DAY);
   const snap = await createFinancialSnapshot(
     b.id,
-    { periodStart: iso(new Date(periodEnd.getTime() - 30 * DAY)), periodEnd: iso(periodEnd), currency: "INR", revenue: 100000, fixedCosts: 130000, cashOnHand },
+    { periodStart: iso(new Date(periodEnd.getTime() - 30 * DAY)), periodEnd: iso(periodEnd), currency: "INR", revenue: 100000, fixedCosts: 130000, variableCosts: 0, cashOnHand },
     actor, workspaceId
   );
   return { workspaceId, businessId: b.id, snap, periodEnd };

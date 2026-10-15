@@ -17,7 +17,7 @@ import { BANK_BALANCE_UNCONFIRMED_REASON } from "@/domain/owner-budget/mode-clas
 const base = { periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR" } as const;
 // Healthy, profitable business: every OTHER gate qualifies for GROW and SCALE.
 const healthy = (finance: Record<string, number | undefined>): BudgetAssessmentInput => ({
-  finance: { ...base, revenue: 900000, costOfGoodsOrServices: 400000, fixedCosts: 300000, ...finance },
+  finance: { ...base, revenue: 900000, costOfGoodsOrServices: 400000, deliveryFulfilmentCost: 0, fixedCosts: 300000, ...finance },
   unitEconomicsPositive: true, demandRepeatable: true, ownerDependencyHigh: false, dataConfidence: "VERIFIED",
 });
 
@@ -104,7 +104,7 @@ describe("A1 amendment — Budget liquidity gate", () => {
 
   it("I: genuine short runway with COMPLETE liquidity still fires", () => {
     const r = classifyBudgetMode({
-      finance: { ...base, revenue: 100000, fixedCosts: 130000, cashOnHand: 2000, bankBalance: 3000 },
+      finance: { ...base, revenue: 100000, fixedCosts: 130000, variableCosts: 0, cashOnHand: 2000, bankBalance: 3000 },
       dataConfidence: "OPERATIONAL",
     });
     expect(r.cash.runwayDays).toBeLessThan(14);

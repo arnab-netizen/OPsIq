@@ -120,10 +120,13 @@ describe("[db] first-run: canonical state transitions from persisted facts", () 
     const { business } = await createFirstBusiness(t.workspaceId, t.userId, { businessType: "laundry_local_service", currency: "GBP" });
     expect((await getFirstRunContext(t.workspaceId)).state).toBe("NEEDS_EVIDENCE");
 
-    // revenue + a cost, but cash unknown ⇒ still insufficient (blank is unknown, not zero)
+    // revenue + a cost, cash UNKNOWN ⇒ sufficient (owner decision: cash may be unknown; blank is not zero and is not required)
     const partial: any = await createFinancialSnapshot(business.id, quick({ cashOnHand: undefined }) as any, t.userId, t.workspaceId);
-    expect((await getFirstRunContext(t.workspaceId)).state).toBe("NEEDS_EVIDENCE");
+    const ctx = await getFirstRunContext(t.workspaceId);
+    expect(ctx.state).toBe("NEEDS_DIAGNOSIS");
+    expect(ctx.facts.firstReadSufficient).toBe(true);
     expect(partial.id).toBeTruthy();
+    expect(partial.cashOnHand).toBeNull(); // stored as UNKNOWN, never defaulted to 0
   });
   it("[db] sufficient evidence without a diagnosis is state C; a diagnosis is D; accepting is E", async () => {
     const t = await makeTenant();

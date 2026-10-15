@@ -155,7 +155,7 @@ function EssentialNumbersForm({
     ? null
     : sufficient
       ? "That's enough for a first read."
-      : `Still needed for a first read: ${describeMissingFirstReadFacts(assessment.sufficiency?.missing ?? [])}. A rough estimate is fine; zero is fine if it is truly zero.`;
+      : `Still needed for a first read: ${describeMissingFirstReadFacts(assessment.sufficiency?.missing ?? [])}. Leave anything you don't know blank rather than guessing, and enter 0 only if it really was zero.`;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -1,3 +1,4 @@
+import { NO_CONTROL_CHARACTERS } from "@/domain/founder-recovery/validation";
 import type { NextRequest } from "next/server";
 import { db, withStatementTimeout } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
@@ -54,7 +55,8 @@ const signupSchema = z.object({
     .string()
     .trim()
     .min(1, "Business name is required")
-    .max(100, "Business name must be 100 characters or fewer"),
+    .max(100, "Business name must be 100 characters or fewer")
+    .refine(NO_CONTROL_CHARACTERS.test, NO_CONTROL_CHARACTERS.message),
 });
 
 /**

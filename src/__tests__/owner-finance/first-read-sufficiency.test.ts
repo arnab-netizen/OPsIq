@@ -67,8 +67,7 @@ describe("canonical first-read sufficiency — cases A–J", () => {
   it.each([
     ["D revenue + cash only → costs missing", { revenue: 1, cashOnHand: 1 }, ["costs"]],
     ["E cost + cash only → revenue missing", { fixedCosts: 1, cashOnHand: 1 }, ["revenue"]],
-    ["F revenue + cost only → cash missing", { revenue: 1, variableCosts: 1 }, ["cashOnHand"]],
-    ["J blank snapshot → everything unknown", {}, ["revenue", "costs", "cashOnHand"]],
+    ["J blank snapshot → everything unknown (cash is not a sufficiency fact)", {}, ["revenue", "costs"]],
   ])("%s → blocked on every surface, naming only what is missing", (_name, values, missing) => {
     const { firstRead, onboarding, guidance, startHere } = everySurface(row(values));
     expect(firstRead.sufficient).toBe(false);
@@ -79,6 +78,23 @@ describe("canonical first-read sufficiency — cases A–J", () => {
     expect(onboarding.confidenceBeforeDiagnosis).toBe("none");
   });
 
+  it("F revenue + cost with cash UNKNOWN → a first read is allowed on every surface (owner decision: cash may be UNKNOWN)", () => {
+    const { firstRead, onboarding, guidance, startHere } = everySurface(row({ revenue: 1, variableCosts: 1 }));
+    expect(firstRead).toMatchObject({ sufficient: true, missing: [], revenueKnown: true, costKnown: true, cashKnown: false });
+    expect(onboarding.canRunFirstDiagnosis).toBe(true);
+    expect(guidance.canRunFirstDiagnosis).toBe(true);
+    expect(startHere.complete).toBe(true);
+  });
+
+  it("cash known-zero and cash UNKNOWN are different evidence states", () => {
+    const zero = firstReadSufficiencyFromRow(row({ revenue: 1, fixedCosts: 1, cashOnHand: 0 }));
+    const unknown = firstReadSufficiencyFromRow(row({ revenue: 1, fixedCosts: 1 }));
+    expect(zero.cashKnown).toBe(true);
+    expect(unknown.cashKnown).toBe(false);
+    expect(zero.sufficient).toBe(true);
+    expect(unknown.sufficient).toBe(true);
+  });
+
   it("G/H/I known zero revenue, cost and cash are PRESENT evidence, not missing", () => {
     const { firstRead, onboarding } = everySurface(row({ revenue: 0, fixedCosts: 0, cashOnHand: 0 }));
     expect(firstRead).toMatchObject({ sufficient: true, revenueKnown: true, costKnown: true, cashKnown: true });
@@ -86,13 +102,13 @@ describe("canonical first-read sufficiency — cases A–J", () => {
   });
 
   it("zero in one field never rescues a different missing field (zero ≠ blank)", () => {
-    expect(firstReadSufficiencyFromRow(row({ revenue: 0 })).missing).toEqual(["costs", "cashOnHand"]);
-    expect(evaluateFirstReadSufficiency({ revenue: 0, fixedCosts: 0 }).missing).toEqual(["cashOnHand"]);
+    expect(firstReadSufficiencyFromRow(row({ revenue: 0 })).missing).toEqual(["costs"]);
+    expect(evaluateFirstReadSufficiency({ revenue: 0, fixedCosts: 0 })).toMatchObject({ missing: [], sufficient: true, cashKnown: false });
   });
 
   it("no snapshot at all → basis none, everything missing", () => {
     const r = firstReadSufficiencyFromRow(null);
-    expect(r).toMatchObject({ sufficient: false, basis: "none", missing: ["revenue", "costs", "cashOnHand"] });
+    expect(r).toMatchObject({ sufficient: false, basis: "none", missing: ["revenue", "costs"], cashKnown: false });
   });
 
   it("the readiness copy names exactly the missing facts, in the owner's words", () => {
@@ -112,10 +128,10 @@ describe("provisional vs completed basis (provisional periods stay provisional)"
     expect(r).toMatchObject({ sufficient: true, basis: "provisional" });
   });
   it("an incomplete completed snapshot does not borrow the provisional one's missing fields", () => {
-    const r = firstReadSufficiencyFromSnapshots({ completed: row({ revenue: 1 }), provisional: row({ revenue: 1, fixedCosts: 1 }) });
+    const r = firstReadSufficiencyFromSnapshots({ completed: row({ revenue: 1 }), provisional: row({ revenue: 1, cashOnHand: 1 }) }); // neither has a cost
     expect(r.sufficient).toBe(false);
     expect(r.basis).toBe("completed");
-    expect(r.missing).toEqual(["costs", "cashOnHand"]);
+    expect(r.missing).toEqual(["costs"]);
   });
 });
 

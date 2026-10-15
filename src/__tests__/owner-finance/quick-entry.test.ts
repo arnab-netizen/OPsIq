@@ -43,7 +43,10 @@ describe("assessQuickEntry", () => {
   it("only known values are present; blanks are absent and zero is kept", () => {
     const a = assessQuickEntry({ revenue: "100", fixedCosts: "0", variableCosts: "", cashOnHand: "  " });
     expect(a.values).toEqual({ revenue: 100, fixedCosts: 0 });
-    expect(a.sufficiency?.missing).toEqual(["cashOnHand"]);
+    // Revenue + a known cost is a sufficient first read; blank cash is UNKNOWN (not missing, not 0).
+    expect(a.sufficiency?.missing).toEqual([]);
+    expect(a.sufficiency?.sufficient).toBe(true);
+    expect(a.sufficiency?.cashKnown).toBe(false);
   });
   it.each([
     ["A fixed", { revenue: "1", fixedCosts: "1", cashOnHand: "1" }, true],

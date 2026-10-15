@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ValidationError } from "@/infra/errors";
 import { requirePgRateLimit, RateLimitError, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { v4 as uuidv4 } from "uuid";
@@ -253,11 +253,20 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
+    // Malformed input (bad JSON, missing/empty password, invalid email, unknown field) is the caller's mistake, not a
+    // server failure: a controlled 400 with fixed wording, never an unexplained 500.
+    if (error instanceof ValidationError) {
+      return Response.json(
+        { error: "Enter your email address and password.", classification: "validation_failed" },
+        { status: 400 }
+      );
+    }
+
+    // The pipeline stage stays in the server log ([LOGIN_FAILED] above); the client gets only the classification.
     return Response.json(
       {
         error: "Login failed",
         classification,
-        stage
       },
       { status: 500 }
     );

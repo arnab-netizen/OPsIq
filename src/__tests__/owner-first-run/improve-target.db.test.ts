@@ -355,7 +355,7 @@ describe("[db] what the owner is told after coming back", () => {
     const t = await makeTenant();
     const { business, snap } = await setUp(t, { evidenceQuality: "ACTUAL" });
     const before = await getFirstMoneyRead(t.workspaceId, business.id);
-    expect(before.read.cautions.join(" ")).toMatch(/bank balance isn't known/);
+    expect(before.read.cautions.join(" ")).toMatch(/cash position isn't fully known/);
     await requestImprovement(t.workspaceId, t.userId, business.id, "cash_debt");
     await sleep(20);
     await cash(t, business.id, { bankBalance: 3000 });
@@ -365,7 +365,7 @@ describe("[db] what the owner is told after coming back", () => {
     const target = await resolveImproveTarget(t.workspaceId, business.id, "cash_debt");
     const outcome = buildImproveOutcome({ questionLabel: "Cash and debt", before: summaryOf(tokens(before), "cash_debt"), after: tokens(after), target, humanize: humanizeMetricKey });
     expect(outcome.kind).toBe("CHANGED");
-    expect(outcome.lines.join("\n")).toMatch(/No longer a caution: .*bank balance isn't known/);
+    expect(outcome.lines.join("\n")).toMatch(/No longer a caution: .*cash position isn't fully known/);
   });
 
   it("[db] nothing relevant changed (the owner saved nothing): 'Nothing changed in your read' — never an improvement claim", async () => {

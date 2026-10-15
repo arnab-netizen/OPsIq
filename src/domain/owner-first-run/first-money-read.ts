@@ -213,6 +213,8 @@ export interface FirstMoneyReadInput {
   dataRequestCode?: string | null;
   /** The snapshot lacks revenue, a cost or cash (the canonical critical inputs). */
   criticalInputsMissing?: boolean;
+  /** Conclusions OpsIQ withheld because evidence is UNKNOWN (cash, a cost half), as owner-facing sentences. */
+  unsupportedConclusions?: readonly string[];
   confidenceScore: number;
   evidenceQuality: EvidenceQuality | null;
   /** ISO currency of the business, used only to label money-valued metrics. */
@@ -279,6 +281,8 @@ export interface FirstMoneyRead {
   acceptNote: string | null;
   /** Plain cautions shown with the read (estimates, unconfirmed cash, thin confidence). Never blocks on its own. */
   cautions: string[];
+  /** What this read deliberately does NOT conclude because evidence is UNKNOWN (cash, a cost half). Empty when nothing is withheld. */
+  cannotConclude: string[];
 }
 
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
@@ -324,6 +328,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
     evidenceQualityNote: quality ? EVIDENCE_QUALITY_EXPLANATION[quality] : "OpsIQ doesn't know whether these numbers are from your records or estimated, so it does not treat them as confirmed.",
     isEstimated: isEstimate(quality),
     evidenceProvenance: provenanceOf(quality),
+    cannotConclude: [...(input.unsupportedConclusions ?? [])],
   };
   const criticalMissing = input.criticalInputsMissing === true;
   const blocked = tier === "BLOCKED" || criticalMissing;
@@ -334,7 +339,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
   if (!quality) cautions.push("OpsIQ doesn't know how reliable these numbers are, so it treats them as unconfirmed rather than as taken from your records.");
   if (isEstimate(quality)) cautions.push("This rests on estimated numbers, so treat it as a first guide rather than a settled answer.");
   if (input.dataRequestCode === "FIN_LIQUIDITY_UNCONFIRMED") {
-    cautions.push("OpsIQ can't yet confirm how long your cash will last, because your bank balance isn't known. That is a missing figure, not a sign you have no money.");
+    cautions.push("OpsIQ can't yet confirm how long your cash will last, because your cash position isn't fully known. That is a missing figure, not a sign you have no money.");
   }
   if (input.cashflowBalance) cautions.push(cashflowBalanceCaution(input.cashflowBalance.asOfPeriodEnd));
   if (input.period.state === "provisional") cautions.push("This covers a period that is still in progress, so the read may change as the period completes.");
@@ -419,6 +424,7 @@ export function firstMoneyReadStrings(read: FirstMoneyRead): string[] {
     read.evidenceQualityNote,
     read.acceptNote,
     ...read.cautions,
+    ...read.cannotConclude,
     read.sharpenBy?.title ?? null,
     read.sharpenBy?.detail ?? null,
   ].filter((s): s is string => typeof s === "string");

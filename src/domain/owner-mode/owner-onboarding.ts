@@ -177,7 +177,7 @@ export function blocksFirstRead(category: OwnerInputCategory, firstRead: FirstRe
   return firstRead.missing.some((fact) => FIRST_READ_FACT_CATEGORIES[fact].includes(category));
 }
 
-/** Owner-facing sentence naming what the first read still needs ("revenue, one cost figure and cash in hand (enter 0 if none)"). */
+/** Owner-facing sentence naming what the first read still needs ("revenue and one cost figure"). */
 export function describeMissingFirstReadFacts(missing: readonly FirstReadFact[]): string {
   const labels = missing.map((f) => FIRST_READ_FACT_LABEL[f]);
   if (labels.length <= 1) return labels.join("");
@@ -243,7 +243,7 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
   // Cautious first action.
   let firstAction: string;
   if (!canRunFirstDiagnosis) {
-    firstAction = `Enter your ${describeMissingFirstReadFacts(firstRead.missing)} so OpsIQ can run a first read. Rough estimates are fine. No strong action yet — the numbers come first.`;
+    firstAction = `Enter your ${describeMissingFirstReadFacts(firstRead.missing)} so OpsIQ can run a first read. Leave anything you don't know blank rather than guessing. No strong action yet — the numbers come first.`;
   } else if (confidenceBeforeDiagnosis !== "high" && nextBestUpload) {
     firstAction = `Run the limited first diagnosis, then add ${INPUT_CATALOG[nextBestUpload].label} before acting on anything risky — confidence is ${confidenceBeforeDiagnosis}, so treat the first read as directional.`;
   } else {

@@ -12,6 +12,8 @@ import {
   resolveFinanceThresholds,
   grossMarginPct,
   netProfit,
+  netMarginPct,
+  missingCriticalFinanceInputs,
   breakEvenRevenue,
   contributionMarginPct,
   fixedCostBurdenPct,
@@ -49,6 +51,7 @@ function profitable(): FinancialSnapshotInput {
     businessModel: "service",
     revenue: 100000,
     costOfGoodsOrServices: 30000,
+    deliveryFulfilmentCost: 0, // stated as 0 (blank would be UNKNOWN, which makes total costs UNKNOWN)
     // fixedCosts is provided directly (= rent + salaryPayroll + utilities) so it counts as an
     // IMPORTANT_FIELDS present entry; individual components kept for payroll-burden computation.
     fixedCosts: 35000,
@@ -389,13 +392,17 @@ describe("owner-finance — onboarding cost-field mapping honesty (regression)",
     expect(breakEvenRevenue(oldDefect)).toBeNull();
   });
 
-  it("either fixedCosts or variableCosts alone still satisfies the diagnosis engine's cost-info gate", () => {
+  it("either fixedCosts or variableCosts alone satisfies the first-read gate but NEVER yields total costs, profit or margin", () => {
     const fixedOnly: FinancialSnapshotInput = { ...base, revenue: 100000, fixedCosts: 20000, cashOnHand: 1, bankBalance: 0 };
     const variableOnly: FinancialSnapshotInput = { ...base, revenue: 100000, variableCosts: 20000, cashOnHand: 1, bankBalance: 0 };
-    // netProfit requires totalCosts to be non-null, which is the same "has cost info"
-    // condition the diagnosis engine's readiness gate depends on.
-    expect(netProfit(fixedOnly)).not.toBeNull();
-    expect(netProfit(variableOnly)).not.toBeNull();
+    // The gate (one genuine cost known) is unchanged...
+    expect(missingCriticalFinanceInputs(fixedOnly)).toEqual([]);
+    expect(missingCriticalFinanceInputs(variableOnly)).toEqual([]);
+    // ...but an unknown half is not zero: the total, and everything that needs it, is UNKNOWN (owner decision).
+    for (const i of [fixedOnly, variableOnly]) {
+      expect(netProfit(i)).toBeNull();
+      expect(netMarginPct(i)).toBeNull();
+    }
   });
 });
 

@@ -218,6 +218,57 @@ async function chooseQualityAndRead(page: Page, quality: "From my records" | "A 
   await expect(page.getByTestId("first-money-read")).toBeVisible({ timeout: 30000 });
 }
 
+async function exerciseImproveTarget(page: Page) {
+  // The destination and the button label are the SERVER's answer for this question (never "always add").
+  const add = page.getByTestId("first-result-improvement-add");
+  await expect(add, "the server's answer must offer a control for a question with an input surface").toBeVisible();
+  const kind = await page.getByTestId("first-result-improvement-question").getAttribute("data-target-kind");
+  expect(["ADD", "EDIT_FINANCE", "EDIT_CASHFLOW", "NOT_USED_BY_READ"]).toContain(kind);
+  const label = (await add.innerText()).trim();
+  if (kind === "EDIT_FINANCE") {
+    // The evidence lives on the figures this read is about: the existing Correct flow opens in place, with the CURRENT values shown.
+    expect(["Add this", "Edit this"]).toContain(label);
+    await expect(page.getByTestId("first-result-improvement-current")).toBeVisible();
+    await add.click();
+    await expect(page.getByTestId("first-result-correction")).toBeVisible();
+    await expect(page.getByTestId("first-result-correction")).toContainText(/Recorded now:/);
+    await expectNoHorizontalScroll(page, "correction opened from Improve");
+    // Restating what is recorded is not a correction.
+    await page.locator('[data-testid="first-result-correction"] input[name="revenue"]').fill("12000");
+    await expect(page.getByTestId("first-result-correction-submit")).toBeDisabled();
+    await expect(page.getByTestId("first-result-correction-same")).toBeVisible();
+    await page.locator('[data-testid="first-result-correction"] input[name="revenue"]').fill("11000");
+    const [res] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/owner/first-run/correct") && r.request().method() === "POST"),
+      page.getByTestId("first-result-correction-submit").click(),
+    ]);
+    expect(res.status()).toBe(201);
+    await expect(page.getByTestId("first-result-changes")).toContainText(/revenue/i);
+  } else {
+    // Add / edit a Cashflow entry / "saved but not used": a link to an existing input surface carrying the return marker.
+    if (kind === "ADD") expect(label).toBe("Add this");
+    if (kind === "NOT_USED_BY_READ") await expect(page.getByTestId("first-result-improvement-not-used")).toContainText(/won't change this recommendation|doesn't use it/);
+    await add.click();
+    await page.waitForURL(/returnTo=first-run/);
+    const bar = page.getByTestId("first-run-return-bar");
+    await expect(bar).toBeVisible();
+    await expectFingerSizedControls(page, '[data-testid="first-run-return-link"]', "return bar");
+    await expectNoHorizontalScroll(page, "input surface with return bar");
+    // The owner saves nothing here and comes straight back: the read is re-run, and the screen must NOT claim an improvement.
+    await page.getByTestId("first-run-return-link").click();
+    await page.waitForURL(/\/owner\/first-run/, { timeout: 20000 });
+    const summary = page.getByTestId("first-result-improved");
+    await expect(summary).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId("first-money-read")).toBeVisible();
+    expect(page.url(), "the update flag is consumed").not.toMatch(/update=1/);
+    await expect(summary).toHaveAttribute("data-outcome", /^(UNCHANGED|NOT_USED|CHANGED)$/);
+    if ((await summary.getAttribute("data-outcome")) === "UNCHANGED") {
+      await expect(page.getByTestId("first-result-improved-headline")).toHaveText("Nothing changed in your read");
+    }
+    await expect(summary).not.toContainText(/re-run on your latest information/i);
+  }
+}
+
 test.describe("Public beta OBQ journey", () => {
   test.skip(!isLocal, "Refuses to run except against an explicit local Postgres DATABASE_URL.");
   test.setTimeout(120_000);
@@ -403,57 +454,31 @@ test.describe("Public beta OBQ journey", () => {
         expect((await again.locator("p").first().innerText()).trim(), "a skipped question must not be asked again").not.toBe(asked);
       }
 
-      // The destination and the button label are the SERVER's answer for this question (never "always add").
-      const add = page.getByTestId("first-result-improvement-add");
-      await expect(add, "the server's answer must offer a control for a question with an input surface").toBeVisible();
-      const kind = await page.getByTestId("first-result-improvement-question").getAttribute("data-target-kind");
-      expect(["ADD", "EDIT_FINANCE", "EDIT_CASHFLOW", "NOT_USED_BY_READ"]).toContain(kind);
-      const label = (await add.innerText()).trim();
-      if (kind === "EDIT_FINANCE") {
-        // The evidence lives on the figures this read is about: the existing Correct flow opens in place, with the CURRENT values shown.
-        expect(["Add this", "Edit this"]).toContain(label);
-        await expect(page.getByTestId("first-result-improvement-current")).toBeVisible();
-        await add.click();
-        await expect(page.getByTestId("first-result-correction")).toBeVisible();
-        await expect(page.getByTestId("first-result-correction")).toContainText(/Recorded now:/);
-        await expectNoHorizontalScroll(page, "correction opened from Improve");
-        // Restating what is recorded is not a correction.
-        await page.locator('[data-testid="first-result-correction"] input[name="revenue"]').fill("12000");
-        await expect(page.getByTestId("first-result-correction-submit")).toBeDisabled();
-        await expect(page.getByTestId("first-result-correction-same")).toBeVisible();
-        await page.locator('[data-testid="first-result-correction"] input[name="revenue"]').fill("11000");
-        const [res] = await Promise.all([
-          page.waitForResponse((r) => r.url().includes("/api/owner/first-run/correct") && r.request().method() === "POST"),
-          page.getByTestId("first-result-correction-submit").click(),
-        ]);
-        expect(res.status()).toBe(201);
-        await expect(page.getByTestId("first-result-changes")).toContainText(/revenue/i);
+      // After a skip the server may legitimately have nothing more worth asking (relevance filter): that terminal state must be
+      // honest and recoverable. Otherwise the next question is exercised exactly as a first one would be.
+      if (await again.isVisible().catch(() => false)) {
+        await exerciseImproveTarget(page);
       } else {
-        // Add / edit a Cashflow entry / "saved but not used": a link to an existing input surface carrying the return marker.
-        if (kind === "ADD") expect(label).toBe("Add this");
-        if (kind === "NOT_USED_BY_READ") await expect(page.getByTestId("first-result-improvement-not-used")).toContainText(/won't change this recommendation|doesn't use it/);
-        await add.click();
-        await page.waitForURL(/returnTo=first-run/);
-        const bar = page.getByTestId("first-run-return-bar");
-        await expect(bar).toBeVisible();
-        await expectFingerSizedControls(page, '[data-testid="first-run-return-link"]', "return bar");
-        await expectNoHorizontalScroll(page, "input surface with return bar");
-        // The owner saves nothing here and comes straight back: the read is re-run, and the screen must NOT claim an improvement.
-        await page.getByTestId("first-run-return-link").click();
-        await page.waitForURL(/\/owner\/first-run/, { timeout: 20000 });
-        const summary = page.getByTestId("first-result-improved");
-        await expect(summary).toBeVisible({ timeout: 30000 });
-        await expect(page.getByTestId("first-money-read")).toBeVisible();
-        expect(page.url(), "the update flag is consumed").not.toMatch(/update=1/);
-        await expect(summary).toHaveAttribute("data-outcome", /^(UNCHANGED|NOT_USED|CHANGED)$/);
-        if ((await summary.getAttribute("data-outcome")) === "UNCHANGED") {
-          await expect(page.getByTestId("first-result-improved-headline")).toHaveText("Nothing changed in your read");
-        }
-        await expect(summary).not.toContainText(/re-run on your latest information/i);
+        await expect(page.getByTestId("first-result-improvement-done")).toBeVisible();
+        await expect(page.getByTestId("first-result-improvement-done")).toContainText(/nothing more to ask/i);
+        await expect(page.getByRole("link", { name: /Skip to my Cockpit/i })).toBeVisible();
       }
     }
     const later = page.getByTestId("first-result-improvement-later");
     if (await later.isVisible().catch(() => false)) await later.click();
+    await context.close();
+  });
+
+  test("improve: the first question's destination and label are the SERVER's answer, and returning without saving claims no improvement (390px)", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const { businessName } = await signUpAndVerify(page);
+    await completeBusinessStep(page, businessName);
+    await fillEvidence(page, { revenue: "12000", fixedCosts: "7000", variableCosts: "4000", cashOnHand: "1500" });
+    await chooseQualityAndRead(page, "A good estimate");
+    await page.getByTestId("first-run-improve").click();
+    await expect(page.getByTestId("first-result-improvement-question"), "a progressive question must be offered here").toBeVisible({ timeout: 15000 });
+    await exerciseImproveTarget(page);
     await context.close();
   });
 

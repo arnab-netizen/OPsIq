@@ -222,8 +222,8 @@ export function QuickFinancialPicture({
     : assessment.nothingEntered
       ? null
       : sufficient
-        ? "That's enough for a first read. It will be a rough picture and will say how sure it is."
-        : `Still needed for a first read: ${describeMissingFirstReadFacts(assessment.sufficiency?.missing ?? [])}. A rough estimate is fine; zero is fine if it is truly zero.`;
+        ? "That's enough for a first read. It will be a rough picture and will say how sure it is, and what it can't conclude from what is blank."
+        : `Still needed for a first read: ${describeMissingFirstReadFacts(assessment.sufficiency?.missing ?? [])}. Leave anything you don't know blank rather than guessing, and enter 0 only if it really was zero.`;
 
   return (
     <form

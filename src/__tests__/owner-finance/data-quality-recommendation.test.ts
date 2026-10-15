@@ -25,16 +25,19 @@ const PERIOD_END = "2026-05-31";
 // --------------------------------------------------------------------------
 
 describe("data-confidence: fixedCosts covered by components", () => {
-  it("fixedCostsCoveredByComponents returns true when rent is present", () => {
-    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", rent: 10000 })).toBe(true);
+  it("fixedCostsCoveredByComponents is true only when EVERY component is known (a subset is not the fixed-cost total)", () => {
+    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", rent: 10000, salaryPayroll: 50000, utilities: 5000 })).toBe(true);
+    // An explicit 0 is a known value and counts as covered.
+    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", rent: 10000, salaryPayroll: 50000, utilities: 0 })).toBe(true);
   });
 
-  it("fixedCostsCoveredByComponents returns true when salaryPayroll is present", () => {
-    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", salaryPayroll: 50000 })).toBe(true);
-  });
-
-  it("fixedCostsCoveredByComponents returns true when utilities is present", () => {
-    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", utilities: 5000 })).toBe(true);
+  it.each([
+    ["rent only", { rent: 10000 }],
+    ["salaryPayroll only", { salaryPayroll: 50000 }],
+    ["utilities only", { utilities: 5000 }],
+    ["rent + payroll (utilities unknown)", { rent: 10000, salaryPayroll: 50000 }],
+  ])("fixedCostsCoveredByComponents is false for a partial set: %s", (_label, parts) => {
+    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", ...parts })).toBe(false);
   });
 
   it("fixedCostsCoveredByComponents returns false when no component is present", () => {
@@ -592,15 +595,13 @@ describe("FIN_MISSING_CRITICAL_DATA — names exactly the missing critical input
     return { finding, rec: buildFinanceRecommendation(finding)! };
   };
 
-  it("costs and cash missing → names exactly those two, with owner labels and no raw keys", () => {
+  it("costs missing → names exactly costs (cash is not critical: it may be UNKNOWN), with owner labels and no raw keys", () => {
     const { finding, rec } = critical({ ...base, revenue: 100000 });
-    expect(finding.missingData).toEqual(["costs", "cashOnHand"]);
-    expect(rec.requiredOwnerAction).toBe(
-      "Enter Costs (any cost component) and Cash in hand so OpsIQ has the minimum financial information needed for a trustworthy diagnosis."
-    );
-    expect(rec.requiredOwnerAction).not.toContain("Revenue");
+    expect(finding.missingData).toEqual(["costs"]);
+    expect(rec.requiredOwnerAction).toMatch(/^Enter Costs \(any cost component\) so OpsIQ/);
+    expect(rec.requiredOwnerAction).not.toMatch(/Revenue|Cash in hand/);
     expect(`${rec.requiredOwnerAction} ${rec.verificationMethod}`).not.toMatch(/cashOnHand|dataConfidenceScore/);
-    expect(rec.verificationMethod).toContain("Costs (any cost component) and Cash in hand have been entered");
+    expect(rec.verificationMethod).toContain("Costs (any cost component) has been entered");
   });
 
   it("only revenue missing → names only Revenue", () => {

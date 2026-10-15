@@ -265,3 +265,12 @@ export function resolveLiquidity(
 /** Owner-facing sentence for an incomplete position (the abstention, in plain words). */
 export const LIQUIDITY_UNCONFIRMED_STATEMENT =
   "Your bank balance is not yet known, so OpsIQ cannot confirm how long your cash will last. Cash in hand alone is not your total cash.";
+
+/** Same abstention when the CASH IN HAND figure is what is unknown (owner decision: cash may be UNKNOWN, never invented). */
+export const CASH_UNKNOWN_STATEMENT =
+  "Your cash position is not known, so OpsIQ cannot confirm how long your cash will last. That is a missing figure, not a sign you have no money, and you don't need to estimate it.";
+
+/** The owner-facing abstention sentence for an incomplete position. */
+export function liquidityUnconfirmedStatement(status: LiquidityStatus): string {
+  return status === "BANK_UNKNOWN" ? LIQUIDITY_UNCONFIRMED_STATEMENT : CASH_UNKNOWN_STATEMENT;
+}

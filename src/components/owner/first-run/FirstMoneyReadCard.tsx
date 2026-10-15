@@ -118,6 +118,16 @@ export function FirstMoneyReadCard({
         )}
       </dl>
 
+      {read.cannotConclude.length > 0 && (
+        <div className="mt-4 rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="first-money-read-cannot-conclude">
+          <h3 className="font-medium">What OpsIQ can&apos;t conclude yet</h3>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {read.cannotConclude.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {read.cautions.length > 0 && (
         <ul className="mt-4 list-disc space-y-1 rounded-md border border-border bg-background p-3 pl-7 text-sm text-foreground" data-testid="first-money-read-cautions">
           {read.cautions.map((c) => (

@@ -160,7 +160,7 @@ const RATIONALE_DEFINITIONS: Record<string, RationaleDefinition> = {
   FIN_LIQUIDITY_UNCONFIRMED: {
     metric: "totalLiquidFunds",
     text: () =>
-      "Your cash in hand is recorded but your bank balance is not, so OpsIQ cannot yet confirm how long your cash will last. This is a missing figure, not a sign that you have no money.",
+      "Your cash position isn't fully known (cash in hand or the bank balance is missing), so OpsIQ cannot yet confirm how long your cash will last. This is a missing figure, not a sign that you have no money.",
   },
   // The source value is a monetary amount and no safe currency context reaches this builder: never shown.
   FIN_NOTABLE_OUTSTANDING_DEBT: {

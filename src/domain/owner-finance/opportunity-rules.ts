@@ -8,7 +8,7 @@
 import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
-import { LIQUIDITY_UNCONFIRMED_FINDING_CODE, LIQUIDITY_UNCONFIRMED_STATEMENT } from "./liquidity";
+import { LIQUIDITY_UNCONFIRMED_FINDING_CODE, liquidityUnconfirmedStatement } from "./liquidity";
 import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
@@ -296,15 +296,19 @@ export function buildFinanceOpportunityFindings(
     );
   }
 
-  // Liquidity is incomplete: physical cash is recorded but the bank balance is unknown, so total
-  // liquid funds (and therefore cash runway) cannot be confirmed. A data request — never a survival
-  // verdict, and never a claim that liquidity is zero. Enter 0 for the bank if there is none.
-  if (m.liquidityStatus === "BANK_UNKNOWN") {
+  // Liquidity is incomplete: either the bank balance is unknown (cash in hand recorded) or the cash in hand itself is
+  // unknown, so total liquid funds (and therefore cash runway) cannot be confirmed. A data request — never a survival
+  // verdict, never a claim that liquidity is zero, and never a demand that the owner invent a figure. The same finding
+  // code covers every incomplete position so the survival-evidence guard (UNKNOWN is neither safe nor dangerous) holds.
+  if (m.liquidityStatus !== "COMPLETE") {
+    const cashUnknown = m.liquidityStatus === "UNKNOWN" || m.liquidityStatus === "PHYSICAL_UNKNOWN";
     findings.push(
       opportunity({
         code: LIQUIDITY_UNCONFIRMED_FINDING_CODE,
-        title: "Add your bank balance to confirm how long your cash will last",
-        summary: LIQUIDITY_UNCONFIRMED_STATEMENT,
+        title: cashUnknown
+          ? "Add your cash position, if you know it, to confirm how long your cash will last"
+          : "Add your bank balance to confirm how long your cash will last",
+        summary: liquidityUnconfirmedStatement(m.liquidityStatus),
         sourceMetric: "totalLiquidFunds",
         sourceValue: null,
         threshold: null,
@@ -312,12 +316,18 @@ export function buildFinanceOpportunityFindings(
         confidence: 1,
         impactScore: 40,
         urgencyScore: 30,
-        evidence: [
-          "cash in hand is recorded; bank balance is not",
-          "cash runway and days of cash cover need both cash in hand and the bank balance",
-          "enter the bank balance (or 0 if you hold nothing in the bank) in Guided setup or Cashflow",
-        ],
-        missingData: ["bankBalance"],
+        evidence: cashUnknown
+          ? [
+              "cash in hand is not known (it was left blank, which is not the same as 0)",
+              "cash runway and days of cash cover need both cash in hand and the bank balance",
+              "add cash in hand and the bank balance only if you know them — enter 0 only if there really is none",
+            ]
+          : [
+              "cash in hand is recorded; bank balance is not",
+              "cash runway and days of cash cover need both cash in hand and the bank balance",
+              "enter the bank balance (or 0 if you hold nothing in the bank) in Guided setup or Cashflow",
+            ],
+        missingData: cashUnknown ? ["cashOnHand", "bankBalance"] : ["bankBalance"],
         verificationMetric: "totalLiquidFunds",
       })
     );

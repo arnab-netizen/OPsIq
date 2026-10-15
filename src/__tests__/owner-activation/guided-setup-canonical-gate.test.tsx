@@ -82,7 +82,7 @@ describe("Guided setup canonical gate", () => {
     await enter({ revenue: "20000" });
     expect(button().disabled).toBe(true);
     expect(feedback()).toMatch(/one cost figure/);
-    expect(feedback()).toMatch(/cash in hand/);
+    expect(feedback()).not.toMatch(/cash in hand/); // cash is not required: it may be UNKNOWN
     await submit();
     expect(writes(calls)).toEqual([]);
   });
@@ -107,12 +107,17 @@ describe("Guided setup canonical gate", () => {
     expect(writes(calls)).toEqual([]);
   });
 
-  it("revenue + cost → blocked: cash in hand needed", async () => {
-    setup();
+  it("revenue + cost, cash left blank → allowed; the snapshot carries NO cashOnHand (UNKNOWN, never 0)", async () => {
+    const calls = setup();
     render(<OwnerOnboardingPage />);
     await enter({ revenue: "20000", variableCosts: "5000" });
-    expect(button().disabled).toBe(true);
-    expect(feedback()).toMatch(/cash in hand/);
+    expect(button().disabled).toBe(false);
+    expect(feedback()).not.toMatch(/cash in hand/);
+    fireEvent.click(button());
+    await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
+    const snap = writes(calls).find((c) => c.url.endsWith("/finance/businesses/b1/snapshots"))!;
+    expect(snap.body).toMatchObject({ revenue: 20000, variableCosts: 5000 });
+    expect("cashOnHand" in snap.body!).toBe(false);
   });
 
   it("5. revenue + fixedCosts + cash → allowed; snapshot then diagnosis on that snapshot", async () => {
@@ -176,16 +181,18 @@ describe("Guided setup canonical gate", () => {
     expect(button().disabled).toBe(true);
   });
 
-  it("9. bank balance alone does NOT satisfy the Finance cash-in-hand requirement", async () => {
+  it("9. bank balance alone is NOT cash in hand: Finance cash stays UNKNOWN (and does not block); the bank goes to Cashflow", async () => {
     const calls = setup();
     render(<OwnerOnboardingPage />);
     await enter({ revenue: "20000", fixedCosts: "7000", bankBalance: "5000" });
-    expect(button().disabled).toBe(true);
-    expect(feedback()).toMatch(/cash in hand/);
-    await submit();
-    expect(writes(calls)).toEqual([]);
-    // and the shared contract agrees (bankBalance is not a cash fact)
-    expect(evaluateFirstReadSufficiency({ revenue: 1, fixedCosts: 1 }).missing).toEqual(["cashOnHand"]);
+    expect(button().disabled).toBe(false);
+    fireEvent.click(button());
+    await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
+    const fin = writes(calls).find((c) => c.url.endsWith("/finance/businesses/b1/snapshots"))!.body!;
+    expect("cashOnHand" in fin).toBe(false); // the bank balance is never relabelled as cash in hand
+    expect(writes(calls).find((c) => c.url.endsWith("/cashflow/businesses/b1/snapshots"))!.body!.bankBalance).toBe(5000);
+    // and the shared contract agrees: sufficient, but cash in hand is not a known fact
+    expect(evaluateFirstReadSufficiency({ revenue: 1, fixedCosts: 1 })).toMatchObject({ sufficient: true, missing: [], cashKnown: false });
   });
 
   it("10/14/15. bankBalance is never in the Finance payload; it goes to Cashflow; the two stay distinct", async () => {

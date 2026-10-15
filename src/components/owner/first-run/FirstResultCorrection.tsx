@@ -2,12 +2,12 @@
 
 /**
  * "Something here is wrong" — a direct, governed correction of the evidence behind the first read.
- * Parsing reuses the quick-entry parser (blank = unchanged, 0 = a real zero); the save goes to the canonical
+ * Parsing reuses the quick-entry parser (blank = unchanged, 0 = a real zero, "I don't know" = back to UNKNOWN); the save goes to the canonical
  * amendment route, which keeps the old version and re-runs the canonical diagnosis. Presentation only.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "@/ui/primitives";
-import { assessCorrectionDraft, correctionFields, type CorrectionField } from "@/domain/owner-first-run/correction-form";
+import { assessCorrectionDraft, correctionAmendFields, correctionFields, type CorrectionField } from "@/domain/owner-first-run/correction-form";
 import { formatCashflowAmount } from "@/domain/owner-cashflow/edit-flow";
 import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
@@ -37,6 +37,7 @@ export function FirstResultCorrection({
 }) {
   const offered = useMemo(() => fields ?? correctionFields(), [fields]);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [unknown, setUnknown] = useState<Record<string, boolean>>({});
   const [quality, setQuality] = useState<EvidenceQuality | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +45,13 @@ export function FirstResultCorrection({
   const headingRef = useRef<HTMLHeadingElement>(null);
   // The panel opens below the read: move focus to it so keyboard and screen-reader users land on the form.
   useEffect(() => { headingRef.current?.focus(); }, []);
-  const assessment = useMemo(() => assessCorrectionDraft(draft, offered, recorded), [draft, offered, recorded]);
+  const assessment = useMemo(() => assessCorrectionDraft(draft, offered, recorded, unknown), [draft, offered, recorded, unknown]);
   const hasErrors = Object.keys(assessment.errors).length > 0;
   const enteredCount = Object.keys(assessment.values).length;
   // Entering what is already recorded changes nothing: it is not a correction (the server refuses it too).
-  const changes = enteredCount > assessment.sameAsRecorded.length || quality !== null;
-  const onlySame = enteredCount > 0 && enteredCount === assessment.sameAsRecorded.length && quality === null;
+  const clearCount = assessment.clears.length;
+  const changes = enteredCount > assessment.sameAsRecorded.length || clearCount > 0 || quality !== null;
+  const onlySame = enteredCount > 0 && enteredCount === assessment.sameAsRecorded.length && clearCount === 0 && quality === null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +64,7 @@ export function FirstResultCorrection({
         businessId,
         snapshotId,
         amendmentReason: "Corrected by the owner after seeing the first read",
-        ...assessment.values,
+        ...correctionAmendFields(assessment),
         ...(quality ? { evidenceQuality: quality } : {}),
       });
       onDone(result);
@@ -90,24 +92,42 @@ export function FirstResultCorrection({
     <form onSubmit={submit} noValidate data-testid="first-result-correction" className="rounded-lg border border-border bg-background p-4">
       <h3 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">What should be different?</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Change only what is wrong and leave the rest blank. Your earlier numbers are kept on record, and OpsIQ will work out the read again.
+        Change only what is wrong and leave the rest blank. If you no longer vouch for a figure, say you don&apos;t know it — OpsIQ will treat it as unknown rather than as zero. Your earlier numbers are kept on record, and OpsIQ will work out the read again.
       </p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {offered.map((f) => (
-          <Input
-            key={f.name}
-            name={f.name}
-            label={`${f.label} (${currency})`}
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="Blank = leave as is"
-            hint={recorded && f.name in recorded ? (recorded[f.name] === null ? "Recorded now: nothing yet" : `Recorded now: ${formatCashflowAmount(recorded[f.name], currency)}`) : undefined}
-            value={draft[f.name] ?? ""}
-            error={assessment.errors[f.name]}
-            onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
-          />
-        ))}
+        {offered.map((f) => {
+          const isRecorded = recorded === undefined || recorded[f.name] !== null;
+          const markedUnknown = unknown[f.name] === true;
+          return (
+            <div key={f.name}>
+              <Input
+                name={f.name}
+                label={`${f.label} (${currency})`}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder={markedUnknown ? "Will be treated as unknown" : "Blank = leave as is"}
+                hint={recorded && f.name in recorded ? (recorded[f.name] === null ? "Recorded now: nothing yet" : `Recorded now: ${formatCashflowAmount(recorded[f.name], currency)}`) : undefined}
+                value={markedUnknown ? "" : draft[f.name] ?? ""}
+                disabled={markedUnknown}
+                error={assessment.errors[f.name]}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
+              />
+              {isRecorded && (
+                <label className="mt-1 flex min-h-11 items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    name={`${f.name}-unknown`}
+                    data-testid={`first-result-correction-unknown-${f.name}`}
+                    checked={markedUnknown}
+                    onChange={(e) => setUnknown((u) => ({ ...u, [f.name]: e.target.checked }))}
+                  />
+                  I don&apos;t know this figure
+                </label>
+              )}
+            </div>
+          );
+        })}
       </div>
       {onlySame && (
         <p role="status" className="mt-3 text-sm text-muted-foreground" data-testid="first-result-correction-same">
