@@ -89,8 +89,13 @@ operator may record *when the owner said it* (`observedAt`, never in the future)
 
 ## 6. Operating procedure
 
-**Before inviting** (one-time, operator with `BETA_PROGRAM_MANAGE`): production admission mode is `INVITE_ONLY`; capacity ≥ cohort size;
-the invitation email path is working (it delivered in production on 2026-10-14). Do **not** open public signup.
+**Before inviting** (one-time, operator with `BETA_PROGRAM_MANAGE`): production admission mode must be **`INVITE_ONLY`** (check
+`GET /api/auth/beta-status` returns `"admissionMode":"INVITE_ONLY"`; set it in `/admin/beta-programme`); capacity ≥ cohort size;
+the invitation email path is working (verification, reset and invitation emails have delivered in production). Do **not** open
+public signup. `INVITE_ONLY` also keeps the table honest: the cohort view joins an owner's account to their invitation by
+email, and in that mode signup only accepts the invited address, so an owner cannot appear as "invited, no account" while
+actually having signed up under a different address. Existing QA/acceptance accounts are never counted unless explicitly
+assigned, and an assignment of kind `QA_MECHANICS` is never counted.
 
 1. **Invite.** In `/admin/beta-programme` invite the owner's request (existing flow). In `/admin/beta-cohort` assign the
    invited request to the next owner code (`CB1-001`, `CB1-002`, …) with kind `REAL_OWNER`. Mechanics checks use kind

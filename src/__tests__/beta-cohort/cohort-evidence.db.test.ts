@@ -9,6 +9,9 @@
  * Run: TEST_WITH_DB=true npx vitest run src/__tests__/beta-cohort/cohort-evidence.db.test.ts
  */
 import { describe, it, expect, beforeAll } from "vitest";
+import { spawn } from "child_process";
+import path from "path";
+import { Client } from "pg";
 import { randomUUID, randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
@@ -50,6 +53,25 @@ async function productEvent(workspaceId: string, name: keyof typeof AUDIT_EVENTS
 const assignInput = (s: Seeded, n: number, kind: "REAL_OWNER" | "QA_MECHANICS" = "REAL_OWNER") => ({
   betaRequestId: s.betaRequestId, cohortId, ownerCode: code(n), kind, idempotencyKey: key(),
 });
+
+const TSX = path.resolve(process.cwd(), "node_modules/.bin/tsx");
+const CHILD = path.resolve(process.cwd(), "src/__tests__/test-helpers/cohort-writer-child.ts");
+interface ChildResult { ok: boolean; replayed?: boolean; name?: string; message?: string }
+/** A real second session: its own process, own pool. All children wait on the same barrier so they truly overlap. */
+function writerProcess(spec: Record<string, unknown>): Promise<ChildResult> {
+  const env = { ...process.env } as Record<string, string | undefined>;
+  delete env.VITEST; delete env.VITEST_WORKER_ID; delete env.VITEST_POOL_ID;
+  const child = spawn(TSX, [CHILD, JSON.stringify(spec)], { env: env as NodeJS.ProcessEnv, stdio: ["ignore", "pipe", "pipe"] });
+  let out = ""; let err = "";
+  child.stdout.on("data", (d) => (out += d)); child.stderr.on("data", (d) => (err += d));
+  return new Promise((resolve, reject) => {
+    child.on("close", () => {
+      const line = out.split("\n").find((l) => l.startsWith("RESULT:"));
+      if (!line) return reject(new Error(`writer process produced no result: ${err.slice(-600)}`));
+      resolve(JSON.parse(line.slice("RESULT:".length)));
+    });
+  });
+}
 
 const countRows = (eventName: string, entityId: string) => db.auditEvent.count({ where: { eventName, entityId } });
 
@@ -158,6 +180,84 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Controlled Beta Cohort evidence serv
       expect(stored).not.toMatch(/someone@example\.com|https?:\/\/|0123456789abcdef/);
       expect(stored).toContain("[redacted-email]");
     });
+  });
+
+  describe("multi-instance concurrency (separate processes, own pools)", () => {
+    it("six processes recording the SAME entry under one key produce exactly one row", async () => {
+      const s = await seedOwner();
+      await assignCohortOwner(assignInput(s, 50), actorId);
+      const k = key();
+      const startAt = Date.now() + 4000;
+      const results = await Promise.all(Array.from({ length: 6 }, () => writerProcess({
+        op: "evidence", actorId, startAt,
+        input: { betaRequestId: s.betaRequestId, idempotencyKey: k, entry: { entryType: "OBSERVATION", source: "OPERATOR_OBSERVED", trust: "PARTIAL" } },
+      })));
+      expect(results.every((r) => r.ok)).toBe(true);
+      expect(results.filter((r) => r.replayed === false)).toHaveLength(1);
+      expect(await countRows(AUDIT_EVENTS.BETA_COHORT_EVIDENCE_RECORDED, s.betaRequestId)).toBe(1);
+    }, 60_000);
+
+    it("six processes assigning the SAME owner code to six different requests: exactly one wins, the rest are refused", async () => {
+      const seeded = await Promise.all(Array.from({ length: 6 }, () => seedOwner({ noAccount: true })));
+      const startAt = Date.now() + 4000;
+      const results = await Promise.all(seeded.map((s) => writerProcess({
+        op: "assign", actorId, startAt,
+        input: { betaRequestId: s.betaRequestId, cohortId, ownerCode: code(51), kind: "REAL_OWNER", idempotencyKey: key() },
+      })));
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.filter((r) => !r.ok && r.name === "ConflictError")).toHaveLength(5);
+      const rows = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.BETA_COHORT_OWNER_ASSIGNED, payload: { path: ["ownerCode"], equals: code(51) } } });
+      expect(rows).toBe(1);
+    }, 60_000);
+
+    it("the same request assigned into two DIFFERENT cohorts at once: exactly one assignment exists", async () => {
+      const s = await seedOwner({ noAccount: true });
+      const other = `U${randomBytes(5).toString("hex").toUpperCase()}`;
+      const startAt = Date.now() + 4000;
+      const results = await Promise.all([
+        writerProcess({ op: "assign", actorId, startAt, input: { betaRequestId: s.betaRequestId, cohortId, ownerCode: code(52), kind: "REAL_OWNER", idempotencyKey: key() } }),
+        writerProcess({ op: "assign", actorId, startAt, input: { betaRequestId: s.betaRequestId, cohortId: other, ownerCode: `${other}-001`, kind: "REAL_OWNER", idempotencyKey: key() } }),
+      ]);
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(await countRows(AUDIT_EVENTS.BETA_COHORT_OWNER_ASSIGNED, s.betaRequestId)).toBe(1);
+    }, 60_000);
+  });
+
+  describe("the serialisation locks are really taken (deterministic: hold the lock from a second connection)", () => {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    /** Holds `lockKey` in an open transaction on its OWN connection, runs `action` while held, and reports whether it was blocked. */
+    async function blockedWhileHeld<T>(lockKey: string, action: () => Promise<T>): Promise<{ blockedWhileHeld: boolean; result: T }> {
+      const holder = new Client({ connectionString: process.env.DATABASE_URL });
+      await holder.connect();
+      try {
+        await holder.query("BEGIN");
+        await holder.query("SELECT pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+        let settled = false;
+        const pending = action().then((r) => { settled = true; return r; });
+        await sleep(1200);
+        const blocked = !settled;
+        await holder.query("COMMIT"); // release
+        return { blockedWhileHeld: blocked, result: await pending };
+      } finally {
+        await holder.end().catch(() => undefined);
+      }
+    }
+
+    it("recording evidence waits for the per-owner lock, then completes", async () => {
+      const s = await seedOwner();
+      await assignCohortOwner(assignInput(s, 53), actorId);
+      const r = await blockedWhileHeld(`beta_cohort_evidence:${s.betaRequestId}`, () =>
+        recordCohortEvidence({ betaRequestId: s.betaRequestId, idempotencyKey: key(), entry: obs({ trust: "YES" }) }, actorId));
+      expect(r.blockedWhileHeld).toBe(true);
+      expect(r.result.replayed).toBe(false);
+    }, 30_000);
+
+    it("assigning an owner waits for the global assignment lock, then completes", async () => {
+      const s = await seedOwner({ noAccount: true });
+      const r = await blockedWhileHeld("beta_cohort_assign", () => assignCohortOwner(assignInput(s, 54), actorId));
+      expect(r.blockedWhileHeld).toBe(true);
+      expect(r.result.replayed).toBe(false);
+    }, 30_000);
   });
 
   describe("isolation", () => {

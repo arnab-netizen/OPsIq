@@ -74,7 +74,6 @@ describe("free-text hygiene", () => {
     expect(out).toContain("[redacted-email]");
     expect(out).toContain("[redacted-url]");
     expect(out).toContain("[redacted-token]");
-    // eslint-disable-next-line no-control-regex
     expect(out).not.toMatch(/[\u0000-\u0008]/);
     expect(sanitiseCohortText("ordinary words ".repeat(60), 100)).toHaveLength(100);
     expect(sanitiseCohortText("x".repeat(900), 100)).toBe("[redacted-token]"); // a long unbroken run is token-like and is never stored
