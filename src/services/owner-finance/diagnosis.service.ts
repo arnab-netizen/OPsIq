@@ -115,13 +115,8 @@ export async function runFinanceDiagnosis(
     const plan = planFinanceActionsFromDiagnosis(diagnosis, effectivenessMap);
     const confidence = calculateDataConfidence(input);
 
-    const previousCycle = await db.ownerFinanceCycle.findFirst({
-      where: { businessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
-      select: { sequenceNumber: true },
-    });
-    const sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1;
     const cycleId = randomUUID();
+    let sequenceNumber = 0;
 
     const recByFinding: Record<string, string> = {};
     for (const r of plan.recommendations) recByFinding[r.findingCode] = r.recommendationCode;
@@ -135,6 +130,16 @@ export async function runFinanceDiagnosis(
       // by construction). The evidence stamp comes from the DATABASE clock under the lock, as do the Cashflow `updatedAt`
       // stamps it is compared with, so application-server clock skew cannot reorder them.
       await lockCashPositionShared(tx, businessId);
+      // The cycle sequence is allocated under a per-business lock INSIDE the transaction: two concurrent diagnoses (a
+      // double submit, or a correction racing a re-run) serialise here, so each gets the next number and neither trips
+      // the (business, sequence) unique constraint into a failed request.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner_finance_cycle_sequence:${businessId}`}))`;
+      const previousCycle = await tx.ownerFinanceCycle.findFirst({
+        where: { businessId, workspaceId },
+        orderBy: { sequenceNumber: "desc" },
+        select: { sequenceNumber: true },
+      });
+      sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1;
       const evidenceAsOf = await databaseNow(tx);
       const bankNow = selectUsableBankBalance({
         financePeriodEnd: snapshotRow.periodEnd,

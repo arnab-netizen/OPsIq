@@ -14,10 +14,32 @@ import { RECOVERY_ACTION_STATUSES } from "@/domain/founder-recovery/action-statu
 /** A sane upper bound (1e12): larger values only overflow downstream sums and are never a real business figure. */
 const nonNeg = z.number().min(0, "Value cannot be negative").max(1e12, "That number is too large").optional();
 
+/**
+ * A reporting-period boundary: a calendar-valid `YYYY-MM-DD` date or a UTC ISO timestamp, within a sane year range.
+ * Loose strings ("March 5", "1", "2026-02-30", offsets that shift the day, "+275760-09-13") are refused at the
+ * boundary — `new Date()` would otherwise silently reinterpret them (or the database would reject them as a 500).
+ */
+const PERIOD_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?Z)?$/;
+const MIN_PERIOD_YEAR = 2000;
+const MAX_PERIOD_YEAR = 2100;
+
+export function isValidPeriodDateString(value: string): boolean {
+  const m = PERIOD_DATE_PATTERN.exec(value);
+  if (!m) return false;
+  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (year < MIN_PERIOD_YEAR || year > MAX_PERIOD_YEAR) return false;
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return false;
+  return !Number.isNaN(new Date(value).getTime());
+}
+
+const periodDate = (label: string) =>
+  z.string().min(1, `${label} is required`).refine(isValidPeriodDateString, { message: `${label} must be a valid date (YYYY-MM-DD)` });
+
 export const financialSnapshotCreateSchema = z
   .object({
-    periodStart: z.string().min(1, "Reporting period start is required"),
-    periodEnd: z.string().min(1, "Reporting period end is required"),
+    periodStart: periodDate("Reporting period start"),
+    periodEnd: periodDate("Reporting period end"),
     currency: z.string().min(1, "Currency is required").max(8),
     businessModel: z.enum(FINANCIAL_BUSINESS_MODELS).optional(),
     industryTemplate: z.string().max(100).optional(),

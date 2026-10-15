@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ConflictError, NotFoundError } from "@/infra/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
@@ -133,7 +133,15 @@ export async function createFinancialSnapshot(
   actorId: string,
   workspaceId: string
 ) {
-  await getBusiness(businessId, workspaceId); // workspace ownership + existence
+  const business = await getBusiness(businessId, workspaceId); // workspace ownership + existence
+
+  // The snapshot's currency IS the business's currency: a different or malformed code would silently mislabel every
+  // figure on the read (the client always sends the business currency; the API must hold the same line).
+  if (input.currency.trim().toUpperCase() !== String(business.currency).toUpperCase()) {
+    throw new ValidationError("These figures must be in the same currency as your business.", {
+      fieldErrors: [{ path: "currency", message: "Must match the business currency" }],
+    });
+  }
 
   const periodStart = new Date(input.periodStart);
   const periodEnd = new Date(input.periodEnd);
@@ -156,6 +164,18 @@ export async function createFinancialSnapshot(
   // D3-03: snapshot create and audit in a single transaction so an audit
   // failure prevents a partially-recorded snapshot with no audit trail.
   const snapshot = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Two simultaneous submits for the same period (double click, second tab, client retry) serialise on this lock, so the
+    // loser sees the winner's row and gets the same 409 as a sequential duplicate — never a unique-constraint 500.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner_financial_snapshot:${businessId}:${periodStart.toISOString()}:${periodEnd.toISOString()}`}))`;
+    const raced = await tx.ownerFinancialSnapshot.findFirst({
+      where: { businessId, periodStart, periodEnd, supersededById: null },
+      select: { id: true },
+    });
+    if (raced) {
+      throw new ConflictError(
+        "A financial snapshot for this business and reporting period already exists. Amend it instead of creating a duplicate."
+      );
+    }
     const created = await tx.ownerFinancialSnapshot.create({
       data: {
         id: randomUUID(),
@@ -163,7 +183,7 @@ export async function createFinancialSnapshot(
         businessId,
         periodStart,
         periodEnd,
-        currency: input.currency,
+        currency: String(business.currency).toUpperCase(),
         evidenceQuality: input.evidenceQuality ?? null,
         businessModelType: input.businessModel ?? null,
         industryTemplate: input.industryTemplate ?? null,
