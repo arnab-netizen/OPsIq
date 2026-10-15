@@ -487,6 +487,11 @@ const NAV_SECTIONS: NavSection[] = [
         requiresCapability: CAPABILITIES.BETA_PROGRAM_MANAGE,
       },
       {
+        label: "Beta cohort",
+        href: "/admin/beta-cohort",
+        requiresCapability: CAPABILITIES.BETA_PROGRAM_MANAGE,
+      },
+      {
         label: "Customers",
         href: "/admin/customers",
         requiresCapability: CAPABILITIES.CUSTOMER_ACCESS_MANAGE,

@@ -776,6 +776,10 @@ export const AUDIT_EVENTS = {
   BETA_INVITE_EMAIL_NO_PROVIDER: "beta_request.invite_email_no_provider",
   BETA_INVITE_EMAIL_RESENT: "beta_request.invite_email_resent",
 
+  // Controlled Beta Cohort evidence ledger (operator-entered, append-only, platform-level / unchained; never tenant-visible)
+  BETA_COHORT_OWNER_ASSIGNED: "beta_cohort.owner_assigned",
+  BETA_COHORT_EVIDENCE_RECORDED: "beta_cohort.evidence_recorded",
+
   // Administration V1 — beta operating control plane
   PLATFORM_SETTINGS_INITIALIZED: "platform_settings.initialized",
   PLATFORM_ADMISSION_MODE_CHANGED: "platform_settings.admission_mode_changed",
