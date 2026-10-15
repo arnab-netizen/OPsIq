@@ -8,21 +8,23 @@
  *
  * The contract is FACT-based, not taxonomy-based:
  *   - revenue known;
- *   - at least ONE genuine cost component known (COGS, fixed, variable, rent, payroll or utilities);
- *   - cash on hand known.
+ *   - at least ONE genuine cost component known (COGS, fixed, variable, rent, payroll or utilities).
+ * Cash is NOT part of the contract (owner decision: cash may be UNKNOWN). It is reported (`cashKnown`) so surfaces can
+ * say which conclusions are unavailable without it, but its absence never withholds a first read.
  * Blank/unknown is missing; a known zero is present. The 20-category evidence model may be used to
  * EXPLAIN the result, never to decide it. Pure (no I/O).
  */
-import { missingCriticalFinanceInputs, type CriticalFinanceFields } from "./data-confidence";
+import { isCashUnknown, missingCriticalFinanceInputs, type CriticalFinanceFields } from "./data-confidence";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 
+/** The facts that decide sufficiency. Cash is not one of them. */
 export type FirstReadFact = "revenue" | "costs" | "cashOnHand";
 
 /** Plain owner-facing label for each fact (no domain/taxonomy vocabulary). */
 export const FIRST_READ_FACT_LABEL: Record<FirstReadFact, string> = {
   revenue: "revenue",
   costs: "one cost figure",
-  cashOnHand: "cash in hand (enter 0 if none)",
+  cashOnHand: "cash in hand",
 };
 
 /**
@@ -67,7 +69,7 @@ export function evaluateFirstReadSufficiency(
     sufficient: missing.length === 0,
     revenueKnown: !missing.includes("revenue"),
     costKnown: !missing.includes("costs"),
-    cashKnown: !missing.includes("cashOnHand"),
+    cashKnown: !isCashUnknown(input),
     missing,
     basis,
   };

@@ -29,7 +29,7 @@ import {
  */
 export const CASH_IN_HAND_COPY = {
   label: "Cash in hand",
-  hint: "Physical cash the business holds outside the bank (till, safe). Don't include money in the bank: that is a separate figure. If there is none, enter 0 — OpsIQ won't read that as having no money, only as no cash on hand.",
+  hint: "Physical cash the business holds outside the bank (till, safe). Don't include money in the bank: that is a separate figure. If there is none, enter 0 — OpsIQ won't read that as having no money, only as no cash on hand. Not sure? Leave it blank: you'll still get your first read, and OpsIQ will say what it can't work out without it.",
 } as const;
 
 /** The separate bank figure (written to Cashflow, never to the Finance snapshot). */

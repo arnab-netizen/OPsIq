@@ -174,13 +174,15 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
     expect((cashflowPost.body as Record<string, unknown>).bankBalance).toBe(5000);
   });
 
-  it("H. cash in hand left blank: blocked by the canonical gate — nothing is saved, Cashflow is never called", async () => {
+  it("H. cash in hand left blank: NOT blocked (cash may be UNKNOWN) — saved without cashOnHand (never 0); Cashflow is never called", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000" });
 
-    expect(calls.some((c) => c.method === "POST")).toBe(false);
-    expect((screen.getByText("See my first result") as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
+    const financePost = calls.find((c) => c.method === "POST" && c.url.endsWith("/finance/businesses/b1/snapshots"))!;
+    expect("cashOnHand" in (financePost.body as Record<string, unknown>)).toBe(false);
+    expect(calls.some((c) => c.method === "POST" && c.url.includes("/cashflow/"))).toBe(false);
   });
 });
 

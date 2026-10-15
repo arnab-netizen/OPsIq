@@ -22,7 +22,7 @@ const NOW = new Date("2026-10-20T00:00:00Z");
 const base = { periodStart: "2026-10-01", periodEnd: "2026-10-31", currency: "INR" } as const;
 // Case A audit repro: revenue 100000, fixed costs 130000 (a 30000/month loss).
 const lossMaking = (extra: Partial<FinancialSnapshotInput>): FinancialSnapshotInput => ({
-  ...base, revenue: 100000, fixedCosts: 130000, ...extra,
+  ...base, revenue: 100000, fixedCosts: 130000, variableCosts: 0, ...extra, // variable costs stated as 0: blank would be UNKNOWN
 });
 const codes = (i: FinancialSnapshotInput) => diagnoseFinanceSnapshot(i, { now: NOW }).findings.map((f) => f.code);
 const metrics = (i: FinancialSnapshotInput) => computeFinancialMetrics(i, { now: NOW });
@@ -144,7 +144,7 @@ describe("A1 liquidity contract — owner scenarios", () => {
     const short = lossMaking({ cashOnHand: 5000, bankBalance: 15000 }); // 20000 / 30000 per month ≈ 20.7 days
     expect(metrics(short).cashRunwayDays).toBeLessThan(30);
     expect(codes(short)).toContain("FIN_LOW_RUNWAY");
-    const profitableThin: FinancialSnapshotInput = { ...base, revenue: 200000, fixedCosts: 150000, cashOnHand: 1000, bankBalance: 1000 };
+    const profitableThin: FinancialSnapshotInput = { ...base, revenue: 200000, fixedCosts: 150000, variableCosts: 0, cashOnHand: 1000, bankBalance: 1000 };
     expect(codes(profitableThin)).toContain("FIN_LOW_ABSOLUTE_CASH");
   });
 });

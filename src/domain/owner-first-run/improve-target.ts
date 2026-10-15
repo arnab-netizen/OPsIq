@@ -322,6 +322,11 @@ export function amendmentChangesNothing(
     }
     const rowKey = AMEND_TO_ROW[key];
     if (!rowKey) return false;
+    // null = "return to UNKNOWN": a no-op only if the row already records nothing for it (0 is a value, not nothing).
+    if (value === null) {
+      if (row[rowKey] !== null && row[rowKey] !== undefined) return false;
+      continue;
+    }
     if (typeof value !== "number" || row[rowKey] !== value) return false;
   }
   return any;

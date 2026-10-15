@@ -18,7 +18,7 @@
 
 import type { ApprovalLevel } from "./process-intelligence";
 
-import { totalCosts } from "@/domain/owner-finance/metrics";
+import { knownFixedCosts, knownVariableCosts, totalCosts } from "@/domain/owner-finance/metrics";
 
 export type CashProfitSignalType =
   | "CASH_SAFETY_RISK"
@@ -454,14 +454,18 @@ export function deriveFinanceCashProfitFacts(fin: FinanceReadingFacts): FinanceC
   if (snap) {
     if (finiteNumber(snap.revenue) === null) missing.push("revenue");
     // Finance's own cost model decides whether costs are known — never a second definition of completeness.
-    const costs = totalCosts({
+    const costFacts = {
       periodStart: "", periodEnd: "", currency: "",
       fixedCosts: snap.fixedCosts ?? undefined, variableCosts: snap.variableCosts ?? undefined,
       rent: snap.rent ?? undefined, salaryPayroll: snap.payroll ?? undefined, utilities: snap.utilities ?? undefined,
       costOfGoodsOrServices: snap.costOfGoods ?? undefined, deliveryFulfilmentCost: snap.deliveryCost ?? undefined,
       marketingSpend: snap.marketingSpend ?? undefined,
-    });
-    if (costs === null) missing.push("cost figures");
+    };
+    // Total costs are known only when every part is (unknown is not zero). If SOME costs are known the gap is the missing
+    // part — "complete cost figures" — rather than a claim that no costs were given.
+    if (totalCosts(costFacts) === null) {
+      missing.push(knownFixedCosts(costFacts) !== null || knownVariableCosts(costFacts) !== null ? "complete cost figures" : "cost figures");
+    }
   }
   return {
     cashRunwayDays, cashDaysOfCosts,

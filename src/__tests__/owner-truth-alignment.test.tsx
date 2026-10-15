@@ -79,7 +79,9 @@ describe("A: minimum setup vs. all evidence", () => {
       businessName: "B",
       suppliedCategories: [],
     });
-    for (const c of ["revenue_sales", "expenses", "fixed_costs", "payroll", "cash_debt"] as const) expect(blocksFirstRead(c, none.firstRead)).toBe(true);
+    for (const c of ["revenue_sales", "expenses", "fixed_costs", "payroll"] as const) expect(blocksFirstRead(c, none.firstRead)).toBe(true);
+    // Cash may be UNKNOWN: its category never blocks a first read (it lowers confidence instead).
+    expect(blocksFirstRead("cash_debt", none.firstRead)).toBe(false);
     expect(blocksFirstRead("equipment_logs", none.firstRead)).toBe(false);
   });
   it("A3 any ONE cost category satisfies the cost fact — no cost category blocks once one is known", () => {

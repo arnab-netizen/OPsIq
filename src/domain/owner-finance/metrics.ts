@@ -4,9 +4,11 @@
  * Pure functions only (no DB/I/O/LLM). Ratio/per-unit metrics return `null` when
  * not computable from the provided inputs; nothing is invented. Composite scores
  * are bounded 0..100. Cost model convention (documented + deterministic):
- *   fixedCostsTotal    = fixedCosts ?? sum(rent, salaryPayroll, utilities)
- *   variableCostsTotal = variableCosts ?? sum(costOfGoodsOrServices, deliveryFulfilmentCost)
- *   totalCosts         = fixedCostsTotal + variableCostsTotal + marketingSpend
+ *   fixedCostsTotal    = fixedCosts ?? (rent + salaryPayroll + utilities, ONLY if all three are known)
+ *   variableCostsTotal = variableCosts ?? (costOfGoodsOrServices + deliveryFulfilmentCost, ONLY if both are known)
+ *   totalCosts         = fixedCostsTotal + variableCostsTotal + marketingSpend, ONLY if both totals are known
+ * UNKNOWN is never zero (owner decision): an unknown half makes the total — and profit, margin, runway, cash cover
+ * and break-even — UNKNOWN. An explicit 0 is a known value and participates normally.
  * (marketingSpend must be reported separately, not folded into the aggregates.)
  */
 import { resolveLiquidity } from "./liquidity";
@@ -19,45 +21,15 @@ import type {
 } from "./types";
 import { resolveFinanceThresholds, type FinanceThresholds } from "./thresholds";
 import { calculateDataConfidence, isValidCurrency } from "./data-confidence";
+import { num, sumPresent, fixedCostsTotal, variableCostsTotal, totalCosts } from "./cost-model";
+
+// The cost model lives in ./cost-model (shared with the confidence model); re-exported so existing imports keep working.
+export { num, fixedCostsTotal, variableCostsTotal, knownFixedCosts, knownVariableCosts, totalCosts } from "./cost-model";
 
 // --- safe numeric helpers ----------------------------------------------------
 
-/** Present finite number, else null (fail closed on NaN/Infinity/missing). */
-export function num(x: number | undefined | null): number | null {
-  if (x === undefined || x === null || !Number.isFinite(x)) return null;
-  return x;
-}
-
-/** Sum the present finite values; null if none are present. */
-function sumPresent(...xs: (number | undefined | null)[]): number | null {
-  const vals = xs.map(num).filter((v): v is number => v !== null);
-  if (vals.length === 0) return null;
-  return vals.reduce((s, v) => s + v, 0);
-}
-
 function round1(x: number): number {
   return Math.round(x * 10) / 10;
-}
-
-// --- cost model --------------------------------------------------------------
-
-export function fixedCostsTotal(input: FinancialSnapshotInput): number | null {
-  const explicit = num(input.fixedCosts);
-  if (explicit !== null) return explicit;
-  return sumPresent(input.rent, input.salaryPayroll, input.utilities);
-}
-
-export function variableCostsTotal(input: FinancialSnapshotInput): number | null {
-  const explicit = num(input.variableCosts);
-  if (explicit !== null) return explicit;
-  return sumPresent(input.costOfGoodsOrServices, input.deliveryFulfilmentCost);
-}
-
-export function totalCosts(input: FinancialSnapshotInput): number | null {
-  const fixed = fixedCostsTotal(input);
-  const variable = variableCostsTotal(input);
-  if (fixed === null && variable === null) return null;
-  return (fixed ?? 0) + (variable ?? 0) + (num(input.marketingSpend) ?? 0);
 }
 
 // --- margins -----------------------------------------------------------------

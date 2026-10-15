@@ -52,14 +52,51 @@ The stale read is not re-presentable (head is the corrected snapshot); evidence 
 5.8 s machine time, signup submit → first Money read visible (375px, scripted: verification token minted in DB, password, business, evidence, read).
 This excludes human typing/thinking and real email delivery; a human-paced TTTV has **not** been measured.
 
+## Owner decisions applied (closeout) — UNKNOWN is a state, not a number
+
+1. **Cash may be UNKNOWN** (`cash = number | UNKNOWN`). Cash is no longer a *critical* input (`missingCriticalFinanceInputs` = revenue + a cost).
+   Unknown cash never blocks a first read, is stored as NULL (never 0), makes runway / cash-cover abstain (`liquidity.ts`), keeps the
+   `FIN_LIQUIDITY_UNCONFIRMED` finding (the survival guard: UNKNOWN is neither safe nor dangerous), lowers confidence by 10
+   (`UNKNOWN_CASH_CONFIDENCE_PENALTY`), and the first read states "What OpsIQ can't conclude yet" without asking for an estimate.
+2. **Unknown cost components are never zero** (`cost-model.ts`). A group total is known only when every part is; total costs only when
+   fixed AND variable totals are. fixed 20000 + variable UNKNOWN ⇒ `knownFixedCosts` 20000, total/profit/margin/runway/cash-cover/break-even UNKNOWN
+   (fixed-cost burden, which only needs revenue + fixed, still works). An explicit 0 participates normally. Confidence −10 while costs are partial.
+   Marketing spend remains a separately reported add-on (not a required component).
+3. **Corrections may return evidence to UNKNOWN.** Amend schema accepts `null` (= UNKNOWN), the merge uses `incoming === undefined ? recorded : incoming`
+   (never `??`), history is versioned, the new head is the current state, the diagnosis is re-run, `clearedFields` is audited, the no-op check treats
+   clearing an already-unknown figure as nothing, and the form has an explicit "I don't know this figure" control per recorded figure.
+
+Tests: `unknown-evidence-contract.test.ts` (22: cash 0/positive/unknown, six-case cost matrix, owner's example), `unknown-evidence.db.test.ts` (4 DB: first read with
+unknown cash; partial costs; known→known, known→UNKNOWN, UNKNOWN→known and cash known→UNKNOWN→0, each re-evaluated, history kept, no silent restore),
+`obq-unknown-evidence.spec.ts` (3 browser, 375px + desktop). 4/4 DB tests fail on the previous source.
+Existing tests that pinned the rejected semantics were updated (Trinity pilot fixture now states confirmed-zero lines explicitly; fixtures that left delivery /
+variable costs blank now state 0; sufficiency, liquidity, quick-entry, cash-profit-protection expectations).
+Guided setup's separate "minimum data pack" (which still lists cash/debt) is a readiness measure, not OBQ completion and no longer gates the first read.
+
+## Live email acceptance — `LIVE_EMAIL_ACCEPTANCE=USER_ACTION_REQUIRED`
+
+Not performed, and **not** marked PASS. The audit environment has no production provider credentials (`RESEND_API_KEY` unset), no production URL
+configured, and outbound production hosts are blocked by the sandbox proxy (HTTP 403 on CONNECT). Sending a message through a different tool would not
+exercise OpsIQ's own signup → provider → link flow, so it was not substituted.
+
+Safe browser steps for the owner (record only PASS/FAIL per line; do not paste the address, link, token or any key anywhere):
+1. Pre-check: `npm run deployment:preflight` against the production environment shows `RESEND_API_KEY` and `ALERT_FROM_EMAIL` as set, and `NEXT_PUBLIC_APP_URL` is the intended OpsIQ production domain (not localhost or a preview URL).
+2. Use a mailbox you control, with an address never used before (e.g. a `+tag` alias). Ensure admission mode allows signup (OPEN_BETA or an invite).
+3. In a private browser window open the production site → Start free → enter that address and a business name → submit. Expect "Check your email".
+4. In the mailbox: the message arrives (check spam). Confirm the From address/domain is the OpsIQ sender, the subject is "Verify your OpsIQ account", and the link host is the production domain.
+5. Open the link → click "Verify my email" (a page load alone verifies nothing) → choose a password and accept the policies → you land on `/owner/first-run`.
+6. Sign out, sign in with the new password → OBQ is reachable. Re-open the same link: it must be refused (single use).
+7. Password reset: Sign in → "Forgot your password" → submit the same address → email arrives from the same sender → the link host is the production domain → the reset page loads.
+Mark `LIVE_VERIFICATION_EMAIL=PASS` only when steps 3–7 are observed. If step 4 never arrives, check the operator signal `EMAIL_VERIFICATION_NOT_SENT` (reasons NO_PROVIDER / SEND_FAILED / BASE_URL_NOT_PUBLIC) in the admin audit view.
+
 ## Known limitations (not fixed; each stated with impact)
 
-1. **Real email transport is unverified here** (no provider/egress). Token redemption, single-use, expiry, GET-safety, unverified-login-block are proven; delivery through Resend with a verified sender domain is not. Signup is best-effort by design and records `EMAIL_VERIFICATION_NOT_SENT`.
-2. **Cash cannot be left unknown** to obtain the first read (sufficiency = revenue + a cost + cash). The owner must type a number — mitigated by the mandatory reliability control (rough guess caps confidence), but an owner who truly does not know cash is nudged to estimate. Needs a product decision (provisional read without cash); not changed (it would alter the accepted sufficiency contract).
-3. **One cost half is accepted as "enough"**; the other is treated as 0 in net profit / margin (fixed-only: revenue 100000, fixed 20000 → netMargin 80, health 72, risk 0, confidence 45/LOW). Pinned as intentional by the Trinity pilot fixture and `metrics.test.ts`; no owner surface displays derived net profit/health for it and the first read leads with liquidity/data-quality. Changing it breaks 14 accepted tests — owner decision required.
+1. **Real email transport is unverified** — see the live-email section above (USER_ACTION_REQUIRED). Token redemption, single-use, expiry, GET-safety, unverified-login-block are proven; delivery through Resend with a verified sender domain is not. Signup is best-effort by design and records `EMAIL_VERIFICATION_NOT_SENT`.
+2. ~~Cash cannot be left unknown~~ — RESOLVED by owner decision 1 (above). Previously: cash could not be left unknown to obtain the first read (sufficiency = revenue + a cost + cash). The owner must type a number — mitigated by the mandatory reliability control (rough guess caps confidence), but an owner who truly does not know cash is nudged to estimate. Needs a product decision (provisional read without cash); not changed (it would alter the accepted sufficiency contract).
+3. ~~One cost half treated as zero~~ — RESOLVED by owner decision 2. Previously: one cost half was accepted as "enough"; the other is treated as 0 in net profit / margin (fixed-only: revenue 100000, fixed 20000 → netMargin 80, health 72, risk 0, confidence 45/LOW). Pinned as intentional by the Trinity pilot fixture and `metrics.test.ts`; no owner surface displays derived net profit/health for it and the first read leads with liquidity/data-quality. Changing it breaks 14 accepted tests — owner decision required.
 4. Auth abuse hardening not changed: rate limits key on raw `x-forwarded-for`; `login:<email>` bucket lets anyone lock a victim out for 15 min; passwords have no max length (bcrypt truncates at 72 bytes); session tokens stored plaintext; logout redirects even if the POST fails.
 5. `POST /api/owner/finance/actions/[id]/verify` (Cockpit, after OBQ) has no duplicate-submit guard and its audit is not in the same transaction.
 6. `assignedTo` on finance actions is not checked against workspace membership; no request-body size cap on write routes.
-7. Amending cannot return a figure to *unknown* (only replace it).
+7. ~~Amending cannot return a figure to unknown~~ — RESOLVED by owner decision 3.
 8. 10 test files (59 tests) fail identically on pristine `main` and on this branch (workflow-validation, runtime-proof rp1/rp2, p2a, phase-i10-*, phase-i runtime-discipline, demo-permission backfill, decision-carry-over, signup-schema-contract cleanup). They are unrelated to this change but mean the repository suite is **not** fully green. Full serial run on this branch (fresh DB): 1777 files passed / 11 failed, 38986 tests passed / 60 failed — the 11th is `phase-d/admin-operability-db`, which passes on a DB with ≤23 workspaces and fails at 219 (its list assertion is volume-dependent), i.e. an order artefact, not a regression.
 9. `npm run lint` fails repo-wide (2196 errors, ratchet baseline 2344): the repository's gate is the ratchet, which passes; all files touched here lint at 0 errors.

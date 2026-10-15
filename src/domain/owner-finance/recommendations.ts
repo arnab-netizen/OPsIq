@@ -470,7 +470,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_CONFIRM_BANK_BALANCE",
     category: "improve_data_quality",
     title: "Add your bank balance",
-    requiredOwnerAction: "Add your bank balance in Guided setup or on the Cashflow page. If you hold no money in the bank, enter 0 explicitly so OpsIQ can confirm your total cash.",
+    requiredOwnerAction: "If you know them, add your cash in hand and bank balance in Guided setup or on the Cashflow page. Enter 0 only if you really hold nothing there, and leave a figure blank if you don't know it — OpsIQ will say what it can't conclude rather than guess.",
     verificationMethod: "On your next diagnosis, confirm OpsIQ shows how many days your cash will last instead of asking for the bank balance.",
     expectedTimeframeDays: 7,
     effortScore: 10,

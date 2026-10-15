@@ -35,6 +35,7 @@ function completeHealthy(): FinancialSnapshotInput {
     currency: "INR",
     revenue: 100000,
     costOfGoodsOrServices: 5000,
+    deliveryFulfilmentCost: 0, // stated as 0 so total costs are KNOWN (blank = UNKNOWN costs a partial-costs confidence penalty)
     fixedCosts: 30000,
     salaryPayroll: 20000,
     loanEmiDebtPayments: 0,
@@ -64,12 +65,12 @@ function lowConfidenceNoRisk(): FinancialSnapshotInput {
     periodEnd: "2026-07-31",
     currency: "INR",
     revenue: 100000,
-    costOfGoodsOrServices: 0,   // IMPORTANT: present
+    fixedCosts: 0,               // IMPORTANT: present (confirmed zero) — keeps total costs KNOWN (blank would be a partial-costs penalty)
     variableCosts: 20000,        // satisfies "costs" critical; NOT in IMPORTANT_FIELDS
     loanEmiDebtPayments: 0,      // IMPORTANT: present (confirmed zero)
     cashOnHand: 200000,
     orderCount: 100,             // IMPORTANT: present
-    // fixedCosts, salaryPayroll, receivables, payables, ownerWithdrawals,
+    // costOfGoodsOrServices, salaryPayroll, receivables, payables, ownerWithdrawals,
     // customerCount, discountAmount, refundAmount — all absent (8 × 5 = 40 penalty → score 60)
   };
 }
@@ -228,6 +229,7 @@ describe("E — high confidence + material risk → riskScore and healthScore re
     currency: "INR",
     revenue: 50000,
     costOfGoodsOrServices: 20000,
+    deliveryFulfilmentCost: 0, // stated as 0: the loss is only a conclusion when costs are KNOWN (blank = UNKNOWN → no margin claim)
     fixedCosts: 50000,
     salaryPayroll: 25000,
     loanEmiDebtPayments: 15000,
@@ -589,6 +591,7 @@ describe("K — Trinity-shaped local engine verification", () => {
     industryTemplate: "laundry_local_service",
     revenue: 265076,
     costOfGoodsOrServices: 26683,
+    deliveryFulfilmentCost: 0, // confirmed none, so variable costs (COGS + delivery) are KNOWN
     rent: 25000,
     salaryPayroll: 101000,
     utilities: 19760,

@@ -20,9 +20,14 @@ import type { CashSemantics } from "@/domain/owner-finance/liquidity";
 import { isEvidenceQuality, provenanceOf, resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
-/** True when an amendment changes any numeric figure (notes, reason and quality alone are not numbers). */
+/** True when an amendment changes any numeric figure — setting one or returning one to UNKNOWN (notes, reason and quality alone are not numbers). */
 function amendChangesNumbers(input: FinancialSnapshotAmendInput): boolean {
-  return Object.entries(input).some(([k, v]) => k !== "amendmentReason" && k !== "notes" && k !== "evidenceQuality" && typeof v === "number");
+  return Object.entries(input).some(([k, v]) => k !== "amendmentReason" && k !== "notes" && k !== "evidenceQuality" && (typeof v === "number" || v === null));
+}
+
+/** Amend merge: omitted keeps the recorded value; a number sets it; null returns it to UNKNOWN. Never `??`, which cannot clear. */
+function mergeAmended<T>(incoming: T | null | undefined, recorded: T | null | undefined): T | null {
+  return incoming === undefined ? recorded ?? null : incoming;
 }
 
 /** Map the validated API input to the engine input shape (refund/rework/complaint merged). */
@@ -338,7 +343,7 @@ export async function amendFinancialSnapshot(
     if (!current) throw new NotFoundError("OwnerFinancialSnapshot", snapshotId);
 
     // Compute refundReworkCost: amendment input uses refundAmount as the merged value
-    const refundReworkCost = input.refundAmount !== undefined ? input.refundAmount ?? null : current.refundReworkCost;
+    const refundReworkCost = mergeAmended(input.refundAmount, current.refundReworkCost);
 
     // Build merged row for confidence recomputation
     const mergedRow = {
@@ -348,28 +353,28 @@ export async function amendFinancialSnapshot(
       evidenceQuality: resolveAmendedEvidenceQuality(current.evidenceQuality, input.evidenceQuality, amendChangesNumbers(input)),
       businessModelType: current.businessModelType,
       industryTemplate: current.industryTemplate,
-      revenue: input.revenue ?? current.revenue,
-      costOfGoods: input.costOfGoodsOrServices ?? current.costOfGoods,
-      fixedCosts: input.fixedCosts ?? current.fixedCosts,
-      variableCosts: input.variableCosts ?? current.variableCosts,
-      rent: input.rent ?? current.rent,
-      payroll: input.salaryPayroll ?? current.payroll,
-      utilities: input.utilities ?? current.utilities,
-      deliveryCost: input.deliveryFulfilmentCost ?? current.deliveryCost,
-      marketingSpend: input.marketingSpend ?? current.marketingSpend,
-      discountAmount: input.discountAmount ?? current.discountAmount,
+      revenue: mergeAmended(input.revenue, current.revenue),
+      costOfGoods: mergeAmended(input.costOfGoodsOrServices, current.costOfGoods),
+      fixedCosts: mergeAmended(input.fixedCosts, current.fixedCosts),
+      variableCosts: mergeAmended(input.variableCosts, current.variableCosts),
+      rent: mergeAmended(input.rent, current.rent),
+      payroll: mergeAmended(input.salaryPayroll, current.payroll),
+      utilities: mergeAmended(input.utilities, current.utilities),
+      deliveryCost: mergeAmended(input.deliveryFulfilmentCost, current.deliveryCost),
+      marketingSpend: mergeAmended(input.marketingSpend, current.marketingSpend),
+      discountAmount: mergeAmended(input.discountAmount, current.discountAmount),
       refundReworkCost,
-      debtPayments: input.loanEmiDebtPayments ?? current.debtPayments,
-      totalDebtOutstanding: input.totalDebtOutstanding ?? current.totalDebtOutstanding,
-      cashOnHand: input.cashOnHand ?? current.cashOnHand,
-      receivables: input.receivables ?? current.receivables,
-      overdueReceivables: input.receivablesOverdue ?? current.overdueReceivables,
-      payables: input.payables ?? current.payables,
-      overduePayables: input.payablesOverdue ?? current.overduePayables,
-      ownerWithdrawals: input.ownerWithdrawals ?? current.ownerWithdrawals,
-      inventoryCashLock: input.inventoryStockCashLock ?? current.inventoryCashLock,
-      orderCount: input.orderCount ?? current.orderCount,
-      customerCount: input.customerCount ?? current.customerCount,
+      debtPayments: mergeAmended(input.loanEmiDebtPayments, current.debtPayments),
+      totalDebtOutstanding: mergeAmended(input.totalDebtOutstanding, current.totalDebtOutstanding),
+      cashOnHand: mergeAmended(input.cashOnHand, current.cashOnHand),
+      receivables: mergeAmended(input.receivables, current.receivables),
+      overdueReceivables: mergeAmended(input.receivablesOverdue, current.overdueReceivables),
+      payables: mergeAmended(input.payables, current.payables),
+      overduePayables: mergeAmended(input.payablesOverdue, current.overduePayables),
+      ownerWithdrawals: mergeAmended(input.ownerWithdrawals, current.ownerWithdrawals),
+      inventoryCashLock: mergeAmended(input.inventoryStockCashLock, current.inventoryCashLock),
+      orderCount: mergeAmended(input.orderCount, current.orderCount),
+      customerCount: mergeAmended(input.customerCount, current.customerCount),
       notes: input.notes ?? current.notes,
     };
     const engineInput = rowToFinanceInput(mergedRow);
@@ -391,8 +396,11 @@ export async function amendFinancialSnapshot(
       ["orderCount", input.orderCount], ["customerCount", input.customerCount],
       ["repeatCustomerCount", input.repeatCustomerCount], ["notes", input.notes],
     ];
+    // Fields returned to UNKNOWN (null) are recorded separately so the audit trail can tell "cleared" from "replaced".
+    const clearedFields: string[] = [];
     for (const [key, val] of fieldMap) {
       if (val !== undefined) changedFields.push(key);
+      if (val === null) clearedFields.push(key);
     }
     // Provenance can move WITHOUT being passed (changed numbers step ACTUAL down to GOOD_ESTIMATE). Any change is
     // recorded, with before/after, in the snapshot's own lineage (changedFields) and in the amendment audit event.
@@ -433,9 +441,9 @@ export async function amendFinancialSnapshot(
         inventoryCashLock: mergedRow.inventoryCashLock ?? null,
         orderCount: mergedRow.orderCount ?? null,
         customerCount: mergedRow.customerCount ?? null,
-        repeatCustomerCount: input.repeatCustomerCount ?? current.repeatCustomerCount ?? null,
-        b2bRevenue: input.b2bRevenue ?? current.b2bRevenue ?? null,
-        b2cRevenue: input.b2cRevenue ?? current.b2cRevenue ?? null,
+        repeatCustomerCount: mergeAmended(input.repeatCustomerCount, current.repeatCustomerCount),
+        b2bRevenue: mergeAmended(input.b2bRevenue, current.b2bRevenue),
+        b2cRevenue: mergeAmended(input.b2cRevenue, current.b2cRevenue),
         notes: mergedRow.notes ?? null,
         evidenceQuality: mergedRow.evidenceQuality,
         dataConfidenceScore: confidence.dataConfidenceScore,
@@ -468,6 +476,7 @@ export async function amendFinancialSnapshot(
           periodEnd: current.periodEnd.toISOString(),
           version: created.version,
           changedFields,
+          clearedFields,
           amendmentReason: input.amendmentReason,
           evidenceQualityBefore: qualityBefore,
           evidenceQualityAfter: qualityAfter,

@@ -85,6 +85,12 @@ export const financialSnapshotCreateSchema = z
   );
 export type FinancialSnapshotCreateInput = z.infer<typeof financialSnapshotCreateSchema>;
 
+/**
+ * An amended figure: a non-negative number SETS it; `null` returns it to UNKNOWN (the owner no longer vouches for the
+ * number); omitted leaves it as recorded. Unknown and zero are different states — 0 is only ever an explicit 0.
+ */
+const amendAmount = nonNeg.nullable();
+
 const AMENDABLE_FINANCIAL_FIELDS = [
   "revenue", "b2cRevenue", "b2bRevenue", "costOfGoodsOrServices", "fixedCosts",
   "variableCosts", "rent", "salaryPayroll", "utilities", "deliveryFulfilmentCost",
@@ -97,36 +103,36 @@ const AMENDABLE_FINANCIAL_FIELDS = [
 export const financialSnapshotAmendSchema = z
   .object({
     amendmentReason: z.string().min(1, "Amendment reason is required").max(2000),
-    revenue: nonNeg,
-    b2cRevenue: nonNeg,
-    b2bRevenue: nonNeg,
-    costOfGoodsOrServices: nonNeg,
-    fixedCosts: nonNeg,
-    variableCosts: nonNeg,
-    rent: nonNeg,
-    salaryPayroll: nonNeg,
-    utilities: nonNeg,
-    deliveryFulfilmentCost: nonNeg,
-    marketingSpend: nonNeg,
-    discountAmount: nonNeg,
-    refundAmount: nonNeg,
-    loanEmiDebtPayments: nonNeg,
-    totalDebtOutstanding: nonNeg,
-    cashOnHand: nonNeg,
-    receivables: nonNeg,
-    receivablesOverdue: nonNeg,
-    payables: nonNeg,
-    payablesOverdue: nonNeg,
-    ownerWithdrawals: nonNeg,
-    inventoryStockCashLock: nonNeg,
-    orderCount: nonNeg,
-    customerCount: nonNeg,
-    repeatCustomerCount: nonNeg,
+    revenue: amendAmount,
+    b2cRevenue: amendAmount,
+    b2bRevenue: amendAmount,
+    costOfGoodsOrServices: amendAmount,
+    fixedCosts: amendAmount,
+    variableCosts: amendAmount,
+    rent: amendAmount,
+    salaryPayroll: amendAmount,
+    utilities: amendAmount,
+    deliveryFulfilmentCost: amendAmount,
+    marketingSpend: amendAmount,
+    discountAmount: amendAmount,
+    refundAmount: amendAmount,
+    loanEmiDebtPayments: amendAmount,
+    totalDebtOutstanding: amendAmount,
+    cashOnHand: amendAmount,
+    receivables: amendAmount,
+    receivablesOverdue: amendAmount,
+    payables: amendAmount,
+    payablesOverdue: amendAmount,
+    ownerWithdrawals: amendAmount,
+    inventoryStockCashLock: amendAmount,
+    orderCount: amendAmount,
+    customerCount: amendAmount,
+    repeatCustomerCount: amendAmount,
     notes: z.string().max(2000).optional(),
     evidenceQuality: z.enum(EVIDENCE_QUALITIES).optional(),
   })
   .refine(
-    (s) => AMENDABLE_FINANCIAL_FIELDS.some((f) => s[f] !== undefined),
+    (s) => AMENDABLE_FINANCIAL_FIELDS.some((f) => s[f] !== undefined), // null (return to UNKNOWN) counts as provided
     { message: "At least one field must be provided for an amendment" }
   );
 export type FinancialSnapshotAmendInput = z.infer<typeof financialSnapshotAmendSchema>;

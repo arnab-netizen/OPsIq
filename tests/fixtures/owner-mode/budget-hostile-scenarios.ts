@@ -25,6 +25,7 @@ const base = (over: Partial<BudgetAssessmentInput["finance"]>): BudgetAssessment
   periodStart: "2026-05-01",
   periodEnd: "2026-05-31",
   currency: "INR",
+  deliveryFulfilmentCost: 0, // stated as 0 so variable costs (COGS + delivery) are KNOWN: unknown costs would leave margin unknown
   ...over,
 });
 
