@@ -15,6 +15,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { emitAuditEvent, getAuditEventReadOnlyClient } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import {
   buildOwnerView, emptyAutomaticFacts, evaluateExpansionGate, storedAssignmentSchema, storedEvidenceSchema,
@@ -192,7 +193,7 @@ async function findAssignment(betaRequestId: string): Promise<CohortAssignment |
     : null;
 }
 
-async function loadAutomaticFacts(request: { id: string; email: string; invitedAt: Date | null }): Promise<CohortAutomaticFacts> {
+async function loadAutomaticFacts(request: { id: string; email: string; invitedAt: Date | null }, now: Date): Promise<CohortAutomaticFacts> {
   const facts = emptyAutomaticFacts(request.invitedAt);
   const user = await db.user.findFirst({
     where: { email: { equals: request.email, mode: "insensitive" } },
@@ -232,20 +233,23 @@ async function loadAutomaticFacts(request: { id: string; email: string; invitedA
   facts.isFixtureBusiness = Boolean(business.isFixtureBusiness);
   const businessId = business.id as string;
 
-  const cycles = await db.ownerFinanceCycle.findMany({
-    where: { businessId, workspaceId }, orderBy: { sequenceNumber: "asc" }, select: { id: true, createdAt: true },
-  });
   const topAction = async (cycleId: string) =>
     db.ownerFinanceAction.findFirst({
       where: { cycleId }, orderBy: [{ priorityScore: "desc" }, { createdAt: "asc" }],
       select: { recommendationCode: true, findingCode: true, confidence: true },
     });
-  if (cycles.length > 0) {
-    const firstCycle = cycles[0];
-    const lastCycle = cycles[cycles.length - 1];
+  // The owner's FIRST diagnosis is a history read (oldest run) — it is "what OpsIQ first told them", never "the current".
+  const firstCycle = await db.ownerFinanceCycle.findFirst({
+    where: { businessId, workspaceId }, orderBy: { sequenceNumber: "asc" }, select: { id: true, createdAt: true },
+  });
+  // The CURRENT diagnosis is the repo's one shared definition: latest completed evidence period (never "the latest run").
+  const currentCycle = await db.ownerFinanceCycle.findFirst({
+    where: { businessId, workspaceId, ...currentEvidenceWhere(now) }, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { id: true },
+  });
+  if (firstCycle) {
     if (!facts.firstFindingAt) facts.firstFindingAt = firstCycle.createdAt;
     const a1 = await topAction(firstCycle.id);
-    const aN = lastCycle.id === firstCycle.id ? a1 : await topAction(lastCycle.id);
+    const aN = !currentCycle ? null : currentCycle.id === firstCycle.id ? a1 : await topAction(currentCycle.id);
     facts.firstFindingCode = a1?.findingCode ?? null;
     facts.firstRecommendationCode = a1?.recommendationCode ?? null;
     facts.firstRecommendationConfidence = a1?.confidence ?? null;
@@ -321,7 +325,7 @@ export async function getCohortView(cohortId: string, now: Date = new Date()): P
   const owners: CohortOwnerView[] = [];
   for (const a of assignments) {
     const req = requestById.get(a.betaRequestId);
-    const automatic = req ? await loadAutomaticFacts(req) : emptyAutomaticFacts(null);
+    const automatic = req ? await loadAutomaticFacts(req, now) : emptyAutomaticFacts(null);
     owners.push(buildOwnerView({ assignment: a, automatic, entries: byRequest.get(a.betaRequestId) ?? [], now }));
   }
 

@@ -41,6 +41,7 @@ interface RegistryEntry { file: string; classes: ReaderClass[]; reason: string; 
 
 export const EVIDENCE_PERIOD_READER_REGISTRY: readonly RegistryEntry[] = [
   { file: "src/app/api/owner/dashboard/route.ts", classes: ["CURRENT_EVIDENCE", "PROVISIONAL_AWARE"], reason: "dashboard health: current completed cycles + in-progress tightening", mentions: {"ownerFinanceCycle": 2, "ownerCashflowCycle": 2} },
+  { file: "src/services/beta-cohort/cohort-evidence.service.ts", classes: ["CURRENT_EVIDENCE", "HISTORY_LIST"], reason: "operator cohort view: the CURRENT finance diagnosis through the shared order + completed-period filter (only its recommendation CODE is read), and the owner's first diagnosis as a history read; no snapshot is read", mentions: {"ownerFinanceCycle": 2} },
   { file: "src/domain/owner-mode/control-correlation.ts", classes: ["EXEMPT"], reason: "names the table in an explanatory string; no read", mentions: {"ownerMetricSnapshot": 1} },
   { file: "src/services/founder-recovery/action.service.ts", classes: ["CURRENT_EVIDENCE"], reason: "re-diagnosis reads the latest COMPLETED snapshot", mentions: {"ownerMetricSnapshot": 1} },
   { file: "src/services/founder-recovery/cycle.service.ts", classes: ["CURRENT_EVIDENCE", "HISTORY_LIST"], reason: "write path; the trend baseline is the latest earlier COMPLETED period", mentions: {"recoveryCycle": 5} },

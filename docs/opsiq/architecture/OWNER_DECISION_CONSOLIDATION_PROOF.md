@@ -163,6 +163,7 @@ Every reader of financial evidence in `src` — the snapshot model (dot, bracket
 |---|---|
 | `src/app/api/owner/dashboard/route.ts` | DIAGNOSIS_BOUND |
 | `src/app/api/owner/finance/businesses/[businessId]/snapshots/route.ts` | HISTORICAL_LIST |
+| `src/services/beta-cohort/cohort-evidence.service.ts` | DIAGNOSIS_BOUND, HISTORICAL_LIST |
 | `src/services/owner-budget/budget.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-budget/signal-router.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-condition/business-condition.service.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
