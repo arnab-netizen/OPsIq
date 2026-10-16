@@ -32,6 +32,9 @@ type ReaderClass = "DIAGNOSIS_BOUND" | "CURRENT_EFFECTIVE" | "HISTORICAL_LIST" |
 const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]>> = {
   "src/app/api/owner/dashboard/route.ts": ["DIAGNOSIS_BOUND"],
   "src/app/api/owner/finance/businesses/[businessId]/snapshots/route.ts": ["HISTORICAL_LIST"],
+  // Controlled Beta Cohort operator view: reads only a business's first diagnosis (history) and its current diagnosis (shared order) to
+  // report finding/recommendation CODES; never reads a snapshot and never selects financial evidence.
+  "src/services/beta-cohort/cohort-evidence.service.ts": ["DIAGNOSIS_BOUND", "HISTORICAL_LIST"],
   "src/services/owner-budget/budget.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-budget/signal-router.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-condition/business-condition.service.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
