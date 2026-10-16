@@ -16,7 +16,7 @@ root-cause guesses were re-derived. Where the auditor's reading did not hold, th
 |----|---------|-------------|-------------------|-----------------------|--------------|------------|
 | D1 stale Home action | P1 | Yes (code + DB test) | The returning-owner "Your next move" card only appended a caveat when the diagnosed snapshot was amended; it never asked whether the new read still supports the action. The canonical Home decision already treats a superseded snapshot as stale — only this card lacked it. | P1 | `owner-first-run/next-move` (service + card) | NO (see below) |
 | D2 UNKNOWN scored as healthy | P1 | Yes (unit test: revenue UNKNOWN → raw risk 0 / opportunity 0 / health capped 75) | Scores are rule arithmetic over evidence present; with evidence UNKNOWN they still return numbers and every page printed them as scores. Cash UNKNOWN with everything else complete gave confidence 90 and would have counted as complete. | P1 | Presentation of finance (and sales/marketing/execution/cashflow/Home) scores; the numeric scores themselves are unchanged | NO (see below) |
-| D9 partial leakage | P2 | Yes | `costLeakageRatioPct` sums only the ENTERED leakage components (a known subset — `sumPresent` is documented as "never a total") but was worded "…together are 5% of your sales" at 85/100 confidence. The metric name is a group total, so UNKNOWN components were silently treated as zero. | **Raised to P1** (violates the already-owned invariant "UNKNOWN is never zero"; is a release-gate line) | `domain/owner-finance` (metrics/opportunity rules/actions) | **YES — flag for owner** (see below) |
+| D9 partial leakage | P2 | Yes | `costLeakageRatioPct` sums only the ENTERED leakage components (a known subset — `sumPresent` is documented as "never a total") but was worded "…together are 5% of your sales" at 85/100 confidence. The metric name is a group total, so UNKNOWN components were silently treated as zero. | **Raised to P1** (violates the already-owned invariant "UNKNOWN is never zero"; is a release-gate line) | `domain/owner-finance` (metrics/opportunity rules/actions) | NO — owner-ratified (see below) |
 | D3 invalid currency | P1 | Yes | `businessCreateSchema` accepted any 1–8 char string; 7 more snapshot schemas and 2 intake materialisation paths did the same; only first-run applied a (loose) regex. The dropdown was UI-only. | P1 | Generic write boundary (not OBQ) | NO |
 | D4a profit/margin not shown | P1 | Yes | The engine derives profit/margin and the product tells the owner it "cannot calculate total profit or margin yet", but no owner surface ever displayed the result. No doc forbids showing it; the owner-facing promise implied it. | P1 (promise unfulfilled) | first read + Money page | NO |
 | D4b Goals "0 period(s) with data" | P1 | Yes (5/6 new DB tests fail on `main`) | **Not the same defect as D4a.** Goals read only `owner_metric_snapshots` (founder-recovery results, written solely by the recovery route, with a stored `netProfit`). Finance snapshots live in `owner_financial_snapshots` and have no profit column. Nothing linked the two. | P1 | `owner-strategy/goal.service` | NO |
@@ -71,11 +71,17 @@ workspace. OBQ is therefore **not reopened** by this work.
 - D1 and D2 violate semantic invariants OBQ owns (stale evidence must not support a current conclusion; UNKNOWN must not read as safe).
   The owning layers are respectively the returning-owner next-move module and the *presentation* of scores; the canonical decision and
   the numeric scoring/OBQ stale-read contract were not modified.
-- **D9 is the one place frozen-domain code was changed**: the finance leakage metric violated the owned "UNKNOWN is never zero"
-  invariant and could not be fixed from a presentation layer. The change is additive (coverage flag, finding wording/confidence,
-  rationale text); no threshold, weight or persisted value changed. **Owner decision needed:** ratify this as within the freeze
-  exception for a violated owned invariant, or direct that it be reverted/re-scoped. Likewise confirm whether
-  `owner-first-run/next-move.*` is inside the OBQ freeze boundary.
+- **D9 — owner-ratified:** `D9_SEVERITY=P1`, `D9_FIX=KEEP`, `OBQ_REOPEN=NO`. The change enforces the already-frozen invariant
+  `UNKNOWN != 0`: the shared finance leakage metric could present a partial known sum as a complete group total. Correcting it to
+  an explicit lower bound with missing-component disclosure and reduced confidence is contract-conformance, not OBQ feature
+  expansion. The change is additive (coverage flag, finding wording/confidence, rationale text; no threshold, weight or persisted
+  value changed) and is not to be broadened. Acceptance (all proven by tests in `owner-finance/leakage-partial.test.ts`): complete
+  components keep the true aggregate, plain wording and normal confidence; partial components are a lower bound with the missing
+  components named and confidence reduced; all UNKNOWN yields no aggregate and no finding; an explicit 0 stays a known zero.
+  Differential proof that complete-data diagnoses do not change: five complete-data scenarios (healthy, leaky, loss, all-zeros,
+  receivables-heavy) produce byte-identical metrics, findings, actions and scores on pristine `main` and on the branch.
+- Whether `owner-first-run/next-move.*` is inside the OBQ freeze boundary remains for the owner to confirm; it was changed as a
+  defect fix to a presentation/service module and `OBQ_REOPEN=NO` stands for D1.
 
 ## Existing QA residue — `QA Second Co (abc1)`
 

@@ -59,3 +59,53 @@ describe("cost leakage with UNKNOWN components", () => {
     expect(diagnoseFinanceSnapshot(base, { now: NOW }).metrics.costLeakageRatioPct).toBeNull();
   });
 });
+
+/** The D9 acceptance contract, one assertion group per clause. */
+describe("D9 acceptance contract (UNKNOWN != 0)", () => {
+  const find = (extra: Record<string, unknown>) => diagnoseFinanceSnapshot({ ...base, ...extra } as FinancialSnapshotInput, { now: NOW });
+
+  it("1. complete components: true aggregate, no 'at least', normal complete-evidence confidence and wording", () => {
+    const d = find({ discountAmount: 4000, refundAmount: 1000, reworkCost: 500, complaintCost: 500 });
+    expect(d.metrics.costLeakageRatioPct).toBe(7.5); // (4000+1000+500+500)/80000
+    expect(d.metrics.costLeakageComplete).toBe(true);
+    const f = leak(d)!;
+    expect(f.title).toBe("Recover margin by cutting cost leakage");
+    expect(f.summary).toBe("Discounts/refunds/rework are recoverable margin; tightening them lifts profit directly.");
+    expect(f.evidence).toEqual(["costLeakageRatioPct = 7.5%"]);
+    expect(f.confidence).toBeCloseTo(d.metrics.dataConfidenceScore / 100, 5); // not scaled by coverage
+    expect(JSON.stringify(f)).not.toMatch(/at least|lower bound/i);
+  });
+
+  it("2. partial components: lower bound, missing components named, confidence strictly reduced", () => {
+    const d = find({ discountAmount: 4000, refundAmount: 1000 });
+    expect(d.metrics.costLeakageRatioPct).toBe(6.3); // known subset only
+    expect(d.metrics.costLeakageComplete).toBe(false);
+    const f = leak(d)!;
+    expect(f.valueIsLowerBound).toBe(true);
+    expect(f.summary).toMatch(/At least 6\.3%/);
+    expect(f.summary).toMatch(/redone work, complaint costs not entered/);
+    expect(f.missingData).toEqual(["redone work", "complaint costs"]);
+    expect(f.confidence).toBeLessThan(d.metrics.dataConfidenceScore / 100);
+    expect(f.confidence).toBeCloseTo((d.metrics.dataConfidenceScore / 100) * (0.5 + 0.5 * (2 / 4)), 5);
+  });
+
+  it("3. all UNKNOWN: no numeric aggregate, no leakage finding, no lower-bound claim", () => {
+    const d = find({});
+    expect(d.metrics.costLeakageRatioPct).toBeNull();
+    expect(d.metrics.refundReworkLeakagePct).toBeNull();
+    expect(leak(d)).toBeUndefined();
+    expect(d.findings.some((f) => f.valueIsLowerBound)).toBe(false);
+  });
+
+  it("4. explicit 0 stays a known zero: complete at 0%, not UNKNOWN, no leakage opportunity, never 'lower bound'", () => {
+    const d = find({ discountAmount: 0, refundAmount: 0, reworkCost: 0, complaintCost: 0 });
+    expect(d.metrics.costLeakageRatioPct).toBe(0);
+    expect(d.metrics.costLeakageComplete).toBe(true);
+    expect(leak(d)).toBeUndefined(); // 0% is below the 2% opportunity floor — a known zero, not an unknown
+    // a known zero beside UNKNOWN parts is still only a (zero) lower bound of the entered components
+    const partialZero = find({ discountAmount: 0 });
+    expect(partialZero.metrics.costLeakageRatioPct).toBe(0);
+    expect(partialZero.metrics.costLeakageComplete).toBe(false);
+    expect(leakageCoverage({ ...base, discountAmount: 0 } as FinancialSnapshotInput).known).toEqual(["discounts"]);
+  });
+});
