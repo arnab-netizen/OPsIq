@@ -1,5 +1,6 @@
 "use client";
 
+import { assessScoreAvailability, presentScores, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
 import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
@@ -843,6 +844,23 @@ function FinanceCycleView({
   onCompleteAction: (a: any, values: CompletionValues) => void;
   onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
+  // Whether the three scores may be shown as scores is decided by the server (UNKNOWN is never healthy / zero-risk);
+  // an older payload without it falls back to the same spine rule from the confidence + critical gaps it does carry.
+  const scoreAvailability: ScoreAvailability = score?.scoreAvailability ?? assessScoreAvailability({
+    dataConfidenceScore: score?.dataConfidenceScore ?? cycle?.dataConfidenceScore ?? 0,
+    missingCritical: missing,
+  });
+  const scorePresentation = {
+    availability: scoreAvailability,
+    ...presentScores(
+      {
+        health: Number(score?.healthScore ?? cycle?.overallHealthScore ?? 0),
+        risk: Number(score?.riskScore ?? cycle?.survivalRiskScore ?? 0),
+        opportunity: Number(score?.opportunityScore ?? cycle?.growthOpportunityScore ?? 0),
+      },
+      scoreAvailability,
+    ),
+  };
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -920,20 +938,19 @@ function FinanceCycleView({
             {SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? (score?.survivalState ?? cycle.survivalState)}
           </Badge>
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
-          {[
-            ["Health score", score?.healthScore ?? cycle.overallHealthScore],
-            ["Risk score (lower is better)", score?.riskScore ?? cycle.survivalRiskScore],
-            ["Opportunity score", score?.opportunityScore ?? cycle.growthOpportunityScore],
-          ].map(([label, value]) => (
-            <div key={label as string}>
-              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
-                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
+        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3" data-testid="finance-scores" data-score-availability={scorePresentation.availability}>
+          {scorePresentation.scores.map((s) => (
+            <div key={s.kind}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground" data-testid={`finance-score-${s.kind}`}>
+                {s.value}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
             </div>
           ))}
         </div>
+        {scorePresentation.note && (
+          <p className="mt-2 text-sm text-foreground" data-testid="finance-score-availability-note">{scorePresentation.note}</p>
+        )}
         <p className="mt-3 text-sm text-muted-foreground" data-testid="finance-score-explainer">
           The status badge reflects the most serious single warning sign (such as thin margin or low cash). The scores blend many
           signals, so a low risk score does not mean the status is safe. Act on the findings below, not on one number.

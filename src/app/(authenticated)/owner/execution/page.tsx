@@ -1,5 +1,6 @@
 "use client";
 
+import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
 import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
@@ -555,6 +556,15 @@ function SopCycleView({
   onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
   const state = score?.executionState ?? cycle.executionState;
+  // UNKNOWN is never healthy / zero-risk: the one spine rule decides whether these are shown as scores.
+  const presentedScores = presentScores(
+    {
+      health: Number(score?.healthScore ?? cycle.healthScore ?? 0),
+      risk: Number(score?.riskScore ?? cycle.riskScore ?? 0),
+      opportunity: Number(score?.opportunityScore ?? cycle.opportunityScore ?? 0),
+    },
+    assessScoreAvailability({ dataConfidenceScore: score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0, missingCritical: missing }),
+  );
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -566,8 +576,11 @@ function SopCycleView({
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
           <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
+            {presentedScores.scores.map((s) => `${s.label} ${s.value}`).join(" · ")}
           </div>
+          {presentedScores.note && (
+            <p className="mt-1 text-sm font-normal text-foreground" data-testid="score-availability-note">{presentedScores.note}</p>
+          )}
         </div>
         <div className="text-right">
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>

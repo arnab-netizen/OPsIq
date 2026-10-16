@@ -13,6 +13,7 @@ import {
   clampScore,
   clampConfidence,
 } from "@/domain/owner-spine/contracts";
+import { findingValueIsLowerBound } from "./cost-model";
 import type { FinanceDiagnosisResult } from "./diagnosis";
 import { buildFinanceRecommendations, FINANCE_REC_TEMPLATES, type FinanceRecommendation } from "./recommendations";
 import { modifierAllowedForSeverity, type FinanceEffectivenessMap } from "./outcome-signals";
@@ -23,6 +24,8 @@ export interface FinanceRationaleInput {
   sourceMetric: string;
   sourceValue: number | null | undefined;
   threshold: number | null | undefined;
+  /** sourceValue is a lower bound over the components entered so far. */
+  valueIsLowerBound?: boolean;
 }
 
 /** Deterministic, locale-independent formatting of an existing finite number (no arithmetic). */
@@ -38,7 +41,7 @@ interface RationaleDefinition {
   /** The metric this finding's rule actually emits; any other metric yields no rationale. */
   metric: string;
   /** Plain-language rationale from the already-formatted value / threshold, or null. */
-  text: (value: string | null, threshold: string | null) => string | null;
+  text: (value: string | null, threshold: string | null, lowerBound?: boolean) => string | null;
 }
 
 /** "<lead> <flag>" where the flag sentence is only added when the finding's own threshold is usable. */
@@ -139,7 +142,12 @@ const RATIONALE_DEFINITIONS: Record<string, RationaleDefinition> = {
   // The stored threshold (15%) is the high-risk reference; the opportunity fires from a separate 2% floor: never shown.
   FIN_OPP_LEAKAGE_REDUCTION: {
     metric: "costLeakageRatioPct",
-    text: (v) => (v === null ? null : `Discounts, refunds, redone work and complaint-related costs together are ${v}% of your sales.`),
+    text: (v, _t, lowerBound) =>
+      v === null
+        ? null
+        : lowerBound
+          ? `The leakage you have entered so far (discounts, refunds, redone work or complaint-related costs) is at least ${v}% of your sales. Some of these are not entered yet, so the real figure may be higher.`
+          : `Discounts, refunds, redone work and complaint-related costs together are ${v}% of your sales.`,
   },
   FIN_OPP_REVENUE_QUALITY: {
     metric: "revenueQualityScore",
@@ -180,7 +188,7 @@ const RATIONALE_DEFINITIONS: Record<string, RationaleDefinition> = {
 export function buildFinanceEvidenceRationale(input: FinanceRationaleInput): string | null {
   const def = RATIONALE_DEFINITIONS[input.findingCode];
   if (!def || input.sourceMetric !== def.metric) return null;
-  return def.text(formatRationaleNumber(input.sourceValue), formatRationaleNumber(input.threshold));
+  return def.text(formatRationaleNumber(input.sourceValue), formatRationaleNumber(input.threshold), input.valueIsLowerBound === true);
 }
 
 /**
@@ -191,13 +199,13 @@ export function buildFinanceEvidenceRationale(input: FinanceRationaleInput): str
  */
 export function attachCurrentFinanceEvidenceRationale<T extends { findingCode?: unknown }>(
   actions: readonly T[],
-  currentFindings: ReadonlyArray<{ code: string; sourceMetric: string; sourceValue: number | null; threshold: number | null }>
+  currentFindings: ReadonlyArray<{ code: string; sourceMetric: string; sourceValue: number | null; threshold: number | null; missingData?: unknown; valueIsLowerBound?: boolean }>
 ): Array<T & { evidenceRationale?: string }> {
   const byCode = new Map(currentFindings.map((f) => [f.code, f]));
   return actions.map((a) => {
     const f = typeof a.findingCode === "string" ? byCode.get(a.findingCode) : undefined;
     const rationale = f
-      ? buildFinanceEvidenceRationale({ findingCode: f.code, sourceMetric: f.sourceMetric, sourceValue: f.sourceValue, threshold: f.threshold })
+      ? buildFinanceEvidenceRationale({ findingCode: f.code, sourceMetric: f.sourceMetric, sourceValue: f.sourceValue, threshold: f.threshold, valueIsLowerBound: findingValueIsLowerBound(f) })
       : null;
     return rationale ? { ...a, evidenceRationale: rationale } : { ...a };
   });
@@ -237,6 +245,7 @@ export function recommendationToOwnerAction(
     sourceMetric: rec.sourceMetric,
     sourceValue: rec.sourceValue,
     threshold: rec.threshold,
+    valueIsLowerBound: rec.valueIsLowerBound,
   });
 
   return {

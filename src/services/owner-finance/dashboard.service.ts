@@ -8,6 +8,8 @@
  * action, and missing-critical-data. Returns an explicit empty state. Reads
  * persisted data only — no mock, nothing invented.
  */
+import { assessScoreAvailability, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
+import { financeScoreAvailability } from "@/domain/owner-finance/score-availability";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { attachCurrentFinanceEvidenceRationale } from "@/domain/owner-finance/actions";
@@ -18,6 +20,7 @@ import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuer
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 import { cashPositionChangedSince } from "@/services/owner-finance/liquidity.service";
+import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -51,6 +54,8 @@ export interface FinanceDashboardPayload {
     opportunityScore: number;
     dataConfidenceScore: number;
     survivalState: string;
+    /** Whether the three scores may be shown as scores (UNKNOWN is never healthy/zero-risk): see owner-spine/score-availability.ts. */
+    scoreAvailability: ScoreAvailability;
   } | null;
   recommendedNextAction: any | null;
   missingCriticalData: string[];
@@ -197,6 +202,9 @@ export async function getFinanceDashboard(
         opportunityScore: latestCycle.growthOpportunityScore,
         dataConfidenceScore: latestCycle.dataConfidenceScore,
         survivalState: latestCycle.survivalState,
+        scoreAvailability: latestCycle.snapshot
+          ? financeScoreAvailability(rowToFinanceInput(latestCycle.snapshot), latestCycle.dataConfidenceScore)
+          : assessScoreAvailability({ dataConfidenceScore: latestCycle.dataConfidenceScore, missingCritical: [] }),
       }
     : null;
 

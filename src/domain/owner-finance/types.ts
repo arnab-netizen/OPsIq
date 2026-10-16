@@ -106,7 +106,13 @@ export interface FinancialDerivedMetrics {
   debtServicePressurePct: number | null;
   receivablesPressurePct: number | null;
   payablesPressurePct: number | null;
+  /**
+   * Discounts + refunds + redone work + complaint costs as a % of sales, over the components the owner ENTERED.
+   * When `costLeakageComplete` is false it is a LOWER BOUND ("at least"), never the total: an UNKNOWN component is not zero.
+   */
   costLeakageRatioPct: number | null;
+  /** All four leakage components are known (an explicit 0 counts). Absent on older stored metrics = unknown completeness. */
+  costLeakageComplete?: boolean;
   discountLeakagePct: number | null;
   refundReworkLeakagePct: number | null;
   revenueQualityScore: number | null;
