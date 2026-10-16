@@ -1,5 +1,6 @@
 import { getImageProps } from "next/image";
 import Link from "next/link";
+import { PublicLink } from "@/components/navigation/PublicLink";
 import { Badge } from "@/ui/primitives";
 import { PublicBetaCta, PublicBetaText } from "@/components/landing/PublicBetaCta";
 import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
@@ -159,9 +160,9 @@ export default function LandingPage({ admissionMode = null }: { admissionMode?: 
           </p>
           <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
             <PublicBetaCta triggerClassName={`${primaryCta} w-full sm:w-auto`} initialMode={admissionMode} />
-            <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
+            <PublicLink href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
               Sign in
-            </Link>
+            </PublicLink>
           </div>
         </div>
 
@@ -356,9 +357,9 @@ export default function LandingPage({ admissionMode = null }: { admissionMode?: 
         </h2>
         <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center">
           <PublicBetaCta triggerClassName={`${primaryCta} w-full sm:w-auto`} initialMode={admissionMode} />
-          <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
+          <PublicLink href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
             Sign in
-          </Link>
+          </PublicLink>
         </div>
       </section>
 

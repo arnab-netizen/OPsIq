@@ -6,7 +6,7 @@
  * Display only — the server decides every real signup. `initialMode` lets a server-rendered page (the
  * homepage) render the right button on first paint; statically generated pages resolve it after mount.
  */
-import Link from "next/link";
+import { PublicLink } from "@/components/navigation/PublicLink";
 import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
 import { usePublicAdmissionMode } from "@/lib/public-admission-client";
 import { presentationForAdmissionMode } from "@/domain/beta/public-presentation";
@@ -17,14 +17,14 @@ export function PublicBetaCta({ triggerClassName, initialMode = null }: { trigge
   const presentation = presentationForAdmissionMode(mode);
   if (presentation.openRegistration) {
     return (
-      <Link
+      <PublicLink
         href="/signup"
         className={triggerClassName}
         data-testid="start-free-cta"
         onClick={() => reportAnonymousProductEvent("public_start_free_clicked")}
       >
         {presentation.primaryCtaLabel}
-      </Link>
+      </PublicLink>
     );
   }
   return <BetaAccessCta triggerClassName={triggerClassName} />;
