@@ -13,6 +13,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
+import { findFinanceContradictions } from "@/domain/owner-finance/validation";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
@@ -377,6 +378,17 @@ export async function amendFinancialSnapshot(
       customerCount: mergeAmended(input.customerCount, current.customerCount),
       notes: input.notes ?? current.notes,
     };
+    // A correction must not introduce a contradiction the original entry would have been refused for (merged values).
+    const contradictions = findFinanceContradictions({
+      revenue: mergedRow.revenue, b2cRevenue: mergeAmended(input.b2cRevenue, current.b2cRevenue), b2bRevenue: mergeAmended(input.b2bRevenue, current.b2bRevenue),
+      costOfGoodsOrServices: mergedRow.costOfGoods, deliveryFulfilmentCost: mergedRow.deliveryCost, variableCosts: mergedRow.variableCosts,
+      rent: mergedRow.rent, salaryPayroll: mergedRow.payroll, utilities: mergedRow.utilities, fixedCosts: mergedRow.fixedCosts,
+      receivables: mergedRow.receivables, receivablesOverdue: mergedRow.overdueReceivables, payables: mergedRow.payables, payablesOverdue: mergedRow.overduePayables,
+      customerCount: mergedRow.customerCount, repeatCustomerCount: mergeAmended(input.repeatCustomerCount, current.repeatCustomerCount),
+    });
+    if (contradictions.length > 0) {
+      throw new ValidationError("Some of these figures contradict each other", { fieldErrors: contradictions.map((c) => ({ path: c.path, message: c.message })) });
+    }
     const engineInput = rowToFinanceInput(mergedRow);
     const confidence = calculateDataConfidence(engineInput);
 

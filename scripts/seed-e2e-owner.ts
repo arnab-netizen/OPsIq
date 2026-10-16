@@ -37,7 +37,7 @@ const OWNER_ROLE = "admin_or_portfolio_manager"; // ROLES.ADMIN_OR_PORTFOLIO_MAN
 const LEAKY_SNAPSHOT = {
   periodStart: "2026-04-01",
   periodEnd: "2026-04-30",
-  currency: "INR",
+  currency: "INR" as const,
   revenue: 100000,
   fixedCosts: 40000,
   variableCosts: 40000,

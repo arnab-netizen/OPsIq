@@ -8,6 +8,7 @@
  * whole-business plan (which reads `ownerWorkloadSnapshot` by workspaceId+businessId). The service enforces workspace
  * ownership of the business; this route enforces auth + capability + workspace. No seed script, no fabricated data.
  */
+import { endNotBeforeStart } from "@/validation/date-range";
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
@@ -28,7 +29,8 @@ const workloadSnapshotSchema = z.object({
   automatable: z.boolean().optional(),
   periodStart: z.string().datetime().optional(),
   periodEnd: z.string().datetime().optional(),
-});
+})
+  .superRefine(endNotBeforeStart("periodStart", "periodEnd", "The period end must be on or after the period start"));
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
