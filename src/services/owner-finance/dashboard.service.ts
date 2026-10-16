@@ -9,6 +9,7 @@
  * persisted data only — no mock, nothing invented.
  */
 import { assessScoreAvailability, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
+import { profitPosition, type ProfitPosition } from "@/domain/owner-finance/profit-position";
 import { financeScoreAvailability } from "@/domain/owner-finance/score-availability";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
@@ -58,6 +59,8 @@ export interface FinanceDashboardPayload {
     scoreAvailability: ScoreAvailability;
   } | null;
   recommendedNextAction: any | null;
+  /** Net profit and margin on the diagnosed snapshot (KNOWN) or UNKNOWN with the reason; null before any diagnosis. */
+  profitPosition: ProfitPosition | null;
   missingCriticalData: string[];
   cycleHistory: Array<{
     id: string;
@@ -96,7 +99,7 @@ export async function getFinanceDashboard(
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
       inProgressSnapshot: null, latestSnapshotPeriodState: null, diagnosisTargetSnapshot: null,
       diagnosisTargetReason: null, latestSnapshotDiagnosis: null,
-      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
+      latestCycle: null, domainScore: null, recommendedNextAction: null, profitPosition: null, missingCriticalData: [],
       cycleHistory: [],
     };
   }
@@ -281,6 +284,9 @@ export async function getFinanceDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
+    profitPosition: latestCycle?.snapshot
+      ? profitPosition(rowToFinanceInput(latestCycle.snapshot), (businesses.find((b: any) => b.id === selectedBusinessId) as any)?.currency ?? latestCycle.snapshot.currency)
+      : null,
     // From the diagnosis TARGET snapshot — the same snapshot diagnosisTargetSnapshot/the diagnosis
     // button point at. Reading `latestCycle?.snapshot` instead would show a stale amended-and-
     // superseded snapshot's missing-data list (the old diagnosis's own snapshot) while the button is

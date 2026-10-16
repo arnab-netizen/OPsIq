@@ -1,5 +1,6 @@
 "use client";
 
+import type { ProfitPosition } from "@/domain/owner-finance/profit-position";
 import { assessScoreAvailability, presentScores, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
 import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
@@ -799,6 +800,7 @@ export default function OwnerFinancePage() {
             <FinanceCycleView
               cycle={cycle}
               score={score}
+              profit={dashboard.profitPosition ?? null}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
               businessId={dashboard.selectedBusinessId}
@@ -820,6 +822,7 @@ export default function OwnerFinancePage() {
 function FinanceCycleView({
   cycle,
   score,
+  profit,
   missing,
   recommended,
   businessId,
@@ -833,6 +836,7 @@ function FinanceCycleView({
 }: {
   cycle: any;
   score: any;
+  profit: ProfitPosition | null;
   missing: string[];
   recommended: any;
   businessId: string | null;
@@ -948,6 +952,16 @@ function FinanceCycleView({
             </div>
           ))}
         </div>
+        {profit && (
+          <div className="mt-3 text-sm text-foreground" data-testid="finance-profit-position" data-profit-status={profit.status}>
+            <span className="font-medium">Profit and margin: </span>
+            {profit.status === "KNOWN" ? (
+              <span>{profit.headline}{profit.marginText ? ` · ${profit.marginText}` : ""}</span>
+            ) : (
+              <span className="text-muted-foreground">{profit.reason}</span>
+            )}
+          </div>
+        )}
         {scorePresentation.note && (
           <p className="mt-2 text-sm text-foreground" data-testid="finance-score-availability-note">{scorePresentation.note}</p>
         )}

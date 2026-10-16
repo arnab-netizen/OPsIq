@@ -33,6 +33,7 @@ import type { ReadStaleReason } from "@/domain/owner-first-run/read-staleness";
 import { computeMissingInputsWithPriority } from "@/domain/owner-finance/data-confidence";
 import { isEvidenceQuality, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { QUICK_ENTRY_FIELDS } from "@/domain/owner-finance/quick-entry";
+import { profitPosition } from "@/domain/owner-finance/profit-position";
 import { unsupportedConclusions } from "@/domain/owner-finance/unsupported-conclusions";
 import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
 import { formatDomainActionCandidateId } from "@/domain/owner-spine/owner-decision-record";
@@ -341,6 +342,7 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     dataRequestCode: dataRequest ? String((dataRequest as { findingCode?: string }).findingCode ?? "") : null,
     criticalInputsMissing: jsonStringArray(snapshot.missingCriticalData).length > 0,
     unsupportedConclusions: unsupportedConclusions(rowToFinanceInput(snapshot)).map((c) => c.text),
+    profitPosition: profitPosition(rowToFinanceInput(snapshot), business.currency),
     evidenceQuality: quality,
     currency: business.currency,
     evidenceDomains: ["finance"],

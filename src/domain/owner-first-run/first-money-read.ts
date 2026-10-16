@@ -8,6 +8,7 @@
  * Pure.
  */
 import { confidenceTierFromScore, type ConfidenceTier } from "@/domain/owner-finance/data-confidence";
+import type { ProfitPosition } from "@/domain/owner-finance/profit-position";
 import { humanizeEvidenceLine, humanizeMetricKey, humanizeSnakeCase } from "@/lib/metric-label";
 import {
   EVIDENCE_QUALITY_EXPLANATION,
@@ -215,6 +216,8 @@ export interface FirstMoneyReadInput {
   criticalInputsMissing?: boolean;
   /** Conclusions OpsIQ withheld because evidence is UNKNOWN (cash, a cost half), as owner-facing sentences. */
   unsupportedConclusions?: readonly string[];
+  /** Net profit and margin derived from the figures on record (KNOWN) or UNKNOWN with the reason. Null = not supplied. */
+  profitPosition?: ProfitPosition | null;
   confidenceScore: number;
   evidenceQuality: EvidenceQuality | null;
   /** ISO currency of the business, used only to label money-valued metrics. */
@@ -283,6 +286,8 @@ export interface FirstMoneyRead {
   cautions: string[];
   /** What this read deliberately does NOT conclude because evidence is UNKNOWN (cash, a cost half). Empty when nothing is withheld. */
   cannotConclude: string[];
+  /** Profit and margin on the figures this read is about (KNOWN with the amounts, or UNKNOWN with why). */
+  profitPosition: ProfitPosition | null;
 }
 
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
@@ -329,6 +334,7 @@ export function buildFirstMoneyRead(input: FirstMoneyReadInput): FirstMoneyRead 
     isEstimated: isEstimate(quality),
     evidenceProvenance: provenanceOf(quality),
     cannotConclude: [...(input.unsupportedConclusions ?? [])],
+    profitPosition: input.profitPosition ?? null,
   };
   const criticalMissing = input.criticalInputsMissing === true;
   const blocked = tier === "BLOCKED" || criticalMissing;
@@ -425,6 +431,7 @@ export function firstMoneyReadStrings(read: FirstMoneyRead): string[] {
     read.acceptNote,
     ...read.cautions,
     ...read.cannotConclude,
+    read.profitPosition ? (read.profitPosition.status === "KNOWN" ? read.profitPosition.headline : read.profitPosition.reason) : null,
     read.sharpenBy?.title ?? null,
     read.sharpenBy?.detail ?? null,
   ].filter((s): s is string => typeof s === "string");
