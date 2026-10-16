@@ -6,6 +6,7 @@
  * basic impossibility checks. Used by the API layer; duplicate-period and
  * workspace-ownership are enforced in the service layer.
  */
+import { businessCurrencySchema } from "./currency";
 import { z } from "zod/v4";
 import { BUSINESS_TYPES } from "./types";
 
@@ -22,7 +23,7 @@ export const businessCreateSchema = z.object({
   name: z.string().min(1, "Business name is required").max(200).refine(NO_CONTROL_CHARACTERS.test, NO_CONTROL_CHARACTERS.message),
   businessType: z.enum(BUSINESS_TYPES),
   location: z.string().max(200).optional(),
-  currency: z.string().min(1, "Currency is required").max(8),
+  currency: businessCurrencySchema,
   operatingModel: z.string().max(200).optional(),
   b2cSupported: z.boolean().optional().default(true),
   b2bSupported: z.boolean().optional().default(false),
@@ -54,7 +55,7 @@ export const metricSnapshotSchema = z
   .object({
     periodStart: z.string().min(1, "Reporting period start is required"),
     periodEnd: z.string().min(1, "Reporting period end is required"),
-    currency: z.string().min(1, "Currency is required").max(8),
+    currency: businessCurrencySchema,
 
     revenue: nonNeg,
     totalCosts: nonNeg,

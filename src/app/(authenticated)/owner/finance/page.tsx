@@ -1,5 +1,6 @@
 "use client";
 
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
@@ -622,7 +623,7 @@ export default function OwnerFinancePage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>

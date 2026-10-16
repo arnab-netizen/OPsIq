@@ -4,6 +4,7 @@
  * diagnosis, records decisions through the canonical decision service, and amends evidence through the
  * canonical snapshot versioning.
  */
+import { normalizeBusinessCurrency } from "@/domain/founder-recovery/currency";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -213,13 +214,13 @@ export async function createFirstBusiness(
 ): Promise<{ business: FirstRunBusiness; replayed: boolean }> {
   const workspace = await db.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } });
   if (!workspace) throw new NotFoundError("Workspace", workspaceId);
-  if (!/^[A-Za-z]{3,8}$/.test(input.currency.trim())) {
-    throw new ValidationError("Please choose your currency.", { fieldErrors: [{ path: "currency", message: "Not a valid currency code" }] });
+  if (!normalizeBusinessCurrency(input.currency)) {
+    throw new ValidationError("Please choose your currency.", { fieldErrors: [{ path: "currency", message: "Not a supported currency code" }] });
   }
   const parsed = businessCreateSchema.safeParse({
     name: (input.name ?? workspace.name).trim(),
     businessType: input.businessType,
-    currency: input.currency.trim().toUpperCase(),
+    currency: input.currency,
   });
   if (!parsed.success) {
     throw new ValidationError("Please check your business details.", {
