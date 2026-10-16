@@ -25,7 +25,9 @@ import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { hasAnyRealBusiness, hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { computeGoalTrajectory } from "./goal-trajectory.service";
-import type { GoalTrajectoryResult, TrailingPeriod } from "./goal-trajectory.service";
+import { mergeTrailingPeriods, type GoalTrajectoryResult, type TrailingPeriod } from "./goal-trajectory.service";
+import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
+import { netProfit as financeNetProfit, num as financeNum } from "@/domain/owner-finance/metrics";
 
 export type GoalTargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
 /** Target types a NEW goal may use: the metrics OpsIQ actually records per business. */
@@ -515,9 +517,9 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
     : { workspaceId: goal.workspaceId, business: { isActive: true, isFixtureBusiness: false } };
   const currencyMatch = { equals: goal.targetCurrency, mode: "insensitive" as const };
 
-  const excludedSnapshotCount = (await db.ownerMetricSnapshot.count({
-    where: { ...scopeWhere, NOT: { currency: currencyMatch } },
-  })) as number;
+  const excludedSnapshotCount =
+    ((await db.ownerMetricSnapshot.count({ where: { ...scopeWhere, NOT: { currency: currencyMatch } } })) as number) +
+    ((await db.ownerFinancialSnapshot.count({ where: { ...scopeWhere, supersededById: null, ...completedSnapshotWhere(new Date()), NOT: { currency: currencyMatch } } })) as number);
   const excludedReason =
     excludedSnapshotCount > 0
       ? `${excludedSnapshotCount} recorded result${excludedSnapshotCount === 1 ? " is" : "s are"} in a different currency than this ${goal.targetCurrency} goal and ${excludedSnapshotCount === 1 ? "is" : "are"} not included (OpsIQ does not convert currencies).`
@@ -562,14 +564,26 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
     orderBy: { periodStart: "desc" },
     take: 12,
   })) as SnapshotRow[];
-  const snapshots = [...newestFirst].reverse();
-
-  const periods: TrailingPeriod[] = snapshots.map((s) => ({
+  // The Finance snapshots (Money) are the other store a period can live in: current (un-amended), completed, in the
+  // goal's currency. Net profit is DERIVED here by the one finance cost model (never read from a stored column, never
+  // a partial cost total): UNKNOWN costs leave netProfit null, which is not a usable period.
+  const financeRows = (await db.ownerFinancialSnapshot.findMany({
+    where: { ...scopeWhere, currency: currencyMatch, supersededById: null, ...completedSnapshotWhere(new Date()) },
+    orderBy: { periodEnd: "desc" },
+    take: 12,
+  })) as Array<Record<string, unknown>>;
+  const financePeriods: TrailingPeriod[] = financeRows.map((r) => {
+    const input = rowToFinanceInput(r);
+    return { periodStart: r.periodStart as Date, periodEnd: r.periodEnd as Date, revenue: financeNum(input.revenue), netProfit: financeNetProfit(input) };
+  });
+  const recoveryPeriods: TrailingPeriod[] = [...newestFirst].reverse().map((s) => ({
     periodStart: s.periodStart,
     periodEnd: s.periodEnd,
     revenue: s.revenue,
     netProfit: s.netProfit,
   }));
+  const periods = mergeTrailingPeriods(financePeriods, recoveryPeriods).slice(-12);
+  const snapshots = periods;
   const trajectory = computeGoalTrajectory({
     targetType: goal.targetType as GoalTargetType,
     targetAmount: goal.targetAmount,
