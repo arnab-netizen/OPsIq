@@ -5,6 +5,7 @@
  * action-status vocabulary and the Spine target directions. Missing data stays
  * missing (optional fields); negative monetary inputs are rejected (fail closed).
  */
+import { businessCurrencySchema } from "@/domain/founder-recovery/currency";
 import { z } from "zod/v4";
 import { FINANCIAL_BUSINESS_MODELS } from "./types";
 import { EVIDENCE_QUALITIES } from "./evidence-quality";
@@ -36,11 +37,57 @@ export function isValidPeriodDateString(value: string): boolean {
 const periodDate = (label: string) =>
   z.string().min(1, `${label} is required`).refine(isValidPeriodDateString, { message: `${label} must be a valid date (YYYY-MM-DD)` });
 
+type Amount = number | null | undefined;
+const isNum = (x: Amount): x is number => typeof x === "number" && Number.isFinite(x);
+
+export interface FinanceContradiction {
+  path: string;
+  message: string;
+}
+
+/**
+ * Relationships between figures that cannot all be true (a part larger than its whole), checked ONLY when both sides are
+ * known: an UNKNOWN side is never a contradiction and never zero. The reported `path` is the part that is too large, so the
+ * owner is told which field to look at. Only relationships the cost/segment model defines as part-of-whole are checked. Used by create (this payload), amend (payload fields) and the amended snapshot's
+ * merged values, so a correction cannot introduce a contradiction the original entry would have been refused for.
+ */
+export function findFinanceContradictions(v: Record<string, Amount>): FinanceContradiction[] {
+  const out: FinanceContradiction[] = [];
+  const atMost = (part: string, whole: string, partLabel: string, wholeLabel: string) => {
+    const a = v[part];
+    const b = v[whole];
+    if (isNum(a) && isNum(b) && a > b) out.push({ path: part, message: `${partLabel} (${a}) cannot be more than ${wholeLabel} (${b})` });
+  };
+  const sumAtMost = (parts: string[], whole: string, partsLabel: string, wholeLabel: string) => {
+    const vals = parts.map((p) => v[p]).filter(isNum);
+    const b = v[whole];
+    if (vals.length > 0 && isNum(b)) {
+      const sum = vals.reduce((s, x) => s + x, 0);
+      if (sum > b) out.push({ path: whole, message: `${wholeLabel} (${b}) is less than the ${partsLabel} you entered (${sum})` });
+    }
+  };
+  atMost("repeatCustomerCount", "customerCount", "Repeat customers", "total customers");
+  atMost("receivablesOverdue", "receivables", "Overdue receivables", "total receivables");
+  atMost("payablesOverdue", "payables", "Overdue payables", "total payables");
+  sumAtMost(["rent", "salaryPayroll", "utilities"], "fixedCosts", "rent, payroll and utilities", "Total fixed costs");
+  // Deliberately NOT checked: cost of goods vs variableCosts. The cost model treats an explicit variableCosts as the total used for
+  // profit and cost of goods as a separate gross-margin input, so one exceeding the other is not a part/whole contradiction.
+  const segments = [v.b2cRevenue, v.b2bRevenue].filter(isNum);
+  if (segments.length > 0 && isNum(v.revenue) && segments.reduce((s, x) => s + x, 0) > v.revenue) {
+    out.push({ path: "revenue", message: `Revenue (${v.revenue}) is less than the consumer and business revenue you entered (${segments.reduce((s, x) => s + x, 0)})` });
+  }
+  return out;
+}
+
+const contradictionRefinement = (s: Record<string, unknown>, ctx: z.RefinementCtx) => {
+  for (const c of findFinanceContradictions(s as Record<string, Amount>)) ctx.addIssue({ code: "custom", message: c.message, path: [c.path] });
+};
+
 export const financialSnapshotCreateSchema = z
   .object({
     periodStart: periodDate("Reporting period start"),
     periodEnd: periodDate("Reporting period end"),
-    currency: z.string().min(1, "Currency is required").max(8),
+    currency: businessCurrencySchema,
     businessModel: z.enum(FINANCIAL_BUSINESS_MODELS).optional(),
     industryTemplate: z.string().max(100).optional(),
     /** Provenance of the numbers: from records, a good estimate, or a rough guess. Omitted = unspecified. */
@@ -82,7 +129,8 @@ export const financialSnapshotCreateSchema = z
   .refine(
     (s) => !Number.isNaN(new Date(s.periodStart).getTime()) && !Number.isNaN(new Date(s.periodEnd).getTime()),
     { message: "Reporting period must be valid dates", path: ["periodStart"] }
-  );
+  )
+  .superRefine(contradictionRefinement);
 export type FinancialSnapshotCreateInput = z.infer<typeof financialSnapshotCreateSchema>;
 
 /**
@@ -134,7 +182,8 @@ export const financialSnapshotAmendSchema = z
   .refine(
     (s) => AMENDABLE_FINANCIAL_FIELDS.some((f) => s[f] !== undefined), // null (return to UNKNOWN) counts as provided
     { message: "At least one field must be provided for an amendment" }
-  );
+  )
+  .superRefine(contradictionRefinement); // fields in THIS payload; the service re-checks the merged snapshot
 export type FinancialSnapshotAmendInput = z.infer<typeof financialSnapshotAmendSchema>;
 
 export const runFinanceDiagnosisSchema = z.object({

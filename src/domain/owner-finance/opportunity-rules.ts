@@ -9,6 +9,7 @@ import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } fr
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
 import { LIQUIDITY_UNCONFIRMED_FINDING_CODE, liquidityUnconfirmedStatement } from "./liquidity";
+import { leakageCoverage, LEAKAGE_COMPONENTS } from "./cost-model";
 import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
@@ -25,6 +26,7 @@ interface OppArgs {
   evidence: string[];
   missingData?: string[];
   verificationMetric: string;
+  valueIsLowerBound?: boolean;
 }
 
 function opportunity(args: OppArgs): OwnerFinding {
@@ -44,6 +46,7 @@ function opportunity(args: OppArgs): OwnerFinding {
     evidence: args.evidence,
     missingData: args.missingData ?? [],
     verificationMetric: args.verificationMetric,
+    ...(args.valueIsLowerBound ? { valueIsLowerBound: true } : {}),
   };
 }
 
@@ -181,19 +184,28 @@ export function buildFinanceOpportunityFindings(
   // Leakage reduction opportunity: requires at least 2% leakage ratio.
   // Below 2% is within normal operational tolerance (rounding, small discounts).
   if (m.costLeakageRatioPct !== null && m.costLeakageRatioPct >= 2) {
+    // Partial coverage: the figure is only what was ENTERED (a lower bound). Say "at least", name what is missing, and
+    // let confidence follow coverage (a claim about the whole group cannot be as strong as one about all of it).
+    const cov = leakageCoverage(input);
+    const partial = !cov.complete;
+    const coverageFactor = 0.5 + 0.5 * (cov.known.length / LEAKAGE_COMPONENTS.length);
     findings.push(
       opportunity({
         code: "FIN_OPP_LEAKAGE_REDUCTION",
-        title: "Recover margin by cutting cost leakage",
-        summary: "Discounts/refunds/rework are recoverable margin; tightening them lifts profit directly.",
+        title: partial ? "Recover margin by cutting the leakage you already know about" : "Recover margin by cutting cost leakage",
+        summary: partial
+          ? `At least ${pct(m.costLeakageRatioPct)} of sales is leaking through ${cov.known.join(" and ")}. ${cov.unknown.join(", ")} not entered yet, so the real figure is at least this much.`
+          : "Discounts/refunds/rework are recoverable margin; tightening them lifts profit directly.",
+        valueIsLowerBound: partial,
+        missingData: partial ? cov.unknown : undefined,
         sourceMetric: "costLeakageRatioPct",
         sourceValue: m.costLeakageRatioPct,
         threshold: t.highCostLeakageRatioPct,
         severity: m.costLeakageRatioPct > t.highCostLeakageRatioPct ? "medium" : "low",
-        confidence: conf,
+        confidence: partial ? conf * coverageFactor : conf,
         impactScore: clampScore(m.costLeakageRatioPct * 3),
         urgencyScore: 40,
-        evidence: [`costLeakageRatioPct = ${pct(m.costLeakageRatioPct)}`],
+        evidence: [partial ? `costLeakageRatioPct >= ${pct(m.costLeakageRatioPct)} (lower bound: ${cov.unknown.join(", ")} not entered)` : `costLeakageRatioPct = ${pct(m.costLeakageRatioPct)}`],
         verificationMetric: "costLeakageRatioPct",
       })
     );

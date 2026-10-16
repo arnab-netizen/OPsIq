@@ -29,6 +29,39 @@ function sumAllKnown(...xs: (number | undefined | null)[]): number | null {
   return (vals as number[]).reduce((sum, v) => sum + v, 0);
 }
 
+/** The four leakage components and which of them the owner has actually entered (UNKNOWN is not zero). */
+export const LEAKAGE_COMPONENTS = [
+  { key: "discountAmount", label: "discounts" },
+  { key: "refundAmount", label: "refunds" },
+  { key: "reworkCost", label: "redone work" },
+  { key: "complaintCost", label: "complaint costs" },
+] as const;
+
+/** Metrics that are a TOTAL over a group of components: measured with any component UNKNOWN they are a known-subset lower bound. */
+export const GROUP_TOTAL_METRICS: ReadonlySet<string> = new Set(["costLeakageRatioPct"]);
+
+/**
+ * Whether a finding's value is a lower bound: the domain flagged it when it was raised, or (for a stored finding, which
+ * persists `missingData` but not the flag) it is a group-total metric with components still UNKNOWN.
+ */
+export function findingValueIsLowerBound(f: { sourceMetric: string; missingData?: unknown; valueIsLowerBound?: boolean }): boolean {
+  if (f.valueIsLowerBound === true) return true;
+  return GROUP_TOTAL_METRICS.has(f.sourceMetric) && Array.isArray(f.missingData) && f.missingData.length > 0;
+}
+
+export interface LeakageCoverage {
+  known: string[];
+  unknown: string[];
+  complete: boolean;
+}
+
+export function leakageCoverage(input: FinancialSnapshotInput): LeakageCoverage {
+  const known: string[] = [];
+  const unknown: string[] = [];
+  for (const c of LEAKAGE_COMPONENTS) (num(input[c.key]) === null ? unknown : known).push(c.label);
+  return { known, unknown, complete: unknown.length === 0 };
+}
+
 /** Fixed costs as a KNOWN TOTAL: the explicit aggregate, else rent + payroll + utilities only when all three are known. */
 export function fixedCostsTotal(input: FinancialSnapshotInput): number | null {
   const explicit = num(input.fixedCosts);

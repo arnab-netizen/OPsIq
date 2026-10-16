@@ -2,6 +2,7 @@
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
   "last_updated": "2026-08-08",
+  "hostile_audit_remediation": "IN_PROGRESS 2026-10-16 — verdict OWNER_BETA_BLOCKED_BY_P1; CB1_OWNER_001_READY=NO; CB1_EXPANSION_GATE=CLOSED. Branch claude/cool-goldberg-78h8yp from main d641afc3: D1/D2/D3/D4/D9 fixed + P2 set on branch, NOT merged, NOT deployed, production re-audit NOT run. Record: docs/opsiq/status/HOSTILE_AUDIT_REMEDIATION_2026-10-16.md. No gate line may be claimed before the post-deploy re-audit; merge needs exact-SHA owner authorization.",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",

@@ -1,5 +1,8 @@
 "use client";
 
+import { ownerConfidencePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
@@ -15,7 +18,7 @@ import {
 } from "@/components/owner/DomainActionInlineForms";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
@@ -433,7 +436,7 @@ export default function OwnerExecutionPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -554,6 +557,15 @@ function SopCycleView({
   onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
   const state = score?.executionState ?? cycle.executionState;
+  // UNKNOWN is never healthy / zero-risk: the one spine rule decides whether these are shown as scores.
+  const presentedScores = presentScores(
+    {
+      health: Number(score?.healthScore ?? cycle.healthScore ?? 0),
+      risk: Number(score?.riskScore ?? cycle.riskScore ?? 0),
+      opportunity: Number(score?.opportunityScore ?? cycle.opportunityScore ?? 0),
+    },
+    assessScoreAvailability({ dataConfidenceScore: score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0, missingCritical: missing }),
+  );
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -565,8 +577,11 @@ function SopCycleView({
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
           <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
+            {presentedScores.scores.map((s) => `${s.label} ${s.value}`).join(" · ")}
           </div>
+          {presentedScores.note && (
+            <p className="mt-1 text-sm font-normal text-foreground" data-testid="score-availability-note">{presentedScores.note}</p>
+          )}
         </div>
         <div className="text-right">
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
@@ -610,7 +625,7 @@ function SopCycleView({
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · evidence strength {Math.round((f.confidence ?? 0) * 100)}/100 (heuristic, not a probability)
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {ownerValueText(f.sourceValue)}{f.threshold !== null && f.threshold !== undefined ? <> (threshold {ownerValueText(f.threshold)})</> : null} · {ownerConfidencePhrase(Math.round((f.confidence ?? 0) * 100))} — a heuristic rating, not a probability
               </p>
               {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                 <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>

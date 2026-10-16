@@ -5,6 +5,7 @@
  * action-status vocabulary and the Spine target directions. Missing data stays
  * missing (optional fields); negative monetary inputs are rejected (fail closed).
  */
+import { businessCurrencySchema } from "@/domain/founder-recovery/currency";
 import { z } from "zod/v4";
 import { OVERDRAFT_BANK_BALANCE_SENTENCE } from "./overdraft-copy";
 import { CASHFLOW_BUSINESS_MODELS } from "./types";
@@ -30,7 +31,7 @@ export const cashflowSnapshotCreateSchema = z
   .object({
     periodStart: z.string().min(1, "Reporting period start is required"),
     periodEnd: z.string().min(1, "Reporting period end is required"),
-    currency: z.string().min(1, "Currency is required").max(8),
+    currency: businessCurrencySchema,
     businessModel: z.enum(CASHFLOW_BUSINESS_MODELS).optional(),
     industryTemplate: z.string().max(100).optional(),
 

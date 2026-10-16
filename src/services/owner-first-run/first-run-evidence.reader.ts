@@ -125,3 +125,9 @@ export async function isReadCurrentForWrite(
   const head = await firstRunEvidence(workspaceId, businessId, new Date(), tx, { cashStaleness: true });
   return head.headSnapshotId === snapshotId && head.runOnHead?.id === cycleId && head.staleReason === null;
 }
+
+/** Whether the diagnosis with this id raised a finding with this code (workspace + business scoped). */
+export async function cycleRaisedFinding(workspaceId: string, businessId: string, cycleId: string, findingCode: string): Promise<boolean> {
+  const row = await sharedDb.ownerFinanceFinding.findFirst({ where: { workspaceId, businessId, cycleId, code: findingCode }, select: { id: true } });
+  return row !== null;
+}

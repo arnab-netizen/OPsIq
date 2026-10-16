@@ -2,9 +2,9 @@
  * Returning-owner value: the action the owner accepted, from the canonical decision chains. Read-only; reuses
  * listOwnerOutcomeChains (workspace + business scoped) and the owner's own recorded commitment.
  */
-import { cycleSnapshotSuperseded } from "@/services/owner-first-run/first-run-evidence.reader";
+import { cycleRaisedFinding, cycleSnapshotSuperseded, firstRunEvidence } from "@/services/owner-first-run/first-run-evidence.reader";
 import { listOwnerOutcomeChains } from "@/services/owner-outcome/owner-outcome-chain.service";
-import { deriveNextMove, type NextMoveView } from "@/domain/owner-first-run/next-move";
+import { deriveNextMove, deriveNextMoveValidity, type NextMoveView } from "@/domain/owner-first-run/next-move";
 
 export async function getAcceptedNextMove(workspaceId: string, businessId: string, now: Date = new Date()): Promise<NextMoveView | null> {
   const { chains } = await listOwnerOutcomeChains(workspaceId, businessId);
@@ -19,6 +19,20 @@ export async function getAcceptedNextMove(workspaceId: string, businessId: strin
   // The numbers changed since the decision exactly when the diagnosis it was based on ran on a snapshot that was amended.
   const evidenceChangedSince = cycleAtDecision ? await cycleSnapshotSuperseded(workspaceId, businessId, cycleAtDecision) : false;
 
+  // Is the evidence this decision rests on still standing? The figures were amended, or the cash position the read used
+  // changed since it. If so, was the new figures' read run, and does it still raise the finding the owner accepted?
+  const evidence = await firstRunEvidence(workspaceId, businessId, now, undefined, { cashStaleness: true });
+  // Finance evidence only: a decision in another domain does not rest on the Finance read.
+  const isFinance = decision.domain === "finance";
+  const evidenceChanged = isFinance && (evidenceChangedSince || evidence.staleReason === "CASH_POSITION_CHANGED");
+  const currentReadExists = evidence.runOnHead !== null && evidence.staleReason === null;
+  const findingCode = (decision.recommendationSnapshot as { findingCode?: string | null } | null)?.findingCode ?? decision.findingCode ?? null;
+  const findingStillRaised =
+    evidenceChanged && currentReadExists && evidence.runOnHead && findingCode
+      ? await cycleRaisedFinding(workspaceId, businessId, evidence.runOnHead.id, findingCode)
+      : false;
+  const validity = deriveNextMoveValidity({ evidenceChanged, currentReadExists, findingStillRaised });
+
   const snap = decision.recommendationSnapshot as { title?: string | null } | null;
   return deriveNextMove({
     commitment: decision.commitmentDescription ?? snap?.title ?? "Your accepted action",
@@ -27,6 +41,7 @@ export async function getAcceptedNextMove(workspaceId: string, businessId: strin
     observationWindowDays: decision.observationWindowDays ?? null,
     assessed: Boolean(open.currentAssessment),
     evidenceChangedSince,
+    validity,
     now,
   });
 }

@@ -211,7 +211,8 @@ describe("Owner Sales — FindingCard adoption preserves every previously-shown 
     expect(screen.getByText(/Supporting detail:/)).toBeInTheDocument();
     expect(screen.getByText(/lost customer rate % = 57.1 > 35/i)).toBeInTheDocument();
     expect(screen.getByText(/How sure OpsIQ is:/)).toBeInTheDocument();
-    expect(screen.getByText(/evidence strength 80\/100/)).toBeInTheDocument();
+    // One canonical confidence vocabulary: 80/100 evidence strength reads "Moderate confidence (80/100)" on every owner surface.
+    expect(screen.getByText(/Moderate confidence \(80\/100\)/)).toBeInTheDocument();
     expect(screen.getByText(/verify by re-checking/i)).toBeInTheDocument();
   });
 

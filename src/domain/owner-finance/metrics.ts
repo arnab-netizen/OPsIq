@@ -21,7 +21,7 @@ import type {
 } from "./types";
 import { resolveFinanceThresholds, type FinanceThresholds } from "./thresholds";
 import { calculateDataConfidence, isValidCurrency } from "./data-confidence";
-import { num, sumPresent, fixedCostsTotal, variableCostsTotal, totalCosts } from "./cost-model";
+import { num, sumPresent, fixedCostsTotal, variableCostsTotal, totalCosts, leakageCoverage } from "./cost-model";
 
 // The cost model lives in ./cost-model (shared with the confidence model); re-exported so existing imports keep working.
 export { num, fixedCostsTotal, variableCostsTotal, knownFixedCosts, knownVariableCosts, totalCosts } from "./cost-model";
@@ -173,6 +173,11 @@ export function refundReworkLeakagePct(input: FinancialSnapshotInput): number | 
   return round1((leak / revenue) * 100);
 }
 
+/**
+ * Known leakage as a % of sales: the sum of the components that ARE known. With any component UNKNOWN this is a lower
+ * bound, not "the cost leakage" (see `costLeakageComplete`); consumers must word it "at least". Threshold comparisons
+ * stay valid on a lower bound (an unknown part can only add), which is why it is not nulled.
+ */
 export function costLeakageRatioPct(input: FinancialSnapshotInput): number | null {
   const revenue = num(input.revenue);
   const leak = sumPresent(
@@ -423,6 +428,7 @@ export function computeFinancialMetrics(
     receivablesPressurePct: receivablesPressurePct(input),
     payablesPressurePct: payablesPressurePct(input),
     costLeakageRatioPct: costLeakageRatioPct(input),
+    costLeakageComplete: leakageCoverage(input).complete,
     discountLeakagePct: discountLeakagePct(input),
     refundReworkLeakagePct: refundReworkLeakagePct(input),
     revenueQualityScore: revenueQualityScore(input),

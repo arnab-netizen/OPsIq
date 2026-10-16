@@ -5,13 +5,14 @@
  * again; only the type and currency are genuinely new. Submission goes to the canonical, idempotent
  * first-run business route. Presentation only.
  */
+import { SUPPORTED_BUSINESS_CURRENCIES } from "@/domain/founder-recovery/currency";
 import { useRef, useState } from "react";
 import { Button, Input, Select } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { firstRunApi } from "@/lib/owner-first-run-client";
 import { firstRunErrorText } from "@/lib/first-run-errors";
 
-const CURRENCIES = ["GBP", "USD", "EUR", "INR", "AUD", "CAD", "NZD", "SGD", "AED", "ZAR", "MYR", "IDR", "PHP", "NGN", "KES"] as const;
+const CURRENCIES = SUPPORTED_BUSINESS_CURRENCIES;
 
 export function FirstRunBusinessStep({
   suggestedName,
