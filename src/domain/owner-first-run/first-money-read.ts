@@ -290,11 +290,13 @@ export interface FirstMoneyRead {
   profitPosition: ProfitPosition | null;
 }
 
+// Same words and thresholds as every other owner surface (owner-spine/confidence-vocabulary.ts); only the tier's plain
+// consequence is added where the tier contract has one.
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
-  HIGH: "Fairly confident",
-  MEDIUM: "Reasonably confident",
-  LOW: "Directional only — treat as a first guide",
-  BLOCKED: "Not enough information to rely on this yet",
+  HIGH: "High confidence",
+  MEDIUM: "Moderate confidence",
+  LOW: "Low confidence — treat as a first guide",
+  BLOCKED: "Too low to rely on yet — not enough information",
 };
 
 function timingLabel(days: number): string {

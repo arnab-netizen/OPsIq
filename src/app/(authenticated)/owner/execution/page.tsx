@@ -1,5 +1,6 @@
 "use client";
 
+import { ownerConfidencePhrase } from "@/domain/owner-spine/confidence-vocabulary";
 import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
 import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
@@ -17,7 +18,7 @@ import {
 } from "@/components/owner/DomainActionInlineForms";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
@@ -624,7 +625,7 @@ function SopCycleView({
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · evidence strength {Math.round((f.confidence ?? 0) * 100)}/100 (heuristic, not a probability)
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {ownerValueText(f.sourceValue)}{f.threshold !== null && f.threshold !== undefined ? <> (threshold {ownerValueText(f.threshold)})</> : null} · {ownerConfidencePhrase(Math.round((f.confidence ?? 0) * 100))} — a heuristic rating, not a probability
               </p>
               {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                 <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>

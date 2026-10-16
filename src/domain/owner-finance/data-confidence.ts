@@ -4,6 +4,7 @@
  * Deterministic and honest: confidence drops as inputs go missing, and missing
  * critical inputs are listed explicitly. Nothing is invented. Pure (no I/O).
  */
+import { ownerConfidenceLevel } from "@/domain/owner-spine/confidence-vocabulary";
 import { clampScore } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput } from "./types";
 import { applyEvidenceQualityToScore } from "./evidence-quality";
@@ -132,10 +133,9 @@ export function fixedCostsCoveredByComponents(input: FinancialSnapshotInput): bo
 export type ConfidenceTier = "HIGH" | "MEDIUM" | "LOW" | "BLOCKED";
 
 export function confidenceTierFromScore(score: number): ConfidenceTier {
-  if (score >= 85) return "HIGH";
-  if (score >= 60) return "MEDIUM";
-  if (score >= 30) return "LOW";
-  return "BLOCKED";
+  // Thresholds live in ONE place (owner-spine/confidence-vocabulary.ts) so every surface words the same number the same way.
+  const level = ownerConfidenceLevel(score);
+  return level === "HIGH" ? "HIGH" : level === "MODERATE" ? "MEDIUM" : level === "LOW" ? "LOW" : "BLOCKED";
 }
 
 /**
