@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * "Your next move" on the canonical Cockpit: the action the owner accepted, when it is due, a notice if their
- * numbers changed since, and the prompt to check the result. Presentation only — it links to the existing
- * outcomes surface for the check; it is not a second home page and holds no logic.
+ * "Your next move" on the canonical Cockpit: the action the owner accepted, when it is due, and the prompt to check
+ * the result — but ONLY while the evidence it rests on still stands. When the owner's numbers changed and the action
+ * is no longer current (NEEDS_REASSESSMENT / SUPERSEDED / STALE, decided on the server), it is shown as an earlier
+ * action in history with the reason, never under "Your next move". Presentation only: it holds no logic.
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -27,16 +28,36 @@ export function AcceptedNextMoveCard({ businessId }: { businessId: string }) {
   }, [businessId]);
 
   if (!move) return null;
+
+  if (move.validity !== "CURRENT") {
+    return (
+      <section
+        className="rounded-lg border border-border bg-muted/30 p-4"
+        data-testid="accepted-next-move"
+        data-validity={move.validity}
+        aria-label={move.validityHeading ?? "Earlier action"}
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" data-testid="accepted-next-move-validity-heading">
+          {move.validityHeading}
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground" data-testid="accepted-next-move-earlier-commitment">{move.commitment}</p>
+        {move.validityNote && <p className="mt-2 text-sm text-foreground" data-testid="accepted-next-move-validity-note">{move.validityNote}</p>}
+        <Link
+          href="/owner/first-run"
+          className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-[var(--primary-text)] underline"
+          data-testid="accepted-next-move-link"
+        >
+          Review your updated read
+        </Link>
+      </section>
+    );
+  }
+
   return (
-    <section className="rounded-lg border border-border bg-background p-4" data-testid="accepted-next-move" aria-label="Your next move">
+    <section className="rounded-lg border border-border bg-background p-4" data-testid="accepted-next-move" data-validity="CURRENT" aria-label="Your next move">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your next move</p>
       <p className="mt-1 text-base font-semibold text-foreground">{move.commitment}</p>
       {move.prompt && <p className="mt-1 text-sm text-foreground" data-testid="accepted-next-move-prompt">{move.prompt}</p>}
-      {move.evidenceChangedSince && (
-        <p className="mt-2 text-sm text-muted-foreground" data-testid="accepted-next-move-evidence">
-          Your numbers have changed since you accepted this. OpsIQ re-checks what comes first from the latest figures.
-        </p>
-      )}
       <Link
         href="/owner/outcomes"
         className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-[var(--primary-text)] underline"
