@@ -15,10 +15,13 @@ describe("finance snapshot: relationships that cannot all be true are refused, n
     const i = issues(financialSnapshotCreateSchema.safeParse({ ...base, payables: 1000, payablesOverdue: 5000, receivables: 100, receivablesOverdue: 200 }) as never);
     expect(i.map((x) => x.path[0]).sort()).toEqual(["payablesOverdue", "receivablesOverdue"]);
   });
-  it("component costs more than the total fixed / variable costs", () => {
-    const i = issues(financialSnapshotCreateSchema.safeParse({ ...base, fixedCosts: 20000, rent: 15000, salaryPayroll: 9000, costOfGoodsOrServices: 5, variableCosts: 100, deliveryFulfilmentCost: 200 }) as never);
-    expect(i.map((x) => x.path[0]).sort()).toEqual(["fixedCosts", "variableCosts"]);
-    expect(i.find((x) => x.path[0] === "fixedCosts")!.message).toMatch(/Total fixed costs \(20000\) is less than the rent, payroll and utilities you entered \(24000\)/);
+  it("rent + payroll + utilities more than the total fixed costs", () => {
+    const i = issues(financialSnapshotCreateSchema.safeParse({ ...base, fixedCosts: 20000, rent: 15000, salaryPayroll: 9000 }) as never);
+    expect(i.map((x) => x.path[0])).toEqual(["fixedCosts"]);
+    expect(i[0].message).toMatch(/Total fixed costs \(20000\) is less than the rent, payroll and utilities you entered \(24000\)/);
+  });
+  it("cost of goods vs variable costs is NOT a part/whole check (COGS is a gross-margin input; explicit variableCosts is the profit total)", () => {
+    expect(financialSnapshotCreateSchema.safeParse({ ...base, costOfGoodsOrServices: 300000, variableCosts: 100000, deliveryFulfilmentCost: 200 }).success).toBe(true);
   });
   it("consumer + business revenue more than revenue", () => {
     expect(issues(financialSnapshotCreateSchema.safeParse({ ...base, revenue: 100, b2cRevenue: 80, b2bRevenue: 80 }) as never).map((x) => x.path[0])).toEqual(["revenue"]);

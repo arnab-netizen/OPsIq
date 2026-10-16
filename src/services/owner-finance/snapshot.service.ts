@@ -379,13 +379,17 @@ export async function amendFinancialSnapshot(
       notes: input.notes ?? current.notes,
     };
     // A correction must not introduce a contradiction the original entry would have been refused for (merged values).
-    const contradictions = findFinanceContradictions({
-      revenue: mergedRow.revenue, b2cRevenue: mergeAmended(input.b2cRevenue, current.b2cRevenue), b2bRevenue: mergeAmended(input.b2bRevenue, current.b2bRevenue),
-      costOfGoodsOrServices: mergedRow.costOfGoods, deliveryFulfilmentCost: mergedRow.deliveryCost, variableCosts: mergedRow.variableCosts,
-      rent: mergedRow.rent, salaryPayroll: mergedRow.payroll, utilities: mergedRow.utilities, fixedCosts: mergedRow.fixedCosts,
-      receivables: mergedRow.receivables, receivablesOverdue: mergedRow.overdueReceivables, payables: mergedRow.payables, payablesOverdue: mergedRow.overduePayables,
-      customerCount: mergedRow.customerCount, repeatCustomerCount: mergeAmended(input.repeatCustomerCount, current.repeatCustomerCount),
-    });
+    // Only contradictions this amendment INTRODUCES are refused: a record that already held one (entered before these checks
+    // existed) must stay correctable on any other field.
+    const figures = (r: { revenue?: unknown; b2cRevenue?: unknown; b2bRevenue?: unknown; rent?: unknown; payroll?: unknown; utilities?: unknown; fixedCosts?: unknown; receivables?: unknown; overdueReceivables?: unknown; payables?: unknown; overduePayables?: unknown; customerCount?: unknown; repeatCustomerCount?: unknown }) => ({
+      revenue: r.revenue, b2cRevenue: r.b2cRevenue, b2bRevenue: r.b2bRevenue, rent: r.rent, salaryPayroll: r.payroll, utilities: r.utilities, fixedCosts: r.fixedCosts,
+      receivables: r.receivables, receivablesOverdue: r.overdueReceivables, payables: r.payables, payablesOverdue: r.overduePayables,
+      customerCount: r.customerCount, repeatCustomerCount: r.repeatCustomerCount,
+    }) as Record<string, number | null | undefined>;
+    const before = new Set(findFinanceContradictions(figures(current)).map((c) => `${c.path}|${c.message}`));
+    const contradictions = findFinanceContradictions(
+      figures({ ...mergedRow, b2cRevenue: mergeAmended(input.b2cRevenue, current.b2cRevenue), b2bRevenue: mergeAmended(input.b2bRevenue, current.b2bRevenue), repeatCustomerCount: mergeAmended(input.repeatCustomerCount, current.repeatCustomerCount) }),
+    ).filter((c) => !before.has(`${c.path}|${c.message}`));
     if (contradictions.length > 0) {
       throw new ValidationError("Some of these figures contradict each other", { fieldErrors: contradictions.map((c) => ({ path: c.path, message: c.message })) });
     }

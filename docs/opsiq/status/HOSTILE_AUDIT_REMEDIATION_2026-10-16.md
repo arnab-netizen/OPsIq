@@ -61,7 +61,10 @@ Not reproduced / reclassified:
 - **Period scope**: the Money page now states which period a reading is based on and that other periods are kept but not combined
   (the evidence-selection contract forbids merging); "still missing" is labelled for that period.
 - **Relational validation**: part ≤ whole checks on Finance create, amend and the amended snapshot's merged values; each error names
-  the field that is too large. UNKNOWN is never a contradiction.
+  the field that is too large. UNKNOWN is never a contradiction. Only relationships the model defines as part-of-whole are checked
+  (customers/repeat, total/overdue receivables and payables, rent+payroll+utilities/fixed costs, B2C+B2B/revenue); cost of goods vs
+  variable costs is deliberately not checked (COGS is a gross-margin input, an explicit variableCosts is the profit total). An
+  amendment is refused only for a contradiction it introduces, so records entered before the checks stay correctable.
 
 ## OBQ freeze determinations
 

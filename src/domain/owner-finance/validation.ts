@@ -48,7 +48,7 @@ export interface FinanceContradiction {
 /**
  * Relationships between figures that cannot all be true (a part larger than its whole), checked ONLY when both sides are
  * known: an UNKNOWN side is never a contradiction and never zero. The reported `path` is the part that is too large, so the
- * owner is told which field to look at. Used by create (this payload), amend (payload fields) and the amended snapshot's
+ * owner is told which field to look at. Only relationships the cost/segment model defines as part-of-whole are checked. Used by create (this payload), amend (payload fields) and the amended snapshot's
  * merged values, so a correction cannot introduce a contradiction the original entry would have been refused for.
  */
 export function findFinanceContradictions(v: Record<string, Amount>): FinanceContradiction[] {
@@ -70,7 +70,8 @@ export function findFinanceContradictions(v: Record<string, Amount>): FinanceCon
   atMost("receivablesOverdue", "receivables", "Overdue receivables", "total receivables");
   atMost("payablesOverdue", "payables", "Overdue payables", "total payables");
   sumAtMost(["rent", "salaryPayroll", "utilities"], "fixedCosts", "rent, payroll and utilities", "Total fixed costs");
-  sumAtMost(["costOfGoodsOrServices", "deliveryFulfilmentCost"], "variableCosts", "cost of goods and delivery", "Total variable costs");
+  // Deliberately NOT checked: cost of goods vs variableCosts. The cost model treats an explicit variableCosts as the total used for
+  // profit and cost of goods as a separate gross-margin input, so one exceeding the other is not a part/whole contradiction.
   const segments = [v.b2cRevenue, v.b2bRevenue].filter(isNum);
   if (segments.length > 0 && isNum(v.revenue) && segments.reduce((s, x) => s + x, 0) > v.revenue) {
     out.push({ path: "revenue", message: `Revenue (${v.revenue}) is less than the consumer and business revenue you entered (${segments.reduce((s, x) => s + x, 0)})` });

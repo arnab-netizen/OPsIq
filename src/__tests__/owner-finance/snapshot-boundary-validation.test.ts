@@ -47,8 +47,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] snapshot currency is the business's 
       actorId, workspaceId,
     );
     try {
+      // Two layers: the boundary schema refuses a malformed code outright (only "USD" is a supported code but the wrong one for this
+      // business), and the SERVICE still refuses any mismatched or malformed currency when it is called without the schema.
+      expect(financialSnapshotCreateSchema.safeParse({ ...base, currency: "USD" }).success).toBe(true);
+      for (const currency of ["123", "₹"]) expect(financialSnapshotCreateSchema.safeParse({ ...base, currency }).success).toBe(false);
       for (const currency of ["USD", "123", "₹"]) {
-        await expect(createFinancialSnapshot(biz.id, financialSnapshotCreateSchema.parse({ ...base, currency }), actorId, workspaceId))
+        await expect(createFinancialSnapshot(biz.id, { ...base, currency } as never, actorId, workspaceId))
           .rejects.toMatchObject({ statusCode: 400 });
       }
       expect(await db.ownerFinancialSnapshot.count({ where: { businessId: biz.id } })).toBe(0);
