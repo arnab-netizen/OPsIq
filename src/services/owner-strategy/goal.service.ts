@@ -23,10 +23,11 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
-import { hasAnyRealBusiness, hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
+import { hasAnyRealBusiness, hasExactlyOneRealBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import { computeGoalTrajectory } from "./goal-trajectory.service";
 import { mergeTrailingPeriods, type GoalTrajectoryResult, type TrailingPeriod } from "./goal-trajectory.service";
 import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { netProfit as financeNetProfit, num as financeNum } from "@/domain/owner-finance/metrics";
 
 export type GoalTargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
@@ -517,9 +518,25 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
     : { workspaceId: goal.workspaceId, business: { isActive: true, isFixtureBusiness: false } };
   const currencyMatch = { equals: goal.targetCurrency, mode: "insensitive" as const };
 
+  // Finance snapshots (Money): the business's CURRENT (un-amended), COMPLETED periods, newest first — exactly the selector's
+  // definition (financial-snapshot-selection.ts) — filtered here to the goal's currency. A legacy workspace goal means its sole
+  // real business (checked below); with several there is nothing to read.
+  const now = new Date();
+  const financeBusinessId =
+    metricBasis === "not_measured"
+      ? null
+      : goal.businessId ?? ((await hasExactlyOneRealBusiness(goal.workspaceId)) ? ((await listBusinesses(goal.workspaceId))[0]?.id ?? null) : null);
+  const goalCurrency = goal.targetCurrency.trim().toUpperCase();
+  const financeCompleted = (financeBusinessId
+    ? ((await db.ownerFinancialSnapshot.findMany(
+        currentEffectiveFinancialSnapshotQuery({ workspaceId: goal.workspaceId, businessId: financeBusinessId }, undefined, now),
+      )) as Array<Record<string, unknown>>)
+    : []);
+  const financeInCurrency = financeCompleted.filter((r) => String(r.currency).trim().toUpperCase() === goalCurrency);
+
   const excludedSnapshotCount =
     ((await db.ownerMetricSnapshot.count({ where: { ...scopeWhere, NOT: { currency: currencyMatch } } })) as number) +
-    ((await db.ownerFinancialSnapshot.count({ where: { ...scopeWhere, supersededById: null, ...completedSnapshotWhere(new Date()), NOT: { currency: currencyMatch } } })) as number);
+    (financeCompleted.length - financeInCurrency.length);
   const excludedReason =
     excludedSnapshotCount > 0
       ? `${excludedSnapshotCount} recorded result${excludedSnapshotCount === 1 ? " is" : "s are"} in a different currency than this ${goal.targetCurrency} goal and ${excludedSnapshotCount === 1 ? "is" : "are"} not included (OpsIQ does not convert currencies).`
@@ -567,11 +584,7 @@ export async function computeGoalTrajectoryView(goal: GoalSummary): Promise<Goal
   // The Finance snapshots (Money) are the other store a period can live in: current (un-amended), completed, in the
   // goal's currency. Net profit is DERIVED here by the one finance cost model (never read from a stored column, never
   // a partial cost total): UNKNOWN costs leave netProfit null, which is not a usable period.
-  const financeRows = (await db.ownerFinancialSnapshot.findMany({
-    where: { ...scopeWhere, currency: currencyMatch, supersededById: null, ...completedSnapshotWhere(new Date()) },
-    orderBy: { periodEnd: "desc" },
-    take: 12,
-  })) as Array<Record<string, unknown>>;
+  const financeRows = financeInCurrency.slice(0, 12); // newest period first
   const financePeriods: TrailingPeriod[] = financeRows.map((r) => {
     const input = rowToFinanceInput(r);
     return { periodStart: r.periodStart as Date, periodEnd: r.periodEnd as Date, revenue: financeNum(input.revenue), netProfit: financeNetProfit(input) };

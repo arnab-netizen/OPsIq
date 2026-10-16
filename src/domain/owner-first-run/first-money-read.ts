@@ -295,7 +295,7 @@ export interface FirstMoneyRead {
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
   HIGH: "High confidence",
   MEDIUM: "Moderate confidence",
-  LOW: "Low confidence — treat as a first guide",
+  LOW: "Low confidence — directional only, treat as a first guide",
   BLOCKED: "Too low to rely on yet — not enough information",
 };
 
