@@ -47,3 +47,15 @@ export function humanizeSnakeCase(value: string): string {
   if (!value) return value;
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
 }
+
+/**
+ * Owner-facing text for a measured value or threshold that may be missing. `String(null)` / `String(undefined)` print the
+ * raw words "null" / "undefined" to the owner; a value that was never entered is "not entered", and a booleans is yes/no.
+ * Presentation only — it formats an existing value and never invents one.
+ */
+export function ownerValueText(value: unknown): string {
+  if (value === null || value === undefined) return "not entered";
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "not available";
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}

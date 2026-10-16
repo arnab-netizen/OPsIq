@@ -100,8 +100,11 @@ describe("B: Health/Risk labelling on the Finance position header", () => {
   it("B1 labels say what the scores are and that the status badge is set separately", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("src/app/(authenticated)/owner/finance/page.tsx", "utf8");
-    expect(src).toContain('"Risk score (lower is better)"');
-    expect(src).toContain('"Health score"');
+    // The labels now live once in the score-availability contract the page renders through (UNKNOWN is never shown as a score).
+    const labels = readFileSync("src/domain/owner-spine/score-availability.ts", "utf8");
+    expect(labels).toContain('"Risk score (lower is better)"');
+    expect(labels).toContain('"Health score"');
+    expect(src).toContain("presentScores(");
     expect(src).toContain("a low risk score does not mean the status is safe");
     expect(src).not.toMatch(/\["Risk", score/);
   });

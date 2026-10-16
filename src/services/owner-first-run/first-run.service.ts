@@ -4,6 +4,7 @@
  * diagnosis, records decisions through the canonical decision service, and amends evidence through the
  * canonical snapshot versioning.
  */
+import { normalizeBusinessCurrency } from "@/domain/founder-recovery/currency";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -32,6 +33,7 @@ import type { ReadStaleReason } from "@/domain/owner-first-run/read-staleness";
 import { computeMissingInputsWithPriority } from "@/domain/owner-finance/data-confidence";
 import { isEvidenceQuality, type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { QUICK_ENTRY_FIELDS } from "@/domain/owner-finance/quick-entry";
+import { profitPosition } from "@/domain/owner-finance/profit-position";
 import { unsupportedConclusions } from "@/domain/owner-finance/unsupported-conclusions";
 import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
 import { formatDomainActionCandidateId } from "@/domain/owner-spine/owner-decision-record";
@@ -213,13 +215,13 @@ export async function createFirstBusiness(
 ): Promise<{ business: FirstRunBusiness; replayed: boolean }> {
   const workspace = await db.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } });
   if (!workspace) throw new NotFoundError("Workspace", workspaceId);
-  if (!/^[A-Za-z]{3,8}$/.test(input.currency.trim())) {
-    throw new ValidationError("Please choose your currency.", { fieldErrors: [{ path: "currency", message: "Not a valid currency code" }] });
+  if (!normalizeBusinessCurrency(input.currency)) {
+    throw new ValidationError("Please choose your currency.", { fieldErrors: [{ path: "currency", message: "Not a supported currency code" }] });
   }
   const parsed = businessCreateSchema.safeParse({
     name: (input.name ?? workspace.name).trim(),
     businessType: input.businessType,
-    currency: input.currency.trim().toUpperCase(),
+    currency: input.currency,
   });
   if (!parsed.success) {
     throw new ValidationError("Please check your business details.", {
@@ -340,6 +342,7 @@ export async function getFirstMoneyRead(workspaceId: string, businessId: string)
     dataRequestCode: dataRequest ? String((dataRequest as { findingCode?: string }).findingCode ?? "") : null,
     criticalInputsMissing: jsonStringArray(snapshot.missingCriticalData).length > 0,
     unsupportedConclusions: unsupportedConclusions(rowToFinanceInput(snapshot)).map((c) => c.text),
+    profitPosition: profitPosition(rowToFinanceInput(snapshot), business.currency),
     evidenceQuality: quality,
     currency: business.currency,
     evidenceDomains: ["finance"],

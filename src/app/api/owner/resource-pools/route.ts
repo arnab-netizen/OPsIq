@@ -6,6 +6,7 @@
  *
  * Workspace isolation enforced via canonical auth. OWNER_MANAGE required.
  */
+import { endNotBeforeStart } from "@/validation/date-range";
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
@@ -37,7 +38,8 @@ const schema = z.object({
   priority: z.number().int().min(0).max(100).optional(),
   // RELEASE fields
   allocationId: z.string().trim().uuid().nullish(),
-});
+})
+  .superRefine(endNotBeforeStart("periodStart", "periodEnd", "The period end must be on or after the period start"));
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {

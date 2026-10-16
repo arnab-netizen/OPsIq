@@ -15,6 +15,7 @@
  * required (mirroring finance) and every other numeric key is passed through. These per-domain snapshots feed the
  * per-domain dashboards, NOT the whole-business-plan critical domains (that bridge is a documented product decision).
  */
+import { normalizeBusinessCurrency } from "@/domain/founder-recovery/currency";
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { createSalesSnapshot } from "@/services/owner-sales/snapshot.service";
 import { createOperationsSnapshot } from "@/services/owner-operations/snapshot.service";
@@ -95,7 +96,7 @@ async function materializeViaSnapshot(
   for (const r of records) {
     const periodStart = str(r.periodStart);
     const periodEnd = str(r.periodEnd);
-    const currency = str(r.currency);
+    const currency = normalizeBusinessCurrency(str(r.currency)); // unsupported imported currency: skipped, never stored
     if (!periodStart || !periodEnd || !currency) {
       skipped++;
       continue;
@@ -131,7 +132,8 @@ async function materializeFinance(
   for (const r of records) {
     const periodStart = str(r.periodStart);
     const periodEnd = str(r.periodEnd);
-    const currency = str(r.currency);
+    // An imported currency outside the supported set is not guessed or stored: the row is skipped like any other incomplete one.
+    const currency = normalizeBusinessCurrency(str(r.currency));
     const revenue = num(r.revenue);
     // Required for a meaningful financial snapshot; without them we do NOT fabricate one.
     if (!periodStart || !periodEnd || !currency || revenue === undefined) {

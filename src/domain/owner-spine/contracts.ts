@@ -97,6 +97,8 @@ export const ownerFindingSchema = z.object({
   evidence: z.array(z.string()).default([]),
   missingData: z.array(z.string()).default([]),
   verificationMetric: z.string().optional(),
+  /** The sourceValue is a KNOWN-SUBSET lower bound of a group total (some components UNKNOWN): worded "at least", never as the total. */
+  valueIsLowerBound: z.boolean().optional(),
 });
 export type OwnerFinding = z.infer<typeof ownerFindingSchema>;
 

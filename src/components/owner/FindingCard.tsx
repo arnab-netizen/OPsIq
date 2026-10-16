@@ -22,7 +22,9 @@
  * real data -- not as a prop threaded through a component that would otherwise have to fake it.
  */
 import { Badge } from "@/ui/primitives";
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { ownerConfidenceLabel, ownerConfidencePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { findingValueIsLowerBound } from "@/domain/owner-finance/cost-model";
+import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 
 export interface FindingCardData {
   id: string;
@@ -36,6 +38,8 @@ export interface FindingCardData {
   confidence: number;
   evidence?: unknown;
   verificationMetric?: string | null;
+  /** Inputs still UNKNOWN behind this finding. For a group-total metric they make the measured value a lower bound. */
+  missingData?: unknown;
 }
 
 const SEVERITY_VARIANT: Record<string, "default" | "warning" | "destructive" | "muted-accessible"> = {
@@ -95,7 +99,15 @@ function ownLookup<T>(map: Record<string, T>, key: string | undefined): T | unde
 
 /** Plain-language confidence phrase, shared so every owner surface words confidence the same way. */
 export function sureLabel(confidencePct: number): string {
-  return confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
+  return ownerConfidenceLabel(confidencePct);
+}
+
+/**
+ * A group-total metric measured while some of its components are still UNKNOWN is a known-subset lower bound, never the
+ * total (domain/owner-finance/cost-model.ts leakageCoverage). Presentation only: the domain already worded the summary.
+ */
+function isLowerBoundMeasure(f: FindingCardData): boolean {
+  return findingValueIsLowerBound(f);
 }
 
 export function FindingCard({ finding }: { finding: FindingCardData }) {
@@ -119,9 +131,9 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       <div className="mt-3">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Evidence</span>
         <p className="mt-1 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Measured:</span> {humanizeMetricKey(finding.sourceMetric)} is {String(finding.sourceValue)}
+          <span className="font-medium text-foreground">Measured:</span> {humanizeMetricKey(finding.sourceMetric)} is {isLowerBoundMeasure(finding) ? "at least " : ""}{ownerValueText(finding.sourceValue)}
           {finding.threshold !== null && finding.threshold !== undefined && (
-            <> — <span className="font-medium text-foreground">compared against</span> a threshold of {String(finding.threshold)}</>
+            <> — <span className="font-medium text-foreground">compared against</span> a threshold of {ownerValueText(finding.threshold)}</>
           )}
         </p>
         {evidenceLines.length > 0 && (
@@ -132,7 +144,7 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">How sure OpsIQ is:</span> {sureLabel(confidencePct)} (evidence strength {confidencePct}/100 — a heuristic rating, not a probability)
+        <span className="font-medium text-foreground">How sure OpsIQ is:</span> {ownerConfidencePhrase(confidencePct)} — a heuristic rating of the evidence, not a probability
         {finding.verificationMetric && <> — verify by re-checking {humanizeMetricKey(finding.verificationMetric)}</>}
       </p>
     </div>

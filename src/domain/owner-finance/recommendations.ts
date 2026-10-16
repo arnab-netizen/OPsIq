@@ -30,6 +30,8 @@ export interface FinanceRecommendation {
   ownerRole: string;
   title: string;
   evidence: string[];
+  /** sourceValue is a known-subset lower bound (some components UNKNOWN): word it "at least". */
+  valueIsLowerBound?: boolean;
 }
 
 interface FinanceRecTemplate {
@@ -529,6 +531,7 @@ export function buildFinanceRecommendation(finding: OwnerFinding): FinanceRecomm
     ownerRole: tpl.ownerRole,
     title: tpl.title,
     evidence: finding.evidence,
+    ...(finding.valueIsLowerBound ? { valueIsLowerBound: true } : {}),
   };
 }
 

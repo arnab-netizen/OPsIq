@@ -1,5 +1,6 @@
 "use client";
 
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
@@ -7,7 +8,7 @@ import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey } from "@/lib/metric-label";
+import { humanizeMetricKey, ownerValueText } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
 import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
@@ -295,7 +296,7 @@ export default function OwnerRecoveryPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -418,7 +419,7 @@ function RecoveryCycleView({
                 <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.currentValue)} (threshold {String(f.threshold)})
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {ownerValueText(f.currentValue)}{f.threshold !== null && f.threshold !== undefined ? <> (threshold {ownerValueText(f.threshold)})</> : null}
               </p>
               <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence}</p>
               <p className="text-xs text-muted-foreground"><strong>Why:</strong> {f.whyItMatters}</p>
@@ -456,7 +457,7 @@ function RecoveryCycleView({
                   <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Move <strong>{humanizeMetricKey(a.metricToMove)}</strong> {a.direction} — baseline {String(a.baselineValue)} → target {String(a.targetValue)} (within {a.verificationWindowDays}d)
+                  Move <strong>{humanizeMetricKey(a.metricToMove)}</strong> {a.direction} — baseline {ownerValueText(a.baselineValue)} → target {ownerValueText(a.targetValue)} (within {a.verificationWindowDays}d)
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}

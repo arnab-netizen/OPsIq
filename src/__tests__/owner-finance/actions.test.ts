@@ -4,6 +4,7 @@
  * deterministic survival-weighted priority, ranking, no-invention, and that
  * inputs are not mutated.
  */
+import { findingValueIsLowerBound } from "@/domain/owner-finance/cost-model";
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -339,7 +340,7 @@ describe("owner-finance/actions — canonical evidence rationale (read-time, fin
     expect(f, `finding ${code} should be produced`).toBeDefined();
     return f!;
   };
-  const rationale = (f: OwnerFinding) => buildFinanceEvidenceRationale({ findingCode: f.code, sourceMetric: f.sourceMetric, sourceValue: f.sourceValue, threshold: f.threshold });
+  const rationale = (f: OwnerFinding) => buildFinanceEvidenceRationale({ findingCode: f.code, sourceMetric: f.sourceMetric, sourceValue: f.sourceValue, threshold: f.threshold, valueIsLowerBound: findingValueIsLowerBound(f) });
   const RAW_KEYS = /grossMarginPct|netMarginPct|fixedCostBurdenPct|payrollBurdenPct|debtServicePressurePct|receivablesPressurePct|payablesPressurePct|discountLeakagePct|refundReworkLeakagePct|costLeakageRatioPct|cashRunwayDays|cashDaysOfCosts|dataConfidenceScore|revenueQualityScore|totalDebtOutstanding/;
 
   it("every real emitted finding gets a rationale with no raw keys, 'threshold:' or null/NaN words", () => {
@@ -397,7 +398,8 @@ describe("owner-finance/actions — canonical evidence rationale (read-time, fin
     expect(rationale(r)).toBe("The money customers owe you is 40% of your sales.");
     const l = find("FIN_OPP_LEAKAGE_REDUCTION", pressured);
     expect(l.threshold).toBe(15);
-    expect(rationale(l)).toBe("Discounts, refunds, redone work and complaint-related costs together are 20% of your sales.");
+    // The fixture enters only some leakage components, so the figure is a known-subset lower bound (never "together").
+    expect(rationale(l)).toBe("The leakage you have entered so far (discounts, refunds, redone work or complaint-related costs) is at least 20% of your sales. Some of these are not entered yet, so the real figure may be higher.");
     const d = find("FIN_OPP_DATA_QUALITY", pressured);
     expect(d.threshold).toBe(100);
     expect(rationale(d)).not.toMatch(/target|threshold/i);

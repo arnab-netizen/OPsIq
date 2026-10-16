@@ -118,6 +118,19 @@ export function FirstMoneyReadCard({
         )}
       </dl>
 
+      {read.profitPosition && (read.profitPosition.status === "KNOWN" || !read.cannotConclude.includes(read.profitPosition.reason)) && (
+        <div className="mt-4 rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="first-money-read-profit" data-profit-status={read.profitPosition.status}>
+          <h3 className="font-medium">Profit and margin</h3>
+          {read.profitPosition.status === "KNOWN" ? (
+            <p className="mt-1">
+              {read.profitPosition.headline}
+              {read.profitPosition.marginText ? ` · ${read.profitPosition.marginText}` : ""}
+            </p>
+          ) : (
+            <p className="mt-1 text-muted-foreground">{read.profitPosition.reason}</p>
+          )}
+        </div>
+      )}
       {read.cannotConclude.length > 0 && (
         <div className="mt-4 rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="first-money-read-cannot-conclude">
           <h3 className="font-medium">What OpsIQ can&apos;t conclude yet</h3>

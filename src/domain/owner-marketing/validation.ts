@@ -5,6 +5,7 @@
  * action-status vocabulary and the Spine target directions. Missing data stays
  * missing (optional fields); negative inputs are rejected (fail closed).
  */
+import { businessCurrencySchema } from "@/domain/founder-recovery/currency";
 import { z } from "zod/v4";
 import { MARKETING_BUSINESS_MODELS } from "./types";
 import { RECOVERY_ACTION_STATUSES } from "@/domain/founder-recovery/action-status";
@@ -16,7 +17,7 @@ export const marketingSnapshotCreateSchema = z
   .object({
     periodStart: z.string().min(1, "Reporting period start is required"),
     periodEnd: z.string().min(1, "Reporting period end is required"),
-    currency: z.string().min(1, "Currency is required").max(8),
+    currency: businessCurrencySchema,
     businessModel: z.enum(MARKETING_BUSINESS_MODELS).optional(),
     industryTemplate: z.string().max(100).optional(),
 

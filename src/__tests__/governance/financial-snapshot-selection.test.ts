@@ -58,6 +58,9 @@ const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]
   "src/services/owner-mode/owner-progress.service.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-outcome/outcome-sources.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-spine/provisional-cash-finance.ts": ["DIAGNOSIS_BOUND"],
+  // Goal trajectory: the trailing series of COMPLETED current periods (net profit derived by the finance cost model); the selector's
+  // current, completed periods (one per period) filtered to the goal currency; never "the latest snapshot" alone.
+  "src/services/owner-strategy/goal.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-trust/trust.service.ts": ["DIAGNOSIS_BOUND"],
 };
 

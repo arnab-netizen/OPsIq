@@ -1,5 +1,9 @@
 "use client";
 
+import { periodLabel } from "@/domain/owner-first-run/first-money-read";
+import type { ProfitPosition } from "@/domain/owner-finance/profit-position";
+import { assessScoreAvailability, presentScores, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
@@ -8,7 +12,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { FindingCard, sureLabel } from "@/components/owner/FindingCard";
+import { ownerConfidenceLabel } from "@/domain/owner-spine/confidence-vocabulary";
+import { FindingCard } from "@/components/owner/FindingCard";
 import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import {
   CompletionActionForm,
@@ -622,7 +627,7 @@ export default function OwnerFinancePage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -797,6 +802,7 @@ export default function OwnerFinancePage() {
             <FinanceCycleView
               cycle={cycle}
               score={score}
+              profit={dashboard.profitPosition ?? null}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
               businessId={dashboard.selectedBusinessId}
@@ -818,6 +824,7 @@ export default function OwnerFinancePage() {
 function FinanceCycleView({
   cycle,
   score,
+  profit,
   missing,
   recommended,
   businessId,
@@ -831,6 +838,7 @@ function FinanceCycleView({
 }: {
   cycle: any;
   score: any;
+  profit: ProfitPosition | null;
   missing: string[];
   recommended: any;
   businessId: string | null;
@@ -842,6 +850,27 @@ function FinanceCycleView({
   onCompleteAction: (a: any, values: CompletionValues) => void;
   onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
+  // The diagnosis rests on ONE evidence period (the snapshot it ran on); say which, never leave it implicit.
+  const diagnosedPeriod: string | null = cycle?.snapshot?.periodStart && cycle?.snapshot?.periodEnd
+    ? periodLabel({ start: String(cycle.snapshot.periodStart), end: String(cycle.snapshot.periodEnd) })
+    : null;
+  // Whether the three scores may be shown as scores is decided by the server (UNKNOWN is never healthy / zero-risk);
+  // an older payload without it falls back to the same spine rule from the confidence + critical gaps it does carry.
+  const scoreAvailability: ScoreAvailability = score?.scoreAvailability ?? assessScoreAvailability({
+    dataConfidenceScore: score?.dataConfidenceScore ?? cycle?.dataConfidenceScore ?? 0,
+    missingCritical: missing,
+  });
+  const scorePresentation = {
+    availability: scoreAvailability,
+    ...presentScores(
+      {
+        health: Number(score?.healthScore ?? cycle?.overallHealthScore ?? 0),
+        risk: Number(score?.riskScore ?? cycle?.survivalRiskScore ?? 0),
+        opportunity: Number(score?.opportunityScore ?? cycle?.growthOpportunityScore ?? 0),
+      },
+      scoreAvailability,
+    ),
+  };
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -896,20 +925,25 @@ function FinanceCycleView({
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">How sure OpsIQ is</div>
           <p className="mt-1 text-sm text-foreground">
-            {sureLabel(Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0))} — this reading rests on{" "}
+            {ownerConfidenceLabel(Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0))} — this reading rests on{" "}
             {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0)}% of the information OpsIQ looks for.
           </p>
         </div>
         {missing.length > 0 && (
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What is still missing</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What is still missing{diagnosedPeriod ? ` for ${diagnosedPeriod}` : ""}</div>
             <p className="mt-1 text-sm text-foreground">
-              OpsIQ can assess what you entered. These would make the diagnosis more complete:{" "}
+              OpsIQ can assess what you entered{diagnosedPeriod ? ` for ${diagnosedPeriod}` : ""}. These would make the diagnosis more complete:{" "}
               {missing.map(humanizeMetricKey).join(", ")}.
             </p>
           </div>
         )}
       </section>
+      {diagnosedPeriod && (
+        <p className="text-sm text-foreground" data-testid="finance-period-scope">
+          This reading is based on your <strong>{diagnosedPeriod}</strong> figures only. Figures you entered for other periods are kept on record but are not combined into it.
+        </p>
+      )}
       <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
         <div className="flex flex-wrap items-baseline gap-2.5">
           <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
@@ -919,20 +953,29 @@ function FinanceCycleView({
             {SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? (score?.survivalState ?? cycle.survivalState)}
           </Badge>
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
-          {[
-            ["Health score", score?.healthScore ?? cycle.overallHealthScore],
-            ["Risk score (lower is better)", score?.riskScore ?? cycle.survivalRiskScore],
-            ["Opportunity score", score?.opportunityScore ?? cycle.growthOpportunityScore],
-          ].map(([label, value]) => (
-            <div key={label as string}>
-              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
-                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
+        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3" data-testid="finance-scores" data-score-availability={scorePresentation.availability}>
+          {scorePresentation.scores.map((s) => (
+            <div key={s.kind}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground" data-testid={`finance-score-${s.kind}`}>
+                {s.value}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
             </div>
           ))}
         </div>
+        {profit && (
+          <div className="mt-3 text-sm text-foreground" data-testid="finance-profit-position" data-profit-status={profit.status}>
+            <span className="font-medium">Profit and margin: </span>
+            {profit.status === "KNOWN" ? (
+              <span>{profit.headline}{profit.marginText ? ` · ${profit.marginText}` : ""}</span>
+            ) : (
+              <span className="text-muted-foreground">{profit.reason}</span>
+            )}
+          </div>
+        )}
+        {scorePresentation.note && (
+          <p className="mt-2 text-sm text-foreground" data-testid="finance-score-availability-note">{scorePresentation.note}</p>
+        )}
         <p className="mt-3 text-sm text-muted-foreground" data-testid="finance-score-explainer">
           The status badge reflects the most serious single warning sign (such as thin margin or low cash). The scores blend many
           signals, so a low risk score does not mean the status is safe. Act on the findings below, not on one number.
