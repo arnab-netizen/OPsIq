@@ -2,12 +2,13 @@
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
   "last_updated": "2026-08-08",
+  "commercial_minimum": "IMPLEMENTED_PENDING_REVIEW 2026-10-17 — branch claude/epic-ride-0hyyq1 from main e5749ffb; Paddle MoR checkout/webhook/entitlement/cancel; additive migration 20261017180000 (NOT applied); paywall OFF by default (BILLING_PAYWALL_ENFORCEMENT); sandbox E2E NOT run (paddle.com unreachable from build container); NOT merged, NOT deployed. Doc: docs/opsiq/commercial/COMMERCIAL_MINIMUM.md",
   "hostile_audit_remediation": "IN_PROGRESS 2026-10-16 — verdict OWNER_BETA_BLOCKED_BY_P1; CB1_OWNER_001_READY=NO; CB1_EXPANSION_GATE=CLOSED. Branch claude/cool-goldberg-78h8yp from main d641afc3: D1/D2/D3/D4/D9 fixed + P2 set on branch, NOT merged, NOT deployed, production re-audit NOT run. Record: docs/opsiq/status/HOSTILE_AUDIT_REMEDIATION_2026-10-16.md. No gate line may be claimed before the post-deploy re-audit; merge needs exact-SHA owner authorization.",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
   "active_bundle": "factory-stage-7-closure",
-  "active_branch": "claude/stage7-d12-stable-subject",
+  "active_branch": "claude/owner-operational-completion",
   "owner_minimum_effort_input": "IMPLEMENTED_PENDING_REVIEW — branch claude/owner-minimum-effort-input from main 6c6c8f33; canonical first-read sufficiency + one-screen quick path; no migration; doc: docs/opsiq/product/OWNER_MINIMUM_EFFORT_INPUT.md; not merged",
   "owner_operational_completion_progress": {
     "CAT2_atomicity_sweep_owner_mode": "COMPLETE — owner-action-outcome.service + owner-approval-resolution.service (both paths) wrapped in $transaction; AuditClient exported; OwnerLoadDeps.auditClient added for tx propagation; 5 DB atomicity tests pass, committed d89ee55e",
@@ -32,17 +33,14 @@
     "owner_routes_capability_audit": "COMPLETE — 3 owner routes (guided-choice, first-value, execution-plan) missing requireCapabilities; all fixed with OWNER_VIEW",
     "bulk_capability_gate_sweep": "COMPLETE — 44 non-owner API routes using withCanonicalEnforcement but missing requireCapabilities; all fixed with domain-appropriate capabilities; tsc passes, build passes, prisma validates",
     "DB_status": "DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE — Neon endpoint unreachable from container; all DB-dependent items deferred",
-    "items_remaining_no_db": [
-      "TOKEN/BYPASS DEBT scan (done — none found)",
-      "IDEMPOTENCY audit (done — patterns correct)",
-      "CAPABILITY AUDIT (COMPLETE — all routes audited)"
-    ]
+    "items_remaining_no_db": ["TOKEN/BYPASS DEBT scan (done — none found)", "IDEMPOTENCY audit (done — patterns correct)", "CAPABILITY AUDIT (COMPLETE — all routes audited)"]
   },
   "blocked_by": [],
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
   "next_target": "Owner decision. Either produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without the four required evidence fields.",
   "main_sha": "036c526940f349d7d06e05635f29c064c78ba71b",
+  "active_branch": "claude/stage7-d12-stable-subject",
   "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
   "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
   "factory_stage_6": "ACCEPTED",
@@ -293,17 +291,8 @@
     "applied_in": "PR-1A",
     "date": "2026-08-02",
     "base_sha": "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068",
-    "owner_decisions_applied": [
-      "D-5 (option b)",
-      "D-6 (option a)"
-    ],
-    "amendments_applied": [
-      "A3",
-      "A5",
-      "A6",
-      "A7",
-      "A8"
-    ],
+    "owner_decisions_applied": ["D-5 (option b)", "D-6 (option a)"],
+    "amendments_applied": ["A3", "A5", "A6", "A7", "A8"],
     "amendments_deferred": {
       "A1": "blocked by owner decision D-1 (deployment candidate SHA)",
       "A2": "blocked by owner decisions D-2, D-3 (migration status authorization, REQUIRED config set)",
@@ -325,6 +314,5 @@
     "migration_sha256": "ef597d7248cb1584b91937107042802ceff7d5edffc90408d097a1089be866c2",
     "resource_1": "NOT PUBLISHED — structural dry run only (src/__tests__/resources/fixtures/resource-1-structure.md)",
     "next_target": "PR -> CI green -> owner-run pre-deploy migration -> owner merge -> rerun production verification gate"
-  },
-  "commercial_minimum": "IMPLEMENTED_PENDING_REVIEW 2026-10-17 — branch claude/epic-ride-0hyyq1 from main e5749ffb; Paddle MoR checkout/webhook/entitlement/cancel; additive migration 20261017180000 (NOT applied); paywall OFF by default (BILLING_PAYWALL_ENFORCEMENT); sandbox E2E NOT run (paddle.com unreachable from build container); NOT merged, NOT deployed. Doc: docs/opsiq/commercial/COMMERCIAL_MINIMUM.md"
+  }
 }
