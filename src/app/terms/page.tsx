@@ -1,3 +1,4 @@
+import { PublicLink } from "@/components/navigation/PublicLink";
 import Link from "next/link";
 import { PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
 
@@ -11,9 +12,9 @@ const POLICY_VERSION = "2026-09-17";
 export default function TermsPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-6 py-12 text-foreground">
-      <Link href="/" className="text-sm text-[var(--primary-text)] hover:underline">
+      <PublicLink href="/" className="text-sm text-[var(--primary-text)] hover:underline">
         &larr; Back to OpsIQ
-      </Link>
+      </PublicLink>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Terms</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         OpsIQ is currently in <PublicBetaText field="betaPhrase" />. Version {POLICY_VERSION}.

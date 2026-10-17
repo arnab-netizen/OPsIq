@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicLink } from "@/components/navigation/PublicLink";
 import { PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
 
 export const metadata = {
@@ -11,9 +12,9 @@ const POLICY_VERSION = "2026-09-17";
 export default function BetaNoticePage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-6 py-12 text-foreground">
-      <Link href="/" className="text-sm text-[var(--primary-text)] hover:underline">
+      <PublicLink href="/" className="text-sm text-[var(--primary-text)] hover:underline">
         &larr; Back to OpsIQ
-      </Link>
+      </PublicLink>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Beta Notice</h1>
       <p className="mt-2 text-sm text-muted-foreground">Version {POLICY_VERSION}.</p>
       <p className="mt-2 rounded bg-muted p-3 text-xs text-muted-foreground">
@@ -29,9 +30,9 @@ export default function BetaNoticePage() {
               open={
                 <>
                   You can create an account at{" "}
-                  <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+                  <PublicLink href="/signup" className="text-[var(--primary-text)] hover:underline">
                     /signup
-                  </Link>
+                  </PublicLink>
                   , subject to the beta&rsquo;s capacity limit. If registration is full or paused, the
                   signup page will say so.{" "}
                 </>
@@ -42,9 +43,9 @@ export default function BetaNoticePage() {
                   beta access from the homepage — submitting a request does not guarantee access; we
                   follow up by email if you&rsquo;re selected. If you&rsquo;ve been invited, you can
                   complete your account at{" "}
-                  <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+                  <PublicLink href="/signup" className="text-[var(--primary-text)] hover:underline">
                     /signup
-                  </Link>
+                  </PublicLink>
                   .{" "}
                 </>
               }

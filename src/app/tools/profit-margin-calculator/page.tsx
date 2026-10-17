@@ -1,3 +1,4 @@
+import { PublicLink } from "@/components/navigation/PublicLink";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
@@ -110,9 +111,9 @@ export default function ProfitMarginCalculatorPage() {
 
       <div className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 break-words">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
-          <Link href="/" className="hover:underline">
+          <PublicLink href="/" className="hover:underline">
             OpsIQ
-          </Link>{" "}
+          </PublicLink>{" "}
           / <span aria-current="page">Profit margin calculator</span>
         </nav>
         <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Profit Margin Calculator for Small Business</h1>
