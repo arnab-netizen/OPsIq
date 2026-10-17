@@ -451,7 +451,7 @@ export function buildImproveOutcome(args: {
   }
 
   const lines = [...went];
-  if (before.confidenceTier !== after.confidenceTier) lines.push(`How sure OpsIQ is: ${tier(before.confidenceTier)} → ${tier(after.confidenceTier)}`);
+  if (before.confidenceTier !== after.confidenceTier) lines.push(`How complete your information is: ${tier(before.confidenceTier)} → ${tier(after.confidenceTier)}`);
   if (before.evidenceQuality !== after.evidenceQuality) lines.push(`How reliable your numbers are: ${quality(before.evidenceQuality)} → ${quality(after.evidenceQuality)}`);
   const filled = before.missingEvidence.filter((m) => !after.missingEvidence.includes(m));
   const newlyMissing = after.missingEvidence.filter((m) => !before.missingEvidence.includes(m));

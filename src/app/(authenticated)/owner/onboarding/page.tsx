@@ -12,6 +12,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { displayLabelForField } from "@/domain/owner-finance";
+import { ownerConceptScorePhrase } from "@/domain/owner-spine/confidence-vocabulary";
 import { confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
 import {
   BANK_BALANCE_COPY,
@@ -110,10 +111,11 @@ function lastFullMonthEnd(): string {
 }
 
 function confidencePhrase(score: number): string {
-  if (score >= 85) return "High confidence — this is based on solid data.";
-  if (score >= 60) return "Reasonable confidence — a good starting picture.";
-  if (score >= 30) return "Limited confidence — add more data for a fuller picture.";
-  return "Not enough data yet for a reliable read.";
+  const phrase = ownerConceptScorePhrase("DATA_COMPLETENESS", score);
+  if (score >= 85) return `${phrase} — this is based on solid data.`;
+  if (score >= 60) return `${phrase} — a good starting picture.`;
+  if (score >= 30) return `${phrase} — add more data for a fuller picture.`;
+  return `${phrase} — not enough data yet for a reliable read.`;
 }
 
 /**
@@ -428,7 +430,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
       {typeof confidenceScore === "number" && (
         <>
           <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            How sure OpsIQ is
+            How complete your information is
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">{confidencePhrase(confidenceScore)}</p>
         </>
@@ -592,7 +594,7 @@ export default function OwnerOnboardingPage() {
 
                   <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-confidence">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs uppercase text-muted-foreground">How sure OpsIQ is so far</div>
+                      <div className="text-xs uppercase text-muted-foreground">How much starter information OpsIQ has so far</div>
                       <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
                         {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
                       </Badge>

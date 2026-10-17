@@ -250,9 +250,8 @@ describe("one action: save → diagnose → route (6, 9, 10, 12, 13)", () => {
     fireEvent.click(primary());
     const text = (await screen.findByTestId("quick-error")).textContent ?? "";
     expect(text).toMatch(/already saved numbers for that period/i);
-    // It points at a path that EXISTS (the first read's correction), never at an editor the Money page does not have.
-    expect(text).toMatch(/Something here is wrong/);
-    expect(text).not.toMatch(/Money page|update the saved numbers/i);
+    // It points at a path that EXISTS: Money lists every saved period with "Update this period" (governed amendment).
+    expect(text).toMatch(/Update this period/);
     expect(posts("/snapshots")).toHaveLength(1);
     expect(posts("/diagnoses")).toHaveLength(0);
   });

@@ -182,7 +182,7 @@ export function resolveOwnerAdvicePolicy(input: OwnerAdvicePolicyInput): OwnerAd
             ? "CAUTION"
             : "SUPPORTED";
     const reasons = noData
-      ? ["There is no business data yet."]
+      ? ["OpsIQ has no completed analysis of your figures yet."]
       : mode === "REFRESH_REQUIRED"
         ? ["Some figures are out of date, so OpsIQ cannot say nothing needs doing in those areas."]
         : mode === "EVIDENCE_REQUIRED"

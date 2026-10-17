@@ -755,7 +755,7 @@ export default function OwnerCommandCenterPage() {
                       Execution risk {Math.round(profile.executionRiskScore)}/100
                     </Badge>
                   )}
-                  <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
+                  <Badge variant="muted-accessible">Data completeness {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Domains wired: {(data.domainsWired ?? []).map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ") || "none"}

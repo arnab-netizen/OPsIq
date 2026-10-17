@@ -180,8 +180,10 @@ export function QuickFinancialPicture({
     if (error instanceof HttpResponseError && error.status === 409) {
       setPhase({
         kind: "error",
-        // The Money page has no editor for saved numbers; the real correction path is the first read's "Something here is wrong".
-        message: "You've already saved numbers for that period, so nothing new was saved. Pick a different period, or open your first read and use “Something here is wrong” to correct the saved numbers.",
+        // A saved period is updated, never re-added: Money lists every saved period with "Update this period" (governed amendment).
+        message: omitMoneyLink
+          ? "You've already saved numbers for that period, so nothing new was saved. To add a missing figure or correct one, use “Update this period” under Your saved periods — or pick a different period here."
+          : "You've already saved numbers for that period, so nothing new was saved. To add a missing figure or correct one, open the Money page and use “Update this period” — or pick a different period here.",
       });
       return;
     }
@@ -246,8 +248,11 @@ export function QuickFinancialPicture({
           {incompleteSaved.length > 0 && (
             <p className="mt-3 rounded-md border border-border bg-background p-3 text-sm text-foreground" data-testid="quick-incomplete-saved">
               You already have saved numbers for {incompleteSaved[0].start} to {incompleteSaved[0].end}, but OpsIQ still needs{" "}
-              {describeMissingFirstReadFacts(incompleteSaved[0].missing)}. Those saved numbers are left as they are — to complete them, use{" "}
-              <Link href="/owner/onboarding" className="underline">Guided setup</Link>, or give a different period here.
+              {describeMissingFirstReadFacts(incompleteSaved[0].missing)}. Those saved numbers are left as they are — to complete them, {omitMoneyLink ? (
+                <>use “Update this period” under Your saved periods</>
+              ) : (
+                <>use “Update this period” on the <Link href="/owner/finance#saved-periods" className="underline">Money page</Link></>
+              )}, or give a different period here.
             </p>
           )}
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">

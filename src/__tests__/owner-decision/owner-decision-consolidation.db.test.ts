@@ -17,6 +17,7 @@
  *
  * `[db]`-gated. Run: TEST_WITH_DB=true npx vitest run src/__tests__/owner-decision/owner-decision-consolidation.db.test.ts
  */
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { randomUUID } from "crypto";
 
@@ -248,7 +249,8 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(expected.length).toBeGreaterThan(0);
 
     const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
-    for (const m of expected) expect(d.missingInformation).toContain(m);
+    // the persisted keys are shown to the owner in owner words (never the internal key)
+    for (const m of ownerMissingItems(expected)) expect(d.missingInformation).toContain(m.charAt(0).toUpperCase() + m.slice(1));
     // The Business Condition rollup and Finance dashboard read the same diagnosed snapshot.
     const { getBusinessCondition } = await import("@/services/owner-condition/business-condition.service");
     const cond = await getBusinessCondition(workspaceId, businessId);

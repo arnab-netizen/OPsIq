@@ -290,13 +290,13 @@ export interface FirstMoneyRead {
   profitPosition: ProfitPosition | null;
 }
 
-// Same words and thresholds as every other owner surface (owner-spine/confidence-vocabulary.ts); only the tier's plain
+// Same scale and thresholds as every other owner surface (owner-spine/confidence-vocabulary.ts), labelled as the DATA_COMPLETENESS concept; only the tier's plain
 // consequence is added where the tier contract has one.
 const CONFIDENCE_LABEL: Record<ConfidenceTier, string> = {
-  HIGH: "High confidence",
-  MEDIUM: "Moderate confidence",
-  LOW: "Low confidence — directional only, treat as a first guide",
-  BLOCKED: "Too low to rely on yet — not enough information",
+  HIGH: "Data completeness: High",
+  MEDIUM: "Data completeness: Moderate",
+  LOW: "Data completeness: Low — directional only, treat as a first guide",
+  BLOCKED: "Data completeness: too low to rely on yet — not enough information",
 };
 
 function timingLabel(days: number): string {

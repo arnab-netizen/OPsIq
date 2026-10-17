@@ -9,6 +9,7 @@
  */
 import Link from "next/link";
 import { Badge, Disclosure } from "@/ui/primitives";
+import { ownerTargetConfidencePhrase, OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
 import type { OwnerAdviceMode } from "@/domain/owner-spine/owner-advice-policy";
 import { OWNER_WHAT_CHANGED_WINDOW_DAYS, ownerTargetHref, type CurrentOwnerDecision, type OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
@@ -27,12 +28,6 @@ const POLICY_BADGE_LABEL: Partial<Record<OwnerAdviceMode, string>> = {
 const SEVERITY_LABEL: Record<string, string> = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const SEVERITY_VARIANT = (s: string | null): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
   s === "critical" || s === "high" ? "destructive-accessible" : s === "medium" ? "warning-accessible" : s === "low" ? "default-accessible" : "muted-accessible";
-const CONFIDENCE_LABEL: Record<string, string> = {
-  high: "High confidence",
-  moderate: "Moderate confidence",
-  low: "Low confidence",
-  insufficient: "Not enough evidence",
-};
 const CONFIDENCE_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "muted-accessible"> = {
   high: "success-accessible",
   moderate: "default-accessible",
@@ -81,8 +76,8 @@ export function OwnerDecisionCard({
         )}
         {(p || decision.state === "NO_EVIDENCE") && (
           <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
-            <span data-testid="owner-decision-confidence">
-              {policyBadge ?? (p && decision.confidence.level === "insufficient" ? "Very low confidence" : CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level)}
+            <span data-testid="owner-decision-confidence" title={OWNER_CONFIDENCE_CONCEPT.TARGET_CONFIDENCE.measures}>
+              {policyBadge ?? (p ? ownerTargetConfidencePhrase(decision.confidence.level) : "No main target yet — not enough information")}
             </span>
           </Badge>
         )}

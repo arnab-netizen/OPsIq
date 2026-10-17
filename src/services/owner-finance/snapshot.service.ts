@@ -12,7 +12,9 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
+import { FINANCE_CONFLICT_CODES } from "@/domain/owner-finance/snapshot-conflict";
+import { FinanceConflictError } from "./finance-conflict";
 import { findFinanceContradictions } from "@/domain/owner-finance/validation";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
@@ -141,6 +143,9 @@ export async function listFinancialSnapshotVersions(
   });
 }
 
+const PERIOD_EXISTS_MESSAGE =
+  "A financial snapshot for this business and reporting period already exists. Amend it instead of creating a duplicate.";
+
 export async function createFinancialSnapshot(
   businessId: string,
   input: FinancialSnapshotCreateInput,
@@ -165,9 +170,7 @@ export async function createFinancialSnapshot(
     select: { id: true },
   });
   if (existing) {
-    throw new ConflictError(
-      "A financial snapshot for this business and reporting period already exists. Amend it instead of creating a duplicate."
-    );
+    throw new FinanceConflictError(FINANCE_CONFLICT_CODES.PERIOD_EXISTS, PERIOD_EXISTS_MESSAGE, { snapshotId: existing.id });
   }
 
   const engineInput = toFinanceInput(input);
@@ -184,9 +187,7 @@ export async function createFinancialSnapshot(
       select: { id: true },
     });
     if (raced) {
-      throw new ConflictError(
-        "A financial snapshot for this business and reporting period already exists. Amend it instead of creating a duplicate."
-      );
+      throw new FinanceConflictError(FINANCE_CONFLICT_CODES.PERIOD_EXISTS, PERIOD_EXISTS_MESSAGE, { snapshotId: raced.id });
     }
     const created = await tx.ownerFinancialSnapshot.create({
       data: {
@@ -340,8 +341,10 @@ export async function amendFinancialSnapshot(
     if (g.workspace_id !== workspaceId) throw new NotFoundError("OwnerFinancialSnapshot", snapshotId);
 
     if (g.superseded_by_id !== null) {
-      throw new ConflictError(
-        `Snapshot ${snapshotId} has already been superseded by ${g.superseded_by_id}. Amend the latest version instead.`
+      throw new FinanceConflictError(
+        FINANCE_CONFLICT_CODES.SUPERSEDED,
+        `Snapshot ${snapshotId} has already been superseded by ${g.superseded_by_id}. Amend the latest version instead.`,
+        { currentSnapshotId: g.superseded_by_id }
       );
     }
 

@@ -243,7 +243,7 @@ describe("Owner Cockpit (Home) — UX-03 canonical assessment presentation", () 
     expect(screen.getByTestId("owner-assessment-primary-concern")).toHaveTextContent(
       "Cash flow is the first issue to address.",
     );
-    expect(screen.getByTestId("owner-assessment-confidence-label")).toHaveTextContent("Limited confidence");
+    expect(screen.getByTestId("owner-assessment-confidence-label")).toHaveTextContent("Assessment evidence: limited");
     expect(screen.getByTestId("owner-assessment-confidence-message")).toHaveTextContent(
       "Some important data is missing, so this assessment is provisional.",
     );
@@ -276,7 +276,7 @@ describe("Owner Cockpit (Home) — UX-03 canonical assessment presentation", () 
         "There isn't enough evidence to assess this business yet.",
       ),
     );
-    expect(screen.getByTestId("owner-assessment-confidence-label")).toHaveTextContent("Not enough evidence");
+    expect(screen.getByTestId("owner-assessment-confidence-label")).toHaveTextContent("Assessment evidence: not enough");
     expect(screen.getByTestId("owner-assessment-confidence-message")).toHaveTextContent(
       "More current business data is needed before OpsIQ can make a reliable assessment.",
     );

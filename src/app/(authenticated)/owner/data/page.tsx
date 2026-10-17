@@ -34,6 +34,7 @@ import {
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { blocksFirstRead, confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
 import type { FirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
+import { firstReadStatement } from "@/domain/owner-finance/first-read-statement";
 import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -210,6 +211,7 @@ function BusinessTypeEditor({ business, onUpdated }: { business: BusinessLite; o
 
 /** What OpsIQ knows so far: the confidence badge and essential-items progress. */
 function ReadinessSummary({ state }: { state: OnboardingView }) {
+  const statement = firstReadStatement(state.firstRead);
   const pct =
     state.minimumRequiredCount > 0
       ? Math.round((state.minimumSuppliedCount / state.minimumRequiredCount) * 100)
@@ -226,9 +228,8 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
 
       <p className="mt-2 text-sm text-muted-foreground" data-testid="data-hub-first-read-ready">
         <span className="font-medium text-foreground">Enough for a first read. </span>
-        You have given OpsIQ revenue, a cost figure and cash
-        {state.firstRead?.basis === "provisional" ? " for a month that is still in progress, so the read is provisional" : ""}.
-        That is a rough financial picture — it does not mean OpsIQ knows the whole business.
+        {statement.given}
+        {statement.notGiven ? <span data-testid="data-hub-first-read-not-given"> {statement.notGiven}</span> : null} {statement.caveat}
       </p>
       <p className="mt-1 text-sm text-muted-foreground" data-testid="data-hub-starter-profile">
         <span className="font-medium text-foreground">Additional starter and profile evidence: </span>

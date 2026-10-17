@@ -584,7 +584,7 @@ function SalesCycleView({
         <div className="text-right">
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
+            data completeness {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
         </div>
       </div>

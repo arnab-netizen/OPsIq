@@ -190,8 +190,7 @@ describe("FindingCard — every previously-shown field is preserved", () => {
     expect(screen.getByText(/compared against/i)).toBeInTheDocument();
     expect(screen.getByText(/Supporting detail:/)).toBeInTheDocument();
     expect(screen.getByText(/lost customer rate % = 57\.1 > 35/i)).toBeInTheDocument();
-    expect(screen.getByText(/How sure OpsIQ is:/)).toBeInTheDocument();
-    expect(screen.getByText(/Moderate confidence \(80\/100\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Finding strength: Moderate \(80\/100\)/)).toBeInTheDocument();
     expect(screen.getByText(/verify by re-checking/i)).toBeInTheDocument();
   });
 

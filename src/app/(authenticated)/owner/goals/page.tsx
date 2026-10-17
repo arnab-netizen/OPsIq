@@ -17,6 +17,7 @@ import { Badge, Button, Modal, Input, Select, DetailPageSkeleton, PageHeader, Pa
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { httpResponseErrorFromBody, fieldErrorMap } from "@/lib/operator-safe-errors";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 type TargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
@@ -87,7 +88,7 @@ const STATUS_VARIANT: Record<GoalStatus, "default-accessible" | "success-accessi
 };
 const STATUS_LABEL: Record<GoalStatus, string> = { ACTIVE: "Active", ACHIEVED: "Achieved", REVISED: "Replaced" };
 // Verified against TrajectoryConfidence in src/services/owner-strategy/goal-trajectory.service.ts.
-const CONFIDENCE_LABEL: Record<string, string> = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" };
+const CONFIDENCE_LABEL: Record<string, string> = { HIGH: "High", MEDIUM: "Moderate", LOW: "Low" };
 const NOT_AVAILABLE = "Not enough data";
 
 async function apiFetch(path: string, options?: RequestInit) {
@@ -179,8 +180,8 @@ function GoalCard({ view, testId, children }: { view: GoalTrajectoryView; testId
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Confidence</p>
-                <p className="text-lg font-semibold">{CONFIDENCE_LABEL[traj.confidence] ?? traj.confidence}</p>
+                <p className="text-xs text-muted-foreground mb-1" title={OWNER_CONFIDENCE_CONCEPT.GOAL_FORECAST.measures}>Forecast confidence</p>
+                <p className="text-lg font-semibold" data-testid="goal-forecast-confidence">{CONFIDENCE_LABEL[traj.confidence] ?? traj.confidence}</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground">Gap to target: {formatCurrency(traj.gapToClose, goal.targetCurrency)}</p>

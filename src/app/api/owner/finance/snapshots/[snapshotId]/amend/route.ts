@@ -13,6 +13,7 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { financialSnapshotAmendSchema } from "@/domain/owner-finance/validation";
 import { amendFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import { FinanceConflictError } from "@/services/owner-finance/finance-conflict";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,16 +22,22 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     parseOrThrow(uuidSchema, params.snapshotId);
     const body = await parseRequestBody(ctx.request!, financialSnapshotAmendSchema);
-    const { snapshot, previousSnapshotId } = await amendFinancialSnapshot(
-      params.snapshotId,
-      body,
-      ctx.verifiedActorId,
-      ctx.verifiedWorkspaceId
-    );
-    return canonicalJson(
-      { newSnapshotId: snapshot!.id, previousSnapshotId, version: snapshot!.version },
-      { status: 201 }
-    );
+    try {
+      const { snapshot, previousSnapshotId } = await amendFinancialSnapshot(
+        params.snapshotId,
+        body,
+        ctx.verifiedActorId,
+        ctx.verifiedWorkspaceId
+      );
+      return canonicalJson(
+        { newSnapshotId: snapshot!.id, previousSnapshotId, version: snapshot!.version },
+        { status: 201 }
+      );
+    } catch (error) {
+      // FINANCE_SNAPSHOT_SUPERSEDED: the form was opened on a version that has since been replaced.
+      if (error instanceof FinanceConflictError) return canonicalJson(error.responseBody, { status: 409 });
+      throw error;
+    }
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

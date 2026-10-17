@@ -10,6 +10,7 @@ import { financialSnapshotCreateSchema } from "@/domain/owner-finance/validation
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { assertEvidenceQualityStatedForFirstEvidence, recordProductEventOnce } from "@/services/owner-first-run/first-run.service";
 import { createFinancialSnapshot, listFinancialSnapshots } from "@/services/owner-finance/snapshot.service";
+import { FinanceConflictError } from "@/services/owner-finance/finance-conflict";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,12 +28,14 @@ export const POST = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, params.businessId);
     const input = await parseRequestBody(ctx.request!, financialSnapshotCreateSchema);
     await assertEvidenceQualityStatedForFirstEvidence(ctx.verifiedWorkspaceId, params.businessId, input.evidenceQuality);
-    const snapshot = await createFinancialSnapshot(
-      params.businessId,
-      input,
-      ctx.verifiedActorId,
-      ctx.verifiedWorkspaceId
-    );
+    let snapshot;
+    try {
+      snapshot = await createFinancialSnapshot(params.businessId, input, ctx.verifiedActorId, ctx.verifiedWorkspaceId);
+    } catch (error) {
+      // FINANCE_PERIOD_EXISTS carries the existing snapshot's id so the owner can open that period to update it.
+      if (error instanceof FinanceConflictError) return canonicalJson(error.responseBody, { status: 409 });
+      throw error;
+    }
     await recordProductEventOnce({
       name: "first_evidence_saved",
       eventName: AUDIT_EVENTS.PRODUCT_FIRST_EVIDENCE_SAVED,

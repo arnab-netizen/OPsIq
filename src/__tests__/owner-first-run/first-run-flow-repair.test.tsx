@@ -121,7 +121,7 @@ describe("returning from 'Add this'", () => {
     const panel = await screen.findByTestId("first-result-improved");
     expect(retry).toHaveBeenCalledTimes(1);
     expect(panel.textContent).toMatch(/You went to add: fixed costs/);
-    expect(panel.textContent).toMatch(/How sure OpsIQ is: low → high/);
+    expect(panel.textContent).toMatch(/How complete your information is: low → high/);
     expect(panel.textContent).toMatch(/No longer missing: fixed costs/i);
     expect(panel.textContent).toMatch(/Recommendation: Review fixed costs \(unchanged\)/);
     expect(window.sessionStorage.getItem("opsiq:first-run:round-trip")).toBeNull();

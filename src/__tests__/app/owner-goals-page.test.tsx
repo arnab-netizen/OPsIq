@@ -268,7 +268,9 @@ describe("GoalsPage — business-scoped goals", () => {
     const { findByTestId } = render(<GoalsPage />);
     const card = await findByTestId("goal-detail");
     expect(card.textContent).toMatch(/Active/);
-    expect(card.textContent).toMatch(/Medium/);
+    // N5: the goal's confidence is a FORECAST confidence — labelled as such, on the shared High / Moderate / Low words.
+    expect(card.textContent).toMatch(/Forecast confidence/);
+    expect(card.querySelector('[data-testid="goal-forecast-confidence"]')?.textContent).toBe("Moderate");
     expect(card.textContent).not.toMatch(/\bACTIVE\b|\bMEDIUM\b/);
   });
 

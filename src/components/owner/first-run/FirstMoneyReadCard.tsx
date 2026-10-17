@@ -76,7 +76,7 @@ export function FirstMoneyReadCard({
         )}
 
         <div data-testid="first-money-read-confidence">
-          <dt className="font-medium text-muted-foreground">How sure OpsIQ is</dt>
+          <dt className="font-medium text-muted-foreground">How complete your information is</dt>
           <dd className="mt-0.5 text-foreground">{read.confidenceLabel}</dd>
         </div>
 

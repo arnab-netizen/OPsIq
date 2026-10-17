@@ -12,6 +12,8 @@ import * as path from "path";
 
 const pagePath = path.resolve(__dirname, "../../app/(authenticated)/owner/finance/page.tsx");
 const src = fs.readFileSync(pagePath, "utf8");
+// The snapshot form's field set and tiers live in the domain (one definition for the add form and the update form).
+const fieldsSrc = fs.readFileSync(path.resolve(__dirname, "../../domain/owner-finance/snapshot-fields.ts"), "utf8");
 
 describe("Owner Finance page wiring — module contract assertions", () => {
   it("fs.readFileSync is a function", () => {
@@ -94,9 +96,10 @@ describe("Owner Finance page wiring", () => {
   });
 
   it("F2-F4: keeps the four-number quick picture default, optional sections collapsed, business model optional", () => {
-    expect(src).toContain('const QUICK_FIELD_NAMES = ["revenue", "fixedCosts", "variableCosts", "cashOnHand"]');
-    expect(src).toContain('<Disclosure summary="Improve the analysis (optional)">');
-    expect(src).toContain('<Disclosure summary="Advanced detail (optional)">');
+    // The field set and tiers are defined once in the domain (shared by the add form and the update form).
+    expect(fieldsSrc).toContain('export const QUICK_FIELD_NAMES = ["revenue", "fixedCosts", "variableCosts", "cashOnHand"]');
+    expect(src).toContain('<Disclosure summary="Improve the analysis (optional)"');
+    expect(src).toContain('<Disclosure summary="Advanced detail (optional)"');
     expect(src).toContain("Start with your basic numbers");
     expect(src).toContain('label="Business model (optional)"');
     expect(src).toContain("OpsIQ will not guess it");
@@ -106,7 +109,7 @@ describe("Owner Finance page wiring", () => {
   });
 
   it("G1-G8: answer-first summary is built only from returned cycle data (no new ranking, no generated text)", () => {
-    for (const heading of ["What needs attention", "Why this matters", "What to do first", "How sure OpsIQ is", "What is still missing"]) {
+    for (const heading of ["What needs attention", "Why this matters", "What to do first", "How complete your information is", "What is still missing"]) {
       expect(src, heading).toContain(heading);
     }
     expect(src).toContain("recommended?.evidenceRationale"); // Why only when a real rationale exists
@@ -144,15 +147,15 @@ describe("Owner Finance page — progressive-disclosure snapshot entry", () => {
   // this proves the restructuring never drops, duplicates, or renames a submitted field.
   function extractQuotedList(varName: string): string[] {
     const re = new RegExp(`const ${varName}(?:: string\\[\\])?\\s*=\\s*\\[([\\s\\S]*?)\\];`);
-    const match = src.match(re);
+    const match = fieldsSrc.match(re);
     if (!match) throw new Error(`Could not find ${varName} in source`);
     return [...match[1].matchAll(/"([a-zA-Z0-9]+)"/g)].map((m) => m[1]);
   }
 
   function extractFinanceFieldNames(): string[] {
-    const start = src.indexOf("const FINANCE_FIELDS");
-    const end = src.indexOf("];", start);
-    const block = src.slice(start, end);
+    const start = fieldsSrc.indexOf("export const FINANCE_FIELDS");
+    const end = fieldsSrc.indexOf("];", start);
+    const block = fieldsSrc.slice(start, end);
     return [...block.matchAll(/\{ name: "([a-zA-Z0-9]+)"/g)].map((m) => m[1]);
   }
 
@@ -171,9 +174,9 @@ describe("Owner Finance page — progressive-disclosure snapshot entry", () => {
     const quick = extractQuotedList("QUICK_FIELD_NAMES");
     const advanced = extractQuotedList("ADVANCED_FIELD_NAMES");
 
-    const improveBlockStart = src.indexOf("const IMPROVE_GROUPS");
-    const improveBlockEnd = src.indexOf("];", improveBlockStart);
-    const improveBlock = src.slice(improveBlockStart, improveBlockEnd);
+    const improveBlockStart = fieldsSrc.indexOf("export const IMPROVE_GROUPS");
+    const improveBlockEnd = fieldsSrc.indexOf("];", improveBlockStart);
+    const improveBlock = fieldsSrc.slice(improveBlockStart, improveBlockEnd);
     // Only pull names out of each group's `fieldNames: [...]` sub-array, never a group's `title`
     // string (e.g. "Loans", "Stock" would otherwise false-positive-match the same regex).
     const improve = [...improveBlock.matchAll(/fieldNames:\s*\[([^\]]*)\]/g)].flatMap((m) =>
