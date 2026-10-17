@@ -12,6 +12,7 @@
 import { allowedProcessTaskActions, approveActionLabel } from "@/domain/owner-mode/process-execution-bridge";
 import type { ReactNode } from "react";
 import { Badge } from "@/ui/primitives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 
 // ── Executive Cockpit layout (progressive disclosure, anti-overload, mobile-friendly) ──────────────────
 
@@ -148,7 +149,7 @@ export function ProcessIntelligencePanel({ data }: { data: ProcessIntelligenceVi
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>{top.ownerExplanation}</p>
         {top.missingData.length > 0 && (
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#b45309" }} data-testid="pi-missing-data">
-            Needed: {top.missingData.join("; ")}
+            Needed: {ownerMissingItems(top.missingData).join("; ")}
           </p>
         )}
       </div>
@@ -195,7 +196,7 @@ export function ProcessIntelligencePanel({ data }: { data: ProcessIntelligenceVi
       </div>
 
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: "#b45309" }} data-testid="pi-missing-data">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 13, color: "#b45309" }} data-testid="pi-missing-data">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
 
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
@@ -335,7 +336,7 @@ export function SopChecklistCorrectionsPanel({ data }: { data: SopChecklistCorre
                 <span style={{ color: "#6b7280" }}>Review in {d.reviewAfterDays}d</span>
               </div>
               {d.missingData.length > 0 && (
-                <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="sop-item-missing">Missing data: {d.missingData.join("; ")}</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="sop-item-missing">Missing data: {ownerMissingItems(d.missingData).join("; ")}</p>
               )}
             </li>
           );
@@ -525,7 +526,7 @@ export function EffectivenessPanel({ data }: { data: EffectivenessView | null })
               <span data-testid="eff-item-approval">
                 <Badge variant={e.approvalLevel === "OWNER" ? "destructive" : "default"}>{APPROVAL_LABEL[e.approvalLevel] ?? e.approvalLevel}</Badge>
               </span>
-              {e.missingData.length > 0 && <span style={{ color: "#b45309" }} data-testid="eff-item-missing">Missing: {e.missingData.join("; ")}</span>}
+              {e.missingData.length > 0 && <span style={{ color: "#b45309" }} data-testid="eff-item-missing">Missing: {ownerMissingItems(e.missingData).join("; ")}</span>}
             </div>
           </li>
         ))}
@@ -622,7 +623,7 @@ export function OwnerWorkloadReductionPanel({ data }: { data: OwnerWorkloadReduc
         </details>
       )}
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="owr-missing">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="owr-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
       {rest.length > 0 && (
         <details data-testid="owr-more">
@@ -721,7 +722,7 @@ export function ApprovalPolicyPanel({ data }: { data: ApprovalPolicyView | null 
         </details>
       )}
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="app-missing">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="app-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
       <span data-testid="app-summary" style={{ fontSize: 12, color: "#6b7280" }}>
         {s.autoAllowed} auto · {s.managerRequired} manager · {s.ownerRequired} owner · {s.neverAuto} never-auto · {s.needsData} needs-data
@@ -911,7 +912,7 @@ export function CashProfitPanel({ data }: { data: CashProfitProtectionView | nul
         </details>
       )}
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="cp-missing">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="cp-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
       <span data-testid="cp-summary" style={{ fontSize: 12, color: "#6b7280" }}>
         {s.total} risk(s) · {s.critical} critical · {s.high} high · {s.ownerReviewRequired} need owner review
@@ -1188,7 +1189,7 @@ export function OpportunityPanel({ data }: { data: ExternalOpportunityView | nul
             </details>
           )}
           {top.missingData.length > 0 && (
-            <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="opp-missing">Missing data: {top.missingData.join("; ")}</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="opp-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
           )}
         </>
       )}

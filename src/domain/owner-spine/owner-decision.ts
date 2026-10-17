@@ -30,6 +30,7 @@
  * diagnosed domain gets honest "add data" guidance instead of a fabricated target.
  */
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { ownerMissingItemText } from "./owner-field-labels";
 import { describeVerifiedActionLine } from "./owner-outcome-policy";
 import {
   ownerImperativeContext,
@@ -1291,10 +1292,12 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
 
   // Missing information: never invented — carried from the diagnosis layer and the primary's finding.
   const missingInformation: string[] = [];
-  const pushMissing = (s: string) => {
+  // Owner words only: a persisted finding names its missing evidence by internal field (`bankBalance`), never shown as such.
+  const pushMissing = (raw: string) => {
+    const s = ownerMissingItemText(raw, { capitalise: true });
     if (s && !missingInformation.includes(s)) missingInformation.push(s);
   };
-  if (!hasEvidence) pushMissing("Add your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
+  if (!hasEvidence) pushMissing("Add or complete your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
   for (const m of input.dataSufficiency.missingCriticalData) pushMissing(m);
   if (primary) for (const m of primary.missingData) pushMissing(m);
   for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`);
@@ -1339,7 +1342,8 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (primaryIsRefresh) reasons.push("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
   else if (primaryIsDataRequest) reasons.push("This is a request for missing information; advice on everything else waits for it.");
   const level: OwnerDecisionConfidenceLevel = primary ? confidenceLevelFor(score) : "insufficient";
-  if (!primary && !hasEvidence) reasons.push("There is no business data yet.");
+  // "No analysed data" — never "no data": figures may be saved but not yet assessed (or too incomplete to assess).
+  if (!primary && !hasEvidence) reasons.push("OpsIQ has no completed analysis of your figures yet.");
 
   // Why this wins: explicit arbitration against the strongest competitor, and against the strongest
   // competitor from a DIFFERENT domain (so a Finance-vs-Strategy conflict is always named).

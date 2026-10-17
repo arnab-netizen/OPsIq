@@ -713,7 +713,7 @@ function OperationsCycleView({
         </div>
         {presentedScores.note && <p className="mt-2 text-sm text-foreground" data-testid="score-availability-note">{presentedScores.note}</p>}
         <p className="mt-3 text-sm text-muted-foreground">
-          Data confidence {dataConfidence}/100 — how much of this reading rests on real, supplied numbers.
+          Data completeness {dataConfidence}/100 — how much of this reading rests on real, supplied numbers.
         </p>
       </div>
 
@@ -726,7 +726,7 @@ function OperationsCycleView({
           domainLabel="Operations"
           businessId={businessId}
           missing={missing.map(humanizeMetricKey)}
-          fallback={`⚠ Data confidence is critically low (${dataConfidence}/100). Diagnosis results are not yet reliable; confirm them with the missing critical inputs below before relying on them.`}
+          fallback={`⚠ Data completeness is critically low (${dataConfidence}/100). Diagnosis results are not yet reliable; confirm them with the missing critical inputs below before relying on them.`}
         />
       )}
 
@@ -754,7 +754,7 @@ function OperationsCycleView({
           OwnerFinanceFinding, so this is the same real component, not a look-alike copy. */}
       <section className="border-t border-border pt-4">
         <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-4">Findings ({cycle.findings.length})</h2>
-        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected — this may indicate missing input data rather than smooth operations. Check data confidence above.</p>}
+        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected — this may indicate missing input data rather than smooth operations. Check data completeness above.</p>}
         <div className="flex flex-col gap-6">
           {cycle.findings.map((f: any) => (
             <FindingCard key={f.id} finding={f} />

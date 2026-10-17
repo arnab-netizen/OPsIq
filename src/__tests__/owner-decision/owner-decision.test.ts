@@ -132,7 +132,8 @@ describe("adversarial cases", () => {
       { dataSufficiency: { status: "insufficient", lowestDataConfidenceScore: 0, lowConfidenceDomains: ["finance"], missingCriticalData: ["costs", "cashOnHand"] } }
     ));
     expect(d.primaryTarget?.title).toBe("Enter your costs and cash");
-    expect(d.missingInformation).toEqual(expect.arrayContaining(["costs", "cashOnHand"]));
+    // owner words, never the internal keys
+    expect(d.missingInformation).toEqual(expect.arrayContaining(["Costs", "Cash in hand"]));
     expect(d.whyThisWins.join(" ")).toMatch(/Close the ₹50,000 funding gap/);
   });
 
@@ -197,7 +198,7 @@ describe("adversarial cases", () => {
     expect(d.primaryTarget).toBeNull();
     expect(d.primaryCandidateId).toBeNull();
     expect(d.attention).toEqual([]);
-    expect(d.missingInformation[0]).toMatch(/Add your business numbers/);
+    expect(d.missingInformation[0]).toMatch(/Add or complete your business numbers/);
     expect(d.confidence.level).toBe("insufficient");
   });
 

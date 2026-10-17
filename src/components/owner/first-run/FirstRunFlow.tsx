@@ -381,7 +381,7 @@ export function FirstRunFlow() {
                 <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
                   <li>Corrected: {correction.changedFields.map(fieldLabel).join(", ")}</li>
                   <li>
-                    How sure OpsIQ is: {TIER_WORDS[correction.before.confidenceTier]} → {TIER_WORDS[correction.after.read.confidenceTier]}
+                    How complete your information is: {TIER_WORDS[correction.before.confidenceTier]} → {TIER_WORDS[correction.after.read.confidenceTier]}
                   </li>
                   <li>
                     How reliable your numbers are: {qualityWords(correction.before.evidenceQuality)} → {qualityWords(correction.after.read.evidenceQuality)}

@@ -31,6 +31,8 @@ import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
 import { ownerImperativeContext, reconcileRecoveryBlocks, reconcileRecoveryGrowthGate } from "@/domain/owner-spine/owner-imperatives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
+import { presentProfitLeakCard } from "@/domain/owner-mode/profit-leak-presentation";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -289,7 +291,7 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
               Source quality: {signals.sourceQualitySummary} · Evidence: {signals.evidenceStrengthSummary}
             </p>
             {signals.missingData.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {ownerMissingItems(signals.missingData).slice(0, 3).join("; ")}</p>
             )}
             {signals.validationRequired && (
               <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
@@ -998,7 +1000,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
         )}
         {dataFreshnessWeak && (
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--warning-text)", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
-            Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
+            Data completeness is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
           </p>
         )}
       </div>
@@ -1512,13 +1514,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
               whose domain is the literal string "data") are gated on the same leakType check
               business-control-slo.ts already uses for this exact distinction; the impact figure and
               ownerExplanation continue to render exactly as before for every case. */}
-          {topProfitLeak && (
+          {topProfitLeak && (() => {
+            const view = presentProfitLeakCard(topProfitLeak, ownerDecision);
+            return (
             <div data-testid="cockpit-profit-leak-section" className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-foreground">
-                {topProfitLeak.leakType === "DATA_INSUFFICIENT" ? "No profit leak detected yet" : "Profit leak detected"}
-              </span>
+              <span className="text-sm font-medium text-foreground">{view.headline}</span>
               <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 2 }}>
-                {topProfitLeak.leakType !== "DATA_INSUFFICIENT" && (
+                {view.radarFinding && (
                   <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
                 )}
                 {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
@@ -1527,12 +1529,16 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                     {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
                   </span>
                 )}
-                {topProfitLeak.ownerExplanation && (
+                {view.scopeNote && (
+                  <span data-testid="cockpit-profit-leak-scope" style={{ color: "var(--muted-foreground)" }}>{view.scopeNote}</span>
+                )}
+                {topProfitLeak.ownerExplanation && view.showRadarExplanation && (
                   <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
                 )}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Policy Attention Signal — Phase 2 Signal C */}
           {policyAttentionSignal && (

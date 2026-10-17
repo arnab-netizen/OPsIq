@@ -30,7 +30,8 @@ describe("cashOnHand means physical cash — one truthful meaning everywhere", (
   });
 
   it("Money's full-detail form uses the same copy (no separate, contradictory definition)", () => {
-    const src = read("src/app/(authenticated)/owner/finance/page.tsx");
+    // The form's field definitions live in the domain (shared by the add form and the update form).
+    const src = read("src/domain/owner-finance/snapshot-fields.ts");
     const line = src.split("\n").find((l) => l.includes('name: "cashOnHand"'))!;
     expect(line).toContain("CASH_IN_HAND_COPY.label");
     expect(line).toContain("CASH_IN_HAND_COPY.hint");

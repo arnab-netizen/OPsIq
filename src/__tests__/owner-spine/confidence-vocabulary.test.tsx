@@ -22,22 +22,24 @@ describe("one confidence vocabulary: the same number reads the same on every own
     expect(ownerConfidenceLevel(Number.NaN)).toBe("INSUFFICIENT");
     expect(ownerConfidencePhrase(Number.NaN)).toBe("Too low to rely on (0/100)");
   });
-  it("a finding at 0.85 reads 'High confidence (85/100)' — not 'Very sure', 'Fairly confident' or a bare number", () => {
+  it("a finding at 0.85 reads 'Finding strength: High (85/100)' — the scale is shared, the concept is named; never 'Very sure', 'Fairly confident' or a bare number", () => {
     const { container } = render(
       <FindingCard finding={{ id: "f", findingType: "opportunity", title: "t", summary: "s", sourceMetric: "x", sourceValue: 1, threshold: null, severity: "low", confidence: 0.85 }} />,
     );
-    expect(container.textContent).toMatch(/High confidence \(85\/100\)/);
+    expect(container.textContent).toMatch(/Finding strength: High \(85\/100\)/);
     expect(container.textContent).not.toMatch(/Very sure|Fairly confident|Reasonably sure/);
   });
-  it("the first read words the same score with the same label", () => {
+  it("the first read words the same score on the same scale, labelled as data completeness", () => {
     const read = (confidenceScore: number) =>
       buildFirstMoneyRead({
         finding: null, action: null, dataRequest: null, confidenceScore, evidenceQuality: "ACTUAL", missingEvidence: [],
         period: { start: "2026-09-01T00:00:00.000Z", end: "2026-09-30T00:00:00.000Z", state: "completed" },
       });
-    expect(read(85).confidenceLabel).toBe(ownerConfidenceLabel(85));
-    expect(read(70).confidenceLabel).toBe(ownerConfidenceLabel(70));
-    expect(read(40).confidenceLabel).toMatch(/^Low confidence/);
-    expect(read(10).confidenceLabel).toMatch(/^Too low to rely on/);
+    expect(read(85).confidenceLabel).toBe("Data completeness: High");
+    expect(read(70).confidenceLabel).toBe("Data completeness: Moderate");
+    expect(read(40).confidenceLabel).toMatch(/^Data completeness: Low/);
+    expect(read(10).confidenceLabel).toMatch(/^Data completeness: too low to rely on/);
+    // same scale words as the shared vocabulary
+    expect(ownerConfidenceLabel(85)).toBe("High confidence");
   });
 });

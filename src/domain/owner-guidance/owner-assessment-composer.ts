@@ -61,12 +61,12 @@ const PROBLEM_CLASSES = new Set<OwnerPriorityClass>([
 ]);
 
 const AVAILABLE_CONFIDENCE_LABEL: Record<EvidenceConfidenceLevel, string> = {
-  [EvidenceConfidenceLevel.VERIFIED]: "Verified evidence",
-  [EvidenceConfidenceLevel.STRONG]: "Strong evidence",
-  [EvidenceConfidenceLevel.MODERATE]: "Moderate evidence",
-  [EvidenceConfidenceLevel.WEAK]: "Limited evidence",
+  [EvidenceConfidenceLevel.VERIFIED]: "Assessment evidence: verified",
+  [EvidenceConfidenceLevel.STRONG]: "Assessment evidence: strong",
+  [EvidenceConfidenceLevel.MODERATE]: "Assessment evidence: moderate",
+  [EvidenceConfidenceLevel.WEAK]: "Assessment evidence: limited",
   // Defensive fallback for inconsistent upstream input; never changes readiness.
-  [EvidenceConfidenceLevel.INSUFFICIENT]: "Limited evidence",
+  [EvidenceConfidenceLevel.INSUFFICIENT]: "Assessment evidence: limited",
 };
 
 function composeHeadline(assessment: CanonicalOwnerAssessment): string {
@@ -92,8 +92,8 @@ function composePrimaryConcern(assessment: CanonicalOwnerAssessment): string | n
 }
 
 function composeConfidenceLabel(assessment: CanonicalOwnerAssessment): string {
-  if (assessment.readiness === "INSUFFICIENT") return "Not enough evidence";
-  if (assessment.readiness === "LIMITED") return "Limited confidence";
+  if (assessment.readiness === "INSUFFICIENT") return "Assessment evidence: not enough";
+  if (assessment.readiness === "LIMITED") return "Assessment evidence: limited";
   return AVAILABLE_CONFIDENCE_LABEL[assessment.confidence];
 }
 

@@ -135,7 +135,7 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
   it("5. LIMITED + health OK produces the no-major-problem headline and Limited confidence label", () => {
     const result = composeOwnerAssessment(baseAssessment({ readiness: "LIMITED", health: "OK", confidenceCapped: true }));
     expect(result.headline).toBe("No major problem is showing in the current evidence.");
-    expect(result.confidenceLabel).toBe("Limited confidence");
+    expect(result.confidenceLabel).toBe("Assessment evidence: limited");
   });
 
   it("6. LIMITED + health OK + missing data does not turn the headline into WATCH/DANGER/CRITICAL language", () => {
@@ -171,7 +171,7 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
       baseAssessment({ readiness: "LIMITED", health: "CRITICAL", confidenceCapped: true }),
     );
     expect(result.headline).toBe("The business needs urgent attention.");
-    expect(result.confidenceLabel).toBe("Limited confidence");
+    expect(result.confidenceLabel).toBe("Assessment evidence: limited");
   });
 
   const CLASS_CASES: Array<[OwnerPriorityClass, string]> = [
@@ -214,22 +214,22 @@ describe("owner-assessment-composer — UX-02B owner-facing narrative", () => {
   it("15. AVAILABLE confidence labels: VERIFIED/STRONG/MODERATE", () => {
     expect(
       composeOwnerAssessment(baseAssessment({ confidence: EvidenceConfidenceLevel.VERIFIED })).confidenceLabel,
-    ).toBe("Verified evidence");
+    ).toBe("Assessment evidence: verified");
     expect(
       composeOwnerAssessment(baseAssessment({ confidence: EvidenceConfidenceLevel.STRONG })).confidenceLabel,
-    ).toBe("Strong evidence");
+    ).toBe("Assessment evidence: strong");
     expect(
       composeOwnerAssessment(baseAssessment({ confidence: EvidenceConfidenceLevel.MODERATE })).confidenceLabel,
-    ).toBe("Moderate evidence");
+    ).toBe("Assessment evidence: moderate");
   });
 
   it("16. defensive AVAILABLE WEAK/INSUFFICIENT confidence maps to 'Limited evidence' without changing readiness", () => {
     const weak = composeOwnerAssessment(baseAssessment({ confidence: EvidenceConfidenceLevel.WEAK }));
-    expect(weak.confidenceLabel).toBe("Limited evidence");
+    expect(weak.confidenceLabel).toBe("Assessment evidence: limited");
     const insufficientConfidenceButAvailable = composeOwnerAssessment(
       baseAssessment({ confidence: EvidenceConfidenceLevel.INSUFFICIENT }),
     );
-    expect(insufficientConfidenceButAvailable.confidenceLabel).toBe("Limited evidence");
+    expect(insufficientConfidenceButAvailable.confidenceLabel).toBe("Assessment evidence: limited");
   });
 
   it("17. LIMITED + missing data confidenceMessage exact string", () => {

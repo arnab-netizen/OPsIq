@@ -192,7 +192,7 @@ describe("buildImproveOutcome — never claims more than is true", () => {
     const o = buildImproveOutcome({ questionLabel: "Payroll", before: before(), after: tokens({ confidenceTier: "HIGH", missingEvidence: [], cautions: [], recommendedAction: "Raise prices" }), target: null, humanize });
     expect(o.kind).toBe("CHANGED");
     const text = o.lines.join("\n");
-    expect(text).toMatch(/How sure OpsIQ is: low → high/);
+    expect(text).toMatch(/How complete your information is: low → high/);
     expect(text).toMatch(/No longer missing: fixed costs/);
     expect(text).toMatch(/No longer a caution: c1/);
     expect(text).toMatch(/Recommendation: Review fixed costs → Raise prices/);

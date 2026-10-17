@@ -4,6 +4,7 @@
  * is no runtime summary. Advanced reasoning (assumption ledger, full cadence) is collapsed by default.
  */
 import { Badge } from "@/ui/primitives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 
 export interface SupervisorSummaryView {
   found: boolean;
@@ -72,7 +73,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
             <Badge variant={STATUS_VARIANT[summary.actionStatus] ?? "muted"}>{STATUS_LABEL[summary.actionStatus] ?? summary.actionStatus}</Badge>
           </span>
           <span data-testid="supervisor-confidence">
-            <Badge variant={CONFIDENCE_VARIANT[summary.confidence] ?? "muted"}>Confidence: {summary.confidence}</Badge>
+            <Badge variant={CONFIDENCE_VARIANT[summary.confidence] ?? "muted"}>Plan analysis confidence: {summary.confidence}</Badge>
           </span>
           {summary.emergency && <Badge variant="destructive">Emergency</Badge>}
         </div>
@@ -143,7 +144,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
       <div className="rounded-md border p-2 text-sm mt-2" data-testid="supervisor-missing-assumptions">
         <strong>Missing data / assumptions:</strong>{" "}
         {summary.ledger.missingData.length > 0
-          ? <span className="text-muted-foreground">missing: {summary.ledger.missingData.slice(0, 3).join(", ")}.</span>
+          ? <span className="text-muted-foreground">missing: {ownerMissingItems(summary.ledger.missingData).slice(0, 3).join(", ")}.</span>
           : summary.ledger.assumptions.length > 0
             ? <span className="text-muted-foreground">{summary.ledger.assumptions.length} owner-estimate(s) in play.</span>
             : <span className="text-muted-foreground">none material.</span>}

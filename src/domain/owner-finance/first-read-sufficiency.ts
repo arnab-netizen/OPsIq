@@ -50,6 +50,8 @@ export interface FirstReadSufficiency {
    * truth); "none" — no snapshot at all.
    */
   basis: "completed" | "provisional" | "none";
+  /** The reporting period of the snapshot the answer rests on (ISO timestamps); null when there is no snapshot. */
+  period?: { start: string; end: string } | null;
 }
 
 const FACT_BY_ENGINE_KEY: Record<string, FirstReadFact> = {
@@ -77,6 +79,8 @@ export function evaluateFirstReadSufficiency(
 
 /** The persisted OwnerFinancialSnapshot columns the critical-evidence rule reads. */
 export interface CriticalFinanceRow {
+  periodStart?: Date | string | null;
+  periodEnd?: Date | string | null;
   revenue?: number | null;
   costOfGoods?: number | null;
   fixedCosts?: number | null;
@@ -101,12 +105,21 @@ export function criticalFieldsFromRow(row: CriticalFinanceRow): CriticalFinanceF
   };
 }
 
+const isoOf = (v: Date | string | null | undefined): string | null =>
+  v instanceof Date ? (Number.isNaN(v.getTime()) ? null : v.toISOString()) : typeof v === "string" && v ? v : null;
+
+function periodOf(row: CriticalFinanceRow): { start: string; end: string } | null {
+  const start = isoOf(row.periodStart);
+  const end = isoOf(row.periodEnd);
+  return start && end ? { start, end } : null;
+}
+
 export function firstReadSufficiencyFromRow(
   row: CriticalFinanceRow | null | undefined,
   basis: "completed" | "provisional" = "completed"
 ): FirstReadSufficiency {
-  if (!row) return { ...evaluateFirstReadSufficiency({}, "none"), basis: "none" };
-  return evaluateFirstReadSufficiency(criticalFieldsFromRow(row), basis);
+  if (!row) return { ...evaluateFirstReadSufficiency({}, "none"), basis: "none", period: null };
+  return { ...evaluateFirstReadSufficiency(criticalFieldsFromRow(row), basis), period: periodOf(row) };
 }
 
 /**

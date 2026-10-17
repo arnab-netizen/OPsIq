@@ -22,7 +22,7 @@
  * real data -- not as a prop threaded through a component that would otherwise have to fake it.
  */
 import { Badge } from "@/ui/primitives";
-import { ownerConfidenceLabel, ownerConfidencePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { ownerConfidenceLabel, ownerConceptScorePhrase, OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
 import { findingValueIsLowerBound } from "@/domain/owner-finance/cost-model";
 import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 
@@ -144,7 +144,7 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">How sure OpsIQ is:</span> {ownerConfidencePhrase(confidencePct)} — a heuristic rating of the evidence, not a probability
+        <span className="font-medium text-foreground" data-testid="finding-strength">{ownerConceptScorePhrase("FINDING_STRENGTH", confidencePct)}</span> — {OWNER_CONFIDENCE_CONCEPT.FINDING_STRENGTH.measures} A rating of the evidence, not a probability
         {finding.verificationMetric && <> — verify by re-checking {humanizeMetricKey(finding.verificationMetric)}</>}
       </p>
     </div>
