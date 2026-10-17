@@ -55,10 +55,46 @@ export interface LeakageCoverage {
   complete: boolean;
 }
 
+/** The refund / rework / complaint group: the three components whose stored form used to be one merged number. */
+const REFUND_GROUP_KEYS = new Set<string>(["refundAmount", "reworkCost", "complaintCost"]);
+
+/** Label for the part of a LEGACY combined figure that cannot be attributed (see FinancialSnapshotInput.legacyCombinedLeakage). */
+const LEGACY_COMBINED_KNOWN_LABEL = "refunds, redone work and complaint costs combined";
+const LEGACY_COMBINED_UNKNOWN_LABEL = "the split between refunds, redone work and complaint costs";
+
+/**
+ * The values of the refund / rework / complaint group. A legacy record contributes its single ambiguous combined figure
+ * (its three components are UNKNOWN); a component-aware record contributes its three independent components. One
+ * definition, so the metric sums, the "is this input present" checks and the coverage can never disagree.
+ */
+export function refundGroupParts(input: FinancialSnapshotInput): (number | null)[] {
+  const legacy = num(input.legacyCombinedLeakage);
+  return legacy !== null ? [legacy] : [num(input.refundAmount), num(input.reworkCost), num(input.complaintCost)];
+}
+
+/**
+ * The value of an IMPORTANT input for "was it supplied?" checks. The refund / rework / complaint group is ONE important
+ * input ("Refund / Rework Cost"): supplied when any part of it is known, whether as components or as a legacy combined figure.
+ */
+export function importantFieldValue(input: FinancialSnapshotInput, field: string): number | undefined {
+  if (field === "refundAmount") return sumPresent(...refundGroupParts(input)) ?? undefined;
+  return input[field as keyof FinancialSnapshotInput] as number | undefined;
+}
+
 export function leakageCoverage(input: FinancialSnapshotInput): LeakageCoverage {
   const known: string[] = [];
   const unknown: string[] = [];
-  for (const c of LEAKAGE_COMPONENTS) (num(input[c.key]) === null ? unknown : known).push(c.label);
+  const legacy = num(input.legacyCombinedLeakage) !== null;
+  for (const c of LEAKAGE_COMPONENTS) {
+    // A legacy combined figure's composition is unknown: its three components are not individually known, whatever the
+    // aggregate holds, and the group is reported once below.
+    if (legacy && REFUND_GROUP_KEYS.has(c.key)) continue;
+    (num(input[c.key]) === null ? unknown : known).push(c.label);
+  }
+  if (legacy) {
+    known.push(LEGACY_COMBINED_KNOWN_LABEL);
+    unknown.push(LEGACY_COMBINED_UNKNOWN_LABEL); // keeps `complete` false for every legacy record, by construction
+  }
   return { known, unknown, complete: unknown.length === 0 };
 }
 

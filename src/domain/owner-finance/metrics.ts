@@ -21,7 +21,7 @@ import type {
 } from "./types";
 import { resolveFinanceThresholds, type FinanceThresholds } from "./thresholds";
 import { calculateDataConfidence, isValidCurrency } from "./data-confidence";
-import { num, sumPresent, fixedCostsTotal, variableCostsTotal, totalCosts, leakageCoverage } from "./cost-model";
+import { num, sumPresent, fixedCostsTotal, variableCostsTotal, totalCosts, leakageCoverage, refundGroupParts } from "./cost-model";
 
 // The cost model lives in ./cost-model (shared with the confidence model); re-exported so existing imports keep working.
 export { num, fixedCostsTotal, variableCostsTotal, knownFixedCosts, knownVariableCosts, totalCosts } from "./cost-model";
@@ -168,7 +168,7 @@ export function discountLeakagePct(input: FinancialSnapshotInput): number | null
 
 export function refundReworkLeakagePct(input: FinancialSnapshotInput): number | null {
   const revenue = num(input.revenue);
-  const leak = sumPresent(input.refundAmount, input.reworkCost, input.complaintCost);
+  const leak = sumPresent(...refundGroupParts(input));
   if (revenue === null || leak === null || revenue === 0) return null;
   return round1((leak / revenue) * 100);
 }
@@ -180,12 +180,7 @@ export function refundReworkLeakagePct(input: FinancialSnapshotInput): number | 
  */
 export function costLeakageRatioPct(input: FinancialSnapshotInput): number | null {
   const revenue = num(input.revenue);
-  const leak = sumPresent(
-    input.discountAmount,
-    input.refundAmount,
-    input.reworkCost,
-    input.complaintCost
-  );
+  const leak = sumPresent(input.discountAmount, ...refundGroupParts(input));
   if (revenue === null || leak === null || revenue === 0) return null;
   return round1((leak / revenue) * 100);
 }

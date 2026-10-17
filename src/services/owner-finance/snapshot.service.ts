@@ -19,6 +19,7 @@ import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence"
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { CashSemantics } from "@/domain/owner-finance/liquidity";
 import { isEvidenceQuality, provenanceOf, resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { LEAKAGE_COMPONENT_CONTRACT_V1, leakageColumns, resolveAmendedLeakage } from "./leakage-components";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
 /** True when an amendment changes any numeric figure — setting one or returning one to UNKNOWN (notes, reason and quality alone are not numbers). */
@@ -31,12 +32,8 @@ function mergeAmended<T>(incoming: T | null | undefined, recorded: T | null | un
   return incoming === undefined ? recorded ?? null : incoming;
 }
 
-/** Map the validated API input to the engine input shape (refund/rework/complaint merged). */
+/** Map the validated API input to the engine input shape (refund / rework / complaint stay separate; omitted = UNKNOWN). */
 export function toFinanceInput(input: FinancialSnapshotCreateInput): FinancialSnapshotInput {
-  const refundReworkComplaint = [input.refundAmount, input.reworkCost, input.complaintCost]
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
-  const refundMerged =
-    refundReworkComplaint.length > 0 ? refundReworkComplaint.reduce((s, v) => s + v, 0) : undefined;
   return {
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
@@ -56,7 +53,9 @@ export function toFinanceInput(input: FinancialSnapshotCreateInput): FinancialSn
     deliveryFulfilmentCost: input.deliveryFulfilmentCost,
     marketingSpend: input.marketingSpend,
     discountAmount: input.discountAmount,
-    refundAmount: refundMerged,
+    refundAmount: input.refundAmount,
+    reworkCost: input.reworkCost,
+    complaintCost: input.complaintCost,
     loanEmiDebtPayments: input.loanEmiDebtPayments,
     totalDebtOutstanding: input.totalDebtOutstanding,
     cashOnHand: input.cashOnHand,
@@ -98,7 +97,16 @@ export function rowToFinanceInput(row: any, cashSemantics: CashSemantics = "LEGA
     deliveryFulfilmentCost: row.deliveryCost ?? undefined,
     marketingSpend: row.marketingSpend ?? undefined,
     discountAmount: row.discountAmount ?? undefined,
-    refundAmount: row.refundReworkCost ?? undefined,
+    // Component-aware row: the three components are authoritative and independently known/unknown. Legacy row (marker absent,
+    // or any marker this code does not know): ONLY the combined figure exists; it is carried as an explicitly ambiguous
+    // lower-bound amount and is NEVER attributed to a component (the components stay UNKNOWN).
+    ...(row.leakageCompVersion === LEAKAGE_COMPONENT_CONTRACT_V1
+      ? {
+          refundAmount: row.refundAmount ?? undefined,
+          reworkCost: row.reworkCost ?? undefined,
+          complaintCost: row.complaintCost ?? undefined,
+        }
+      : { legacyCombinedLeakage: row.refundReworkCost ?? undefined }),
     loanEmiDebtPayments: row.debtPayments ?? undefined,
     totalDebtOutstanding: row.totalDebtOutstanding ?? undefined,
     cashOnHand: row.cashOnHand ?? undefined,
@@ -163,8 +171,6 @@ export async function createFinancialSnapshot(
   }
 
   const engineInput = toFinanceInput(input);
-  const refundReworkComplaint = [input.refundAmount, input.reworkCost, input.complaintCost]
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const confidence = calculateDataConfidence(engineInput);
 
   // D3-03: snapshot create and audit in a single transaction so an audit
@@ -203,7 +209,7 @@ export async function createFinancialSnapshot(
         deliveryCost: input.deliveryFulfilmentCost ?? null,
         marketingSpend: input.marketingSpend ?? null,
         discountAmount: input.discountAmount ?? null,
-        refundReworkCost: refundReworkComplaint.length > 0 ? refundReworkComplaint.reduce((s, v) => s + v, 0) : null,
+        ...leakageColumns(input),
         debtPayments: input.loanEmiDebtPayments ?? null,
         totalDebtOutstanding: input.totalDebtOutstanding ?? null,
         cashOnHand: input.cashOnHand ?? null,
@@ -343,8 +349,8 @@ export async function amendFinancialSnapshot(
     const current = await tx.ownerFinancialSnapshot.findFirst({ where: { id: snapshotId } });
     if (!current) throw new NotFoundError("OwnerFinancialSnapshot", snapshotId);
 
-    // Compute refundReworkCost: amendment input uses refundAmount as the merged value
-    const refundReworkCost = mergeAmended(input.refundAmount, current.refundReworkCost);
+    // Leakage components: merged per component (never as one combined number); a legacy row is never promoted to complete.
+    const leakage = resolveAmendedLeakage(current, input);
 
     // Build merged row for confidence recomputation
     const mergedRow = {
@@ -364,7 +370,11 @@ export async function amendFinancialSnapshot(
       deliveryCost: mergeAmended(input.deliveryFulfilmentCost, current.deliveryCost),
       marketingSpend: mergeAmended(input.marketingSpend, current.marketingSpend),
       discountAmount: mergeAmended(input.discountAmount, current.discountAmount),
-      refundReworkCost,
+      refundReworkCost: leakage.refundReworkCost,
+      refundAmount: leakage.refundAmount,
+      reworkCost: leakage.reworkCost,
+      complaintCost: leakage.complaintCost,
+      leakageCompVersion: leakage.leakageCompVersion,
       debtPayments: mergeAmended(input.loanEmiDebtPayments, current.debtPayments),
       totalDebtOutstanding: mergeAmended(input.totalDebtOutstanding, current.totalDebtOutstanding),
       cashOnHand: mergeAmended(input.cashOnHand, current.cashOnHand),
@@ -404,7 +414,7 @@ export async function amendFinancialSnapshot(
       ["variableCosts", input.variableCosts], ["rent", input.rent], ["salaryPayroll", input.salaryPayroll],
       ["utilities", input.utilities], ["deliveryFulfilmentCost", input.deliveryFulfilmentCost],
       ["marketingSpend", input.marketingSpend], ["discountAmount", input.discountAmount],
-      ["refundAmount", input.refundAmount], ["loanEmiDebtPayments", input.loanEmiDebtPayments],
+      ["refundAmount", input.refundAmount], ["reworkCost", input.reworkCost], ["complaintCost", input.complaintCost], ["loanEmiDebtPayments", input.loanEmiDebtPayments],
       ["totalDebtOutstanding", input.totalDebtOutstanding], ["cashOnHand", input.cashOnHand],
       ["receivables", input.receivables], ["receivablesOverdue", input.receivablesOverdue],
       ["payables", input.payables], ["payablesOverdue", input.payablesOverdue],
@@ -446,6 +456,10 @@ export async function amendFinancialSnapshot(
         marketingSpend: mergedRow.marketingSpend ?? null,
         discountAmount: mergedRow.discountAmount ?? null,
         refundReworkCost: mergedRow.refundReworkCost ?? null,
+        refundAmount: mergedRow.refundAmount ?? null,
+        reworkCost: mergedRow.reworkCost ?? null,
+        complaintCost: mergedRow.complaintCost ?? null,
+        leakageCompVersion: mergedRow.leakageCompVersion ?? null,
         debtPayments: mergedRow.debtPayments ?? null,
         totalDebtOutstanding: mergedRow.totalDebtOutstanding ?? null,
         cashOnHand: mergedRow.cashOnHand ?? null,
@@ -494,6 +508,9 @@ export async function amendFinancialSnapshot(
           changedFields,
           clearedFields,
           amendmentReason: input.amendmentReason,
+          // A legacy combined figure replaced by an explicit three-way split: the superseded value is recorded here (and stays
+          // in the previous, immutable version), never silently dropped.
+          ...(leakage.upgradedFromLegacy ? { leakageContractUpgraded: true, legacyCombinedLeakageSuperseded: current.refundReworkCost ?? null } : {}),
           evidenceQualityBefore: qualityBefore,
           evidenceQualityAfter: qualityAfter,
         },

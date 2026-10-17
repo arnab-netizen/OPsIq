@@ -9,7 +9,7 @@ import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } fr
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
 import { LIQUIDITY_UNCONFIRMED_FINDING_CODE, liquidityUnconfirmedStatement } from "./liquidity";
-import { leakageCoverage, LEAKAGE_COMPONENTS } from "./cost-model";
+import { leakageCoverage, LEAKAGE_COMPONENTS, importantFieldValue } from "./cost-model";
 import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
@@ -240,7 +240,7 @@ export function buildFinanceOpportunityFindings(
     //   2. Any IMPORTANT_FIELDS not in the priority list (forward-compatibility catch-all).
     function isMissingField(f: string): boolean {
       if (f === "fixedCosts" && coveredByComponents) return false;
-      const v = input[f as keyof FinancialSnapshotInput];
+      const v = importantFieldValue(input, f);
       return v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v));
     }
     const priorityOrdered = IMPORTANT_FIELD_PRIORITY_ORDER.filter(isMissingField);

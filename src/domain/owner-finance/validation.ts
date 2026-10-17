@@ -142,7 +142,7 @@ const amendAmount = nonNeg.nullable();
 const AMENDABLE_FINANCIAL_FIELDS = [
   "revenue", "b2cRevenue", "b2bRevenue", "costOfGoodsOrServices", "fixedCosts",
   "variableCosts", "rent", "salaryPayroll", "utilities", "deliveryFulfilmentCost",
-  "marketingSpend", "discountAmount", "refundAmount", "loanEmiDebtPayments",
+  "marketingSpend", "discountAmount", "refundAmount", "reworkCost", "complaintCost", "loanEmiDebtPayments",
   "totalDebtOutstanding", "cashOnHand", "receivables", "receivablesOverdue",
   "payables", "payablesOverdue", "ownerWithdrawals", "inventoryStockCashLock",
   "orderCount", "customerCount", "repeatCustomerCount", "notes", "evidenceQuality",
@@ -164,6 +164,8 @@ export const financialSnapshotAmendSchema = z
     marketingSpend: amendAmount,
     discountAmount: amendAmount,
     refundAmount: amendAmount,
+    reworkCost: amendAmount,
+    complaintCost: amendAmount,
     loanEmiDebtPayments: amendAmount,
     totalDebtOutstanding: amendAmount,
     cashOnHand: amendAmount,

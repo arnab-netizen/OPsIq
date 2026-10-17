@@ -51,6 +51,14 @@ export interface FinancialSnapshotInput {
   refundAmount?: number;
   reworkCost?: number;
   complaintCost?: number;
+  /**
+   * LEGACY ONLY. A refund + rework + complaint figure recorded as ONE combined number before the three were stored
+   * separately. Which components it contains was never recorded, so it is an AMBIGUOUS lower-bound contribution: it adds
+   * its known amount to the leakage total but can never make the leakage group complete, and it is never attributed to
+   * refundAmount / reworkCost / complaintCost. When present it takes precedence over those three fields (a record is
+   * either legacy or component-aware, never both).
+   */
+  legacyCombinedLeakage?: number;
 
   // Debt / cash
   loanEmiDebtPayments?: number;
