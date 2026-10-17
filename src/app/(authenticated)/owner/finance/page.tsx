@@ -623,7 +623,7 @@ export default function OwnerFinancePage() {
   const gateKnown = Boolean(selected && firstReadGate && firstReadGate.businessId === selected);
   const preFirstRead = gateKnown && !dashboard?.hasData && firstReadGate?.canRun === false;
   const snapshotDraft: FinanceDraft | null = selected && showSnapshotForm ? readFinanceDraft(selected) : null;
-  const snapshotFieldMessages: Record<string, string> = snapshotError?.fieldMessages ?? {};
+  const fieldProblems: Record<string, string> = snapshotError?.fieldMessages ?? {};
 
   return (
     <PageContainer>
@@ -756,8 +756,8 @@ export default function OwnerFinancePage() {
                 Financial snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input id="snapshot-field-periodStart" name="periodStart" label="These numbers cover: from" hint="First day of the month or period you are entering." type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} error={snapshotFieldMessages.periodStart} />
-                <Input id="snapshot-field-periodEnd" name="periodEnd" label="These numbers cover: to" hint="Last day of that period." type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} error={snapshotFieldMessages.periodEnd} />
+                <Input id="snapshot-field-periodStart" name="periodStart" label="These numbers cover: from" hint="First day of the month or period you are entering." type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} error={fieldProblems.periodStart} />
+                <Input id="snapshot-field-periodEnd" name="periodEnd" label="These numbers cover: to" hint="Last day of that period." type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} error={fieldProblems.periodEnd} />
                 <Select
                   name="evidenceQuality"
                   label="How reliable are these numbers?"
@@ -801,14 +801,14 @@ export default function OwnerFinancePage() {
                         placeholder="—"
                         hint={f.hint}
                         defaultValue={snapshotDraft?.[f.name as DraftField] ?? ""}
-                        error={snapshotFieldMessages[f.name]}
+                        error={fieldProblems[f.name]}
                       />
                     );
                   })}
                 </div>
               </div>
 
-              <Disclosure summary="Improve the analysis (optional)" defaultOpen={IMPROVE_GROUPS.some((g) => g.fieldNames.some((n) => n in snapshotFieldMessages))}>
+              <Disclosure summary="Improve the analysis (optional)" defaultOpen={IMPROVE_GROUPS.some((g) => g.fieldNames.some((n) => n in fieldProblems))}>
                 <p className="mb-3">
                   Adding these makes OpsIQ&rsquo;s read of your business more accurate. Leave
                   anything blank that doesn&rsquo;t apply — missing data is reported, never
@@ -821,7 +821,7 @@ export default function OwnerFinancePage() {
                       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {group.fieldNames.map((name) => {
                           const f = financeField(name);
-                          return <Input key={f.name} id={`snapshot-field-${f.name}`} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} error={snapshotFieldMessages[f.name]} />;
+                          return <Input key={f.name} id={`snapshot-field-${f.name}`} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} error={fieldProblems[f.name]} />;
                         })}
                       </div>
                     </div>
@@ -829,11 +829,11 @@ export default function OwnerFinancePage() {
                 </div>
               </Disclosure>
 
-              <Disclosure summary="Advanced detail (optional)" defaultOpen={ADVANCED_FIELD_NAMES.some((n) => n in snapshotFieldMessages)}>
+              <Disclosure summary="Advanced detail (optional)" defaultOpen={ADVANCED_FIELD_NAMES.some((n) => n in fieldProblems)}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {ADVANCED_FIELD_NAMES.map((name) => {
                     const f = financeField(name);
-                    return <Input key={f.name} id={`snapshot-field-${f.name}`} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} error={snapshotFieldMessages[f.name]} />;
+                    return <Input key={f.name} id={`snapshot-field-${f.name}`} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} error={fieldProblems[f.name]} />;
                   })}
                 </div>
               </Disclosure>

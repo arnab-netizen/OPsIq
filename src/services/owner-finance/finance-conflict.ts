@@ -16,6 +16,7 @@ export class FinanceConflictError extends ConflictError {
   }
 
   get responseBody(): Record<string, unknown> {
-    return { error: this.message, ...this.body };
+    const text = this.message;
+    return { error: text, ...this.body };
   }
 }
