@@ -8,7 +8,7 @@ import { ownerConfidenceLevel } from "@/domain/owner-spine/confidence-vocabulary
 import { clampScore } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput } from "./types";
 import { applyEvidenceQualityToScore } from "./evidence-quality";
-import { totalCosts } from "./cost-model";
+import { totalCosts, importantFieldValue } from "./cost-model";
 
 /** A finite, present number (missing/NaN/Infinity → not present). */
 function present(x: number | undefined | null): boolean {
@@ -267,7 +267,7 @@ export function calculateDataConfidence(
   for (const f of IMPORTANT_FIELDS) {
     // fixedCosts aggregate is not a gap when components (rent, salaryPayroll, utilities) cover it.
     if (f === "fixedCosts" && fixedCostsCoveredByComponents(input)) continue;
-    if (!present(input[f] as number | undefined)) score -= 5;
+    if (!present(importantFieldValue(input, f))) score -= 5;
   }
 
   if (isCashUnknown(input)) score -= UNKNOWN_CASH_CONFIDENCE_PENALTY;

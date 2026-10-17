@@ -2950,7 +2950,17 @@ model OwnerFinancialSnapshot {
   deliveryCost         Float?              @map("delivery_cost")
   marketingSpend       Float?              @map("marketing_spend")
   discountAmount       Float?              @map("discount_amount")
+  /// COMPATIBILITY AGGREGATE of refund + rework + complaint. For a leakageCompVersion = NULL (legacy) row this is the ONLY
+  /// persisted leakage figure and its composition is UNKNOWN (which components were supplied was never stored). For a
+  /// component-aware row it is derived from the three component columns and is never the source of component coverage.
   refundReworkCost     Float?              @map("refund_rework_cost")
+  /// Separately persisted leakage components (D9). NULL = UNKNOWN; 0 = an explicit known zero. Only ever set on a row with
+  /// leakageCompVersion = 1 (enforced by owner_fin_snapshots_leakage_component_contract_check). Never backfilled.
+  refundAmount         Float?              @map("refund_amount")
+  reworkCost           Float?              @map("rework_cost")
+  complaintCost        Float?              @map("complaint_cost")
+  /// NULL = legacy combined-aggregate contract (components unknowable). 1 = the three component columns above are authoritative.
+  leakageCompVersion   Int?                @map("leakage_component_version")
   debtPayments         Float?              @map("debt_payments")
   totalDebtOutstanding Float?              @map("total_debt_outstanding")
   cashOnHand           Float?              @map("cash_on_hand")
