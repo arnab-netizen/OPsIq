@@ -23,6 +23,7 @@ import { verifyPaddleSignature } from "@/services/billing/paddle-signature";
 import {
   PaddleEventRejectedError,
   auditRejectedPaddleEvent,
+  cancelDuplicateSubscription,
   processPaddleEvent,
 } from "@/services/billing/paddle-webhook.service";
 import {
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
     if (error instanceof PaddleEventRejectedError) {
       try {
         await auditRejectedPaddleEvent(envelope, error);
+        await cancelDuplicateSubscription(envelope, error);
         await markWebhookEventProcessed(eventKey);
       } catch (innerError) {
         logger.error("Failed to record rejected Paddle event", {

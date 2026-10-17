@@ -13,6 +13,7 @@ export function createFakeBillingDb() {
       if (v && typeof v === "object" && !(v instanceof Date)) {
         const o = v as Row;
         if ("lte" in o) return row[k] != null && row[k] <= o.lte;
+        if ("lt" in o) return row[k] != null && row[k] < o.lt;
         return false;
       }
       return row[k] === v;

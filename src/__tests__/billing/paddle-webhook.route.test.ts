@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   markFailed: vi.fn(),
   process: vi.fn(),
   auditRejected: vi.fn(),
+  cancelDuplicate: vi.fn(),
 }));
 vi.mock("@/services/webhook.service", () => ({
   getOrCreateWebhookEvent: m.getOrCreate,
@@ -17,7 +18,7 @@ vi.mock("@/services/billing/paddle-webhook.service", async () => {
   class PaddleEventRejectedError extends Error {
     constructor(public reason: string, public workspaceId?: string) { super(reason); }
   }
-  return { PaddleEventRejectedError, processPaddleEvent: m.process, auditRejectedPaddleEvent: m.auditRejected };
+  return { PaddleEventRejectedError, processPaddleEvent: m.process, auditRejectedPaddleEvent: m.auditRejected, cancelDuplicateSubscription: m.cancelDuplicate };
 });
 
 import { POST } from "@/app/api/webhooks/paddle/route";
@@ -99,5 +100,13 @@ describe("POST /api/webhooks/paddle", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ rejected: "tenant_mismatch" });
     expect(m.auditRejected).toHaveBeenCalledTimes(1);
+    expect(m.cancelDuplicate).toHaveBeenCalledTimes(1);
+  });
+  it("if cancelling the duplicate subscription fails transiently, the event is NOT acknowledged (provider retries)", async () => {
+    m.process.mockRejectedValue(new PaddleEventRejectedError("second_live_subscription", "ws"));
+    m.cancelDuplicate.mockRejectedValue(new Error("provider 503"));
+    const res = await POST(req());
+    expect(res.status).toBe(500);
+    expect(m.markProcessed).not.toHaveBeenCalled();
   });
 });

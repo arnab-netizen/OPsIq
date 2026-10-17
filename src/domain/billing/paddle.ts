@@ -102,9 +102,43 @@ export function commercialStateFromStatus(status: string | null | undefined): Co
   }
 }
 
-/** The single entitlement rule. Fail closed. */
-export function isEntitledStatus(status: string | null | undefined): boolean {
-  return status === "active";
+/**
+ * Payment-recovery policy (deterministic; Paddle owns the actual retries — OpsIQ runs no dunning).
+ *
+ *   active   → "paid"   full access
+ *   past_due → "grace"  access continues for PAST_DUE_GRACE_DAYS after the missed renewal date
+ *                       (currentPeriodEnd — Paddle does not advance the period until payment
+ *                       succeeds), with a visible payment problem; after that → "denied"
+ *   paused   → "denied"
+ *   canceled → "denied" (Paddle sends it only when the cancellation is effective; a merely
+ *                       scheduled cancellation stays "active")
+ *   anything else (trialing — none are sold —, unknown, missing) → "denied"  (fail closed)
+ */
+export const PAST_DUE_GRACE_DAYS = 7;
+
+export type AccessLevel = "paid" | "grace" | "denied";
+
+export interface AccessDecision {
+  access: AccessLevel;
+  entitled: boolean;
+  paymentProblem: boolean;
+  graceEndsAt: Date | null;
+}
+
+export function resolveAccess(
+  sub: { status: string | null | undefined; currentPeriodEnd: Date | null | undefined } | null | undefined,
+  now: Date = new Date(),
+): AccessDecision {
+  const denied: AccessDecision = { access: "denied", entitled: false, paymentProblem: false, graceEndsAt: null };
+  if (!sub) return denied;
+  if (sub.status === "active") return { access: "paid", entitled: true, paymentProblem: false, graceEndsAt: null };
+  if (sub.status === "past_due") {
+    if (!sub.currentPeriodEnd || Number.isNaN(sub.currentPeriodEnd.getTime())) return { ...denied, paymentProblem: true };
+    const graceEndsAt = new Date(sub.currentPeriodEnd.getTime() + PAST_DUE_GRACE_DAYS * 24 * 60 * 60 * 1000);
+    const inGrace = now.getTime() < graceEndsAt.getTime();
+    return { access: inGrace ? "grace" : "denied", entitled: inGrace, paymentProblem: true, graceEndsAt };
+  }
+  return denied;
 }
 
 /** True when the workspace id carried in provider custom_data is a well-formed UUID. */

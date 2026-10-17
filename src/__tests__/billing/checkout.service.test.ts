@@ -16,7 +16,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: m.audit }));
 
-import { createCheckout, requestCancellation } from "@/services/billing/checkout.service";
+import { createCheckout, createPaymentMethodUpdate, requestCancellation } from "@/services/billing/checkout.service";
 
 const WS = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const saved = { ...process.env };
@@ -69,10 +69,17 @@ describe("checkout creation", () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500, json: async () => ({ error: "secret detail" }) });
     await expect(createCheckout({ workspaceId: WS, actorId: "u" })).rejects.toMatchObject({ statusCode: 502, message: "Payment provider request failed" });
   });
-  it("refuses a second checkout for an already-active workspace", async () => {
-    m.subFindFirst.mockResolvedValue({ status: "active" });
-    await expect(createCheckout({ workspaceId: WS, actorId: "u" })).rejects.toThrow("already has an active subscription");
+  it("refuses a second checkout while any non-canceled subscription exists (active, past_due, paused)", async () => {
+    for (const status of ["active", "past_due", "paused"]) {
+      m.subFindFirst.mockResolvedValue({ status });
+      await expect(createCheckout({ workspaceId: WS, actorId: "u" })).rejects.toThrow("already has a subscription");
+    }
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("allows a new checkout after a canceled subscription", async () => {
+    m.subFindFirst.mockResolvedValue({ status: "canceled" });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: { id: "t", checkout: { url: "https://u" } } }) });
+    await expect(createCheckout({ workspaceId: WS, actorId: "u" })).resolves.toEqual({ checkoutUrl: "https://u" });
   });
 });
 
@@ -86,11 +93,42 @@ describe("cancellation", () => {
     expect(JSON.parse(init.body)).toEqual({ effective_from: "next_billing_period" });
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ eventName: "billing.cancellation_requested" }));
   });
+  it("allows cancelling a past_due subscription", async () => {
+    m.subFindFirst.mockResolvedValue({ id: "s1", status: "past_due", paddleSubscriptionId: "sub_1" });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: {} }) });
+    await expect(requestCancellation({ workspaceId: WS, actorId: "u" })).resolves.toEqual({ requested: true });
+  });
   it("rejects cancelling when there is no active subscription", async () => {
     m.subFindFirst.mockResolvedValue({ id: "s1", status: "canceled", paddleSubscriptionId: "sub_1" });
     await expect(requestCancellation({ workspaceId: WS, actorId: "u" })).rejects.toThrow("No active subscription");
     m.subFindFirst.mockResolvedValue(null);
     await expect(requestCancellation({ workspaceId: WS, actorId: "u" })).rejects.toThrow("No active subscription");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("payment-method update (past-due recovery)", () => {
+  it("obtains the provider-controlled update transaction for the caller's own subscription and audits", async () => {
+    m.subFindFirst.mockResolvedValue({ id: "s1", status: "past_due", paddleSubscriptionId: "sub_1" });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: { id: "txn_u", checkout: { url: "https://pay.example/pay?_ptxn=txn_u" } } }) });
+    expect(await createPaymentMethodUpdate({ workspaceId: WS, actorId: "u" })).toEqual({ checkoutUrl: "https://pay.example/pay?_ptxn=txn_u" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://sandbox-api.paddle.com/subscriptions/sub_1/update-payment-method-transaction");
+    expect(init.method).toBe("GET");
+    expect(init.headers.Authorization).toBe("Bearer test_key");
+    expect(m.subFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { billingAccount: { workspaceId: WS } } }));
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ eventName: "billing.payment_method_update_requested", workspaceId: WS }));
+  });
+  it("is refused when there is no recoverable subscription (none, paused, canceled)", async () => {
+    for (const row of [null, { id: "s", status: "canceled", paddleSubscriptionId: "sub_1" }, { id: "s", status: "paused", paddleSubscriptionId: "sub_1" }, { id: "s", status: "past_due", paddleSubscriptionId: null }]) {
+      m.subFindFirst.mockResolvedValue(row);
+      await expect(createPaymentMethodUpdate({ workspaceId: WS, actorId: "u" })).rejects.toThrow("No subscription with a payment method");
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("fails closed when the provider returns no URL, without leaking provider detail", async () => {
+    m.subFindFirst.mockResolvedValue({ id: "s1", status: "past_due", paddleSubscriptionId: "sub_1" });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: { id: "t", checkout: { url: null } } }) });
+    await expect(createPaymentMethodUpdate({ workspaceId: WS, actorId: "u" })).rejects.toMatchObject({ statusCode: 503 });
   });
 });

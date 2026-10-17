@@ -1,18 +1,41 @@
 import { describe, it, expect } from "vitest";
 import {
   commercialStateFromStatus,
-  isEntitledStatus,
+  PAST_DUE_GRACE_DAYS,
+  resolveAccess,
   paddleEnvelopeSchema,
   paddleSubscriptionDataSchema,
   readWorkspaceIdFromCustomData,
 } from "@/domain/billing/paddle";
 
-describe("entitlement rule fails closed", () => {
-  it("only 'active' is entitled", () => {
-    expect(isEntitledStatus("active")).toBe(true);
-    for (const s of ["trialing", "past_due", "paused", "canceled", "", "ACTIVE", "unknown", null, undefined]) {
-      expect(isEntitledStatus(s as string | null | undefined)).toBe(false);
+const END = new Date("2026-10-31T00:00:00Z");
+const at = (days: number) => new Date(END.getTime() + days * 24 * 60 * 60 * 1000);
+
+describe("access policy (resolveAccess) fails closed", () => {
+  it("active is paid access", () => {
+    expect(resolveAccess({ status: "active", currentPeriodEnd: END }, at(-3))).toEqual({
+      access: "paid", entitled: true, paymentProblem: false, graceEndsAt: null,
+    });
+  });
+  it("past_due is grace access with a payment problem until PAST_DUE_GRACE_DAYS after the missed renewal", () => {
+    expect(PAST_DUE_GRACE_DAYS).toBe(7);
+    const d = resolveAccess({ status: "past_due", currentPeriodEnd: END }, at(3));
+    expect(d).toMatchObject({ access: "grace", entitled: true, paymentProblem: true });
+    expect(d.graceEndsAt?.toISOString()).toBe(at(7).toISOString());
+    // boundary: exactly at grace end is already denied
+    expect(resolveAccess({ status: "past_due", currentPeriodEnd: END }, at(7))).toMatchObject({ access: "denied", entitled: false, paymentProblem: true });
+    expect(resolveAccess({ status: "past_due", currentPeriodEnd: END }, at(30)).entitled).toBe(false);
+  });
+  it("past_due with unusable period data is denied (fail closed) but still flagged", () => {
+    expect(resolveAccess({ status: "past_due", currentPeriodEnd: null })).toMatchObject({ entitled: false, paymentProblem: true });
+    expect(resolveAccess({ status: "past_due", currentPeriodEnd: new Date("nope") })).toMatchObject({ entitled: false });
+  });
+  it("paused, canceled, trialing, unknown, missing are denied", () => {
+    for (const s of ["paused", "canceled", "trialing", "", "ACTIVE", "unknown", null, undefined]) {
+      expect(resolveAccess({ status: s as string | null | undefined, currentPeriodEnd: END }, at(-1)).entitled).toBe(false);
     }
+    expect(resolveAccess(null).entitled).toBe(false);
+    expect(resolveAccess(undefined).access).toBe("denied");
   });
   it("maps statuses to commercial states", () => {
     expect(commercialStateFromStatus(undefined)).toBe("none");

@@ -14,6 +14,12 @@ export function PublicSiteFooter() {
         <Link href="/resources" className="text-[var(--primary-text)] hover:underline">
           Resources
         </Link>
+        <Link href="/pricing" className="text-[var(--primary-text)] hover:underline">
+          Pricing
+        </Link>
+        <Link href="/refund-policy" className="text-[var(--primary-text)] hover:underline">
+          Refunds
+        </Link>
         <Link href="/privacy" className="text-[var(--primary-text)] hover:underline">
           Privacy
         </Link>

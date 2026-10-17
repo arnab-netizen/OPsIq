@@ -12,7 +12,8 @@ vi.mock("@/infra/audit", () => ({
 }));
 
 import { processPaddleEvent, PaddleEventRejectedError } from "@/services/billing/paddle-webhook.service";
-import { isEntitledStatus } from "@/domain/billing/paddle";
+import { resolveAccess } from "@/domain/billing/paddle";
+const isEntitledStatus = (status: string) => resolveAccess({ status, currentPeriodEnd: new Date("2026-11-01T00:00:00Z") }, new Date("2026-10-20T00:00:00Z")).access === "paid";
 
 const WS_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const WS_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -23,7 +24,7 @@ function sub(over: Record<string, unknown> = {}, ws: string | null = WS_A) {
     id: "sub_1",
     status: "active",
     customer_id: "ctm_A",
-    custom_data: ws ? { workspaceId: ws } : null,
+    custom_data: ws ? { workspaceId: ws, billingAccountId: ws === WS_A ? "acct-A" : ws === WS_B ? "acct-B" : "acct-none" } : null,
     items: [{ price: { id: PRICE } }],
     current_billing_period: { starts_at: "2026-10-01T00:00:00Z", ends_at: "2026-11-01T00:00:00Z" },
     scheduled_change: null,
@@ -86,6 +87,47 @@ describe("Paddle webhook → subscription state", () => {
     await expect(processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:00Z", sub({ customer_id: "ctm_x" }, null)))).rejects.toMatchObject({
       reason: "unknown_tenant",
     });
+  });
+
+  it("rejects a client-supplied workspace claim without the server-issued billingAccountId (public-token forgery)", async () => {
+    const forged = sub({ customer_id: "ctm_attacker", custom_data: { workspaceId: WS_A } });
+    await expect(processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:00Z", forged))).rejects.toMatchObject({ reason: "unverified_binding" });
+    const wrongId = sub({ customer_id: "ctm_attacker", custom_data: { workspaceId: WS_A, billingAccountId: "acct-B" } });
+    await expect(processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:01Z", wrongId))).rejects.toMatchObject({ reason: "unverified_binding" });
+    expect(statusOf(WS_A)).toBeUndefined();
+    expect(h.fake.accounts[0].paddleCustomerId).toBeNull();
+  });
+
+  it("a legacy (non-Paddle) live subscription row is never overwritten by a Paddle event", async () => {
+    h.fake.subs.push({ id: "legacy", billingAccountId: "acct-A", status: "active", paddleSubscriptionId: null, lastEventTimestamp: null });
+    await expect(processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:00Z", sub()))).rejects.toMatchObject({
+      reason: "second_live_subscription", orphanSubscriptionId: "sub_1",
+    });
+    expect(h.fake.subs[0]).toMatchObject({ id: "legacy", status: "active", paddleSubscriptionId: null });
+  });
+
+  it("a double payment is rejected with the orphan identified; the duplicate's own late cancel is ignored", async () => {
+    await processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:00Z", sub()));
+    await expect(processPaddleEvent(evt("subscription.created", "2026-10-02T10:00:00Z", sub({ id: "sub_dup" })))).rejects.toMatchObject({ orphanSubscriptionId: "sub_dup" });
+    expect(await processPaddleEvent(evt("subscription.canceled", "2026-10-02T10:00:05Z", sub({ id: "sub_dup", status: "canceled" })))).toBe("ignored");
+    expect(statusOf(WS_A)).toMatchObject({ status: "active", paddleSubscriptionId: "sub_1" });
+  });
+
+  it("a delayed event of an OLDER lineage cannot resurrect access after re-subscribe + cancel", async () => {
+    await processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:00Z", sub()));
+    await processPaddleEvent(evt("subscription.canceled", "2026-10-05T10:00:00Z", sub({ status: "canceled" })));
+    await processPaddleEvent(evt("subscription.created", "2026-10-06T10:00:00Z", sub({ id: "sub_2" })));
+    await processPaddleEvent(evt("subscription.canceled", "2026-10-07T10:00:00Z", sub({ id: "sub_2", status: "canceled" })));
+    expect(await processPaddleEvent(evt("subscription.updated", "2026-10-03T10:00:00Z", sub()))).toBe("stale_ignored");
+    expect(statusOf(WS_A)).toMatchObject({ status: "canceled", paddleSubscriptionId: "sub_2" });
+  });
+
+  it("equal timestamps: a terminal cancel wins the tie, anything else does not displace the stored state", async () => {
+    await processPaddleEvent(evt("subscription.created", "2026-10-01T10:00:00Z", sub()));
+    expect(await processPaddleEvent(evt("subscription.updated", "2026-10-01T10:00:00Z", sub({ status: "paused" })))).toBe("stale_ignored");
+    expect(statusOf(WS_A)!.status).toBe("active");
+    expect(await processPaddleEvent(evt("subscription.canceled", "2026-10-01T10:00:00Z", sub({ status: "canceled" })))).toBe("applied");
+    expect(statusOf(WS_A)!.status).toBe("canceled");
   });
 
   it("rejects an unknown price id (fail closed, no entitlement)", async () => {

@@ -7,11 +7,12 @@ import { db } from "@/lib/db";
 import { ValidationError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { isEntitledStatus, PADDLE_PROVIDER } from "@/domain/billing/paddle";
+import { PADDLE_PROVIDER } from "@/domain/billing/paddle";
 import {
   PaddleNotConfiguredError,
   cancelSubscriptionAtPeriodEnd,
   createCheckoutTransaction,
+  getPaymentMethodUpdateTransaction,
   resolvePaddlePriceId,
 } from "@/services/billing/paddle-client";
 
@@ -26,8 +27,10 @@ export async function createCheckout(input: { workspaceId: string; actorId: stri
     where: { billingAccount: { workspaceId: input.workspaceId } },
     select: { status: true },
   });
-  if (isEntitledStatus(existing?.status)) {
-    throw new ValidationError("Workspace already has an active subscription");
+  // Any non-canceled subscription (active, past_due, paused…) already occupies the single slot:
+  // a second checkout would create a second live subscription, which the webhook rejects.
+  if (existing && existing.status !== "canceled") {
+    throw new ValidationError("Workspace already has a subscription — manage it from the billing page");
   }
 
   const account = await db.billingAccount.upsert({
@@ -64,7 +67,7 @@ export async function requestCancellation(input: { workspaceId: string; actorId:
     where: { billingAccount: { workspaceId: input.workspaceId } },
     select: { id: true, status: true, paddleSubscriptionId: true },
   });
-  if (!sub?.paddleSubscriptionId || !isEntitledStatus(sub.status)) {
+  if (!sub?.paddleSubscriptionId || (sub.status !== "active" && sub.status !== "past_due")) {
     throw new ValidationError("No active subscription to cancel");
   }
   await cancelSubscriptionAtPeriodEnd(sub.paddleSubscriptionId);
@@ -79,4 +82,34 @@ export async function requestCancellation(input: { workspaceId: string; actorId:
     visibility: "internal",
   });
   return { requested: true };
+}
+
+/**
+ * Sends the owner into Paddle's provider-controlled payment-method update checkout. Tenant scoped
+ * (subscription looked up by the verified workspace only). Returning from it changes nothing
+ * locally — entitlement is restored only when the verified webhook reports the new provider state.
+ */
+export async function createPaymentMethodUpdate(input: { workspaceId: string; actorId: string }): Promise<{ checkoutUrl: string }> {
+  const sub = await db.subscription.findFirst({
+    where: { billingAccount: { workspaceId: input.workspaceId } },
+    select: { id: true, status: true, paddleSubscriptionId: true },
+  });
+  if (!sub?.paddleSubscriptionId || (sub.status !== "active" && sub.status !== "past_due")) {
+    throw new ValidationError("No subscription with a payment method to update");
+  }
+  const txn = await getPaymentMethodUpdateTransaction(sub.paddleSubscriptionId);
+  const checkoutUrl = txn.checkout?.url;
+  if (!checkoutUrl) throw new PaddleNotConfiguredError();
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.BILLING_PAYMENT_METHOD_UPDATE_REQUESTED,
+    workspaceId: input.workspaceId,
+    actorId: input.actorId,
+    actorType: "user",
+    entityType: "Subscription",
+    entityId: sub.id,
+    payload: { transactionId: txn.id },
+    visibility: "internal",
+  });
+  return { checkoutUrl };
 }

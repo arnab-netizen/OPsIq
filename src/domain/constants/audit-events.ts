@@ -241,7 +241,9 @@ export const AUDIT_EVENTS = {
   BILLING_PAYMENT_SUCCEEDED: "billing.payment_succeeded",
   BILLING_PAYMENT_FAILED: "billing.payment_failed",
   BILLING_CANCELLATION_REQUESTED: "billing.cancellation_requested",
+  BILLING_PAYMENT_METHOD_UPDATE_REQUESTED: "billing.payment_method_update_requested",
   BILLING_EVENT_REJECTED: "billing.event_rejected",
+  BILLING_DUPLICATE_SUBSCRIPTION_CANCELED: "billing.duplicate_subscription_canceled",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
 
   // Owner Mode

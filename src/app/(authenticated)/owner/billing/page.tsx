@@ -19,6 +19,10 @@ interface BillingStatus {
   checkoutAvailable: boolean;
   state: "none" | "active" | "past_due" | "paused" | "canceled" | "other";
   entitled: boolean;
+  access: "paid" | "grace" | "denied";
+  paymentProblem: boolean;
+  graceEndsAt: string | null;
+  canUpdatePaymentMethod: boolean;
   planName: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
@@ -27,7 +31,7 @@ interface BillingStatus {
 const STATE_COPY: Record<BillingStatus["state"], string> = {
   none: "No subscription yet. You can keep using the free first-diagnosis experience.",
   active: "Your subscription is active.",
-  past_due: "Your last payment did not go through. Update your payment method to restore access.",
+  past_due: "Your last payment did not go through.",
   paused: "Your subscription is paused.",
   canceled: "Your subscription has ended.",
   other: "Your subscription status could not be determined.",
@@ -45,6 +49,7 @@ export default function OwnerBillingPage() {
   // A fresh idempotency key per attempt: a double click replays one request, a later retry is new.
   const [checkoutKey, setCheckoutKey] = useState(() => createClientIdempotencyKey("billing-checkout"));
   const [cancelKey, setCancelKey] = useState(() => createClientIdempotencyKey("billing-cancel"));
+  const [recoverKey, setRecoverKey] = useState(() => createClientIdempotencyKey("billing-payment-method"));
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +97,23 @@ export default function OwnerBillingPage() {
     onSettled: () => setCancelKey(createClientIdempotencyKey("billing-cancel")),
   });
 
-  const busy = checkout.isLoading || cancel.isLoading;
+  // Sends the owner to Paddle's own payment-method update checkout. Returning does not restore
+  // access by itself: the page re-reads server state, which changes only after the verified webhook.
+  const recover = useOperatorMutation<unknown, Record<string, never>>({
+    url: "/api/billing/payment-method",
+    method: "POST",
+    headers: { "idempotency-key": recoverKey },
+    maxRetries: 0,
+    operationName: "billing-payment-method",
+    onSuccess: (body) => {
+      const url = unwrap<{ checkoutUrl?: string }>(body)?.checkoutUrl;
+      if (url) window.location.assign(url);
+    },
+    onError: onFail,
+    onSettled: () => setRecoverKey(createClientIdempotencyKey("billing-payment-method")),
+  });
+
+  const busy = checkout.isLoading || cancel.isLoading || recover.isLoading;
 
   return (
     <PageContainer>
@@ -103,20 +124,35 @@ export default function OwnerBillingPage() {
         <section aria-label="Subscription status">
           {status.providerEnvironment === "sandbox" && <p>Test mode: no real charges are made.</p>}
           <p>{STATE_COPY[status.state]}</p>
+          {status.paymentProblem && (
+            <div role="alert">
+              <p>
+                <strong>Payment problem.</strong>{" "}
+                {status.access === "grace" && status.graceEndsAt
+                  ? `Your access continues while our payment provider retries, until ${new Date(status.graceEndsAt).toLocaleDateString()}. Update your payment method to avoid losing access.`
+                  : "Your access is paused until the payment is fixed. Update your payment method to restore it."}
+              </p>
+              {status.canUpdatePaymentMethod && (
+                <button type="button" disabled={busy} onClick={() => void recover.mutate({})}>
+                  Update payment method
+                </button>
+              )}
+            </div>
+          )}
           {status.planName && <p>Plan: {status.planName}</p>}
-          {status.entitled && status.currentPeriodEnd && (
+          {status.access === "paid" && status.currentPeriodEnd && (
             <p>
               {status.cancelAtPeriodEnd ? "Access ends on " : "Renews on "}
               {new Date(status.currentPeriodEnd).toLocaleDateString()}
             </p>
           )}
-          {!status.entitled && status.checkoutAvailable && (
+          {(status.state === "none" || status.state === "canceled") && status.checkoutAvailable && (
             <button type="button" disabled={busy} onClick={() => void checkout.mutate({})}>
               Upgrade
             </button>
           )}
-          {!status.entitled && !status.checkoutAvailable && <p>Upgrades are not open yet.</p>}
-          {status.entitled && !status.cancelAtPeriodEnd && (
+          {(status.state === "none" || status.state === "canceled") && !status.checkoutAvailable && <p>Upgrades are not open yet.</p>}
+          {status.access === "paid" && !status.cancelAtPeriodEnd && (
             <button type="button" disabled={busy} onClick={() => void cancel.mutate({})}>
               Cancel at end of period
             </button>

@@ -117,3 +117,30 @@ export async function cancelSubscriptionAtPeriodEnd(subscriptionId: string, fetc
     fetchImpl,
   );
 }
+
+/**
+ * Provider-controlled payment-method update: Paddle returns a transaction whose hosted checkout
+ * (default payment link → /pay) lets the customer replace the card. Only the verified webhook
+ * restores entitlement afterwards.
+ */
+export async function getPaymentMethodUpdateTransaction(
+  subscriptionId: string,
+  fetchImpl?: FetchLike,
+): Promise<PaddleCheckoutTransaction> {
+  return paddleRequest<PaddleCheckoutTransaction>(
+    "GET",
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/update-payment-method-transaction`,
+    undefined,
+    fetchImpl,
+  );
+}
+
+/** Cancels an unwanted duplicate subscription immediately (customer paid twice). Refund stays manual in Paddle. */
+export async function cancelSubscriptionImmediately(subscriptionId: string, fetchImpl?: FetchLike): Promise<void> {
+  await paddleRequest<unknown>(
+    "POST",
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    { effective_from: "immediately" },
+    fetchImpl,
+  );
+}

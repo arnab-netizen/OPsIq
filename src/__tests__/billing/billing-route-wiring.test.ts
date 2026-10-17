@@ -15,6 +15,7 @@ describe("billing routes require authentication, workspace and capability", () =
   for (const [rel, cap] of [
     ["billing/checkout/route.ts", "OWNER_MANAGE"],
     ["billing/cancel/route.ts", "OWNER_MANAGE"],
+    ["billing/payment-method/route.ts", "OWNER_MANAGE"],
     ["billing/status/route.ts", "OWNER_VIEW"],
   ] as const) {
     it(`${rel} is canonically enforced with ${cap}`, () => {
@@ -25,7 +26,7 @@ describe("billing routes require authentication, workspace and capability", () =
     });
   }
   it("mutating billing routes require an idempotency key and never read workspace/price from the client", () => {
-    for (const rel of ["billing/checkout/route.ts", "billing/cancel/route.ts"]) {
+    for (const rel of ["billing/checkout/route.ts", "billing/cancel/route.ts", "billing/payment-method/route.ts"]) {
       const src = read(rel);
       expect(src).toContain("idempotency-key header required");
       expect(src).toContain("ctx.verifiedWorkspaceId");

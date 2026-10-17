@@ -16,6 +16,7 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { PaddleApiError, cancelSubscriptionImmediately } from "@/services/billing/paddle-client";
 import {
   PADDLE_PROVIDER,
   isPaddleSubscriptionEvent,
@@ -33,6 +34,8 @@ export class PaddleEventRejectedError extends Error {
   constructor(
     public readonly reason: string,
     public readonly workspaceId?: string,
+    /** Provider subscription that must be cancelled because it is an unwanted duplicate (second_live_subscription). */
+    public readonly orphanSubscriptionId?: string,
   ) {
     super(`paddle event rejected: ${reason}`);
     this.name = "PaddleEventRejectedError";
@@ -45,6 +48,17 @@ interface ResolveInput {
   paddleSubscriptionId?: string | null;
   customerId?: string | null;
   customData?: Record<string, unknown> | null;
+}
+
+/**
+ * Paddle's client-side token is public, so anyone can open a checkout with arbitrary customData.
+ * custom_data.workspaceId alone is therefore NOT proof of tenancy. The first binding of a provider
+ * identity to a BillingAccount additionally requires custom_data.billingAccountId — an unguessable
+ * UUID that only our authenticated, server-side checkout ever sends — to equal the account's id.
+ */
+function readBillingAccountId(customData: Record<string, unknown> | null | undefined): string | null {
+  const raw = customData?.billingAccountId;
+  return typeof raw === "string" ? raw.toLowerCase() : null;
 }
 
 async function resolveBillingAccount(tx: Tx, input: ResolveInput) {
@@ -62,7 +76,12 @@ async function resolveBillingAccount(tx: Tx, input: ResolveInput) {
     account = await tx.billingAccount.findUnique({ where: { paddleCustomerId: input.customerId } });
   }
   if (!account && claimedWorkspaceId) {
-    account = await tx.billingAccount.findUnique({ where: { workspaceId: claimedWorkspaceId } });
+    const candidate = await tx.billingAccount.findUnique({ where: { workspaceId: claimedWorkspaceId } });
+    if (candidate && readBillingAccountId(input.customData) !== candidate.id.toLowerCase()) {
+      // Workspace claim without the server-issued account id: forged/client-supplied binding.
+      throw new PaddleEventRejectedError("unverified_binding", candidate.workspaceId);
+    }
+    account = candidate;
   }
   if (!account) return null;
 
@@ -94,12 +113,12 @@ async function applySubscriptionEvent(tx: Tx, envelope: PaddleEnvelope): Promise
   if (!plan) throw new PaddleEventRejectedError("unknown_price", account.workspaceId);
 
   const existing = await tx.subscription.findUnique({ where: { billingAccountId: account.id } });
-  if (
-    existing?.paddleSubscriptionId &&
-    existing.paddleSubscriptionId !== data.id &&
-    existing.status !== "canceled"
-  ) {
-    throw new PaddleEventRejectedError("second_live_subscription", account.workspaceId);
+  // Any other non-canceled row (including a legacy row with no Paddle id) occupies the single slot.
+  if (existing && existing.paddleSubscriptionId !== data.id && existing.status !== "canceled") {
+    // A late event of the duplicate's own cancellation is harmless; anything else means the owner
+    // paid twice and the extra provider subscription must be cancelled (done by the route).
+    if (data.status === "canceled") return "ignored";
+    throw new PaddleEventRejectedError("second_live_subscription", account.workspaceId, data.id);
   }
 
   const status = mapPaddleStatus(data.status);
@@ -107,7 +126,6 @@ async function applySubscriptionEvent(tx: Tx, envelope: PaddleEnvelope): Promise
   const periodEnd = data.current_billing_period ? new Date(data.current_billing_period.ends_at) : (existing?.currentPeriodEnd ?? occurredAt);
   const cancelAtPeriodEnd = data.scheduled_change?.action === "cancel";
   const canceledAt = data.canceled_at ? new Date(data.canceled_at) : null;
-  const sameSubscription = existing?.paddleSubscriptionId === data.id;
 
   const values = {
     planId: plan.id,
@@ -130,11 +148,15 @@ async function applySubscriptionEvent(tx: Tx, envelope: PaddleEnvelope): Promise
     });
     subscriptionId = created.id;
   } else {
-    // Guarded write: only moves forward in provider time. A re-subscribe (new paddle id on a
-    // canceled row) is a new lineage and is allowed to replace the old snapshot.
-    const guard = sameSubscription
-      ? { OR: [{ lastEventTimestamp: null }, { lastEventTimestamp: { lte: occurredAt } }] }
-      : {};
+    // Guarded write: only moves forward in provider time — for the same lineage AND for a
+    // re-subscribe over a canceled row, so a delayed event of an older lineage can never resurrect
+    // access. An equal timestamp is accepted only for a terminal "canceled" (cancel wins ties).
+    const guard = {
+      OR: [
+        { lastEventTimestamp: null },
+        { lastEventTimestamp: status === "canceled" ? { lte: occurredAt } : { lt: occurredAt } },
+      ],
+    };
     const result = await tx.subscription.updateMany({ where: { id: existing.id, ...guard }, data: values });
     if (result.count === 0) {
       await emitAuditEvent(
@@ -224,9 +246,21 @@ async function auditTransactionEvent(tx: Tx, envelope: PaddleEnvelope): Promise<
   return "audited";
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: string }).code === "P2002";
+}
+
 export async function processPaddleEvent(envelope: PaddleEnvelope): Promise<PaddleProcessOutcome> {
   if (isPaddleSubscriptionEvent(envelope.event_type)) {
-    return db.$transaction((tx: Prisma.TransactionClient) => applySubscriptionEvent(tx, envelope));
+    // Two first events (created + activated) can race to create the single subscription row; the
+    // loser hits the unique index and simply re-runs as an update instead of burning a retry attempt.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await db.$transaction((tx: Prisma.TransactionClient) => applySubscriptionEvent(tx, envelope));
+      } catch (error) {
+        if (attempt >= 2 || !isUniqueViolation(error)) throw error;
+      }
+    }
   }
   if (isPaddleTransactionEvent(envelope.event_type)) {
     return db.$transaction((tx: Prisma.TransactionClient) => auditTransactionEvent(tx, envelope));
@@ -242,6 +276,32 @@ export async function auditRejectedPaddleEvent(envelope: PaddleEnvelope, error: 
     actorType: "system",
     entityType: "WebhookEvent",
     payload: { providerEventId: envelope.event_id, eventType: envelope.event_type, reason: error.reason },
+    visibility: "internal",
+  });
+}
+
+/**
+ * The owner paid twice (two checkouts opened before the first webhook landed). The extra provider
+ * subscription grants nothing locally, so cancel it at the provider to stop recurring charges; the
+ * refund of the duplicate charge stays a manual Paddle-dashboard action (flagged in the audit).
+ * A provider 4xx (already canceled / unknown) is final; a 5xx/network failure is rethrown so the
+ * webhook is retried.
+ */
+export async function cancelDuplicateSubscription(envelope: PaddleEnvelope, error: PaddleEventRejectedError): Promise<void> {
+  if (error.reason !== "second_live_subscription" || !error.orphanSubscriptionId) return;
+  let outcome = "canceled";
+  try {
+    await cancelSubscriptionImmediately(error.orphanSubscriptionId);
+  } catch (e) {
+    if (e instanceof PaddleApiError && e.upstreamStatus >= 400 && e.upstreamStatus < 500) outcome = `provider_${e.upstreamStatus}`;
+    else throw e;
+  }
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.BILLING_DUPLICATE_SUBSCRIPTION_CANCELED,
+    workspaceId: error.workspaceId,
+    actorType: "system",
+    entityType: "Subscription",
+    payload: { providerEventId: envelope.event_id, duplicateSubscriptionId: error.orphanSubscriptionId, outcome, refundRequired: true },
     visibility: "internal",
   });
 }
