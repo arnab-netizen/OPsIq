@@ -170,6 +170,7 @@ export async function getOwnerOnboardingState(deps: OwnerOnboardingDeps): Promis
     profileType,
     ownerRole: role,
     suppliedCategories: supplied,
+    now: deps.now,
   });
   return { ...state, workspaceId, businessId, found: true, generatedFromRuntime: true, suppliedCategories: supplied };
 }

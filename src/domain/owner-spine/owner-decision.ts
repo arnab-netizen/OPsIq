@@ -836,7 +836,7 @@ export function describeOwnerChanges(facts: OwnerChangeFacts): OwnerDecisionChan
     );
   }
   for (const d of [...facts.newlyStaleDomains].sort()) {
-    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The figures in ${ownerDomainLabel(d)} are now out of date — update them before acting on what they flagged.` });
+    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The analysis of ${ownerDomainLabel(d)} now rests on out-of-date figures — add current figures and refresh it before acting on what it flagged.` });
   }
   const seen = new Set<string>();
   return [...records, ...attribution, ...issues, ...work, ...stale, ...evidence].filter((c) => (seen.has(c.message) ? false : (seen.add(c.message), true)));
@@ -1300,7 +1300,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (!hasEvidence) pushMissing("Add or complete your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
   for (const m of input.dataSufficiency.missingCriticalData) pushMissing(m);
   if (primary) for (const m of primary.missingData) pushMissing(m);
-  for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`);
+  for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the figures behind the latest analysis are out of date, so what it showed cannot be relied on yet.`);
   for (const d of input.futureDomains ?? []) {
     pushMissing(`${ownerDomainLabel(d)} figures entered for a period that has not started yet are not used. Correct the period if it was entered by mistake.`);
   }
@@ -1352,7 +1352,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whyThisWins.push(
       primaryIsRefresh
         // Never claims the old problem is current — only that it was last flagged and needs confirming.
-        ? `Your ${ownerDomainLabel(primary.domain)} figures are out of date, and they last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming them comes before acting on anything they showed.`
+        ? `The figures behind your ${ownerDomainLabel(primary.domain)} analysis are out of date, and it last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming the figures comes before acting on anything it showed.`
         : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}, ${
             primary.source === "domain_action"
               ? `from your ${ownerDomainLabel(primary.domain)} diagnosis`

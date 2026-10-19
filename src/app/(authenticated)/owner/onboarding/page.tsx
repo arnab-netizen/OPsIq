@@ -14,7 +14,7 @@ import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { displayLabelForField } from "@/domain/owner-finance";
 import { ownerConceptScorePhrase } from "@/domain/owner-spine/confidence-vocabulary";
-import { confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
+import { describeMissingFirstReadFacts, staleEvidenceNotice, starterStatusPhrase } from "@/domain/owner-mode/owner-onboarding";
 import {
   BANK_BALANCE_COPY,
   QUICK_ENTRY_FIELDS,
@@ -459,7 +459,6 @@ export default function OwnerOnboardingPage() {
     loading: contextLoading,
   } = useActiveBusiness();
   const [state, setState] = useState<any | null>(null);
-  const [readiness, setReadiness] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [firstResult, setFirstResult] = useState<any | null>(null);
@@ -476,12 +475,6 @@ export default function OwnerOnboardingPage() {
       if (loadSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load onboarding");
       setState(null);
-    }
-    try {
-      const next = await api(`/api/owner/readiness?businessId=${businessId}`);
-      if (loadSeq.current === seq) setReadiness(next);
-    } catch {
-      if (loadSeq.current === seq) setReadiness(null);
     }
   }, []);
 
@@ -579,20 +572,10 @@ export default function OwnerOnboardingPage() {
                 />
               )}
 
-              {readiness?.found && (
-                <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-readiness">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-xs uppercase text-muted-foreground">Setup progress</div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge
-                        variant={readiness.overallScore >= 70 ? "success-accessible" : readiness.overallScore >= 40 ? "warning-accessible" : "destructive-accessible"}
-                        className="tabular-nums"
-                      >
-                        {Math.round(readiness.overallScore)}/100
-                      </Badge>
-                    </div>
-                  </div>
-                </section>
+              {staleEvidenceNotice(state?.evidenceFreshness) && (
+                <p className="rounded-md border border-border bg-card p-4 text-sm" role="status" data-testid="onboarding-stale-evidence">
+                  {staleEvidenceNotice(state?.evidenceFreshness)}
+                </p>
               )}
 
               {state?.found && (
@@ -615,7 +598,7 @@ export default function OwnerOnboardingPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-xs uppercase text-muted-foreground">How much starter information OpsIQ has so far</div>
                       <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
-                        {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
+                        {starterStatusPhrase(state.confidenceBeforeDiagnosis, state.evidenceFreshness)}
                       </Badge>
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">
