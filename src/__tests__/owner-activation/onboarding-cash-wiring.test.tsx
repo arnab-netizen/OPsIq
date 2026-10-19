@@ -33,6 +33,7 @@ vi.mock("next/link", () => ({
 }));
 
 import OwnerOnboardingPage from "@/app/(authenticated)/owner/onboarding/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 
 const BUSINESS_ID = "b1";
 
@@ -128,7 +129,7 @@ afterEach(() => {
 describe("E/F/G/H: onboarding cash-field routing", () => {
   it("E. physical cash only: posts cashOnHand to Finance, never calls Cashflow", async () => {
     const calls = setupFetch();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "3000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
@@ -141,7 +142,7 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
 
   it("F. bank balance with a known 0 cash in hand: never puts the bank figure on the Finance snapshot, creates a minimal Cashflow snapshot instead", async () => {
     const calls = setupFetch();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
@@ -161,7 +162,7 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
 
   it("G. both physical cash and bank balance: each lands in its own domain, neither is dropped", async () => {
     const calls = setupFetch();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "3000", bankBalance: "5000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
@@ -176,7 +177,7 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
 
   it("H. cash in hand left blank: NOT blocked (cash may be UNKNOWN) — saved without cashOnHand (never 0); Cashflow is never called", async () => {
     const calls = setupFetch();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000" });
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true));
@@ -189,7 +190,7 @@ describe("E/F/G/H: onboarding cash-field routing", () => {
 describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just non-blocking", () => {
   it("A. no existing snapshot + bank balance: plain create succeeds, no conflict path taken, no warning", async () => {
     const calls = setupFetch();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
@@ -199,7 +200,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
 
   it("B. existing snapshot with the SAME bank balance: genuinely idempotent, proceeds with no warning", async () => {
     const calls = setupFetch({ existingCashflowSnapshot: { bankBalance: 5000 } });
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
@@ -212,7 +213,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
 
   it("C. existing snapshot with a DIFFERENT bank balance: never silently proceeds as if the new number was saved", async () => {
     const calls = setupFetch({ existingCashflowSnapshot: { bankBalance: 100000 } });
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "70000" });
 
     // The first result still renders (finance data was saved correctly) --
@@ -228,7 +229,7 @@ describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just 
 
   it("D. existing snapshot for the period with NO bank balance on it: still flagged, not silently treated as a match", async () => {
     setupFetch({ existingCashflowSnapshot: { bankBalance: null } });
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await fillAndSubmit({ revenue: "20000", fixedCosts: "7000", cashOnHand: "0", bankBalance: "5000" });
 
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
