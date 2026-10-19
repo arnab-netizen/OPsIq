@@ -15,6 +15,7 @@ vi.mock("next/link", () => ({
 }));
 
 import OwnerOnboardingPage from "@/app/(authenticated)/owner/onboarding/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 import { evaluateFirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
 
 const ID = "b1";
@@ -58,7 +59,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 describe("Guided setup canonical gate", () => {
   it("0. sufficient numbers without a stated reliability → button disabled, submit posts nothing (provenance is required)", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "600000", fixedCosts: "200000", cashOnHand: "180000" }, { withoutQuality: true });
     expect(button().disabled).toBe(true);
     await submit();
@@ -69,7 +70,7 @@ describe("Guided setup canonical gate", () => {
 
   it("1. all blank → button disabled, submit posts nothing (no snapshot, no diagnosis)", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({});
     expect(button().disabled).toBe(true);
     await submit();
@@ -78,7 +79,7 @@ describe("Guided setup canonical gate", () => {
 
   it("2. revenue only → blocked; names the missing facts; no diagnosis", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000" });
     expect(button().disabled).toBe(true);
     expect(feedback()).toMatch(/one cost figure/);
@@ -89,7 +90,7 @@ describe("Guided setup canonical gate", () => {
 
   it("3. revenue + cash → blocked: one cost figure still needed", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000", cashOnHand: "3000" });
     expect(button().disabled).toBe(true);
     expect(feedback()).toMatch(/Still needed for a first read: one cost figure\./);
@@ -99,7 +100,7 @@ describe("Guided setup canonical gate", () => {
 
   it("4. cost + cash → blocked: revenue needed", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ fixedCosts: "7000", cashOnHand: "3000" });
     expect(button().disabled).toBe(true);
     expect(feedback()).toMatch(/Still needed for a first read: revenue\./);
@@ -109,7 +110,7 @@ describe("Guided setup canonical gate", () => {
 
   it("revenue + cost, cash left blank → allowed; the snapshot carries NO cashOnHand (UNKNOWN, never 0)", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000", variableCosts: "5000" });
     expect(button().disabled).toBe(false);
     expect(feedback()).not.toMatch(/cash in hand/);
@@ -122,7 +123,7 @@ describe("Guided setup canonical gate", () => {
 
   it("5. revenue + fixedCosts + cash → allowed; snapshot then diagnosis on that snapshot", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000", fixedCosts: "7000", cashOnHand: "3000" });
     expect(button().disabled).toBe(false);
     expect(feedback()).toMatch(/enough for a first read/i);
@@ -136,7 +137,7 @@ describe("Guided setup canonical gate", () => {
 
   it("6. revenue + variableCosts + cash → allowed (sent as variableCosts, never relabelled)", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000", variableCosts: "5000", cashOnHand: "3000" });
     expect(button().disabled).toBe(false);
     fireEvent.click(button());
@@ -148,7 +149,7 @@ describe("Guided setup canonical gate", () => {
 
   it("7. zero revenue / zero cost / zero cash are valid KNOWN values and are sent as 0", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "0", fixedCosts: "0", cashOnHand: "0" });
     expect(button().disabled).toBe(false);
     fireEvent.click(button());
@@ -158,7 +159,7 @@ describe("Guided setup canonical gate", () => {
 
   it("blank is never persisted as zero: blank fields are omitted from the payload", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "10", fixedCosts: "5", cashOnHand: "1" });
     fireEvent.click(button());
     await waitFor(() => expect(writes(calls).some((c) => c.url.endsWith("/diagnoses"))).toBe(true));
@@ -169,21 +170,21 @@ describe("Guided setup canonical gate", () => {
 
   it("8. invalid numeric input → explicit inline feedback, nothing persisted", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "six lakh", fixedCosts: "7000", cashOnHand: "3000" });
     expect(screen.getByText("Enter a number, like 150000.")).toBeTruthy();
     expect(button().disabled).toBe(true);
     await submit();
     expect(writes(calls)).toEqual([]);
     // an invalid bank balance blocks too, even with sufficient core facts
-    cleanup(); setup(); render(<OwnerOnboardingPage />);
+    cleanup(); setup(); render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "1", fixedCosts: "1", cashOnHand: "1", bankBalance: "lots" });
     expect(button().disabled).toBe(true);
   });
 
   it("9. bank balance alone is NOT cash in hand: Finance cash stays UNKNOWN (and does not block); the bank goes to Cashflow", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000", fixedCosts: "7000", bankBalance: "5000" });
     expect(button().disabled).toBe(false);
     fireEvent.click(button());
@@ -197,7 +198,7 @@ describe("Guided setup canonical gate", () => {
 
   it("10/14/15. bankBalance is never in the Finance payload; it goes to Cashflow; the two stay distinct", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "20000", fixedCosts: "7000", cashOnHand: "3000", bankBalance: "5000" });
     fireEvent.click(button());
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
@@ -211,7 +212,7 @@ describe("Guided setup canonical gate", () => {
 
   it("double submit does not post twice", async () => {
     const calls = setup();
-    render(<OwnerOnboardingPage />);
+    render(<ActiveBusinessProvider><OwnerOnboardingPage /></ActiveBusinessProvider>);
     await enter({ revenue: "1", fixedCosts: "1", cashOnHand: "1" });
     const f = await form();
     fireEvent.submit(f.querySelector("form")!);

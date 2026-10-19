@@ -32,8 +32,8 @@ import {
   type OwnerDataGroupView,
 } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
-import { blocksFirstRead, confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
-import type { FirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
+import { blocksFirstRead, describeMissingFirstReadFacts, staleEvidenceNotice, starterStatusPhrase } from "@/domain/owner-mode/owner-onboarding";
+import type { EvidenceFreshness, FirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
 import { firstReadStatement } from "@/domain/owner-finance/first-read-statement";
 import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
 
@@ -80,6 +80,8 @@ interface OnboardingView {
   canRunFirstDiagnosis: boolean;
   /** Canonical first-read sufficiency (absent only on a payload from before it existed). */
   firstRead?: FirstReadSufficiency;
+  /** Whether the evidence that first read rests on is current (same window Home uses). Absent on an older payload. */
+  evidenceFreshness?: EvidenceFreshness;
   firstAction: string;
   whatNotToDo: string[];
   nextBestUpload: OwnerInputCategory | null;
@@ -222,9 +224,15 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-foreground">What OpsIQ knows so far</h2>
         <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
-          {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
+          {starterStatusPhrase(state.confidenceBeforeDiagnosis, state.evidenceFreshness)}
         </Badge>
       </div>
+
+      {staleEvidenceNotice(state.evidenceFreshness) && (
+        <p className="mt-2 text-sm text-warning" role="status" data-testid="data-hub-stale-evidence">
+          {staleEvidenceNotice(state.evidenceFreshness)}
+        </p>
+      )}
 
       <p className="mt-2 text-sm text-muted-foreground" data-testid="data-hub-first-read-ready">
         <span className="font-medium text-foreground">Enough for a first read. </span>
