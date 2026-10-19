@@ -14,7 +14,7 @@ export interface FinanceFieldDef { name: string; label: string; hint: string }
 // (below) changes ONLY what's visible/expanded by default; every field name here still maps
 // 1:1 to addSnapshot()'s FormData read, so the save payload is byte-for-byte unchanged.
 export const FINANCE_FIELDS: ReadonlyArray<FinanceFieldDef> = [
-  { name: "revenue", label: "Revenue", hint: "Total sales in a typical month, before costs. Example: 15000." },
+  { name: "revenue", label: "Revenue", hint: "Total sales in the period these numbers cover, before costs. Example: 15000." },
   { name: "b2cRevenue", label: "B2C revenue", hint: "Sales directly to individual customers, if you track it separately. Leave blank if you don't split this out." },
   { name: "b2bRevenue", label: "B2B revenue", hint: "Sales to other businesses, if you track it separately. Leave blank if you don't split this out." },
   { name: "costOfGoodsOrServices", label: "Cost of goods/services", hint: "What it directly cost you to make or deliver what you sold (materials, direct labor) — accountants call this COGS." },
