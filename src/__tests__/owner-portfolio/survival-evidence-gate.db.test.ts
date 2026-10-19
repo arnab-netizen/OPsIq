@@ -80,7 +80,7 @@ describe("[db] survival-evidence gate — persisted evidence through getPortfoli
     expect(v.investmentAssessment.status).toBe("HELD");
     // Held either by the canonical refresh target (when stale Finance still has open work) or by the survival-evidence gate
     // (when it has none — covered with the real resolver in survival-evidence-gate.test.ts); both say the figures are out of date.
-    expect(rowFor(v, a.businessId)!.ownerStatement).toMatch(/out of date/);
+    expect(rowFor(v, a.businessId)!.ownerStatement).toMatch(/out[- ]of[- ]date/);
     expect(rowFor(v, a.businessId)!.nextStep.length).toBeGreaterThan(0);
   });
 
