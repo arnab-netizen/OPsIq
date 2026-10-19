@@ -1,5 +1,5 @@
 {
-  "baselineSha": "0ecbd34518152685148a7d389e6201a1cca9d80c",
+  "baselineSha": "8335c7fe9627819c327dd0d52a79238050846e37",
   "generatorPath": "scripts/ux/generate-owner-feature-baseline.mjs",
   "ownerPageRoutes": [
     {
@@ -1290,6 +1290,7 @@
         "src/__tests__/auth/reset-password-page.test.tsx",
         "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
         "src/__tests__/owner-first-run/accepted-next-move-card.test.tsx",
+        "src/__tests__/owner-first-run/first-run-active-business.test.tsx",
         "src/__tests__/owner-first-run/first-run-domain.test.ts",
         "src/__tests__/owner-first-run/first-run-flow-repair.test.tsx",
         "src/__tests__/owner-first-run/first-run.db.test.ts",
@@ -2084,13 +2085,6 @@
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
       "apiCapabilityRequirements": [
         {
-          "endpoint": "/api/owner/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
-        {
           "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
           "method": "GET",
           "capabilities": [
@@ -2148,12 +2142,8 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
-        {
-          "method": "GET",
-          "path": "/api/owner/businesses"
-        },
         {
           "method": "GET",
           "path": "/api/owner/cashflow/businesses/:param/snapshots"
@@ -5128,7 +5118,7 @@
         "OWNER_VIEW"
       ],
       "readOrWrite": "read",
-      "scope": "workspace-scoped",
+      "scope": "business-scoped",
       "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
@@ -13390,6 +13380,7 @@
     "src/app/(authenticated)/owner/marketing/campaigns/page.tsx",
     "src/app/(authenticated)/owner/marketing/page.tsx",
     "src/app/(authenticated)/owner/now/page.tsx",
+    "src/app/(authenticated)/owner/onboarding/page.tsx",
     "src/app/(authenticated)/owner/operations/page.tsx",
     "src/app/(authenticated)/owner/page.tsx",
     "src/app/(authenticated)/owner/priorities/page.tsx",
@@ -13406,21 +13397,10 @@
   "businessContextClassificationCounts": {
     "NO_BUSINESS_CONTEXT": 11,
     "NOT_APPLICABLE": 7,
-    "SHARED_ACTIVE_BUSINESS": 29,
-    "WORKSPACE_ONLY": 1,
-    "LOCAL_BUSINESS_STATE": 1
+    "SHARED_ACTIVE_BUSINESS": 30,
+    "WORKSPACE_ONLY": 1
   },
-  "businessContextFindings": [
-    {
-      "finding": "LOCAL_BUSINESS_STATE_CANDIDATE",
-      "pages": [
-        "/owner/onboarding"
-      ],
-      "evidence": "These pages render <BusinessContextSelector> but do not call the shared useActiveBusiness() hook that other pages (e.g. cockpit, finance, sales, operations) read from — each threads businessId through local component state/callbacks only.",
-      "missionRelevance": "Mission section 17 names Recovery, Strategy, Marketing, and Marketing Campaigns for special business-context inspection; this mechanical classification confirms the suspected gap with source evidence and is deferred to UX-01's full 8-invariant business-context audit. Not fixed in UX-00A.1.",
-      "disposition": "BLOCKED_NEEDS_EVIDENCE_FOR_FIX (evidence sufficient to flag; fix scope belongs to UX-01)"
-    }
-  ],
+  "businessContextFindings": [],
   "publicRoutesTouchedBySharedComponents": [
     {
       "route": "/about",
