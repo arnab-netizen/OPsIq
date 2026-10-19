@@ -225,7 +225,7 @@ export function resolveOwnerAdvicePolicy(input: OwnerAdvicePolicyInput): OwnerAd
       requiresEvidenceRefresh: true,
       targetEvidence: "NOT_APPLICABLE",
       ownerStatement: STATEMENT.REFRESH_REQUIRED,
-      reasons: ["The latest figures are out of date; what they last showed is not treated as current."],
+      reasons: ["The latest analysis rests on out-of-date figures, so what it showed is not treated as current."],
       missingEvidence,
       nextEvidenceAction: `Re-run the ${label} diagnosis on your current figures (add them first if they are older).`,
     };

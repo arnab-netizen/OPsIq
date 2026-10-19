@@ -106,9 +106,14 @@ describe("3/15. stale high-severity diagnosis: not claimed as current; refresh w
     expect(p.canMakeMaterialCommitment).toBe(false);
     expect(p.nextEvidenceAction).toMatch(/Re-run the .* diagnosis on your current figures/);
   });
+  it("its reason describes the ANALYSIS as out of date, never the owner's latest figures (they may be newer, just not analysed)", () => {
+    const reasons = policyOf(d).reasons.join(" ");
+    expect(reasons).toMatch(/latest analysis rests on out-of-date figures/);
+    expect(reasons).not.toMatch(/latest figures are out of date/);
+  });
   it("never states the old danger as a current fact", () => {
     const text = [policyOf(d).ownerStatement, ...policyOf(d).reasons, ...d.whyThisWins].join(" ");
-    expect(text).toMatch(/out of date/i);
+    expect(text).toMatch(/out[- ]of[- ]date/i);
     expect(text).not.toMatch(/cash runs out/i);
     expect(d.primaryConcernClass).toBe("MISSING_CRITICAL_EVIDENCE");
   });
