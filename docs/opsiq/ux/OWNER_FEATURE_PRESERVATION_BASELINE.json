@@ -1,5 +1,5 @@
 {
-  "baselineSha": "8335c7fe9627819c327dd0d52a79238050846e37",
+  "baselineSha": "0aa90a971163a3988d441296fe1bcdf48924ee87",
   "generatorPath": "scripts/ux/generate-owner-feature-baseline.mjs",
   "ownerPageRoutes": [
     {
@@ -2132,13 +2132,6 @@
           "capabilities": [
             "OWNER_VIEW"
           ]
-        },
-        {
-          "endpoint": "/api/owner/readiness",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
@@ -2155,10 +2148,6 @@
         {
           "method": "GET",
           "path": "/api/owner/onboarding"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/readiness"
         }
       ],
       "writeApis": [
