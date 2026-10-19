@@ -1,6 +1,8 @@
 /**
- * One readiness contract: "enough for a first read" and "figures are out of date" are decided on the SAME evidence
- * and the SAME window, so Onboarding, Start Here, My Business and Home cannot contradict each other.
+ * First-read surfaces (Onboarding, Start Here, My Business) share one DATA-freshness contract: the same evidence and
+ * the same 45-day window. Home separately reports ANALYSIS freshness (the diagnosed evidence); setup sufficiency and
+ * action state are different concepts again. These tests pin the shared data-freshness rule and its wording, not a
+ * single "ready" boolean.
  *
  * Root cause (hostile UX audit): first-read sufficiency and "Starter information complete" had no age limit, while
  * Home flagged the same business "out of date" after 45 days.

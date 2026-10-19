@@ -384,12 +384,12 @@ describe("what changed — only persisted mutation facts, never read-time memory
   it("a refresh target never claims the old problem is current; confidence explains it is out-of-date information", () => {
     const d = resolveOwnerDecision(input([cand({ findingCode: "FIN_INSOLVENT_RUNWAY", title: "Cash runs out in 20 days", severity: "critical", stale: true })], { staleDomains: ["finance"] }));
     expect(d.primaryTarget?.source).toBe("evidence_refresh");
-    expect(d.whyThisWins[0]).toMatch(/^The figures behind your Finance analysis are out of date, and it last showed a cash-survival danger \(critical\); confirming the figures comes before acting/);
+    expect(d.whyThisWins[0]).toMatch(/^The figures behind your Finance analysis are out of date, and it last showed a cash-survival danger \(critical\); refreshing the analysis comes before acting/);
     expect(d.whyThisWins[0]).not.toMatch(/^This is/);
-    expect(d.confidence.reasons).toContain("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
-    expect(d.missingInformation).toContain("Current figures for Finance — the figures behind the latest analysis are out of date, so what it showed cannot be relied on yet.");
+    expect(d.confidence.reasons).toContain("This analysis rests on out-of-date figures, so what it showed is not proven now; refresh it before acting on it.");
+    expect(d.missingInformation).toContain("A refreshed Finance analysis — the latest one rests on out-of-date figures, so what it showed cannot be relied on yet.");
     expect(d.evidence.join(" ")).toMatch(/^Out-of-date finding: /);
-    expect(d.reassessmentTrigger).toMatch(/^Check again after you update the Finance figures and re-run its diagnosis/);
+    expect(d.reassessmentTrigger).toMatch(/^Check again after you refresh the Finance analysis/);
   });
 });
 
