@@ -90,18 +90,32 @@ describe("Owner Budget & Profit Plan page", () => {
     expect(text).not.toContain("OWNER_APPROVAL_REQUIRED");
   });
 
-  it("labels generated actions as advisory and shows the honest PARTIAL module banner", async () => {
+  it("shows no developer or build-status language, keeps owner-relevant limits, and keeps generated actions distinct from execution tasks", async () => {
     mockFetch();
     const { container } = renderWithProvider(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Generated actions"));
     const text = container.textContent ?? "";
-    // The module-status banner is honest about being partial, but must never leak the raw
-    // internal build-status token to the owner (G-post-merge-live-verification).
-    expect(text).toMatch(/partially integrated/i);
-    expect(text).not.toContain("DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL");
-    // Generated actions are honestly labelled as the advisory plan snapshot.
+    // No implementation, governance-proof, RBAC or test-status commentary reaches the owner.
+    for (const developerText of [
+      "DB/CI",
+      "RBAC",
+      "runtime test",
+      "feature-complete",
+      "Module status",
+      "backend governance",
+      "DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL",
+    ]) {
+      expect(text).not.toContain(developerText);
+    }
+    expect(text).not.toMatch(/partially integrated/i);
+    // Owner-relevant limits are stated in plain language.
+    expect(text).toContain("About these figures");
+    expect(text).toMatch(/information entered in OpsIQ/i);
+    expect(text).toMatch(/Live POS, payment-gateway and bank feeds are not connected automatically/i);
+    // Generated actions are still labelled as the advisory plan snapshot, not execution tasks.
     expect(text).toMatch(/advisory plan snapshot/i);
     expect(text).toMatch(/advisory recommendations from the current plan snapshot/i);
+    expect(text).toContain("Execution tasks");
     expect(text).toContain("Override this plan"); // owner override control present
   });
 
