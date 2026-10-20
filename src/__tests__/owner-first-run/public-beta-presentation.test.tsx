@@ -13,7 +13,7 @@ vi.mock("next/link", () => ({
 }));
 
 import LandingPage from "@/components/landing/LandingPage";
-import { PublicBetaCta, PublicBetaText } from "@/components/landing/PublicBetaCta";
+import { PublicBetaCta, PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
 import { resetPublicAdmissionModeCache } from "@/lib/public-admission-client";
 
 const fetchMock = vi.fn();
@@ -94,6 +94,48 @@ describe("statically generated public pages resolve the mode after mount (server
     render(<p data-testid="t"><PublicBetaText field="resourceLine" /></p>);
     expect(screen.getByTestId("t").textContent).toMatch(/invite-only/);
     await waitFor(() => expect(screen.getByTestId("t").textContent).not.toMatch(/invite/i));
+  });
+});
+
+describe("a mode change while the tab stays open (no hard reload)", () => {
+  const notice = () => (
+    <p data-testid="notice">
+      <PublicBetaSwitch open="You can create an account at /signup." invite="Access currently requires an invitation." />
+    </p>
+  );
+  const status = (admissionMode: string) => ({ ok: true, json: () => Promise.resolve({ enabled: true, admissionMode }) });
+
+  it("a page opened after the mode becomes OPEN_BETA shows the open guidance, not a cached INVITE_ONLY answer", async () => {
+    fetchMock.mockResolvedValue(status("INVITE_ONLY"));
+    const first = render(notice());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId("notice").textContent).toMatch(/requires an invitation/);
+    first.unmount(); // client-side navigation away from the first public page
+
+    fetchMock.mockResolvedValue(status("OPEN_BETA"));
+    render(notice()); // client-side navigation to /beta, same document, no reload
+    expect(screen.getByTestId("notice").textContent).toMatch(/requires an invitation/); // first paint stays the stricter wording
+    await waitFor(() => expect(screen.getByTestId("notice").textContent).toMatch(/You can create an account/));
+    expect(screen.getByTestId("notice").textContent).not.toMatch(/invitation/i);
+  });
+
+  it("goes back to the invitation wording when the mode returns to INVITE_ONLY", async () => {
+    fetchMock.mockResolvedValue(status("OPEN_BETA"));
+    const first = render(notice());
+    await waitFor(() => expect(screen.getByTestId("notice").textContent).toMatch(/You can create an account/));
+    first.unmount();
+
+    fetchMock.mockResolvedValue(status("INVITE_ONLY"));
+    render(notice());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("notice").textContent).toMatch(/requires an invitation/);
+  });
+
+  it("components mounted together on one page still share a single status request", async () => {
+    fetchMock.mockResolvedValue(status("OPEN_BETA"));
+    render(<>{notice()}<PublicBetaCta triggerClassName="x" /><p data-testid="t"><PublicBetaText field="resourceLine" /></p></>);
+    await waitFor(() => expect(screen.getByTestId("start-free-cta")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
