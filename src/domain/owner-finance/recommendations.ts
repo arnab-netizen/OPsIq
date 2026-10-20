@@ -10,6 +10,7 @@
 import type { OwnerFinding, OwnerSeverity } from "@/domain/owner-spine/contracts";
 import { clampScore, clampConfidence } from "@/domain/owner-spine/contracts";
 import { IMPORTANT_FIELD_LABELS, displayLabelForField } from "./data-confidence";
+import { BANK_BALANCE_OWNER_ACTION } from "./bank-balance-entry";
 
 export interface FinanceRecommendation {
   recommendationCode: string;
@@ -472,7 +473,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_CONFIRM_BANK_BALANCE",
     category: "improve_data_quality",
     title: "Add your bank balance",
-    requiredOwnerAction: "Enter the total across your bank accounts right now, and your cash in hand too if you know it — the “Enter your bank balance” link on Home or Money opens the entry. Enter 0 only if you really hold nothing there, and leave a figure blank if you don't know it — OpsIQ will say what it can't conclude rather than guess.",
+    requiredOwnerAction: BANK_BALANCE_OWNER_ACTION,
     verificationMethod: "On your next diagnosis, confirm OpsIQ shows how many days your cash will last instead of asking for the bank balance.",
     expectedTimeframeDays: 7,
     effortScore: 10,

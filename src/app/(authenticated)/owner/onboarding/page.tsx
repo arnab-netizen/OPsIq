@@ -5,6 +5,7 @@ import Link from "next/link";
 import { lastFullCalendarMonth } from "@/lib/owner-quick-start";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 import type { EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
@@ -402,7 +403,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
           {topAction ? (
             <>
               <p className="mt-1 text-base font-semibold text-foreground">{topAction.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{presentBankBalanceActionText(topAction.recommendationCode ?? top?.findingCode, topAction.description)}</p>
               <BankBalanceEntryLink code={topAction.recommendationCode ?? top?.findingCode} className="mt-2" />
               {topAction.verificationMethod && (
                 <>

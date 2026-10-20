@@ -37,6 +37,7 @@ import { listFinanceSnapshots } from "@/lib/owner-finance-client";
 import { ADVANCED_FIELD_NAMES, FINANCE_FIELDS, IMPROVE_GROUPS, QUICK_FIELD_NAMES, financeField } from "@/domain/owner-finance/snapshot-fields";
 import { Disclosure } from "@/ui/primitives";
 import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -990,7 +991,7 @@ function FinanceCycleView({
             <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">How to start fixing this</div>
             <ol className="mt-1 space-y-2 text-sm text-foreground">
               {[
-                recommended.description && { label: "Do this", text: humanizeEvidenceLine(String(recommended.description)) },
+                recommended.description && { label: "Do this", text: humanizeEvidenceLine(presentBankBalanceActionText(recommended.recommendationCode ?? recommended.findingCode, String(recommended.description))) },
                 recommended.expectedTimeframeDays > 0 && { label: "Do it within", text: `Try to do this within ${recommended.expectedTimeframeDays} days.` },
                 recommended.verificationMethod && { label: "How to check", text: humanizeEvidenceLine(String(recommended.verificationMethod)) },
               ]
@@ -1147,7 +1148,7 @@ function FinanceCycleView({
                   </div>
                   <Badge variant="muted-accessible">Recommendation status: <span>{ACTION_STATUS_LABEL[a.status] ?? a.status}</span></Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">{presentBankBalanceActionText(a.recommendationCode ?? a.findingCode, a.description)}</p>
                 <p className="text-xs text-muted-foreground">
                   Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>

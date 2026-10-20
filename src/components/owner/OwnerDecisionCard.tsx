@@ -9,6 +9,7 @@
  */
 import Link from "next/link";
 import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 import { Badge, Disclosure } from "@/ui/primitives";
 import { ownerTargetConfidencePhrase, OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
 import type { OwnerAdviceMode } from "@/domain/owner-spine/owner-advice-policy";
@@ -90,7 +91,7 @@ export function OwnerDecisionCard({
             {p.title}
           </strong>
           <p className="m-0 text-xs text-muted-foreground">Area: {p.domainLabel}</p>
-          {p.explanation && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{p.explanation}</p>}
+          {p.explanation && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{presentBankBalanceActionText(p.findingCode, p.explanation)}</p>}
           {decision.whyThisWins.length > 0 && (
             <div data-testid="owner-decision-why">
               <span className="text-sm font-medium text-foreground">Why this comes first</span>
