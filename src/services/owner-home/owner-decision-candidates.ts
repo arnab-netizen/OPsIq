@@ -22,6 +22,7 @@
 import { buildFinanceEvidenceRationale } from "@/domain/owner-finance/actions";
 import { extractReachedTargetFromVerification } from "@/domain/owner-finance/outcome-signals";
 import { isExpired } from "@/domain/owner-mode/compliance-boundary";
+import { FIRST_READ_STALE_AFTER_DAYS } from "@/domain/owner-finance/first-read-sufficiency";
 import {
   classifyOwnerFindingCode,
   type OwnerCandidateExclusion,
@@ -34,7 +35,7 @@ import { clampConfidence, clampScore, OWNER_SEVERITIES, ownerSeverityRank, type 
 export const OPEN_OWNER_ACTION_STATUSES: readonly string[] = ["proposed", "assigned", "in_progress", "blocked"];
 
 /** Evidence older than this is flagged stale (same window as the Business Condition staleness rule). */
-export const OWNER_DECISION_STALE_EVIDENCE_DAYS = 45;
+export const OWNER_DECISION_STALE_EVIDENCE_DAYS = FIRST_READ_STALE_AFTER_DAYS;
 
 export const OWNER_DOMAIN_ROUTE: Record<string, string> = {
   finance: "/owner/finance",

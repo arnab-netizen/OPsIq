@@ -54,6 +54,42 @@ export interface FirstReadSufficiency {
   period?: { start: string; end: string } | null;
 }
 
+/**
+ * Evidence older than this is out of date. ONE window shared by Home's staleness rule
+ * (OWNER_DECISION_STALE_EVIDENCE_DAYS re-exports it) and by every readiness surface, so a screen can never call
+ * figures "complete" that Home calls "out of date" for the same business.
+ */
+export const FIRST_READ_STALE_AFTER_DAYS = 45;
+
+export interface EvidenceFreshness {
+  /** "unknown": the answer does not rest on a dated snapshot (category-presence adapter) — never reported as stale. */
+  state: "current" | "stale" | "unknown";
+  /** End of the reporting period the first read rests on (ISO), null when unknown. */
+  periodEnd: string | null;
+  /** Whole days since that period ended; 0 for a period still in progress; null when unknown. */
+  ageDays: number | null;
+  staleAfterDays: number;
+}
+
+const DAY_MS = 86_400_000;
+
+/** Freshness of the evidence a first read rests on, by the same period-end rule Home applies to diagnosis cycles. */
+export function evidenceFreshnessOf(
+  firstRead: Pick<FirstReadSufficiency, "period" | "basis">,
+  now: Date,
+  staleAfterDays: number = FIRST_READ_STALE_AFTER_DAYS
+): EvidenceFreshness {
+  const end = firstRead.period?.end ? new Date(firstRead.period.end) : null;
+  if (!end || Number.isNaN(end.getTime())) return { state: "unknown", periodEnd: null, ageDays: null, staleAfterDays };
+  const ageDays = Math.max(0, Math.floor((now.getTime() - end.getTime()) / DAY_MS));
+  return {
+    state: end.getTime() < now.getTime() - staleAfterDays * DAY_MS ? "stale" : "current",
+    periodEnd: end.toISOString(),
+    ageDays,
+    staleAfterDays,
+  };
+}
+
 const FACT_BY_ENGINE_KEY: Record<string, FirstReadFact> = {
   revenue: "revenue",
   costs: "costs",

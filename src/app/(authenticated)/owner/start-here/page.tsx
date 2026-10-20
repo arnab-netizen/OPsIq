@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { staleEvidenceNotice } from "@/domain/owner-mode/owner-onboarding";
 import {
   computeStartHereSteps, hasEngagedPriorityForBusiness,
   nextStartHereStep,
@@ -49,6 +50,7 @@ export default function StartHerePage() {
   const { activeBusinessId, activeBusiness, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
   const [steps, setSteps] = useState<StartHereStep[] | null>(null);
   const [canRunFirstDiagnosis, setCanRunFirstDiagnosis] = useState(false);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -106,6 +108,7 @@ export default function StartHerePage() {
       });
       setSteps(computed);
       setCanRunFirstDiagnosis(onboarding.canRunFirstDiagnosis === true);
+      setStaleNotice(staleEvidenceNotice(onboarding.evidenceFreshness));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load your setup progress.");
     } finally {
@@ -169,8 +172,9 @@ export default function StartHerePage() {
       {canRunFirstDiagnosis && (
         <div className="mb-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }} data-testid="start-here-first-read-available">
           <p className="text-sm font-medium text-foreground">
-            You already have enough information for a first read.
+            {staleNotice ? "You have enough information for a first read, but your figures are out of date." : "You already have enough information for a first read."}
           </p>
+          {staleNotice && <p className="mt-1 text-sm text-muted-foreground" data-testid="start-here-stale-evidence">{staleNotice}</p>}
           <p className="mt-1 text-sm text-muted-foreground">
             OpsIQ will analyze every area you&rsquo;ve added data for — no need to visit each one separately.
           </p>
@@ -235,7 +239,7 @@ export default function StartHerePage() {
 
       {!next && (
         <div className="mt-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--success-text)" }}>
-          <p className="text-sm font-medium text-foreground">Basic setup is complete.</p>
+          <p className="text-sm font-medium text-foreground">{staleNotice ? "Basic setup is done, but your figures are out of date." : "Basic setup is complete."}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             OpsIQ can give you a first read. Adding more evidence (see My Business) improves confidence and can unlock additional decisions.
           </p>

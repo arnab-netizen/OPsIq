@@ -1,5 +1,5 @@
 {
-  "baselineSha": "e5d6fd8b73d6a1619b89377b764b6ec0046335fd",
+  "baselineSha": "0aa90a971163a3988d441296fe1bcdf48924ee87",
   "generatorPath": "scripts/ux/generate-owner-feature-baseline.mjs",
   "ownerPageRoutes": [
     {
@@ -397,6 +397,20 @@
           ]
         },
         {
+          "endpoint": "/api/owner/cashflow/snapshots/:param/amend",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/cashflow/snapshots/:param",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
           "endpoint": "/api/owner/home",
           "method": "GET",
           "capabilities": [
@@ -420,6 +434,10 @@
         },
         {
           "method": "GET",
+          "path": "/api/owner/cashflow/snapshots/:param"
+        },
+        {
+          "method": "GET",
           "path": "/api/owner/home"
         }
       ],
@@ -439,6 +457,10 @@
         {
           "method": "POST",
           "path": "/api/owner/cashflow/businesses/:param/snapshots"
+        },
+        {
+          "method": "POST",
+          "path": "/api/owner/cashflow/snapshots/:param/amend"
         },
         {
           "method": "POST",
@@ -467,6 +489,11 @@
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         },
         {
+          "endpoint": "/api/owner/cashflow/snapshots/:param/amend",
+          "method": "POST",
+          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
+        },
+        {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
@@ -476,18 +503,25 @@
       "deepLinkedFrom": [
         "src/__tests__/components/BudgetCashForecast.test.tsx",
         "src/__tests__/owner-activation/onboarding-cash-wiring.test.tsx",
+        "src/__tests__/owner-cashflow/cashflow-edit-ui.test.tsx",
         "src/__tests__/owner-cashflow/cashflow-page-empty-state-gating.test.tsx",
         "src/__tests__/owner-decision/r7-canonical-blockers.test.ts",
+        "src/__tests__/owner-first-run/first-run-components.test.tsx",
         "src/__tests__/owner-first-run/first-run-repair-domain.test.ts",
+        "src/__tests__/owner-first-run/improve-target.db.test.ts",
+        "src/app/(authenticated)/owner/cashflow/page.tsx",
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/onboarding/page.tsx",
         "src/app/(authenticated)/owner/page.tsx",
         "src/components/owner/BudgetCashForecast.tsx",
+        "src/domain/owner-cashflow/edit-flow.ts",
         "src/domain/owner-first-run/first-money-read.ts",
+        "src/domain/owner-first-run/improve-target.ts",
         "src/domain/owner-spine/owner-decision.ts",
+        "src/services/owner-first-run/first-run.service.ts",
         "src/services/owner-home/owner-decision-candidates.ts"
       ],
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 8
     },
     {
       "route": "/owner/cockpit",
@@ -1043,7 +1077,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 6
+      "componentTreeFileCount": 7
     },
     {
       "route": "/owner/feedback",
@@ -1222,7 +1256,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 10
+      "componentTreeFileCount": 13
     },
     {
       "route": "/owner/first-run",
@@ -1252,16 +1286,22 @@
       "majorActions": [],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [
+        "src/__tests__/api/auth/email-ownership-before-credential.db.test.ts",
+        "src/__tests__/auth/reset-password-page.test.tsx",
         "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/__tests__/owner-first-run/accepted-next-move-card.test.tsx",
+        "src/__tests__/owner-first-run/first-run-active-business.test.tsx",
         "src/__tests__/owner-first-run/first-run-domain.test.ts",
         "src/__tests__/owner-first-run/first-run-flow-repair.test.tsx",
         "src/__tests__/owner-first-run/first-run.db.test.ts",
         "src/__tests__/owner-first-run/mobile-launch-path.test.tsx",
         "src/app/(authenticated)/owner/cockpit/page.tsx",
-        "src/app/verify-email/page.tsx",
+        "src/app/api/auth/reset-password/route.ts",
+        "src/components/owner/first-run/AcceptedNextMoveCard.tsx",
         "src/components/owner/first-run/FirstRunRedirect.tsx",
         "src/components/owner/first-run/FirstRunReturnBar.tsx",
-        "src/domain/owner-first-run/first-run-router.ts"
+        "src/domain/owner-first-run/first-run-router.ts",
+        "src/domain/owner-first-run/improve-target.ts"
       ],
       "componentTreeFileCount": 9
     },
@@ -1998,7 +2038,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/now",
@@ -2044,13 +2084,6 @@
       "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
       "apiCapabilityRequirements": [
-        {
-          "endpoint": "/api/owner/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
         {
           "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
           "method": "GET",
@@ -2099,22 +2132,11 @@
           "capabilities": [
             "OWNER_VIEW"
           ]
-        },
-        {
-          "endpoint": "/api/owner/readiness",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
-        {
-          "method": "GET",
-          "path": "/api/owner/businesses"
-        },
         {
           "method": "GET",
           "path": "/api/owner/cashflow/businesses/:param/snapshots"
@@ -2126,10 +2148,6 @@
         {
           "method": "GET",
           "path": "/api/owner/onboarding"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/readiness"
         }
       ],
       "writeApis": [
@@ -2176,8 +2194,7 @@
       "deepLinkedFrom": [
         "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
         "src/app/(authenticated)/owner/data/page.tsx",
-        "src/app/(authenticated)/owner/page.tsx",
-        "src/components/owner/QuickFinancialPicture.tsx"
+        "src/app/(authenticated)/owner/page.tsx"
       ],
       "componentTreeFileCount": 4
     },
@@ -2334,7 +2351,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 8
+      "componentTreeFileCount": 9
     },
     {
       "route": "/owner/outcomes",
@@ -2497,10 +2514,12 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [
+        "src/__tests__/analytics/clarity-policy.test.ts",
         "src/__tests__/components/sidebar-nav-risk-hidden.test.tsx",
         "src/__tests__/components/visual-system-semantic-color-closure.test.ts",
         "src/__tests__/owner-activation/navigation-activation.test.tsx",
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
+        "src/__tests__/owner-cashflow/cashflow-edit-ui.test.tsx",
         "src/__tests__/owner-cashflow/cashflow-page-empty-state-gating.test.tsx",
         "src/__tests__/owner-cashflow/incomplete-cash-downstream.test.ts",
         "src/__tests__/owner-condition/owner-home-page.test.ts",
@@ -2516,8 +2535,10 @@
         "src/__tests__/owner-decision/user-hostile-audit-regressions.test.ts",
         "src/__tests__/owner-finance/finance-page.test.ts",
         "src/__tests__/owner-first-run/first-run-repair-domain.test.ts",
+        "src/__tests__/owner-first-run/improve-target.db.test.ts",
         "src/__tests__/owner-home/home-page.test.ts",
         "src/__tests__/owner-marketing/marketing-page-empty-state-gating.test.tsx",
+        "src/__tests__/owner-mode/profit-leak-presentation.test.tsx",
         "src/__tests__/owner-portfolio/engine.test.ts",
         "src/__tests__/owner-recovery/recovery-page-empty-state-gating.test.tsx",
         "src/__tests__/owner-spine/owner-advice-policy.test.ts",
@@ -2539,8 +2560,11 @@
         "src/app/(authenticated)/owner/tasks/new/page.tsx",
         "src/app/(authenticated)/owner/tasks/page.tsx",
         "src/app/(authenticated)/owner/wealth/page.tsx",
+        "src/domain/owner-cashflow/edit-flow.ts",
+        "src/domain/owner-first-run/improve-target.ts",
         "src/domain/owner-mode/owner-data-hub.ts",
         "src/domain/owner-spine/owner-decision.ts",
+        "src/lib/analytics/clarity-policy.ts",
         "src/lib/audit-label.ts",
         "src/services/owner-home/owner-decision-candidates.ts",
         "src/services/workspace/employee-lifecycle.service.ts"
@@ -2866,7 +2890,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 4
     },
     {
       "route": "/owner/risks/[id]",
@@ -3101,7 +3125,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 8
+      "componentTreeFileCount": 9
     },
     {
       "route": "/owner/start-here",
@@ -3509,7 +3533,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/tasks/[taskId]",
@@ -4418,6 +4442,21 @@
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
     {
+      "path": "/api/owner/cashflow/snapshots/[snapshotId]/amend",
+      "sourceFile": "src/app/api/owner/cashflow/snapshots/[snapshotId]/amend/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "scopeNote": "Neither `businessId` nor `workspaceId` identifier found in route source; scope not deterministically visible from this file alone (may resolve scope via a shared service call this generator does not trace).",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
       "path": "/api/owner/cashflow/snapshots/[snapshotId]",
       "sourceFile": "src/app/api/owner/cashflow/snapshots/[snapshotId]/route.ts",
       "httpMethods": [
@@ -4975,6 +5014,20 @@
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
     {
+      "path": "/api/owner/first-run/improve-target",
+      "sourceFile": "src/app/api/owner/first-run/improve-target/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
       "path": "/api/owner/first-run/improve",
       "sourceFile": "src/app/api/owner/first-run/improve/route.ts",
       "httpMethods": [
@@ -5054,7 +5107,7 @@
         "OWNER_VIEW"
       ],
       "readOrWrite": "read",
-      "scope": "workspace-scoped",
+      "scope": "business-scoped",
       "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
@@ -8244,6 +8297,15 @@
     },
     {
       "section": "admin",
+      "label": "Beta cohort",
+      "href": "/admin/beta-cohort",
+      "requiresOwner": false,
+      "requiresCapability": "BETA_PROGRAM_MANAGE",
+      "state": "core",
+      "blurb": null
+    },
+    {
+      "section": "admin",
       "label": "Customers",
       "href": "/admin/customers",
       "requiresOwner": false,
@@ -9322,9 +9384,11 @@
       "source": [
         "src/domain/owner-finance/actions.ts",
         "src/domain/owner-finance/cash-safety-gate.ts",
+        "src/domain/owner-finance/cost-model.ts",
         "src/domain/owner-finance/data-confidence.ts",
         "src/domain/owner-finance/diagnosis.ts",
         "src/domain/owner-finance/evidence-quality.ts",
+        "src/domain/owner-finance/first-read-statement.ts",
         "src/domain/owner-finance/first-read-sufficiency.ts",
         "src/domain/owner-finance/index.ts",
         "src/domain/owner-finance/liquidity.ts",
@@ -9332,21 +9396,31 @@
         "src/domain/owner-finance/metrics.ts",
         "src/domain/owner-finance/opportunity-rules.ts",
         "src/domain/owner-finance/outcome-signals.ts",
+        "src/domain/owner-finance/period-timing.ts",
         "src/domain/owner-finance/pricing-analysis.ts",
         "src/domain/owner-finance/pricing-analysis.validation.ts",
+        "src/domain/owner-finance/profit-position.ts",
         "src/domain/owner-finance/quick-entry.ts",
         "src/domain/owner-finance/recommendations.ts",
         "src/domain/owner-finance/risk-rules.ts",
+        "src/domain/owner-finance/score-availability.ts",
+        "src/domain/owner-finance/snapshot-amend-form.ts",
+        "src/domain/owner-finance/snapshot-conflict.ts",
+        "src/domain/owner-finance/snapshot-fields.ts",
+        "src/domain/owner-finance/snapshot-form-errors.ts",
         "src/domain/owner-finance/thresholds.ts",
         "src/domain/owner-finance/types.ts",
         "src/domain/owner-finance/unit-economics.ts",
+        "src/domain/owner-finance/unsupported-conclusions.ts",
         "src/domain/owner-finance/validation.ts",
         "src/services/owner-finance/action.service.ts",
         "src/services/owner-finance/baseline.service.ts",
         "src/services/owner-finance/dashboard.service.ts",
         "src/services/owner-finance/diagnosis.service.ts",
         "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/finance-conflict.ts",
         "src/services/owner-finance/financial-snapshot-selection.ts",
+        "src/services/owner-finance/leakage-components.ts",
         "src/services/owner-finance/learning-bridge.service.ts",
         "src/services/owner-finance/liquidity.service.ts",
         "src/services/owner-finance/recommendation-cash-safety.service.ts",
@@ -9505,12 +9579,15 @@
       "family": "cashflow_actions",
       "source": [
         "src/domain/owner-cashflow/actions.ts",
+        "src/domain/owner-cashflow/amend.ts",
         "src/domain/owner-cashflow/cycle-projection.ts",
         "src/domain/owner-cashflow/data-confidence.ts",
         "src/domain/owner-cashflow/diagnosis.ts",
+        "src/domain/owner-cashflow/edit-flow.ts",
         "src/domain/owner-cashflow/index.ts",
         "src/domain/owner-cashflow/metrics.ts",
         "src/domain/owner-cashflow/opportunity-rules.ts",
+        "src/domain/owner-cashflow/overdraft-copy.ts",
         "src/domain/owner-cashflow/recommendations.ts",
         "src/domain/owner-cashflow/risk-rules.ts",
         "src/domain/owner-cashflow/row-input.ts",
@@ -9518,8 +9595,10 @@
         "src/domain/owner-cashflow/types.ts",
         "src/domain/owner-cashflow/validation.ts",
         "src/services/owner-cashflow/action.service.ts",
+        "src/services/owner-cashflow/cashflow-conflict.ts",
         "src/services/owner-cashflow/dashboard.service.ts",
         "src/services/owner-cashflow/diagnosis.service.ts",
+        "src/services/owner-cashflow/effective-cashflow.service.ts",
         "src/services/owner-cashflow/snapshot.service.ts",
         "src/services/owner-cashflow/verification.service.ts"
       ],
@@ -9594,6 +9673,13 @@
             "POST"
           ],
           "sourceFile": "src/app/api/owner/cashflow/businesses/[businessId]/snapshots/route.ts"
+        },
+        {
+          "path": "/api/owner/cashflow/snapshots/[snapshotId]/amend",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/cashflow/snapshots/[snapshotId]/amend/route.ts"
         }
       ],
       "currentOwnerUiPages": [
@@ -10021,6 +10107,7 @@
       "source": [
         "src/domain/founder-recovery/action-continuity.ts",
         "src/domain/founder-recovery/action-status.ts",
+        "src/domain/founder-recovery/currency.ts",
         "src/domain/founder-recovery/diagnosis.ts",
         "src/domain/founder-recovery/legacy-fixture-classification.ts",
         "src/domain/founder-recovery/metrics.ts",
@@ -12180,9 +12267,11 @@
       "source": [
         "src/domain/owner-finance/actions.ts",
         "src/domain/owner-finance/cash-safety-gate.ts",
+        "src/domain/owner-finance/cost-model.ts",
         "src/domain/owner-finance/data-confidence.ts",
         "src/domain/owner-finance/diagnosis.ts",
         "src/domain/owner-finance/evidence-quality.ts",
+        "src/domain/owner-finance/first-read-statement.ts",
         "src/domain/owner-finance/first-read-sufficiency.ts",
         "src/domain/owner-finance/index.ts",
         "src/domain/owner-finance/liquidity.ts",
@@ -12190,21 +12279,31 @@
         "src/domain/owner-finance/metrics.ts",
         "src/domain/owner-finance/opportunity-rules.ts",
         "src/domain/owner-finance/outcome-signals.ts",
+        "src/domain/owner-finance/period-timing.ts",
         "src/domain/owner-finance/pricing-analysis.ts",
         "src/domain/owner-finance/pricing-analysis.validation.ts",
+        "src/domain/owner-finance/profit-position.ts",
         "src/domain/owner-finance/quick-entry.ts",
         "src/domain/owner-finance/recommendations.ts",
         "src/domain/owner-finance/risk-rules.ts",
+        "src/domain/owner-finance/score-availability.ts",
+        "src/domain/owner-finance/snapshot-amend-form.ts",
+        "src/domain/owner-finance/snapshot-conflict.ts",
+        "src/domain/owner-finance/snapshot-fields.ts",
+        "src/domain/owner-finance/snapshot-form-errors.ts",
         "src/domain/owner-finance/thresholds.ts",
         "src/domain/owner-finance/types.ts",
         "src/domain/owner-finance/unit-economics.ts",
+        "src/domain/owner-finance/unsupported-conclusions.ts",
         "src/domain/owner-finance/validation.ts",
         "src/services/owner-finance/action.service.ts",
         "src/services/owner-finance/baseline.service.ts",
         "src/services/owner-finance/dashboard.service.ts",
         "src/services/owner-finance/diagnosis.service.ts",
         "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/finance-conflict.ts",
         "src/services/owner-finance/financial-snapshot-selection.ts",
+        "src/services/owner-finance/leakage-components.ts",
         "src/services/owner-finance/learning-bridge.service.ts",
         "src/services/owner-finance/liquidity.service.ts",
         "src/services/owner-finance/recommendation-cash-safety.service.ts",
@@ -12262,12 +12361,15 @@
       "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
       "source": [
         "src/domain/owner-cashflow/actions.ts",
+        "src/domain/owner-cashflow/amend.ts",
         "src/domain/owner-cashflow/cycle-projection.ts",
         "src/domain/owner-cashflow/data-confidence.ts",
         "src/domain/owner-cashflow/diagnosis.ts",
+        "src/domain/owner-cashflow/edit-flow.ts",
         "src/domain/owner-cashflow/index.ts",
         "src/domain/owner-cashflow/metrics.ts",
         "src/domain/owner-cashflow/opportunity-rules.ts",
+        "src/domain/owner-cashflow/overdraft-copy.ts",
         "src/domain/owner-cashflow/recommendations.ts",
         "src/domain/owner-cashflow/risk-rules.ts",
         "src/domain/owner-cashflow/row-input.ts",
@@ -12275,8 +12377,10 @@
         "src/domain/owner-cashflow/types.ts",
         "src/domain/owner-cashflow/validation.ts",
         "src/services/owner-cashflow/action.service.ts",
+        "src/services/owner-cashflow/cashflow-conflict.ts",
         "src/services/owner-cashflow/dashboard.service.ts",
         "src/services/owner-cashflow/diagnosis.service.ts",
+        "src/services/owner-cashflow/effective-cashflow.service.ts",
         "src/services/owner-cashflow/snapshot.service.ts",
         "src/services/owner-cashflow/verification.service.ts"
       ],
@@ -12532,6 +12636,7 @@
       "source": [
         "src/domain/founder-recovery/action-continuity.ts",
         "src/domain/founder-recovery/action-status.ts",
+        "src/domain/founder-recovery/currency.ts",
         "src/domain/founder-recovery/diagnosis.ts",
         "src/domain/founder-recovery/legacy-fixture-classification.ts",
         "src/domain/founder-recovery/metrics.ts",
@@ -13067,6 +13172,7 @@
     "src/domain/badges",
     "src/domain/benchmark",
     "src/domain/beta",
+    "src/domain/beta-cohort",
     "src/domain/business-condition",
     "src/domain/business-facts",
     "src/domain/business-impact",
@@ -13153,6 +13259,7 @@
     "src/services/benchmark",
     "src/services/best-path-engine",
     "src/services/beta",
+    "src/services/beta-cohort",
     "src/services/business-condition",
     "src/services/business-impact",
     "src/services/cache",
@@ -13262,6 +13369,7 @@
     "src/app/(authenticated)/owner/marketing/campaigns/page.tsx",
     "src/app/(authenticated)/owner/marketing/page.tsx",
     "src/app/(authenticated)/owner/now/page.tsx",
+    "src/app/(authenticated)/owner/onboarding/page.tsx",
     "src/app/(authenticated)/owner/operations/page.tsx",
     "src/app/(authenticated)/owner/page.tsx",
     "src/app/(authenticated)/owner/priorities/page.tsx",
@@ -13278,21 +13386,10 @@
   "businessContextClassificationCounts": {
     "NO_BUSINESS_CONTEXT": 11,
     "NOT_APPLICABLE": 7,
-    "SHARED_ACTIVE_BUSINESS": 29,
-    "WORKSPACE_ONLY": 1,
-    "LOCAL_BUSINESS_STATE": 1
+    "SHARED_ACTIVE_BUSINESS": 30,
+    "WORKSPACE_ONLY": 1
   },
-  "businessContextFindings": [
-    {
-      "finding": "LOCAL_BUSINESS_STATE_CANDIDATE",
-      "pages": [
-        "/owner/onboarding"
-      ],
-      "evidence": "These pages render <BusinessContextSelector> but do not call the shared useActiveBusiness() hook that other pages (e.g. cockpit, finance, sales, operations) read from — each threads businessId through local component state/callbacks only.",
-      "missionRelevance": "Mission section 17 names Recovery, Strategy, Marketing, and Marketing Campaigns for special business-context inspection; this mechanical classification confirms the suspected gap with source evidence and is deferred to UX-01's full 8-invariant business-context audit. Not fixed in UX-00A.1.",
-      "disposition": "BLOCKED_NEEDS_EVIDENCE_FOR_FIX (evidence sufficient to flag; fix scope belongs to UX-01)"
-    }
-  ],
+  "businessContextFindings": [],
   "publicRoutesTouchedBySharedComponents": [
     {
       "route": "/about",
@@ -13602,6 +13699,13 @@
     {
       "route": "/admin/audit",
       "sourceFile": "src/app/(authenticated)/admin/audit/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/beta-cohort",
+      "sourceFile": "src/app/(authenticated)/admin/beta-cohort/page.tsx",
       "sharedComponentsImported": [
         "@/ui/primitives"
       ]

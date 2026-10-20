@@ -33,7 +33,7 @@
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/(authenticated)/owner/start-here/page.tsx",
-      "line": 167,
+      "line": 170,
       "severity": "error",
       "code": "{error && <p className=\"text-sm text-destructive mb-4\">{error}</p>}",
       "reason": "operator-facing render; pre-existing, deferred to a separate runtime fix slice"
