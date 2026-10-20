@@ -36,6 +36,7 @@ import { presentSnapshotFormError, type SnapshotFormError } from "@/domain/owner
 import { listFinanceSnapshots } from "@/lib/owner-finance-client";
 import { ADVANCED_FIELD_NAMES, FINANCE_FIELDS, IMPROVE_GROUPS, QUICK_FIELD_NAMES, financeField } from "@/domain/owner-finance/snapshot-fields";
 import { Disclosure } from "@/ui/primitives";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -979,6 +980,7 @@ function FinanceCycleView({
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What to do first</div>
             <p className="mt-1 text-sm font-medium text-foreground">{recommended.title}</p>
+            <BankBalanceEntryLink code={recommended.recommendationCode ?? recommended.findingCode} className="mt-1" />
           </div>
         )}
         {recommended && (recommended.description || recommended.expectedTimeframeDays > 0 || recommended.verificationMethod) && (

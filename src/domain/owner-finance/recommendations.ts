@@ -472,7 +472,7 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     recommendationCode: "FINREC_CONFIRM_BANK_BALANCE",
     category: "improve_data_quality",
     title: "Add your bank balance",
-    requiredOwnerAction: "If you know them, add your cash in hand and bank balance in Guided setup or on the Cashflow page. Enter 0 only if you really hold nothing there, and leave a figure blank if you don't know it — OpsIQ will say what it can't conclude rather than guess.",
+    requiredOwnerAction: "Enter the total across your bank accounts right now, and your cash in hand too if you know it — the “Enter your bank balance” link on Home or Money opens the entry. Enter 0 only if you really hold nothing there, and leave a figure blank if you don't know it — OpsIQ will say what it can't conclude rather than guess.",
     verificationMethod: "On your next diagnosis, confirm OpsIQ shows how many days your cash will last instead of asking for the bank balance.",
     expectedTimeframeDays: 7,
     effortScore: 10,

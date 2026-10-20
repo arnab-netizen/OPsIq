@@ -8,6 +8,7 @@
  * which target wins.
  */
 import Link from "next/link";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
 import { Badge, Disclosure } from "@/ui/primitives";
 import { ownerTargetConfidencePhrase, OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
 import type { OwnerAdviceMode } from "@/domain/owner-spine/owner-advice-policy";
@@ -100,6 +101,7 @@ export function OwnerDecisionCard({
               </ul>
             </div>
           )}
+          <BankBalanceEntryLink code={p.findingCode} />
           <Link data-testid="owner-decision-go" href={ownerTargetHref(p)} className="inline-flex self-start items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             Work on this in {p.domainLabel} →
           </Link>

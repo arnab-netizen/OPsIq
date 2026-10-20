@@ -35,7 +35,7 @@ export const CASH_IN_HAND_COPY = {
 /** The separate bank figure (written to Cashflow, never to the Finance snapshot). */
 export const BANK_BALANCE_COPY = {
   label: "Money in the bank",
-  hint: `Bank balance right now, across all accounts. Optional. If you already track this in Cashflow for this month, enter it only there or only here — never both, or it is counted twice. ${OVERDRAFT_BANK_BALANCE_SENTENCE}`,
+  hint: `Bank balance right now, across all accounts. Optional. If you have already entered your bank balance for this month elsewhere in OpsIQ, enter it in only one place — never both, or it is counted twice. ${OVERDRAFT_BANK_BALANCE_SENTENCE}`,
 } as const;
 
 export const QUICK_ENTRY_FIELDS = [

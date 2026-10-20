@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { lastFullCalendarMonth } from "@/lib/owner-quick-start";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
 import type { EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
@@ -243,8 +244,8 @@ function EssentialNumbersForm({
             // honestly rather than silently using the stale figure.
             bankBalanceWarning =
               onFile === null
-                ? `Your bank balance couldn't be saved for this period — a cashflow record already exists for it without a bank balance. Add it directly in Cashflow.`
-                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it directly in Cashflow if that figure is wrong.`;
+                ? `Your bank balance couldn't be saved for this period — an earlier record for it exists without a bank balance. Add it with the link below.`
+                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it with the link below if that figure is wrong.`;
           }
           // else: identical value already on file -- genuinely idempotent, nothing to warn about.
         }
@@ -334,6 +335,7 @@ type FirstResultFinding = {
   severity: string;
   sourceMetric?: string | null;
   missingData?: string[] | null;
+  findingCode?: string | null;
 };
 type FirstResultAction = {
   findingId: string | null;
@@ -342,6 +344,7 @@ type FirstResultAction = {
   verificationMetric?: string | null;
   verificationMethod?: string | null;
   confidence?: number | null;
+  recommendationCode?: string | null;
 };
 
 /**
@@ -379,9 +382,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
         >
           <p className="font-medium">Bank balance not saved</p>
           <p className="mt-1">{bankBalanceWarning}</p>
-          <Link href="/owner/cashflow" className="mt-1 inline-block font-medium underline hover:no-underline">
-            Go to Cashflow →
-          </Link>
+          <BankBalanceEntryLink code="FINREC_CONFIRM_BANK_BALANCE" className="mt-1" />
         </div>
       )}
       <h2 className="text-base font-semibold text-foreground">What OpsIQ found</h2>
@@ -402,6 +403,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
             <>
               <p className="mt-1 text-base font-semibold text-foreground">{topAction.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
+              <BankBalanceEntryLink code={topAction.recommendationCode ?? top?.findingCode} className="mt-2" />
               {topAction.verificationMethod && (
                 <>
                   <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
