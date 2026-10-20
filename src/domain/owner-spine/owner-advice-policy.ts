@@ -14,8 +14,9 @@
  *   CAUTION                        shown, but material uncertainty remains: name it, give a reassessment condition.
  *   PROVISIONAL                    a real issue needs attention, but the diagnosis/score for it rests on incomplete or
  *                                  in-progress evidence: never present magnitude, diagnosis or outcome as established.
- *   REFRESH_REQUIRED               the evidence is out of date: the target is to update/reconfirm it; the old diagnosis
- *                                  is never stated as a current fact.
+ *   REFRESH_REQUIRED               the analysis rests on out-of-date figures: the target is to refresh (re-run) the
+ *                                  analysis on current figures (the owner's latest figures may already be newer); the
+ *                                  old diagnosis is never stated as a current fact.
  *   EVIDENCE_REQUIRED              critical information is missing: OpsIQ abstains from the material recommendation
  *                                  and asks for the named evidence (abstention is NOT "show nothing").
  *   RECORDED_FACT                  a recorded compliance/risk/safety fact: actionable as a FACT; unrelated missing
