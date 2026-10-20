@@ -836,7 +836,7 @@ export function describeOwnerChanges(facts: OwnerChangeFacts): OwnerDecisionChan
     );
   }
   for (const d of [...facts.newlyStaleDomains].sort()) {
-    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The figures in ${ownerDomainLabel(d)} are now out of date — update them before acting on what they flagged.` });
+    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The analysis of ${ownerDomainLabel(d)} now rests on out-of-date figures — add current figures and refresh it before acting on what it flagged.` });
   }
   const seen = new Set<string>();
   return [...records, ...attribution, ...issues, ...work, ...stale, ...evidence].filter((c) => (seen.has(c.message) ? false : (seen.add(c.message), true)));
@@ -868,8 +868,8 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: {
       priorityClass: top.priorityClass,
       findingCode: "EVIDENCE_REFRESH",
       findingId: null,
-      title: `Update the figures in ${label} before acting on them`,
-      explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
+      title: `Refresh the ${label} analysis before acting on it`,
+      explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Re-run the ${label} diagnosis on your current figures (add them first if they are older) to confirm what still needs doing.`,
       // Every ranking attribute comes from the SAME most-serious item (never mixed across items or
       // classes); confidence is also capped at "low" — the figures are out of date.
       severity: top.severity,
@@ -1300,7 +1300,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (!hasEvidence) pushMissing("Add or complete your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
   for (const m of input.dataSufficiency.missingCriticalData) pushMissing(m);
   if (primary) for (const m of primary.missingData) pushMissing(m);
-  for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`);
+  for (const d of input.staleDomains) pushMissing(`A refreshed ${ownerDomainLabel(d)} analysis — the latest one rests on out-of-date figures, so what it showed cannot be relied on yet.`);
   for (const d of input.futureDomains ?? []) {
     pushMissing(`${ownerDomainLabel(d)} figures entered for a period that has not started yet are not used. Correct the period if it was entered by mistake.`);
   }
@@ -1339,7 +1339,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (primary?.source === "safety_gate" && (primary.findingCode === "GATE_CASH_UNSAFE" || primary.findingCode === "GATE_PROFIT_UNSAFE") && input.gate?.cash.provisional) {
     reasons.push("This rests on this period's in-progress figures, not a completed period, so it is provisional.");
   }
-  if (primaryIsRefresh) reasons.push("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
+  if (primaryIsRefresh) reasons.push("This analysis rests on out-of-date figures, so what it showed is not proven now; refresh it before acting on it.");
   else if (primaryIsDataRequest) reasons.push("This is a request for missing information; advice on everything else waits for it.");
   const level: OwnerDecisionConfidenceLevel = primary ? confidenceLevelFor(score) : "insufficient";
   // "No analysed data" — never "no data": figures may be saved but not yet assessed (or too incomplete to assess).
@@ -1352,7 +1352,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whyThisWins.push(
       primaryIsRefresh
         // Never claims the old problem is current — only that it was last flagged and needs confirming.
-        ? `Your ${ownerDomainLabel(primary.domain)} figures are out of date, and they last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming them comes before acting on anything they showed.`
+        ? `The figures behind your ${ownerDomainLabel(primary.domain)} analysis are out of date, and it last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; refreshing the analysis comes before acting on anything it showed.`
         : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}, ${
             primary.source === "domain_action"
               ? `from your ${ownerDomainLabel(primary.domain)} diagnosis`
@@ -1460,7 +1460,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const cadence = `or within ${input.reassessment.days} days (${input.reassessment.reason})`;
   const reassessmentTrigger = primary
     ? primary.source === "evidence_refresh"
-      ? `Check again after you update the ${ownerDomainLabel(primary.domain)} figures and re-run its diagnosis, ${cadence}.`
+      ? `Check again after you refresh the ${ownerDomainLabel(primary.domain)} analysis, ${cadence}.`
       : primary.source === "survival_reading"
         ? `Check again when new ${ownerDomainLabel(primary.domain)} figures are added (only new figures can show this has gone), ${cadence}.`
         : primary.source === "safety_gate"

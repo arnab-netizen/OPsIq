@@ -174,7 +174,7 @@ test.describe("50 — final owner beta-readiness (one login)", () => {
       await expect(page.getByTestId("cockpit-profit-leak-section")).toContainText("Cost leakage found in your Money figures");
     }
     const target = page.getByTestId("owner-decision-confidence");
-    if (await target.count()) await expect(target.first()).toContainText(/^Confidence in this main target:|Needs your information|Confirm the figures first|Figures disagree|No main target yet/);
+    if (await target.count()) await expect(target.first()).toContainText(/^Confidence in this main target:|Needs your information|Refresh the analysis first|Figures disagree|No main target yet/);
     await page.goto("/owner/finance", { waitUntil: "networkidle" });
     await page.evaluate(() => document.querySelectorAll("details").forEach((d) => { (d as HTMLDetailsElement).open = true; }));
     const money = await page.locator("body").innerText();

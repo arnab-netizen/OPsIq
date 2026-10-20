@@ -1446,7 +1446,7 @@ function main() {
   }
 
   const baseline = {
-    baselineSha: "8335c7fe9627819c327dd0d52a79238050846e37",
+    baselineSha: "0aa90a971163a3988d441296fe1bcdf48924ee87",
     // No `generatedAt` timestamp: it carries no preservation value and made the artifact non-
     // idempotent run-to-run (every run produced a git diff on that field alone). Content is fully
     // determined by repository source at BASELINE_SHA; `git log` on this file is the generation

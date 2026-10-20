@@ -29,7 +29,7 @@ used only as a design principle; no number is derived from any external source.
 | `SUPPORTED` | current, sufficient evidence for this kind of claim | yes | yes |
 | `CAUTION` | shown, but material uncertainty remains; names it | yes | only for non-growth, non-plan targets while business-wide data is not insufficient |
 | `PROVISIONAL` | a real issue needs attention, but its score/diagnosis rests on incomplete or in-progress evidence | yes | no |
-| `REFRESH_REQUIRED` | evidence is out of date; the target is to update/reconfirm it; the old diagnosis is never stated as current | yes (the refresh) | no |
+| `REFRESH_REQUIRED` | the analysis rests on out-of-date figures; the target is to refresh (re-run) that analysis on current figures; the old diagnosis is never stated as current | yes (the refresh) | no |
 | `EVIDENCE_REQUIRED` | critical information is missing; OpsIQ abstains from the material recommendation and asks for the named evidence | yes (supply it) | no |
 | `RECORDED_FACT` | a recorded compliance/risk/safety fact, actionable as a fact; unrelated data gaps do not make it uncertain | yes | yes |
 | `CONFLICT_REQUIRES_RESOLUTION` | Cash flow and Finance disagree and neither is more current | yes (reconcile) | no |
@@ -46,7 +46,7 @@ stale/provisional domains, gate flags) rather than creating a parallel truth.
 |---|---|---|---|
 | no business data | — | `EVIDENCE_REQUIRED` | "Add your business numbers, then re-run" |
 | missing critical target data (data-request target) | recommendation | `EVIDENCE_REQUIRED` | "OpsIQ cannot support this decision yet" + the named fields |
-| stale evidence | diagnosis | `REFRESH_REQUIRED` | "Out of date — confirm the figures first"; shown as "last flagged", never as current |
+| stale evidence | diagnosis | `REFRESH_REQUIRED` | "Analysis rests on out-of-date figures — refresh the analysis first"; shown as "last flagged", never as current |
 | current + sufficient | diagnosis / recommendation | `SUPPORTED` | act normally |
 | current + `caution` sufficiency | recommendation | `CAUTION` | act with the stated caveat; no probability wording |
 | incomplete evidence in the target's own area | issue needing attention | `PROVISIONAL` | "needs attention now, but its score is provisional" |
@@ -74,7 +74,11 @@ policy text explains why. Narrowing the numeric cap is recorded as a behavior-ch
 
 - **Stale:** out-of-date evidence cannot be current truth. The canonical election already replaces stale candidates with an
   `evidence_refresh` target (confidence cap 0.4, class and severity kept as "last flagged"); the policy maps it to
-  `REFRESH_REQUIRED`, `requiresEvidenceRefresh`, and a card badge "Confirm the figures first" instead of a confidence label.
+  `REFRESH_REQUIRED`, `requiresEvidenceRefresh`, and a card badge "Refresh the analysis first" instead of a confidence label.
+  The stale thing is the **analysis** (data freshness and analysis freshness are separate): the owner's underlying figures may
+  already be newer, and the existing diagnosis has simply not been recomputed from them. The statement therefore says the
+  analysis "rests on out-of-date figures", and the next step is to re-run the diagnosis on current figures, adding newer
+  figures first only if the figures on hand are themselves old.
 - **Provisional (in-progress period):** may tighten a safety check, never clears it or approves growth. A business with only
   an in-progress period is no longer told "advice rests on the latest completed period" when none exists.
 - **Recorded facts:** compliance breaches, owner-recorded risks and recorded safety blocks stay actionable facts; the control
@@ -88,7 +92,7 @@ policy text explains why. Narrowing the numeric cap is recorded as a behavior-ch
 |---|---|---|---|
 | C1 | Control center says "do not make material decisions" while the gate/decision let a growth step proceed | REAL_DEFECT | **Wording consistent**: the Control Center's commitment statement now comes from the canonical policy; the policy withholds commitment for growth/plan targets (card line). **The action gate itself is unchanged and does not enforce `canMakeMaterialCommitment`** (candidate) |
 | C2 | Business-wide missing data caps an unrelated, well-supported current target (numeric cap) | REAL_DEFECT (scope) | Policy distinguishes target-relevant vs unrelated (`CAUTION` + explanation). **Numeric cap unchanged** (pinned by tests; candidate) |
-| C3 | A data-request target shown as "High confidence" | REAL_DEFECT | **Fixed** (card shows "Needs your information" / "Confirm the figures first") |
+| C3 | A data-request target shown as "High confidence" | REAL_DEFECT | **Fixed** (card shows "Needs your information" / "Refresh the analysis first") |
 | C4 | High-confidence label beside stale evidence elsewhere; margin gate wording on stale figures is present tense | AMBIGUOUS / REAL (wording) | **Margin wording FIXED** (policy block reason, hold text and blocker title distinguish last-known out-of-date margin from a current measurement; tests prove the hold, code and floor are unchanged; margin has no provisional path because its source is the current effective completed snapshot). "Other areas out of date" reason added to the policy |
 | C5 | Priority strip said "safe to act" / "strong actions are paused"; Now View / Command Center said "Ready / Blocked" / "Strong recommendations are paused" beside the card | REAL_DEFECT | **FIXED** (tested): strip notes are evidence descriptions and, when the policy withholds a commitment, the strip says it is not approval; Now View labels are scoped to "Guidance …" with a scope line that defers to the main target's advice status; Command Center checklist wording no longer pauses/permits. The assessment composer's "Limited confidence / Not enough evidence" is evidence description and is unchanged |
 | C6 | Low confidence only changes a badge; growth/plan step unqualified | AMBIGUOUS | **Mitigated** (statement + no-commitment line from the policy) |
@@ -115,7 +119,7 @@ policy text explains why. Narrowing the numeric cap is recorded as a behavior-ch
 ## 9. Examples
 
 - *Compliance licence recorded as expired while Marketing data is thin:* `RECORDED_FACT` — "This is a recorded fact, not an estimate." The recorded confidence is not capped.
-- *Cashflow danger flagged 60 days ago:* `REFRESH_REQUIRED` — "last flagged: Critical"; "Update the Cashflow figures and re-run its diagnosis." Never "your cash runs out".
+- *Cashflow danger flagged 60 days ago:* `REFRESH_REQUIRED` — "last flagged: Critical"; "Re-run the Cash flow diagnosis on your current figures (add them first if they are older)." Never "your cash runs out".
 - *No sales, cost or cash data:* `EVIDENCE_REQUIRED` — "Add your business numbers (sales, costs and cash), then re-run OpsIQ."
 - *Cash and Finance disagree with no way to tell which is newer:* `CONFLICT_REQUIRES_RESOLUTION` — "Confirm which figures are authoritative: update the older of Cash flow and Finance, then re-run both."
 

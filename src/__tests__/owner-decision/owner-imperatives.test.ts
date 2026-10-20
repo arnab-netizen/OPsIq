@@ -264,7 +264,7 @@ describe("P2 — Recovery, Finance confidence warning, missing-data guardrail", 
       sopsNeedingReview: 0, trainingRecommendations: 0, equipmentBottlenecks: [], processReviewsDue: 0, ownerApprovalsRequired: 0,
       reassessmentsDue: 0, approvalsAvoided: 0,
       attention: { criticalUnresolved: 0, ownerDecisionsRequired: 0, handledByOpsIQ: 0 } as never,
-      mainTarget: { title: "Update the figures in Finance before acting on them", priorityClass: "SURVIVAL_CASH", source: "evidence_refresh", findingCode: "EVIDENCE_REFRESH" },
+      mainTarget: { title: "Refresh the Finance analysis before acting on it", priorityClass: "SURVIVAL_CASH", source: "evidence_refresh", findingCode: "EVIDENCE_REFRESH" },
     });
     expect(cc.whatNotToDo).toEqual(["Do not make material decisions until the missing data is provided."]);
   });

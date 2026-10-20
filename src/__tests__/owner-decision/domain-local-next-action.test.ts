@@ -170,7 +170,7 @@ describe("P1 — Strategy's local step is the first canonically eligible item; i
   });
 
   it("stale Strategy figures → the refresh target is the next step; the decision's step is replaced (also when no row carries it yet)", () => {
-    const refresh = cand({ candidateId: "evidence_refresh:strategy", source: "evidence_refresh", sourceId: "strategy", title: "Update the figures in Strategy before acting on them", findingCode: "EVIDENCE_REFRESH" });
+    const refresh = cand({ candidateId: "evidence_refresh:strategy", source: "evidence_refresh", sourceId: "strategy", title: "Refresh the Strategy analysis before acting on it", findingCode: "EVIDENCE_REFRESH" });
     for (const rs of [rows, [rows[1]]]) {
       const r = selectStrategyLocalStep(true, rs, [refresh], isStep);
       expect(r.decisionStep.state).toBe("replaced");

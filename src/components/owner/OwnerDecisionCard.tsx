@@ -20,7 +20,7 @@ type Detail = "full" | "compact";
  * advice OpsIQ is confident in. The label comes from the canonical advice policy (never decided here).
  */
 const POLICY_BADGE_LABEL: Partial<Record<OwnerAdviceMode, string>> = {
-  REFRESH_REQUIRED: "Confirm the figures first",
+  REFRESH_REQUIRED: "Refresh the analysis first",
   EVIDENCE_REQUIRED: "Needs your information",
   CONFLICT_REQUIRES_RESOLUTION: "Figures disagree",
 };
