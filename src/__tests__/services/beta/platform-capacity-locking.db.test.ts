@@ -141,7 +141,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] platform capacity — shared advisor
 
     const [signupRes] = await Promise.all([
       POST(signupRequest(email) as never),
-      updatePlatformSettings({ actorId: ADMIN_1, capacityLimit: 2 }),
+      updatePlatformSettings({ actorId: ADMIN_1, capacityLimit: 2, capacityIncreaseConfirmation: { from: 1, to: 2 }, reason: "race with a concurrent signup" }),
     ]);
 
     const finalCount = await db.workspace.count({ where: { signupSource: { in: ["PUBLIC_BETA", "CONTROLLED_BETA_INVITE"] } } });
@@ -155,23 +155,26 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] platform capacity — shared advisor
     expect(signupRes.status === 201 || signupRes.status === 403).toBe(true);
   });
 
-  it("[db] admin update vs admin update: two concurrent capacity writes serialize cleanly — both succeed in some order, final row is exactly one of the two target values with no corruption", async () => {
+  it("[db] admin update vs admin update: two concurrent increases from 10 serialize; a confirmation for 10 can never authorize an increase from the new value", async () => {
     await seedSettings("OPEN_BETA", 10);
 
     const results = await Promise.allSettled([
-      updatePlatformSettings({ actorId: ADMIN_1, capacityLimit: 20 }),
-      updatePlatformSettings({ actorId: ADMIN_2, capacityLimit: 30 }),
+      updatePlatformSettings({ actorId: ADMIN_1, capacityLimit: 20, capacityIncreaseConfirmation: { from: 10, to: 20 }, reason: "race a" }),
+      updatePlatformSettings({ actorId: ADMIN_2, capacityLimit: 30, capacityIncreaseConfirmation: { from: 10, to: 30 }, reason: "race b" }),
     ]);
 
     const finalSettings = await db.platformSetting.findUniqueOrThrow({ where: { id: "global" } });
-    // The advisory lock fully serializes both writes (each reads `current`
-    // fresh from INSIDE its own locked transaction, so there is no stale
-    // read for the optimistic version check to catch) — both legitimately
-    // succeed, one after the other; the final value is whichever committed
-    // last, never a blended/corrupted value.
-    expect([20, 30]).toContain(finalSettings.capacityLimit);
-    expect(finalSettings.version).toBe(2); // two real, sequential increments from the seeded row
-    expect(results.every((r) => r.status === "fulfilled")).toBe(true);
+    // The advisory lock fully serializes both writes and each re-reads `current` inside its own locked transaction.
+    //   20 first, then 30: the 30 request's confirmation names "from 10" but the live capacity is now 20 -> refused.
+    //   30 first, then 20: the 20 request is now a DECREASE (30 -> 20) and needs no increase confirmation -> applied.
+    // Either way the final capacity is exactly 20 and the version counts only the writes that really happened.
+    expect(finalSettings.capacityLimit).toBe(20);
+    const fulfilled = results.filter((r) => r.status === "fulfilled").length;
+    expect(fulfilled).toBeGreaterThanOrEqual(1);
+    expect(finalSettings.version).toBe(fulfilled);
+    for (const r of results) {
+      if (r.status === "rejected") expect((r.reason as Error).message).toMatch(/explicit confirmation/);
+    }
   });
 
   it("[db] admin capacity update is refused below current utilization, even under the shared lock", async () => {

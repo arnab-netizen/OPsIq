@@ -52,18 +52,108 @@ describe("beta programme — kill switch", () => {
     expect(screen.getByTestId("stop-signups-button").textContent).toMatch(/closed/i);
   });
 
-  it("Save sends only the changed field", async () => {
+  const posts = () => fetchMock.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === "POST");
+  const body = (call: unknown[]) => JSON.parse((call[1] as RequestInit).body as string);
+  const capacityInput = () => document.querySelector('input[type="number"]') as HTMLInputElement;
+
+  it("Save sends only the changed field: a capacity DECREASE goes straight through with nothing extra", async () => {
     route();
     render(<AdminBetaProgrammePage />);
     await screen.findByTestId("stop-signups-button");
-    const capacity = document.querySelector('input[type="number"]') as HTMLInputElement;
-    fireEvent.change(capacity, { target: { value: "25" } });
+    fireEvent.change(capacityInput(), { target: { value: "5" } });
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
-    await waitFor(() => expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(true));
-    const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST")!;
-    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ capacityLimit: 25 });
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(body(posts()[0])).toEqual({ capacityLimit: 5 });
+    expect(screen.queryByTestId("capacity-increase-confirmation")).toBeNull();
   });
 
+  it("Save of a mode change alone sends the mode alone", async () => {
+    route();
+    render(<AdminBetaProgrammePage />);
+    await screen.findByTestId("stop-signups-button");
+    fireEvent.change(screen.getByLabelText(/admission mode/i), { target: { value: "INVITE_ONLY" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(body(posts()[0])).toEqual({ admissionMode: "INVITE_ONLY" });
+  });
+});
+
+describe("beta programme — capacity increases need an explicit confirmation", () => {
+  const posts = () => fetchMock.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === "POST");
+  const body = (call: unknown[]) => JSON.parse((call[1] as RequestInit).body as string);
+  const capacityInput = () => document.querySelector('input[type="number"]') as HTMLInputElement;
+
+  it("Save on an increase sends nothing: it shows current vs new capacity and waits for a reason and a confirmation", async () => {
+    route();
+    render(<AdminBetaProgrammePage />);
+    await screen.findByTestId("stop-signups-button");
+    fireEvent.change(capacityInput(), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    const panel = await screen.findByTestId("capacity-increase-confirmation");
+    expect(panel.textContent).toMatch(/Increase capacity from 10 to 25/);
+    expect(panel.textContent).toMatch(/Current capacity:\s*10/);
+    expect(panel.textContent).toMatch(/New capacity:\s*25/);
+    expect(posts()).toHaveLength(0);
+    expect((screen.getByRole("button", { name: /confirm increase/i }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("Confirm increase sends the exact from/to confirmation and the reason", async () => {
+    route();
+    render(<AdminBetaProgrammePage />);
+    await screen.findByTestId("stop-signups-button");
+    fireEvent.change(capacityInput(), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await screen.findByTestId("capacity-increase-confirmation");
+    fireEvent.change(screen.getByLabelText(/reason for the increase/i), { target: { value: "  second wave of invitees " } });
+    fireEvent.click(screen.getByRole("button", { name: /confirm increase/i }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(body(posts()[0])).toEqual({
+      capacityLimit: 25,
+      capacityIncreaseConfirmation: { from: 10, to: 25 },
+      reason: "second wave of invitees",
+    });
+    await waitFor(() => expect(screen.queryByTestId("capacity-increase-confirmation")).toBeNull());
+  });
+
+  it("activating a mode in the same click as an increase sends the mode alone; the increase waits for its own confirmation", async () => {
+    route();
+    render(<AdminBetaProgrammePage />);
+    await screen.findByTestId("stop-signups-button");
+    fireEvent.change(screen.getByLabelText(/admission mode/i), { target: { value: "INVITE_ONLY" } });
+    fireEvent.change(capacityInput(), { target: { value: "1000" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(body(posts()[0])).toEqual({ admissionMode: "INVITE_ONLY" });
+    expect(await screen.findByTestId("capacity-increase-confirmation")).toBeTruthy();
+  });
+
+  it("changing the capacity after the panel opened closes it, so a confirmation never carries over to a different value", async () => {
+    route();
+    render(<AdminBetaProgrammePage />);
+    await screen.findByTestId("stop-signups-button");
+    fireEvent.change(capacityInput(), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await screen.findByTestId("capacity-increase-confirmation");
+    fireEvent.change(capacityInput(), { target: { value: "1000" } });
+    expect(screen.queryByTestId("capacity-increase-confirmation")).toBeNull();
+    expect(posts()).toHaveLength(0);
+  });
+
+  it("Cancel closes the panel, sends nothing and puts the current capacity back", async () => {
+    route();
+    render(<AdminBetaProgrammePage />);
+    await screen.findByTestId("stop-signups-button");
+    fireEvent.change(capacityInput(), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await screen.findByTestId("capacity-increase-confirmation");
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    expect(screen.queryByTestId("capacity-increase-confirmation")).toBeNull();
+    expect(capacityInput().value).toBe("10");
+    expect(posts()).toHaveLength(0);
+  });
+});
+
+describe("beta programme — settings that were never initialised", () => {
   it("explains the one thing that blocks the switch when settings were never initialised", async () => {
     route({ "GET /api/admin/platform-settings/bootstrap": () => ok({ ...bootstrap, alreadyInitialized: false }) });
     render(<AdminBetaProgrammePage />);
