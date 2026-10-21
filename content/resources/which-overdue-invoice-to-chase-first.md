@@ -35,6 +35,7 @@ A small design studio has $3,000 in the bank and $9,500 of bills due in the next
 
 Its aging report (total outstanding $12,850):
 
+Table: Worked example — aging report (illustrative)
 | Customer | Amount | Status | Bucket |
 |---|---|---|---|
 | A | $1,200 | 12 days overdue | 1-30 |
