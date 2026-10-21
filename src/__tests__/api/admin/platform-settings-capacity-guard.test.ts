@@ -38,7 +38,7 @@ vi.mock("@/lib/db", () => {
       }),
     },
   };
-  return { db: { $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx) } };
+  return { db: { $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx) }, getDbInstance: vi.fn(async () => undefined) };
 });
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn(async (e: { eventName: string; actorId: string; payload: Record<string, unknown> }) => {
