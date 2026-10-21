@@ -21,6 +21,7 @@ const PUBLIC_EXACT_PATHS = new Set([
   "/terms",
   "/resources",
   "/tools/profit-margin-calculator",
+  "/agency",
 ]);
 
 /** Public path prefixes whose sub-pages are counted (resource articles). */
