@@ -124,7 +124,7 @@ export function assessPortfolioInvestmentEligibility(input: PortfolioBusinessInp
     return held("SURVIVAL_EVIDENCE_UNVERIFIABLE", "OpsIQ could not confirm that the figures behind this business's survival reading are complete and current, so it will not recommend committing more money yet.", [], "Reload the portfolio, then reassess.");
   }
   if (se.financeLiquidityUnconfirmed) {
-    return held("SURVIVAL_LIQUIDITY_UNCONFIRMED", "Your bank balance is not confirmed, so OpsIQ cannot yet say how much cash this business has. It will not recommend committing more money until it is.", [], "Confirm the bank balance (enter 0 if there is none) in Guided setup or Cashflow and re-run the Finance diagnosis; OpsIQ will then reassess.");
+    return held("SURVIVAL_LIQUIDITY_UNCONFIRMED", "Your bank balance is not confirmed, so OpsIQ cannot yet say how much cash this business has. It will not recommend committing more money until it is.", [], "Enter the bank balance (the total across your bank accounts; enter 0 if there is none) and re-run the Finance diagnosis; OpsIQ will then reassess.");
   }
   if (se.cashflowPositionIncomplete) {
     return held("SURVIVAL_CASHFLOW_POSITION_INCOMPLETE", "Your latest cash-flow check does not include both cash in hand and the bank balance, so OpsIQ cannot confirm your total cash. It will not recommend committing more money until it can.", [], "Record a current cash-flow check that includes both cash in hand and the bank balance; OpsIQ will then reassess.");

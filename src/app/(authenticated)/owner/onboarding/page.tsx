@@ -4,16 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { lastFullCalendarMonth } from "@/lib/owner-quick-start";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 import type { EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 import { FirstRunRedirect } from "@/components/owner/first-run/FirstRunRedirect";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { displayLabelForField } from "@/domain/owner-finance";
 import { ownerConceptScorePhrase } from "@/domain/owner-spine/confidence-vocabulary";
-import { confidenceDisplayPhrase, describeMissingFirstReadFacts } from "@/domain/owner-mode/owner-onboarding";
+import { describeMissingFirstReadFacts, staleEvidenceNotice, starterStatusPhrase } from "@/domain/owner-mode/owner-onboarding";
 import {
   BANK_BALANCE_COPY,
   QUICK_ENTRY_FIELDS,
@@ -242,8 +245,8 @@ function EssentialNumbersForm({
             // honestly rather than silently using the stale figure.
             bankBalanceWarning =
               onFile === null
-                ? `Your bank balance couldn't be saved for this period — a cashflow record already exists for it without a bank balance. Add it directly in Cashflow.`
-                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it directly in Cashflow if that figure is wrong.`;
+                ? `Your bank balance couldn't be saved for this period — an earlier record for it exists without a bank balance. Add it with the link below.`
+                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it with the link below if that figure is wrong.`;
           }
           // else: identical value already on file -- genuinely idempotent, nothing to warn about.
         }
@@ -333,6 +336,7 @@ type FirstResultFinding = {
   severity: string;
   sourceMetric?: string | null;
   missingData?: string[] | null;
+  findingCode?: string | null;
 };
 type FirstResultAction = {
   findingId: string | null;
@@ -341,6 +345,7 @@ type FirstResultAction = {
   verificationMetric?: string | null;
   verificationMethod?: string | null;
   confidence?: number | null;
+  recommendationCode?: string | null;
 };
 
 /**
@@ -378,9 +383,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
         >
           <p className="font-medium">Bank balance not saved</p>
           <p className="mt-1">{bankBalanceWarning}</p>
-          <Link href="/owner/cashflow" className="mt-1 inline-block font-medium underline hover:no-underline">
-            Go to Cashflow →
-          </Link>
+          <BankBalanceEntryLink code="FINREC_CONFIRM_BANK_BALANCE" className="mt-1" />
         </div>
       )}
       <h2 className="text-base font-semibold text-foreground">What OpsIQ found</h2>
@@ -400,7 +403,8 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
           {topAction ? (
             <>
               <p className="mt-1 text-base font-semibold text-foreground">{topAction.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{presentBankBalanceActionText(topAction.recommendationCode ?? top?.findingCode, topAction.description)}</p>
+              <BankBalanceEntryLink code={topAction.recommendationCode ?? top?.findingCode} className="mt-2" />
               {topAction.verificationMethod && (
                 <>
                   <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -448,60 +452,68 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
 }
 
 export default function OwnerOnboardingPage() {
-  const [businesses, setBusinesses] = useState<any[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  // The business this form writes to IS the active business (header, Money, Start Here all read the same
+  // context); switching here switches it everywhere, so a financial form never silently targets another one.
+  const {
+    businesses,
+    activeBusinessId: selected,
+    needsBusinessRecovery,
+    setActiveBusinessId,
+    loading: contextLoading,
+  } = useActiveBusiness();
   const [state, setState] = useState<any | null>(null);
-  const [readiness, setReadiness] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [firstResult, setFirstResult] = useState<any | null>(null);
   const [bankBalanceWarning, setBankBalanceWarning] = useState<string | null>(null);
 
+  const loadSeq = useRef(0);
   const loadState = useCallback(async (businessId: string) => {
+    const seq = ++loadSeq.current;
     setError(null);
     try {
-      setState(await api(`/api/owner/onboarding?businessId=${businessId}`));
+      const next = await api(`/api/owner/onboarding?businessId=${businessId}`);
+      if (loadSeq.current === seq) setState(next);
     } catch (e) {
+      if (loadSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load onboarding");
       setState(null);
     }
-    try {
-      setReadiness(await api(`/api/owner/readiness?businessId=${businessId}`));
-    } catch {
-      setReadiness(null);
-    }
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const biz = await api("/api/owner/businesses");
-      const list = biz.businesses ?? [];
-      setBusinesses(list);
-      if (list.length > 0) {
-        setSelected((prev) => prev ?? list[0].id);
-        await loadState(selected ?? list[0].id);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- selected is read, not a dependency: this only runs on mount and after business creation, both of which should always resolve to the first/only business
-  }, [loadState]);
-
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading || needsBusinessRecovery) return;
+    if (!selected) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setFirstResult(null);
+    loadState(selected).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [contextLoading, needsBusinessRecovery, selected, loadState]);
 
-  if (loading) return <CardDashboardSkeleton label="Loading onboarding" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading onboarding" />;
+  if (needsBusinessRecovery) {
+    return (
+      <PageContainer narrow data-testid="owner-onboarding-recovery">
+        <p className="mb-3 text-sm">Your previously selected business is no longer available. Choose a business to continue.</p>
+        <BusinessContextSelector businesses={businesses} selectedId={null} onChange={setActiveBusinessId} />
+      </PageContainer>
+    );
+  }
 
-  const selectedBusiness = businesses?.find((b) => b.id === selected) ?? null;
+  const selectedBusiness = businesses.find((b) => b.id === selected) ?? null;
 
   // A real, deterministic read of where the owner actually is in this 3-step flow -- never a
   // decorative counter. Gives the page a sense of progress instead of restating "Welcome to
   // OpsIQ" with no indication of how far along setup is.
-  const step = firstResult ? 3 : (businesses?.length ?? 0) > 0 ? 2 : 1;
+  const step = firstResult ? 3 : businesses.length > 0 ? 2 : 1;
   const stepLabel = step === 1 ? "Business basics" : step === 2 ? "Essential numbers" : "First result";
 
   return (
@@ -520,26 +532,24 @@ export default function OwnerOnboardingPage() {
 
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-          {error} <Button className="ml-2 min-h-[44px]" onClick={() => load()}>Retry</Button>
+          {error} <Button className="ml-2 min-h-[44px]" onClick={() => selected && void loadState(selected)}>Retry</Button>
         </div>
       )}
 
-      {(businesses?.length ?? 0) === 0 ? (
+      {businesses.length === 0 ? (
         <div data-testid="onboarding-empty">
           <h2 className="mb-2 text-sm font-medium text-muted-foreground">Business basics</h2>
           <FirstRunRedirect />
         </div>
       ) : (
         <>
-          {(businesses?.length ?? 0) > 1 && (
+          {businesses.length > 1 && (
             <div className="mb-6">
               <BusinessContextSelector
-                businesses={businesses ?? []}
+                businesses={businesses}
                 selectedId={selected}
                 onChange={(businessId) => {
-                  setSelected(businessId);
-                  setFirstResult(null);
-                  loadState(businessId);
+                  setActiveBusinessId(businessId);
                 }}
               />
             </div>
@@ -549,10 +559,15 @@ export default function OwnerOnboardingPage() {
             <FirstResultCard cycle={firstResult} bankBalanceWarning={bankBalanceWarning} />
           ) : (
             <div className="flex flex-col gap-6">
-              {state?.found && !state.canRunFirstDiagnosis && selectedBusiness && (
+              {state?.found && !state.canRunFirstDiagnosis && selectedBusiness && !selectedBusiness.currency && (
+                <p className="rounded-md border border-border bg-card p-4 text-sm" data-testid="onboarding-currency-missing">
+                  {selectedBusiness.name} has no currency set yet. Set its currency in My Business before entering numbers, so they are never recorded in the wrong one.
+                </p>
+              )}
+              {state?.found && !state.canRunFirstDiagnosis && selectedBusiness?.currency && (
                 <EssentialNumbersForm
                   businessId={selectedBusiness.id}
-                  currency={selectedBusiness.currency ?? "USD"}
+                  currency={selectedBusiness.currency}
                   onResult={(cycle, warning) => {
                     setFirstResult(cycle);
                     setBankBalanceWarning(warning ?? null);
@@ -560,20 +575,10 @@ export default function OwnerOnboardingPage() {
                 />
               )}
 
-              {readiness?.found && (
-                <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-readiness">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-xs uppercase text-muted-foreground">Setup progress</div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge
-                        variant={readiness.overallScore >= 70 ? "success-accessible" : readiness.overallScore >= 40 ? "warning-accessible" : "destructive-accessible"}
-                        className="tabular-nums"
-                      >
-                        {Math.round(readiness.overallScore)}/100
-                      </Badge>
-                    </div>
-                  </div>
-                </section>
+              {staleEvidenceNotice(state?.evidenceFreshness) && (
+                <p className="rounded-md border border-border bg-card p-4 text-sm" role="status" data-testid="onboarding-stale-evidence">
+                  {staleEvidenceNotice(state?.evidenceFreshness)}
+                </p>
               )}
 
               {state?.found && (
@@ -596,7 +601,7 @@ export default function OwnerOnboardingPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-xs uppercase text-muted-foreground">How much starter information OpsIQ has so far</div>
                       <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
-                        {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
+                        {starterStatusPhrase(state.confidenceBeforeDiagnosis, state.evidenceFreshness)}
                       </Badge>
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">

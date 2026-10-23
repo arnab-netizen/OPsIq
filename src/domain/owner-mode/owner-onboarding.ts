@@ -25,7 +25,10 @@ import type { Confidence } from "@/services/owner-mode/owner-domain-ingestion";
 import {
   FIRST_READ_FACT_CATEGORIES,
   FIRST_READ_FACT_LABEL,
+  FIRST_READ_STALE_AFTER_DAYS,
+  evidenceFreshnessOf,
   firstReadSufficiencyFromCategories,
+  type EvidenceFreshness,
   type FirstReadFact,
   type FirstReadSufficiency,
 } from "@/domain/owner-finance/first-read-sufficiency";
@@ -109,6 +112,8 @@ export interface OnboardingInput {
    * `suppliedCategories` through the same rule — the gate is never a separate category list.
    */
   firstRead?: FirstReadSufficiency;
+  /** The clock for the evidence-freshness verdict. When omitted the verdict is "unknown" (never guessed). */
+  now?: Date;
 }
 
 export type OnboardingStepId =
@@ -151,6 +156,8 @@ export interface OnboardingState {
   canRunFirstDiagnosis: boolean;
   /** The canonical first-read sufficiency this state's gate is derived from (one rule, no copies). */
   firstRead: FirstReadSufficiency;
+  /** Whether the evidence that first read rests on is still current — the same window Home uses for "out of date". */
+  evidenceFreshness: EvidenceFreshness;
   minimumComplete: boolean;
   /** Cautious, data-aware first action — collect the dominant missing input first if data is weak. */
   firstAction: string;
@@ -312,6 +319,9 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     confidenceBeforeDiagnosis,
     canRunFirstDiagnosis,
     firstRead,
+    evidenceFreshness: input.now
+      ? evidenceFreshnessOf(firstRead, input.now)
+      : { state: "unknown", periodEnd: null, ageDays: null, staleAfterDays: FIRST_READ_STALE_AFTER_DAYS },
     minimumComplete,
     firstAction,
     whatNotToDo,
@@ -320,6 +330,24 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     delegationGuidance,
     multiLocation: input.ownerRole === "multi_location",
   };
+}
+
+/**
+ * The ONE owner-facing status for the starter information, freshness-aware: "complete" is never claimed for figures
+ * the Home page would call out of date. Every surface that shows the starter status renders this.
+ */
+export function starterStatusPhrase(confidence: string, freshness?: Pick<EvidenceFreshness, "state"> | null): string {
+  if (freshness?.state === "stale" && (confidence === "high" || confidence === "medium")) {
+    return confidence === "high" ? "Starter information entered — figures out of date" : "Getting there — figures out of date";
+  }
+  return confidenceDisplayPhrase(confidence);
+}
+
+/** One sentence explaining stale evidence, or null when the evidence is current/unknown. */
+export function staleEvidenceNotice(freshness?: EvidenceFreshness | null): string | null {
+  if (!freshness || freshness.state !== "stale" || freshness.periodEnd === null) return null;
+  const end = freshness.periodEnd.slice(0, 10);
+  return `Your latest figures cover the period ending ${end}, more than ${freshness.staleAfterDays} days ago. Add the latest period so OpsIQ reads your business as it is now.`;
 }
 
 /**

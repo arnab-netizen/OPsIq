@@ -220,11 +220,51 @@ async function acquireCapacityLock(tx: Prisma.TransactionClient): Promise<void> 
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"public_beta_workspace_cap"}))`;
 }
 
+/** Longest operator reason accepted (mirrors the API schema bound). */
+export const CAPACITY_REASON_MAX_LENGTH = 500;
+
+/**
+ * The operator's explicit, high-risk confirmation of ONE capacity increase. It names the exact current and proposed
+ * capacity, so it can authorize only that change: a stale page, a replayed request or a confirmation given for a
+ * different value never matches the live row and is refused. It is not a reusable flag.
+ */
+export interface CapacityIncreaseConfirmation {
+  from: number;
+  to: number;
+}
+
 export interface UpdatePlatformSettingsInput {
   actorId: string;
   admissionMode?: AdmissionMode;
   capacityLimit?: number;
+  /** Required (with `reason`) whenever `capacityLimit` is above the current capacity; never needed for a decrease or a mode-only change. */
+  capacityIncreaseConfirmation?: CapacityIncreaseConfirmation;
   reason?: string;
+}
+
+/**
+ * Refuses a capacity INCREASE that is not explicitly confirmed for exactly this current -> proposed change and
+ * explained. Runs inside the capacity-locked transaction against the live row, so it cannot be satisfied by stale
+ * client state. Capacity decreases (the fast path to fail closed) and mode-only changes never reach this check.
+ */
+function assertCapacityIncreaseAuthorized(
+  currentCapacity: number,
+  proposedCapacity: number,
+  confirmation: CapacityIncreaseConfirmation | undefined,
+  reason: string | undefined
+): void {
+  const confirmedForThisChange =
+    confirmation !== undefined && confirmation.from === currentCapacity && confirmation.to === proposedCapacity;
+  if (!confirmedForThisChange) {
+    throw new ValidationError(
+      `Raising capacity from ${currentCapacity} to ${proposedCapacity} needs your explicit confirmation of that exact increase. Nothing was changed.`
+    );
+  }
+  if (!reason) {
+    throw new ValidationError(
+      `Raising capacity from ${currentCapacity} to ${proposedCapacity} needs a short reason. Nothing was changed.`
+    );
+  }
 }
 
 /**
@@ -239,7 +279,11 @@ export interface UpdatePlatformSettingsInput {
  * this function never creates it, matching the governed-bootstrap contract.
  */
 export async function updatePlatformSettings(input: UpdatePlatformSettingsInput): Promise<EffectiveSettings> {
-  const { actorId, admissionMode, capacityLimit, reason } = input;
+  const { actorId, admissionMode, capacityLimit, capacityIncreaseConfirmation } = input;
+  const reason = input.reason?.trim() || undefined;
+  if (reason !== undefined && reason.length > CAPACITY_REASON_MAX_LENGTH) {
+    throw new ValidationError(`The reason must be ${CAPACITY_REASON_MAX_LENGTH} characters or fewer.`);
+  }
   if (admissionMode === undefined && capacityLimit === undefined) {
     throw new ValidationError("Nothing to update: provide admissionMode and/or capacityLimit.");
   }
@@ -265,6 +309,12 @@ export async function updatePlatformSettings(input: UpdatePlatformSettingsInput)
       throw new ValidationError(
         "Platform settings have not been initialized. Run the bootstrap action first."
       );
+    }
+
+    // Checked against the LIVE capacity, under the lock, before any write: a refused increase changes nothing,
+    // not even a mode supplied in the same request.
+    if (capacityLimit !== undefined && capacityLimit > current.capacityLimit) {
+      assertCapacityIncreaseAuthorized(current.capacityLimit, capacityLimit, capacityIncreaseConfirmation, reason);
     }
 
     if (capacityLimit !== undefined) {

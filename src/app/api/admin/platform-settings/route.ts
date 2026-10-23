@@ -5,12 +5,19 @@
  * bootstrap has run, legacy fallback otherwise). POST updates admission
  * mode and/or capacity — race-safe (shared advisory lock with signup),
  * audited, bounded by the absolute ceiling, refuses a capacity below
- * current usage. Gated on BETA_PROGRAM_MANAGE.
+ * current usage. A capacity INCREASE is refused unless the request carries an
+ * explicit confirmation naming that exact increase plus a reason; decreases and
+ * mode-only changes need neither. Gated on BETA_PROGRAM_MANAGE.
  */
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { readEffectiveSettings, updatePlatformSettings, ADMISSION_MODES } from "@/services/beta/platform-settings.service";
+import {
+  readEffectiveSettings,
+  updatePlatformSettings,
+  ADMISSION_MODES,
+  CAPACITY_REASON_MAX_LENGTH,
+} from "@/services/beta/platform-settings.service";
 import { ValidationError } from "@/infra/errors";
 import { parseRequestBody } from "@/lib/validation";
 import { z } from "zod/v4";
@@ -26,7 +33,12 @@ export const GET = withCanonicalEnforcement(
 const updateSchema = z.object({
   admissionMode: z.enum(ADMISSION_MODES).optional(),
   capacityLimit: z.number().int().positive().optional(),
-  reason: z.string().trim().max(500).optional(),
+  // Names the exact increase being confirmed (current -> proposed); the service refuses an increase it does not match.
+  capacityIncreaseConfirmation: z
+    .object({ from: z.number().int().positive(), to: z.number().int().positive() })
+    .strict()
+    .optional(),
+  reason: z.string().trim().max(CAPACITY_REASON_MAX_LENGTH).optional(),
 });
 
 export const POST = withCanonicalEnforcement(

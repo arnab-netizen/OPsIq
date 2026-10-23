@@ -337,7 +337,7 @@ export function buildFinanceOpportunityFindings(
           : [
               "cash in hand is recorded; bank balance is not",
               "cash runway and days of cash cover need both cash in hand and the bank balance",
-              "enter the bank balance (or 0 if you hold nothing in the bank) in Guided setup or Cashflow",
+              "enter the total across your bank accounts (or 0 if you hold nothing in the bank)",
             ],
         missingData: cashUnknown ? ["cashOnHand", "bankBalance"] : ["bankBalance"],
         verificationMetric: "totalLiquidFunds",

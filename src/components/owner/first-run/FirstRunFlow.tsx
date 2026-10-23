@@ -55,7 +55,7 @@ function friendly(err: unknown, _context?: "load" | "save" | "action"): string {
 }
 
 export function FirstRunFlow() {
-  const { refreshBusinesses, setActiveBusinessId } = useActiveBusiness();
+  const { refreshBusinesses, setActiveBusinessId, activeBusinessId, loading: businessContextLoading } = useActiveBusiness();
   const [ctx, setCtx] = useState<FirstRunContext | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<FirstMoneyReadView | null>(null);
@@ -77,19 +77,21 @@ export function FirstRunFlow() {
   const loadContext = useCallback(async (): Promise<FirstRunContext | null> => {
     setLoadError(null);
     try {
-      const next = await firstRunApi.context();
+      // The flow is about the ACTIVE business (the header's), never an independently chosen one.
+      const next = await firstRunApi.context(activeBusinessId);
       setCtx(next);
       return next;
     } catch (err) {
       setLoadError(`We couldn't load your setup. Nothing was lost. ${friendly(err, "load")}`);
       return null;
     }
-  }, []);
+  }, [activeBusinessId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+    if (businessContextLoading) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount and whenever the active business changes
     void loadContext();
-  }, [loadContext]);
+  }, [businessContextLoading, loadContext]);
 
   const businessId = ctx?.business?.id ?? null;
   const hasResult = ctx?.state === "FIRST_RESULT" || ctx?.state === "ESTABLISHED";

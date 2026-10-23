@@ -48,13 +48,10 @@ const SIGNAL_VARIANT: Record<string, "default-accessible" | "success-accessible"
   CRITICAL: "destructive-accessible",
 };
 
-const PARTIAL_LIMITATIONS = [
-  "Owner UI is new — backend governance is DB/CI-proven, but live operational feeds are not yet wired.",
-  "Generated actions are the advisory plan snapshot; persisted execution tasks (real, governed owner action records) are shown separately below and reuse the shared owner action lifecycle.",
-  "Revenue-assurance / working-capital ageing / vendor benchmarks rely on entered data — live POS/gateway/bank feeds are not connected.",
-  "Runtime least-privilege RBAC denial is enforced by the server wrapper but not yet proven by an automated runtime test.",
-];
-
+// Owner-relevant limits of this page, in plain language. Build/test status is developer
+// information and does not belong on an owner surface.
+const ABOUT_THESE_FIGURES =
+  "This plan uses the information entered in OpsIQ. Live POS, payment-gateway and bank feeds are not connected automatically, so revenue-assurance, working-capital ageing and vendor benchmarks reflect only what has been entered.";
 const TASK_STATUS_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   proposed: "muted-accessible",
   assigned: "default-accessible",
@@ -307,12 +304,9 @@ export default function OwnerBudgetPlanPage() {
         />
       </div>
 
-      {/* Honest module-status banner (never imply OWNER_MODE_READY). Plain-language text for the
-          owner -- the internal DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL build-status marker (see
-          the file header comment) is a developer-facing token and must never render raw here. */}
-      <div className="mb-6 rounded-md border border-warning/30 bg-warning/5 p-3 text-xs space-y-1">
-        <div className="font-semibold break-words">Module status: Partially integrated — backend governance is DB/CI-proven, but Owner Mode is not yet feature-complete.</div>
-        {PARTIAL_LIMITATIONS.map((l) => (<div key={l}>• {l}</div>))}
+      <div className="mb-6 rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1" data-testid="budget-about-figures">
+        <div className="font-semibold">About these figures</div>
+        <div>{ABOUT_THESE_FIGURES}</div>
       </div>
 
       {error && (

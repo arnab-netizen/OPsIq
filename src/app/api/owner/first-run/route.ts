@@ -3,6 +3,8 @@
  * where to go, the business name typed once at signup, and the business if it exists. Derived from persisted
  * facts only (src/domain/owner-first-run/first-run-router.ts); no onboarding-complete flag exists.
  */
+import { z } from "zod";
+import { parseSearchParams, uuidSchema } from "@/lib/validation";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -11,9 +13,12 @@ import { getFirstRunContext, recordProductEventOnce } from "@/services/owner-fir
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const querySchema = z.object({ businessId: uuidSchema.optional() });
+
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const context = await getFirstRunContext(ctx.verifiedWorkspaceId);
+    const { businessId } = parseSearchParams(ctx.request!.url, querySchema);
+    const context = await getFirstRunContext(ctx.verifiedWorkspaceId, businessId);
     if (context.state === "NEEDS_BUSINESS") {
       await recordProductEventOnce({
         name: "first_run_started",

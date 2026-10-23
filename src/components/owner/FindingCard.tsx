@@ -24,10 +24,13 @@
 import { Badge } from "@/ui/primitives";
 import { ownerConfidenceLabel, ownerConceptScorePhrase, OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
 import { findingValueIsLowerBound } from "@/domain/owner-finance/cost-model";
+import { presentBankBalanceEvidenceLine } from "@/domain/owner-finance/bank-balance-entry";
 import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 
 export interface FindingCardData {
   id: string;
+  /** The finding code (e.g. FIN_LIQUIDITY_UNCONFIRMED); lets saved rows with outdated wording be shown with the current wording. */
+  code?: string | null;
   findingType: string;
   title: string;
   summary: string;
@@ -138,7 +141,7 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
         </p>
         {evidenceLines.length > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Supporting detail:</span> {evidenceLines.map((l) => humanizeEvidenceLine(String(l))).join("; ")}
+            <span className="font-medium text-foreground">Supporting detail:</span> {evidenceLines.map((l) => humanizeEvidenceLine(presentBankBalanceEvidenceLine(finding.code, String(l)))).join("; ")}
           </p>
         )}
       </div>

@@ -14,8 +14,9 @@
  *   CAUTION                        shown, but material uncertainty remains: name it, give a reassessment condition.
  *   PROVISIONAL                    a real issue needs attention, but the diagnosis/score for it rests on incomplete or
  *                                  in-progress evidence: never present magnitude, diagnosis or outcome as established.
- *   REFRESH_REQUIRED               the evidence is out of date: the target is to update/reconfirm it; the old diagnosis
- *                                  is never stated as a current fact.
+ *   REFRESH_REQUIRED               the analysis rests on out-of-date figures: the target is to refresh (re-run) the
+ *                                  analysis on current figures (the owner's latest figures may already be newer); the
+ *                                  old diagnosis is never stated as a current fact.
  *   EVIDENCE_REQUIRED              critical information is missing: OpsIQ abstains from the material recommendation
  *                                  and asks for the named evidence (abstention is NOT "show nothing").
  *   RECORDED_FACT                  a recorded compliance/risk/safety fact: actionable as a FACT; unrelated missing
@@ -150,7 +151,7 @@ const STATEMENT: Record<OwnerAdviceMode, string> = {
   SUPPORTED: "The current figures indicate this is your main target.",
   CAUTION: "The current figures indicate this, but the evidence is incomplete in places — treat it as a strong lead, not a certainty.",
   PROVISIONAL: "This needs attention now, but its score and diagnosis are provisional until the missing information is supplied.",
-  REFRESH_REQUIRED: "The figures behind this are out of date, so OpsIQ cannot say the earlier problem still exists — confirm the figures first.",
+  REFRESH_REQUIRED: "The analysis behind this rests on out-of-date figures, so OpsIQ cannot say the earlier problem still exists — refresh the analysis first.",
   EVIDENCE_REQUIRED: "OpsIQ cannot support this decision yet: information it needs is missing.",
   RECORDED_FACT: "This is a recorded fact, not an estimate.",
   CONFLICT_REQUIRES_RESOLUTION: "Your cash and finance figures disagree and OpsIQ cannot tell which is current, so it applies the more cautious reading until they are reconciled.",
@@ -207,7 +208,7 @@ export function resolveOwnerAdvicePolicy(input: OwnerAdvicePolicyInput): OwnerAd
           : noData
             ? "Add your business numbers (sales, costs and cash), then re-run OpsIQ."
             : mode === "REFRESH_REQUIRED"
-              ? "Update the out-of-date figures and re-run their diagnosis."
+              ? "Re-run the diagnosis on your current figures (add them first if they are older)."
               : "Add the missing information listed, then re-run OpsIQ.",
     };
   }
@@ -225,9 +226,9 @@ export function resolveOwnerAdvicePolicy(input: OwnerAdvicePolicyInput): OwnerAd
       requiresEvidenceRefresh: true,
       targetEvidence: "NOT_APPLICABLE",
       ownerStatement: STATEMENT.REFRESH_REQUIRED,
-      reasons: ["The latest figures are out of date; what they last showed is not treated as current."],
+      reasons: ["The latest analysis rests on out-of-date figures, so what it showed is not treated as current."],
       missingEvidence,
-      nextEvidenceAction: `Update the ${label} figures and re-run its diagnosis.`,
+      nextEvidenceAction: `Re-run the ${label} diagnosis on your current figures (add them first if they are older).`,
     };
   }
   if (primary.priorityClass === "MISSING_CRITICAL_EVIDENCE") {
