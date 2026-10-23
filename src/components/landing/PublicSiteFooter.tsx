@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicLink } from "@/components/navigation/PublicLink";
 
 const SUPPORT_EMAIL = "support@opsiq.solutions";
 
@@ -14,12 +15,12 @@ export function PublicSiteFooter() {
         <Link href="/resources" className="text-[var(--primary-text)] hover:underline">
           Resources
         </Link>
-        <Link href="/pricing" className="text-[var(--primary-text)] hover:underline">
+        <PublicLink href="/pricing" className="text-[var(--primary-text)] hover:underline">
           Pricing
-        </Link>
-        <Link href="/refund-policy" className="text-[var(--primary-text)] hover:underline">
+        </PublicLink>
+        <PublicLink href="/refund-policy" className="text-[var(--primary-text)] hover:underline">
           Refunds
-        </Link>
+        </PublicLink>
         <Link href="/privacy" className="text-[var(--primary-text)] hover:underline">
           Privacy
         </Link>

@@ -40,7 +40,7 @@ export default function TermsPage() {
           <p className="mt-1">
             When a paid plan is offered, it is a monthly subscription that renews automatically until you cancel. The
             current price is shown on the{" "}
-            <Link href="/pricing" className="text-[var(--primary-text)] hover:underline">Pricing</Link> page and in
+            <PublicLink href="/pricing" className="text-[var(--primary-text)] hover:underline">Pricing</PublicLink> page and in
             checkout before you pay. Payment is processed by Paddle, which acts as the Merchant of Record: Paddle sells
             the subscription to you, charges you, collects applicable tax, and issues receipts, and Paddle&rsquo;s checkout
             buyer terms apply to the purchase. OpsIQ does not receive or store your card details.
@@ -49,7 +49,7 @@ export default function TermsPage() {
             You can cancel any time from the Billing page; access continues until the end of the paid period. If a renewal
             payment fails, paid access continues for up to 7 days after the missed renewal date while Paddle retries and
             you update your payment method, and then ends if payment is not recovered. Refunds are described in the{" "}
-            <Link href="/refund-policy" className="text-[var(--primary-text)] hover:underline">Refund and cancellation policy</Link>.
+            <PublicLink href="/refund-policy" className="text-[var(--primary-text)] hover:underline">Refund and cancellation policy</PublicLink>.
           </p>
         </section>
 
