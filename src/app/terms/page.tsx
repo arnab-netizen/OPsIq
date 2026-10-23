@@ -7,7 +7,7 @@ export const metadata = {
   description: "Beta terms for using OpsIQ.",
 };
 
-const POLICY_VERSION = "2026-09-17";
+const POLICY_VERSION = "2026-10-17";
 
 export default function TermsPage() {
   return (
@@ -29,10 +29,27 @@ export default function TermsPage() {
         <section>
           <h2 className="font-semibold text-foreground">Beta, and free</h2>
           <p className="mt-1">
-            OpsIQ is a free <PublicBetaSwitch open="beta" invite="invite-only beta" />. There is no charge to use it during beta, no payment method
-            is required to sign up, and no automatic paid entitlement is granted. If OpsIQ ever
-            introduces paid plans, that will be a separate, clearly communicated decision — beta
-            access does not roll into a paid subscription automatically.
+            OpsIQ is a free <PublicBetaSwitch open="beta" invite="invite-only beta" />. During beta there is no charge to
+            sign up, no payment method is required to sign up, and no paid subscription is created automatically. Beta
+            access never rolls into a paid subscription by itself: you only pay if you choose to subscribe.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-semibold text-foreground">Paid subscription (when offered)</h2>
+          <p className="mt-1">
+            When a paid plan is offered, it is a monthly subscription that renews automatically until you cancel. The
+            current price is shown on the{" "}
+            <PublicLink href="/pricing" className="text-[var(--primary-text)] hover:underline">Pricing</PublicLink> page and in
+            checkout before you pay. Payment is processed by Paddle, which acts as the Merchant of Record: Paddle sells
+            the subscription to you, charges you, collects applicable tax, and issues receipts, and Paddle&rsquo;s checkout
+            buyer terms apply to the purchase. OpsIQ does not receive or store your card details.
+          </p>
+          <p className="mt-2">
+            You can cancel any time from the Billing page; access continues until the end of the paid period. If a renewal
+            payment fails, paid access continues for up to 7 days after the missed renewal date while Paddle retries and
+            you update your payment method, and then ends if payment is not recovered. Refunds are described in the{" "}
+            <PublicLink href="/refund-policy" className="text-[var(--primary-text)] hover:underline">Refund and cancellation policy</PublicLink>.
           </p>
         </section>
 

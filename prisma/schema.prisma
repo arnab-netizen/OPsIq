@@ -88,6 +88,7 @@ model BillingAccount {
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   stripeCustomerId   String?       @unique(map: "uk_stripe_customer_id") @map("stripe_customer_id")
+  paddleCustomerId   String?       @unique @map("paddle_customer_id")
   subscription       Subscription?
 
   @@index([status])
@@ -802,6 +803,7 @@ model Plan {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   stripePriceId    String?          @map("stripe_price_id")
+  paddlePriceId    String?          @unique @map("paddle_price_id")
   planCapabilities PlanCapability[]
   subscriptions    Subscription[]
 
@@ -1254,6 +1256,8 @@ model Subscription {
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   stripeSubscriptionId String?        @map("stripe_subscription_id")
+  paddleSubscriptionId String?        @unique @map("paddle_subscription_id")
+  cancelAtPeriodEnd    Boolean        @default(false) @map("cancel_at_period_end")
   lastEventTimestamp   DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
   billingAccount       BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
   plan                 Plan           @relation(fields: [planId], references: [id])
