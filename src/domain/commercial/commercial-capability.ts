@@ -31,6 +31,8 @@ export const COMMERCIAL_CLASSES = [
   "FREE_FIRST_VALUE",
   "FREE_READ",
   "PAID_CONTINUATION",
+  /** One handler carries both free capture and paid continuation actions; the paid action is gated semantically. */
+  "MIXED_ACTION_SPLIT",
   "ACCOUNT_LIFECYCLE",
   "NON_COMMERCIAL",
   "CLASSIFICATION_REQUIRES_DECISION",

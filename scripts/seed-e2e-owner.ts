@@ -136,7 +136,7 @@ async function main() {
     },
     USER_ID, WORKSPACE_ID
   );
-  console.log(`[seed-e2e] budget seeded: period ${period.id}, plan mode ${spend.plan.mode}, decision ${spend.plan.decisionType}`);
+  console.log(`[seed-e2e] budget seeded: period ${period.id}, plan mode ${spend.plan?.mode}, decision ${spend.plan?.decisionType}`);
 
   // ── Proof-blocked delegated task (flow B) ────────────────────────────────────────────────
   // A proof-required task with NO accepted proof. The owner attempting to complete it is

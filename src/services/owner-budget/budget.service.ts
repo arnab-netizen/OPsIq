@@ -10,6 +10,8 @@
  * pure decision logic lives in `@/domain/owner-budget`; this layer only assembles
  * inputs, persists results atomically/idempotently, and emits audit events.
  */
+import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
+import { canPerformCommercialCapability } from "@/services/billing/commercial-policy.service";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { getBusiness } from "@/services/founder-recovery/business.service";
@@ -209,10 +211,18 @@ export interface RecordSpendInput {
   ownerOverrideReason?: string | null;
 }
 
+/** Present only when the spend was captured but the paid reassessment was not run (enforcement ON, not entitled). */
+export interface SpendReassessmentDeferred {
+  status: "REQUIRES_SUBSCRIPTION";
+  capability: "reassessment";
+  reason: string;
+}
+
 export interface RecordSpendResult {
   spend: any;
   governance: SpendGovernanceResult;
-  plan: UpdatedOwnerPlan;
+  plan: UpdatedOwnerPlan | null;
+  reassessment?: SpendReassessmentDeferred;
 }
 
 export async function recordSpendEntry(
@@ -293,6 +303,13 @@ export async function recordSpendEntry(
       actorId, workspaceId, entityType: "SpendEntry", entityId: spend.id,
       payload: { businessId, amount: input.amount, decision: governance.decision, reason: input.ownerOverrideReason },
     });
+  }
+
+  // Commercial split: capturing the spend is free; the reassessment (new plan snapshot + actions) is paid
+  // continuation. No-op, and the result shape is unchanged, when enforcement is OFF.
+  const commercial = await canPerformCommercialCapability(workspaceId, COMMERCIAL_CAPABILITIES.REASSESSMENT);
+  if (!commercial.allowed) {
+    return { spend, governance, plan: null, reassessment: { status: "REQUIRES_SUBSCRIPTION", capability: "reassessment", reason: commercial.reason } };
   }
 
   const plan = await reassessBudget(businessId, workspaceId, {

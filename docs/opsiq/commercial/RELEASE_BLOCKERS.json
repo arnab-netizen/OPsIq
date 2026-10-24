@@ -1,10 +1,14 @@
 {
-  "schema": 1,
-  "comment": "The enable tool refuses while `open` is non-empty. Clear an item only by a reviewed commit once the owner has decided it (see PAYWALL_BOUNDARY.md section 7).",
+  "schema": 2,
+  "comment": "The enable tool refuses while `open` is non-empty. Clear an item only by a reviewed commit once the owner has decided it / the proof exists. `resolved` is the owner's recorded decision history, kept for audit; it is never read as permission.",
   "open": [
-    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: allowance scope and size (per workspace implemented)",
-    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: classification of the 26 CLASSIFICATION_REQUIRES_DECISION handlers and 5 unenforced HIGH bypasses (PAYWALL_BOUNDARY.md sections 5 and 7)",
-    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: grandfathering or exemption of existing OPEN_BETA workspaces",
-    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: final launch price (public-pricing.ts) and live Paddle price/plan seed"
+    "RB4: final launch price (public-pricing.ts) and live Paddle product/price and Plan seed are undecided; the sandbox price is test data and must not be used",
+    "ACTIVATION_PREREQUISITE: Preview enforcement-ON acceptance (authenticated sandbox owner: unpaid first diagnosis allowed and readable, paid continuation returns 402 with the upgrade state, direct API bypass rejected, paid sandbox workspace continues, billing reachable) has not been proven",
+    "ACTIVATION_PREREQUISITE: Paddle Live account/domain approval is external and not yet recorded in an approval manifest"
+  ],
+  "resolved": [
+    "RB1: one free diagnosis per workspace, shared across the normal owner diagnosis domains and Startup Mode",
+    "RB2: handler classifications as authorized by the owner (see OWNER_DECISIONS.md); zero open bypasses, zero undecided handlers",
+    "RB3: no implicit or permanent grandfathering; existing OPEN_BETA workspaces follow the same rules when enforcement is intentionally enabled"
   ]
 }

@@ -13,7 +13,7 @@
  *
  * First-diagnosis invariant (no schema change): the workspace has used its free diagnosis iff at
  * least one diagnosis cycle row exists, in ANY of the eight per-domain cycle tables, for ANY of its
- * businesses. Inside the diagnosis writers the check runs in the same transaction as the cycle insert
+ * businesses, or a Startup Mode analysis row exists (one allowance shared by every mode). Inside the diagnosis writers the check runs in the same transaction as the cycle insert
  * and under a workspace-scoped advisory lock, so two concurrent first diagnoses (even in different
  * domains or businesses) serialize and exactly one is free.
  */
@@ -48,7 +48,11 @@ async function readEntitlement(reader: Reader, workspaceId: string): Promise<boo
   }
 }
 
-/** True iff the workspace already owns at least one persisted diagnosis cycle in any domain. */
+/**
+ * True iff the workspace already consumed its one free diagnosis: at least one persisted diagnosis cycle in any of the
+ * eight owner domains, or at least one persisted Startup Mode analysis (screening, hypotheses, economic model,
+ * readiness assessment, system recommendation). Workspace-scoped and shared across all modes.
+ */
 export async function workspaceHasDiagnosis(reader: Pick<Prisma.TransactionClient, "$queryRaw">, workspaceId: string): Promise<boolean> {
   const rows = await reader.$queryRaw<Array<{ used: boolean }>>`
     SELECT (
@@ -60,6 +64,11 @@ export async function workspaceHasDiagnosis(reader: Pick<Prisma.TransactionClien
       OR EXISTS (SELECT 1 FROM owner_sop_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
       OR EXISTS (SELECT 1 FROM owner_marketing_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
       OR EXISTS (SELECT 1 FROM owner_strategy_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_idea_record r WHERE r.workspace_id = ${workspaceId}::uuid AND r.screening_data IS NOT NULL)
+      OR EXISTS (SELECT 1 FROM startup_hypothesis r WHERE r.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_economic_model r WHERE r.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_readiness_assessment r WHERE r.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_system_recommendation r WHERE r.workspace_id = ${workspaceId}::uuid)
     ) AS used`;
   return rows[0]?.used === true;
 }

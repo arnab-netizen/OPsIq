@@ -15,6 +15,8 @@ import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import { COMMERCIAL_CAPABILITIES, COMMERCIAL_CLASSES } from "@/domain/commercial/commercial-capability";
 import registryJson from "@/domain/commercial/commercial-route-registry.json";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { getCapabilitiesForRole } from "@/policies/capability-check";
 
 interface Entry { method: string; route: string; classification: string; enforcement: string; capability?: string }
 const registry = registryJson as Entry[];
@@ -123,6 +125,65 @@ describe("commercial coverage registry", () => {
       .map((h) => key(h.method, h.route))
       .filter((k) => !paid.has(k));
     expect(stray).toEqual([]);
+  });
+
+  it("no handler is left unclassified or pending: zero open bypasses, zero undecided handlers", () => {
+    expect(registry.filter((e) => e.classification === "CLASSIFICATION_REQUIRES_DECISION" || e.enforcement === "decision-pending")).toEqual([]);
+  });
+
+  it("every enforcement kind in the registry is one this suite knows how to verify", () => {
+    const known = new Set([
+      "none", "requireCommercial", "route:assertCommercialAccess", "service:diagnosis-allowance",
+      "service:scheduled-reassessment-skip", "service:capture-free-reassessment-paid", "handler:assertCommercialCapability", "staff-only-guard",
+    ]);
+    expect(registry.filter((e) => !known.has(e.enforcement)).map((e) => key(e.method, e.route))).toEqual([]);
+  });
+
+  it("handler-level action gates exist where the registry says the paid action is split from free capture", () => {
+    for (const e of registry.filter((x) => x.enforcement === "handler:assertCommercialCapability")) {
+      const h = handlers.find((x) => x.method === e.method && x.route === e.route)!;
+      expect(h.source, key(e.method, e.route)).toContain("assertCommercialCapability(");
+      // the free action must NOT be route-gated, or capture would be blocked
+      expect(wrapperCall(h.source, e.method) ?? "", key(e.method, e.route)).not.toContain("requireCommercial");
+    }
+    const spend = readFileSync(join(process.cwd(), "src/services/owner-budget/budget.service.ts"), "utf8");
+    const fn = spend.slice(spend.indexOf("export async function recordSpendEntry"));
+    expect(fn.indexOf("canPerformCommercialCapability(")).toBeGreaterThan(fn.indexOf("db.spendEntry.create("));
+    expect(fn.indexOf("canPerformCommercialCapability(")).toBeLessThan(fn.indexOf("reassessBudget("));
+  });
+
+  it("Startup Mode shares the workspace allowance: every qualifying analysis writer is gated in its transaction, capture is not", () => {
+    const src = readFileSync(join(process.cwd(), "src/services/owner-strategy/startup-session.service.ts"), "utf8");
+    for (const fn of ["screenIdeaRecord", "generateAndPersistHypotheses", "buildAndPersistEconomicModel", "assessAndPersistReadiness", "createSystemRecommendation"]) {
+      const body = src.slice(src.indexOf(`export async function ${fn}(`));
+      const tx = body.indexOf("db.$transaction(");
+      const gate = body.indexOf("assertDiagnosisAllowance(tx, workspaceId)");
+      expect(gate, fn).toBeGreaterThan(tx);
+      expect(gate, fn).toBeLessThan(body.indexOf("\nexport ", 10) === -1 ? Infinity : body.indexOf("\nexport ", 10));
+    }
+    const capture = src.slice(src.indexOf("export async function recordHypothesisResult("));
+    expect(capture.slice(0, capture.indexOf("\nexport ", 10))).not.toContain("assertDiagnosisAllowance");
+    const analysis = handlers.find((h) => h.route === "/api/owner/startup/sessions/[sessionId]/analysis" && h.method === "POST")!;
+    expect(wrapperCall(analysis.source, "POST") ?? "").not.toContain("requireCommercial");
+    const policy = readFileSync(join(process.cwd(), "src/services/billing/commercial-policy.service.ts"), "utf8");
+    for (const table of ["startup_idea_record", "startup_hypothesis", "startup_economic_model", "startup_readiness_assessment", "startup_system_recommendation"]) {
+      expect(policy, table).toContain(table);
+    }
+  });
+
+  it("staff-only handlers are unreachable by a self-serve owner capability bundle; owner-role expansion fails this test until reclassified", () => {
+    const ownerBundle = new Set<string>(getCapabilitiesForRole("admin_or_portfolio_manager" as never, "owner" as never));
+    const byName = CAPABILITIES as Record<string, string>;
+    const reachable: string[] = [];
+    for (const e of registry.filter((x) => x.enforcement === "staff-only-guard")) {
+      const h = handlers.find((x) => x.method === e.method && x.route === e.route)!;
+      const call = wrapperCall(h.source, e.method);
+      expect(call, key(e.method, e.route)).not.toBeNull();
+      const required = [...(/requireCapabilities:\s*\[([^\]]*)\]/.exec(call!)?.[1] ?? "").matchAll(/CAPABILITIES\.([A-Z_]+)/g)].map((m) => byName[m[1]]);
+      expect(required.length, key(e.method, e.route)).toBeGreaterThan(0);
+      if (required.every((c) => ownerBundle.has(c))) reachable.push(key(e.method, e.route));
+    }
+    expect(reachable).toEqual([]);
   });
 
   it("diagnosis writers are gated inside the writer transaction", () => {

@@ -396,8 +396,8 @@
  {
   "method": "POST",
   "route": "/api/complaint-rework",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",
@@ -408,8 +408,8 @@
  {
   "method": "POST",
   "route": "/api/consulting/engagements",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",
@@ -507,8 +507,8 @@
  {
   "method": "POST",
   "route": "/api/decisions/create",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
@@ -555,32 +555,32 @@
  {
   "method": "POST",
   "route": "/api/diagnosis",
-  "classification": "FREE_FIRST_VALUE",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
   "route": "/api/diagnosis/archetype",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
   "route": "/api/diagnosis/bottleneck",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
   "route": "/api/diagnosis/maturity",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
   "route": "/api/diagnosis/root-cause",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",
@@ -673,8 +673,8 @@
  {
   "method": "POST",
   "route": "/api/engagements/[engagementId]/constraint-checks",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",
@@ -1072,8 +1072,8 @@
  {
   "method": "PATCH",
   "route": "/api/growth/pricing-tiers/[tierId]/approve",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
@@ -1162,14 +1162,14 @@
  {
   "method": "GET",
   "route": "/api/intelligence/recommendations",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",
   "route": "/api/intelligence/summary",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
@@ -1469,8 +1469,8 @@
  {
   "method": "POST",
   "route": "/api/opsiq/consulting-engine/run",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "POST",
@@ -1659,8 +1659,9 @@
  {
   "method": "POST",
   "route": "/api/owner/budget/spend",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "MIXED_ACTION_SPLIT",
+  "enforcement": "service:capture-free-reassessment-paid",
+  "capability": "reassessment"
  },
  {
   "method": "GET",
@@ -1945,8 +1946,9 @@
  {
   "method": "POST",
   "route": "/api/owner/constraints",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "MIXED_ACTION_SPLIT",
+  "enforcement": "handler:assertCommercialCapability",
+  "capability": "governed_execution"
  },
  {
   "method": "GET",
@@ -2222,8 +2224,8 @@
  {
   "method": "POST",
   "route": "/api/owner/guardrails/screen",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
  },
  {
   "method": "GET",
@@ -2276,8 +2278,8 @@
  {
   "method": "POST",
   "route": "/api/owner/integration-events",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",
@@ -2898,8 +2900,9 @@
  {
   "method": "POST",
   "route": "/api/owner/procurement/purchase-orders/[poId]/transition",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
  },
  {
   "method": "POST",
@@ -3187,14 +3190,15 @@
  {
   "method": "PATCH",
   "route": "/api/owner/sop-intelligence",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
  },
  {
   "method": "POST",
   "route": "/api/owner/sop-intelligence",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
  },
  {
   "method": "GET",
@@ -3325,7 +3329,7 @@
   "method": "POST",
   "route": "/api/owner/startup/sessions/[sessionId]/analysis",
   "classification": "FREE_FIRST_VALUE",
-  "enforcement": "decision-pending"
+  "enforcement": "service:diagnosis-allowance"
  },
  {
   "method": "GET",
@@ -3336,8 +3340,9 @@
  {
   "method": "POST",
   "route": "/api/owner/startup/sessions/[sessionId]/arbitrate",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
  },
  {
   "method": "GET",
@@ -3628,14 +3633,14 @@
  {
   "method": "POST",
   "route": "/api/owner/tender/application-pack",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
  },
  {
   "method": "POST",
   "route": "/api/owner/tender/screen",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
  },
  {
   "method": "GET",
@@ -3670,8 +3675,9 @@
  {
   "method": "POST",
   "route": "/api/owner/vendor/[vendorId]/approve",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
  },
  {
   "method": "GET",
@@ -3700,14 +3706,14 @@
  {
   "method": "POST",
   "route": "/api/owner/vendor/[vendorId]/suspend",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
  },
  {
   "method": "POST",
   "route": "/api/owner/vendor/assess",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
  },
  {
   "method": "GET",
@@ -3846,8 +3852,8 @@
  {
   "method": "POST",
   "route": "/api/scenario",
-  "classification": "CLASSIFICATION_REQUIRES_DECISION",
-  "enforcement": "decision-pending"
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
  },
  {
   "method": "GET",

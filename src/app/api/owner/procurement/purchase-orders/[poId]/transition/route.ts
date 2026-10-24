@@ -33,5 +33,5 @@ export const POST = withCanonicalEnforcement(
       return canonicalJson({ error: safeText }, { status: 422 });
     }
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] }
+  { requireCommercial: "approval_resolution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] }
 );
