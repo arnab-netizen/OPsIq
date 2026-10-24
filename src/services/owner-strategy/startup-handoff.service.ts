@@ -29,6 +29,7 @@ export async function handOffStartupSessionToBusiness(
         id: true,
         status: true,
         businessId: true,
+        isFixtureBusiness: true,
         intake: true,
         currentOwnerDecisionId: true,
       },
@@ -99,6 +100,9 @@ export async function handOffStartupSessionToBusiness(
         businessType: idea.industry,
         location: intake?.location ?? null,
         isActive: true,
+        // A fixture (acceptance) Startup session hands off to a fixture business; otherwise the
+        // handoff would turn synthetic acceptance data into an owner-visible business.
+        isFixtureBusiness: session.isFixtureBusiness === true,
         createdBy: actorId,
       },
     });

@@ -23,6 +23,7 @@ import {
   finalizeEvidence,
   timedApiCall,
 } from "./helpers/evidence";
+import { assertFixtureCreationCapable, assertStartupSessionIsFixture } from "./helpers/fixture-isolation";
 
 const SPEC_NAME = "phase13-startup-mode";
 const ACCEPTANCE_TAG = `OPSIQ Production Acceptance - ${new Date().toISOString().slice(0, 19)}Z`;
@@ -109,6 +110,8 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   // ─── Phase 13: Startup Mode real browser handoff journey ──────────────
 
   test("13-01 — create a clearly-tagged Startup acceptance session + idea", async () => {
+    // Stop BEFORE creating anything if this actor cannot create fixtures.
+    await assertFixtureCreationCapable(context, page);
     const created = await timedApiCall(context, "POST", "/api/owner/startup/sessions", () =>
       page.request.post("/api/owner/startup/sessions", {
         data: {
@@ -125,8 +128,8 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
           // OwnerStartupSession.isFixtureBusiness), rather than relying on the "OPSIQ Production
           // Acceptance - ..." label to keep it out of ordinary owners' Startup planning history —
           // mirrors domain-business.ts's isFixtureBusiness flag for business creation. Requires
-          // the acceptance account to hold SYSTEM_ADMIN in the target environment; the route
-          // silently ignores this flag otherwise.
+          // the acceptance account to hold SYSTEM_ADMIN in the target environment; without it
+          // the route answers 403 and creates nothing (the preflight above stops the run first).
           isFixtureBusiness: true,
         },
       })
@@ -134,6 +137,8 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     expect(created.status()).toBe(201);
     handoffSessionId = (await created.json()).sessionId;
     expect(handoffSessionId).toBeTruthy();
+    // 201 alone is not proof of isolation: the session must be absent from the ordinary list.
+    await assertStartupSessionIsFixture(context, page, handoffSessionId);
 
     const sessionRes = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
       page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
@@ -216,8 +221,8 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
             // Marks every record this blueprint creates (objective, tasks, KPIs, risks,
             // resource allocation, constraint) as a fixture at creation time — see
             // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md. Requires the acceptance account to hold
-            // SYSTEM_ADMIN in the target environment; the route silently ignores this flag
-            // otherwise.
+            // SYSTEM_ADMIN in the target environment; without it the route answers 403 and
+            // creates nothing.
             isFixtureRecord: true,
           },
         })
