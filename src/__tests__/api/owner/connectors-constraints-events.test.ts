@@ -353,8 +353,8 @@ describe("Connectors / Constraints / Integration Events Routes — non-DB mock t
 
     it("passes provider to registerConnector", async () => {
       mockRegisterConnector.mockResolvedValueOnce(CONNECTOR_DTO);
-      await connectorsPost(makeCtx(BASE_CONNECTORS, {}, { provider: "QUICKBOOKS" }));
-      expect(mockRegisterConnector).toHaveBeenCalledWith(expect.objectContaining({ provider: "QUICKBOOKS" }));
+      await connectorsPost(makeCtx(BASE_CONNECTORS, {}, { provider: "XERO" }));
+      expect(mockRegisterConnector).toHaveBeenCalledWith(expect.objectContaining({ provider: "XERO" }));
     });
 
     it("calls registerConnector exactly once", async () => {

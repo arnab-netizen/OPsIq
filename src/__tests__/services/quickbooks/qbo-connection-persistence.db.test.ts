@@ -7,9 +7,19 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { resolveQboConfig, type QboEnvironment, type QboProviderConfig } from "@/domain/quickbooks/qbo-config";
-import { seedTenant, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
+import { seedTenant as seedBaseTenant, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
+import { trackQboWorkspace } from "@/__tests__/test-helpers/qbo-task-cleanup";
+
+const seedTenant = async (): Promise<Tenant> => {
+  const t = await seedBaseTenant();
+  trackQboWorkspace(t.ws);
+  // These suites exercise connection mechanics against a Sandbox company, which may only attach to TEST (fixture) businesses.
+  // Real-business behaviour is covered by the explicit "real business" cases below.
+  await db.ownerBusiness.updateMany({ where: { workspaceId: t.ws }, data: { isFixtureBusiness: true } });
+  return t;
+};
 import {
-  beginQboAuthorization, consumeQboAuthorizationState, finalizeQboConnection, rotateQboTokens, loadQboTokensForUse,
+  QBO_SANDBOX_REAL_BUSINESS_MESSAGE, beginQboAuthorization, consumeQboAuthorizationState, finalizeQboConnection, rotateQboTokens, loadQboTokensForUse,
   markQboReauthorizationRequired, disconnectQboConnection, listQboConnectionsForBusiness,
 } from "@/services/quickbooks/qbo-connection.service";
 import type { QboTokenGrant } from "@/services/quickbooks/qbo-oauth.service";
@@ -78,11 +88,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connection persistence (real Postgres
       const b = await beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: A.biz, environment: "sandbox" }, cfg("sandbox"), { now: () => t0 });
       expect(await consumeQboAuthorizationState({ workspaceId: A.ws, actorId: A.actor, environment: "sandbox", state: stateOf(b.authorizationUrl) })).toEqual({ ok: false, reason: "EXPIRED" });
     });
-    it("begin: foreign-workspace business, fixture business, environment mismatch are rejected", async () => {
+    it("begin: foreign-workspace business, production-on-fixture business, environment mismatch are rejected; sandbox-on-fixture is allowed", async () => {
       await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: B.biz, environment: "sandbox" }, cfg("sandbox"))).rejects.toMatchObject({ name: "NotFoundError" });
       const fx = randomUUID();
       await db.ownerBusiness.create({ data: { id: fx, workspaceId: A.ws, name: "fx", businessType: "generic_local_service", currency: "INR", isFixtureBusiness: true } });
-      await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: fx, environment: "sandbox" }, cfg("sandbox"))).rejects.toMatchObject({ name: "ValidationError" });
+      await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: fx, environment: "production" }, cfg("production"))).rejects.toMatchObject({ name: "ValidationError" });
+      await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: fx, environment: "sandbox" }, cfg("sandbox"))).resolves.toMatchObject({ authorizationUrl: expect.any(String) });
       await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: A.biz, environment: "production" }, cfg("sandbox"))).rejects.toMatchObject({ name: "ValidationError" });
     });
   });
@@ -122,13 +133,31 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connection persistence (real Postgres
       if (!c.ok) throw new Error("x");
       await expect(finalizeQboConnection({ authorization: c.authorization, realmId: "12; DROP", grant: grant() })).rejects.toMatchObject({ name: "ValidationError" });
     });
+    it("a Sandbox company can NEVER attach to a real business: refused at begin and at finalize, nothing written", async () => {
+      const t = await seedTenant();
+      const real = randomUUID();
+      await db.ownerBusiness.create({ data: { id: real, workspaceId: t.ws, name: "real", businessType: "generic_local_service", currency: "INR", isFixtureBusiness: false } });
+      await expect(beginQboAuthorization({ workspaceId: t.ws, actorId: t.actor, businessId: real, environment: "sandbox" }, cfg("sandbox"))).rejects.toMatchObject({ name: "ValidationError", message: QBO_SANDBOX_REAL_BUSINESS_MESSAGE });
+      // an authorization issued while the business was a test business is re-checked at finalize (the flag can change in between)
+      await db.ownerBusiness.update({ where: { id: real }, data: { isFixtureBusiness: true } });
+      const b = await beginQboAuthorization({ workspaceId: t.ws, actorId: t.actor, businessId: real, environment: "sandbox" }, cfg("sandbox"));
+      const c = await consumeQboAuthorizationState({ workspaceId: t.ws, actorId: t.actor, environment: "sandbox", state: stateOf(b.authorizationUrl) });
+      if (!c.ok) throw new Error("x");
+      await db.ownerBusiness.update({ where: { id: real }, data: { isFixtureBusiness: false } });
+      await expect(finalizeQboConnection({ authorization: c.authorization, realmId: nextRealm(), grant: grant() })).rejects.toMatchObject({ name: "ValidationError" });
+      expect(await db.qboConnection.count({ where: { businessId: real } })).toBe(0);
+    });
     it("two businesses, two realms, one workspace; sandbox and production are separate", async () => {
       const r1 = nextRealm(); const r2 = nextRealm();
       const t = await seedTenant();
       expect((await connect(t, t.biz, "sandbox", r1)).fin.ok).toBe(true);
       expect((await connect(t, t.bizB, "sandbox", r2)).fin.ok).toBe(true);
-      expect((await connect(t, t.biz, "production", r1)).fin.ok).toBe(true); // same business, other environment, same numeric realm id
-      expect((await listQboConnectionsForBusiness({ workspaceId: t.ws, businessId: t.biz })).map((c) => c.environment).sort()).toEqual(["production", "sandbox"]);
+      // production attaches only to a REAL business; the same numeric realm id is a different company in the other environment
+      const real = randomUUID();
+      await db.ownerBusiness.create({ data: { id: real, workspaceId: t.ws, name: "real", businessType: "generic_local_service", currency: "INR", isFixtureBusiness: false } });
+      expect((await connect(t, real, "production", r1)).fin.ok).toBe(true);
+      expect((await listQboConnectionsForBusiness({ workspaceId: t.ws, businessId: real })).map((c) => c.environment)).toEqual(["production"]);
+      expect((await listQboConnectionsForBusiness({ workspaceId: t.ws, businessId: t.biz })).map((c) => c.environment)).toEqual(["sandbox"]);
     });
     it("same realm cannot bind to a second business or workspace; no disclosure; original untouched", async () => {
       const realm = nextRealm();
@@ -181,6 +210,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connection persistence (real Postgres
       await disconnectQboConnection({ workspaceId: t.ws, actorId: t.actor, connectionId: c1.fin.connection.id });
       const c2 = await connect(t, t.biz, "sandbox", realm);
       expect(c2.fin.ok && c2.fin.reconnected && c2.fin.connection.id === c1.fin.connection.id && c2.fin.connection.status === "ACTIVE").toBe(true);
+    });
+    it("reconnect ends the failure streak the owner was shown", async () => {
+      const t = await seedTenant(); const realm = nextRealm();
+      const c1 = await connect(t, t.biz, "sandbox", realm);
+      if (!c1.fin.ok) throw new Error("x");
+      const id = c1.fin.connection.id;
+      await db.qboSyncState.create({ data: { connectionId: id, workspaceId: t.ws, businessId: t.biz, lifecycle: "FAILING", consecutiveFailures: 3, lastErrorCode: "REAUTH_REQUIRED", lastSuccessAt: new Date() } });
+      await disconnectQboConnection({ workspaceId: t.ws, actorId: t.actor, connectionId: id });
+      await connect(t, t.biz, "sandbox", realm);
+      expect(await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: id } })).toMatchObject({ lifecycle: "SYNCED", consecutiveFailures: 0, lastErrorCode: null });
     });
   });
 

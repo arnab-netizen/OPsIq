@@ -17,7 +17,17 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
 
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
-import { seedTenant, seedUser, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
+import { seedTenant as seedBaseTenant, seedUser, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
+import { trackQboWorkspace } from "@/__tests__/test-helpers/qbo-task-cleanup";
+
+const seedTenant = async (): Promise<Tenant> => {
+  const t = await seedBaseTenant();
+  trackQboWorkspace(t.ws);
+  // These suites exercise connection mechanics against a Sandbox company, which may only attach to TEST (fixture) businesses.
+  // Real-business behaviour is covered by the explicit "real business" cases below.
+  await db.ownerBusiness.updateMany({ where: { workspaceId: t.ws }, data: { isFixtureBusiness: true } });
+  return t;
+};
 import * as connectRoute from "@/app/api/owner/integrations/quickbooks/connect/route";
 import * as callbackRoute from "@/app/api/owner/integrations/quickbooks/callback/route";
 
@@ -112,16 +122,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       expect(row).toMatchObject({ businessId: t.biz, initiatedById: t.actor, environment: "sandbox" });
       expect(row.stateHash).not.toBe(u.searchParams.get("state"));
     });
-    it("rejects a foreign-workspace, fixture and archived business, and an environment mismatch", async () => {
+    it("rejects a foreign-workspace and archived business and an environment mismatch; a fixture business is Sandbox-only", async () => {
       const t = await seedTenant(); const other = await seedTenant();
       await expect(asRoute(connectRoute.POST)(postCtx(t, { businessId: other.biz, environment: "sandbox" }))).rejects.toMatchObject({ name: "NotFoundError" });
       const fx = randomUUID();
       await db.ownerBusiness.create({ data: { id: fx, workspaceId: t.ws, name: "fx", businessType: "generic_local_service", currency: "INR", isFixtureBusiness: true } });
-      await expect(asRoute(connectRoute.POST)(postCtx(t, { businessId: fx, environment: "sandbox" }))).rejects.toMatchObject({ name: "ValidationError" });
+      await expect(asRoute(connectRoute.POST)(postCtx(t, { businessId: fx, environment: "sandbox" }))).resolves.toBeDefined();
       await db.ownerBusiness.update({ where: { id: t.bizB }, data: { isActive: false } });
       await expect(asRoute(connectRoute.POST)(postCtx(t, { businessId: t.bizB, environment: "sandbox" }))).rejects.toMatchObject({ name: "ValidationError" });
       await expect(asRoute(connectRoute.POST)(postCtx(t, { businessId: t.biz, environment: "production" }))).rejects.toMatchObject({ name: "ValidationError" });
-      expect(await db.qboOAuthState.count({ where: { workspaceId: t.ws } })).toBe(0);
+      expect(await db.qboOAuthState.count({ where: { workspaceId: t.ws } })).toBe(1); // only the Sandbox-on-fixture intent
     });
     it("fails closed with no state row and no secret when QuickBooks is not configured", async () => {
       const t = await seedTenant();

@@ -7,6 +7,7 @@ const read = (rel: string) => readFileSync(join(process.cwd(), rel), "utf8");
 const code = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 const connect = code(read("src/app/api/owner/integrations/quickbooks/connect/route.ts"));
 const callback = code(read("src/app/api/owner/integrations/quickbooks/callback/route.ts"));
+const callbackPage = code(read("src/app/(authenticated)/owner/integrations/quickbooks/callback/page.tsx"));
 const service = code(read("src/services/quickbooks/qbo-connect-callback.service.ts"));
 
 describe("public outcome table", () => {
@@ -35,6 +36,13 @@ describe("source contracts", () => {
       expect(src).not.toMatch(/console\.|logger\./);
       expect(src).toMatch(/requireCapabilities: \[CAPABILITIES\.OWNER_MANAGE\]/);
     }
+  });
+  it("the callback PAGE forwards the query to the API once and navigates only to a constant path with ONE closed token", () => {
+    expect(callbackPage).toContain("qboOutcomeRedirectPath(token)");
+    expect(callbackPage).toMatch(/router\.replace\(qboOutcomeRedirectPath\(token\)\)/);
+    expect(callbackPage).toContain("started.has(search)"); // one API call per page load (a second would only say "already used")
+    expect(callbackPage).not.toMatch(/searchParams\.get|URLSearchParams|returnTo|redirect_uri|window\.location\.(href|assign)\s*=/);
+    expect(callbackPage).not.toMatch(/console\.|logger\./);
   });
   it("the callback consumes the state before it can reach the token exchange, and never reads tenancy from the query", () => {
     expect(service.indexOf("consumeQboAuthorizationState(")).toBeGreaterThan(-1);

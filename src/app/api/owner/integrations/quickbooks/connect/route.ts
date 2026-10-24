@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const bodySchema = z.strictObject({
-  businessId: z.string().uuid(),
+  businessId: z.guid(),
   environment: z.enum(["sandbox", "production"]),
 });
 
