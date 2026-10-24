@@ -36,6 +36,7 @@ import { blocksFirstRead, describeMissingFirstReadFacts, staleEvidenceNotice, st
 import type { EvidenceFreshness, FirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
 import { firstReadStatement } from "@/domain/owner-finance/first-read-statement";
 import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
+import { QuickBooksConnectionCard } from "@/components/owner/QuickBooksConnectionCard";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -296,6 +297,19 @@ function NextAction({ state }: { state: OnboardingView }) {
 }
 
 /** Secondary methods only — the primary path is the quick financial picture above. */
+/**
+ * Connected accounts — the integrations area of My Business. Today that is QuickBooks Online (read-only). The card carries all
+ * of its own state from the server's bounded status document; this page adds nothing to it.
+ */
+function ConnectedAccounts({ businessId }: { businessId: string }) {
+  return (
+    <section aria-label="Connected accounts" data-testid="data-hub-connected-accounts" className="border-t border-border pt-4">
+      <h2 className="text-sm font-semibold text-foreground">Connected accounts</h2>
+      <QuickBooksConnectionCard key={businessId} businessId={businessId} />
+    </section>
+  );
+}
+
 function OtherWaysToAdd() {
   const secondary = [
     {
@@ -335,7 +349,7 @@ function OtherWaysToAdd() {
           </li>
         ))}
         <li className="border-b border-border py-3 last:border-0 last:pb-0" data-testid="data-hub-integrations">
-          <p className="font-medium text-muted-foreground">Connect accounting, banking or POS</p>
+          <p className="font-medium text-muted-foreground">Connect banking or POS</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Not available yet. Use the options above for now — we will tell you here when
             connections are ready.
@@ -622,6 +636,7 @@ export default function OwnerDataHubPage() {
                   <Link href="/owner/finance" className="underline">Add it on the Money page</Link>.
                 </p>
               )}
+              {selectedBusiness && <ConnectedAccounts businessId={selectedBusiness.id} />}
               <OtherWaysToAdd />
               {businessSettings}
             </div>
@@ -632,6 +647,7 @@ export default function OwnerDataHubPage() {
             <>
               <ReadinessSummary state={state} />
               <NextAction state={state} />
+              {selectedBusiness && <ConnectedAccounts businessId={selectedBusiness.id} />}
               <OtherWaysToAdd />
               {businessSettings}
               <details className="border-t border-border pt-6" data-testid="data-hub-more-detail">
