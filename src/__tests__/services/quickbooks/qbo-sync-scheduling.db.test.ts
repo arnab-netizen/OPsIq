@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { connectQbo, envFor, makeFakeIntuit, monthKeys, seedQboTenant, type FakeIntuit, type MonthBooks } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { runQboProducerForTest } from "@/__tests__/test-helpers/qbo-task-cleanup";
 import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 import { QboProviderError } from "@/domain/quickbooks/qbo-errors";
@@ -33,13 +34,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     await disconnectQboConnection({ workspaceId: c.ws, actorId: c.actor, connectionId: cc.connectionId });
     await markQboReauthorizationRequired({ workspaceId: d.ws, connectionId: cd.connectionId, reasonCode: "TOKEN_REJECTED" });
     const now = new Date();
-    const first = await enqueueDueQboSyncTasks(now);
+    const first = await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
     expect(first.enqueued).toBeGreaterThanOrEqual(2);
     const key = (id: string) => qboSyncKey(id, "daily", now);
     expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: [key(ca.connectionId), key(cb.connectionId)] } } })).toBe(2);
     expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: [key(cc.connectionId), key(cd.connectionId)] } } })).toBe(0);
     // re-running creates nothing new for these connections (global counts are not asserted: other suites share this database)
-    await enqueueDueQboSyncTasks(now);
+    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
     expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: [key(ca.connectionId), key(cb.connectionId)] } } })).toBe(2);
     const t = await db.scheduledTask.findFirstOrThrow({ where: { idempotencyKey: key(ca.connectionId) } });
     expect(t).toMatchObject({ taskName: TASK_NAME_QBO_SYNC, workspaceId: a.ws, maxAttempts: 3 });
@@ -56,7 +57,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
       ids.push(c.id);
     }
     const now = new Date();
-    await enqueueDueQboSyncTasks(now);
+    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
     const have = await db.scheduledTask.count({ where: { idempotencyKey: { in: ids.map((id) => qboSyncKey(id, "daily", now)) } } });
     expect(have).toBe(extra);
     // a few hundred due tasks must not linger for suites that drain the shared scheduler table in batches
@@ -136,7 +137,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     expect((await db.qboConnection.findUniqueOrThrow({ where: { id: b.connectionId } })).status).toBe("REAUTH_REQUIRED");
     // producers skip it from now on
     const now = new Date(Date.now() + 86_400_000);
-    await enqueueDueQboSyncTasks(now);
+    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
     expect(await db.scheduledTask.count({ where: { idempotencyKey: qboSyncKey(b.connectionId, "daily", now) } })).toBe(0);
   });
 

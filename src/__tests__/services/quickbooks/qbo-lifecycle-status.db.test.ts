@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { runQboProducerForTest } from "@/__tests__/test-helpers/qbo-task-cleanup";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { cfg, connectQbo, envFor, grant, makeFakeIntuit, monthKeys, seedQboTenant, type MonthBooks } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { getQboOwnerStatus } from "@/services/quickbooks/qbo-status.service";
@@ -107,7 +108,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO disconnect / reconnect (real Postgres
     expect(await db.ownerFinancialSnapshot.count({ where: { workspaceId: t.ws } })).toBe(12);
     // not schedulable, not syncable
     const now = new Date(Date.now() + 86_400_000);
-    await enqueueDueQboSyncTasks(now);
+    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
     expect(await db.scheduledTask.count({ where: { idempotencyKey: qboSyncKey(connectionId, "daily", now) } })).toBe(0);
     expect(await sync(t, connectionId)).toEqual({ status: "SKIPPED", reason: "NOT_ACTIVE" });
     expect(await db.auditEvent.count({ where: { workspaceId: t.ws, eventName: "qbo.connection_disconnected" } })).toBe(1);
