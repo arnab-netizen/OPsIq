@@ -742,6 +742,9 @@ const NON_WORKFLOW_MUTATION_FAMILIES = [
   // Do-not-repeat rules: recording a rule and recording what has changed on one (the changed-context
   // override, Cockpit → "Do-not-repeat rules") — a governed field write, not a status workflow.
   { family: "do_not_repeat_rules", apiPrefixes: ["/api/owner/do-not-repeat"], uiPages: ["/owner/cockpit"] },
+  // QuickBooks Online (read-only): connect / refresh / disconnect on My Business. Connection-lifecycle writes only; no status
+  // workflow, and nothing is ever written to QuickBooks.
+  { family: "quickbooks_connection", apiPrefixes: ["/api/owner/integrations/quickbooks/connect", "/api/owner/integrations/quickbooks/disconnect", "/api/owner/integrations/quickbooks/sync"], uiPages: ["/owner/data"] },
 ];
 
 function findFilesByKeywords(keywords, excludeKeywords = []) {
