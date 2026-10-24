@@ -23,5 +23,5 @@ export const POST = withCanonicalEnforcement(
     const result = await linkProcessTaskToDecision(ctx.verifiedWorkspaceId, ctx.verifiedActorId, params.businessId, body);
     return canonicalJson(result, { status: result.created ? 201 : 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

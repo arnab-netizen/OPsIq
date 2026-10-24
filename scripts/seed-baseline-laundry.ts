@@ -145,7 +145,7 @@ async function main() {
     { periodId: period.id, label: "Payroll + PF/ESI (committed)", category: "statutory_payroll_tax", amount: 130000, state: "committed", obligationKind: "payroll", dueInDays: 4, requestedByUserId: USER_ID, ownerApprovalThreshold: 50000 },
     USER_ID, WORKSPACE_ID
   );
-  console.log(`[baseline] budget: period ${period.id}, mode ${spend.plan.mode}, decision ${spend.plan.decisionType}`);
+  console.log(`[baseline] budget: period ${period.id}, mode ${spend.plan?.mode}, decision ${spend.plan?.decisionType}`);
 
   // ── Capacity bottleneck: a down dryer + an over-utilised washer ───────────────────────────────
   const { recordEquipment } = await import("../src/services/owner-mode/equipment.service");

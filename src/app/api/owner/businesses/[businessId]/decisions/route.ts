@@ -34,5 +34,5 @@ export const POST = withCanonicalEnforcement(
     // 201 for a newly recorded decision, 200 when the request was recognised as a retry of an existing one.
     return canonicalJson(result, { status: result.replayed ? 200 : 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

@@ -31,4 +31,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   const r = await acknowledgeEscalation({ escalationId: input.escalationId, workspaceId, acknowledgedBy: actorId });
   return canonicalJson({ status: r.status, alreadyAcknowledged: r.alreadyAcknowledged }, { status: 200 });
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });
+}, { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

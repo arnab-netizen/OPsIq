@@ -121,5 +121,5 @@ export const PATCH = withCanonicalEnforcement(
     const dto = await reopenComplaint({ ...input, workspaceId: ws, actorId });
     return canonicalJson(dto, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

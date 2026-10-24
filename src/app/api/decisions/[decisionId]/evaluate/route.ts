@@ -124,5 +124,5 @@ export const POST = withCanonicalEnforcement(
         : `Decision evaluated: System recommends BLOCK (${blockStage})`,
     };
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
+  { requireCommercial: "approval_resolution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
 );

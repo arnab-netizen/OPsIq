@@ -20,5 +20,5 @@ export const POST = withCanonicalEnforcement(
     const result = await recordOwnerOutcomeContract(ctx.verifiedWorkspaceId, ctx.verifiedActorId, params.businessId, body);
     return canonicalJson(result, { status: result.replayed ? 200 : 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

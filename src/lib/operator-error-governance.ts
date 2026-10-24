@@ -10,6 +10,7 @@
  * - Automatic escalation triggers
  */
 
+import { COMMERCIAL_DENIED_EVENT, isCommercialDenialStatus } from "@/domain/commercial/commercial-denial";
 import { toOperatorSafeError } from "./operator-safe-errors";
 
 function mapContextType(context: string): "decision" | "action" | "form" | "load" | "save" | "network" {
@@ -86,6 +87,11 @@ export function classifyOperatorError(
   const technicalDetails = extractTechnicalDetails(error);
   const shouldEscalate = determineShouldEscalate(error, context);
   const { httpStatus, serverClassification } = extractServerTags(error);
+  // Commercial denial (HTTP 402): inform the shell so it can show the upgrade state. The server already
+  // decided; this is presentation signalling only and is a no-op on the server and when never denied.
+  if (isCommercialDenialStatus(httpStatus) && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(COMMERCIAL_DENIED_EVENT));
+  }
 
   return {
     operatorMessage: safeError.error,

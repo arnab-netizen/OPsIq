@@ -12,7 +12,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runAllChecks } from "../verify-owner-feature-preservation.mjs";
-import { validateMutationCoverage } from "../generate-owner-feature-baseline.mjs";
+import { validateMutationCoverage, scanWholeFileCapabilities, extractMethodCapabilities } from "../generate-owner-feature-baseline.mjs";
 
 // ── minimal shared fixture builder ──────────────────────────────────────────
 // A tiny but structurally complete baseline: one page, one API route, one owner-action family,
@@ -353,3 +353,51 @@ test("mutation coverage: bracket-vs-:param route notation normalizes identically
   assert.equal(result.unaccounted.length, 0, "bracket and :param forms of the same route must be recognized as the same endpoint");
   assert.equal(result.coveredByOwnerActions, 1);
 });
+
+// ── authorization-capability extraction: identifier boundary ────────────────────────────────
+// Commercial entitlement (COMMERCIAL_CAPABILITIES.*) is a different concern from owner RBAC
+// (CAPABILITIES.*). The whole-file scan must match the real CAPABILITIES namespace only, never an
+// identifier that merely ENDS in "CAPABILITIES".
+
+test("capability scan: CAPABILITIES.OWNER_MANAGE is an authorization capability", () => {
+  assert.deepEqual(scanWholeFileCapabilities("requireCapabilities: [CAPABILITIES.OWNER_MANAGE]"), ["OWNER_MANAGE"]);
+});
+
+test("capability scan: COMMERCIAL_CAPABILITIES.GOVERNED_EXECUTION is NOT an authorization capability", () => {
+  assert.deepEqual(scanWholeFileCapabilities("await assertCommercialCapability(ws, COMMERCIAL_CAPABILITIES.GOVERNED_EXECUTION);"), []);
+});
+
+test("capability scan: COMMERCIAL_CAPABILITIES.APPROVAL_RESOLUTION is NOT an authorization capability", () => {
+  assert.deepEqual(scanWholeFileCapabilities("assertCommercialCapability(ws, COMMERCIAL_CAPABILITIES.APPROVAL_RESOLUTION)"), []);
+});
+
+test("capability scan: a route with both reports only the real authorization capability", () => {
+  const src = [
+    'import { CAPABILITIES } from "@/domain/constants/capabilities";',
+    'import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";',
+    "export const POST = withCanonicalEnforcement(async (ctx) => {",
+    "  await assertCommercialCapability(ctx.verifiedWorkspaceId, COMMERCIAL_CAPABILITIES.GOVERNED_EXECUTION);",
+    "  await assertCommercialCapability(ctx.verifiedWorkspaceId, COMMERCIAL_CAPABILITIES.APPROVAL_RESOLUTION);",
+    "}, { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true });",
+  ].join("\n");
+  assert.deepEqual(scanWholeFileCapabilities(src), ["OWNER_MANAGE"]);
+});
+
+test("capability scan: still matches every plausible real-reference position", () => {
+  for (const s of ["[CAPABILITIES.OWNER_VIEW]", "(CAPABILITIES.OWNER_VIEW)", ", CAPABILITIES.OWNER_VIEW,", "!ctx.has(CAPABILITIES.OWNER_VIEW)", "x = CAPABILITIES.OWNER_VIEW;", "\nCAPABILITIES.OWNER_VIEW", "ns.CAPABILITIES.OWNER_VIEW"]) {
+    assert.deepEqual(scanWholeFileCapabilities(s), ["OWNER_VIEW"], s);
+  }
+});
+
+test("method-specific extraction is unchanged and ignores commercial capabilities in the handler body", () => {
+  const src = [
+    "export const GET = withCanonicalEnforcement(async () => ok(), { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true });",
+    "export const POST = withCanonicalEnforcement(async () => {",
+    "  await assertCommercialCapability(ws, COMMERCIAL_CAPABILITIES.GOVERNED_EXECUTION);",
+    "}, { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true });",
+  ].join("\n");
+  assert.deepEqual(extractMethodCapabilities(src, "GET"), ["OWNER_VIEW"]);
+  assert.deepEqual(extractMethodCapabilities(src, "POST"), ["OWNER_MANAGE"]);
+  assert.equal(extractMethodCapabilities(src, "DELETE"), null);
+});
+
