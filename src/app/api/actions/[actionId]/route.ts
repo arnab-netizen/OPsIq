@@ -45,7 +45,7 @@ export const PATCH = withCanonicalEnforcement(
     const updated = await getActionById(actionId, ctx.verifiedWorkspaceId);
     return updated;
   },
-  {
+  { requireCommercial: "governed_execution",
     requireCapabilities: [CAPABILITIES.ACTION_UPDATE],
     requireWorkspace: true,
   }

@@ -7,6 +7,7 @@
  * build recovery actions, and persist cycle + findings + actions atomically.
  * Cycles are linked (previousCycleId) so the loop is repeatable and comparable.
  */
+import { assertDiagnosisAllowance } from "@/services/billing/commercial-policy.service";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
@@ -81,6 +82,8 @@ export async function runCycle(
   let carriedForwardIds: string[] = [];
   let createdActionCount = 0;
   await db.$transaction(async (tx: any) => {
+    // Commercial gate: first diagnosis free; later cycles need entitlement. Same tx + advisory lock => race-safe.
+    await assertDiagnosisAllowance(tx, workspaceId);
     await tx.recoveryCycle.create({
       data: {
         id: cycleId,

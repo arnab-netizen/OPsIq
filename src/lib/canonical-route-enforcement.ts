@@ -213,7 +213,7 @@ export function withCanonicalEnforcement(
     requireWorkspace?: boolean;
     requireCapabilities?: string[];
     requireActorType?: "user" | "service" | ("user" | "service")[];
-    skipReadinessCheck?: boolean;
+    skipReadinessCheck?: boolean; requireCommercial?: import("@/domain/commercial/commercial-capability").CommercialCapability; // see enforceCommercialRequirement
     errorNamespace?: string;
     operationName?: string;
     routeVersion?: string;
@@ -675,7 +675,7 @@ export function withCanonicalEnforcement(
       shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.HANDLER_EXECUTING);
       traceManager.recordStage("HANDLER_EXECUTING", "success");
       telemetry.emitHandlerExecuting(verifiedContext.verifiedActorId);
-      const result = await handler(verifiedContext, params);
+      await enforceCommercialRequirement(options?.requireCommercial, verifiedContext.verifiedWorkspaceId); const result = await handler(verifiedContext, params);
 
       // ========================================
       // STEP 9: RETURN HANDLER RESULT
@@ -1038,4 +1038,19 @@ export function extractSafeFieldErrors(error: unknown): Array<{ path: string; me
     out.push({ path: path.slice(0, 200), message: message.slice(0, 300) });
   }
   return out;
+}
+
+/**
+ * Commercial gate for PAID_CONTINUATION routes: evaluated after authentication and workspace derivation,
+ * before the handler. A denial is a PlanLimitError (HTTP 402). No-op when the route declares no
+ * requirement or BILLING_PAYWALL_ENFORCEMENT is not "on". See docs/opsiq/commercial/PAYWALL_BOUNDARY.md.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+async function enforceCommercialRequirement(
+  capability: import("@/domain/commercial/commercial-capability").CommercialCapability | undefined,
+  workspaceId: string
+): Promise<void> {
+  if (!capability) return;
+  const { assertCommercialCapability } = await import("@/services/billing/commercial-policy.service");
+  await assertCommercialCapability(workspaceId, capability);
 }

@@ -45,5 +45,5 @@ export const POST = withCanonicalEnforcement(
     const result = await assessPersistedOwnerOutcome(ctx.verifiedWorkspaceId, ctx.verifiedActorId, params.businessId, ref);
     return canonicalJson(result, { status: result.created ? 201 : 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

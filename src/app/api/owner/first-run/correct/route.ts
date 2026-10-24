@@ -28,5 +28,5 @@ export const POST = withCanonicalEnforcement(
     );
     return canonicalJson(result, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

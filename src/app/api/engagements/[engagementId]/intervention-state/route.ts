@@ -64,7 +64,7 @@ export const PUT = withCanonicalEnforcement(
       throw error;
     }
   },
-  {
+  { requireCommercial: "reassessment",
     requireCapabilities: [CAPABILITIES.INTERVENTION_MANAGE],
     requireWorkspace: true,
   }

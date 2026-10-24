@@ -1,0 +1,3989 @@
+[
+ {
+  "method": "GET",
+  "route": "/api/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/actions",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/actions/[actionId]/complete",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/actions/[actionId]/impact-delta",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/actions/[actionId]/start",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/administration-audit",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/audit-log",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/beta-cohort",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-cohort/assign",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-cohort/evidence",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/beta-requests",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-requests/[id]/invite",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-requests/[id]/reject",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-requests/[id]/reopen",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-requests/[id]/resend-invite",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/beta-requests/[id]/revoke",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/billing/diagnostics",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/customers/detail",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/customers/diagnostics",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/customers/resend-verification",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/customers/restore",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/customers/revoke-sessions",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/customers/search",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/customers/suspend",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/fixture-businesses",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/overview",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/platform-settings",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/platform-settings",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/platform-settings/bootstrap",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/platform-settings/bootstrap",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/workspaces",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/workspaces/[id]/disable",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/workspaces/[id]/members",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/audit",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/audit/events",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/auth/beta-status",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/forgot-password",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/login",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/logout",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/resend-verification",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/reset-password",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/signup",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/auth/verify-email",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/beta-requests",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/billing/cancel",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/billing/checkout",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/billing/payment-method",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/billing/plan",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/billing/status",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/billing/upgrade",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/billing/usage",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/business-impact/decision/[id]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/business-impact/summary",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/calibration",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/clients",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/clients",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/clients/[clientId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/clients/[clientId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/clients/[clientId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/clients/[clientId]/contacts",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/clients/[clientId]/contacts",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/clients/[clientId]/contacts/[contactId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/clients/[clientId]/contacts/[contactId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/complaint-rework",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/consulting/engagements",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/consulting/engagements",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/consulting/engagements/export",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/consulting/engagements/health",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/control/blocked-metrics",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/control/today",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/decision/export",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/decisions/[decisionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/accept",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/close",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/evaluate",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/execute",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/fail",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/record-outcome",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/reject",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/[decisionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/create",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/intake",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/decisions/list",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/decisions/submit-external",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/decisions/submit-external",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/deliverables",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/deliverables",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/deliverables/[deliverableId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/diagnosis",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/diagnosis/archetype",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/diagnosis/bottleneck",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/diagnosis/maturity",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/diagnosis/root-cause",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/employee/tasks",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/employee/tasks/[taskId]/guidance",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/engagements/[engagementId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/acknowledge",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/engagements/[engagementId]/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/business-impact",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/business-impact/detail",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/condition",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/condition",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/constraint-checks",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/constraint-checks",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/decision-evidence",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/drift",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/escalation-checks",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/escalation-checks",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/execution-certainty",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/experiments",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/experiments",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/experiments/[experimentId]/approve",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/experiments/[experimentId]/learning",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/experiments/[experimentId]/progress",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/experiments/[experimentId]/result",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/experiments/[experimentId]/start",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/intervention",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/engagements/[engagementId]/intervention",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/intervention-state",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PUT",
+  "route": "/api/engagements/[engagementId]/intervention-state",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/kpis",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/kpis",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/outcomes",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/recommendations",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/recommendations/rerank",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/report",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/review-cycles",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/review-cycles",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/engagements/[engagementId]/shock-events",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/engagements/[engagementId]/shock-events",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/entitlement",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/entitlement",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/entitlement/quota",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/entitlement/quota",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/entity",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/entity",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/escalation",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/escalation/acknowledge",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/evidence",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/evidence",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/evidence-bundles",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/evidence-bundles",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/evidence-bundles/[bundleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PUT",
+  "route": "/api/evidence-bundles/[bundleId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/evidence-bundles/[bundleId]/items",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/evidence-bundles/[bundleId]/items",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/evidence/[evidenceId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/evidence/[evidenceId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/evidence/[evidenceId]/validate",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/execute",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/export",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/export",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/feedback",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/findings",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/findings/[findingId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/findings/[findingId]",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/findings/[findingId]/evidence",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/findings/[findingId]/evidence",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/governance/alerts",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/governance/metrics",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/acquisition-metrics",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/acquisition-metrics",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/offers",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/pricing-tiers",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/pricing-tiers",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/growth/pricing-tiers/[tierId]/approve",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/pricing-tiers/[tierId]/supersede",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/pricing-tiers/analysis",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/retention-metrics",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/retention-metrics",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/retention-metrics/analysis",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/revenue-streams",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/revenue-streams",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/growth/sales-pipeline",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/sales-pipeline",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/growth/sales-pipeline/[dealId]/stage",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/growth/unit-economics",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/health",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/intelligence/insights",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/intelligence/patterns",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/intelligence/recommendations",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/intelligence/summary",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/internal/alerts/[alertId]/retry-email",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/build-info",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/cron/scheduler",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/debug-engagements-p2007",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/debug-engagements-prisma",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/demo-engagement-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/internal/demo-engagement-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/demo-permission-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/internal/demo-permission-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/diagnosis-route-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/engagement-dashboard-route-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/engagement-drift-route-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/engagements-api-runtime-trace",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/engagements-route-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/internal/finance-learning-reconcile",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/login-diagnostic",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/owner-dashboard-runtime-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/internal/reassessment-scan",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "service:scheduled-reassessment-skip"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/signup-owner-permission-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/signup-proof",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/internal/smoke-cleanup",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/internal/startup",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/leads",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/leads",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/leads/[leadId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/leads/[leadId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/leads/[leadId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/liveness",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/me",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/metrics/control-effectiveness",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/metrics/decision-latency",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/notifications",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/notifications",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/notifications/[id]",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/notifications/[id]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/notifications/preferences",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/notifications/preferences",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/observability/summary",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/onboarding/invite",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/onboarding/workspace",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/operator",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/operator",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/operator/my-day",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/operator/myday",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/operator/queue",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/ops/errors",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/ops/metrics",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/ops/readiness",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/ops/runtime",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/opsiq/consulting-engine/run",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "POST",
+  "route": "/api/override",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/action-assignments",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/action-assignments",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/action-assignments",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/action-plan",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/alerts",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/alerts",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/alerts/[id]/read",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/alerts/[id]/resolve",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/approval",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/approval",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/approval",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/approvals/memory",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/approvals/memory",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/approvals/resolve",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "route:assertCommercialAccess"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/arbitrate",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/bcp",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/bcp",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/bcp",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/budget/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/archetype-metrics",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/budget/archetype-metrics",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/authority",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/budget/authority",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/forecast",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/guidance",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/budget/override",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/budget/spend",
+  "classification": "MIXED_ACTION_SPLIT",
+  "enforcement": "service:capture-free-reassessment-paid",
+  "capability": "reassessment"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/budget/working-capital",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/budget/working-capital",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/businesses",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/businesses/[businessId]/analyze",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/businesses/[businessId]/decisions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/businesses/[businessId]/decisions",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/businesses/[businessId]/outcome-chain",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/businesses/[businessId]/outcome-chain",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/businesses/[businessId]/outcome-chain/process-task-link",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/businesses/[businessId]/outcome-chains",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/businesses/[businessId]/outcome-contracts",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/businesses/[businessId]/outcomes",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/businesses/[businessId]/outcomes",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/businesses/[businessId]/progress",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/capacity/assess",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/cashflow/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/cashflow/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/cashflow/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/cashflow/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cashflow/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/cashflow/snapshots/[snapshotId]/amend",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/collective-decision",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/command-center",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/complaints",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/complaints",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/complaints",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/compliance",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/compliance",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/compliance/[itemId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/compliance/[itemId]/business",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/compliance/[itemId]/review",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/compliance/[itemId]/tasks",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/compliance/classify",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/config",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/config",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/connectors",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/connectors",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/connectors",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/constraints",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/constraints",
+  "classification": "MIXED_ACTION_SPLIT",
+  "enforcement": "handler:assertCommercialCapability",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/control-center",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/cost-attribution",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/cost-intelligence",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/dev/seed-archetype",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/do-not-repeat",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/do-not-repeat/[ruleId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/do-not-repeat/rules",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/equipment",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/execution-plan",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/finance/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/finance/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/finance/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/finance/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/finance/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/finance/snapshots/[snapshotId]/amend",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/first-run",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/accept",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/business",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/cockpit-visit",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/correct",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/feedback",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/improve",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/first-run/improve-target",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/first-run/next-move",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/first-run/next-question",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/first-run/result",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/result/viewed",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/first-run/skip-question",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/first-value",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/owner/gates/opt-out",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/gates/opt-out",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/goal-arbitration",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/goal-arbitration",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/goals",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/goals",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/goals/assign",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/goals/trajectory",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/guardrails/screen",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/guided-choice",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/home",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/input-guidance",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/intake/businesses/[businessId]/uploads",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/intake/businesses/[businessId]/uploads",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/intake/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/intake/uploads/[intakeId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/intake/uploads/[intakeId]/confirm",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/integration-events",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/integrations/quickbooks/callback",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/integrations/quickbooks/connect",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/inventory/stock-items",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/inventory/stock-items",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/inventory/stock-items/[stockItemId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/inventory/stock-items/[stockItemId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/kpi-ownership",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/kpi-ownership",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-admissions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-admissions",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-attribution-reviews",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-attribution-reviews",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-candidates",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-candidates",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-candidates/[candidateId]/promote",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-candidates/[candidateId]/reject",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-consent",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-consent",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-harm-events",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-harm-events",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-privacy",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-privacy",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-regression-results",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-regression-results",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-rejections",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-rejections",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-retention",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-retention",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-reviews",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-reviews",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-reviews/[reviewId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-rollback-events",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-rollback-events",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/learning-rollout-flags",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/learning-rollout-flags",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/local-mode/status",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/manual-entry",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/marketing/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/marketing/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/marketing/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/marketing/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/campaigns",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/marketing/campaigns",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/campaigns/[campaignId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/marketing/campaigns/[campaignId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/marketing/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/now-view",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/objectives",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/objectives",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/objectives/[objectiveId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/onboarding",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/onboarding-lifecycle",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/onboarding-lifecycle",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/onboarding-lifecycle",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operating-memory",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/operating-memory",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/operations/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/operations/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/businesses/[businessId]/capacity-snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/operations/businesses/[businessId]/capacity-snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/operations/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/operations/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/businesses/[businessId]/workload-snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/operations/businesses/[businessId]/workload-snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/operations/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/opportunities/decide",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/opportunities/execution-task",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/opportunities/signals",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/opportunities/validation-outcome",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/override-arbitration",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/override-arbitration",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/policies",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/policies/[policyKey]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/policies/[policyKey]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/policies/[policyKey]/overrides",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/owner/policies/[policyKey]/overrides/[overrideId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/portfolio/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/portfolio/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/portfolio/ranking",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/portfolio/risks",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/pricing-analysis",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/priorities",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/process-execution",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/process-execution",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/processes",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/processes",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/procurement/purchase-orders",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/procurement/purchase-orders",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/procurement/purchase-orders/[poId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/procurement/purchase-orders/[poId]/transition",
+  "classification": "MIXED_ACTION_SPLIT",
+  "enforcement": "handler:assertCommercialCapability",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/profit-leak",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/proof-risk/queue",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/public-signals",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/reactivation/assess",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/readiness",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery-status",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/recovery/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/recovery/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/businesses",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/recovery/businesses",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/businesses/[businessId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/recovery/businesses/[businessId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/businesses/[businessId]/cycles",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/recovery/businesses/[businessId]/cycles",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/recovery/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/cycles/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/recovery/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/resource-pools",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/resource-pools",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/risks",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/risks",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/risks/[riskId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/risks/[riskId]/review",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/risks/[riskId]/tasks",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/sales/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sales/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sales/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sales/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/customers",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sales/customers",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/customers/[customerId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/sales/customers/[customerId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sales/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/scheduler-status",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/self-evaluation",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/sop-documents",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sop-documents",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop-intelligence",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/sop-intelligence",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sop-intelligence",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/sop/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sop/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sop/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/sop/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/sop/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/staff-training",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/standing-instructions",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup-validate",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/initiatives/[initiativeId]/close",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/startup/sessions/[sessionId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/activate",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/analysis",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:startup-free-journey"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/arbitrate",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/arbitrate",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:startup-free-journey"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/blueprint",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/blueprint",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/candidates",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/accept",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/reject",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/decision",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/decision",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/evidence",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/evidence",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/evidence/freshness",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/explanation",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/explanation",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/generate-ideas",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/economics",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/economics",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/execution-plan",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/market-sizing",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/market-sizing",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/revise",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/validation-plan",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/validation-plan",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/profile",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/startup/sessions/[sessionId]/profile",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/startup/sessions/[sessionId]/research",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/startup/sessions/[sessionId]/research",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/actions/[actionId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/strategy/actions/[actionId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/strategy/actions/[actionId]/verify",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/strategy/businesses/[businessId]/diagnoses",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:diagnosis-allowance"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/businesses/[businessId]/snapshots",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/strategy/businesses/[businessId]/snapshots",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/dashboard",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/diagnoses/[cycleId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/diagnoses/[cycleId]/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/diagnoses/[cycleId]/findings",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/strategy/snapshots/[snapshotId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/tasks",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/tasks",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/tasks/[taskId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/tasks/[taskId]/proof/review",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/tasks/[taskId]/proof/submit",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/tasks/[taskId]/status",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/tasks/complete",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/tender/application-pack",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/tender/screen",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/trust/audit-trail",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/trust/cycles",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/trust/explanations",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/vendor",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/vendor",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/vendor/[vendorId]/approve",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "approval_resolution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/vendor/[vendorId]/contracts",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/vendor/[vendorId]/contracts",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/vendor/[vendorId]/deliveries",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/vendor/[vendorId]/performance",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/vendor/[vendorId]/suspend",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/vendor/assess",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/waste-leakage",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/waste-leakage",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/owner/waste-leakage/[eventId]/status",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/wealth-command-center",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/wealth-path",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/whole-business-plan",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/privacy-requests",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/product-events",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/proof-risk/adjudicate",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/proof/dispute",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/proof/review",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "POST",
+  "route": "/api/proof/submit",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "governed_execution"
+ },
+ {
+  "method": "GET",
+  "route": "/api/public/actions",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/public/engagements",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/public/kpis",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/readiness",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/recommendations",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/recommendations/[recommendationId]",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/recommendations/[recommendationId]",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "GET",
+  "route": "/api/report",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/run",
+  "classification": "PAID_CONTINUATION",
+  "enforcement": "requireCommercial",
+  "capability": "continuation_action"
+ },
+ {
+  "method": "POST",
+  "route": "/api/scenario",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "staff-only-guard"
+ },
+ {
+  "method": "GET",
+  "route": "/api/startup",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/users",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/users",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/users/[userId]",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "PATCH",
+  "route": "/api/users/[userId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/users/[userId]",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/users/[userId]/memberships",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/users/[userId]/memberships",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/users/[userId]/memberships",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "DELETE",
+  "route": "/api/users/[userId]/roles",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/users/[userId]/roles",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/users/[userId]/roles",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/value",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/value/7day",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/value/summary",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/verify",
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/[id]/test",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/paddle",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/resend",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/webhooks/stripe",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/stripe",
+  "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/subscribe",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ }
+]

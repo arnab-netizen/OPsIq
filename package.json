@@ -46,7 +46,9 @@
     "audit:wrapped-handlers:update-baseline": "node scripts/audit-wrapped-handlers.js update-baseline",
     "governance:scan:a77": "tsx scripts/a77-prevention-gates.ts",
     "evidence:validate": "node scripts/validate-evidence-artifacts.mjs",
-    "evidence:validate:strict": "node scripts/validate-evidence-artifacts.mjs --require-accepted --require-provenance"
+    "evidence:validate:strict": "node scripts/validate-evidence-artifacts.mjs --require-accepted --require-provenance",
+    "billing:paywall:enable": "node scripts/release/paywall-toggle.mjs enable",
+    "billing:paywall:disable": "node scripts/release/paywall-toggle.mjs disable"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",

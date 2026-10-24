@@ -174,5 +174,5 @@ export const POST = withCanonicalEnforcement(
       selfVerified: r.selfVerified ?? null,
     }, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

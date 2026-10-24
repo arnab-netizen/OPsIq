@@ -6,6 +6,7 @@
  * snapshot and persists an OwnerCashflowCycle + findings + actions atomically.
  * Workspace ownership is enforced; nothing is invented.
  */
+import { assertDiagnosisAllowance } from "@/services/billing/commercial-policy.service";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
@@ -114,6 +115,8 @@ export async function runCashflowDiagnosis(
   let createdActionCount = 0;
   await db.$transaction(
     async (tx: any) => {
+      // Commercial gate: first diagnosis free; later cycles need entitlement. Same tx + advisory lock => race-safe.
+      await assertDiagnosisAllowance(tx, workspaceId);
       await tx.ownerCashflowCycle.create({
         data: {
           id: cycleId,
