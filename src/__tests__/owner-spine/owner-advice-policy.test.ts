@@ -104,17 +104,22 @@ describe("3/15. stale high-severity diagnosis: not claimed as current; refresh w
     expect(p.mode).toBe("REFRESH_REQUIRED");
     expect(p.requiresEvidenceRefresh).toBe(true);
     expect(p.canMakeMaterialCommitment).toBe(false);
-    expect(p.nextEvidenceAction).toMatch(/Update the .* figures/);
+    expect(p.nextEvidenceAction).toMatch(/Re-run the .* diagnosis on your current figures/);
+  });
+  it("its reason describes the ANALYSIS as out of date, never the owner's latest figures (they may be newer, just not analysed)", () => {
+    const reasons = policyOf(d).reasons.join(" ");
+    expect(reasons).toMatch(/latest analysis rests on out-of-date figures/);
+    expect(reasons).not.toMatch(/latest figures are out of date/);
   });
   it("never states the old danger as a current fact", () => {
     const text = [policyOf(d).ownerStatement, ...policyOf(d).reasons, ...d.whyThisWins].join(" ");
-    expect(text).toMatch(/out of date/i);
+    expect(text).toMatch(/out[- ]of[- ]date/i);
     expect(text).not.toMatch(/cash runs out/i);
     expect(d.primaryConcernClass).toBe("MISSING_CRITICAL_EVIDENCE");
   });
   it("the card labels it as a confirmation, not a confidence", () => {
     const html = renderToStaticMarkup(createElement(OwnerDecisionCard, { decision: d }));
-    expect(html).toContain("Confirm the figures first");
+    expect(html).toContain("Refresh the analysis first");
     expect(html).toContain("Last flagged");
     expect(html).not.toContain("High confidence");
   });
@@ -225,7 +230,7 @@ describe("12. missing or stale evidence is never read as 'resolved'", () => {
   it("the card does not claim 'nothing open' without the qualifier", () => {
     const html = renderToStaticMarkup(createElement(OwnerDecisionCard, { decision: resolveOwnerDecision(input([], { staleDomains: ["sales"] })) }));
     expect(html).toContain("owner-decision-empty-policy");
-    expect(html).toMatch(/out of date/);
+    expect(html).toMatch(/out[- ]of[- ]date/);
   });
 });
 

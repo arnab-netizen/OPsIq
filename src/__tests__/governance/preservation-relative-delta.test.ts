@@ -5,6 +5,10 @@
  * value (not the real one) so the test cannot pass merely because today's committed number and today's
  * real main value happen to agree — changing the synthetic main value must still produce
  * synthetic + delta, or the test fails.
+ *
+ * The ledger (docs/opsiq/ux/PRESERVATION_BRANCH_DELTAS.json) lists only genuine non-zero BRANCH-owned deltas. Once a
+ * branch merges and the baseline is re-anchored to main, its entries are retired, so an EMPTY ledger is a valid
+ * governed state: every invariant below is generic over zero, one or many entries and none requires a particular path.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
@@ -88,24 +92,61 @@ describe("R10 P2-12 — preservation baseline entries are a proven relative delt
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  // Mutation proof: this must NOT be true merely because today's real numbers agree. Using a SYNTHETIC
-  // accepted-main value (never the real 4) proves the formula itself — not today's specific arithmetic —
-  // is what the test checks. If OPTION 1 relative-delta semantics were abandoned for a hard-coded branch
-  // absolute (e.g. always asserting `=== 7`), this synthetic case would still need to read as X + delta,
-  // and a test hard-coded to 7 would fail it.
-  it("the formula holds for a synthetic accepted-main value, not just today's real one (proves relative semantics, not a lucky number)", () => {
+  // Mutation proof: this must NOT be true merely because today's real numbers agree. Synthetic accepted-main values
+  // (never the real ones) prove the formula itself -- not a lucky number -- is what the ledger is checked against.
+  it("the formula holds for synthetic accepted-main values and deltas, independent of any real ledger entry", () => {
     for (const syntheticMain of [0, 1, 4, 10, 25]) {
-      for (const e of deltas.entries) {
-        expect(expectedBranchValue(syntheticMain, e.branchDelta)).toBe(syntheticMain + e.branchDelta);
+      for (const delta of [-2, -1, 1, 3]) {
+        expect(expectedBranchValue(syntheticMain, delta)).toBe(syntheticMain + delta);
       }
+      // If main's accepted value moves forward independently, the branch value moves with it (relative, not absolute).
+      expect(expectedBranchValue(syntheticMain + 1, 3)).toBe(expectedBranchValue(syntheticMain, 3) + 1);
     }
-    // And explicitly: if main's accepted value moves (e.g. main itself adds a file to /owner/cockpit
-    // independently of this branch, so acceptedMainValue becomes 5), the correct committed branch value
-    // becomes 5 + 3 = 8, never a value still hard-coded from when main's accepted value was 4.
-    const cockpit = deltas.entries.find((e) => e.path.includes("/owner/cockpit"))!;
-    const mainMovedForward = cockpit.acceptedMainValue + 1;
-    expect(expectedBranchValue(mainMovedForward, cockpit.branchDelta)).toBe(cockpit.expectedBranchValue + 1);
-    expect(expectedBranchValue(mainMovedForward, cockpit.branchDelta)).not.toBe(cockpit.expectedBranchValue);
+  });
+
+  // The invariants as a pure function, so they are proven on synthetic ledgers of ANY size (zero, one, many) and
+  // proven to REJECT bad ones -- an empty ledger being valid must never mean the checks are vacuous.
+  function ledgerProblems(entries: DeltaEntry[]): string[] {
+    const problems: string[] = [];
+    const seen = new Set<string>();
+    for (const e of entries) {
+      if (e.expectedBranchValue !== expectedBranchValue(e.acceptedMainValue, e.branchDelta)) problems.push(`${e.path}: arithmetic`);
+      if (e.branchDelta === 0) problems.push(`${e.path}: zero delta`);
+      if (seen.has(e.path)) problems.push(`${e.path}: duplicate`);
+      seen.add(e.path);
+    }
+    return problems;
+  }
+  const entry = (path: string, main: number, delta: number, expected = main + delta): DeltaEntry => ({
+    path, acceptedMainValue: main, acceptedMainSha: "a".repeat(40), branchDelta: delta, expectedBranchValue: expected,
+    reason: "synthetic branch-owned delta used to prove the ledger invariants",
+  });
+
+  it("the real ledger satisfies the generic invariants (zero, one or many entries are all valid)", () => {
+    expect(ledgerProblems(deltas.entries)).toEqual([]);
+  });
+
+  it("an empty ledger is a valid governed state; one and many valid entries are valid", () => {
+    expect(ledgerProblems([])).toEqual([]);
+    expect(ledgerProblems([entry("ownerPageRoutes[route=/x].componentTreeFileCount", 3, 2)])).toEqual([]);
+    expect(
+      ledgerProblems([
+        entry("ownerPageRoutes[route=/x].componentTreeFileCount", 3, 2),
+        entry("businessContextClassificationCounts.WORKSPACE_ONLY", 3, -2),
+        entry("cockpitExternalFeeds[key=GET /api/y].callSiteCount", 0, 1),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("still REJECTS a zero-delta entry, wrong arithmetic and a duplicated path", () => {
+    expect(ledgerProblems([entry("ownerPageRoutes[route=/x].componentTreeFileCount", 3, 0)])).toEqual([
+      "ownerPageRoutes[route=/x].componentTreeFileCount: zero delta",
+    ]);
+    expect(ledgerProblems([entry("ownerPageRoutes[route=/x].componentTreeFileCount", 3, 2, 9)])).toEqual([
+      "ownerPageRoutes[route=/x].componentTreeFileCount: arithmetic",
+    ]);
+    const dup = entry("ownerPageRoutes[route=/x].componentTreeFileCount", 3, 2);
+    expect(ledgerProblems([dup, dup])).toEqual(["ownerPageRoutes[route=/x].componentTreeFileCount: duplicate"]);
   });
 
   it("every ledger entry names the main SHA the accepted value was read from (auditable, not asserted from memory)", () => {

@@ -94,9 +94,9 @@ export interface FirstRunContext {
   goalFamilies: readonly string[];
 }
 
-async function firstRealBusiness(workspaceId: string): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
+async function firstRealBusiness(workspaceId: string, businessId?: string): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
   const row = await db.ownerBusiness.findFirst({
-    where: { workspaceId, isActive: true, isFixtureBusiness: false },
+    where: { workspaceId, isActive: true, isFixtureBusiness: false, ...(businessId ? { id: businessId } : {}) },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true, name: true, businessType: true, currency: true, createdAt: true },
   });
@@ -138,11 +138,17 @@ async function trustedInteractionFacts(workspaceId: string, businessId: string):
   return facts;
 }
 
-export async function getFirstRunContext(workspaceId: string): Promise<FirstRunContext> {
+/**
+ * `businessId` is the owner's ACTIVE business (the header's). When given, the context is about exactly that business and a
+ * business that is not an active, non-fixture business of this workspace is refused — never silently replaced by the
+ * oldest one. When omitted (login landing, server-side callers) the oldest real business is used, as before.
+ */
+export async function getFirstRunContext(workspaceId: string, businessId?: string): Promise<FirstRunContext> {
   const [workspace, business] = await Promise.all([
     db.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } }),
-    firstRealBusiness(workspaceId),
+    firstRealBusiness(workspaceId, businessId),
   ]);
+  if (businessId && !business) throw new NotFoundError("OwnerBusiness", businessId);
 
   let firstReadSufficient = false;
   let evidence: Awaited<ReturnType<typeof firstRunEvidence>> = { headSnapshotId: null, headPeriod: null, head: null, runOnHead: null, hasAnyRun: false, staleReason: null };

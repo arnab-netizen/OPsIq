@@ -2,6 +2,7 @@
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
   "last_updated": "2026-08-08",
+  "commercial_minimum": "IMPLEMENTED_PENDING_REVIEW 2026-10-17 — branch claude/epic-ride-0hyyq1 from main e5749ffb; Paddle MoR checkout (/pay + Paddle.js), verified webhooks, 7-day past_due grace + payment-method recovery, cancel; real-Postgres tests 17/17, migration 20261017180000 proven from zero (NOT applied to production); paywall OFF by default; real Paddle sandbox E2E BLOCKED_BY_EXECUTION_ENVIRONMENT (runbook: docs/opsiq/commercial/SANDBOX_E2E_RUNBOOK.md); live Paddle approval NOT_STARTED; PRICING_DECISION_REQUIRED; NOT merged, NOT deployed.",
   "hostile_audit_remediation": "IN_PROGRESS 2026-10-16 — verdict OWNER_BETA_BLOCKED_BY_P1; CB1_OWNER_001_READY=NO; CB1_EXPANSION_GATE=CLOSED. Branch claude/cool-goldberg-78h8yp from main d641afc3: D1/D2/D3/D4/D9 fixed + P2 set on branch, NOT merged, NOT deployed, production re-audit NOT run. Record: docs/opsiq/status/HOSTILE_AUDIT_REMEDIATION_2026-10-16.md. No gate line may be claimed before the post-deploy re-audit; merge needs exact-SHA owner authorization.",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",

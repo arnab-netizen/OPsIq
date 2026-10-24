@@ -39,7 +39,8 @@ export function newIdempotencyKey(): string {
 }
 
 export const firstRunApi = {
-  context: () => call<FirstRunContext>(""),
+  /** `businessId` = the active business; omitted only when the owner has no business yet. */
+  context: (businessId?: string | null) => call<FirstRunContext>(businessId ? `?businessId=${encodeURIComponent(businessId)}` : ""),
   createBusiness: (body: { name?: string; businessType: string; currency: string }) =>
     post<{ business: { id: string; name: string; businessType: string; currency: string }; replayed: boolean }>("/business", body),
   result: (businessId: string) => call<FirstMoneyReadView>(`/result?businessId=${encodeURIComponent(businessId)}`),

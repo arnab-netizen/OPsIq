@@ -10,6 +10,8 @@
 import { useEffect, useRef, useState } from "react";
 import { decisionHasActionableStepIn, type CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { domainDataGapNotice } from "@/domain/owner-spine/owner-imperatives";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 
 /** The anchor every domain page's main-target block carries (see OwnerDecisionCard's go link). */
 export const OWNER_MAIN_TARGET_ANCHOR = "main-target";
@@ -86,7 +88,8 @@ export function DomainMainTargetContext({ domain, businessId, revision }: { doma
     <div ref={ref} id={OWNER_MAIN_TARGET_ANCHOR} data-testid="domain-main-target" className="rounded-md border-2 border-foreground/10 bg-card p-3 text-sm">
       <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Your overall main target (the same one on Home)</div>
       <div className="mt-1 font-semibold text-foreground">{primary.title}</div>
-      {primary.explanation && <p className="mt-0.5 text-xs text-muted-foreground">{primary.explanation}</p>}
+      {primary.explanation && <p className="mt-0.5 text-xs text-muted-foreground">{presentBankBalanceActionText(primary.findingCode, primary.explanation)}</p>}
+      <BankBalanceEntryLink code={primary.findingCode} className="mt-2" />
     </div>
   );
 }

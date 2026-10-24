@@ -539,7 +539,7 @@ function deriveNextAction(
         return {
           decisionType: "COLLECT_EVIDENCE",
           topConstraint: "Bank balance not confirmed",
-          nextBestAction: "Confirm your bank balance (Guided setup or Cashflow; enter 0 if you hold none) so OpsIQ can confirm your total cash before clearing growth or scale spending.",
+          nextBestAction: "Enter your bank balance (the total across your bank accounts; enter 0 if you hold none) so OpsIQ can confirm your total cash before clearing growth or scale spending.",
         };
       }
       return {
