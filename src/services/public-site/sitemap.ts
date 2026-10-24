@@ -21,6 +21,8 @@ export function buildSitemap(resources: ResourceDocument[]): MetadataRoute.Sitem
     { url: absoluteUrl("/agency"), changeFrequency: "monthly", priority: 0.8 },
     { url: absoluteUrl("/privacy"), changeFrequency: "monthly", priority: 0.3 },
     { url: absoluteUrl("/terms"), changeFrequency: "monthly", priority: 0.3 },
+    { url: absoluteUrl("/pricing"), changeFrequency: "monthly", priority: 0.5 },
+    { url: absoluteUrl("/refund-policy"), changeFrequency: "monthly", priority: 0.3 },
   ];
 
   const resourceEntries: MetadataRoute.Sitemap = resources.map((doc) => ({
