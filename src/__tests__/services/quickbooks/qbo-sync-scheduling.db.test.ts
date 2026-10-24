@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { connectQbo, envFor, makeFakeIntuit, monthKeys, seedQboTenant, type FakeIntuit, type MonthBooks } from "@/__tests__/test-helpers/qbo-db-fixtures";
-import { runQboProducerForTest } from "@/__tests__/test-helpers/qbo-task-cleanup";
+import { qboProducerScope } from "@/__tests__/test-helpers/qbo-task-cleanup";
 import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 import { QboProviderError } from "@/domain/quickbooks/qbo-errors";
@@ -34,13 +34,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     await disconnectQboConnection({ workspaceId: c.ws, actorId: c.actor, connectionId: cc.connectionId });
     await markQboReauthorizationRequired({ workspaceId: d.ws, connectionId: cd.connectionId, reasonCode: "TOKEN_REJECTED" });
     const now = new Date();
-    const first = await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
+    const first = await enqueueDueQboSyncTasks(now, qboProducerScope());
     expect(first.enqueued).toBeGreaterThanOrEqual(2);
     const key = (id: string) => qboSyncKey(id, "daily", now);
     expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: [key(ca.connectionId), key(cb.connectionId)] } } })).toBe(2);
     expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: [key(cc.connectionId), key(cd.connectionId)] } } })).toBe(0);
     // re-running creates nothing new for these connections (global counts are not asserted: other suites share this database)
-    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
+    await enqueueDueQboSyncTasks(now, qboProducerScope());
     expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: [key(ca.connectionId), key(cb.connectionId)] } } })).toBe(2);
     const t = await db.scheduledTask.findFirstOrThrow({ where: { idempotencyKey: key(ca.connectionId) } });
     expect(t).toMatchObject({ taskName: TASK_NAME_QBO_SYNC, workspaceId: a.ws, maxAttempts: 3 });
@@ -59,7 +59,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     const now = new Date();
     // an explicit page budget: the default (5,000 connections) is a production bound, and this shared test database holds
     // connections other files seeded, so the assertion must not depend on how many of those there are
-    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now, { maxPages: 10_000 }));
+    await enqueueDueQboSyncTasks(now, qboProducerScope({ maxPages: 10_000 }));
     const have = await db.scheduledTask.count({ where: { idempotencyKey: { in: ids.map((id) => qboSyncKey(id, "daily", now)) } } });
     expect(have).toBe(extra);
     // a few hundred due tasks must not linger for suites that drain the shared scheduler table in batches
@@ -71,16 +71,25 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     for (let i = 0; i < 6; i++) await connectQbo(await seedQboTenant());
     void t;
     const now = new Date();
-    // both invocations inside ONE cleanup scope: removing the first one's tasks in between would legitimately re-select them
-    const { r1, r2 } = await runQboProducerForTest(async () => ({
-      r1: await enqueueDueQboSyncTasks(now, { pageSize: 2, maxPages: 2 }),
-      r2: await enqueueDueQboSyncTasks(now, { pageSize: 2, maxPages: 2 }),
-    }));
+    const scope = qboProducerScope({ pageSize: 2, maxPages: 2 });
+    const r1 = await enqueueDueQboSyncTasks(now, scope);
+    const r2 = await enqueueDueQboSyncTasks(now, scope);
     // each invocation is bounded by its budget (pageSize x maxPages) ...
     expect(r1.enqueuedConnectionIds.length).toBeLessThanOrEqual(4);
     expect(r2.enqueuedConnectionIds.length).toBeLessThanOrEqual(4);
     // ... and the second never selects a connection the first already enqueued (progress, no repetition)
     expect(r1.enqueuedConnectionIds.filter((id) => r2.enqueuedConnectionIds.includes(id))).toEqual([]);
+    // run to exhaustion: no id is ever enqueued twice, the loop terminates, and every active connection in scope ends up covered
+    const all = [...r1.enqueuedConnectionIds, ...r2.enqueuedConnectionIds];
+    for (let i = 0; i < 500; i++) {
+      const r = await enqueueDueQboSyncTasks(now, scope);
+      if (r.enqueuedConnectionIds.length === 0) break;
+      all.push(...r.enqueuedConnectionIds);
+    }
+    expect(new Set(all).size).toBe(all.length);
+    const active = await db.qboConnection.findMany({ where: { workspaceId: { in: qboProducerScope().workspaceIds }, status: "ACTIVE" }, select: { id: true } });
+    const keys = active.map((c) => qboSyncKey(c.id, "daily", now));
+    expect(await db.scheduledTask.count({ where: { idempotencyKey: { in: keys } } })).toBe(active.length);
   }, 120_000);
 
   it("duplicate enqueue of the same logical task yields one row (idempotency key)", async () => {
@@ -156,7 +165,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     expect((await db.qboConnection.findUniqueOrThrow({ where: { id: b.connectionId } })).status).toBe("REAUTH_REQUIRED");
     // producers skip it from now on
     const now = new Date(Date.now() + 86_400_000);
-    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
+    await enqueueDueQboSyncTasks(now, qboProducerScope());
     expect(await db.scheduledTask.count({ where: { idempotencyKey: qboSyncKey(b.connectionId, "daily", now) } })).toBe(0);
   });
 
@@ -291,7 +300,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
       const { connectionId } = await connectQbo(t);
       const armedAt = new Date(Date.now() - 3_600_000);
       await db.qboSyncState.create({ data: { connectionId, workspaceId: t.ws, businessId: t.biz, lifecycle: "SYNCED", webhookPendingAt: armedAt } });
-      await runQboProducerForTest(() => enqueueDueQboSyncTasks(new Date()));
+      await enqueueDueQboSyncTasks(new Date(), qboProducerScope());
       expect(await db.scheduledTask.count({ where: { idempotencyKey: qboSyncKey(connectionId, "wh", armedAt) } })).toBe(1);
     });
   });

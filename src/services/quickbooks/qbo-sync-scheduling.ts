@@ -67,6 +67,8 @@ export interface QboProducerResult {
 export interface QboProducerLimits {
   pageSize?: number;
   maxPages?: number;
+  /** Restrict the scan to these workspaces (operational / test scoping). Omitted in production: every active connection is considered. */
+  workspaceIds?: string[];
 }
 
 /**
@@ -83,6 +85,8 @@ export async function enqueueDueQboSyncTasks(now: Date = new Date(), limits: Qbo
   const pageSize = limits.pageSize ?? QBO_PRODUCER_PAGE_SIZE;
   const maxPages = limits.maxPages ?? QBO_PRODUCER_MAX_PAGES;
   const scheduler = new DatabaseSchedulerProvider();
+  const scoped = limits.workspaceIds !== undefined;
+  const scopeIds = limits.workspaceIds ?? [];
   const dailyKeyPrefix = (id: string) => qboSyncKey(id, "daily", now);
   const day = now.toISOString().slice(0, 10);
   let enqueued = 0;
@@ -95,6 +99,7 @@ export async function enqueueDueQboSyncTasks(now: Date = new Date(), limits: Qbo
       SELECT c.id, c.workspace_id
       FROM qbo_connections c
       WHERE c.status = 'ACTIVE' AND c.id > ${cursor}::uuid
+        AND (${!scoped} OR c.workspace_id = ANY(${scopeIds}::uuid[]))
         AND NOT EXISTS (
           SELECT 1 FROM scheduled_tasks t
           WHERE t.idempotency_key = 'qbo-sync:' || c.id::text || ':daily:' || ${day}
@@ -124,6 +129,7 @@ export async function enqueueDueQboSyncTasks(now: Date = new Date(), limits: Qbo
       FROM qbo_connections c
       JOIN qbo_sync_state s ON s.connection_id = c.id
       WHERE c.status = 'ACTIVE' AND s.webhook_pending_at IS NOT NULL AND c.id > ${cursor}::uuid
+        AND (${!scoped} OR c.workspace_id = ANY(${scopeIds}::uuid[]))
       ORDER BY c.id
       LIMIT ${pageSize}
     `;

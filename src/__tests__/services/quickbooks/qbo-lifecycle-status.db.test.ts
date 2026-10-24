@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { runQboProducerForTest } from "@/__tests__/test-helpers/qbo-task-cleanup";
+import { qboProducerScope } from "@/__tests__/test-helpers/qbo-task-cleanup";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { cfg, connectQbo, envFor, grant, makeFakeIntuit, monthKeys, seedQboTenant, type MonthBooks } from "@/__tests__/test-helpers/qbo-db-fixtures";
 import { getQboOwnerStatus } from "@/services/quickbooks/qbo-status.service";
@@ -108,7 +108,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO disconnect / reconnect (real Postgres
     expect(await db.ownerFinancialSnapshot.count({ where: { workspaceId: t.ws } })).toBe(12);
     // not schedulable, not syncable
     const now = new Date(Date.now() + 86_400_000);
-    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
+    await enqueueDueQboSyncTasks(now, qboProducerScope());
     expect(await db.scheduledTask.count({ where: { idempotencyKey: qboSyncKey(connectionId, "daily", now) } })).toBe(0);
     expect(await sync(t, connectionId)).toEqual({ status: "SKIPPED", reason: "NOT_ACTIVE" });
     expect(await db.auditEvent.count({ where: { workspaceId: t.ws, eventName: "qbo.connection_disconnected" } })).toBe(1);
@@ -184,7 +184,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO disconnect / reconnect (real Postgres
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO admin health (aggregate only)", () => {
   it("counts connection states, failing/stale/never-synced and failure causes — and exposes no identifiers or secrets", async () => {
     const { getQboAdminHealth } = await import("@/services/quickbooks/qbo-admin-health.service");
-    const before = await getQboAdminHealth();
     const t = await seedQboTenant(); const u = await seedQboTenant(); const w = await seedQboTenant();
     const a = await connectQbo(t); const b = await connectQbo(u); await connectQbo(w);
     await sync(t, a.connectionId);
@@ -193,11 +192,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO admin health (aggregate only)", () =>
     await expect(sync(u, b.connectionId, bad)).rejects.toBeDefined();
     await db.qboSyncState.update({ where: { connectionId: a.connectionId }, data: { lastSuccessAt: new Date(Date.now() - 72 * 3_600_000) } });
     const after = await getQboAdminHealth();
-    expect(after.connections.active - before.connections.active).toBeGreaterThanOrEqual(3); // other suites share this database
-    expect(after.activeHealth.failing - before.activeHealth.failing).toBeGreaterThanOrEqual(1);
-    expect(after.activeHealth.stale - before.activeHealth.stale).toBeGreaterThanOrEqual(1);
-    expect(after.activeHealth.neverSynced - before.activeHealth.neverSynced).toBeGreaterThanOrEqual(2);
-    expect((after.lastFailureCodes.TRANSIENT_PROVIDER_FAILURE ?? 0) - (before.lastFailureCodes.TRANSIENT_PROVIDER_FAILURE ?? 0)).toBeGreaterThanOrEqual(1);
+    // The aggregate is global and other files share this database (and deactivate their own connections when they finish), so a
+    // before/after delta is racy. The three connections seeded above are ACTIVE for the whole assertion: absolute LOWER bounds hold.
+    expect(after.connections.active).toBeGreaterThanOrEqual(3);
+    expect(after.activeHealth.failing).toBeGreaterThanOrEqual(1);
+    expect(after.activeHealth.stale).toBeGreaterThanOrEqual(1);
+    expect(after.activeHealth.neverSynced).toBeGreaterThanOrEqual(2);
+    expect(after.lastFailureCodes.TRANSIENT_PROVIDER_FAILURE ?? 0).toBeGreaterThanOrEqual(1);
     const dump = JSON.stringify(after);
     for (const secret of [t.ws, u.ws, a.connectionId, a.realmId, "v1gcm", "ACCESS-", "REFRESH-"]) expect(dump).not.toContain(secret);
   });

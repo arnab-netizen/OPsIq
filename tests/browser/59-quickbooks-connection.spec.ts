@@ -6,7 +6,11 @@
  * Connect call and Intuit redirect, no raw-JSON callback UX (denial round-trip), connecting/connected/stale/error/reconnect/
  * disconnected states, disconnect with confirmation, reconnect, phone-width layout and accessibility of the card.
  *
- * Requires the server to run with QUICKBOOKS_CLIENT_ID / _CLIENT_SECRET / _REDIRECT_URI and QUICKBOOKS_ENVIRONMENT=production (a real business never connects a Sandbox company; the server enforces it).
+ * Two modes, selected by the server's QUICKBOOKS_ENVIRONMENT (the same variable the spec process is started with):
+ *   production  the full owner lifecycle against a real (non-test) business. The redirect URI must be an https host name (a
+ *               production-config rule); Intuit is never contacted, the navigation to it is intercepted.
+ *   sandbox     a Sandbox company only attaches to a TEST business, and test businesses are hidden from owners, so an ordinary
+ *               business is NOT offered Connect and the card says why; a direct POST is refused by the server.
  */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -16,6 +20,7 @@ import { authenticateUser } from "./helpers";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "./e2e-fixtures";
 
 const connString = (process.env.DATABASE_URL ?? "").replace(/\?.*$/, "");
+const ENV = process.env.QUICKBOOKS_ENVIRONMENT === "sandbox" ? "sandbox" : "production";
 const REALM = `9${Date.now().toString().slice(-9)}`;
 let client: pg.Client;
 let businessId = "";
@@ -43,6 +48,11 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
   test.beforeAll(async () => {
     client = new pg.Client({ connectionString: connString });
     await client.connect();
+  });
+  test.beforeEach(({}, ti) => {
+    const sandboxOnly = ti.title.startsWith("an ordinary (non-test) business");
+    if (ENV === "sandbox" && !sandboxOnly) ti.skip(true, "full owner lifecycle runs against a production-configured server");
+    if (ENV !== "sandbox" && sandboxOnly) ti.skip(true, "runs against a Sandbox-configured server");
   });
   test.afterAll(async () => {
     if (connectionId) {
@@ -84,7 +94,7 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
     const connectCall = page.waitForRequest((r) => r.url().includes("/api/owner/integrations/quickbooks/connect") && r.method() === "POST");
     await page.getByTestId("qbo-connect").click();
     const body = (await connectCall).postDataJSON();
-    expect(body).toEqual({ businessId, environment: "production" });
+    expect(body).toEqual({ businessId, environment: ENV });
     await page.waitForURL(/appcenter\.intuit\.com/);
     const u = new URL(intuitUrl);
     expect(u.searchParams.get("scope")).toBe("com.intuit.quickbooks.accounting");
@@ -94,9 +104,25 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
     test.info().annotations.push({ type: "state", description: "issued" });
   });
 
+  test("an ordinary (non-test) business is NOT offered Connect against a Sandbox deployment, and the card says why", async ({ page }) => {
+    await authenticateUser(page, E2E_OWNER.email, E2E_OWNER.password);
+    const list = await page.request.get("/api/owner/businesses");
+    const biz = (await list.json()) as { businesses?: Array<{ id: string }> } | Array<{ id: string }>;
+    const visibleId = (Array.isArray(biz) ? biz : biz.businesses ?? [])[0]?.id ?? "";
+    expect(visibleId).not.toBe("");
+    await openMyBusiness(page);
+    await expect(page.getByTestId("qbo-blocked")).toContainText(/test business/i);
+    await expect(page.getByTestId("qbo-connect")).toHaveCount(0);
+    // and the server refuses a direct call too (no UI involved)
+    const direct = await page.request.post("/api/owner/integrations/quickbooks/connect", { data: { businessId: visibleId, environment: "sandbox" } });
+    expect(direct.status()).toBe(400);
+    expect(JSON.stringify(await direct.json())).toMatch(/test business/i);
+    expect(await sql(`SELECT 1 FROM qbo_connections WHERE business_id = $1`, [visibleId]).then((r) => r.rowCount)).toBe(0);
+  });
+
   test("callback never shows raw JSON: a denial round-trip lands back on My Business with a plain sentence", async ({ page }) => {
     await authenticateUser(page, E2E_OWNER.email, E2E_OWNER.password);
-    const start = await page.request.post("/api/owner/integrations/quickbooks/connect", { data: { businessId, environment: "production" } });
+    const start = await page.request.post("/api/owner/integrations/quickbooks/connect", { data: { businessId, environment: ENV } });
     expect(start.status()).toBe(200);
     const state = new URL(((await start.json()) as { authorizationUrl: string }).authorizationUrl).searchParams.get("state") as string;
     // Intuit redirects the browser to the callback PAGE (the registered redirect URI), not to the JSON API.
@@ -126,7 +152,7 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
     connectionId = randomUUID();
     await sql(
       `INSERT INTO qbo_connections (id, workspace_id, business_id, environment, realm_id, status, connected_by_id, connected_at, version, updated_at)
-       VALUES ($1,$2,$3,'production',$4,'ACTIVE',$5, now(), 1, now())`,
+       VALUES ($1,$2,$3,'${ENV}',$4,'ACTIVE',$5, now(), 1, now())`,
       [connectionId, E2E_WORKSPACE_ID, businessId, REALM, E2E_OWNER.userId],
     );
 
