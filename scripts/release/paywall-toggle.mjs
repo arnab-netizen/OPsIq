@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * Entry point for billing:paywall:enable / billing:paywall:disable.
- * Usage: node scripts/release/paywall-toggle.mjs <enable|disable> --expected-main-sha=<sha> --confirm="..." --production-url=https://... [--manifest=path] [--dry-run]
+ * Usage: node scripts/release/paywall-toggle.mjs <enable|disable> --expected-main-sha=<sha> --confirm="..." [--production-url=https://opsiq.solutions (pinned)] [--manifest=path] [--dry-run]
  * Secrets come only from the process environment: VERCEL_TOKEN (required), DATABASE_URL (enable: read-only plan check).
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { VERCEL_API, execute, parseArgs, redact } from "./lib/paywall-release.mjs";
+import { PRODUCTION_ORIGIN, VERCEL_API, execute, parseArgs, redact } from "./lib/paywall-release.mjs";
 
 const mode = process.argv[2];
 const args = parseArgs(process.argv.slice(3));
@@ -19,7 +19,9 @@ const io = {
   readFile: (p) => (existsSync(p) ? readFileSync(p, "utf8") : null),
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   http: async (url) => {
-    const res = await fetch(url, { redirect: "follow" });
+    // The Production origin is pinned: refuse any other origin, and never follow a redirect off it.
+    if (new URL(url).origin !== PRODUCTION_ORIGIN) throw new Error(`refusing request outside the pinned Production origin: ${new URL(url).origin}`);
+    const res = await fetch(url, { redirect: "manual" });
     return { status: res.status, text: await res.text() };
   },
   vercel: async (method, path, body) => {

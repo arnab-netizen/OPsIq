@@ -47,23 +47,33 @@ Prerequisites in the shell: `VERCEL_TOKEN` (never stored in the repo), and for t
 ```sh
 # Rehearsal: same read-only preflights, zero mutations, prints the exact two requests (no secrets)
 npm run billing:paywall:enable -- --expected-main-sha=<40-char SHA> \
-  --confirm="ENABLE PRODUCTION PAYWALL" --production-url=https://<production host> \
+  --confirm="ENABLE PRODUCTION PAYWALL" \
   --manifest=<path> --dry-run
 
 # Real run
 npm run billing:paywall:enable -- --expected-main-sha=<40-char SHA> \
-  --confirm="ENABLE PRODUCTION PAYWALL" --production-url=https://<production host> \
+  --confirm="ENABLE PRODUCTION PAYWALL" \
   --manifest=<path>
 ```
 
 Preflights (every one fails closed; a real run also refuses if any check was skipped):
 
-1. repository is `arnab-netizen/OPsIq` · 2. clean working tree · 3. `origin/main` and local `HEAD` equal the expected SHA · 4. Vercel project reachable · 5. flag currently not `on`, present only on the Production target · 6. Production `/api/health` OK · 7. `/api/readiness` ready and migration history current · 8. Production `/api/internal/build-info` serves the expected SHA with environment `production` · 9. `/pricing` no longer says "to be announced" · 10. `/pay` available · 11. all five Paddle variables present for Production · 12. approval manifest complete and bound to this SHA · 13. `PADDLE_ENV` is live · 14. `PADDLE_PRICE_ID` equals the manifest's live price id · 15. exactly one active Plan carries that price id (single READ ONLY query, host must be the Production database) · 16. `RELEASE_BLOCKERS.json` has nothing open.
+1. repository is `arnab-netizen/OPsIq` · 2. clean working tree · 3. `origin/main` and local `HEAD` equal the expected SHA · 4. Vercel project identity proven (id, name, linked repo, Production domain) and reachable · 5. flag currently not `on`, present only on the Production target · 6. Production `/api/health` OK · 7. `/api/readiness` ready and migration history current · 8. Production `/api/internal/build-info` serves the expected SHA with environment `production` · 9. `/pricing` no longer says "to be announced" · 10. `/pay` available · 11. all five Paddle variables present for Production · 12. approval manifest complete and bound to this SHA · 13. `PADDLE_ENV` is live · 14. `PADDLE_PRICE_ID` equals the manifest's live price id · 15. exactly one active Plan carries that price id (single READ ONLY query, host must be the Production database) · 16. `RELEASE_BLOCKERS.json` has nothing open.
 
 Mutations (exactly two, in order, nothing else):
 
 1. Set `BILLING_PAYWALL_ENFORCEMENT=on` on the **Production** target only.
-2. Create a **Production deployment of the exact Git commit** through the Vercel deployments API with a `gitSource` (`github`, `arnab-netizen/OPsIq`, `ref: main`, `sha: <expected>`). Local files are never uploaded, so a dirty or divergent tree cannot reach Production (`LOCAL_TREE_DEPLOY_RISK=NO`). The tool waits for READY, checks the deployment's Git SHA and target, then checks Production serves the SHA. If step 2 fails, step 1 is restored to its previous value and the tool reports it.
+2. Create a **Production deployment of the exact Git commit** through the Vercel deployments API with a `gitSource` (`github`, `arnab-netizen/OPsIq`, `ref: main`, `sha: <expected>`, `target: production`). Local files are never uploaded, so a dirty or divergent tree cannot reach Production (`LOCAL_TREE_DEPLOY_RISK=NO`). The tool waits for READY, checks that every commit the deployment reports equals the expected SHA and that the target is production, then checks Production serves the SHA.
+
+**Failure compensation (verified, never a latent ON).** If step 2 fails for any reason (create error, deployment ERROR/CANCELED, wrong commit, Production not serving the SHA), the tool undoes step 1 and proves the result by reading the flag back:
+- flag existed: restored to its exact previous value (verified);
+- flag was absent: the newly created Production record is deleted (verified absent); if deletion cannot be verified it is set to `off` (verified);
+- if neither can be verified the tool exits **3** with `UNCOMPENSATED_DANGER`, prints no success message, and you must fix the variable in the Vercel dashboard immediately.
+A dry run performs no mutation and no compensation. Disable never re-enables: if its deploy fails the flag stays `off` (the safe direction) and the tool prints `REDEPLOY_REQUIRED`.
+
+**Target identity and origin are pinned.** The tool refuses unless the Vercel project proves it is the OpsIQ project (id `prj_LzPZ9kyIq2nna8F6MZtpt7MZUZTb`, name `o-ps-iq`, linked to `arnab-netizen/OPsIq`, and `opsiq.solutions` is one of its verified Production domains). There is no `--project-id` override. All health, readiness, build-info, pricing and `/pay` checks go only to `https://opsiq.solutions` (any other `--production-url` is rejected, redirects are not followed).
+
+**Vercel wire model (verified against the current REST reference).** List `GET /v10/projects/{id}/env`; create `POST /v10/projects/{id}/env`; edit `PATCH /v9/projects/{id}/env/{envId}`; delete `DELETE /v9/projects/{id}/env/{envId}`; read one `GET /v1/projects/{id}/env/{envId}`; deployments `POST /v13/deployments`. Variable `type` is `system | encrypted | plain | sensitive`; the 2026 *Config* variable (readable, encrypted at rest) is `type: "encrypted"` (response `visibility: "config"`) and *Secret* is `type: "sensitive"` (`visibility: "secret"`, write-only). `BILLING_PAYWALL_ENFORCEMENT` is configuration, so it is created as `encrypted` and is deliberately not `sensitive` so the tool can read it back to verify state.
 
 The tool never touches Paddle, the database (beyond the one read-only plan check), subscriptions or billing records, and prints no secret.
 
@@ -80,7 +90,7 @@ Note: the project's `ignoreCommand` (`scripts/vercel-ignore-build.mjs`) fails op
 
 ```sh
 npm run billing:paywall:disable -- --expected-main-sha=<known-good 40-char SHA> \
-  --confirm="DISABLE PRODUCTION PAYWALL" --production-url=https://<production host> [--dry-run]
+  --confirm="DISABLE PRODUCTION PAYWALL" [--dry-run]
 ```
 
 Needs only `VERCEL_TOKEN`. Fewer checks: repository identity, clean tree, the SHA exists on `origin/main`, flag currently `on`. Two mutations only: set the flag to `off` (Production only) and redeploy that exact SHA from Git. It does not change subscriptions, Paddle or billing records; owners who already subscribed keep their subscription. Because disabling turns every gate into a no-op, no data is lost or blocked.
