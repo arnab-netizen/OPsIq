@@ -18,13 +18,25 @@ deployment refuses a test business. Owners cannot see test businesses in the UI,
 operator marks one business (`UPDATE owner_businesses SET is_fixture_business = true WHERE id = '<acceptance business>'`) before connecting.
 The branch-scoped Preview configuration must be created for THIS PR's branch (earlier branches' configuration does not apply).
 
+Preview-specific facts (verified against the project configuration and code):
+- The project enforces **Vercel Authentication on all Preview deployments**. The owner's browser (signed in to Vercel) can use the Preview, so the OAuth round trip works; a server-to-server call such as Intuit's **webhook cannot** reach a Preview unless a Vercel protection-bypass secret is added to the URL — which is why webhooks (step 8) are optional and deferred.
+- **Vercel cron does not run on Preview deployments.** There is no daily tick: syncs run from the post-connect hand-off and from `POST /api/owner/integrations/quickbooks/sync` (the "Refresh now" action). Steps below that say "cron tick" mean this call.
+- The Preview needs its **own isolated database holding the complete schema** (`prisma migrate deploy` from empty: all migrations through `20261024090000_qbo_v1_sync_evidence_provenance`) and must never point at production.
+- `OAUTH_TOKEN_ENCRYPTION_KEY` is a fresh Preview-only key: `openssl rand -base64 32` (must decode to at least 32 bytes). Enter it only in the Vercel dashboard as a Sensitive variable; never paste it into chat or a commit.
+
 ## 1. Connect / callback / encryption / realm binding
-Sign in → My Business → Connected accounts → **Connect QuickBooks** → authorize the Sandbox company.
-Expect: redirect back to My Business with "QuickBooks is connected"; status `Connecting` then `Importing`.
-Verify in the DB: `qbo_connections` has one ACTIVE row with the Sandbox realm; `qbo_connection_tokens` ciphertext starts `v1gcm.`.
+**A test business is hidden from the owner UI by design** (`listBusinesses` never returns `isFixtureBusiness = true` rows), so there is no
+"Connect QuickBooks" button for it. The acceptance path therefore drives the same governed API the button calls, in the signed-in browser
+session on the Preview:
+1. As the owner, open the Preview and sign in. Create the acceptance business (any ordinary flow), note its id, and mark it a test business on the
+   disposable database only: `UPDATE owner_businesses SET is_fixture_business = true WHERE id = '<id>';`
+2. In the browser console on the Preview origin: `fetch('/api/owner/integrations/quickbooks/connect',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({businessId:'<id>',environment:'sandbox'})}).then(r=>r.json())` → open the returned `authorizationUrl` and authorize the Sandbox company.
+3. Intuit redirects to the registered callback PAGE, which completes the connection and lands on My Business. (My Business shows the owner's *visible*
+   businesses, so confirm the result with `GET /api/owner/integrations/quickbooks/status?businessId=<id>` and the DB.)
+Expect status `CONNECTING` then `IMPORTING`. Verify in the DB: `qbo_connections` has one ACTIVE row with the Sandbox realm; `qbo_connection_tokens` ciphertext starts `v1gcm.`.
 
 ## 2. Four reports — capture the REAL 2026 shape (the one unverified item)
-Run the first sync (cron tick, or **Refresh now**). Expect `qbo_report_snapshots` rows for PROFIT_AND_LOSS, BALANCE_SHEET,
+Run the first sync (it starts after the connection is made; to repeat, `POST /api/owner/integrations/quickbooks/sync` with `{businessId}` — Preview has no cron tick). Expect `qbo_report_snapshots` rows for PROFIT_AND_LOSS, BALANCE_SHEET,
 AGED_RECEIVABLES, AGED_PAYABLES with `currency`, `accounting_basis` (`basis_source = REPORT_HEADER`), non-null `values.v` totals.
 If any month shows `last_error_code = REPORT_*`, the real response differs from the parser's structural assumptions:
 capture that report's JSON (GET `…/reports/<Name>?…` with a Sandbox token), **sanitize** (no names/ids), add it to
@@ -49,8 +61,8 @@ Try to connect the Sandbox company to a **real** (non-fixture) business: Connect
 ## 7. Stale analysis
 After a QuickBooks refresh changes a figure, the Money page shows newer figures and **no diagnosis is run automatically**; re-run analysis manually.
 
-## 8. Webhook (optional)
-Register `https://<preview-host>/api/webhooks/quickbooks` for the Sandbox app and set the verifier token. Change a Sandbox invoice:
+## 8. Webhook (optional; needs a protection bypass on Preview)
+The Preview is behind Vercel Authentication, so Intuit's server cannot reach it unless the project's "Protection Bypass for Automation" secret is appended to the URL as `?x-vercel-protection-bypass=<secret>` (a project-level setting change — owner decision). Without that, skip this step. Register `https://<preview-host>/api/webhooks/quickbooks` for the Sandbox app and set the verifier token. Change a Sandbox invoice:
 expect `qbo_sync_state.webhook_pending_at` set and one `qbo-sync` task with key `qbo-sync:<id>:wh:<marker arming instant, epoch ms>`. Record the payload format
 Intuit actually sends (legacy `eventNotifications` vs CloudEvents) and its signature header; adjust `qbo-webhook.ts` if the field names differ.
 
