@@ -48,8 +48,8 @@ function period(endDaysAgo: number, length = 20) {
   const end = new Date(Date.now() - endDaysAgo * DAY);
   return { periodStart: iso(new Date(end.getTime() - length * DAY)), periodEnd: iso(end) };
 }
-const UNSAFE = { cashInHand: 100, dailyCollections: 50, receivables: 20000, receivablesOverdue: 15000, payables: 40000, upcomingEmi: 15000, rentDue: 10000, salaryDue: 20000, vendorDue: 15000, taxDue: 5000, ownerWithdrawal: 4000 };
-const SAFE = { cashInHand: 5_000_000, dailyCollections: 50000, receivables: 1000, receivablesOverdue: 0, payables: 1000, upcomingEmi: 0, rentDue: 1000, salaryDue: 1000, vendorDue: 0, taxDue: 0, ownerWithdrawal: 0 };
+const UNSAFE = { cashInHand: 100, bankBalance: 0, dailyCollections: 50, receivables: 20000, receivablesOverdue: 15000, payables: 40000, upcomingEmi: 15000, rentDue: 10000, salaryDue: 20000, vendorDue: 15000, taxDue: 5000, ownerWithdrawal: 4000 };
+const SAFE = { cashInHand: 5_000_000, bankBalance: 0, dailyCollections: 50000, receivables: 1000, receivablesOverdue: 0, payables: 1000, upcomingEmi: 0, rentDue: 1000, salaryDue: 1000, vendorDue: 0, taxDue: 0, ownerWithdrawal: 0 };
 
 async function business(workspaceId: string, name: string) {
   const b = await createBusiness({ name, businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false }, actor, workspaceId);
@@ -147,7 +147,7 @@ describe("[db] future-dated periods are never trusted current evidence", () => {
     // Genuinely future figures (the period has not started) are not evidence at all (never read as current, never
     // "out of date", Round 8 Decision 1): the decision says they are not used, and nothing is built on them.
     expect(d.missingInformation.join(" ")).toMatch(/Finance figures entered for a period that has not started yet are not used/);
-    expect(d.missingInformation.join(" ")).not.toMatch(/Current figures for Finance — the latest ones are out of date/);
+    expect(d.missingInformation.join(" ")).not.toMatch(/A refreshed Finance analysis — the latest one rests on out-of-date figures/);
     expect(d.attention.some((t: any) => t.candidateId === "evidence_refresh:finance")).toBe(false);
     await teardownOwnerBusiness(b);
   });
@@ -163,7 +163,7 @@ describe("[db] future-dated periods are never trusted current evidence", () => {
     expect(await growthGate(ws, b)).toBe("blocked");
     const d = (await getOwnerHome(ws, b)).currentOwnerDecision!;
     expect(d.missingInformation.join(" ")).toMatch(/Cash flow figures entered for a period that has not started yet are not used/);
-    expect(d.missingInformation.join(" ")).not.toMatch(/Current figures for Cash flow — the latest ones are out of date/);
+    expect(d.missingInformation.join(" ")).not.toMatch(/A refreshed Cash flow analysis — the latest one rests on out-of-date figures/);
     await teardownOwnerBusiness(b);
   });
 });

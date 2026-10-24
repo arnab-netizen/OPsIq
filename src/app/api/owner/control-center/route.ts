@@ -51,6 +51,7 @@ export const GET = withCanonicalEnforcement(
       nextBestAction: decision?.primaryTarget?.title ?? null,
       mainTarget: decision?.primaryTarget ? asTarget(decision.primaryTarget) : null,
       supportingSteps: (decision?.supportingSteps ?? []).map(asTarget),
+      advicePolicy: decision?.advicePolicy ?? null,
     });
     return canonicalJson(panel, { status: 200 });
   },

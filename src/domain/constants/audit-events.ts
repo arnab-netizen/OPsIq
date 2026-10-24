@@ -235,6 +235,15 @@ export const AUDIT_EVENTS = {
 
   // Billing/Subscription
   SUBSCRIPTION_ACTIVATED: "subscription.activated",
+  BILLING_CHECKOUT_CREATED: "billing.checkout_created",
+  BILLING_SUBSCRIPTION_SYNCED: "billing.subscription_synced",
+  BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED: "billing.subscription_stale_event_ignored",
+  BILLING_PAYMENT_SUCCEEDED: "billing.payment_succeeded",
+  BILLING_PAYMENT_FAILED: "billing.payment_failed",
+  BILLING_CANCELLATION_REQUESTED: "billing.cancellation_requested",
+  BILLING_PAYMENT_METHOD_UPDATE_REQUESTED: "billing.payment_method_update_requested",
+  BILLING_EVENT_REJECTED: "billing.event_rejected",
+  BILLING_DUPLICATE_SUBSCRIPTION_CANCELED: "billing.duplicate_subscription_canceled",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
 
   // Owner Mode
@@ -336,6 +345,8 @@ export const AUDIT_EVENTS = {
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",
+  /** A recorded Cashflow figure (bank balance / cash in hand) was added to, changed or cleared; payload keeps before/after. */
+  CASHFLOW_SNAPSHOT_AMENDED: "owner.cashflow_snapshot_amended",
   OWNER_CASHFLOW_DIAGNOSIS_RUN: "owner.cashflow_diagnosis_run",
   OWNER_CASHFLOW_ACTION_UPDATED: "owner.cashflow_action_updated",
   OWNER_CASHFLOW_ACTION_COMPLETED: "owner.cashflow_action_completed",
@@ -650,6 +661,22 @@ export const AUDIT_EVENTS = {
   OWNER_ACTION_STALL_DETECTED: "owner.action_stall_detected",
   OWNER_ACTION_APPROVAL_GRANTED: "owner.action_approval_granted",
 
+  // Owner Outcome Persistence v1 — decision/commitment record and canonical outcome spine
+  OWNER_DECISION_RECORDED: "owner.decision_recorded",
+  OWNER_OUTCOME_CONTRACT_RECORDED: "owner.outcome_contract_recorded",
+  OWNER_OUTCOME_SOURCE_LINKED: "owner.outcome_source_linked",
+  OWNER_OUTCOME_ASSESSMENT_RECORDED: "owner.outcome_assessment_recorded",
+
+  // QuickBooks Online — business-scoped connection persistence (identifiers/metadata only; never tokens, codes or state)
+  QBO_AUTHORIZATION_STARTED: "qbo.authorization_started",
+  QBO_AUTHORIZATION_COMPLETED: "qbo.authorization_completed",
+  QBO_TOKENS_ROTATED: "qbo.tokens_rotated",
+  QBO_REAUTHORIZATION_REQUIRED: "qbo.reauthorization_required",
+  QBO_CONNECTION_DISCONNECTED: "qbo.connection_disconnected",
+  QBO_REALM_BINDING_CONFLICT: "qbo.realm_binding_conflict",
+  QBO_AUTHORIZATION_DENIED: "qbo.authorization_denied",
+  QBO_AUTHORIZATION_FAILED: "qbo.authorization_failed",
+
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",
   COMPLAINT_TRIAGED: "complaint.triaged",
@@ -713,9 +740,35 @@ export const AUDIT_EVENTS = {
   EMAIL_VERIFICATION_REQUESTED: "user.email_verification_requested",
   EMAIL_VERIFICATION_RESENT: "user.email_verification_resent",
   EMAIL_VERIFIED: "user.email_verified",
+  // A verification email that could not be delivered (no provider, send failure, or a non-public link base). Payload: reason enum only.
+  EMAIL_VERIFICATION_NOT_SENT: "user.email_verification_not_sent",
+  /** A forgot-password setup/reset email that could not be sent (enum reason only, no address). */
+  PASSWORD_EMAIL_NOT_SENT: "user.password_email_not_sent",
   POLICY_ACCEPTED: "user.policy_accepted",
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",
+
+  // Public-beta product funnel (src/domain/analytics/product-events.ts). Payloads carry enums/durations only.
+  PRODUCT_PUBLIC_START_FREE_CLICKED: "product.public_start_free_clicked",
+  PRODUCT_SIGNUP_STARTED: "product.signup_started",
+  PRODUCT_SIGNUP_COMPLETED: "product.signup_completed",
+  PRODUCT_EMAIL_VERIFIED: "product.email_verified",
+  PRODUCT_PASSWORD_SET: "product.password_set",
+  PRODUCT_FIRST_RUN_STARTED: "product.first_run_started",
+  PRODUCT_BUSINESS_PROFILE_COMPLETED: "product.business_profile_completed",
+  PRODUCT_FIRST_EVIDENCE_SAVED: "product.first_evidence_saved",
+  PRODUCT_FIRST_DIAGNOSIS_COMPLETED: "product.first_diagnosis_completed",
+  PRODUCT_FIRST_RESULT_VIEWED: "product.first_result_viewed",
+  PRODUCT_FIRST_RESULT_ACTION_ACCEPTED: "product.first_result_action_accepted",
+  PRODUCT_FIRST_RESULT_CORRECTED: "product.first_result_corrected",
+  PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED: "product.first_result_improvement_requested",
+  PRODUCT_FIRST_RESULT_QUESTION_SKIPPED: "product.first_result_question_skipped",
+  PRODUCT_FIRST_TRUSTED_DECISION_INTERACTION: "product.first_trusted_decision_interaction",
+  PRODUCT_FIRST_VALUE_FEEDBACK: "product.first_value_feedback",
+  PRODUCT_COCKPIT_REACHED: "product.cockpit_reached",
+  PRODUCT_RETURNING_OWNER: "product.returning_owner",
+  PRODUCT_OUTCOME_VERIFICATION_STARTED: "product.outcome_verification_started",
+  PRODUCT_OUTCOME_VERIFIED: "product.outcome_verified",
 
   // Controlled-beta homepage capture
   BETA_REQUEST_CREATED: "beta_request.created",
@@ -724,6 +777,17 @@ export const AUDIT_EVENTS = {
   BETA_REQUEST_REVOKED: "beta_request.revoked",
   BETA_REQUEST_REJECTED: "beta_request.rejected",
   BETA_REQUEST_REOPENED: "beta_request.reopened",
+  // Invitation EMAIL side effect (separate from the invite state). "accepted_by_provider" means the provider took the
+  // submission; it never claims delivery.
+  BETA_INVITE_EMAIL_ATTEMPTED: "beta_request.invite_email_attempted",
+  BETA_INVITE_EMAIL_ACCEPTED_BY_PROVIDER: "beta_request.invite_email_accepted_by_provider",
+  BETA_INVITE_EMAIL_FAILED: "beta_request.invite_email_failed",
+  BETA_INVITE_EMAIL_NO_PROVIDER: "beta_request.invite_email_no_provider",
+  BETA_INVITE_EMAIL_RESENT: "beta_request.invite_email_resent",
+
+  // Controlled Beta Cohort evidence ledger (operator-entered, append-only, platform-level / unchained; never tenant-visible)
+  BETA_COHORT_OWNER_ASSIGNED: "beta_cohort.owner_assigned",
+  BETA_COHORT_EVIDENCE_RECORDED: "beta_cohort.evidence_recorded",
 
   // Administration V1 — beta operating control plane
   PLATFORM_SETTINGS_INITIALIZED: "platform_settings.initialized",

@@ -50,10 +50,16 @@ export interface PriorityStripInput {
 
 const SEVERITY_RANK: Record<PrioritySeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
+/**
+ * An EVIDENCE DESCRIPTION of the plan analysis behind a checkpoint — never an owner-wide permission. These checkpoints are
+ * supporting analysis, not the canonical owner target: whether OpsIQ may recommend or support committing money, capacity or a
+ * plan is decided ONLY by the canonical advice policy (`CurrentOwnerDecision.advicePolicy`, owner-advice-policy.ts). A
+ * checkpoint therefore never says "safe to act" or "actions are paused" from its own confidence value.
+ */
 function confidenceNote(confidence: string, canProceed: boolean): string {
-  if (!canProceed) return `Confidence is ${confidence}; strong actions are paused until critical data is supplied.`;
-  if (confidence === "high") return "Confidence is high — safe to act on this.";
-  return `Confidence is ${confidence}; treat this as directional and confirm with more data where you can.`;
+  if (!canProceed) return `Evidence behind this plan analysis is ${confidence}; information it needs is missing — add it to firm this up.`;
+  if (confidence === "high") return "Evidence behind this plan analysis is strong.";
+  return `Evidence behind this plan analysis is ${confidence}; confirm with more data where you can.`;
 }
 
 /** Build the capped, severity-ordered top priorities from the live runtime signals. */

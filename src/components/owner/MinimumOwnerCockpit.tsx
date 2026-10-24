@@ -19,16 +19,20 @@
 import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge, Disclosure } from "@/ui/primitives";
+import { allowedProcessTaskActions, approveActionLabel } from "@/domain/owner-mode/process-execution-bridge";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
+import { conditionHeadline, conditionRiskLevel, highestConditionRisk } from "@/domain/business-condition/condition-risk";
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
 import { ownerImperativeContext, reconcileRecoveryBlocks, reconcileRecoveryGrowthGate } from "@/domain/owner-spine/owner-imperatives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
+import { presentProfitLeakCard } from "@/domain/owner-mode/profit-leak-presentation";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -155,19 +159,7 @@ const PRIMARY_ACTIONS = ["APPROVE", "COMPLETE", "START"] as const;
 /** Interactive actions valid for a route, mirroring the server guardrails so the UI never OFFERS an
  *  impossible/unsafe transition. The server still re-checks every one. */
 export function allowedCockpitActions(r: BridgedRouteView): string[] {
-  const terminal = r.status === "COMPLETED" || r.status === "REJECTED" || r.status === "OUTCOME_RECORDED" || r.status === "OUTCOME_DISPUTED" || r.status === "OUTCOME_VERIFIED";
-  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
-  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
-  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
-  if (terminal) return ["REQUEST_REASSESSMENT"];
-  const out: string[] = [];
-  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
-  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
-  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
-  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
-  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
-  out.push("REQUEST_REASSESSMENT");
-  return out;
+  return allowedProcessTaskActions(r);
 }
 
 export interface CockpitActionInput {
@@ -282,13 +274,13 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
   const active = signals.publicSignalStatus !== "NONE";
   return (
     <details data-testid="cockpit-signals-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Outside signals
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {PUBLIC_SIGNAL_STATUS_LABEL[signals.publicSignalStatus] ?? signals.publicSignalStatus}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!active ? (
-          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-none">No outside signals for this workspace right now.</p>
+          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-none">No outside signals for your business right now.</p>
         ) : (
           <>
             {signals.topPublicSignalAction && (
@@ -299,7 +291,7 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
               Source quality: {signals.sourceQualitySummary} · Evidence: {signals.evidenceStrengthSummary}
             </p>
             {signals.missingData.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {ownerMissingItems(signals.missingData).slice(0, 3).join("; ")}</p>
             )}
             {signals.validationRequired && (
               <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
@@ -364,12 +356,13 @@ const CONDITION_FIELD_ORDER: (keyof DerivedBusinessConditionSignals)[] = [
 ];
 
 const VERIFICATION_CLASS_LABEL: Record<string, string> = {
-  SUCCESS: "Verified: Success",
-  PARTIAL_SUCCESS: "Verified: Partial success",
-  NO_MEASURABLE_IMPACT: "Verified: No measurable impact",
-  FAILURE: "Verified: Failure",
-  NEGATIVE_IMPACT: "Verified: Negative impact",
-  INCONCLUSIVE: "Verified: Inconclusive",
+  SUCCESS: "Result recorded: Success",
+  PARTIAL_SUCCESS: "Result recorded: Partial success",
+  NO_MEASURABLE_IMPACT: "Result recorded: No measurable impact",
+  FAILURE: "Result recorded: Failure",
+  NEGATIVE_IMPACT: "Result recorded: Negative impact",
+  INCONCLUSIVE: "Result recorded: Inconclusive",
+  EXTERNAL_EVENT_INTERFERENCE: "External event interfered — not credited to the action",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };
@@ -377,7 +370,7 @@ const VERIFICATION_CLASS_LABEL: Record<string, string> = {
 const VERIFICATION_CLASS_VARIANT = (c: string): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
   c === "SUCCESS" ? "default-accessible"
   : c === "FAILURE" || c === "NEGATIVE_IMPACT" ? "destructive-accessible"
-  : c === "PARTIAL_SUCCESS" ? "warning-accessible"
+  : c === "PARTIAL_SUCCESS" || c === "EXTERNAL_EVENT_INTERFERENCE" ? "warning-accessible"
   : "muted-accessible";
 
 const OUTCOME_STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -497,7 +490,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-ACKNOWLEDGE-${item.taskKey}`} disabled={busy}
               aria-label={`Acknowledge: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "ACKNOWLEDGE")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #0369a1", background: "#0369a1", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid #0369a1", background: "#0369a1", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Acknowledge
             </button>
           )}
@@ -505,7 +498,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-RECORD_PROGRESS-${item.taskKey}`} disabled={busy}
               aria-label={`Record progress: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "RECORD_PROGRESS")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: busy ? "default" : "pointer" }}>
               Record progress
             </button>
           )}
@@ -513,7 +506,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-RECORD_OUTCOME-${item.taskKey}`} disabled={busy}
               aria-label={`Record outcome: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "RECORD_OUTCOME")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Record outcome
             </button>
           )}
@@ -521,7 +514,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-VERIFY_OUTCOME-${item.taskKey}`} disabled={busy}
               aria-label={`Verify outcome: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "VERIFY_OUTCOME")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #16a34a", background: "#16a34a", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid #16a34a", background: "#16a34a", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Verify outcome
             </button>
           )}
@@ -536,19 +529,19 @@ function ExecutionLifecycleSection({
                 Progress % (0–100, optional)
                 <input type="number" min={0} max={100} value={progressPct}
                   onChange={(e) => setProgressPct(e.target.value)} data-testid="cockpit-progress-pct-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
               <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Stage label (optional)
                 <input type="text" value={stage}
                   onChange={(e) => setStage(e.target.value)} data-testid="cockpit-stage-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
               <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Note (optional)
                 <input type="text" value={reason}
                   onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
             </>
           )}
@@ -558,7 +551,7 @@ function ExecutionLifecycleSection({
                 Outcome
                 <select value={outcomeStatus} onChange={(e) => setOutcomeStatus(e.target.value)}
                   data-testid="cockpit-outcome-status-select"
-                  style={{ display: "block", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }}>
+                  style={{ display: "block", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }}>
                   {OUTCOME_STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -568,7 +561,7 @@ function ExecutionLifecycleSection({
                 Outcome notes (optional)
                 <input type="text" value={reason}
                   onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
             </>
           )}
@@ -577,17 +570,17 @@ function ExecutionLifecycleSection({
               Verification notes (optional)
               <input type="text" value={reason}
                 onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
             </label>
           )}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" disabled={busy} data-testid="cockpit-phase3-confirm"
               onClick={() => submitPhase3(item.taskKey, pending.action)}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Confirm
             </button>
             <button type="button" data-testid="cockpit-phase3-cancel" onClick={resetForm}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}>
               Cancel
             </button>
           </div>
@@ -621,7 +614,7 @@ function ExecutionLifecycleSection({
           <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>Reported {humanizeReported(earliestReported)}</span>
         </div>
         <details style={{ marginTop: 6 }}>
-          <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--primary-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 12, color: "var(--primary-text)" }}>
             Show all {group.items.length}
           </summary>
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -636,7 +629,7 @@ function ExecutionLifecycleSection({
 
   return (
     <details data-testid="cockpit-execution-lifecycle" open={total > 0} style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Execution lifecycle{total > 0 ? ` (${total} active)` : ""}
         {lifecycle.totalPendingVerification > 0 && (
           <span style={{ marginLeft: 8, fontSize: 12, padding: "1px 6px", borderRadius: 10, background: "#fef3c7", color: "#92400e" }}>
@@ -647,7 +640,7 @@ function ExecutionLifecycleSection({
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
         <details data-testid="cockpit-requires-decision-group" open={lifecycle.requiresDecision.length > 0}
           style={{ borderLeft: "3px solid #fef3c7", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
             Requires your decision ({lifecycle.requiresDecision.length})
           </summary>
           {lifecycle.requiresDecision.length === 0
@@ -662,7 +655,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-in-execution-group" open={lifecycle.inExecution.length > 0}
           style={{ borderLeft: "3px solid #dbeafe", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--primary-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--primary-text)" }}>
             In execution ({lifecycle.inExecution.length})
           </summary>
           {lifecycle.inExecution.length === 0
@@ -673,7 +666,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-awaiting-verification-group" open={lifecycle.awaitingVerification.length > 0}
           style={{ borderLeft: "3px solid #fde68a", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
             Awaiting verification ({lifecycle.awaitingVerification.length})
           </summary>
           {lifecycle.awaitingVerification.length === 0
@@ -684,7 +677,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-recently-verified-group"
           style={{ borderLeft: "3px solid #d1fae5", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--success-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--success-text)" }}>
             Recently verified ({lifecycle.recentlyVerified.length})
           </summary>
           {lifecycle.recentlyVerified.length === 0
@@ -756,7 +749,7 @@ function BusinessOperatingSystemSection({
 
   return (
     <details open={bos.totalActiveObjectives > 0} data-testid="cockpit-bos-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Goals &amp; objectives
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>
           {" "}
@@ -781,7 +774,7 @@ function BusinessOperatingSystemSection({
               data-testid="cockpit-bos-run-arbitration"
               onClick={() => void handleRunArbitration()}
               disabled={busy || overrideSubmitting}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
             >
               Run arbitration
             </button>
@@ -859,7 +852,7 @@ function BusinessOperatingSystemSection({
                         data-testid={`cockpit-bos-resolve-constraint-${c.constraintId}`}
                         onClick={() => void handleConstraintAction(c.constraintId, "RESOLVE")}
                         disabled={busy}
-                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
+                        style={{ fontSize: 14, padding: "10px 12px", minHeight: 44, borderRadius: 6, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
                       >
                         Resolve
                       </button>
@@ -867,7 +860,7 @@ function BusinessOperatingSystemSection({
                         data-testid={`cockpit-bos-accept-constraint-${c.constraintId}`}
                         onClick={() => void handleConstraintAction(c.constraintId, "ACCEPT")}
                         disabled={busy}
-                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
+                        style={{ fontSize: 14, padding: "10px 12px", minHeight: 44, borderRadius: 6, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
                       >
                         Accept
                       </button>
@@ -914,7 +907,7 @@ function BusinessOperatingSystemSection({
               <button
                 data-testid="cockpit-bos-override-open"
                 onClick={() => setOverrideOpen(true)}
-                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning-text)", cursor: "pointer", background: "transparent" }}
+                style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning-text)", cursor: "pointer", background: "transparent" }}
               >
                 Record owner override
               </button>
@@ -952,14 +945,14 @@ function BusinessOperatingSystemSection({
                     data-testid="cockpit-bos-override-submit"
                     onClick={() => void handleSubmitOverride()}
                     disabled={overrideSubmitting || overrideRationale.trim().length < 10}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "none", background: "#b45309", color: "#fff", cursor: "pointer" }}
+                    style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "none", background: "#b45309", color: "#fff", cursor: "pointer" }}
                   >
                     {overrideSubmitting ? "Saving…" : "Submit override"}
                   </button>
                   <button
                     data-testid="cockpit-bos-override-cancel"
                     onClick={() => { setOverrideOpen(false); setOverrideRationale(""); }}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "transparent", color: "var(--foreground)" }}
+                    style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "transparent", color: "var(--foreground)" }}
                   >
                     Cancel
                   </button>
@@ -980,18 +973,12 @@ function BusinessOperatingSystemSection({
 function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
-  const worstLevel = CONDITION_FIELD_ORDER
-    .map((k) => condition[k])
-    .reduce<string>((worst, level) => {
-      const rank: Record<string, number> = { CRITICAL: 4, BLOCKED: 3, HIGH: 3, MEDIUM: 2, LOW: 1, unknown: 0 };
-      return (rank[level] ?? 0) > (rank[worst] ?? 0) ? level : worst;
-    }, "LOW");
+  const worstLevel = highestConditionRisk(condition as unknown as Record<string, string>);
 
   return (
     <details data-testid="cockpit-business-condition-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
-        Business condition
-        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+        {conditionHeadline(worstLevel, knownFields.length, unknownCount)}
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
         {knownFields.length === 0 ? (
@@ -1000,7 +987,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 12px" }}>
             {knownFields.map((k) => (
               <span key={k} style={{ display: "flex", gap: 6, alignItems: "center" }} data-testid={`cockpit-condition-${k}`}>
-                <Badge variant={RISK_VARIANT(condition[k])}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
+                <Badge variant={RISK_VARIANT(conditionRiskLevel(k, condition[k]))}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{CONDITION_FIELD_LABEL[k]}</span>
               </span>
             ))}
@@ -1013,7 +1000,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
         )}
         {dataFreshnessWeak && (
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--warning-text)", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
-            Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
+            Data completeness is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
           </p>
         )}
       </div>
@@ -1032,7 +1019,7 @@ function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryS
   const recoveryStatusLabel = recovery.recoveryStatus === "THRIVE_GATE_BLOCKED" ? reconcileRecoveryGrowthGate(statusLabel, imperativeCtx) : statusLabel;
   return (
     <details data-testid="cockpit-recovery-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Recovery status
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {recoveryStatusLabel}</span>
       </summary>
@@ -1278,7 +1265,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                   <button type="button" data-testid={`cockpit-action-${dominantPrimaryAction}`} data-cockpit-priority="primary" disabled={busy}
                     onClick={() => clickAction(dominantPrimaryAction!)}
                     className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">
-                    {ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
+                    {dominantPrimaryAction! === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
                   </button>
                 )}
               </div>
@@ -1292,15 +1279,15 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                   {demotedPrimary.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="primary" disabled={busy}
                       onClick={() => clickAction(a)}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                   {secondaryVisible.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="secondary" disabled={busy}
                       onClick={() => clickAction(a)}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                 </div>
@@ -1308,13 +1295,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
             )}
             {secondaryMore.length > 0 && (
               <details data-testid="cockpit-more-actions">
-                <summary className="cursor-pointer text-xs text-muted-foreground">{secondaryMore.length} more action(s)</summary>
+                <summary className="flex min-h-11 cursor-pointer items-center text-xs text-muted-foreground">{secondaryMore.length} more action(s)</summary>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {secondaryMore.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} disabled={busy}
                       onClick={() => clickAction(a)}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                 </div>
@@ -1347,21 +1334,21 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                       );
                     })()}
                     <input data-testid="cockpit-evidence-input" value={evidenceText} onChange={(e) => setEvidenceText(e.target.value)}
-                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>
                 )}
                 {needsReason(pending) && (
                   <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Reason (optional)
                     <input data-testid="cockpit-reason-input" value={reasonText} onChange={(e) => setReasonText(e.target.value)}
-                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>
                 )}
                 {isDelegate(pending) && (
                   <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Delegate to
                     <select data-testid="cockpit-delegate-select" value={delegateRole} onChange={(e) => setDelegateRole(e.target.value as "MANAGER" | "STAFF")}
-                      style={{ display: "block", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }}>
+                      style={{ display: "block", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }}>
                       <option value="MANAGER">Manager</option>
                       <option value="STAFF">Staff</option>
                     </select>
@@ -1369,9 +1356,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                 )}
                 <div className="flex gap-2">
                   <button type="button" data-testid="cockpit-confirm" disabled={busy} onClick={() => submit(pending)}
-                    className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">Confirm</button>
+                    className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">Confirm</button>
                   <button type="button" data-testid="cockpit-cancel" onClick={() => setPending(null)}
-                    className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted">Cancel</button>
+                    className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted">Cancel</button>
                 </div>
               </div>
             )}
@@ -1390,7 +1377,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
               data-testid={`cockpit-start-work-${top.taskKey}`}
               disabled={busy}
               onClick={() => onStartWork(top.taskKey)}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
             >
               Start Work
             </button>
@@ -1465,7 +1452,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
 
       {/* 8. Secondary Actions (collapsed) */}
       <details data-testid="cockpit-secondary-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
           Other actions{secondaryRoutes.length ? ` (${secondaryRoutes.length})` : ""}
         </summary>
         {secondaryRoutes.length === 0 ? (
@@ -1485,7 +1472,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
 
       {/* 9. Monitor-only (collapsed) */}
       <details data-testid="cockpit-monitor-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
           Monitor only{monitorRoutes.length ? ` (${monitorRoutes.length})` : ""}
         </summary>
         {monitorRoutes.length === 0 ? (
@@ -1527,13 +1514,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
               whose domain is the literal string "data") are gated on the same leakType check
               business-control-slo.ts already uses for this exact distinction; the impact figure and
               ownerExplanation continue to render exactly as before for every case. */}
-          {topProfitLeak && (
+          {topProfitLeak && (() => {
+            const view = presentProfitLeakCard(topProfitLeak, ownerDecision);
+            return (
             <div data-testid="cockpit-profit-leak-section" className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-foreground">
-                {topProfitLeak.leakType === "DATA_INSUFFICIENT" ? "No profit leak detected yet" : "Profit leak detected"}
-              </span>
+              <span className="text-sm font-medium text-foreground">{view.headline}</span>
               <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 2 }}>
-                {topProfitLeak.leakType !== "DATA_INSUFFICIENT" && (
+                {view.radarFinding && (
                   <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
                 )}
                 {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
@@ -1542,12 +1529,16 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                     {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
                   </span>
                 )}
-                {topProfitLeak.ownerExplanation && (
+                {view.scopeNote && (
+                  <span data-testid="cockpit-profit-leak-scope" style={{ color: "var(--muted-foreground)" }}>{view.scopeNote}</span>
+                )}
+                {topProfitLeak.ownerExplanation && view.showRadarExplanation && (
                   <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
                 )}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Policy Attention Signal — Phase 2 Signal C */}
           {policyAttentionSignal && (
@@ -1651,7 +1642,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
                         type="button"
                         data-testid={`cockpit-escalation-ack-${esc.id}`}
                         onClick={() => onAcknowledgeEscalation(esc.id)}
-                        style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
+                        style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
                       >
                         Acknowledge
                       </button>
@@ -1680,7 +1671,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepCondition
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>View proof &amp; details</summary>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>View proof &amp; details</summary>
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 6 }}>
           <span><strong>Done when:</strong> {top.completionCriteria}</span>
           {top.evidenceRefs.length > 0

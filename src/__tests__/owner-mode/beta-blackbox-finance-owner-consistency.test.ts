@@ -25,6 +25,7 @@ const periodStart = new Date(periodEnd.getTime() - 30 * DAY); // 31-day period
 const SNAPSHOT_INPUT: FinancialSnapshotInput = {
   periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), currency: "INR",
   revenue: 180000, fixedCosts: 110000, variableCosts: 60000, cashOnHand: 40000,
+  bankBalance: 0, // the owner reported no bank money, so total liquid funds is known (40000)
 };
 const diagnosis = diagnoseFinanceSnapshot(SNAPSHOT_INPUT, { now: new Date(NOW) });
 
@@ -224,7 +225,7 @@ describe("D3 — a complete current Finance snapshot is not 'not enough financia
   });
 
   it("names the specific missing figure when the current snapshot lacks one", () => {
-    const facts = deriveFinanceCashProfitFacts({ findings: [], snapshot: { revenue: null, fixedCosts: 1, cashOnHand: 5 } });
+    const facts = deriveFinanceCashProfitFacts({ findings: [], snapshot: { revenue: null, fixedCosts: 1, variableCosts: 0, cashOnHand: 5 } });
     expect(facts.missingFinancialFields).toEqual(["revenue"]);
     const a = buildCashProfitProtection(cashInput({ financialDataComplete: false, missingFinancialFields: facts.missingFinancialFields }), "ws1", "2026-09-29T00:00:00Z");
     const s = a.signals.find((x) => x.signalType === "PROFIT_DATA_INSUFFICIENT")!;
@@ -234,7 +235,10 @@ describe("D3 — a complete current Finance snapshot is not 'not enough financia
   });
 
   it("uses Finance's own cost model: itemised costs count, no costs at all is a named gap", () => {
-    expect(deriveFinanceCashProfitFacts({ snapshot: { revenue: 10, rent: 3, payroll: 2 } }).missingFinancialFields).toEqual([]);
+    // Every cost line stated (an explicit 0 is a stated line) → complete.
+    expect(deriveFinanceCashProfitFacts({ snapshot: { revenue: 10, rent: 3, payroll: 2, utilities: 0, costOfGoods: 1, deliveryCost: 0 } }).missingFinancialFields).toEqual([]);
+    // Some costs known but not all (unknown is not zero) → a named gap, not "no costs".
+    expect(deriveFinanceCashProfitFacts({ snapshot: { revenue: 10, rent: 3, payroll: 2 } }).missingFinancialFields).toEqual(["complete cost figures"]);
     expect(deriveFinanceCashProfitFacts({ snapshot: { revenue: 10 } }).missingFinancialFields).toEqual(["cost figures"]);
     expect(deriveFinanceCashProfitFacts({ snapshot: {} }).missingFinancialFields).toEqual(["revenue", "cost figures"]);
   });

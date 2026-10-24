@@ -17,6 +17,7 @@
  *
  * `[db]`-gated. Run: TEST_WITH_DB=true npx vitest run src/__tests__/owner-decision/owner-decision-consolidation.db.test.ts
  */
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { randomUUID } from "crypto";
 
@@ -178,7 +179,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     const b = await newBusiness(workspaceId, "QA Decision B");
     await seedProductionScenario(workspaceId, a);
     const cf = await createCashflowSnapshot(b, {
-      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      ...period(), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     await runCashflowDiagnosis(b, cf.id, actor, workspaceId);
@@ -248,7 +249,8 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(expected.length).toBeGreaterThan(0);
 
     const d = (await getOwnerHome(workspaceId, businessId)).currentOwnerDecision!;
-    for (const m of expected) expect(d.missingInformation).toContain(m);
+    // the persisted keys are shown to the owner in owner words (never the internal key)
+    for (const m of ownerMissingItems(expected)) expect(d.missingInformation).toContain(m.charAt(0).toUpperCase() + m.slice(1));
     // The Business Condition rollup and Finance dashboard read the same diagnosed snapshot.
     const { getBusinessCondition } = await import("@/services/owner-condition/business-condition.service");
     const cond = await getBusinessCondition(workspaceId, businessId);
@@ -266,7 +268,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     const cfEnd = new Date(Date.now() - 20 * 86_400_000);
     const cfStart = new Date(cfEnd.getTime() - 29 * 86_400_000);
     const cf = await createCashflowSnapshot(businessId, {
-      periodStart: cfStart.toISOString().slice(0, 10), periodEnd: cfEnd.toISOString().slice(0, 10), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      periodStart: cfStart.toISOString().slice(0, 10), periodEnd: cfEnd.toISOString().slice(0, 10), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     const cashCycle = await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
@@ -292,7 +294,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     const workspaceId = randomUUID();
     const businessId = await newBusiness(workspaceId, "QA Decision Stale");
     const cf = await createCashflowSnapshot(businessId, {
-      periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000,
+      periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000,
       receivablesOverdue: 15000, payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
@@ -318,7 +320,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     expect(first.whatChanged).toEqual([{ kind: "EVIDENCE_UPDATED", message: "New Sales figures were analysed." }]);
     // A critical cash danger appears; the owner only ever opens Home.
     const cf = await createCashflowSnapshot(businessId, {
-      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      ...period(), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
@@ -357,7 +359,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     const workspaceId = randomUUID();
     const businessId = await newBusiness(workspaceId, "QA Decision Cash Confirm");
     const cf = await createCashflowSnapshot(businessId, {
-      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      ...period(), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     const cycle = await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
@@ -395,7 +397,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     const workspaceId = randomUUID();
     const businessId = await newBusiness(workspaceId, "QA Decision Issue vs Action");
     const cf = await createCashflowSnapshot(businessId, {
-      ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      ...period(), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);
@@ -427,7 +429,7 @@ describe("[db] canonical owner decision — consolidation", () => {
     const start = new Date(end.getTime() - 29 * 86_400_000);
     const cf = await createCashflowSnapshot(businessId, {
       periodStart: start.toISOString().slice(0, 10), periodEnd: end.toISOString().slice(0, 10), currency: "INR",
-      cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+      cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
       payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
     }, actor, workspaceId);
     await runCashflowDiagnosis(businessId, cf.id, actor, workspaceId);

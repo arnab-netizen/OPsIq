@@ -2,14 +2,25 @@ import type { Prisma } from "@/generated/prisma/client";
 import { canAdmitSignup } from "@/domain/beta/admission";
 import {
   readEffectiveSettings,
-  countExternalBetaWorkspaces,
+  PENDING_SIGNUPS_PER_SOURCE_LIMIT,
+  countCapacityUsage,
+  countPendingFromSource,
+  hasSignupCapacity,
   type AdmissionMode,
 } from "@/services/beta/platform-settings.service";
 
 export class BetaCapExceededError extends Error {
-  constructor() {
-    super("Beta capacity has been reached. Please check back soon.");
+  constructor(message = "Beta capacity has been reached. Please check back soon.") {
+    super(message);
     this.name = "BetaCapExceededError";
+  }
+}
+
+/** Too many unverified signups from one source address are still waiting for their verification link. */
+export class BetaPendingFromSourceError extends BetaCapExceededError {
+  constructor() {
+    super("Several sign-ups from this connection are still waiting to be verified. Please open the link in your email, or try again later.");
+    this.name = "BetaPendingFromSourceError";
   }
 }
 
@@ -32,6 +43,23 @@ export class BetaAdmissionRefusedError extends Error {
     );
     this.name = "BetaAdmissionRefusedError";
     this.reason = reason;
+  }
+}
+
+/**
+ * Re-check capacity for a LATE verifier: an unverified signup whose pending hold lapsed no longer holds a slot, so
+ * verifying must take one (under the same advisory lock as signup and admin changes). Not a mode check: accounts
+ * that exist keep working while signups are CLOSED. Throws BetaCapExceededError when the beta is full.
+ */
+export async function reserveCapacityForLateVerification(tx: Prisma.TransactionClient): Promise<void> {
+  try {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"public_beta_workspace_cap"}))`;
+    const settings = await readEffectiveSettings(tx);
+    const usage = await countCapacityUsage(tx);
+    if (usage.consumed >= settings.capacityLimit) throw new BetaCapExceededError();
+  } catch (error) {
+    if (error instanceof BetaCapExceededError) throw error;
+    throw new BetaCapUnavailableError(error);
   }
 }
 
@@ -60,16 +88,22 @@ export class BetaAdmissionRefusedError extends Error {
  */
 export async function reservePublicBetaCapacity(
   tx: Prisma.TransactionClient,
-  isInvited: boolean
+  isInvited: boolean,
+  sourceIp: string | null = null
 ): Promise<{ admissionMode: AdmissionMode }> {
   let mode: AdmissionMode;
   let hasCapacity: boolean;
+  let sourceThrottled = false;
   try {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"public_beta_workspace_cap"}))`;
     const settings = await readEffectiveSettings(tx);
-    const count = await countExternalBetaWorkspaces(tx);
+    // Verified accounts + unverified signups still inside their pending hold (see CAPACITY DEFINITION), so unverified
+    // requests for addresses nobody owns can never fill the beta permanently; and a bound on how many of those one
+    // source address may hold at once.
+    const usage = await countCapacityUsage(tx);
     mode = settings.admissionMode;
-    hasCapacity = count < settings.capacityLimit;
+    hasCapacity = hasSignupCapacity(usage, settings.capacityLimit);
+    sourceThrottled = hasCapacity && (await countPendingFromSource(tx, sourceIp)) >= PENDING_SIGNUPS_PER_SOURCE_LIMIT;
   } catch (error) {
     // Covers PlatformSettingsUnavailableError and any lock/query failure alike — fail closed.
     throw new BetaCapUnavailableError(error);
@@ -82,6 +116,7 @@ export async function reservePublicBetaCapacity(
     if (mode === "INVITE_ONLY" && !isInvited) throw new BetaAdmissionRefusedError("not_invited");
     throw new BetaCapExceededError();
   }
+  if (sourceThrottled) throw new BetaPendingFromSourceError();
 
   return { admissionMode: mode };
 }

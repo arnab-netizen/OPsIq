@@ -17,8 +17,11 @@ import type {
   PortfolioPriority,
   PortfolioRiskAlert,
   PortfolioInvestmentRecommendation,
+  PortfolioInvestmentHold,
+  PortfolioInvestmentAssessment,
   PortfolioView,
 } from "./types";
+import { assessPortfolioInvestmentEligibility } from "./investment-eligibility";
 import { PORTFOLIO_THRESHOLDS, type PortfolioThresholds } from "./thresholds";
 
 /** Health score for a domain in the profile, or null when absent. */
@@ -43,9 +46,9 @@ export function toBusinessSummary(input: PortfolioBusinessInput): PortfolioBusin
     currency: input.currency ?? null,
     hasData: p !== null,
     overallHealthScore: p ? clampScore(p.overallHealthScore) : 0,
-    survivalRiskScore: p ? clampScore(p.survivalRiskScore) : 0,
+    survivalRiskScore: p && p.survivalRiskScore !== null ? clampScore(p.survivalRiskScore) : null,
     growthOpportunityScore: p ? clampScore(p.growthOpportunityScore) : 0,
-    executionRiskScore: p ? clampScore(p.executionRiskScore) : 0,
+    executionRiskScore: p && p.executionRiskScore !== null ? clampScore(p.executionRiskScore) : null,
     dataConfidenceScore: p ? clampScore(p.dataConfidenceScore) : 0,
     financialScore: domainHealth(input, "finance"),
     salesScore: domainHealth(input, "sales"),
@@ -103,7 +106,10 @@ export function buildPortfolioView(
     // Same tie-break as the arbiter: a target on CURRENT figures precedes a refresh of out-of-date ones.
     const cur = Number(b.mainTarget !== null && b.mainTarget.source !== "evidence_refresh") - Number(a.mainTarget !== null && a.mainTarget.source !== "evidence_refresh");
     if (cur !== 0) return cur;
-    if (b.survivalRiskScore !== a.survivalRiskScore) return b.survivalRiskScore - a.survivalRiskScore;
+    // NOT MEASURED sorts after any measured survival risk (it is neither safe nor urgent evidence).
+    const sb = b.survivalRiskScore ?? -1;
+    const sa = a.survivalRiskScore ?? -1;
+    if (sb !== sa) return sb - sa;
     if (a.overallHealthScore !== b.overallHealthScore) return a.overallHealthScore - b.overallHealthScore;
     if (a.name !== b.name) return a.name < b.name ? -1 : 1;
     return a.businessId < b.businessId ? -1 : a.businessId > b.businessId ? 1 : 0;
@@ -128,7 +134,8 @@ export function buildPortfolioView(
     }),
     worstExecutionProblemBusinessId: maxByBusiness(withData, (s) => s.executionRiskScore),
     bestGrowthCandidateBusinessId: maxByBusiness(
-      withData.filter((s) => s.survivalRiskScore < t.safeInvestmentSurvivalRiskBar),
+      // Unmeasured survival risk is not evidence of safety: such a business is never a "safe" candidate.
+      withData.filter((s) => s.survivalRiskScore !== null && s.survivalRiskScore < t.safeInvestmentSurvivalRiskBar),
       (s) => s.growthOpportunityScore
     ),
   };
@@ -144,7 +151,7 @@ export function buildPortfolioView(
   // Risk alerts (deterministic, ordered by score desc within type, businessId asc tie-break).
   const riskAlerts: PortfolioRiskAlert[] = [];
   for (const s of withData) {
-    if (s.survivalRiskScore >= t.survivalRiskAlertScore) {
+    if (s.survivalRiskScore !== null && s.survivalRiskScore >= t.survivalRiskAlertScore) {
       riskAlerts.push({ businessId: s.businessId, businessName: s.name, type: "survival_risk", message: `Survival risk is ${s.survivalRiskScore}/100`, score: s.survivalRiskScore });
     }
     const input = inputs.find((i) => i.businessId === s.businessId)!;
@@ -152,27 +159,39 @@ export function buildPortfolioView(
     if (cashRisk !== null && cashRisk >= t.cashRiskAlertScore) {
       riskAlerts.push({ businessId: s.businessId, businessName: s.name, type: "cash_risk", message: `Cashflow risk is ${cashRisk}/100`, score: cashRisk });
     }
-    if (s.executionRiskScore >= t.executionRiskAlertScore) {
+    if (s.executionRiskScore !== null && s.executionRiskScore >= t.executionRiskAlertScore) {
       riskAlerts.push({ businessId: s.businessId, businessName: s.name, type: "execution_risk", message: `Execution risk is ${s.executionRiskScore}/100`, score: s.executionRiskScore });
     }
   }
   riskAlerts.sort((a, b) => (b.score !== a.score ? b.score - a.score : a.businessId < b.businessId ? -1 : 1));
 
-  // Investment recommendation: best safe growth candidate above the opportunity bar.
+  // Investment recommendation (A2): ranking is not permission. Each business is assessed against its OWN canonical owner
+  // decision (advice policy, primary priority class, evidence freshness); the existing deterministic ranking is then applied
+  // to the ELIGIBLE set only, so a blocked top candidate never suppresses an eligible runner-up. This does not make growth
+  // scores comparable across businesses (P2) — it changes who MAY be recommended, not how scores are computed.
+  const assessments = withData.map((s) => ({ s, a: assessPortfolioInvestmentEligibility(inputs.find((i) => i.businessId === s.businessId)!, t) }));
+  const eligibleRows = assessments.filter((x) => x.a.eligible).map((x) => x.s);
+  const eligibleId = maxByBusiness(eligibleRows, (s) => s.growthOpportunityScore);
   let investmentRecommendation: PortfolioInvestmentRecommendation | null = null;
-  const candidateId = ranking.bestGrowthCandidateBusinessId;
-  if (candidateId) {
-    const c = withData.find((s) => s.businessId === candidateId)!;
-    if (c.growthOpportunityScore >= t.minInvestmentOpportunityScore) {
-      investmentRecommendation = {
-        businessId: c.businessId,
-        businessName: c.name,
-        reason: `Highest growth opportunity (${c.growthOpportunityScore}/100) among businesses with survival risk below ${t.safeInvestmentSurvivalRiskBar}/100 (this one: ${c.survivalRiskScore}/100).`,
-        growthOpportunityScore: c.growthOpportunityScore,
-        survivalRiskScore: c.survivalRiskScore,
-      };
-    }
+  if (eligibleId) {
+    const c = eligibleRows.find((s) => s.businessId === eligibleId)!;
+    investmentRecommendation = {
+      businessId: c.businessId,
+      businessName: c.name,
+      reason: `Highest growth opportunity (${c.growthOpportunityScore}/100) among businesses whose current evidence and owner policy do not require holding a material decision, and whose survival risk is below ${t.safeInvestmentSurvivalRiskBar}/100 (this one: ${c.survivalRiskScore}/100).`,
+      growthOpportunityScore: c.growthOpportunityScore,
+      survivalRiskScore: c.survivalRiskScore as number,
+    };
   }
+  const holds: PortfolioInvestmentHold[] = assessments
+    .filter((x): x is { s: PortfolioBusinessSummary; a: Extract<typeof x.a, { eligible: false }> } => !x.a.eligible && x.a.held)
+    .sort((x, y) => (y.s.growthOpportunityScore !== x.s.growthOpportunityScore ? y.s.growthOpportunityScore - x.s.growthOpportunityScore : x.s.businessId < y.s.businessId ? -1 : 1))
+    .map((x) => ({ businessId: x.s.businessId, businessName: x.s.name, ownerStatement: x.a.ownerStatement, reasons: x.a.reasons, nextStep: x.a.nextStep }));
+  const investmentAssessment: PortfolioInvestmentAssessment = investmentRecommendation
+    ? { status: "RECOMMENDED", summary: `${investmentRecommendation.businessName} is the strongest growth candidate whose current evidence and owner policy do not require holding a material decision.`, held: holds }
+    : holds.length > 0
+      ? { status: "HELD", summary: "Investment recommendation on hold: a business shows a growth signal, but its current decision does not yet support committing money.", held: holds }
+      : { status: "NO_QUALIFYING_CANDIDATE", summary: "No business currently meets the survival-risk and growth-signal criteria for an investment recommendation.", held: [] };
 
   return {
     hasData: withData.length > 0,
@@ -183,6 +202,7 @@ export function buildPortfolioView(
     top3Priorities,
     riskAlerts,
     investmentRecommendation,
+    investmentAssessment,
     generatedAt: now,
   };
 }

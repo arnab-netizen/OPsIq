@@ -17,6 +17,7 @@ import {
   type LocationContext,
 } from "@/behavioral-validation/schema";
 import { LOCATIONS } from "@/behavioral-validation/locations";
+import { cashflowTotalCash } from "@/domain/owner-finance/liquidity";
 
 const DAY_MS = 86_400_000;
 
@@ -99,7 +100,8 @@ export function deriveOwnerContext(rows: OwnerDomainRows, opts: DeriveContextOpt
   const location = deriveLocationContext(business.location, business.currency);
 
   // ── numbers (real persisted figures, keyed for the business-math engine) ──
-  const cash = cashflow ? (cashflow.cashInHand ?? 0) + (cashflow.bankBalance ?? 0) : null;
+  // Total cash only when BOTH parts are recorded; an unrecorded part is unknown, never 0 (liquidity contract).
+  const cash = cashflowTotalCash(cashflow);
   const numbers: Record<string, number | string> = {};
   if (cash !== null) numbers.cash = cash;
   if (finance?.revenue != null) numbers.grossSalesNow = finance.revenue;

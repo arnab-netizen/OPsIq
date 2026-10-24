@@ -14,6 +14,7 @@ import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 import {
   createBudgetPeriod,
   addBudgetLine,
@@ -62,11 +63,12 @@ async function seedHealthyFinance(workspaceId: string, businessId: string) {
       workspaceId, businessId,
       periodStart: new Date("2026-05-01"), periodEnd: new Date("2026-05-31"),
       currency: "INR",
-      revenue: 500000, costOfGoods: 250000, fixedCosts: 150000, cashOnHand: 400000,
+      revenue: 500000, costOfGoods: 250000, deliveryCost: 0, fixedCosts: 150000, cashOnHand: 400000,
       dataConfidenceScore: 80, missingCriticalData: [],
       updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 describe("[db] Owner Budget service", () => {

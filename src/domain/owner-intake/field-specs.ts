@@ -36,7 +36,7 @@ export const INTAKE_FIELD_SPECS: Record<IntakeTargetDomain, IntakeFieldSpec[]> =
     n("costOfGoodsOrServices", "currency"),
     n("fixedCosts", "currency"),
     n("variableCosts", "currency"),
-    n("cashOnHand", "currency"),
+    { ...n("cashOnHand", "currency"), label: "Cash in hand (not the bank)" },
     n("receivables", "currency"),
   ],
   sales: [

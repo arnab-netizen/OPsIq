@@ -100,7 +100,7 @@ export function AppShell({
             </div>
           )}
 
-          <main aria-hidden={drawerOpen || undefined} className="flex-1 overflow-y-auto p-6">
+          <main aria-hidden={drawerOpen || undefined} className="flex-1 scroll-pt-28 overflow-y-auto p-6">
             <CapabilitiesProvider capabilities={capabilities}>{children}</CapabilitiesProvider>
           </main>
         </div>

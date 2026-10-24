@@ -3,7 +3,7 @@
  *
  * Read-only. Diagnostics calls the SAME authoritative predicates the real
  * routes use (canAdmitSignup, canSubmitBetaRequest, isBetaRequestInvited,
- * readEffectiveSettings/countExternalBetaWorkspaces, and
+ * readEffectiveSettings/countCapacityUsage, and
  * getEmployeeAccessStatus for workspace access) — never a second,
  * independently-reimplemented copy of any rule, so this can never drift from
  * the real gates (design correction 10).
@@ -17,7 +17,7 @@ import { identityEmailSchema } from "@/lib/validation";
 import { ValidationError } from "@/infra/errors";
 import { isBetaRequestInvited, isInviteExpired } from "@/lib/beta";
 import { canAdmitSignup, canSubmitBetaRequest } from "@/domain/beta/admission";
-import { readEffectiveSettings, countExternalBetaWorkspaces } from "@/services/beta/platform-settings.service";
+import { readEffectiveSettings, countCapacityUsage, hasSignupCapacity } from "@/services/beta/platform-settings.service";
 import { getEmployeeAccessStatus } from "@/services/workspace/employee-lifecycle.service";
 import { EmployeeAccessStatus, hasLiveAccess } from "@/domain/workspace/employee-lifecycle";
 
@@ -235,8 +235,7 @@ export async function diagnoseAccess(email: string, workspaceId?: string): Promi
   const canRequestBeta = canSubmitBetaRequest(settings.admissionMode);
 
   const isInvited = await isBetaRequestInvited(normalizedEmail);
-  const count = await countExternalBetaWorkspaces();
-  const hasCapacity = count < settings.capacityLimit;
+  const hasCapacity = hasSignupCapacity(await countCapacityUsage(), settings.capacityLimit);
   const canSignUp = canAdmitSignup(settings.admissionMode, isInvited, hasCapacity);
 
   const user = await db.user.findUnique({

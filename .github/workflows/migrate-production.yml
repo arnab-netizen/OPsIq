@@ -395,7 +395,9 @@ jobs:
 
       - name: Check pending migrations (pre-deploy)
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
           echo "=== Pre-deploy migration status ==="
           # `prisma migrate status` exits non-zero whenever migrations are
@@ -422,7 +424,10 @@ jobs:
 
       - name: Deploy migrations
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          OPSIQ_PRODUCTION_OPERATION: migrate deploy
         run: |
           echo "DEPLOY_STARTED=true" >> "$GITHUB_ENV"
           npx prisma migrate deploy
@@ -430,7 +435,9 @@ jobs:
 
       - name: Verify migration status (post-deploy)
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
           echo "=== Post-deploy migration status ==="
           # Same errexit hazard as the pre-deploy check above -- a failed

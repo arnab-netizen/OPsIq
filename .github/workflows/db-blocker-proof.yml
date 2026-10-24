@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      OPSIQ_DB_TARGET: ci
       TEST_WITH_DB: "true"
     services:
       postgres:

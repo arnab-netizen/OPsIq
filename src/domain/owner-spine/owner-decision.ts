@@ -19,11 +19,19 @@
  * The 0–100 priority score saturates (raw product reaches ~300), so ties at 100 are routine; they are
  * decided by business class and severity, never by alphabetical finding code or title.
  *
+ * SCORE COMPARABILITY (owner-spine/score-semantics.ts): the raw `priorityScore` of different domains is NOT a
+ * universal ranking and is NOT sufficient to elect the owner-wide #1 action. Heterogeneous domain scores are
+ * reconciled by semantic class and severity first; priority, impact, confidence and effort are only the
+ * SUBORDINATE tie-breaks (stages 3–4 above, canonical-tie-break-only). Cross-domain election belongs solely to
+ * `resolveOwnerDecision`; `rankOwnerActions` is domain-local.
+ *
  * Pure: no DB, no I/O, no clock reads (the caller supplies `now`). Nothing is invented: missing data
  * is reported as missing, confidence is capped when evidence is insufficient, and an owner with no
  * diagnosed domain gets honest "add data" guidance instead of a fabricated target.
  */
 import { humanizeMetricKey } from "@/lib/metric-label";
+import { ownerMissingItemText } from "./owner-field-labels";
+import { describeVerifiedActionLine } from "./owner-outcome-policy";
 import {
   ownerImperativeContext,
   ownerLeverKey,
@@ -40,6 +48,12 @@ import {
   type OwnerDomain,
   type OwnerSeverity,
 } from "./contracts";
+import {
+  isEvidenceRequestTarget,
+  isRecordedFactTarget,
+  resolveOwnerAdvicePolicy,
+  type OwnerAdvicePolicy,
+} from "./owner-advice-policy";
 import { evaluateOwnerActionGate, NO_OWNER_GATE_CONSTRAINTS, type OwnerGateBlock, type OwnerGateBlockCode, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
 
 // --- Business-semantic priority classes ---------------------------------------------------------
@@ -147,6 +161,9 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "MKT_MISSING_CRITICAL_DATA", "MKT_INVALID_CURRENCY",
     // Cash/Finance figures that are not current hold work until current figures are diagnosed.
     "GATE_CASH_UNVERIFIED",
+    // Total cash is not established (a Cash flow position missing a component, or Finance liquidity unconfirmed): the gate
+    // holds discretionary growth until it is confirmed. A data request — never a survival verdict.
+    "GATE_CASH_UNCONFIRMED",
   ],
   GROWTH_OPPORTUNITY: [
     "SALES_OPP_CONVERT_PIPELINE", "SALES_OPP_IMPROVE_RETENTION", "SALES_OPP_RAISE_CONVERSION",
@@ -174,6 +191,8 @@ const CLASS_CODES: Record<OwnerPriorityClass, readonly string[]> = {
     "SOP_OPP_DATA_QUALITY", "MKT_OPP_DATA_QUALITY",
     // A low-severity "enter the EMI for the recorded debt" data request (opportunity-rules.ts).
     "FIN_NOTABLE_OUTSTANDING_DEBT",
+    // A medium-severity "add the bank balance to confirm total cash" data request (opportunity-rules.ts).
+    "FIN_LIQUIDITY_UNCONFIRMED",
     "OPS_OPP_CLOSE_SOP_GAP", "OPS_OPP_CUT_REWORK", "OPS_OPP_RECLAIM_IDLE", "OPS_OPP_RECOVER_DELAYS",
     "OPS_OPP_USE_CAPACITY_HEADROOM",
     "SOP_OPP_CLEAR_OVERDUE", "SOP_OPP_CLOSE_COVERAGE_GAP", "SOP_OPP_CONVERT_TO_SOP", "SOP_OPP_RAISE_VERIFICATION",
@@ -510,6 +529,12 @@ export interface CurrentOwnerDecision {
   conditions: string[];
   missingInformation: string[];
   /**
+   * What OpsIQ may CLAIM or RECOMMEND from the elected target, given its evidence (owner-advice-policy.ts). The
+   * ONE advice policy: owner surfaces read it and never invent their own act / do-not-act / abstain semantics. It
+   * composes the facts above (confidence, missingInformation, reassessmentTrigger) and never changes who wins.
+   */
+  advicePolicy: OwnerAdvicePolicy;
+  /**
    * What changed, derived ONLY from persisted mutation facts inside the recent window (new diagnoses,
    * action completions/verifications, risk/compliance transitions, attribution changes). Reading the
    * decision never writes anything; transitions that cannot be proven from those facts are omitted.
@@ -807,11 +832,11 @@ export function describeOwnerChanges(facts: OwnerChangeFacts): OwnerDecisionChan
     work.push(
       e.kind === "ACTION_COMPLETED"
         ? { kind: "ACTION_COMPLETED", message: `Completed: "${e.title}".` }
-        : { kind: "ACTION_VERIFIED", message: `Verified: "${e.title}" reached its target.` }
+        : { kind: "ACTION_VERIFIED", message: describeVerifiedActionLine(e.title) }
     );
   }
   for (const d of [...facts.newlyStaleDomains].sort()) {
-    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The figures in ${ownerDomainLabel(d)} are now out of date — update them before acting on what they flagged.` });
+    stale.push({ kind: "EVIDENCE_OUT_OF_DATE", message: `The analysis of ${ownerDomainLabel(d)} now rests on out-of-date figures — add current figures and refresh it before acting on what it flagged.` });
   }
   const seen = new Set<string>();
   return [...records, ...attribution, ...issues, ...work, ...stale, ...evidence].filter((c) => (seen.has(c.message) ? false : (seen.add(c.message), true)));
@@ -843,8 +868,8 @@ function buildRefreshTargets(staleCandidates: OwnerDecisionCandidate[], input: {
       priorityClass: top.priorityClass,
       findingCode: "EVIDENCE_REFRESH",
       findingId: null,
-      title: `Update the figures in ${label} before acting on them`,
-      explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Enter current figures and re-run the ${label} diagnosis to confirm what still needs doing.`,
+      title: `Refresh the ${label} analysis before acting on it`,
+      explanation: `Your latest ${label} diagnosis is out of date, so OpsIQ will not tell you to act on it yet. It last flagged "${top.title}"${more}. Re-run the ${label} diagnosis on your current figures (add them first if they are older) to confirm what still needs doing.`,
       // Every ranking attribute comes from the SAME most-serious item (never mixed across items or
       // classes); confidence is also capped at "low" — the figures are out of date.
       severity: top.severity,
@@ -896,9 +921,19 @@ const MARGIN_REPAIR_CODES = new Set(["FIN_NEGATIVE_GROSS_MARGIN", "FIN_NEGATIVE_
  * survival state driven by profit and margin, or figures that are not current. The blocker target is named
  * and routed by it — a margin problem is never called "Stabilise cash".
  */
-type CashBlockKind = "cash" | "profit" | "unverified";
+type CashBlockKind = "cash" | "profit" | "unverified" | "evidence";
 function cashBlockKind(gate: OwnerGateConstraints): CashBlockKind {
+  // A block caused ONLY by incomplete material cash evidence (the state itself — SAFE/WATCH — would not hold growth): named
+  // as the data request it is, never as a cash danger ("Stabilise cash").
+  const safeState = gate.cash.gateState === "SAFE" || gate.cash.gateState === "WATCH";
+  if (gate.cash.evidenceSufficient === false && safeState && gate.cash.driver !== "unverified") return "evidence";
   return gate.cash.driver === "finance_profit" ? "profit" : gate.cash.driver === "unverified" ? "unverified" : "cash";
+}
+
+/** The domain a cash-evidence gap points the owner to (the source that holds the gap; Cash flow first). */
+function cashEvidenceDomain(gate: OwnerGateConstraints): "cashflow" | "finance" {
+  const first = gate.cash.evidenceGaps?.find((g) => g.source === "cashflow") ?? gate.cash.evidenceGaps?.[0];
+  return first?.source === "finance" ? "finance" : "cashflow";
 }
 
 /** Whether an eligible candidate already IS the work that clears a gate blocker (so none is synthesized). */
@@ -909,6 +944,10 @@ function addressesBlocker(c: OwnerDecisionCandidate, code: OwnerGateBlockCode, g
     case "CASH_SAFETY_BLOCKED": {
       const kind = cashBlockKind(gate);
       if (kind === "profit") return c.domain === "finance" && c.priorityClass === "PROFIT_LOSS";
+      if (kind === "evidence") {
+        // The request for the missing cash figure (or a refresh of it), in the source that holds the gap.
+        return (c.domain === "cashflow" || c.domain === "finance") && (c.source === "evidence_refresh" || c.priorityClass === "MISSING_CRITICAL_EVIDENCE");
+      }
       if (kind === "unverified") {
         // The refresh of the source whose figures decide it (an amended Finance snapshot → Finance).
         const src = gate.cash.source === "finance" ? "finance" : gate.cash.source === "cashflow" ? "cashflow" : null;
@@ -941,6 +980,10 @@ function gateTarget(code: OwnerGateBlockCode, gate: OwnerGateConstraints, heldDo
     case "CASH_SAFETY_BLOCKED": {
       const kind = cashBlockKind(gate);
       if (kind === "profit") return { findingCode: "GATE_PROFIT_UNSAFE", priorityClass: "PROFIT_LOSS", domain: "finance", route: "/owner/finance" };
+      if (kind === "evidence") {
+        const d = cashEvidenceDomain(gate);
+        return { findingCode: "GATE_CASH_UNCONFIRMED", priorityClass: "MISSING_CRITICAL_EVIDENCE", domain: d, route: `/owner/${d}` };
+      }
       if (kind === "unverified") {
         // Routed to the source whose figures need confirming (an amended Finance snapshot → Finance).
         return gate.cash.source === "finance"
@@ -973,11 +1016,14 @@ export function ownerGateHoldText(code: OwnerGateBlockCode, gate: OwnerGateConst
       case "CASH_SAFETY_BLOCKED": {
         const kind = cashBlockKind(gate);
         if (kind === "profit") return ["the profitability safety limit", "Restore profitability"];
+        if (kind === "evidence") return ["total cash not being confirmed yet", "Enter the missing cash in hand / bank balance figure"];
         if (kind === "unverified") return ["cash and Finance figures that are not current", "Confirm current cash and Finance figures"];
         return ["the cash safety limit", "Stabilise cash"];
       }
       case "MARGIN_SAFETY_BLOCKED":
-        return ["the gross-margin safety floor", "Restore gross margin above the floor"];
+        return gate.grossMarginOutOfDate
+          ? ["the gross-margin safety floor (the last recorded margin is from out-of-date figures)", "Confirm your current gross margin and keep it above the floor"]
+          : ["the gross-margin safety floor", "Restore gross margin above the floor"];
       case "CAPACITY_BLOCKED":
         return ["the capacity limit", "Clear the capacity bottleneck"];
       case "DO_NOT_REPEAT_BLOCKED":
@@ -1011,11 +1057,14 @@ function gateBlockerTitle(code: OwnerGateBlockCode, gate: OwnerGateConstraints, 
     case "CASH_SAFETY_BLOCKED": {
       const kind = cashBlockKind(gate);
       if (kind === "profit") return "Restore profitability before advancing the work it holds back";
+      if (kind === "evidence") return "Confirm your total cash (enter the missing cash in hand / bank balance) before advancing the growth work it holds back";
       if (kind === "unverified") return "Confirm current cash and Finance figures before advancing the work they hold back";
       return "Stabilise cash before advancing the work it holds back";
     }
     case "MARGIN_SAFETY_BLOCKED":
-      return "Restore gross margin above the safety floor before scaling sales or marketing";
+      return gate.grossMarginOutOfDate
+        ? "Confirm your current gross margin (the last figures are out of date) before scaling sales or marketing"
+        : "Restore gross margin above the safety floor before scaling sales or marketing";
     case "CAPACITY_BLOCKED":
       return `Clear the capacity bottleneck${gate.capacity.bottlenecks.length ? ` (${gate.capacity.bottlenecks.join(", ")})` : ""} before taking on more work`;
     case "DO_NOT_REPEAT_BLOCKED":
@@ -1059,12 +1108,6 @@ function blockerConfidence(code: OwnerGateBlockCode, gate: OwnerGateConstraints,
       return typeof gate.grossMarginConfidence === "number" ? clampConfidence(gate.grossMarginConfidence) : UNKNOWN_BLOCKER_CONFIDENCE;
   }
 }
-
-/**
- * Gate targets that rest on recorded control records, not on diagnosed domain data (the business-wide
- * data-sufficiency cap does not apply; their own confidence is still source-derived — see blockerConfidence).
- */
-const RECORDED_FACT_GATE_CODES: ReadonlySet<string> = new Set(["GATE_COMPLIANCE_EXPIRED", "GATE_CAPACITY_UNSAFE"]);
 
 /**
  * One explicit "clear this blocker" target per gate blocker that holds eligible work and that no eligible
@@ -1249,22 +1292,26 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
 
   // Missing information: never invented — carried from the diagnosis layer and the primary's finding.
   const missingInformation: string[] = [];
-  const pushMissing = (s: string) => {
+  // Owner words only: a persisted finding names its missing evidence by internal field (`bankBalance`), never shown as such.
+  const pushMissing = (raw: string) => {
+    const s = ownerMissingItemText(raw, { capitalise: true });
     if (s && !missingInformation.includes(s)) missingInformation.push(s);
   };
-  if (!hasEvidence) pushMissing("Add your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
+  if (!hasEvidence) pushMissing("Add or complete your business numbers (sales, costs and cash) so OpsIQ can find your main target.");
   for (const m of input.dataSufficiency.missingCriticalData) pushMissing(m);
   if (primary) for (const m of primary.missingData) pushMissing(m);
-  for (const d of input.staleDomains) pushMissing(`Current figures for ${ownerDomainLabel(d)} — the latest ones are out of date, so what they showed cannot be relied on yet.`);
+  for (const d of input.staleDomains) pushMissing(`A refreshed ${ownerDomainLabel(d)} analysis — the latest one rests on out-of-date figures, so what it showed cannot be relied on yet.`);
   for (const d of input.futureDomains ?? []) {
     pushMissing(`${ownerDomainLabel(d)} figures entered for a period that has not started yet are not used. Correct the period if it was entered by mistake.`);
   }
   for (const d of input.provisionalDomains ?? []) {
     // Only Cash flow and Finance in-progress figures feed a safety check (they may tighten it); other domains'
     // in-progress figures are not used at all until the period ends.
+    // With no completed period to rest on, never claim advice rests on one.
+    const rests = hasEvidence ? " Advice rests on the latest completed period." : " Add figures for a completed period so OpsIQ can advise.";
     pushMissing(d === "cashflow" || d === "finance"
-      ? `${ownerDomainLabel(d)} figures for the current period are still in progress: OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth, until the period ends. Advice rests on the latest completed period.`
-      : `${ownerDomainLabel(d)} figures for the current period are still in progress, so they are not used until the period ends. Advice rests on the latest completed period.`);
+      ? `${ownerDomainLabel(d)} figures for the current period are still in progress: OpsIQ uses them only to flag a worsening, never to clear a problem or approve growth, until the period ends.${rests}`
+      : `${ownerDomainLabel(d)} figures for the current period are still in progress, so they are not used until the period ends.${rests}`);
   }
 
   // Confidence: the primary's own evidence confidence, capped by business-wide data sufficiency.
@@ -1272,16 +1319,13 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   let score = primary ? Math.round(clampConfidence(primary.confidence) * 100) : 0;
   let capped = false;
   const primaryIsRefresh = primary?.source === "evidence_refresh";
-  const primaryIsDataRequest = primary?.priorityClass === "MISSING_CRITICAL_EVIDENCE" || primaryIsRefresh;
+  const primaryIsDataRequest = primary !== null && isEvidenceRequestTarget(primary);
   // Recorded control facts (a compliance breach, an owner-recorded risk) do not depend on domain
   // data completeness, so business-wide data sufficiency never caps them.
   // A safety-gate blocker resting on a recorded fact (an expired obligation, recorded capacity) is not capped
   // as provisional either; one resting on data-derived readings (cash, margin, a do-not-repeat hold on
   // diagnosed work) is capped like the evidence it rests on (its own confidence is source-derived).
-  const primaryIsRecordedFact = primary !== null && (
-    primary.source === "compliance_item" || primary.source === "business_risk" ||
-    (primary.source === "safety_gate" && RECORDED_FACT_GATE_CODES.has(primary.findingCode))
-  );
+  const primaryIsRecordedFact = primary !== null && isRecordedFactTarget(primary);
   if (primary && !primaryIsDataRequest && !primaryIsRecordedFact) {
     // The reason is stated whenever data is short — also when the score was already at or below the cap.
     if (input.dataSufficiency.status === "insufficient") {
@@ -1295,10 +1339,11 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   if (primary?.source === "safety_gate" && (primary.findingCode === "GATE_CASH_UNSAFE" || primary.findingCode === "GATE_PROFIT_UNSAFE") && input.gate?.cash.provisional) {
     reasons.push("This rests on this period's in-progress figures, not a completed period, so it is provisional.");
   }
-  if (primaryIsRefresh) reasons.push("These figures are out of date, so what they showed is not proven now; confirm them before acting on it.");
+  if (primaryIsRefresh) reasons.push("This analysis rests on out-of-date figures, so what it showed is not proven now; refresh it before acting on it.");
   else if (primaryIsDataRequest) reasons.push("This is a request for missing information; advice on everything else waits for it.");
   const level: OwnerDecisionConfidenceLevel = primary ? confidenceLevelFor(score) : "insufficient";
-  if (!primary && !hasEvidence) reasons.push("There is no business data yet.");
+  // "No analysed data" — never "no data": figures may be saved but not yet assessed (or too incomplete to assess).
+  if (!primary && !hasEvidence) reasons.push("OpsIQ has no completed analysis of your figures yet.");
 
   // Why this wins: explicit arbitration against the strongest competitor, and against the strongest
   // competitor from a DIFFERENT domain (so a Finance-vs-Strategy conflict is always named).
@@ -1307,7 +1352,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whyThisWins.push(
       primaryIsRefresh
         // Never claims the old problem is current — only that it was last flagged and needs confirming.
-        ? `Your ${ownerDomainLabel(primary.domain)} figures are out of date, and they last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; confirming them comes before acting on anything they showed.`
+        ? `The figures behind your ${ownerDomainLabel(primary.domain)} analysis are out of date, and it last showed ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}; refreshing the analysis comes before acting on anything it showed.`
         : `This is ${OWNER_PRIORITY_CLASS_LABEL[primary.priorityClass]}${primary.severity ? ` (${primary.severity})` : ""}, ${
             primary.source === "domain_action"
               ? `from your ${ownerDomainLabel(primary.domain)} diagnosis`
@@ -1415,7 +1460,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
   const cadence = `or within ${input.reassessment.days} days (${input.reassessment.reason})`;
   const reassessmentTrigger = primary
     ? primary.source === "evidence_refresh"
-      ? `Check again after you update the ${ownerDomainLabel(primary.domain)} figures and re-run its diagnosis, ${cadence}.`
+      ? `Check again after you refresh the ${ownerDomainLabel(primary.domain)} analysis, ${cadence}.`
       : primary.source === "survival_reading"
         ? `Check again when new ${ownerDomainLabel(primary.domain)} figures are added (only new figures can show this has gone), ${cadence}.`
         : primary.source === "safety_gate"
@@ -1426,6 +1471,26 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     : hasEvidence
       ? `Check again when new data is added, ${cadence}.`
       : "Check again as soon as you add your business numbers.";
+
+  const advicePolicy = resolveOwnerAdvicePolicy({
+    state,
+    primary: primary
+      ? { source: primary.source, priorityClass: primary.priorityClass, findingCode: primary.findingCode, domain: primary.domain, missingData: primary.missingData }
+      : null,
+    intent: primary ? ownerTargetIntent(primary) : null,
+    primaryDomainLabel: primary ? ownerDomainLabel(primary.domain) : "",
+    dataSufficiency: {
+      status: input.dataSufficiency.status,
+      lowConfidenceDomains: input.dataSufficiency.lowConfidenceDomains,
+      missingCriticalData: input.dataSufficiency.missingCriticalData,
+    },
+    staleDomains: input.staleDomains,
+    gateCashProvisional:
+      primary?.source === "safety_gate" && (primary.findingCode === "GATE_CASH_UNSAFE" || primary.findingCode === "GATE_PROFIT_UNSAFE") && input.gate?.cash.provisional === true,
+    gateCashConflicting: input.gate?.cash.conflicting === true,
+    missingInformation,
+    reassessmentTrigger,
+  });
 
   const generatedAt = input.now.toISOString();
   const primaryTarget = primary ? toTarget(primary) : null;
@@ -1449,6 +1514,7 @@ export function resolveOwnerDecision(input: ResolveOwnerDecisionInput): CurrentO
     whatNotToDo,
     conditions,
     missingInformation,
+    advicePolicy,
     whatChanged: describeOwnerChanges(input.changeFacts),
     whatChangedWindowDays: OWNER_WHAT_CHANGED_WINDOW_DAYS,
     reassessmentTrigger,

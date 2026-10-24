@@ -31,13 +31,34 @@ describe("owner-manual-entry-form — module contract assertions", () => {
 });
 
 describe("owner manual-entry form contract", () => {
-  it("1. every section maps to a valid governed OwnerInputCategory and has an id + a required note", () => {
+  it("1. every section maps to a valid governed OwnerInputCategory and has an id + a note field", () => {
     expect(MANUAL_ENTRY_SECTIONS.length).toBeGreaterThanOrEqual(10);
     for (const s of MANUAL_ENTRY_SECTIONS) {
       expect(OWNER_INPUT_CATEGORIES as readonly string[]).toContain(s.category);
       expect(s.id.length).toBeGreaterThan(0);
-      expect(s.fields.some((f) => f.key === "note" && f.required)).toBe(true);
+      const note = s.fields.find((f) => f.key === "note");
+      expect(note).toBeDefined();
+      // A note is required exactly when the section has no structured numeric fact to carry.
+      expect(Boolean(note!.required)).toBe(!s.fields.some((f) => f.kind === "amount"));
     }
+  });
+
+  it("1b. a structured numeric fact is valid WITHOUT a narrative note (zero included)", () => {
+    expect(validateManualEntry(sectionById("cash_cost")!, { cashInHand: 100000 }).ok).toBe(true);
+    expect(validateManualEntry(sectionById("cash_cost")!, { cashInHand: 0 }).ok).toBe(true);
+    expect(validateManualEntry(sectionById("revenue")!, { revenue: 250000 }).ok).toBe(true);
+    expect(validateManualEntry(sectionById("business_snapshot")!, { orderCount: 40 }).ok).toBe(true);
+  });
+
+  it("1c. narrative-only sections still require the note, and PII is still blocked on a numeric-only section's other fields", () => {
+    for (const id of ["current_issue", "customer_quality", "staff_process", "vendor", "owner_workload", "opportunity", "missing_data"]) {
+      const r = validateManualEntry(sectionById(id)!, { missingData: "unknown" });
+      expect(r.ok).toBe(false);
+      expect(r.errors.join(" ")).toMatch(/operational note/i);
+    }
+    const pii = validateManualEntry(sectionById("cash_cost")!, { cashInHand: 5, missingData: "ask sen@mail.com" });
+    expect(pii.ok).toBe(false);
+    expect(pii.errors.join(" ")).toMatch(/personal data/i);
   });
 
   it("2. section ids are unique and there is at least one essential + one optional section", () => {

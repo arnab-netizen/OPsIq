@@ -6,14 +6,24 @@
  * basic impossibility checks. Used by the API layer; duplicate-period and
  * workspace-ownership are enforced in the service layer.
  */
+import { businessCurrencySchema } from "./currency";
 import { z } from "zod/v4";
 import { BUSINESS_TYPES } from "./types";
 
+/**
+ * A name an owner types is display text: C0 control characters (NUL, escape sequences, line breaks) and DEL are never part
+ * of one, and a NUL byte is rejected by Postgres as an unexplained server error. Refused at the boundary as a 400.
+ */
+export const NO_CONTROL_CHARACTERS = {
+  test: (v: string) => !/[\u0000-\u001F\u007F]/.test(v),
+  message: "Business name can't contain control characters",
+} as const;
+
 export const businessCreateSchema = z.object({
-  name: z.string().min(1, "Business name is required").max(200),
+  name: z.string().min(1, "Business name is required").max(200).refine(NO_CONTROL_CHARACTERS.test, NO_CONTROL_CHARACTERS.message),
   businessType: z.enum(BUSINESS_TYPES),
   location: z.string().max(200).optional(),
-  currency: z.string().min(1, "Currency is required").max(8),
+  currency: businessCurrencySchema,
   operatingModel: z.string().max(200).optional(),
   b2cSupported: z.boolean().optional().default(true),
   b2bSupported: z.boolean().optional().default(false),
@@ -26,7 +36,7 @@ export const businessCreateSchema = z.object({
 export type BusinessCreateInput = z.infer<typeof businessCreateSchema>;
 
 export const businessUpdateSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().min(1).max(200).refine(NO_CONTROL_CHARACTERS.test, NO_CONTROL_CHARACTERS.message).optional(),
   businessType: z.enum(BUSINESS_TYPES).optional(),
   location: z.string().max(200).optional(),
   operatingModel: z.string().max(200).optional(),
@@ -45,7 +55,7 @@ export const metricSnapshotSchema = z
   .object({
     periodStart: z.string().min(1, "Reporting period start is required"),
     periodEnd: z.string().min(1, "Reporting period end is required"),
-    currency: z.string().min(1, "Currency is required").max(8),
+    currency: businessCurrencySchema,
 
     revenue: nonNeg,
     totalCosts: nonNeg,

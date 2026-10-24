@@ -432,8 +432,18 @@ restore procedure without any production risk, use Neon's branching feature
 4. Provision a **new, empty Neon project** (do not restore onto anything that might
    still be serving production traffic).
 5. Get that new project's direct (non-pooler) connection string.
-6. Run: `DATABASE_URL="<new-project-direct-url>" bash scripts/restore-database.sh
-   opsiq_backup_<timestamp>.sql.gz verify`
+6. **Do not run `scripts/restore-database.sh` against the new Neon project.** The script restores
+   only onto a loopback database (`OPSIQ_DB_TARGET=local`) or an approved staging endpoint
+   (`OPSIQ_DB_TARGET=staging`) and refuses production (`PRODUCTION_RESTORE_REQUIRES_GOVERNED_WORKFLOW`):
+   a `pg_dump --create` dump drops and recreates a whole database, so a direct production
+   restore from a shell `DATABASE_URL` is not supported until a separately governed production
+   recovery workflow exists (`GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED`; it will need a
+   protected `production` environment, manual dispatch, owner confirmation, exact database
+   identity proof, backup provenance, checksum verification, a maintenance procedure,
+   rehearsal evidence, post-restore verification, an audit record and abort conditions).
+   Until then, rehearse the backup locally with
+   `OPSIQ_DB_TARGET=local DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" bash scripts/restore-database.sh opsiq_backup_<timestamp>.sql.gz verify`
+   and use the Neon point-in-time paths above for production.
 7. **Do not repoint production traffic yet.** First, independently confirm:
    - `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';`
      matches the expected table count for the current `prisma/schema.prisma`.

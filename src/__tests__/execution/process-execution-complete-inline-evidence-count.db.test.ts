@@ -16,7 +16,7 @@
  * (N) is provably 1 in one scenario and provably 2 in another — and the exact boundary where N-1
  * inline items still correctly reject.
  *
- * MECHANISM UNDER TEST (completeProcessTask, process-execution-bridge.service.ts):
+ * MECHANISM UNDER TEST (completeProcessTask, applyProcessExecutionAction, process-execution-bridge.service.ts):
  *   const combinedEvidenceRefs = Array.from(new Set([...task.evidenceRefs, ...evidenceRefs]));
  *   if (EVIDENCE_REQUIRED_ROUTES.has(route)) {
  *     const minRequired = task.requiredEvidence.length > 0 ? task.requiredEvidence.length : 1;
@@ -52,7 +52,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { buildProcessExecutionBridge } from "@/domain/owner-mode/process-execution-bridge";
 import {
-  persistProcessExecutionRoutes, getPersistedProcessTasks, completeProcessTask,
+  persistProcessExecutionRoutes, getPersistedProcessTasks, completeProcessTask, applyProcessExecutionAction,
   type ProcessBridgeDb, type ProcessBridgeDeps,
 } from "@/services/owner-mode/process-execution-bridge.service";
 import type { ProcessCorrection, ProcessCorrectionRouting, CorrectionType } from "@/domain/owner-mode/bottleneck-correction-routing";
@@ -122,6 +122,14 @@ async function freshScenarios(): Promise<{ businessId: string; n1TaskKey: string
   return { businessId: scopedBusinessId, n1TaskKey: n1.taskKey, n2TaskKey: n2.taskKey };
 }
 
+/** Owner-approval work is approval-first: approve and start it before COMPLETE is reachable. */
+async function approveAndStart(workspaceId: string, taskKey: string, actorId: string, businessId: string) {
+  for (const action of ["APPROVE", "START"] as const) {
+    const r = await applyProcessExecutionAction({ workspaceId, businessId, actorId, actorRole: "owner", taskKey, action }, deps);
+    expect(r.ok).toBe(true);
+  }
+}
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db] COMPLETE with inline evidence, single call, no prior SUBMIT_EVIDENCE — evidence-count boundary (live audit reproduction)",
   () => {
@@ -154,6 +162,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("SCENARIO A (N=1): a bare COMPLETE (N-1=0 inline items) is correctly rejected EVIDENCE_REQUIRED/400", async () => {
       const { businessId, n1TaskKey } = await freshScenarios();
+      await approveAndStart(workspaceId, n1TaskKey, owner, businessId);
       const res = await completeProcessTask(
         { workspaceId, businessId, actorId: owner, actorRole: "owner", taskKey: n1TaskKey, evidenceRefs: [] },
         deps,
@@ -167,6 +176,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     it("SCENARIO A (N=1): COMPLETE with exactly 1 inline evidenceRef, in the SAME call, NO prior SUBMIT_EVIDENCE -> 200", async () => {
       const { businessId, n1TaskKey } = await freshScenarios();
       // Sanity: no SUBMIT_EVIDENCE call precedes this — task.evidenceRefs is still [] going in.
+      await approveAndStart(workspaceId, n1TaskKey, owner, businessId);
       const before = (await getPersistedProcessTasks(workspaceId, deps)).find((t) => t.taskKey === n1TaskKey)!;
       expect(before.evidenceRefs).toEqual([]);
 

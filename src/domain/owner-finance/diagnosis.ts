@@ -12,6 +12,7 @@ import { resolveFinanceThresholds } from "./thresholds";
 import { buildFinanceRiskFindings } from "./risk-rules";
 import { buildFinanceOpportunityFindings } from "./opportunity-rules";
 import { missingCriticalFinanceInputs, type MissingInputPriority } from "./data-confidence";
+import { importantFieldValue } from "./cost-model";
 
 /** A structured entry in the missing inputs registry. */
 export interface MissingInputEntry {
@@ -51,7 +52,7 @@ export function buildMissingInputsRegistry(input: FinancialSnapshotInput): Missi
     result.push({ field, priority: "CRITICAL", impact: MISSING_INPUT_IMPACT[field] ?? "diagnosis accuracy" });
   }
   for (const field of IMPORTANT_INPUT_FIELDS) {
-    const value = input[field];
+    const value = importantFieldValue(input, String(field));
     if (value === null || value === undefined || (typeof value === "number" && !Number.isFinite(value))) {
       result.push({ field: String(field), priority: "IMPORTANT", impact: MISSING_INPUT_IMPACT[String(field)] ?? "diagnosis accuracy" });
     }

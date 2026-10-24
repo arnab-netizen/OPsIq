@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { listBudgetSnapshots } from "@/services/owner-budget/budget.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const businessIds: string[] = [];
@@ -52,6 +53,7 @@ async function seedFinance(workspaceId: string, businessId: string) {
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 async function seedBudgetAction(workspaceId: string, businessId: string, dueAt: Date, status = "proposed") {

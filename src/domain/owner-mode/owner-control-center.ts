@@ -8,6 +8,7 @@
 
 import type { AttentionSummary } from "@/domain/owner-mode/owner-load";
 import type { OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
+import { ownerMaterialCommitmentGuard, sufficiencyOnlyAdvicePolicy, type OwnerAdvicePolicy } from "@/domain/owner-spine/owner-advice-policy";
 import { ownerImperativeContext, partitionReconciled, quoteTitles, reconcileOwnerProhibition, type ReconciledProhibition } from "@/domain/owner-spine/owner-imperatives";
 
 /** A canonical decision target, as far as the panel's guardrails need it. */
@@ -38,9 +39,16 @@ export interface ControlCenterInputs {
   mainTarget?: ControlCenterMainTarget | null;
   /** The canonical decision's supporting steps (never vetoed either). */
   supportingSteps?: ControlCenterMainTarget[];
+  /**
+   * The canonical decision's advice policy (owner-advice-policy.ts). The panel reads it so it never states a different
+   * "act / do not act" semantics from the decision beside it; it never overrides it.
+   */
+  advicePolicy?: OwnerAdvicePolicy | null;
 }
 
 export interface OwnerControlCenter {
+  /** The canonical decision's advice policy, passed through unchanged (null when no decision was supplied). */
+  advicePolicy: OwnerAdvicePolicy | null;
   attention: AttentionSummary;
   criticalAlerts: string[];
   whatNotToDo: string[];
@@ -72,20 +80,36 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   // Every guardrail passes through the ONE shared reconciler (owner-imperatives.ts): it never vetoes the
   // canonical main target or a supporting step; a refresh (data-request) target rewrites nothing.
   const ctx = ownerImperativeContext(i.mainTarget ? { primaryTarget: i.mainTarget, supportingSteps: i.supportingSteps ?? [] } : null);
+  // Data sufficiency is an INFORMATIONAL data-quality signal here. The owner-wide statement about committing money, capacity or
+  // a plan comes ONLY from the canonical advice policy (the decision's own, or — when no decision exists for the selected
+  // business — a sufficiency-only policy resolved by the same module). This panel keeps no separate permission rule.
   if (i.dataSufficiencyStatus === "insufficient") {
-    criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).`);
-    // The canonical arbiter already accounted for missing data (confidence caps, data-request
-    // targets); the guardrail applies to OTHER material decisions, never to an action main target.
+    // A recorded fact (compliance breach, recorded risk, recorded safety block) is not made uncertain by data gaps elsewhere.
+    const recordedFactNote = i.advicePolicy?.mode === "RECORDED_FACT" ? " The recorded issue below is a fact and is unaffected." : "";
+    criticalAlerts.push(`Data is insufficient for confident decisions (${i.lowConfidenceDomains.join(", ") || "missing critical inputs"}).${recordedFactNote}`);
+  }
+  const policy = i.advicePolicy ?? sufficiencyOnlyAdvicePolicy(i.dataSufficiencyStatus);
+  const commitmentGuard = policy ? ownerMaterialCommitmentGuard(policy) : null;
+  if (commitmentGuard) {
+    // The canonical arbiter already accounted for missing data (confidence caps, data-request targets); the guardrail applies
+    // to OTHER material decisions, never to an action main target.
     guardrails.push(
       reconcileOwnerProhibition(
         {
-          text: "Do not make material decisions until the missing data is provided.",
+          text: commitmentGuard.prohibition,
           vetoes: "ANY_ACTION",
-          asCondition: (t) => `Go ahead with ${quoteTitles(t)}; hold other material decisions until the missing data is provided.`,
+          asCondition: (t) => `Go ahead with ${quoteTitles(t)}; ${commitmentGuard.condition}`,
         },
         ctx
       )
     );
+  } else if (i.advicePolicy?.mode === "RECORDED_FACT" && i.dataSufficiencyStatus === "insufficient" && i.mainTarget) {
+    // A recorded fact is actionable as a fact; only analysis that depends on the missing data waits — disclosed, never a "do not act" on the fact.
+    guardrails.push({
+      kind: "condition",
+      text: `Go ahead with ${quoteTitles([i.mainTarget.title])}; hold other material decisions that depend on the missing data until it is supplied.`,
+      conditionOn: [],
+    });
   }
   if (i.financeBlocked > 0) {
     criticalAlerts.push(`${i.financeBlocked} finance/margin/cash-unsafe recommendation(s) were blocked.`);
@@ -129,6 +153,7 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   const needsOwnerAttention = ownerActionsToday > 0 || criticalAlerts.length > 0;
 
   return {
+    advicePolicy: i.advicePolicy ?? null,
     attention: i.attention,
     criticalAlerts,
     whatNotToDo,

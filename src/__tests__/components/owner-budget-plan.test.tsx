@@ -55,7 +55,7 @@ function mockFetch() {
     if (url.includes("/api/owner/businesses")) return json({ businesses: [{ id: "b1", name: "Acme", currency: "INR" }] });
     if (url.includes("/api/owner/budget/guidance")) return json({ hasPlan: true, mode: "EMERGENCY", confidence: "OPERATIONAL", version: 2, reassessedAt: "2026-06-27T00:00:00Z", decisionType: "BLOCK", nextBestAction: PLAN.nextBestAction, topRisk: PLAN.topConstraint, signals: PLAN.signals, generatedActions: PLAN.generatedActions });
     if (url.includes("/api/owner/budget/snapshots")) return json([{ id: "s2", isCurrent: true, version: 2, plan: PLAN }]);
-    if (url.includes("/api/owner/budget/forecast")) return json({ hasData: true, startingCash: 40000, reserveRequired: 50000, sevenDayCash: 35000, thirtyDayCash: 10000, ninetyDayCash: -50000, nextCriticalDueInDays: 5, scenarios: [{ name: "base", weeklyEndingCash: [], endingCash: -50000, minCash: -60000, reserveBreachWeek: 3 }] });
+    if (url.includes("/api/owner/budget/forecast")) return json({ hasData: true, liquidityComplete: true, startingCash: 40000, reserveRequired: 50000, sevenDayCash: 35000, thirtyDayCash: 10000, ninetyDayCash: -50000, nextCriticalDueInDays: 5, scenarios: [{ name: "base", weeklyEndingCash: [], endingCash: -50000, minCash: -60000, reserveBreachWeek: 3 }] });
     if (url.includes("/api/owner/budget/authority")) return json([{ id: "a1", subjectRole: "manager", scopeCategory: "growth_roi", status: "OWNER_APPROVAL_REQUIRED", reason: "Repeated unverified spend" }]);
     if (url.includes("/api/owner/budget/actions")) return json([{ id: "t1", workspaceId: "w1", businessId: "b1", sourceKey: "BLOCK|protect cash: freeze discretionary spend", title: "Protect cash: freeze discretionary spend", decisionType: "BLOCK", accountableRole: "owner", status: "proposed", dueAt: "2026-06-29T00:00:00Z", reviewInDays: 2, requiredProof: "Updated cash position", expectedFinancialImpact: "Preserve reserve", verificationMethod: "Owner verifies against required proof: Updated cash position", escalationPath: "Escalate to owner if not actioned by the 2-day review date." }]);
     return json({});
@@ -90,18 +90,32 @@ describe("Owner Budget & Profit Plan page", () => {
     expect(text).not.toContain("OWNER_APPROVAL_REQUIRED");
   });
 
-  it("labels generated actions as advisory and shows the honest PARTIAL module banner", async () => {
+  it("shows no developer or build-status language, keeps owner-relevant limits, and keeps generated actions distinct from execution tasks", async () => {
     mockFetch();
     const { container } = renderWithProvider(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Generated actions"));
     const text = container.textContent ?? "";
-    // The module-status banner is honest about being partial, but must never leak the raw
-    // internal build-status token to the owner (G-post-merge-live-verification).
-    expect(text).toMatch(/partially integrated/i);
-    expect(text).not.toContain("DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL");
-    // Generated actions are honestly labelled as the advisory plan snapshot.
+    // No implementation, governance-proof, RBAC or test-status commentary reaches the owner.
+    for (const developerText of [
+      "DB/CI",
+      "RBAC",
+      "runtime test",
+      "feature-complete",
+      "Module status",
+      "backend governance",
+      "DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL",
+    ]) {
+      expect(text).not.toContain(developerText);
+    }
+    expect(text).not.toMatch(/partially integrated/i);
+    // Owner-relevant limits are stated in plain language.
+    expect(text).toContain("About these figures");
+    expect(text).toMatch(/information entered in OpsIQ/i);
+    expect(text).toMatch(/Live POS, payment-gateway and bank feeds are not connected automatically/i);
+    // Generated actions are still labelled as the advisory plan snapshot, not execution tasks.
     expect(text).toMatch(/advisory plan snapshot/i);
     expect(text).toMatch(/advisory recommendations from the current plan snapshot/i);
+    expect(text).toContain("Execution tasks");
     expect(text).toContain("Override this plan"); // owner override control present
   });
 

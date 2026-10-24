@@ -163,6 +163,7 @@ Every reader of financial evidence in `src` — the snapshot model (dot, bracket
 |---|---|
 | `src/app/api/owner/dashboard/route.ts` | DIAGNOSIS_BOUND |
 | `src/app/api/owner/finance/businesses/[businessId]/snapshots/route.ts` | HISTORICAL_LIST |
+| `src/services/beta-cohort/cohort-evidence.service.ts` | DIAGNOSIS_BOUND, HISTORICAL_LIST |
 | `src/services/owner-budget/budget.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-budget/signal-router.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-condition/business-condition.service.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
@@ -174,6 +175,7 @@ Every reader of financial evidence in `src` — the snapshot model (dot, bracket
 | `src/services/owner-finance/recommendation-margin-safety.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-finance/snapshot.service.ts` | MODEL_SERVICE, HISTORICAL_LIST |
 | `src/services/owner-finance/verification.service.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
+| `src/services/owner-first-run/first-run-evidence.reader.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
 | `src/services/owner-guidance/owner-now-view.service.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-home/owner-candidate-builder.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-home/owner-change-facts.ts` | DIAGNOSIS_BOUND |
@@ -181,8 +183,11 @@ Every reader of financial evidence in `src` — the snapshot model (dot, bracket
 | `src/services/owner-mode/opportunity-decision.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-mode/owner-action-gate.service.ts` | DIAGNOSIS_BOUND, CURRENT_EFFECTIVE |
 | `src/services/owner-mode/owner-db-providers.ts` | CURRENT_EFFECTIVE |
+| `src/services/owner-mode/owner-onboarding.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-mode/owner-progress.service.ts` | DIAGNOSIS_BOUND |
+| `src/services/owner-outcome/outcome-sources.ts` | DIAGNOSIS_BOUND |
 | `src/services/owner-spine/provisional-cash-finance.ts` | DIAGNOSIS_BOUND |
+| `src/services/owner-strategy/goal.service.ts` | CURRENT_EFFECTIVE |
 | `src/services/owner-trust/trust.service.ts` | DIAGNOSIS_BOUND |
 <!-- financial-evidence-readers:end -->
 

@@ -120,8 +120,10 @@ describe("MinimumOwnerCockpit", () => {
 
   it("14. allowed action buttons appear for the owner", () => {
     const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    // Owner-approval work is approval-first: a PROPOSED task offers APPROVE (not START / COMPLETE).
     expect(getByTestId("cockpit-action-APPROVE")).toBeTruthy();
-    expect(getByTestId("cockpit-action-COMPLETE")).toBeTruthy();
+    const started = render(<MinimumOwnerCockpit bridge={view({ topRoute: route({ status: "IN_PROGRESS" }) })} onAction={noop} />);
+    expect(started.getByTestId("cockpit-action-COMPLETE")).toBeTruthy();
   });
 
   it("15. forbidden / impossible actions do not appear (no APPROVE on a manager/staff task; no unsafe button)", () => {
@@ -161,7 +163,7 @@ describe("MinimumOwnerCockpit", () => {
   // route needs and whether evidence already on file already satisfies it, instead of a same-page 400.
   it("19. COMPLETE: the owner's typed evidence is included in the onAction request payload (UI request-body regression)", () => {
     const onAction = vi.fn();
-    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={onAction} />);
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view({ topRoute: route({ status: "IN_PROGRESS" }) })} onAction={onAction} />);
     fireEvent.click(getByTestId("cockpit-action-COMPLETE")); // opens the labelled form
     fireEvent.change(getByTestId("cockpit-evidence-input"), { target: { value: "invoice-4471" } });
     fireEvent.click(getByTestId("cockpit-confirm"));
@@ -170,6 +172,7 @@ describe("MinimumOwnerCockpit", () => {
 
   it("20. COMPLETE: a multi-item evidence route tells the owner how many distinct references it requires", () => {
     const twoItemRoute = route({
+      status: "IN_PROGRESS",
       requiredEvidence: ["the drafted SOP/checklist change", "evidence of adoption before it is marked done"],
       evidenceRefs: [],
     });
@@ -180,6 +183,7 @@ describe("MinimumOwnerCockpit", () => {
 
   it("21. COMPLETE: evidence already on file (e.g. from an earlier Submit evidence step) is recognised, and Complete succeeds without re-entering it", () => {
     const satisfiedRoute = route({
+      status: "IN_PROGRESS",
       requiredEvidence: ["the drafted SOP/checklist change", "evidence of adoption before it is marked done"],
       evidenceRefs: ["sop-draft-1", "adoption-proof-1"],
     });

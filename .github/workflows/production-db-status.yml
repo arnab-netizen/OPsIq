@@ -506,7 +506,9 @@ jobs:
 
       - name: Prisma migrate status (built-in, read-only comparison)
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: npx prisma migrate status
 
       - name: Status summary

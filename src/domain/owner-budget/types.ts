@@ -106,6 +106,8 @@ export interface CashPosture {
   obligationsDueInHorizon: number;
   freeCashAfterObligations: number | null;
   reserveBreached: boolean;
+  /** Total liquid funds (cash in hand + bank balance) is fully known. Offensive modes require it. */
+  liquidityComplete: boolean;
   nextCriticalDueInDays: number | null;
 }
 

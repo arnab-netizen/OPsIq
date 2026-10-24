@@ -83,18 +83,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] cross-tenant hostile regression: two
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         email,
-        password: "password123",
         workspaceName,
-        acceptTerms: true,
-        acceptPrivacy: true,
-        acceptBetaNotice: true,
       }),
     });
     const res = await (POST(req as never) as Promise<Response>);
     expect(res.status).toBe(201);
-    const json = await res.json();
-    const userId = json.user.id as string;
-    const workspaceId = json.workspace.id as string;
+    const createdUser = await db.user.findUniqueOrThrow({ where: { email } });
+    const createdMembership = await db.workspaceMembership.findFirstOrThrow({ where: { userId: createdUser.id } });
+    const userId = createdUser.id;
+    const workspaceId = createdMembership.workspaceId;
 
     // Simulate "this account already redeemed its verification link" —
     // exactly the state POST /api/auth/verify-email would have produced.

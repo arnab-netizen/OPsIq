@@ -64,7 +64,7 @@ function period(endDaysAgo: number) {
   const end = new Date(Date.now() - endDaysAgo * 86_400_000);
   return { periodStart: iso(new Date(end.getTime() - 20 * 86_400_000)), periodEnd: iso(end) };
 }
-const CASH_FIGURES = { cashInHand: 50000, dailyCollections: 2000, receivables: 5000, receivablesOverdue: 1000, payables: 5000, upcomingEmi: 1000, rentDue: 2000, salaryDue: 5000, vendorDue: 1000, taxDue: 500, ownerWithdrawal: 500 };
+const CASH_FIGURES = { cashInHand: 50000, bankBalance: 0, dailyCollections: 2000, receivables: 5000, receivablesOverdue: 1000, payables: 5000, upcomingEmi: 1000, rentDue: 2000, salaryDue: 5000, vendorDue: 1000, taxDue: 500, ownerWithdrawal: 500 };
 
 async function business(workspaceId: string, name: string) {
   const b = await createBusiness({ name, businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false }, actor, workspaceId);
@@ -194,7 +194,9 @@ describe("[db] the ONE cash/finance reading — parity across Home, Now View, th
     // missing Cash flow half adds (obligations and expected inflows).
     expect(r.nowMissing.join(" | ")).not.toMatch(/latest cash position/);
     expect(r.nowMissing).toContain("cash obligations and expected inflows from a Cash flow check (your cash on hand is already measured from your Finance snapshot)");
-    expect(r.gate).toBe("allowed");
+    // The Finance fixture records cash on hand but no bank balance, so total liquidity is unconfirmed: the STATE is SAFE
+    // everywhere (above), but a safe-looking state resting on incomplete cash evidence never clears a growth step.
+    expect(r.gate).toBe("blocked");
     expect(r.rec).toBe("blocked"); // policy: the missing Cash half is AT_RISK for a growth recommendation
     expect((await consumers(ws, b, "cash flow")).rec).toBe("allowed"); // …which permits spend
     await teardownOwnerBusiness(b);

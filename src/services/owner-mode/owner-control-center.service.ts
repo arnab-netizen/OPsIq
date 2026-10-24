@@ -5,6 +5,7 @@
  * control center. Reuses the pure composer + fleet capacity + attention summarizer.
  */
 
+import type { OwnerAdvicePolicy } from "@/domain/owner-spine/owner-advice-policy";
 import { buildOwnerControlCenter, type ControlCenterMainTarget, type OwnerControlCenter } from "@/domain/owner-mode/owner-control-center";
 import { assessFleetCapacity, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
 import { summarizeOwnerAttention, type AttentionEventRecord } from "@/domain/owner-mode/owner-load";
@@ -40,6 +41,8 @@ export interface ControlCenterContext {
   /** The canonical owner decision's main target (never vetoed by the panel; see buildOwnerControlCenter). */
   mainTarget?: ControlCenterMainTarget | null;
   supportingSteps?: ControlCenterMainTarget[];
+  /** The canonical decision's advice policy (read, never overridden, by the panel). */
+  advicePolicy?: OwnerAdvicePolicy | null;
 }
 
 /**
@@ -85,5 +88,6 @@ export async function getOwnerControlCenter(
     nextBestAction: ctx.nextBestAction ?? null,
     mainTarget: ctx.mainTarget ?? null,
     supportingSteps: ctx.supportingSteps ?? [],
+    advicePolicy: ctx.advicePolicy ?? null,
   });
 }

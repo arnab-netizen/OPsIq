@@ -98,9 +98,29 @@ const STALE_DAYS = 60;
 /** Projections beyond this horizon are reported as "not reachable at the current rate" (no date). */
 const MAX_PROJECTION_MONTHS = 1200;
 
-function extractMetric(period: TrailingPeriod, targetType: GoalTrajectoryInput["targetType"]): number | null {
-  if (targetType === "REVENUE" || targetType === "MULTIPLE") return period.revenue;
-  return period.netProfit;
+/**
+ * THE definition of a "period with usable data" for a goal: the period's value for the goal's measure
+ * (revenue for REVENUE/MULTIPLE, net profit for everything else) is a finite number. A null (UNKNOWN) is not a
+ * usable period; an explicit 0 is. Every count and series below is built from this one function.
+ */
+export function periodMetricValue(period: TrailingPeriod, targetType: GoalTrajectoryInput["targetType"]): number | null {
+  const v = targetType === "REVENUE" || targetType === "MULTIPLE" ? period.revenue : period.netProfit;
+  return v !== null && v !== undefined && Number.isFinite(v) ? v : null;
+}
+
+const extractMetric = periodMetricValue;
+
+/**
+ * One trailing series from two evidence stores that can describe the same period: the Finance snapshots (derived
+ * figures) take precedence, the recorded recovery results fill only the periods Finance has no snapshot for. A period
+ * is never counted twice. Result is oldest-first.
+ */
+export function mergeTrailingPeriods(primary: readonly TrailingPeriod[], secondary: readonly TrailingPeriod[]): TrailingPeriod[] {
+  const key = (p: TrailingPeriod) => `${p.periodStart.toISOString().slice(0, 10)}|${p.periodEnd.toISOString().slice(0, 10)}`;
+  const seen = new Set(primary.map(key));
+  return [...primary, ...secondary.filter((p) => !seen.has(key(p)))].sort(
+    (a, b) => a.periodStart.getTime() - b.periodStart.getTime() || a.periodEnd.getTime() - b.periodEnd.getTime(),
+  );
 }
 
 function coefficientOfVariation(values: number[]): number {

@@ -23,6 +23,8 @@ const learningRow = {
   auditTrail: [{ at: NOW.toISOString(), actor: "seed", action: "created" }],
 };
 
+const CASH_ROW = { id: "cf-1", periodStart: NOW, periodEnd: NOW, updatedAt: NOW, cashInHand: 15000, bankBalance: 0, receivables: 240000, receivablesOverdue: 80000, payables: 30000 };
+
 /** Captures the `where` clauses the service issues so we can assert workspace scoping. */
 interface Wheres { where: string[] }
 
@@ -32,7 +34,8 @@ function seededDb(opts: { hasBusiness?: boolean; hasSnapshots?: boolean; learnin
   const ff = (val: unknown) => async (a: { where?: unknown }) => { rec(a?.where); return hasSnapshots ? val : null; };
   const fm = (val: unknown[]) => async (a: { where?: unknown }) => { rec(a?.where); return hasSnapshots ? val : []; };
   return {
-    ownerCashflowSnapshot: { findFirst: ff({ periodEnd: NOW, cashInHand: 15000, bankBalance: 0, receivables: 240000, receivablesOverdue: 80000, payables: 30000 }) },
+    // The current Cashflow row is read through the one selector (a candidate LIST, resolved by the domain rule).
+    ownerCashflowSnapshot: { findFirst: ff(CASH_ROW), findMany: fm([CASH_ROW]) },
     ownerFinancialSnapshot: { findFirst: ff({ periodEnd: NOW, revenue: 320000, costOfGoods: 250000, fixedCosts: 60000, variableCosts: 20000 }) },
     ownerWorkingCapitalItem: { findMany: fm([{ kind: "receivable", amount: 240000, dueDate: past(10) }]) },
     ownerCapacitySnapshot: { findFirst: ff({ bottleneckUtilization: 1.1, growthSafe: false, safeUtilization: 0.7, createdAt: NOW, expansionTriggered: false }) },

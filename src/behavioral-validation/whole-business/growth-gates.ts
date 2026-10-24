@@ -25,7 +25,8 @@ function hasList(xs?: string[]): boolean {
 export interface GrowthGateResult {
   gates: Record<GrowthGate, boolean>;
   scaleAllowed: boolean;
-  blockedBy: GrowthGate[];
+  /** Failing legacy gates; the owner service may append canonical scale-gate codes (canonical-scale-gate.ts). */
+  blockedBy: string[];
   stopLossDefined: boolean;
   decision: "grow" | "pause_stabilize" | "defer";
 }

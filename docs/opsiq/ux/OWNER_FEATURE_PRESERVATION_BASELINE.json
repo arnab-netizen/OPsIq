@@ -1,5 +1,5 @@
 {
-  "baselineSha": "e5d6fd8b73d6a1619b89377b764b6ec0046335fd",
+  "baselineSha": "0aa90a971163a3988d441296fe1bcdf48924ee87",
   "generatorPath": "scripts/ux/generate-owner-feature-baseline.mjs",
   "ownerPageRoutes": [
     {
@@ -351,7 +351,7 @@
       "deepLinkedFrom": [
         "src/app/(authenticated)/owner/page.tsx"
       ],
-      "componentTreeFileCount": 2
+      "componentTreeFileCount": 3
     },
     {
       "route": "/owner/cashflow",
@@ -397,6 +397,20 @@
           ]
         },
         {
+          "endpoint": "/api/owner/cashflow/snapshots/:param/amend",
+          "method": "POST",
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/cashflow/snapshots/:param",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
           "endpoint": "/api/owner/home",
           "method": "GET",
           "capabilities": [
@@ -420,6 +434,10 @@
         },
         {
           "method": "GET",
+          "path": "/api/owner/cashflow/snapshots/:param"
+        },
+        {
+          "method": "GET",
           "path": "/api/owner/home"
         }
       ],
@@ -439,6 +457,10 @@
         {
           "method": "POST",
           "path": "/api/owner/cashflow/businesses/:param/snapshots"
+        },
+        {
+          "method": "POST",
+          "path": "/api/owner/cashflow/snapshots/:param/amend"
         },
         {
           "method": "POST",
@@ -467,6 +489,11 @@
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         },
         {
+          "endpoint": "/api/owner/cashflow/snapshots/:param/amend",
+          "method": "POST",
+          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
+        },
+        {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
@@ -474,16 +501,27 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [
+        "src/__tests__/components/BudgetCashForecast.test.tsx",
         "src/__tests__/owner-activation/onboarding-cash-wiring.test.tsx",
+        "src/__tests__/owner-cashflow/cashflow-edit-ui.test.tsx",
         "src/__tests__/owner-cashflow/cashflow-page-empty-state-gating.test.tsx",
         "src/__tests__/owner-decision/r7-canonical-blockers.test.ts",
+        "src/__tests__/owner-first-run/first-run-components.test.tsx",
+        "src/__tests__/owner-first-run/first-run-repair-domain.test.ts",
+        "src/__tests__/owner-first-run/improve-target.db.test.ts",
+        "src/app/(authenticated)/owner/cashflow/page.tsx",
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/onboarding/page.tsx",
         "src/app/(authenticated)/owner/page.tsx",
+        "src/components/owner/BudgetCashForecast.tsx",
+        "src/domain/owner-cashflow/edit-flow.ts",
+        "src/domain/owner-first-run/first-money-read.ts",
+        "src/domain/owner-first-run/improve-target.ts",
         "src/domain/owner-spine/owner-decision.ts",
+        "src/services/owner-first-run/first-run.service.ts",
         "src/services/owner-home/owner-decision-candidates.ts"
       ],
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 8
     },
     {
       "route": "/owner/cockpit",
@@ -666,7 +704,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 7
+      "componentTreeFileCount": 8
     },
     {
       "route": "/owner/compliance/[id]",
@@ -868,6 +906,13 @@
       "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
       "apiCapabilityRequirements": [
         {
+          "endpoint": "/api/owner/finance/businesses/:param/snapshots",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
           "endpoint": "/api/owner/onboarding",
           "method": "GET",
           "capabilities": [
@@ -880,18 +925,15 @@
           "capabilities": [
             "OWNER_MANAGE"
           ]
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "POST",
-          "capabilities": [
-            "OWNER_MANAGE"
-          ]
         }
       ],
       "previewState": "core",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
+        {
+          "method": "GET",
+          "path": "/api/owner/finance/businesses/:param/snapshots"
+        },
         {
           "method": "GET",
           "path": "/api/owner/onboarding"
@@ -901,10 +943,6 @@
         {
           "method": "PATCH",
           "path": "/api/owner/recovery/businesses/:param"
-        },
-        {
-          "method": "POST",
-          "path": "/api/owner/recovery/businesses"
         }
       ],
       "majorActions": [
@@ -912,16 +950,11 @@
           "endpoint": "/api/owner/recovery/businesses/:param",
           "method": "PATCH",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "POST",
-          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         }
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 4
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/execution",
@@ -1044,7 +1077,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 6
+      "componentTreeFileCount": 7
     },
     {
       "route": "/owner/feedback",
@@ -1111,6 +1144,13 @@
         },
         {
           "endpoint": "/api/owner/finance/businesses/:param/snapshots",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/snapshots",
           "method": "POST",
           "capabilities": [
             "OWNER_MANAGE"
@@ -1131,6 +1171,13 @@
           ]
         },
         {
+          "endpoint": "/api/owner/onboarding",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        },
+        {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
@@ -1143,11 +1190,19 @@
       "readApis": [
         {
           "method": "GET",
+          "path": "/api/owner/finance/businesses/:param/snapshots"
+        },
+        {
+          "method": "GET",
           "path": "/api/owner/finance/dashboard"
         },
         {
           "method": "GET",
           "path": "/api/owner/home"
+        },
+        {
+          "method": "GET",
+          "path": "/api/owner/onboarding"
         }
       ],
       "writeApis": [
@@ -1201,7 +1256,54 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 8
+      "componentTreeFileCount": 13
+    },
+    {
+      "route": "/owner/first-run",
+      "sourceFile": "src/app/(authenticated)/owner/first-run/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
+      "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
+      "apiCapabilityRequirements": [
+        {
+          "endpoint": "/api/owner/finance/businesses/:param/snapshots",
+          "method": "GET",
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
+        }
+      ],
+      "previewState": "NOT_IN_SIDEBAR",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
+      "readApis": [
+        {
+          "method": "GET",
+          "path": "/api/owner/finance/businesses/:param/snapshots"
+        }
+      ],
+      "writeApis": [],
+      "majorActions": [],
+      "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
+      "deepLinkedFrom": [
+        "src/__tests__/api/auth/email-ownership-before-credential.db.test.ts",
+        "src/__tests__/auth/reset-password-page.test.tsx",
+        "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/__tests__/owner-first-run/accepted-next-move-card.test.tsx",
+        "src/__tests__/owner-first-run/first-run-active-business.test.tsx",
+        "src/__tests__/owner-first-run/first-run-domain.test.ts",
+        "src/__tests__/owner-first-run/first-run-flow-repair.test.tsx",
+        "src/__tests__/owner-first-run/first-run.db.test.ts",
+        "src/__tests__/owner-first-run/mobile-launch-path.test.tsx",
+        "src/app/(authenticated)/owner/cockpit/page.tsx",
+        "src/app/api/auth/reset-password/route.ts",
+        "src/components/owner/first-run/AcceptedNextMoveCard.tsx",
+        "src/components/owner/first-run/FirstRunRedirect.tsx",
+        "src/components/owner/first-run/FirstRunReturnBar.tsx",
+        "src/domain/owner-first-run/first-run-router.ts",
+        "src/domain/owner-first-run/improve-target.ts"
+      ],
+      "componentTreeFileCount": 9
     },
     {
       "route": "/owner/first-value",
@@ -1437,8 +1539,11 @@
         "src/__tests__/owner-activation/navigation-activation.test.tsx",
         "src/__tests__/owner-home/home-page.test.ts",
         "src/__tests__/services/owner-diagnosis-action-ordering-governance.test.ts",
+        "src/__tests__/services/quickbooks/qbo-connect-callback.db.test.ts",
+        "src/app/(authenticated)/diagnosis/page.tsx",
         "src/app/(authenticated)/owner/alerts/page.tsx",
-        "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx"
+        "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx",
+        "src/domain/quickbooks/qbo-connect-outcomes.ts"
       ],
       "componentTreeFileCount": 4
     },
@@ -1509,10 +1614,12 @@
         "src/__tests__/owner-activation/nav-targets-inside-shell.test.ts",
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
         "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/__tests__/owner-activation/quick-financial-picture.test.tsx",
         "src/app/(authenticated)/owner/data/page.tsx",
         "src/app/(authenticated)/owner/home/page.tsx",
         "src/app/(authenticated)/owner/onboarding/page.tsx",
         "src/app/(authenticated)/owner/page.tsx",
+        "src/components/owner/QuickFinancialPicture.tsx",
         "src/domain/owner-mode/owner-data-hub.ts"
       ],
       "componentTreeFileCount": 2
@@ -1739,7 +1846,9 @@
         "src/__tests__/owner-activation/nav-targets-inside-shell.test.ts",
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
         "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/__tests__/owner-activation/quick-financial-picture.test.tsx",
         "src/app/(authenticated)/owner/data/page.tsx",
+        "src/components/owner/QuickFinancialPicture.tsx",
         "src/domain/owner-mode/owner-data-hub.ts"
       ],
       "componentTreeFileCount": 2
@@ -1929,7 +2038,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/now",
@@ -1975,13 +2084,6 @@
       "pageAccessGate": "AUTHENTICATED_SESSION_ONLY",
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
       "apiCapabilityRequirements": [
-        {
-          "endpoint": "/api/owner/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
         {
           "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
           "method": "GET",
@@ -2030,29 +2132,11 @@
           "capabilities": [
             "OWNER_VIEW"
           ]
-        },
-        {
-          "endpoint": "/api/owner/readiness",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "POST",
-          "capabilities": [
-            "OWNER_MANAGE"
-          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
       "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
-        {
-          "method": "GET",
-          "path": "/api/owner/businesses"
-        },
         {
           "method": "GET",
           "path": "/api/owner/cashflow/businesses/:param/snapshots"
@@ -2064,10 +2148,6 @@
         {
           "method": "GET",
           "path": "/api/owner/onboarding"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/readiness"
         }
       ],
       "writeApis": [
@@ -2086,10 +2166,6 @@
         {
           "method": "POST",
           "path": "/api/owner/finance/snapshots/:param/amend"
-        },
-        {
-          "method": "POST",
-          "path": "/api/owner/recovery/businesses"
         }
       ],
       "majorActions": [
@@ -2112,11 +2188,6 @@
           "endpoint": "/api/owner/finance/snapshots/:param/amend",
           "method": "POST",
           "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "POST",
-          "note": "Owner-triggerable mutation reachable from this page's component tree; see the top-level ownerActions inventory for the state/action-family this belongs to."
         }
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
@@ -2125,7 +2196,7 @@
         "src/app/(authenticated)/owner/data/page.tsx",
         "src/app/(authenticated)/owner/page.tsx"
       ],
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 4
     },
     {
       "route": "/owner/operations",
@@ -2280,7 +2351,24 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 8
+      "componentTreeFileCount": 9
+    },
+    {
+      "route": "/owner/outcomes",
+      "sourceFile": "src/app/(authenticated)/owner/outcomes/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "pageAccessGate": "OWNER_VIEW",
+      "pageAccessGateNote": "From this route's (or its nearest in-nav ancestor's) sidebar-nav.tsx requiresOwner/requiresCapability gate.",
+      "apiCapabilityRequirements": [],
+      "previewState": "core",
+      "businessContextBehavior": "NOT_APPLICABLE",
+      "readApis": [],
+      "writeApis": [],
+      "majorActions": [],
+      "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
+      "deepLinkedFrom": "N/A_IN_NAV",
+      "componentTreeFileCount": 1
     },
     {
       "route": "/owner",
@@ -2426,11 +2514,14 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": [
+        "src/__tests__/analytics/clarity-policy.test.ts",
         "src/__tests__/components/sidebar-nav-risk-hidden.test.tsx",
         "src/__tests__/components/visual-system-semantic-color-closure.test.ts",
         "src/__tests__/owner-activation/navigation-activation.test.tsx",
         "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
+        "src/__tests__/owner-cashflow/cashflow-edit-ui.test.tsx",
         "src/__tests__/owner-cashflow/cashflow-page-empty-state-gating.test.tsx",
+        "src/__tests__/owner-cashflow/incomplete-cash-downstream.test.ts",
         "src/__tests__/owner-condition/owner-home-page.test.ts",
         "src/__tests__/owner-decision/canonical-gate-compatibility.test.ts",
         "src/__tests__/owner-decision/home-cockpit-priorities-invariant.test.tsx",
@@ -2443,10 +2534,16 @@
         "src/__tests__/owner-decision/survival-reading-candidate.test.ts",
         "src/__tests__/owner-decision/user-hostile-audit-regressions.test.ts",
         "src/__tests__/owner-finance/finance-page.test.ts",
+        "src/__tests__/owner-first-run/first-run-repair-domain.test.ts",
+        "src/__tests__/owner-first-run/improve-target.db.test.ts",
         "src/__tests__/owner-home/home-page.test.ts",
         "src/__tests__/owner-marketing/marketing-page-empty-state-gating.test.tsx",
+        "src/__tests__/owner-mode/profit-leak-presentation.test.tsx",
         "src/__tests__/owner-portfolio/engine.test.ts",
         "src/__tests__/owner-recovery/recovery-page-empty-state-gating.test.tsx",
+        "src/__tests__/owner-spine/owner-advice-policy.test.ts",
+        "src/__tests__/owner-spine/owner-advice-surfaces.test.ts",
+        "src/__tests__/owner-spine/score-semantics.test.ts",
         "src/__tests__/owner-strategy/strategy-page-empty-state-gating.test.tsx",
         "src/__tests__/owner-trust/trust-page.test.ts",
         "src/__tests__/services/owner-diagnosis-action-ordering-governance.test.ts",
@@ -2463,8 +2560,11 @@
         "src/app/(authenticated)/owner/tasks/new/page.tsx",
         "src/app/(authenticated)/owner/tasks/page.tsx",
         "src/app/(authenticated)/owner/wealth/page.tsx",
+        "src/domain/owner-cashflow/edit-flow.ts",
+        "src/domain/owner-first-run/improve-target.ts",
         "src/domain/owner-mode/owner-data-hub.ts",
         "src/domain/owner-spine/owner-decision.ts",
+        "src/lib/analytics/clarity-policy.ts",
         "src/lib/audit-label.ts",
         "src/services/owner-home/owner-decision-candidates.ts",
         "src/services/workspace/employee-lifecycle.service.ts"
@@ -2790,7 +2890,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 3
+      "componentTreeFileCount": 4
     },
     {
       "route": "/owner/risks/[id]",
@@ -3025,7 +3125,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 8
+      "componentTreeFileCount": 9
     },
     {
       "route": "/owner/start-here",
@@ -3433,7 +3533,7 @@
       ],
       "currentTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)",
       "deepLinkedFrom": "N/A_IN_NAV",
-      "componentTreeFileCount": 5
+      "componentTreeFileCount": 6
     },
     {
       "route": "/owner/tasks/[taskId]",
@@ -4088,6 +4188,80 @@
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
     {
+      "path": "/api/owner/businesses/[businessId]/decisions",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/decisions/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/outcome-chain/process-task-link",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-chain/process-task-link/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/outcome-chain",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-chain/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/outcome-chains",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-chains/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/outcome-contracts",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-contracts/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
       "path": "/api/owner/businesses/[businessId]/outcomes",
       "sourceFile": "src/app/api/owner/businesses/[businessId]/outcomes/route.ts",
       "httpMethods": [
@@ -4262,6 +4436,21 @@
         "OWNER_VIEW"
       ],
       "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "scopeNote": "Neither `businessId` nor `workspaceId` identifier found in route source; scope not deterministically visible from this file alone (may resolve scope via a shared service call this generator does not trace).",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/cashflow/snapshots/[snapshotId]/amend",
+      "sourceFile": "src/app/api/owner/cashflow/snapshots/[snapshotId]/amend/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
       "scope": "NOT_VERIFIED",
       "scopeNote": "Neither `businessId` nor `workspaceId` identifier found in route source; scope not deterministically visible from this file alone (may resolve scope via a shared service call this generator does not trace).",
       "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
@@ -4754,6 +4943,189 @@
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
     {
+      "path": "/api/owner/first-run/accept",
+      "sourceFile": "src/app/api/owner/first-run/accept/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/business",
+      "sourceFile": "src/app/api/owner/first-run/business/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/cockpit-visit",
+      "sourceFile": "src/app/api/owner/first-run/cockpit-visit/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "scopeNote": "Neither `businessId` nor `workspaceId` identifier found in route source; scope not deterministically visible from this file alone (may resolve scope via a shared service call this generator does not trace).",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/correct",
+      "sourceFile": "src/app/api/owner/first-run/correct/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/feedback",
+      "sourceFile": "src/app/api/owner/first-run/feedback/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/improve-target",
+      "sourceFile": "src/app/api/owner/first-run/improve-target/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/improve",
+      "sourceFile": "src/app/api/owner/first-run/improve/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/next-move",
+      "sourceFile": "src/app/api/owner/first-run/next-move/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/next-question",
+      "sourceFile": "src/app/api/owner/first-run/next-question/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/result",
+      "sourceFile": "src/app/api/owner/first-run/result/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/result/viewed",
+      "sourceFile": "src/app/api/owner/first-run/result/viewed/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run",
+      "sourceFile": "src/app/api/owner/first-run/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/first-run/skip-question",
+      "sourceFile": "src/app/api/owner/first-run/skip-question/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
       "path": "/api/owner/first-value",
       "sourceFile": "src/app/api/owner/first-value/route.ts",
       "httpMethods": [
@@ -4970,6 +5342,34 @@
       ],
       "readOrWrite": "write",
       "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/integrations/quickbooks/callback",
+      "sourceFile": "src/app/api/owner/integrations/quickbooks/callback/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
+      "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
+    },
+    {
+      "path": "/api/owner/integrations/quickbooks/connect",
+      "sourceFile": "src/app/api/owner/integrations/quickbooks/connect/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
       "knownUiCallers": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope — resolved per-API when a later UX PR actually touches it)",
       "knownTests": "NOT_VERIFIED (informational field; not a preservation blocker per UX-00A.1 scope)"
     },
@@ -7690,6 +8090,15 @@
     },
     {
       "section": "actions",
+      "label": "Results",
+      "href": "/owner/outcomes",
+      "requiresOwner": true,
+      "requiresCapability": null,
+      "state": "core",
+      "blurb": null
+    },
+    {
+      "section": "actions",
       "label": "Check a decision",
       "href": "/decision",
       "requiresOwner": false,
@@ -7881,6 +8290,15 @@
       "section": "admin",
       "label": "Beta programme",
       "href": "/admin/beta-programme",
+      "requiresOwner": false,
+      "requiresCapability": "BETA_PROGRAM_MANAGE",
+      "state": "core",
+      "blurb": null
+    },
+    {
+      "section": "admin",
+      "label": "Beta cohort",
+      "href": "/admin/beta-cohort",
       "requiresOwner": false,
       "requiresCapability": "BETA_PROGRAM_MANAGE",
       "state": "core",
@@ -8461,8 +8879,8 @@
       "sourceFile": "src/components/owner/StartHereContinuationCard.tsx",
       "callSiteCount": 1,
       "businessIdBehavior": {
-        "category": "NO_EXPLICIT_BUSINESS_ID",
-        "note": "No businessId found in this call's URL or argument list."
+        "category": "QUERY_BUSINESS_ID",
+        "note": "Query string (direct)."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
       "responseUsage": "FIELDS",
@@ -8966,28 +9384,45 @@
       "source": [
         "src/domain/owner-finance/actions.ts",
         "src/domain/owner-finance/cash-safety-gate.ts",
+        "src/domain/owner-finance/cost-model.ts",
         "src/domain/owner-finance/data-confidence.ts",
         "src/domain/owner-finance/diagnosis.ts",
+        "src/domain/owner-finance/evidence-quality.ts",
+        "src/domain/owner-finance/first-read-statement.ts",
+        "src/domain/owner-finance/first-read-sufficiency.ts",
         "src/domain/owner-finance/index.ts",
+        "src/domain/owner-finance/liquidity.ts",
         "src/domain/owner-finance/margin-safety-gate.ts",
         "src/domain/owner-finance/metrics.ts",
         "src/domain/owner-finance/opportunity-rules.ts",
         "src/domain/owner-finance/outcome-signals.ts",
+        "src/domain/owner-finance/period-timing.ts",
         "src/domain/owner-finance/pricing-analysis.ts",
         "src/domain/owner-finance/pricing-analysis.validation.ts",
+        "src/domain/owner-finance/profit-position.ts",
+        "src/domain/owner-finance/quick-entry.ts",
         "src/domain/owner-finance/recommendations.ts",
         "src/domain/owner-finance/risk-rules.ts",
+        "src/domain/owner-finance/score-availability.ts",
+        "src/domain/owner-finance/snapshot-amend-form.ts",
+        "src/domain/owner-finance/snapshot-conflict.ts",
+        "src/domain/owner-finance/snapshot-fields.ts",
+        "src/domain/owner-finance/snapshot-form-errors.ts",
         "src/domain/owner-finance/thresholds.ts",
         "src/domain/owner-finance/types.ts",
         "src/domain/owner-finance/unit-economics.ts",
+        "src/domain/owner-finance/unsupported-conclusions.ts",
         "src/domain/owner-finance/validation.ts",
         "src/services/owner-finance/action.service.ts",
         "src/services/owner-finance/baseline.service.ts",
         "src/services/owner-finance/dashboard.service.ts",
         "src/services/owner-finance/diagnosis.service.ts",
         "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/finance-conflict.ts",
         "src/services/owner-finance/financial-snapshot-selection.ts",
+        "src/services/owner-finance/leakage-components.ts",
         "src/services/owner-finance/learning-bridge.service.ts",
+        "src/services/owner-finance/liquidity.service.ts",
         "src/services/owner-finance/recommendation-cash-safety.service.ts",
         "src/services/owner-finance/recommendation-margin-safety.service.ts",
         "src/services/owner-finance/service-economics.service.ts",
@@ -9078,6 +9513,16 @@
           "sourceFile": "src/domain/owner-finance/data-confidence.ts"
         },
         {
+          "typeName": "LiquidityStatus",
+          "values": [
+            "COMPLETE",
+            "BANK_UNKNOWN",
+            "PHYSICAL_UNKNOWN",
+            "UNKNOWN"
+          ],
+          "sourceFile": "src/domain/owner-finance/liquidity.ts"
+        },
+        {
           "typeName": "MarginSafetyOutcome",
           "values": [
             "ALLOWED",
@@ -9134,19 +9579,26 @@
       "family": "cashflow_actions",
       "source": [
         "src/domain/owner-cashflow/actions.ts",
+        "src/domain/owner-cashflow/amend.ts",
+        "src/domain/owner-cashflow/cycle-projection.ts",
         "src/domain/owner-cashflow/data-confidence.ts",
         "src/domain/owner-cashflow/diagnosis.ts",
+        "src/domain/owner-cashflow/edit-flow.ts",
         "src/domain/owner-cashflow/index.ts",
         "src/domain/owner-cashflow/metrics.ts",
         "src/domain/owner-cashflow/opportunity-rules.ts",
+        "src/domain/owner-cashflow/overdraft-copy.ts",
         "src/domain/owner-cashflow/recommendations.ts",
         "src/domain/owner-cashflow/risk-rules.ts",
+        "src/domain/owner-cashflow/row-input.ts",
         "src/domain/owner-cashflow/thresholds.ts",
         "src/domain/owner-cashflow/types.ts",
         "src/domain/owner-cashflow/validation.ts",
         "src/services/owner-cashflow/action.service.ts",
+        "src/services/owner-cashflow/cashflow-conflict.ts",
         "src/services/owner-cashflow/dashboard.service.ts",
         "src/services/owner-cashflow/diagnosis.service.ts",
+        "src/services/owner-cashflow/effective-cashflow.service.ts",
         "src/services/owner-cashflow/snapshot.service.ts",
         "src/services/owner-cashflow/verification.service.ts"
       ],
@@ -9221,6 +9673,13 @@
             "POST"
           ],
           "sourceFile": "src/app/api/owner/cashflow/businesses/[businessId]/snapshots/route.ts"
+        },
+        {
+          "path": "/api/owner/cashflow/snapshots/[snapshotId]/amend",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/cashflow/snapshots/[snapshotId]/amend/route.ts"
         }
       ],
       "currentOwnerUiPages": [
@@ -9648,6 +10107,7 @@
       "source": [
         "src/domain/founder-recovery/action-continuity.ts",
         "src/domain/founder-recovery/action-status.ts",
+        "src/domain/founder-recovery/currency.ts",
         "src/domain/founder-recovery/diagnosis.ts",
         "src/domain/founder-recovery/legacy-fixture-classification.ts",
         "src/domain/founder-recovery/metrics.ts",
@@ -11629,6 +12089,34 @@
           "sourceFile": "src/app/api/owner/businesses/[businessId]/analyze/route.ts"
         },
         {
+          "path": "/api/owner/businesses/[businessId]/decisions",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/businesses/[businessId]/decisions/route.ts"
+        },
+        {
+          "path": "/api/owner/businesses/[businessId]/outcome-chain/process-task-link",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-chain/process-task-link/route.ts"
+        },
+        {
+          "path": "/api/owner/businesses/[businessId]/outcome-chain",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-chain/route.ts"
+        },
+        {
+          "path": "/api/owner/businesses/[businessId]/outcome-contracts",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/businesses/[businessId]/outcome-contracts/route.ts"
+        },
+        {
           "path": "/api/owner/businesses/[businessId]/outcomes",
           "methods": [
             "POST"
@@ -11641,6 +12129,10 @@
       ],
       "sourceFiles": [
         "src/app/api/owner/businesses/[businessId]/analyze/route.ts",
+        "src/app/api/owner/businesses/[businessId]/decisions/route.ts",
+        "src/app/api/owner/businesses/[businessId]/outcome-chain/process-task-link/route.ts",
+        "src/app/api/owner/businesses/[businessId]/outcome-chain/route.ts",
+        "src/app/api/owner/businesses/[businessId]/outcome-contracts/route.ts",
         "src/app/api/owner/businesses/[businessId]/outcomes/route.ts"
       ]
     },
@@ -11775,28 +12267,45 @@
       "source": [
         "src/domain/owner-finance/actions.ts",
         "src/domain/owner-finance/cash-safety-gate.ts",
+        "src/domain/owner-finance/cost-model.ts",
         "src/domain/owner-finance/data-confidence.ts",
         "src/domain/owner-finance/diagnosis.ts",
+        "src/domain/owner-finance/evidence-quality.ts",
+        "src/domain/owner-finance/first-read-statement.ts",
+        "src/domain/owner-finance/first-read-sufficiency.ts",
         "src/domain/owner-finance/index.ts",
+        "src/domain/owner-finance/liquidity.ts",
         "src/domain/owner-finance/margin-safety-gate.ts",
         "src/domain/owner-finance/metrics.ts",
         "src/domain/owner-finance/opportunity-rules.ts",
         "src/domain/owner-finance/outcome-signals.ts",
+        "src/domain/owner-finance/period-timing.ts",
         "src/domain/owner-finance/pricing-analysis.ts",
         "src/domain/owner-finance/pricing-analysis.validation.ts",
+        "src/domain/owner-finance/profit-position.ts",
+        "src/domain/owner-finance/quick-entry.ts",
         "src/domain/owner-finance/recommendations.ts",
         "src/domain/owner-finance/risk-rules.ts",
+        "src/domain/owner-finance/score-availability.ts",
+        "src/domain/owner-finance/snapshot-amend-form.ts",
+        "src/domain/owner-finance/snapshot-conflict.ts",
+        "src/domain/owner-finance/snapshot-fields.ts",
+        "src/domain/owner-finance/snapshot-form-errors.ts",
         "src/domain/owner-finance/thresholds.ts",
         "src/domain/owner-finance/types.ts",
         "src/domain/owner-finance/unit-economics.ts",
+        "src/domain/owner-finance/unsupported-conclusions.ts",
         "src/domain/owner-finance/validation.ts",
         "src/services/owner-finance/action.service.ts",
         "src/services/owner-finance/baseline.service.ts",
         "src/services/owner-finance/dashboard.service.ts",
         "src/services/owner-finance/diagnosis.service.ts",
         "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/finance-conflict.ts",
         "src/services/owner-finance/financial-snapshot-selection.ts",
+        "src/services/owner-finance/leakage-components.ts",
         "src/services/owner-finance/learning-bridge.service.ts",
+        "src/services/owner-finance/liquidity.service.ts",
         "src/services/owner-finance/recommendation-cash-safety.service.ts",
         "src/services/owner-finance/recommendation-margin-safety.service.ts",
         "src/services/owner-finance/service-economics.service.ts",
@@ -11852,19 +12361,26 @@
       "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
       "source": [
         "src/domain/owner-cashflow/actions.ts",
+        "src/domain/owner-cashflow/amend.ts",
+        "src/domain/owner-cashflow/cycle-projection.ts",
         "src/domain/owner-cashflow/data-confidence.ts",
         "src/domain/owner-cashflow/diagnosis.ts",
+        "src/domain/owner-cashflow/edit-flow.ts",
         "src/domain/owner-cashflow/index.ts",
         "src/domain/owner-cashflow/metrics.ts",
         "src/domain/owner-cashflow/opportunity-rules.ts",
+        "src/domain/owner-cashflow/overdraft-copy.ts",
         "src/domain/owner-cashflow/recommendations.ts",
         "src/domain/owner-cashflow/risk-rules.ts",
+        "src/domain/owner-cashflow/row-input.ts",
         "src/domain/owner-cashflow/thresholds.ts",
         "src/domain/owner-cashflow/types.ts",
         "src/domain/owner-cashflow/validation.ts",
         "src/services/owner-cashflow/action.service.ts",
+        "src/services/owner-cashflow/cashflow-conflict.ts",
         "src/services/owner-cashflow/dashboard.service.ts",
         "src/services/owner-cashflow/diagnosis.service.ts",
+        "src/services/owner-cashflow/effective-cashflow.service.ts",
         "src/services/owner-cashflow/snapshot.service.ts",
         "src/services/owner-cashflow/verification.service.ts"
       ],
@@ -12120,6 +12636,7 @@
       "source": [
         "src/domain/founder-recovery/action-continuity.ts",
         "src/domain/founder-recovery/action-status.ts",
+        "src/domain/founder-recovery/currency.ts",
         "src/domain/founder-recovery/diagnosis.ts",
         "src/domain/founder-recovery/legacy-fixture-classification.ts",
         "src/domain/founder-recovery/metrics.ts",
@@ -12647,12 +13164,15 @@
     }
   ],
   "domainPackages": [
+    "src/domain/admin",
+    "src/domain/analytics",
     "src/domain/audit",
     "src/domain/audit-export",
     "src/domain/auth",
     "src/domain/badges",
     "src/domain/benchmark",
     "src/domain/beta",
+    "src/domain/beta-cohort",
     "src/domain/business-condition",
     "src/domain/business-facts",
     "src/domain/business-impact",
@@ -12679,6 +13199,7 @@
     "src/domain/file-intake",
     "src/domain/finance",
     "src/domain/founder-recovery",
+    "src/domain/generic-diagnosis",
     "src/domain/governance",
     "src/domain/growth",
     "src/domain/integration",
@@ -12692,6 +13213,7 @@
     "src/domain/owner-budget",
     "src/domain/owner-cashflow",
     "src/domain/owner-finance",
+    "src/domain/owner-first-run",
     "src/domain/owner-guidance",
     "src/domain/owner-home",
     "src/domain/owner-intake",
@@ -12707,6 +13229,7 @@
     "src/domain/policy",
     "src/domain/private-mode",
     "src/domain/public",
+    "src/domain/quickbooks",
     "src/domain/rate-limit",
     "src/domain/reality",
     "src/domain/remote-operations",
@@ -12727,6 +13250,7 @@
     "src/services/admin",
     "src/services/ai",
     "src/services/alerts",
+    "src/services/analytics",
     "src/services/approval",
     "src/services/audit",
     "src/services/auth",
@@ -12735,6 +13259,7 @@
     "src/services/benchmark",
     "src/services/best-path-engine",
     "src/services/beta",
+    "src/services/beta-cohort",
     "src/services/business-condition",
     "src/services/business-impact",
     "src/services/cache",
@@ -12788,6 +13313,7 @@
     "src/services/owner-collective",
     "src/services/owner-condition",
     "src/services/owner-finance",
+    "src/services/owner-first-run",
     "src/services/owner-guidance",
     "src/services/owner-home",
     "src/services/owner-intake",
@@ -12796,6 +13322,7 @@
     "src/services/owner-marketing-campaigns",
     "src/services/owner-mode",
     "src/services/owner-operations",
+    "src/services/owner-outcome",
     "src/services/owner-portfolio",
     "src/services/owner-procurement",
     "src/services/owner-sales",
@@ -12808,6 +13335,7 @@
     "src/services/problem",
     "src/services/production",
     "src/services/public-site",
+    "src/services/quickbooks",
     "src/services/reality-awareness",
     "src/services/recommendation",
     "src/services/report",
@@ -12818,6 +13346,7 @@
     "src/services/segmentation",
     "src/services/system",
     "src/services/thresholds",
+    "src/services/tools",
     "src/services/validation-contracts",
     "src/services/value",
     "src/services/value-proof",
@@ -12840,6 +13369,7 @@
     "src/app/(authenticated)/owner/marketing/campaigns/page.tsx",
     "src/app/(authenticated)/owner/marketing/page.tsx",
     "src/app/(authenticated)/owner/now/page.tsx",
+    "src/app/(authenticated)/owner/onboarding/page.tsx",
     "src/app/(authenticated)/owner/operations/page.tsx",
     "src/app/(authenticated)/owner/page.tsx",
     "src/app/(authenticated)/owner/priorities/page.tsx",
@@ -12855,8 +13385,8 @@
   ],
   "businessContextClassificationCounts": {
     "NO_BUSINESS_CONTEXT": 11,
-    "NOT_APPLICABLE": 6,
-    "SHARED_ACTIVE_BUSINESS": 29,
+    "NOT_APPLICABLE": 7,
+    "SHARED_ACTIVE_BUSINESS": 30,
     "WORKSPACE_ONLY": 1
   },
   "businessContextFindings": [],
@@ -13169,6 +13699,13 @@
     {
       "route": "/admin/audit",
       "sourceFile": "src/app/(authenticated)/admin/audit/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/beta-cohort",
+      "sourceFile": "src/app/(authenticated)/admin/beta-cohort/page.tsx",
       "sharedComponentsImported": [
         "@/ui/primitives"
       ]

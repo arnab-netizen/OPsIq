@@ -91,8 +91,8 @@ describe("classifyOutcomeVerification", () => {
     expect(classifyOutcomeVerification(outcome({ outcomeStatus: "not_measurable" }), null, NOW)).toBe("NO_MEASURABLE_IMPACT");
   });
 
-  it("returns NO_MEASURABLE_IMPACT for external_event_interference", () => {
-    expect(classifyOutcomeVerification(outcome({ outcomeStatus: "external_event_interference" }), null, NOW)).toBe("NO_MEASURABLE_IMPACT");
+  it("returns EXTERNAL_EVENT_INTERFERENCE (not NO_MEASURABLE_IMPACT) for external_event_interference", () => {
+    expect(classifyOutcomeVerification(outcome({ outcomeStatus: "external_event_interference" }), null, NOW)).toBe("EXTERNAL_EVENT_INTERFERENCE");
   });
 
   it("returns INCONCLUSIVE for too_early_to_judge", () => {
@@ -115,18 +115,46 @@ describe("classifyOutcomeVerification", () => {
     // Higher-is-better metric: started at 15, goal is ≥20, achieved 22
     // Rule 9: afterValue(22) >= targetValue(20) → SUCCESS
     const o = outcome({ outcomeStatus: "worked", beforeValue: 15, afterValue: 22 });
-    const t = task({ targetValue: 20.0 });
+    const t = task({ targetValue: 20.0, targetDirection: "up" });
     expect(classifyOutcomeVerification(o, t, NOW)).toBe("SUCCESS");
   });
 
   it("returns PARTIAL_SUCCESS when metric improvement is below 20% of target range", () => {
     // beforeValue=25, afterValue=24 — tiny improvement toward target=20
     const o = outcome({ outcomeStatus: "worked", beforeValue: 25, afterValue: 24 });
-    const t = task({ targetValue: 20.0 });
+    const t = task({ targetValue: 20.0, targetDirection: "down" });
     // improvement = 25-24=1, required = 25-20=5, 1/5=20% — exactly at boundary → edge case
     // The classification should be PARTIAL_SUCCESS (improvement < required to reach target)
     const result = classifyOutcomeVerification(o, t, NOW);
     expect(["SUCCESS", "PARTIAL_SUCCESS"]).toContain(result);
+  });
+
+  // ── Direction (PR #585 amendment): never defaulted to "higher is better" ─────────────────────────
+  it("UP metric: before 10 → after 20 → target 18 is SUCCESS", () => {
+    const o = outcome({ outcomeStatus: "worked", beforeValue: 10, afterValue: 20 });
+    expect(classifyOutcomeVerification(o, task({ targetValue: 18, targetDirection: "up" }), NOW)).toBe("SUCCESS");
+  });
+
+  it("DOWN metric: before 20 → after 10 → target 12 is SUCCESS (not misread as higher-is-better)", () => {
+    const o = outcome({ outcomeStatus: "worked", beforeValue: 20, afterValue: 10 });
+    expect(classifyOutcomeVerification(o, task({ targetValue: 12, targetDirection: "down" }), NOW)).toBe("SUCCESS");
+  });
+
+  it("DOWN metric that did not reach its target is PARTIAL_SUCCESS", () => {
+    const o = outcome({ outcomeStatus: "worked", beforeValue: 20, afterValue: 15 });
+    expect(classifyOutcomeVerification(o, task({ targetValue: 12, targetDirection: "down" }), NOW)).toBe("PARTIAL_SUCCESS");
+  });
+
+  it("UNKNOWN direction: before 20 → after 10 → target 12 does NOT claim success from numeric ordering", () => {
+    const o = outcome({ outcomeStatus: "worked", beforeValue: 20, afterValue: 10 });
+    expect(classifyOutcomeVerification(o, task({ targetValue: 12 }), NOW)).toBe("INCONCLUSIVE");
+    expect(classifyOutcomeVerification(o, task({ targetValue: 12, targetDirection: null }), NOW)).toBe("INCONCLUSIVE");
+  });
+
+  it("external event flag with a measurable before/after is EXTERNAL_EVENT_INTERFERENCE, never SUCCESS or NO_MEASURABLE_IMPACT", () => {
+    const o = outcome({ outcomeStatus: "worked", beforeValue: 10, afterValue: 20, externalEventFlag: true });
+    const r = classifyOutcomeVerification(o, task({ targetValue: 18, targetDirection: "up" }), NOW);
+    expect(r).toBe("EXTERNAL_EVENT_INTERFERENCE");
   });
 
   it("is deterministic — identical inputs always produce identical output", () => {

@@ -9,12 +9,11 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Database target label'
+        description: 'Database target label (staging only: production schema changes go through migrate-production.yml)'
         required: true
         type: choice
         options:
           - staging
-          - production
       confirm:
         description: 'Must equal APPLY_MODULE10_DATA_INTAKE_MIGRATION'
         required: true
@@ -30,6 +29,8 @@ jobs:
     timeout-minutes: 15
     environment: ${{ github.event.inputs.target }}
     env:
+      OPSIQ_DB_TARGET: staging
+      OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
       MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
       DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 

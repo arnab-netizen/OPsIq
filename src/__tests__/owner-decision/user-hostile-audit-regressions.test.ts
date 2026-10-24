@@ -52,7 +52,7 @@ describe("item 1 — a stale diagnosis is never an authoritative 'do this now'",
     const refresh = d.primaryTarget!;
     expect(refresh.source).toBe("evidence_refresh");
     expect(refresh.domain).toBe("cashflow");
-    expect(refresh.title).toMatch(/^Update the figures in Cash flow before acting on them$/);
+    expect(refresh.title).toMatch(/^Refresh the Cash flow analysis before acting on it$/);
     expect(refresh.priorityClass).toBe("SURVIVAL_CASH");
     expect(refresh.severity).toBe("critical");
     expect(refresh.explanation).toMatch(/Protect runway/);
@@ -72,7 +72,7 @@ describe("item 1 — a stale diagnosis is never an authoritative 'do this now'",
     expect(refresh.priorityClass).toBe("SURVIVAL_CASH");
     expect(d.attention.indexOf(refresh)).toBe(1);
     // Decided by freshness, stated truthfully — never "bigger difference" / "stronger evidence".
-    expect(d.whyThisWins.join(" ")).toMatch(/based on current figures, so it comes before "Update the figures in Finance before acting on them" in Finance, which rests on out-of-date figures/);
+    expect(d.whyThisWins.join(" ")).toMatch(/based on current figures, so it comes before "Refresh the Finance analysis before acting on it" in Finance, which rests on out-of-date figures/);
     expect(d.whyThisWins.join(" ")).not.toMatch(/bigger difference|evidence behind it is stronger/);
   });
 

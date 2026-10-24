@@ -25,6 +25,7 @@ import { routeReassessmentSignals } from "@/services/owner-budget/signal-router.
 import { createBudgetPeriod, addBudgetLine } from "@/services/owner-budget/budget.service";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { BudgetSignal } from "@/domain/owner-budget/types";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const ws = () => randomUUID();
@@ -62,6 +63,7 @@ async function seedFinance(workspaceId: string, businessId: string) {
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 const sig = (type: BudgetSignal["type"], severity: BudgetSignal["severity"] = "HIGH"): BudgetSignal =>

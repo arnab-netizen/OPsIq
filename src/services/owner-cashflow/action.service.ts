@@ -7,6 +7,7 @@
  * requires completion evidence. Reuses the recovery action-status vocabulary.
  */
 import { db } from "@/lib/db";
+import { loadEffectiveCashflowSnapshotId } from "@/services/owner-cashflow/effective-cashflow.service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -105,14 +106,11 @@ export async function updateCashflowAction(
 
   if (updated.status === "completed") {
     try {
-      const latestSnapshot = await db.ownerCashflowSnapshot.findFirst({
-        where: { businessId: updated.businessId, workspaceId, periodEnd: { lte: new Date() } },
-        orderBy: { periodEnd: "desc" },
-        select: { id: true },
-      });
-      if (latestSnapshot) {
+      // The latest COMPLETED snapshot through the one Cashflow selector (ties on periodEnd resolved by the domain rule).
+      const latestSnapshotId = await loadEffectiveCashflowSnapshotId(workspaceId, updated.businessId, new Date());
+      if (latestSnapshotId) {
         const { runCashflowDiagnosis } = await import("./diagnosis.service");
-        const newCycle = await runCashflowDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        const newCycle = await runCashflowDiagnosis(updated.businessId, latestSnapshotId, actorId, workspaceId);
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.OWNER_CASHFLOW_REASSESSMENT_TRIGGERED,
           actorId,

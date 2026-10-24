@@ -1,5 +1,6 @@
 "use client";
 
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
@@ -373,7 +374,7 @@ export default function OwnerStrategyPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -652,7 +653,7 @@ function StrategyCycleView({
                 <p className="text-xs">
                   <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} ={" "}
                   {f.sourceValue == null ? (ownLookup(FINDING_NULL_VALUE_LABEL, f.code) ?? "not entered") : String(f.sourceValue)}
-                  {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                  {f.threshold == null ? "" : ` (threshold ${String(f.threshold)})`} · evidence strength {Math.round((f.confidence ?? 0) * 100)}/100 (heuristic, not a probability)
                 </p>
                 {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                   <p className="text-xs"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>

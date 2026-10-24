@@ -227,6 +227,8 @@ jobs:
       - name: Restore into throwaway container
         id: restore
         env:
+          # restore-database.sh refuses any restore without a proven target: this is the disposable loopback container.
+          OPSIQ_DB_TARGET: local
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rehearsal_target
         run: |
           BACKUP_FILE="${{ steps.parity.outputs.backup_file }}"

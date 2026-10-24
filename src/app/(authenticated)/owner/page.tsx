@@ -451,7 +451,7 @@ export default function OwnerCommandCenterPage() {
             { label: "Execution", href: "/owner/execution", domain: "sop" },
             { label: "Wealth", href: "/owner/wealth", domain: null },
             { label: "Portfolio", href: "/owner/portfolio", domain: null },
-            { label: "Data Intake", href: "/owner/intake", domain: null },
+            { label: "Add business data", href: "/owner/intake", domain: null },
             { label: "Trust", href: "/owner/trust", domain: null },
             { label: "Approvals", href: "/owner/approvals", domain: null },
             { label: "Learning", href: "/owner/learning", domain: null },
@@ -482,7 +482,10 @@ export default function OwnerCommandCenterPage() {
 
       {businessList.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link> to create one.
+          <p>Set up your first business to get started.</p>
+          <Link href="/owner/data" data-testid="owner-empty-setup-cta" className="mt-3 inline-block font-medium underline">
+            Set up your first business →
+          </Link>
         </div>
       ) : (
         <>
@@ -514,7 +517,7 @@ export default function OwnerCommandCenterPage() {
           <div className="p-3">
           {wbp?.supervisor?.found && <SupervisorSummary summary={reconcilePlanSummary(wbp.supervisor, imperativeCtx)} />}
 
-          {priorities?.found && <PriorityCommandStrip cards={reconcilePlanCards(priorities.cards, imperativeCtx)} />}
+          {priorities?.found && <PriorityCommandStrip cards={reconcilePlanCards(priorities.cards, imperativeCtx)} advicePolicy={decision?.advicePolicy ?? null} />}
 
           {wbp?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-whole-business-plan">
@@ -668,7 +671,7 @@ export default function OwnerCommandCenterPage() {
               </div>
               {!guidance.canProceedWithStrongRecommendation && (
                 <p className="text-xs text-[var(--warning-text)] mb-2" data-testid="guidance-must-wait">
-                  Strong recommendations are paused until the critical data below is supplied.
+                  OpsIQ needs the critical information below before this checklist can be firm. Whether you can commit money, capacity or a plan is stated in your main target&apos;s advice status.
                 </p>
               )}
               {guidance.missingBySeverity.length > 0 && (
@@ -737,17 +740,28 @@ export default function OwnerCommandCenterPage() {
                   <Badge variant={HEALTH_VARIANT(profile.overallHealthScore)}>
                     Health {Math.round(profile.overallHealthScore)}/100
                   </Badge>
-                  <Badge variant={RISK_VARIANT(profile.survivalRiskScore)}>
-                    Survival risk {Math.round(profile.survivalRiskScore)}/100
-                  </Badge>
+                  {profile.survivalRiskScore === null ? (
+                    <Badge variant="muted-accessible">Survival risk not measured yet</Badge>
+                  ) : (
+                    <Badge variant={RISK_VARIANT(profile.survivalRiskScore)}>
+                      Survival risk {Math.round(profile.survivalRiskScore)}/100
+                    </Badge>
+                  )}
                   <Badge variant="default-accessible">Growth opportunity {Math.round(profile.growthOpportunityScore)}/100</Badge>
-                  <Badge variant={RISK_VARIANT(profile.executionRiskScore)}>
-                    Execution risk {Math.round(profile.executionRiskScore)}/100
-                  </Badge>
-                  <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
+                  {profile.executionRiskScore === null ? (
+                    <Badge variant="muted-accessible">Execution risk not measured yet</Badge>
+                  ) : (
+                    <Badge variant={RISK_VARIANT(profile.executionRiskScore)}>
+                      Execution risk {Math.round(profile.executionRiskScore)}/100
+                    </Badge>
+                  )}
+                  <Badge variant="muted-accessible">Data completeness {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Domains wired: {(data.domainsWired ?? []).map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ") || "none"}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  These are heuristic 0–100 readings, not probabilities. Health averages each area&apos;s own score; the risk figures show the highest single area in their group; growth opportunity is the highest single area. Scores from different areas are not directly comparable.
                 </div>
               </section>
 

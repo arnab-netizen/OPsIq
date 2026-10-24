@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { BudgetCashForecast } from "@/components/owner/BudgetCashForecast";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
@@ -47,13 +48,10 @@ const SIGNAL_VARIANT: Record<string, "default-accessible" | "success-accessible"
   CRITICAL: "destructive-accessible",
 };
 
-const PARTIAL_LIMITATIONS = [
-  "Owner UI is new — backend governance is DB/CI-proven, but live operational feeds are not yet wired.",
-  "Generated actions are the advisory plan snapshot; persisted execution tasks (real, governed owner action records) are shown separately below and reuse the shared owner action lifecycle.",
-  "Revenue-assurance / working-capital ageing / vendor benchmarks rely on entered data — live POS/gateway/bank feeds are not connected.",
-  "Runtime least-privilege RBAC denial is enforced by the server wrapper but not yet proven by an automated runtime test.",
-];
-
+// Owner-relevant limits of this page, in plain language. Build/test status is developer
+// information and does not belong on an owner surface.
+const ABOUT_THESE_FIGURES =
+  "This plan uses the information entered in OpsIQ. Live POS, payment-gateway and bank feeds are not connected automatically, so revenue-assurance, working-capital ageing and vendor benchmarks reflect only what has been entered.";
 const TASK_STATUS_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   proposed: "muted-accessible",
   assigned: "default-accessible",
@@ -306,12 +304,9 @@ export default function OwnerBudgetPlanPage() {
         />
       </div>
 
-      {/* Honest module-status banner (never imply OWNER_MODE_READY). Plain-language text for the
-          owner -- the internal DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL build-status marker (see
-          the file header comment) is a developer-facing token and must never render raw here. */}
-      <div className="mb-6 rounded-md border border-warning/30 bg-warning/5 p-3 text-xs space-y-1">
-        <div className="font-semibold break-words">Module status: Partially integrated — backend governance is DB/CI-proven, but Owner Mode is not yet feature-complete.</div>
-        {PARTIAL_LIMITATIONS.map((l) => (<div key={l}>• {l}</div>))}
+      <div className="mb-6 rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1" data-testid="budget-about-figures">
+        <div className="font-semibold">About these figures</div>
+        <div>{ABOUT_THESE_FIGURES}</div>
       </div>
 
       {error && (
@@ -391,29 +386,7 @@ export default function OwnerBudgetPlanPage() {
               </section>
 
               {/* 5: Forecast */}
-              {forecast?.hasData && (
-                <section className="border rounded-lg p-4 bg-card">
-                  <h2 className="font-bold mb-2">Cash forecast</h2>
-                  <div className="flex flex-wrap gap-2 text-sm">
-                    <Badge variant="muted-accessible">7-day {Math.round(forecast.sevenDayCash)}</Badge>
-                    <Badge variant="muted-accessible">30-day {Math.round(forecast.thirtyDayCash)}</Badge>
-                    <Badge variant="muted-accessible">90-day {Math.round(forecast.ninetyDayCash)}</Badge>
-                    <Badge variant="muted-accessible">reserve required {Math.round(forecast.reserveRequired)}</Badge>
-                    {forecast.nextCriticalDueInDays != null && <Badge variant="warning-accessible">next due in {forecast.nextCriticalDueInDays}d</Badge>}
-                  </div>
-                  <div className="mt-2 space-y-1 text-xs">
-                    {(forecast.scenarios ?? []).map((s: any) => (
-                      <div key={s.name} className="flex justify-between border-b py-1">
-                        <span className="capitalize">{s.name.replace("_", " ")}</span>
-                        <span className="text-muted-foreground">
-                          ending {Math.round(s.endingCash)} · min {Math.round(s.minCash)} ·{" "}
-                          {s.reserveBreachWeek ? <span className="text-destructive">reserve breach wk {s.reserveBreachWeek}</span> : "no reserve breach (13wk)"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+              <BudgetCashForecast forecast={forecast} />
 
               {/* 6: Fund allocation */}
               {Array.isArray(plan?.fundAllocationChanges) && plan.fundAllocationChanges.length > 0 && (

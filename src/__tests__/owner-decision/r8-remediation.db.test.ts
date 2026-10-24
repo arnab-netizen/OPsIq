@@ -84,8 +84,8 @@ function period(endDaysAgo: number, length = 20) {
 const IN_PROGRESS = { periodStart: iso(new Date(Date.now() - 10 * DAY)), periodEnd: iso(new Date(Date.now() + 5 * DAY)) };
 /** A period that has not started yet. */
 const FUTURE = { periodStart: iso(new Date(Date.now() + 10 * DAY)), periodEnd: iso(new Date(Date.now() + 40 * DAY)) };
-const UNSAFE = { cashInHand: 100, dailyCollections: 50, receivables: 20000, receivablesOverdue: 15000, payables: 40000, upcomingEmi: 15000, rentDue: 10000, salaryDue: 20000, vendorDue: 15000, taxDue: 5000, ownerWithdrawal: 4000 };
-const SAFE_CASH = { cashInHand: 500000, dailyCollections: 20000, receivables: 5000, receivablesOverdue: 0, payables: 5000, upcomingEmi: 1000, rentDue: 2000, salaryDue: 5000, vendorDue: 1000, taxDue: 500, ownerWithdrawal: 500 };
+const UNSAFE = { cashInHand: 100, bankBalance: 0, dailyCollections: 50, receivables: 20000, receivablesOverdue: 15000, payables: 40000, upcomingEmi: 15000, rentDue: 10000, salaryDue: 20000, vendorDue: 15000, taxDue: 5000, ownerWithdrawal: 4000 };
+const SAFE_CASH = { cashInHand: 500000, bankBalance: 0, dailyCollections: 20000, receivables: 5000, receivablesOverdue: 0, payables: 5000, upcomingEmi: 1000, rentDue: 2000, salaryDue: 5000, vendorDue: 1000, taxDue: 500, ownerWithdrawal: 500 };
 
 async function business(workspaceId: string, name: string) {
   const b = await createBusiness({ name, businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false }, actor, workspaceId);

@@ -20,7 +20,7 @@ import type { AllocationCandidate, BudgetAssessmentInput } from "@/domain/owner-
 // ---- helpers -------------------------------------------------------------
 const fin = (over: Partial<BudgetAssessmentInput["finance"]> = {}): BudgetAssessmentInput["finance"] => ({
   periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR",
-  revenue: 800000, costOfGoodsOrServices: 300000, fixedCosts: 200000, cashOnHand: 500000,
+  revenue: 800000, costOfGoodsOrServices: 300000, fixedCosts: 200000, cashOnHand: 500000, bankBalance: 0,
   ...over,
 });
 

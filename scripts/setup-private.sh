@@ -43,9 +43,12 @@ echo ""
 echo "==> npx prisma migrate status"
 npx prisma migrate status || true  # Non-zero exit on pending migrations is informational
 
+# Mutation-capable Prisma commands have no implicit datasource: this script is a LOCAL setup, so it names the
+# local target explicitly and prisma.config.ts then requires DATABASE_URL to be a loopback URL. Schema changes
+# for a remote/production database go only through .github/workflows/migrate-production.yml.
 echo ""
-echo "==> npx prisma migrate deploy"
-npx prisma migrate deploy
+echo "==> npx prisma migrate deploy (OPSIQ_DB_TARGET=local)"
+OPSIQ_DB_TARGET=local npx prisma migrate deploy
 
 echo ""
 echo "==> npx prisma generate"

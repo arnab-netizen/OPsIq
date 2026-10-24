@@ -1,3 +1,5 @@
+> **LEGACY — DO NOT USE FOR CURRENT OPSIQ LAUNCH.** This Rebilix-era material is stale. See `docs/opsiq/marketing/PRODUCT_DEMO_CAPTURE.md` for the current plan.
+
 # Rebilix — Product Hunt Launch Checklist
 
 Production baseline at time of writing: main `dad83b67` deployed; production migration succeeded;

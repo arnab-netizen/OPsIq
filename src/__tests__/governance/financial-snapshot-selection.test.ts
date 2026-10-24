@@ -32,6 +32,9 @@ type ReaderClass = "DIAGNOSIS_BOUND" | "CURRENT_EFFECTIVE" | "HISTORICAL_LIST" |
 const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]>> = {
   "src/app/api/owner/dashboard/route.ts": ["DIAGNOSIS_BOUND"],
   "src/app/api/owner/finance/businesses/[businessId]/snapshots/route.ts": ["HISTORICAL_LIST"],
+  // Controlled Beta Cohort operator view: reads only a business's first diagnosis (history) and its current diagnosis (shared order) to
+  // report finding/recommendation CODES; never reads a snapshot and never selects financial evidence.
+  "src/services/beta-cohort/cohort-evidence.service.ts": ["DIAGNOSIS_BOUND", "HISTORICAL_LIST"],
   "src/services/owner-budget/budget.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-budget/signal-router.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-condition/business-condition.service.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
@@ -43,6 +46,7 @@ const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]
   "src/services/owner-finance/recommendation-margin-safety.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-finance/snapshot.service.ts": ["MODEL_SERVICE", "HISTORICAL_LIST"],
   "src/services/owner-finance/verification.service.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
+  "src/services/owner-first-run/first-run-evidence.reader.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
   "src/services/owner-guidance/owner-now-view.service.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-home/owner-candidate-builder.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-home/owner-change-facts.ts": ["DIAGNOSIS_BOUND"],
@@ -50,8 +54,13 @@ const FINANCIAL_EVIDENCE_READERS: Readonly<Record<string, readonly ReaderClass[]
   "src/services/owner-mode/opportunity-decision.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-mode/owner-action-gate.service.ts": ["DIAGNOSIS_BOUND", "CURRENT_EFFECTIVE"],
   "src/services/owner-mode/owner-db-providers.ts": ["CURRENT_EFFECTIVE"],
+  "src/services/owner-mode/owner-onboarding.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-mode/owner-progress.service.ts": ["DIAGNOSIS_BOUND"],
+  "src/services/owner-outcome/outcome-sources.ts": ["DIAGNOSIS_BOUND"],
   "src/services/owner-spine/provisional-cash-finance.ts": ["DIAGNOSIS_BOUND"],
+  // Goal trajectory: the trailing series of COMPLETED current periods (net profit derived by the finance cost model); the selector's
+  // current, completed periods (one per period) filtered to the goal currency; never "the latest snapshot" alone.
+  "src/services/owner-strategy/goal.service.ts": ["CURRENT_EFFECTIVE"],
   "src/services/owner-trust/trust.service.ts": ["DIAGNOSIS_BOUND"],
 };
 
@@ -168,7 +177,14 @@ describe("financial snapshot selection is centralised", () => {
       "amendFinancialSnapshot",
       "createFinancialSnapshot",
       "getFinancialSnapshot",
+      // Reviewed (A1 liquidity lineage): every version of ONE snapshot's own period, scoped by workspace +
+      // business, unordered — cash-semantics resolution only. It selects no "latest" and no "current".
+      "listFinancialSnapshotVersions",
       "listFinancialSnapshots",
+      // Reviewed (compare-at-write): a share lock on ONE snapshot row by id, scoped by workspace + business, that
+      // reports whether it is still un-superseded. It selects no "latest" and no "current"; it serialises a decision
+      // against a concurrent amendment (which takes the same row FOR UPDATE).
+      "lockUnsupersededFinancialSnapshotShared",
       "resolveCurrentSnapshotId",
       "rowToFinanceInput",
       "toFinanceInput",

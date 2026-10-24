@@ -1,5 +1,6 @@
 "use client";
 
+import { presentScore, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
@@ -166,7 +167,7 @@ export default function OwnerHomePage() {
             { label: "Sales", href: "/owner/sales" },
             { label: "Operations", href: "/owner/operations" },
             { label: "Execution", href: "/owner/execution" },
-            { label: "Data Intake", href: "/owner/intake" },
+            { label: "Add business data", href: "/owner/intake" },
             { label: "Approvals", href: "/owner/approvals" },
             { label: "Learning", href: "/owner/learning" },
             { label: "Delegation", href: "/owner/tasks" },
@@ -252,9 +253,17 @@ export default function OwnerHomePage() {
               <section className="border rounded-lg p-4 bg-card text-center">
                 <div className="text-xs uppercase text-muted-foreground">Business health</div>
                 <div className="mt-1 flex flex-wrap justify-center gap-2">
-                  <Badge variant={HEALTH_VARIANT(s.businessHealthScore)}>
-                    {Math.round(s.businessHealthScore)}/100
-                  </Badge>
+                  {(() => {
+                    // The server's dataSufficiency contract decides whether health may be shown as a score (UNKNOWN is never healthy).
+                    const availability: ScoreAvailability =
+                      s.dataSufficiency?.status === "insufficient" ? "WITHHELD" : s.dataSufficiency?.status === "caution" ? "PARTIAL" : "FULL";
+                    const shown = presentScore("health", s.businessHealthScore, availability);
+                    return (
+                      <Badge variant={availability === "FULL" ? HEALTH_VARIANT(s.businessHealthScore) : "muted-accessible"} data-testid="home-business-health">
+                        {availability === "WITHHELD" ? shown.value : availability === "PARTIAL" ? `${shown.value} so far` : shown.value}
+                      </Badge>
+                    );
+                  })()}
                   {typeof s.dataConfidenceScore === "number" && (
                     <Badge variant="muted-accessible">
                       data completeness {Math.round(s.dataConfidenceScore)}/100

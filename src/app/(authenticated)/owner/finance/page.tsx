@@ -1,5 +1,9 @@
 "use client";
 
+import { periodLabel } from "@/domain/owner-first-run/first-money-read";
+import type { ProfitPosition } from "@/domain/owner-finance/profit-position";
+import { assessScoreAvailability, presentScores, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
@@ -8,6 +12,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { OWNER_CONFIDENCE_CONCEPT, ownerConceptScorePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 import { FindingCard } from "@/components/owner/FindingCard";
 import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import {
@@ -21,9 +27,17 @@ import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
 import { formatHumanDate } from "@/lib/format-human-date";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
+import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
+import { EVIDENCE_QUALITIES, EVIDENCE_QUALITY_LABEL } from "@/domain/owner-finance/evidence-quality";
+import { FinancePeriodEditor } from "@/components/owner/finance/FinancePeriodEditor";
+import { FinanceRecordedPeriods, periodTextOf } from "@/components/owner/finance/FinanceRecordedPeriods";
+import { presentSnapshotFormError, type SnapshotFormError } from "@/domain/owner-finance/snapshot-form-errors";
+import { listFinanceSnapshots } from "@/lib/owner-finance-client";
+import { ADVANCED_FIELD_NAMES, FINANCE_FIELDS, IMPROVE_GROUPS, QUICK_FIELD_NAMES, financeField } from "@/domain/owner-finance/snapshot-fields";
 import { Disclosure } from "@/ui/primitives";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -107,69 +121,11 @@ async function api(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  // Keep the HTTP status + server message + field errors (a plain Error loses them).
-  if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
+  // Keep the HTTP status + server message + field errors (a plain Error loses them) and the parsed body, whose machine
+  // `code` / `snapshotId` the snapshot form branches on.
+  if (!res.ok) throw Object.assign(httpResponseErrorFromBody(res.status, data), { responseBody: data });
   return data;
 }
-
-// Field names match financialSnapshotCreateSchema (Slice 6). `hint` is the plain-language
-// explanation shown under each field (accounting term + short meaning + example, or what to
-// enter if it doesn't apply) — a real usability test found the flat, unexplained ~27-field form
-// unusable for an owner without an accounting background. Grouping these into progressive tiers
-// (below) changes ONLY what's visible/expanded by default; every field name here still maps
-// 1:1 to addSnapshot()'s FormData read, so the save payload is byte-for-byte unchanged.
-const FINANCE_FIELDS: Array<{ name: string; label: string; hint: string }> = [
-  { name: "revenue", label: "Revenue", hint: "Total sales in a typical month, before costs. Example: 15000." },
-  { name: "b2cRevenue", label: "B2C revenue", hint: "Sales directly to individual customers, if you track it separately. Leave blank if you don't split this out." },
-  { name: "b2bRevenue", label: "B2B revenue", hint: "Sales to other businesses, if you track it separately. Leave blank if you don't split this out." },
-  { name: "costOfGoodsOrServices", label: "Cost of goods/services", hint: "What it directly cost you to make or deliver what you sold (materials, direct labor) — accountants call this COGS." },
-  { name: "fixedCosts", label: "Fixed costs", hint: "Rent, wages, and other costs that stay the same whether sales go up or down. Example: 7000." },
-  { name: "variableCosts", label: "Variable costs", hint: "Costs that rise and fall with how much you sell, like materials or delivery. Example: 3000." },
-  { name: "rent", label: "Rent", hint: "Rent for your business space, if any. Leave blank if you don't rent a space." },
-  { name: "salaryPayroll", label: "Salary / payroll", hint: "Wages and salaries paid to staff, not including money you took for yourself." },
-  { name: "utilities", label: "Utilities", hint: "Electricity, water, internet, and similar recurring bills." },
-  { name: "deliveryFulfilmentCost", label: "Delivery / fulfilment", hint: "Shipping, courier, or delivery costs. Leave blank if you don't deliver." },
-  { name: "marketingSpend", label: "Marketing spend", hint: "Advertising and promotion spend. Leave blank if you didn't spend on this." },
-  { name: "discountAmount", label: "Discount amount", hint: "Discounts you gave customers this period." },
-  { name: "refundAmount", label: "Refund amount", hint: "Refunds you paid out this period." },
-  { name: "reworkCost", label: "Rework cost", hint: "Cost of redoing work that didn't meet quality the first time. Leave blank if this doesn't apply." },
-  { name: "complaintCost", label: "Complaint cost", hint: "Cost of resolving customer complaints beyond a refund (e.g. replacement, goodwill). Leave blank if none." },
-  { name: "loanEmiDebtPayments", label: "Loan / EMI payments", hint: "Loan or EMI payments you made this period. Leave blank if you have no loans." },
-  { name: "totalDebtOutstanding", label: "Total debt outstanding", hint: "The total amount you still owe across all loans right now." },
-  { name: "cashOnHand", label: "Cash on hand", hint: "Cash and bank balance you could use today. Example: 20000." },
-  { name: "receivables", label: "Receivables", hint: "Money customers owe you that isn't overdue yet — accountants call this accounts receivable." },
-  { name: "receivablesOverdue", label: "Receivables overdue", hint: "Of the money customers owe you, how much is now overdue." },
-  { name: "payables", label: "Payables", hint: "Money you owe suppliers that isn't overdue yet — accountants call this accounts payable." },
-  { name: "payablesOverdue", label: "Payables overdue", hint: "Of the money you owe suppliers, how much is now overdue." },
-  { name: "ownerWithdrawals", label: "Owner withdrawals", hint: "Money you personally took out of the business this period (not a salary)." },
-  { name: "inventoryStockCashLock", label: "Inventory cash lock", hint: "Cash tied up in unsold stock right now. Leave blank if you don't hold stock." },
-  { name: "orderCount", label: "Order count", hint: "Number of orders or jobs completed in this period." },
-  { name: "customerCount", label: "Customer count", hint: "Number of different customers you served in this period." },
-  { name: "repeatCustomerCount", label: "Repeat customers", hint: "Of those customers, how many had bought from you before." },
-];
-
-function financeField(name: string) {
-  const f = FINANCE_FIELDS.find((x) => x.name === name);
-  if (!f) throw new Error(`Unknown finance field: ${name}`);
-  return f;
-}
-
-// Progressive disclosure tiers — see the FINANCE_FIELDS comment above for why this never changes
-// what gets submitted, only what's visible/expanded by default. Every FINANCE_FIELDS name appears
-// in exactly one tier below.
-const QUICK_FIELD_NAMES = ["revenue", "fixedCosts", "variableCosts", "cashOnHand"];
-
-const IMPROVE_GROUPS: Array<{ title: string; fieldNames: string[] }> = [
-  { title: "Sales detail", fieldNames: ["b2cRevenue", "b2bRevenue", "orderCount", "customerCount", "repeatCustomerCount"] },
-  { title: "Regular costs", fieldNames: ["costOfGoodsOrServices", "rent", "salaryPayroll", "utilities", "deliveryFulfilmentCost", "marketingSpend"] },
-  { title: "Customer money owed", fieldNames: ["receivables", "receivablesOverdue"] },
-  { title: "Supplier money owed", fieldNames: ["payables", "payablesOverdue"] },
-  { title: "Loans", fieldNames: ["loanEmiDebtPayments", "totalDebtOutstanding"] },
-  { title: "Stock", fieldNames: ["inventoryStockCashLock"] },
-  { title: "Discounts & refunds", fieldNames: ["discountAmount", "refundAmount"] },
-];
-
-const ADVANCED_FIELD_NAMES = ["reworkCost", "complaintCost", "ownerWithdrawals"];
 
 // P0-D: minimal local draft persistence for the unfinished "Add financial snapshot" form, keyed
 // per business so switching business never leaks one business's unsaved draft into another. Only
@@ -234,11 +190,18 @@ export default function OwnerFinancePage() {
   // P0-E: the snapshot form's save error is scoped separately from the shared page-level `error`
   // above (used by the other four mutations on this page) so it can render next to the Save
   // button instead of at the top of the page, far from where the owner is looking.
-  const [snapshotError, setSnapshotError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [snapshotError, setSnapshotError] = useState<SnapshotFormError | null>(null);
+  // Saved periods (current versions) and the one being updated. A period that already holds figures is UPDATED through the
+  // governed amendment route — never re-added.
+  const [periods, setPeriods] = useState<Array<Record<string, unknown>>>([]);
+  const [editing, setEditing] = useState<{ id: string; initialDraft?: Record<string, string> } | null>(null);
+  const [updateNotice, setUpdateNotice] = useState<{ message: string; diagnosisFailed: boolean } | null>(null);
   // UX-06 Wave B1: at most one action-editing inline form open at a time on this page (Section
   // Z/AA's frozen state shape). Page-local -- no global store, no context.
   const [editingAction, setEditingAction] = useState<{ actionId: string; mode: "complete" | "verify" } | null>(null);
   const draftDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // What the owner typed on the "add a period" form when it turned out the period already exists (carried into the update form).
+  const carryOverRef = useRef<Record<string, string>>({});
   // UX-06 Wave B1: React state alone does not synchronously protect two rapid Save clicks within
   // the same tick (mirrors approveInFlightRef from UX-06A2) -- local to the completion/verification
   // mutation only, not a general concurrency framework.
@@ -249,6 +212,9 @@ export default function OwnerFinancePage() {
   // business's state and re-anchor the shared activeBusinessId back to the stale one -- see
   // UX-04A Section J item 1.
   const loadGenerationRef = useRef(0);
+  // The canonical first-read gate (the SAME `canRunFirstDiagnosis` /api/owner/onboarding gives My
+  // Business — one rule, never recomputed here). Null until resolved for the selected business.
+  const [firstReadGate, setFirstReadGate] = useState<{ businessId: string; canRun: boolean } | null>(null);
   // UX-04B hostile-audit correction: the generation guard above closes the STALE-RESPONSE race
   // (an old load() resolving late), but a SECOND, distinct race survived it -- a business-scoped
   // MUTATION (addSnapshot/runDiagnosis/updateAction/verifyAction) started for business A can
@@ -345,6 +311,32 @@ export default function OwnerFinancePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business, not on every `load` identity change
   }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const businessId = selected;
+    let cancelled = false;
+    api(`/api/owner/onboarding?businessId=${encodeURIComponent(businessId)}`)
+      .then((d) => {
+        // An unknown business or an unreadable gate falls back to the full existing Money view.
+        if (!cancelled) setFirstReadGate({ businessId, canRun: d?.found === false ? true : d?.canRunFirstDiagnosis !== false });
+      })
+      .catch(() => {
+        if (!cancelled) setFirstReadGate({ businessId, canRun: true });
+      });
+    return () => { cancelled = true; };
+  }, [selected, dashboard]);
+
+  // The saved periods for the selected business. Refreshed whenever the dashboard is (a save or an update reloads it).
+  useEffect(() => {
+    if (!selected) { setPeriods([]); return; }
+    const businessId = selected;
+    let cancelled = false;
+    void listFinanceSnapshots(businessId)
+      .then((rows) => { if (!cancelled) setPeriods(rows); })
+      .catch(() => { if (!cancelled) setPeriods([]); });
+    return () => { cancelled = true; };
+  }, [selected, dashboard]);
+
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -397,6 +389,8 @@ export default function OwnerFinancePage() {
       periodEnd: fd.get("periodEnd"),
       currency: currentBusiness?.currency || fd.get("currency") || "INR",
     };
+    const stated = fd.get("evidenceQuality");
+    if (typeof stated === "string" && stated) body.evidenceQuality = stated;
     const model = fd.get("businessModel");
     if (model && typeof model === "string" && model.trim()) body.businessModel = model;
     for (const f of FINANCE_FIELDS) {
@@ -426,15 +420,80 @@ export default function OwnerFinancePage() {
       // A stale failure for a business the owner has since switched away from must never render
       // on the business they're now looking at.
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      // Governed classification, never the raw fetch/exception text -- see P0-E.
-      const governed = classifyOperatorError(e, { context: "save" });
-      setSnapshotError({
-        message: `We couldn't save this snapshot. Your entries are still here. ${governed.recovery}`,
-        retryable: governed.isRetryable,
-      });
+      // Server validation is correct and stays; this only words it for the owner (specific reason, per field, nothing technical).
+      const presented = presentSnapshotFormError(e, "create");
+      if (presented.kind === "PERIOD_EXISTS") {
+        // The period already holds figures: offer to UPDATE it (governed amendment), carrying over what was typed.
+        const day = (v: unknown) => String(v ?? "").slice(0, 10);
+        const match = periods.find((r) => day(r.periodStart) === String(body.periodStart) && day(r.periodEnd) === String(body.periodEnd));
+        const typed: Record<string, string> = {};
+        for (const f of FINANCE_FIELDS) {
+          const v = fd.get(f.name);
+          if (typeof v === "string" && v.trim()) typed[f.name] = v.trim();
+        }
+        carryOverRef.current = typed;
+        setSnapshotError({ ...presented, existingSnapshotId: presented.existingSnapshotId ?? (match ? String(match.id) : null) });
+        return;
+      }
+      setSnapshotError(presented);
+      if (presented.focusField) {
+        const field = presented.focusField;
+        setTimeout(() => document.getElementById(`snapshot-field-${field}`)?.focus(), 0);
+      }
     } finally {
       setBusy(false);
     }
+  }
+
+  // The update form was opened on a version that has since been replaced: close it and show the latest figures.
+  function reloadLatestFigures() {
+    setEditing(null);
+    void load(selected);
+  }
+
+  function openPeriodForUpdate(id: string, initialDraft?: Record<string, string>) {
+    setUpdateNotice(null);
+    setSnapshotError(null);
+    setShowSnapshotForm(false);
+    setEditing({ id, initialDraft });
+  }
+
+  // A saved correction: the earlier version is history, the new one is the current evidence. Reload, and — when the corrected
+  // period is the one the current read rests on — work the read out again so Money, Home and Goals use the corrected figures.
+  async function afterPeriodUpdated(result: { newSnapshotId: string; version: number }) {
+    const targetBusinessId = selected;
+    if (!targetBusinessId) return;
+    setEditing(null);
+    let notice: { message: string; diagnosisFailed: boolean } = {
+      message: `Saved as a correction (update ${Math.max(1, result.version - 1)}). Your earlier figures are kept as history.`,
+      diagnosisFailed: false,
+    };
+    try {
+      const fresh = await api(`/api/owner/finance/dashboard?businessId=${encodeURIComponent(targetBusinessId)}`);
+      const target = fresh?.diagnosisTargetSnapshot ?? fresh?.latestSnapshot;
+      if (target?.id === result.newSnapshotId) {
+        try {
+          await api(`/api/owner/finance/businesses/${targetBusinessId}/diagnoses`, { method: "POST", body: JSON.stringify({ snapshotId: result.newSnapshotId }) });
+          notice = { message: `${notice.message} OpsIQ has worked out your read again on the updated figures.`, diagnosisFailed: false };
+        } catch (err) {
+          // The diagnosis is limited to 10 an hour per business; say so rather than inviting a re-run that would be refused too.
+          const limited = (err as { status?: number } | null)?.status === 429;
+          notice = {
+            message: limited
+              ? `${notice.message} You've re-run the diagnosis several times in the last hour, so the new read has to wait a little — use “Re-run Finance diagnosis on corrected figures” above later.`
+              : `${notice.message} The new read couldn't be worked out just now — use “Re-run Finance diagnosis on corrected figures” above.`,
+            diagnosisFailed: true,
+          };
+        }
+      } else {
+        notice = { message: `${notice.message} This isn't the period your current read is based on, so the read is unchanged.`, diagnosisFailed: false };
+      }
+    } catch {
+      notice = { message: `${notice.message} Reload the page to see the updated read.`, diagnosisFailed: false };
+    }
+    if (activeBusinessIdRef.current !== targetBusinessId) return;
+    setUpdateNotice(notice);
+    await load(targetBusinessId);
   }
 
   async function runDiagnosis() {
@@ -561,7 +620,12 @@ export default function OwnerFinancePage() {
   // Read once per render for the currently-open form's initial mount -- see the `key={selected}`
   // on the snapshot <form> below, which remounts (and so re-reads this) whenever business
   // switches, so an in-progress draft never leaks across businesses.
+  // Pre-first-read: no diagnosis exists yet AND the canonical gate says the first read is not possible.
+  // Money then offers the shared quick path first; the full snapshot form stays reachable but secondary.
+  const gateKnown = Boolean(selected && firstReadGate && firstReadGate.businessId === selected);
+  const preFirstRead = gateKnown && !dashboard?.hasData && firstReadGate?.canRun === false;
   const snapshotDraft: FinanceDraft | null = selected && showSnapshotForm ? readFinanceDraft(selected) : null;
+  const fieldProblems: Record<string, string> = snapshotError?.fieldMessages ?? {};
 
   return (
     <PageContainer>
@@ -595,7 +659,7 @@ export default function OwnerFinancePage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -621,13 +685,67 @@ export default function OwnerFinancePage() {
               selectedId={selected}
               onChange={handleBusinessSelect}
             />
-            <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
-              + Add financial snapshot
-            </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy} title={financeDiagnosisButtonTitle(dashboard)}>
-              {financeDiagnosisButtonLabel(dashboard)}
-            </Button>
+            {gateKnown && !preFirstRead && (
+              <>
+                <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
+                  + Add financial snapshot
+                </Button>
+                <Button onClick={runDiagnosis} disabled={!selected || !(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot) || busy} title={financeDiagnosisButtonTitle(dashboard)}>
+                  {financeDiagnosisButtonLabel(dashboard)}
+                </Button>
+              </>
+            )}
+            {preFirstRead && (
+              <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected} data-testid="finance-full-detail-toggle">
+                {showSnapshotForm ? "Hide full financial detail" : "Enter full financial detail instead"}
+              </Button>
+            )}
           </div>
+
+          {updateNotice && (
+            <div role="status" data-testid="finance-update-notice" className="mb-4 rounded-md border border-border bg-muted/40 p-3 text-sm text-foreground">
+              {updateNotice.message}
+            </div>
+          )}
+          {editing && (() => {
+            const row = periods.find((r) => String(r.id) === editing.id);
+            return row ? (
+              <div className="mb-6">
+                <FinancePeriodEditor
+                  key={editing.id}
+                  row={row}
+                  currency={currentBusiness?.currency ?? String(row.currency ?? "")}
+                  periodText={periodTextOf(row)}
+                  initialDraft={editing.initialDraft}
+                  onSaved={(r) => void afterPeriodUpdated(r)}
+                  onCancel={() => setEditing(null)}
+                  onStale={reloadLatestFigures}
+                />
+              </div>
+            ) : null;
+          })()}
+          <div id="saved-periods">
+            <FinanceRecordedPeriods
+              rows={periods}
+              currency={currentBusiness?.currency ?? ""}
+              editingId={editing?.id ?? null}
+              onEdit={(id) => openPeriodForUpdate(id)}
+              disabled={busy}
+            />
+          </div>
+
+          {preFirstRead && selected && (
+            <div className="mb-6" data-testid="finance-quick-start">
+              <QuickFinancialPicture
+                requireEvidenceQuality
+                key={selected}
+                businessId={selected}
+                currency={currentBusiness?.currency}
+                omitMoneyLink
+                onFirstRead={() => { void load(selected); }}
+              />
+            </div>
+          )}
 
           {showSnapshotForm && (
             <form
@@ -640,14 +758,26 @@ export default function OwnerFinancePage() {
                 Financial snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input name="periodStart" label="Period start" type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} />
-                <Input name="periodEnd" label="Period end" type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} />
+                <Input id="snapshot-field-periodStart" name="periodStart" label="These numbers cover: from" hint="First day of the month or period you are entering." type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} error={fieldProblems.periodStart} />
+                <Input id="snapshot-field-periodEnd" name="periodEnd" label="These numbers cover: to" hint="Last day of that period." type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} error={fieldProblems.periodEnd} />
+                <Select
+                  name="evidenceQuality"
+                  label="How reliable are these numbers?"
+                  hint="From your records, a good estimate, or a rough guess. OpsIQ uses this to say how far to trust its read."
+                  required
+                  defaultValue=""
+                  options={[
+                    { value: "", label: "Choose one" },
+                    ...EVIDENCE_QUALITIES.map((q) => ({ value: q, label: EVIDENCE_QUALITY_LABEL[q] })),
+                  ]}
+                />
                 <Select
                   name="businessModel"
-                  label="Business model"
+                  label="Business model (optional)"
+                  hint="Optional — leave blank if unsure. OpsIQ will not guess it."
                   defaultValue={snapshotDraft?.businessModel ?? ""}
                   options={[
-                    { value: "", label: "—" },
+                    { value: "", label: "Skip — not sure" },
                     { value: "service", label: "Service" },
                     { value: "inventory", label: "Inventory / retail" },
                     { value: "hybrid", label: "Hybrid" },
@@ -655,10 +785,10 @@ export default function OwnerFinancePage() {
                 />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Quick financial picture</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  These four numbers are enough for a first read. Estimates are fine — you can
-                  refine them later.
+                <h3 className="text-sm font-semibold text-foreground">Start with your basic numbers</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground" data-testid="quick-financial-picture">
+                  Quick financial picture: revenue, at least one cost (fixed or variable) and cash are enough for a first read. Estimates are fine — you can
+                  refine them later. Everything below is optional; leaving it blank only limits how complete the analysis is.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {QUICK_FIELD_NAMES.map((name) => {
@@ -666,19 +796,21 @@ export default function OwnerFinancePage() {
                     return (
                       <Input
                         key={f.name}
+                        id={`snapshot-field-${f.name}`}
                         name={f.name}
                         label={f.label}
                         type="number"
                         placeholder="—"
                         hint={f.hint}
                         defaultValue={snapshotDraft?.[f.name as DraftField] ?? ""}
+                        error={fieldProblems[f.name]}
                       />
                     );
                   })}
                 </div>
               </div>
 
-              <Disclosure summary="Improve the analysis (optional)">
+              <Disclosure summary="Improve the analysis (optional)" defaultOpen={IMPROVE_GROUPS.some((g) => g.fieldNames.some((n) => n in fieldProblems))}>
                 <p className="mb-3">
                   Adding these makes OpsIQ&rsquo;s read of your business more accurate. Leave
                   anything blank that doesn&rsquo;t apply — missing data is reported, never
@@ -691,7 +823,7 @@ export default function OwnerFinancePage() {
                       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {group.fieldNames.map((name) => {
                           const f = financeField(name);
-                          return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                          return <Input key={f.name} id={`snapshot-field-${f.name}`} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} error={fieldProblems[f.name]} />;
                         })}
                       </div>
                     </div>
@@ -699,11 +831,11 @@ export default function OwnerFinancePage() {
                 </div>
               </Disclosure>
 
-              <Disclosure summary="Advanced detail (optional)">
+              <Disclosure summary="Advanced detail (optional)" defaultOpen={ADVANCED_FIELD_NAMES.some((n) => n in fieldProblems)}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {ADVANCED_FIELD_NAMES.map((name) => {
                     const f = financeField(name);
-                    return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                    return <Input key={f.name} id={`snapshot-field-${f.name}`} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} error={fieldProblems[f.name]} />;
                   })}
                 </div>
               </Disclosure>
@@ -714,7 +846,20 @@ export default function OwnerFinancePage() {
                   data-testid="snapshot-save-error"
                   className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
                 >
-                  {snapshotError.message}
+                  <p>{snapshotError.message}</p>
+                  {snapshotError.kind === "PERIOD_EXISTS" && !(snapshotError.existingSnapshotId && periods.some((r) => String(r.id) === snapshotError.existingSnapshotId)) && (
+                    <p className="mt-2" data-testid="snapshot-reload-to-update">Reload this page, then use “Update this period” under Your saved periods.</p>
+                  )}
+                  {snapshotError.kind === "PERIOD_EXISTS" && snapshotError.existingSnapshotId && periods.some((r) => String(r.id) === snapshotError.existingSnapshotId) && (
+                    <Button
+                      type="button"
+                      className="mt-2"
+                      data-testid="snapshot-update-existing-period"
+                      onClick={() => openPeriodForUpdate(snapshotError.existingSnapshotId as string, carryOverRef.current)}
+                    >
+                      Update that period with what I typed
+                    </Button>
+                  )}
                 </div>
               )}
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save snapshot"}</Button>
@@ -724,7 +869,7 @@ export default function OwnerFinancePage() {
           <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.diagnosisTargetSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} provisionalSafetyImplemented />
           <DomainMainTargetContext domain="finance" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
 
-          {!dashboard?.hasData ? (
+          {preFirstRead ? null : !dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="financial"
               hasSnapshot={Boolean(dashboard?.diagnosisTargetSnapshot ?? dashboard?.latestSnapshot)}
@@ -736,6 +881,7 @@ export default function OwnerFinancePage() {
             <FinanceCycleView
               cycle={cycle}
               score={score}
+              profit={dashboard.profitPosition ?? null}
               missing={missing}
               recommended={dashboard.recommendedNextAction}
               businessId={dashboard.selectedBusinessId}
@@ -757,6 +903,7 @@ export default function OwnerFinancePage() {
 function FinanceCycleView({
   cycle,
   score,
+  profit,
   missing,
   recommended,
   businessId,
@@ -770,6 +917,7 @@ function FinanceCycleView({
 }: {
   cycle: any;
   score: any;
+  profit: ProfitPosition | null;
   missing: string[];
   recommended: any;
   businessId: string | null;
@@ -781,6 +929,27 @@ function FinanceCycleView({
   onCompleteAction: (a: any, values: CompletionValues) => void;
   onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
+  // The diagnosis rests on ONE evidence period (the snapshot it ran on); say which, never leave it implicit.
+  const diagnosedPeriod: string | null = cycle?.snapshot?.periodStart && cycle?.snapshot?.periodEnd
+    ? periodLabel({ start: String(cycle.snapshot.periodStart), end: String(cycle.snapshot.periodEnd) })
+    : null;
+  // Whether the three scores may be shown as scores is decided by the server (UNKNOWN is never healthy / zero-risk);
+  // an older payload without it falls back to the same spine rule from the confidence + critical gaps it does carry.
+  const scoreAvailability: ScoreAvailability = score?.scoreAvailability ?? assessScoreAvailability({
+    dataConfidenceScore: score?.dataConfidenceScore ?? cycle?.dataConfidenceScore ?? 0,
+    missingCritical: missing,
+  });
+  const scorePresentation = {
+    availability: scoreAvailability,
+    ...presentScores(
+      {
+        health: Number(score?.healthScore ?? cycle?.overallHealthScore ?? 0),
+        risk: Number(score?.riskScore ?? cycle?.survivalRiskScore ?? 0),
+        opportunity: Number(score?.opportunityScore ?? cycle?.growthOpportunityScore ?? 0),
+      },
+      scoreAvailability,
+    ),
+  };
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -788,6 +957,73 @@ function FinanceCycleView({
   const verifyTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   return (
     <div className="flex flex-col gap-5">
+      {/* Answer first — presentation over data this cycle already returned (survival state, the
+          existing recommendedNextAction and its evidenceRationale, data confidence, missing
+          inputs). No new ranking or generated explanation: a section with no real backing data is
+          omitted rather than filled. Scores stay below as supporting detail. */}
+      <section data-testid="finance-answer-first" className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What needs attention</div>
+          <p className="mt-1 text-sm text-foreground">
+            Your financial position reads <strong>{SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? "unclear"}</strong>
+            {cycle.findings.length > 0
+              ? `, with ${cycle.findings.length} ${cycle.findings.length === 1 ? "finding" : "findings"} below. Each shows the measured number it is based on.`
+              : ". OpsIQ found nothing that needs attention from the numbers you entered."}
+          </p>
+        </div>
+        {recommended?.evidenceRationale && (
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Why this matters</div>
+            <p className="mt-1 text-sm text-foreground">{humanizeEvidenceLine(String(recommended.evidenceRationale))}</p>
+          </div>
+        )}
+        {recommended && (
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What to do first</div>
+            <p className="mt-1 text-sm font-medium text-foreground">{recommended.title}</p>
+            <BankBalanceEntryLink code={recommended.recommendationCode ?? recommended.findingCode} className="mt-1" />
+          </div>
+        )}
+        {recommended && (recommended.description || recommended.expectedTimeframeDays > 0 || recommended.verificationMethod) && (
+          // Existing recommendation fields only (description, expectedTimeframeDays, verificationMethod):
+          // nothing is computed or invented, and a field the recommendation does not carry is omitted.
+          <div data-testid="finance-how-to-fix">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">How to start fixing this</div>
+            <ol className="mt-1 space-y-2 text-sm text-foreground">
+              {[
+                recommended.description && { label: "Do this", text: humanizeEvidenceLine(presentBankBalanceActionText(recommended.recommendationCode ?? recommended.findingCode, String(recommended.description))) },
+                recommended.expectedTimeframeDays > 0 && { label: "Do it within", text: `Try to do this within ${recommended.expectedTimeframeDays} days.` },
+                recommended.verificationMethod && { label: "How to check", text: humanizeEvidenceLine(String(recommended.verificationMethod)) },
+              ]
+                .filter((x): x is { label: string; text: string } => Boolean(x))
+                .map((x, n) => (
+                  <li key={x.label}><span className="font-medium">{n + 1}. {x.label}</span><p className="text-muted-foreground">{x.text}</p></li>
+                ))}
+            </ol>
+          </div>
+        )}
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">How complete your information is</div>
+          <p className="mt-1 text-sm text-foreground" data-testid="finance-data-completeness">
+            {ownerConceptScorePhrase("DATA_COMPLETENESS", Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0))} — this reading rests on{" "}
+            {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0)}% of the information OpsIQ looks for. {OWNER_CONFIDENCE_CONCEPT.DATA_COMPLETENESS.measures}
+          </p>
+        </div>
+        {missing.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What is still missing{diagnosedPeriod ? ` for ${diagnosedPeriod}` : ""}</div>
+            <p className="mt-1 text-sm text-foreground">
+              OpsIQ can assess what you entered{diagnosedPeriod ? ` for ${diagnosedPeriod}` : ""}. These would make the diagnosis more complete:{" "}
+              {ownerMissingItems(missing).join(", ")}.
+            </p>
+          </div>
+        )}
+      </section>
+      {diagnosedPeriod && (
+        <p className="text-sm text-foreground" data-testid="finance-period-scope">
+          This reading is based on your <strong>{diagnosedPeriod}</strong> figures only. Figures you entered for other periods are kept on record but are not combined into it.
+        </p>
+      )}
       <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
         <div className="flex flex-wrap items-baseline gap-2.5">
           <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
@@ -797,22 +1033,35 @@ function FinanceCycleView({
             {SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? (score?.survivalState ?? cycle.survivalState)}
           </Badge>
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
-          {[
-            ["Health", score?.healthScore ?? cycle.overallHealthScore],
-            ["Risk", score?.riskScore ?? cycle.survivalRiskScore],
-            ["Opportunity", score?.opportunityScore ?? cycle.growthOpportunityScore],
-          ].map(([label, value]) => (
-            <div key={label as string}>
-              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
-                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
+        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3" data-testid="finance-scores" data-score-availability={scorePresentation.availability}>
+          {scorePresentation.scores.map((s) => (
+            <div key={s.kind}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground" data-testid={`finance-score-${s.kind}`}>
+                {s.value}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
             </div>
           ))}
         </div>
+        {profit && (
+          <div className="mt-3 text-sm text-foreground" data-testid="finance-profit-position" data-profit-status={profit.status}>
+            <span className="font-medium">Profit and margin: </span>
+            {profit.status === "KNOWN" ? (
+              <span>{profit.headline}{profit.marginText ? ` · ${profit.marginText}` : ""}</span>
+            ) : (
+              <span className="text-muted-foreground">{profit.reason}</span>
+            )}
+          </div>
+        )}
+        {scorePresentation.note && (
+          <p className="mt-2 text-sm text-foreground" data-testid="finance-score-availability-note">{scorePresentation.note}</p>
+        )}
+        <p className="mt-3 text-sm text-muted-foreground" data-testid="finance-score-explainer">
+          The status badge reflects the most serious single warning sign (such as thin margin or low cash). The scores blend many
+          signals, so a low risk score does not mean the status is safe. Act on the findings below, not on one number.
+        </p>
         <p className="mt-3 text-sm text-muted-foreground">
-          Data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100 — how much of this reading rests on real, supplied numbers.
+          {ownerConceptScorePhrase("DATA_COMPLETENESS", Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore))} — how much of this reading rests on real, supplied numbers. Each finding below carries its own, separate strength rating.
         </p>
       </div>
 
@@ -824,25 +1073,21 @@ function FinanceCycleView({
           domain="finance"
           domainLabel="Finance"
           businessId={businessId}
-          missing={missing.map(humanizeMetricKey)}
-          fallback={`⚠ Data confidence is critically low (${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results may be unreliable and should not be acted on until the missing critical information below is provided.`}
+          missing={ownerMissingItems(missing)}
+          fallback={`⚠ Data completeness is critically low (${Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100). These results are not yet reliable; confirm them with the missing critical information below before relying on them.`}
         />
       )}
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
+          <strong>Missing critical data:</strong> {ownerMissingItems(missing).join(", ")} — what you entered can still be assessed; adding these makes the diagnosis more complete.
         </div>
       )}
 
       {recommended && (
         <div className="border-t border-border pt-4">
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Next step within Finance (local to this area — your overall main target is on Home)</div>
-          <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
-          <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          {recommended.evidenceRationale && (
-            <p className="text-xs text-muted-foreground italic">Why: {recommended.evidenceRationale}</p>
-          )}
+          <p className="mt-1 text-xs text-muted-foreground">The step, and why, are summarized at the top of this diagnosis.</p>
           {Array.isArray(recommended.evidence) && recommended.evidence.length > 0 && (
             <p className="text-xs text-muted-foreground">Based on: {recommended.evidence.join(" · ")}</p>
           )}
@@ -875,7 +1120,10 @@ function FinanceCycleView({
       </section>
 
       <section className="border-t border-border pt-4">
-        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Finance actions ({cycle.actions.length})</h2>
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Finance recommendations ({cycle.actions.length})</h2>
+        <p className="text-xs text-muted-foreground mb-3" data-testid="finance-recommendations-note">
+          These are Finance recommendations. Execution progress for governed work is tracked on Home.
+        </p>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
             const latestVerification = a.verifications?.[0];
@@ -898,9 +1146,9 @@ function FinanceCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
+                  <Badge variant="muted-accessible">Recommendation status: <span>{ACTION_STATUS_LABEL[a.status] ?? a.status}</span></Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">{presentBankBalanceActionText(a.recommendationCode ?? a.findingCode, a.description)}</p>
                 <p className="text-xs text-muted-foreground">
                   Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>

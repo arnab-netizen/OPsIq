@@ -17,6 +17,7 @@
  */
 import { describe, it, expect, afterAll } from "vitest";
 import { db } from "@/lib/db";
+import * as bcrypt from "bcryptjs";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { deletePgRateLimitBucket } from "@/infra/rate-limiter-pg";
 
@@ -73,18 +74,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] login brute force is rate-limited, n
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email,
-          password: correctPassword,
           workspaceName: "Brute Force Co",
-          acceptTerms: true,
-          acceptPrivacy: true,
-          acceptBetaNotice: true,
         }),
       }) as never
     );
     expect(signupRes.status).toBe(201);
-    const signupJson = await signupRes.json();
-    userId = signupJson.user.id;
-    await db.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+    // Signup stores no credential. Simulate the finished journey (mailbox proven, password chosen through the
+    // setup step) directly: the subject of this file is the login limiter, not the verification journey.
+    const created = await db.user.findUniqueOrThrow({ where: { email } });
+    userId = created.id;
+    await db.user.update({
+      where: { id: userId },
+      data: { emailVerifiedAt: new Date(), hashedPassword: await bcrypt.hash(correctPassword, 4) },
+    });
 
     // Flood with WRONG passwords on the fixed IP+email pair until the
     // limiter trips. Every pre-trip attempt must be a normal 401 (never a

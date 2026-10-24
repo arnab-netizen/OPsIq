@@ -30,6 +30,7 @@ import { recordOwnerOverride, changeBudgetAuthority } from "@/services/owner-bud
 import { recordWorkingCapitalItem, listWorkingCapitalItems } from "@/services/owner-budget/working-capital.service";
 import { recordArchetypeMetric } from "@/services/owner-budget/archetype-metrics.service";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const ws = () => randomUUID();
@@ -67,10 +68,11 @@ async function seedFinance(
     data: {
       id: randomUUID(), workspaceId, businessId,
       periodStart: new Date("2026-05-01"), periodEnd: new Date("2026-05-31"), currency: "INR",
-      revenue: f.revenue, costOfGoods: f.costOfGoods, fixedCosts: f.fixedCosts, cashOnHand: f.cashOnHand,
+      revenue: f.revenue, costOfGoods: f.costOfGoods, deliveryCost: 0, fixedCosts: f.fixedCosts, cashOnHand: f.cashOnHand,
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 async function growthPeriod(workspaceId: string, businessId: string) {

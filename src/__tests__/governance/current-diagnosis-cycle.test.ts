@@ -46,6 +46,9 @@ const PROVISIONAL_EVIDENCE_FILTER = /\bprovisionalEvidenceWhere\s*\(/;
  * snapshot) and cycle-HISTORY lists for display (every run, newest first).
  */
 const WRITE_PATH_ORDERED_READS: Readonly<Record<string, number>> = {
+  // Controlled Beta Cohort operator view: the owner's FIRST diagnosis (oldest run, ascending) — a history read of "what OpsIQ first told
+  // them". Its CURRENT diagnosis is read through CURRENT_DIAGNOSIS_CYCLE_ORDER + currentEvidenceWhere in the same file.
+  "src/services/beta-cohort/cohort-evidence.service.ts": 1,
   // next cycleNumber for a new Recovery cycle + the cycle history list (listCycles)
   "src/services/founder-recovery/cycle.service.ts": 2,
   // cycle history lists shown on each domain page (every run, newest first) + the latest run on ONE given
@@ -69,6 +72,8 @@ const WRITE_PATH_ORDERED_READS: Readonly<Record<string, number>> = {
   "src/services/owner-finance/diagnosis.service.ts": 2,
   // the latest run on ONE given snapshot (by snapshotId) — not a choice between evidence
   "src/services/owner-finance/baseline.service.ts": 1,
+  // first-run: the latest run on ONE given snapshot (by snapshotId) — the snapshot itself is chosen by the canonical selectors
+  "src/services/owner-first-run/first-run-evidence.reader.ts": 1,
 };
 
 function sourceFiles(dir: string): string[] {

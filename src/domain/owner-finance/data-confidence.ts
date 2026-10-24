@@ -4,8 +4,11 @@
  * Deterministic and honest: confidence drops as inputs go missing, and missing
  * critical inputs are listed explicitly. Nothing is invented. Pure (no I/O).
  */
+import { ownerConfidenceLevel } from "@/domain/owner-spine/confidence-vocabulary";
 import { clampScore } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput } from "./types";
+import { applyEvidenceQualityToScore } from "./evidence-quality";
+import { totalCosts, importantFieldValue } from "./cost-model";
 
 /** A finite, present number (missing/NaN/Infinity → not present). */
 function present(x: number | undefined | null): boolean {
@@ -22,10 +25,27 @@ export function isValidCurrency(currency: string | undefined | null): boolean {
 }
 
 /**
- * Critical inputs: without these, a financial diagnosis is largely guesswork.
- * "Has cost info" is satisfied by any direct cost component.
+ * The fields of a snapshot that decide whether it carries the critical evidence for a useful diagnosis.
+ * `missingCriticalFinanceInputs` needs only these, so snapshot-row adapters (first-read sufficiency) can
+ * call it without fabricating a period or currency.
  */
-export function missingCriticalFinanceInputs(input: FinancialSnapshotInput): string[] {
+export type CriticalFinanceFields = Pick<
+  FinancialSnapshotInput,
+  "revenue" | "costOfGoodsOrServices" | "fixedCosts" | "variableCosts" | "rent" | "salaryPayroll" | "utilities" | "cashOnHand"
+>;
+
+/**
+ * Critical inputs: without these, a financial diagnosis is largely guesswork.
+ * "Has cost info" is satisfied by any direct cost component. This is the ONE authoritative rule —
+ * first-read sufficiency (first-read-sufficiency.ts) consumes it rather than restating it.
+ * A known zero is present evidence; only a missing/non-finite value is missing.
+ *
+ * Cash is deliberately NOT critical (owner decision): `cash = explicit number | UNKNOWN`. An owner who does not know
+ * their cash is never made to invent a figure to get a first read. Unknown cash instead (a) lowers confidence
+ * (UNKNOWN_CASH_CONFIDENCE_PENALTY), (b) makes every cash-dependent conclusion abstain (liquidity.ts: runway and
+ * cash-cover are null), and (c) is stated to the owner as a conclusion that cannot be made yet.
+ */
+export function missingCriticalFinanceInputs(input: CriticalFinanceFields): string[] {
   const missing: string[] = [];
   if (!present(input.revenue)) missing.push("revenue");
   const hasCost =
@@ -36,9 +56,22 @@ export function missingCriticalFinanceInputs(input: FinancialSnapshotInput): str
     present(input.salaryPayroll) ||
     present(input.utilities);
   if (!hasCost) missing.push("costs");
-  if (!present(input.cashOnHand)) missing.push("cashOnHand");
   return missing;
 }
+
+/** Cash is UNKNOWN (never entered or cleared) — distinct from a known 0. */
+export function isCashUnknown(input: Pick<FinancialSnapshotInput, "cashOnHand">): boolean {
+  return !present(input.cashOnHand);
+}
+
+/** Confidence points removed while cash is unknown (a material gap, but not one that blocks a first read). */
+export const UNKNOWN_CASH_CONFIDENCE_PENALTY = 10;
+
+/**
+ * Confidence points removed while SOME cost is known but the total is not (a cost half is UNKNOWN, so profit and margin
+ * cannot be calculated). When no cost is known at all the critical-input penalty already applies; this never doubles it.
+ */
+export const INCOMPLETE_COSTS_CONFIDENCE_PENALTY = 10;
 
 export const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
   "costOfGoodsOrServices",
@@ -79,14 +112,15 @@ export interface MissingInput {
 /**
  * Whether the `fixedCosts` aggregate input is satisfied by component values.
  *
- * The cost model computes `fixedCostsTotal = fixedCosts ?? sum(rent, salaryPayroll, utilities)`,
- * so if any component is present the aggregate field is not a real diagnostic gap:
+ * The cost model computes `fixedCostsTotal = fixedCosts ?? (rent + salaryPayroll + utilities, all three known)`,
+ * so if every component is present the aggregate field is not a real diagnostic gap:
  * all fixed-cost calculations (burden%, break-even) will work correctly without the aggregate.
  * This prevents a false -5 confidence penalty when the owner has entered detailed components
  * instead of the rolled-up total.
  */
 export function fixedCostsCoveredByComponents(input: FinancialSnapshotInput): boolean {
-  return present(input.rent) || present(input.salaryPayroll) || present(input.utilities);
+  // All three components must be known: a subset is not the fixed-cost total (metrics.ts fixedCostsTotal).
+  return present(input.rent) && present(input.salaryPayroll) && present(input.utilities);
 }
 
 /**
@@ -99,10 +133,9 @@ export function fixedCostsCoveredByComponents(input: FinancialSnapshotInput): bo
 export type ConfidenceTier = "HIGH" | "MEDIUM" | "LOW" | "BLOCKED";
 
 export function confidenceTierFromScore(score: number): ConfidenceTier {
-  if (score >= 85) return "HIGH";
-  if (score >= 60) return "MEDIUM";
-  if (score >= 30) return "LOW";
-  return "BLOCKED";
+  // Thresholds live in ONE place (owner-spine/confidence-vocabulary.ts) so every surface words the same number the same way.
+  const level = ownerConfidenceLevel(score);
+  return level === "HIGH" ? "HIGH" : level === "MODERATE" ? "MEDIUM" : level === "LOW" ? "LOW" : "BLOCKED";
 }
 
 /**
@@ -130,7 +163,7 @@ export interface DataConfidenceResult {
   freshnessTier: FreshnessTier | null; // null if date unparseable
 }
 
-const CRITICAL_FIELDS = new Set(["revenue", "costs", "cashOnHand"]);
+const CRITICAL_FIELDS = new Set(["revenue", "costs"]);
 
 /**
  * Classify a missing finance input field by priority tier.
@@ -149,7 +182,7 @@ export function missingInputPriority(field: string): MissingInputPriority {
 const DB_FIELD_DISPLAY_LABELS: Record<string, string> = {
   revenue: "Revenue",
   costs: "Costs (any cost component)",
-  cashOnHand: "Cash on Hand",
+  cashOnHand: "Cash in hand",
   costOfGoods: "Cost of Goods Sold",
   fixedCosts: "Fixed Costs",
   payroll: "Payroll / Salary",
@@ -185,10 +218,10 @@ export function computeMissingInputsWithPriority(snapshot: Record<string, unknow
     !miss(snapshot.variableCosts) || !miss(snapshot.rent) ||
     !miss(snapshot.payroll) || !miss(snapshot.utilities);
   if (!hasCost) result.push({ field: displayLabelForField("costs"), priority: "CRITICAL" });
-  if (miss(snapshot.cashOnHand)) result.push({ field: displayLabelForField("cashOnHand"), priority: "CRITICAL" });
 
-  // Important fields — [DB column name, display label]
+  // Important fields (cash is among them: unknown cash lowers confidence but never blocks a read) — [DB column name, display label]
   const importantChecks: [string, string][] = [
+    ["cashOnHand", displayLabelForField("cashOnHand")],
     ["costOfGoods", displayLabelForField("costOfGoods")],
     ["fixedCosts", displayLabelForField("fixedCosts")],
     ["payroll", displayLabelForField("payroll")],
@@ -217,9 +250,9 @@ export function isStaleSnapshot(periodEnd: string, now: Date, staleDays: number)
 }
 
 /**
- * Confidence starts at 100 and is reduced by: 30 per missing critical input,
- * 5 per missing important field, 10 if currency is invalid, and 15 if the
- * snapshot is stale. Clamped to [0, 100].
+ * Confidence starts at 100 and is reduced by: 30 per missing critical input (revenue, costs),
+ * 10 while cash is unknown, 10 while costs are only partly known (a cost half is unknown), 5 per missing important field, 10 if currency is invalid, and 15 if the
+ * snapshot is stale, then reduced and capped when the evidence is an estimate. Clamped to [0, 100].
  *
  * Returns confidence score, tier, staleness, age in days, and freshness tier.
  */
@@ -234,8 +267,11 @@ export function calculateDataConfidence(
   for (const f of IMPORTANT_FIELDS) {
     // fixedCosts aggregate is not a gap when components (rent, salaryPayroll, utilities) cover it.
     if (f === "fixedCosts" && fixedCostsCoveredByComponents(input)) continue;
-    if (!present(input[f] as number | undefined)) score -= 5;
+    if (!present(importantFieldValue(input, f))) score -= 5;
   }
+
+  if (isCashUnknown(input)) score -= UNKNOWN_CASH_CONFIDENCE_PENALTY;
+  if (!missingCritical.includes("costs") && totalCosts(input as FinancialSnapshotInput) === null) score -= INCOMPLETE_COSTS_CONFIDENCE_PENALTY;
 
   if (!isValidCurrency(input.currency)) score -= 10;
 
@@ -245,6 +281,9 @@ export function calculateDataConfidence(
   const ageDays = Number.isNaN(endMs) ? null : (now.getTime() - endMs) / (1000 * 60 * 60 * 24);
   const stale = ageDays === null ? true : ageDays > staleDays;
   if (stale) score -= 15;
+
+  // Estimates never carry the same weight as actual records (see evidence-quality.ts).
+  score = applyEvidenceQualityToScore(score, input.evidenceQuality);
 
   const finalScore = clampScore(score);
   return {

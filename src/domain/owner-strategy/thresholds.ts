@@ -26,6 +26,8 @@ export interface StrategyThresholds {
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_STRATEGY_THRESHOLDS: StrategyThresholds = {
   strongRoiPct: 100,
   lowRoiPct: 20,

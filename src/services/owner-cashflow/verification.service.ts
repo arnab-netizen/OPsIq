@@ -7,6 +7,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { loadEffectiveCashflowSnapshotId } from "@/services/owner-cashflow/effective-cashflow.service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -99,14 +100,11 @@ export async function recordCashflowVerification(
   // entirely.
   if (result.reachedTarget) {
     try {
-      const latestSnapshot = await db.ownerCashflowSnapshot.findFirst({
-        where: { businessId: action.businessId, workspaceId, periodEnd: { lte: new Date() } },
-        orderBy: { periodEnd: "desc" },
-        select: { id: true },
-      });
-      if (latestSnapshot) {
+      // The latest COMPLETED snapshot through the one Cashflow selector (ties on periodEnd resolved by the domain rule).
+      const latestSnapshotId = await loadEffectiveCashflowSnapshotId(workspaceId, action.businessId, new Date());
+      if (latestSnapshotId) {
         const { runCashflowDiagnosis } = await import("./diagnosis.service");
-        const newCycle = await runCashflowDiagnosis(action.businessId, latestSnapshot.id, actorId, workspaceId);
+        const newCycle = await runCashflowDiagnosis(action.businessId, latestSnapshotId, actorId, workspaceId);
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.OWNER_CASHFLOW_VERIFICATION_REASSESSMENT_TRIGGERED,
           actorId,

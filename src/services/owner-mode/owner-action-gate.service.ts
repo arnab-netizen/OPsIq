@@ -44,7 +44,8 @@ import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQu
 import { ownerFindingIntent, type OwnerTargetIntent } from "@/domain/owner-spine/owner-imperatives";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { financeSurvivalDriver } from "@/domain/owner-spine/owner-decision";
-import { currentCashFinanceReading } from "@/services/owner-spine/current-cash-finance-reading";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
+import { cashFlowEvidenceGaps, currentCashFinanceReading, financeEvidenceGaps } from "@/services/owner-spine/current-cash-finance-reading";
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { loadOwnerDnrOverrides, type DnrOwnerOverrideDb } from "@/services/owner-mode/do-not-repeat.service";
 
@@ -81,7 +82,7 @@ interface ActionGateDb extends ProvisionalCashFinanceDb, DnrOwnerOverrideDb {
       where: Record<string, unknown>;
       orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER;
       select: Record<string, unknown>;
-    }): Promise<{ cashflowState: string; dataConfidenceScore?: number | null; snapshot?: { periodStart?: Date; periodEnd: Date } | null } | null>;
+    }): Promise<{ cashflowState: string; dataConfidenceScore?: number | null; generatedAt?: Date | null; snapshot?: ({ periodStart?: Date; periodEnd: Date } & Record<string, unknown>) | null } | null>;
   };
   ownerFinancialSnapshot: {
     findFirst(args: CurrentEffectiveSnapshotQuery<{ revenue: true; costOfGoods: true; dataConfidenceScore: true; periodEnd: true }>): Promise<{ revenue: number | null; costOfGoods: number | null; dataConfidenceScore?: number | null; periodEnd?: Date | null } | null>;
@@ -111,10 +112,14 @@ function unitScore(v: number | null | undefined): number | null {
  * Confidence in the margin figure (0..1, null ⇒ unknown): the snapshot's data confidence, capped at
  * OUT_OF_DATE_EVIDENCE_CONFIDENCE when its period ended more than the freshness window ago.
  */
+export function marginOutOfDate(snap: { periodEnd?: Date | null } | null, now: Date): boolean {
+  const end = snap?.periodEnd instanceof Date ? snap.periodEnd.getTime() : null;
+  return end === null || now.getTime() - end > CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+}
+
 export function marginConfidence(snap: { dataConfidenceScore?: number | null; periodEnd?: Date | null } | null, now: Date): number | null {
   const base = unitScore(snap?.dataConfidenceScore);
-  const end = snap?.periodEnd instanceof Date ? snap.periodEnd.getTime() : null;
-  const outOfDate = end === null || now.getTime() - end > CAPACITY_RECORD_FRESH_DAYS * 86_400_000;
+  const outOfDate = marginOutOfDate(snap, now);
   if (!outOfDate) return base;
   return base === null ? OUT_OF_DATE_EVIDENCE_CONFIDENCE : Math.min(base, OUT_OF_DATE_EVIDENCE_CONFIDENCE);
 }
@@ -168,7 +173,8 @@ export async function loadOwnerGateConstraints(
       ? deps.db.ownerCashflowCycle.findFirst({
           where: cycleWhere,
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { cashflowState: true, dataConfidenceScore: true, snapshot: { select: { periodStart: true, periodEnd: true } } },
+          // The whole snapshot: the cash position's completeness (and the re-projection of a pre-fix cycle) is judged from it.
+          select: { cashflowState: true, dataConfidenceScore: true, generatedAt: true, snapshot: true },
         })
       : Promise.resolve(null),
     scope
@@ -201,10 +207,14 @@ export async function loadOwnerGateConstraints(
   // The ONE current cash/finance reading (current-cash-finance-reading.ts): the current diagnosis cycles,
   // arbitrated by evidence period; an amended-but-undiagnosed unsafe Finance reading still counts until
   // it is re-diagnosed; figures that are not current are never safe. No reading at all → nothing to enforce.
+  // A Cash flow cycle is read through the read-time projection: when its snapshot cannot establish total cash, the
+  // persisted (possibly pre-fix, partial-total) state is replaced by what the current engine supports, and the gap is
+  // carried as evidence insufficiency (never as danger).
+  const cashRead = cashCycle ? projectCashflowCycleRow(cashCycle) : null;
   const reading = currentCashFinanceReading(
-    cashCycle ? { state: cashCycle.cashflowState, snapshot: cashCycle.snapshot, confidence: unitScore(cashCycle.dataConfidenceScore) } : null,
+    cashRead ? { state: cashRead.cashflowState, snapshot: cashRead.snapshot, confidence: unitScore(cashRead.dataConfidenceScore), evidenceGaps: cashFlowEvidenceGaps(cashRead) } : null,
     finCycle
-      ? { state: finCycle.survivalState, snapshot: finCycle.snapshot, driver: financeSurvivalDriver(finCycle.findings), confidence: unitScore(finCycle.dataConfidenceScore) }
+      ? { state: finCycle.survivalState, snapshot: finCycle.snapshot, driver: financeSurvivalDriver(finCycle.findings), confidence: unitScore(finCycle.dataConfidenceScore), evidenceGaps: financeEvidenceGaps(finCycle.findings) }
       : null,
     now.getTime(),
     provisional
@@ -224,14 +234,19 @@ export async function loadOwnerGateConstraints(
       driver: reading.gateDriver,
       confidence: reading.gateConfidence,
       provisional: reading.provisional,
+      conflicting: reading.conflicting && !reading.provisional,
       source: reading.gateSource,
       // P2-8: each source's OWN in-progress reading — a card tightens by its own source's danger, never
       // dropped just because the OTHER source is worse and wins the single overall gate decision above.
       provisionalCashState: reading.provisionalCashState,
       provisionalFinanceState: reading.provisionalFinanceState,
+      // Evidence sufficiency, SEPARATE from the state (see current-cash-finance-reading.ts): a growth step needs both.
+      evidenceSufficient: reading.gateEvidenceSufficient,
+      evidenceGaps: reading.gateEvidenceGaps,
     },
     grossMarginPct: grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null),
     grossMarginConfidence: marginConfidence(snap, now),
+    grossMarginOutOfDate: marginOutOfDate(snap, now),
     expiredCompliance: expiredComplianceFor(complianceItems, businessId, soleRealBusinessId, now),
   };
 }

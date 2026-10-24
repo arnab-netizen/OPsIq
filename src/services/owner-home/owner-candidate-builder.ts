@@ -30,6 +30,7 @@ import {
   type OwnerGateHold,
 } from "@/domain/owner-spine/owner-decision";
 import type { OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
+import { projectCashflowCycleRow, type CashPositionEvidence } from "@/domain/owner-cashflow/cycle-projection";
 import {
   domainActionToCandidate,
   issueVerificationFact,
@@ -227,7 +228,7 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
   const futureWhere = { ...where, snapshot: { periodStart: { gt: now } } };
   const provisionalWhere = { ...where, ...provisionalEvidenceWhere(now) };
   const futureSelect = { select: { id: true } } as const;
-  const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
+  const [finance, recovery, cashflowRow, sales, operations, sop, marketing, strategy,
     financeVers, salesVers, operationsVers, sopVers, strategyVers, cashflowVers, marketingVers, recoveryVers] = await Promise.all([
     // Finance also needs its snapshot's amendment state: an amended (superseded) snapshot means the
     // latest diagnosis is based on figures the owner has since corrected.
@@ -248,7 +249,13 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
         },
       },
     }),
-    db.ownerCashflowCycle.findFirst({ where: evidenceWhere, ...latest }),
+    // Cashflow needs its WHOLE snapshot: whether the cash position can be established from BOTH components (and, when it
+    // cannot, the read-time re-projection of a possibly pre-fix cycle) is judged from it — see cycle-projection.ts.
+    db.ownerCashflowCycle.findFirst({
+      where: evidenceWhere,
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
+      include: { ...spineCycleInclude, snapshot: true },
+    }),
     db.ownerSalesCycle.findFirst({ where: evidenceWhere, ...latest }),
     db.ownerOperationsCycle.findFirst({ where: evidenceWhere, ...latest }),
     db.ownerSopCycle.findFirst({ where: evidenceWhere, ...latest }),
@@ -269,6 +276,11 @@ export async function loadOwnerSpineEvidence(workspaceId: string, businessId: st
       orderBy: { createdAt: "desc" },
     }),
   ]);
+  // A Cashflow cycle whose snapshot cannot establish total cash is read through the read-time projection BEFORE anything
+  // else uses it (state, scores, findings, actions, engaged-work continuity, survival readings): a persisted conclusion
+  // that rested on a partial cash total — a pre-fix false insolvency / low-runway finding and its action — never reaches
+  // the canonical decision. Complete positions are returned untouched. No writes.
+  const cashflow = cashflowRow ? projectCashflowCycleRow(cashflowRow) : null;
   // Work on other cycles for read-time continuity (followEngagedWork): engaged work, and completed work for a
   // finding the current cycle raises (terminal evidence against a duplicate proposal). Never work on a cycle
   // of a period that has not started (a future plan's priority and wording are never followed).
@@ -551,6 +563,14 @@ export function buildOwnerSpineCandidates(
     ? (finance.snapshot.missingCriticalData as unknown[]).filter((m): m is string => typeof m === "string")
     : [];
 
+  // An incomplete Cash flow position with NO eligible request to complete it (e.g. a cycle persisted before the
+  // complete-position fix has no such finding/action): the gap is still missing critical data — the decision must not
+  // read "nothing open / all clear" over a business whose total cash is unknown.
+  const cashPosition = (cashflow as { cashPosition?: CashPositionEvidence } | null)?.cashPosition;
+  if (cashPosition && cashPosition.judged && !cashPosition.complete
+      && !candidates.some((c) => c.domain === "cashflow" && c.findingCode === "CF_MISSING_CRITICAL_DATA" && !c.exclusion)) {
+    for (const m of cashPosition.missing) if (!missingCriticalData.includes(m)) missingCriticalData.push(m);
+  }
   return { candidates, domainScores, findings, verifications, events, staleDomains, futureDomains, provisionalDomains, survivalReadings, strategyContext, missingCriticalData };
 }
 

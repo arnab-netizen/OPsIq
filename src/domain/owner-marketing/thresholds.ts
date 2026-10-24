@@ -28,6 +28,8 @@ export interface MarketingThresholds {
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_MARKETING_THRESHOLDS: MarketingThresholds = {
   healthyRoiPct: 200,
   lowRoiPct: 50,

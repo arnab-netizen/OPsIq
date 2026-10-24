@@ -195,12 +195,12 @@ describe("Owner Spine — Business Condition Profile", () => {
     expect(profile.missingCriticalData.sort()).toEqual(["cashOnHand", "revenue"]);
   });
 
-  it("with no domain scores, every score is 0 and no action invented", () => {
+  it("with no domain scores, scores are 0 except survival/execution risk, which are NOT MEASURED (null), and no action invented", () => {
     const profile = buildBusinessConditionProfile({ domainScores: [], now: FIXED_NOW });
     expect(profile.overallHealthScore).toBe(0);
-    expect(profile.survivalRiskScore).toBe(0);
+    expect(profile.survivalRiskScore).toBeNull();
     expect(profile.growthOpportunityScore).toBe(0);
-    expect(profile.executionRiskScore).toBe(0);
+    expect(profile.executionRiskScore).toBeNull();
     expect(profile.dataConfidenceScore).toBe(0);
     expect(profile.recommendedNextAction).toBeUndefined();
     expect(profile.missingCriticalData).toEqual([]);

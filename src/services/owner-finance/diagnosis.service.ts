@@ -13,14 +13,21 @@ import { ENGAGED_ACTION_STATUSES, periodEndOf, completedEvidencePeriod, planWith
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { ConflictError, NotFoundError } from "@/infra/errors";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { diagnoseFinanceSnapshot } from "@/domain/owner-finance/diagnosis";
 import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
-import { getFinancialSnapshot, rowToFinanceInput } from "./snapshot.service";
+import { loadFinanceEngineInput } from "./liquidity.service";
+import { databaseNow, loadEffectiveCashflowCandidates, lockCashPositionShared } from "@/services/owner-cashflow/effective-cashflow.service";
+import { pickEffectiveCashflowRow, selectUsableBankBalance, type CashflowSelectionRow } from "@/domain/owner-finance/liquidity";
+import { getFinancialSnapshot } from "./snapshot.service";
 import { getFinanceEffectivenessMap } from "./effectiveness.service";
+
+/** The bank balance this diagnosis used was changed by a Cashflow write that committed before it took the lock: recompute. */
+class CashBalanceMovedDuringDiagnosis extends Error {}
+const MAX_CASH_RACE_ATTEMPTS = 3;
 
 /** Engaged prior action row read for cross-cycle continuity (see action-continuity.ts). */
 interface EngagedPriorAction {
@@ -45,235 +52,249 @@ export async function runFinanceDiagnosis(
     throw new NotFoundError("OwnerFinancialSnapshot", snapshotId);
   }
 
-  const snapshotEnd = snapshotRow.periodEnd instanceof Date
-    ? snapshotRow.periodEnd
-    : new Date(snapshotRow.periodEnd as string);
+  const persist = async () => {
+    // DEFECT 1: Enrich the engine input through the liquidity contract: lineage-resolved cash semantics and
+    // the usable bank balance (at-or-before, fresh, fail-closed: absent/stale/future → undefined, never 0).
+    // This read is OPTIMISTIC: it is validated again under the cash-position lock inside the persisting transaction below.
+    const input = await loadFinanceEngineInput(snapshotRow, workspaceId);
 
-  // DEFECT 1: Enrich engine input with bank balance from a compatible cashflow snapshot.
-  // At-or-before semantics: only a cashflow snapshot whose periodEnd ≤ finance snapshot periodEnd
-  // may enrich it (future cashflow must never influence a past diagnosis).
-  // Freshness window: ≤ 45 days before the finance snapshot periodEnd.
-  // Fail-closed: absent/stale/future cashflow → bankBalance stays undefined (not zero).
-  const cashflowRow = await db.ownerCashflowSnapshot.findFirst({
-    where: { workspaceId, businessId, periodEnd: { lte: snapshotEnd } },
-    orderBy: { periodEnd: "desc" },
-    select: { bankBalance: true, periodEnd: true },
-  });
-
-  const input = rowToFinanceInput(snapshotRow);
-
-  if (cashflowRow?.bankBalance != null && Number.isFinite(cashflowRow.bankBalance)) {
-    const cfEnd = cashflowRow.periodEnd instanceof Date
-      ? cashflowRow.periodEnd
-      : new Date(cashflowRow.periodEnd as string);
-    // ageDays is always ≥ 0 here because cfEnd ≤ snapshotEnd (enforced by the query filter)
-    const ageDays = (snapshotEnd.getTime() - cfEnd.getTime()) / 86_400_000;
-    if (ageDays <= 45) {
-      input.bankBalance = cashflowRow.bankBalance;
+    // DEFECT 2: When the snapshot has no industryTemplate, resolve one from the canonical
+    // business profile (precedence: explicit snapshot override > business-type mapping > generic).
+    if (!input.industryTemplate) {
+      const mapped = mapBusinessTypeToFinanceIndustryTemplate(business.businessType);
+      if (mapped) input.industryTemplate = mapped;
     }
-  }
 
-  // DEFECT 2: When the snapshot has no industryTemplate, resolve one from the canonical
-  // business profile (precedence: explicit snapshot override > business-type mapping > generic).
-  if (!input.industryTemplate) {
-    const mapped = mapBusinessTypeToFinanceIndustryTemplate(business.businessType);
-    if (mapped) input.industryTemplate = mapped;
-  }
-
-  // Enrich from confirmed cash_debt intake when the snapshot is missing either
-  // the principal or the monthly repayment amount.
-  // Precedence: snapshot field (when present) > confirmed intake > absent.
-  // loanEmiDebtPayments=0 (confirmed zero repayment) is a valid answer and must
-  // not be overwritten; only null/undefined triggers enrichment.
-  if (input.totalDebtOutstanding == null || input.loanEmiDebtPayments == null) {
-    const intakeRow = await db.ownerDataIntake.findFirst({
-      where: { workspaceId, businessId, ownerConfirmed: true, targetDomain: "cash_debt" },
-      orderBy: [{ confirmedAt: "desc" }, { createdAt: "desc" }],
-      select: { records: true },
-    });
-    if (intakeRow) {
-      const records = intakeRow.records as unknown[];
-      const first = Array.isArray(records) && records.length > 0 && typeof records[0] === "object" && records[0] !== null
-        ? (records[0] as Record<string, unknown>)
-        : null;
-      if (first) {
-        if (input.totalDebtOutstanding == null) {
-          const v = first["totalOutstandingDebt"];
-          if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
-            input.totalDebtOutstanding = v;
+    // Enrich from confirmed cash_debt intake when the snapshot is missing either
+    // the principal or the monthly repayment amount.
+    // Precedence: snapshot field (when present) > confirmed intake > absent.
+    // loanEmiDebtPayments=0 (confirmed zero repayment) is a valid answer and must
+    // not be overwritten; only null/undefined triggers enrichment.
+    if (input.totalDebtOutstanding == null || input.loanEmiDebtPayments == null) {
+      const intakeRow = await db.ownerDataIntake.findFirst({
+        where: { workspaceId, businessId, ownerConfirmed: true, targetDomain: "cash_debt" },
+        orderBy: [{ confirmedAt: "desc" }, { createdAt: "desc" }],
+        select: { records: true },
+      });
+      if (intakeRow) {
+        const records = intakeRow.records as unknown[];
+        const first = Array.isArray(records) && records.length > 0 && typeof records[0] === "object" && records[0] !== null
+          ? (records[0] as Record<string, unknown>)
+          : null;
+        if (first) {
+          if (input.totalDebtOutstanding == null) {
+            const v = first["totalOutstandingDebt"];
+            if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
+              input.totalDebtOutstanding = v;
+            }
           }
-        }
-        // Map confirmed monthlyRepayment → loanEmiDebtPayments so the debt-service
-        // pressure metric is computed correctly (0 = confirmed no fixed schedule).
-        if (input.loanEmiDebtPayments == null) {
-          const m = first["monthlyRepayment"];
-          if (typeof m === "number" && Number.isFinite(m) && m >= 0) {
-            input.loanEmiDebtPayments = m;
+          // Map confirmed monthlyRepayment → loanEmiDebtPayments so the debt-service
+          // pressure metric is computed correctly (0 = confirmed no fixed schedule).
+          if (input.loanEmiDebtPayments == null) {
+            const m = first["monthlyRepayment"];
+            if (typeof m === "number" && Number.isFinite(m) && m >= 0) {
+              input.loanEmiDebtPayments = m;
+            }
           }
         }
       }
     }
-  }
 
-  const diagnosis = diagnoseFinanceSnapshot(input);
+    const diagnosis = diagnoseFinanceSnapshot(input);
 
-  // Query historical effectiveness signals for all finding codes in this diagnosis.
-  // Best-effort: a query failure falls back to an empty map (no modifier applied).
-  let effectivenessMap;
-  try {
-    const findingCodes = diagnosis.findings.map((f) => f.code);
-    effectivenessMap = await getFinanceEffectivenessMap(workspaceId, findingCodes);
-  } catch {
-    // Non-fatal: diagnosis proceeds without effectiveness adjustment
-  }
-
-  const plan = planFinanceActionsFromDiagnosis(diagnosis, effectivenessMap);
-  const confidence = calculateDataConfidence(input);
-
-  const previousCycle = await db.ownerFinanceCycle.findFirst({
-    where: { businessId, workspaceId },
-    orderBy: { sequenceNumber: "desc" },
-    select: { sequenceNumber: true },
-  });
-  const sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1;
-  const cycleId = randomUUID();
-
-  const recByFinding: Record<string, string> = {};
-  for (const r of plan.recommendations) recByFinding[r.findingCode] = r.recommendationCode;
-
-  let carriedForwardIds: string[] = [];
-  let createdActionCount = 0;
-  await db.$transaction(async (tx: any) => {
-    await tx.ownerFinanceCycle.create({
-      data: {
-        id: cycleId,
-        workspaceId,
-        businessId,
-        snapshotId,
-        sequenceNumber,
-        status: "open",
-        overallHealthScore: diagnosis.domainScore.healthScore,
-        survivalRiskScore: diagnosis.domainScore.riskScore,
-        growthOpportunityScore: diagnosis.domainScore.opportunityScore,
-        dataConfidenceScore: diagnosis.domainScore.dataConfidenceScore,
-        survivalState: diagnosis.metrics.survivalState,
-        generatedAt: diagnosis.generatedAt,
-      },
-    });
-
-    const findingIdByCode: Record<string, string> = {};
-    for (const f of diagnosis.findings) {
-      const id = randomUUID();
-      findingIdByCode[f.code] = id;
-      await tx.ownerFinanceFinding.create({
-        data: {
-          id,
-          workspaceId,
-          businessId,
-          cycleId,
-          findingType: f.findingType,
-          code: f.code,
-          title: f.title,
-          summary: f.summary,
-          sourceMetric: f.sourceMetric,
-          sourceValue: f.sourceValue ?? null,
-          threshold: f.threshold ?? null,
-          severity: f.severity,
-          confidence: f.confidence,
-          impactScore: f.impactScore,
-          urgencyScore: f.urgencyScore,
-          evidence: f.evidence,
-          missingData: f.missingData,
-          verificationMetric: f.verificationMetric ?? null,
-        },
-      });
+    // Query historical effectiveness signals for all finding codes in this diagnosis.
+    // Best-effort: a query failure falls back to an empty map (no modifier applied).
+    let effectivenessMap;
+    try {
+      const findingCodes = diagnosis.findings.map((f) => f.code);
+      effectivenessMap = await getFinanceEffectivenessMap(workspaceId, findingCodes);
+    } catch {
+      // Non-fatal: diagnosis proceeds without effectiveness adjustment
     }
 
-    // Continuity: an action the owner has taken on for the same finding/recommendation is
-    // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
-    const engagedPrior: EngagedPriorAction[] = await tx.ownerFinanceAction.findMany({
-      where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
-      select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true, cycle: { select: { snapshot: { select: { periodEnd: true } } } } },
-    });
-    const plannedWithCodes = plan.actions.map((a) => ({ ...a, recommendationCode: recByFinding[a.findingCode] ?? a.findingCode }));
-    // Back-fill: a diagnosis of an older period never takes over in-flight work attached to a newer
-      // period's cycle (action-continuity.ts "held").
-      const continuity = planWithContinuity(plannedWithCodes, engagedPrior, {
-        current: periodEndOf(snapshotRow.periodEnd),
-        currentCompleted: completedEvidencePeriod(snapshotRow as { periodEnd?: unknown; supersededById?: unknown }, new Date()),
-        of: (p) => periodEndOf(p.cycle?.snapshot?.periodEnd),
+    const plan = planFinanceActionsFromDiagnosis(diagnosis, effectivenessMap);
+    const confidence = calculateDataConfidence(input);
+
+    const cycleId = randomUUID();
+    let sequenceNumber = 0;
+
+    const recByFinding: Record<string, string> = {};
+    for (const r of plan.recommendations) recByFinding[r.findingCode] = r.recommendationCode;
+
+    let carriedForwardIds: string[] = [];
+    let createdActionCount = 0;
+    await db.$transaction(async (tx: any) => {
+      // SERIALISATION with Cashflow writes. The shared cash-position lock is held from here THROUGH the commit that persists
+      // the cycle; Cashflow creates/edits take it exclusively, so any bank-balance change either committed before this point
+      // (and is compared against what this diagnosis used, below) or waits until this cycle is committed (and is then newer
+      // by construction). The evidence stamp comes from the DATABASE clock under the lock, as do the Cashflow `updatedAt`
+      // stamps it is compared with, so application-server clock skew cannot reorder them.
+      await lockCashPositionShared(tx, businessId);
+      // The cycle sequence is allocated under a per-business lock INSIDE the transaction: two concurrent diagnoses (a
+      // double submit, or a correction racing a re-run) serialise here, so each gets the next number and neither trips
+      // the (business, sequence) unique constraint into a failed request.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner_finance_cycle_sequence:${businessId}`}))`;
+      const previousCycle = await tx.ownerFinanceCycle.findFirst({
+        where: { businessId, workspaceId },
+        orderBy: { sequenceNumber: "desc" },
+        select: { sequenceNumber: true },
       });
-    carriedForwardIds = [];
-    // Re-attach each carried action to this cycle (ranking and wording re-evaluated) so every reader
-    // of the latest cycle sees the owner's in-flight work; audited in the same transaction. The
-    // original findingId is kept: it holds the baseline measured before the work started.
-    // Guarded by status: an action finished/cancelled meanwhile is not moved; a fresh proposal
-    // is created for it instead.
-    const recreate: typeof continuity.toCreate = [];
-    const movedPlanned = new Set<(typeof continuity.toCreate)[number]>();
-    for (const c of continuity.carried) {
-      const moved = await tx.ownerFinanceAction.updateMany({
-        where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+      sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1;
+      const evidenceAsOf = await databaseNow(tx);
+      const bankNow = selectUsableBankBalance({
+        financePeriodEnd: snapshotRow.periodEnd,
+        cashflow: pickEffectiveCashflowRow(
+          (await loadEffectiveCashflowCandidates(workspaceId, businessId, snapshotRow.periodEnd, { client: tx })) as CashflowSelectionRow[],
+          snapshotRow.periodEnd,
+        ),
+      });
+      // A balance change committed after the optimistic read above: this diagnosis did not observe it, so it must not commit.
+      if (bankNow !== input.bankBalance) throw new CashBalanceMovedDuringDiagnosis();
+      await tx.ownerFinanceCycle.create({
         data: {
-          cycleId,
-          description: c.planned.description,
-          verificationMethod: c.planned.verificationMethod,
-          expectedTimeframeDays: c.planned.expectedTimeframeDays,
-          priorityScore: c.planned.priorityScore,
-          expectedImpactScore: c.planned.expectedImpactScore,
-          effortScore: c.planned.effortScore,
-          confidence: c.planned.confidence,
+          id: cycleId,
+          workspaceId,
+          businessId,
+          snapshotId,
+          sequenceNumber,
+          status: "open",
+          overallHealthScore: diagnosis.domainScore.healthScore,
+          survivalRiskScore: diagnosis.domainScore.riskScore,
+          growthOpportunityScore: diagnosis.domainScore.opportunityScore,
+          dataConfidenceScore: diagnosis.domainScore.dataConfidenceScore,
+          survivalState: diagnosis.metrics.survivalState,
+          generatedAt: evidenceAsOf,
         },
       });
-      if (moved.count === 0) continue;
-      movedPlanned.add(c.planned);
-      await emitAuditEvent(
-        {
-          eventName: AUDIT_EVENTS.OWNER_FINANCE_ACTION_UPDATED,
-          actorId,
-          workspaceId,
-          entityType: "OwnerFinanceAction",
-          entityId: c.prior.id,
-          payload: {
-            reason: "carried_forward_by_diagnosis",
-            fromCycleId: c.prior.cycleId,
-            toCycleId: cycleId,
-            priorityScore: { from: c.prior.priorityScore, to: c.planned.priorityScore },
+
+      const findingIdByCode: Record<string, string> = {};
+      for (const f of diagnosis.findings) {
+        const id = randomUUID();
+        findingIdByCode[f.code] = id;
+        await tx.ownerFinanceFinding.create({
+          data: {
+            id,
+            workspaceId,
+            businessId,
+            cycleId,
+            findingType: f.findingType,
+            code: f.code,
+            title: f.title,
+            summary: f.summary,
+            sourceMetric: f.sourceMetric,
+            sourceValue: f.sourceValue ?? null,
+            threshold: f.threshold ?? null,
+            severity: f.severity,
+            confidence: f.confidence,
+            impactScore: f.impactScore,
+            urgencyScore: f.urgencyScore,
+            evidence: f.evidence,
+            missingData: f.missingData,
+            verificationMetric: f.verificationMetric ?? null,
           },
-        },
-        tx
-      );
-      carriedForwardIds.push(c.prior.id);
-    }
-    for (const c of continuity.carried) {
-      if (!movedPlanned.has(c.planned) && !recreate.includes(c.planned)) recreate.push(c.planned);
-    }
-    createdActionCount = continuity.toCreate.length + recreate.length;
-    for (const a of [...continuity.toCreate, ...recreate]) {
-      await tx.ownerFinanceAction.create({
-        data: {
-          id: randomUUID(),
-          workspaceId,
-          businessId,
-          cycleId,
-          findingId: findingIdByCode[a.findingCode] ?? null,
-          recommendationCode: a.recommendationCode,
-          findingCode: a.findingCode,
-          title: a.title,
-          description: a.description,
-          ownerRole: a.ownerRole,
-          status: "proposed",
-          priorityScore: a.priorityScore,
-          effortScore: a.effortScore,
-          expectedImpactScore: a.expectedImpactScore,
-          confidence: a.confidence,
-          verificationMetric: a.verificationMetric,
-          verificationMethod: a.verificationMethod,
-          expectedTimeframeDays: a.expectedTimeframeDays,
-        },
+        });
+      }
+
+      // Continuity: an action the owner has taken on for the same finding/recommendation is
+      // carried forward (re-prioritised), not duplicated (see action-continuity.ts).
+      const engagedPrior: EngagedPriorAction[] = await tx.ownerFinanceAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        select: { id: true, cycleId: true, findingCode: true, recommendationCode: true, priorityScore: true, cycle: { select: { snapshot: { select: { periodEnd: true } } } } },
       });
+      const plannedWithCodes = plan.actions.map((a) => ({ ...a, recommendationCode: recByFinding[a.findingCode] ?? a.findingCode }));
+      // Back-fill: a diagnosis of an older period never takes over in-flight work attached to a newer
+        // period's cycle (action-continuity.ts "held").
+        const continuity = planWithContinuity(plannedWithCodes, engagedPrior, {
+          current: periodEndOf(snapshotRow.periodEnd),
+          currentCompleted: completedEvidencePeriod(snapshotRow as { periodEnd?: unknown; supersededById?: unknown }, new Date()),
+          of: (p) => periodEndOf(p.cycle?.snapshot?.periodEnd),
+        });
+      carriedForwardIds = [];
+      // Re-attach each carried action to this cycle (ranking and wording re-evaluated) so every reader
+      // of the latest cycle sees the owner's in-flight work; audited in the same transaction. The
+      // original findingId is kept: it holds the baseline measured before the work started.
+      // Guarded by status: an action finished/cancelled meanwhile is not moved; a fresh proposal
+      // is created for it instead.
+      const recreate: typeof continuity.toCreate = [];
+      const movedPlanned = new Set<(typeof continuity.toCreate)[number]>();
+      for (const c of continuity.carried) {
+        const moved = await tx.ownerFinanceAction.updateMany({
+          where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+          data: {
+            cycleId,
+            description: c.planned.description,
+            verificationMethod: c.planned.verificationMethod,
+            expectedTimeframeDays: c.planned.expectedTimeframeDays,
+            priorityScore: c.planned.priorityScore,
+            expectedImpactScore: c.planned.expectedImpactScore,
+            effortScore: c.planned.effortScore,
+            confidence: c.planned.confidence,
+          },
+        });
+        if (moved.count === 0) continue;
+        movedPlanned.add(c.planned);
+        await emitAuditEvent(
+          {
+            eventName: AUDIT_EVENTS.OWNER_FINANCE_ACTION_UPDATED,
+            actorId,
+            workspaceId,
+            entityType: "OwnerFinanceAction",
+            entityId: c.prior.id,
+            payload: {
+              reason: "carried_forward_by_diagnosis",
+              fromCycleId: c.prior.cycleId,
+              toCycleId: cycleId,
+              priorityScore: { from: c.prior.priorityScore, to: c.planned.priorityScore },
+            },
+          },
+          tx
+        );
+        carriedForwardIds.push(c.prior.id);
+      }
+      for (const c of continuity.carried) {
+        if (!movedPlanned.has(c.planned) && !recreate.includes(c.planned)) recreate.push(c.planned);
+      }
+      createdActionCount = continuity.toCreate.length + recreate.length;
+      for (const a of [...continuity.toCreate, ...recreate]) {
+        await tx.ownerFinanceAction.create({
+          data: {
+            id: randomUUID(),
+            workspaceId,
+            businessId,
+            cycleId,
+            findingId: findingIdByCode[a.findingCode] ?? null,
+            recommendationCode: a.recommendationCode,
+            findingCode: a.findingCode,
+            title: a.title,
+            description: a.description,
+            ownerRole: a.ownerRole,
+            status: "proposed",
+            priorityScore: a.priorityScore,
+            effortScore: a.effortScore,
+            expectedImpactScore: a.expectedImpactScore,
+            confidence: a.confidence,
+            verificationMetric: a.verificationMetric,
+            verificationMethod: a.verificationMethod,
+            expectedTimeframeDays: a.expectedTimeframeDays,
+          },
+        });
+      }
+    });
+  return { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount };
+  };
+
+  let persisted: Awaited<ReturnType<typeof persist>> | undefined;
+  for (let attempt = 1; !persisted; attempt++) {
+    try {
+      persisted = await persist();
+    } catch (error) {
+      if (!(error instanceof CashBalanceMovedDuringDiagnosis)) throw error;
+      if (attempt >= MAX_CASH_RACE_ATTEMPTS) {
+        throw new ConflictError("Your bank balance is being changed right now. Please try again in a moment.");
+      }
     }
-  });
+  }
+  const { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount } = persisted;
 
   const previousCycleForDrift = await db.ownerFinanceCycle.findFirst({
     where: { businessId, workspaceId, id: { not: cycleId } },

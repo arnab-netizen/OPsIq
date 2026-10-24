@@ -1,6 +1,8 @@
+import { getImageProps } from "next/image";
 import Link from "next/link";
+import { PublicLink } from "@/components/navigation/PublicLink";
 import { Badge } from "@/ui/primitives";
-import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
+import { PublicBetaCta, PublicBetaText } from "@/components/landing/PublicBetaCta";
 import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
 import { PublicSiteFooter } from "@/components/landing/PublicSiteFooter";
 
@@ -32,6 +34,10 @@ const secondaryCta =
 /** "How OpsIQ works" — the real loop: every domain diagnosis follows this order today. */
 const HOW_IT_WORKS = [
   {
+    title: "Evidence",
+    body: "Start from the numbers you already track. Each finding shows the metric and value behind it, and missing data is shown as a gap.",
+  },
+  {
     title: "Diagnose",
     body: "Run a structured diagnosis on Money, Sales, or Operations from the numbers you already track.",
   },
@@ -46,6 +52,38 @@ const HOW_IT_WORKS = [
   {
     title: "Verify",
     body: "Mark an action's real outcome afterward. What happened stays separate from what was predicted.",
+  },
+];
+
+/** Input -> output: each line maps to shipped behavior described elsewhere on this page. */
+const INPUT_OUTPUT = [
+  {
+    label: "You bring",
+    body: "The business numbers you already track for Money, Sales, or Operations.",
+  },
+  {
+    label: "OpsIQ does",
+    body: "Checks the evidence, finds what needs attention, ranks it, and explains why.",
+  },
+  {
+    label: "You get",
+    body: "A finding, its priority and reason, a recommended action, and a record of the outcome you verify.",
+  },
+];
+
+/** Differentiation: short, current-product statements only. No brands, no consultant-replacement claim. */
+const DIFFERENTIATORS = [
+  {
+    title: "Not another dashboard",
+    body: "OpsIQ helps decide what deserves attention first, not just display numbers.",
+  },
+  {
+    title: "Not generic AI advice",
+    body: "Recommendations are tied to structured evidence and visible missing information.",
+  },
+  {
+    title: "Not a task tracker",
+    body: "OpsIQ helps decide which action matters before the work is tracked.",
   },
 ];
 
@@ -69,10 +107,37 @@ const TRUST_POINTS = [
   },
 ];
 
-export default function LandingPage() {
+/** PwC-derived facts. Population caveat is part of the wording; see docs/opsiq/marketing/PUBLIC_POSITIONING_EVIDENCE.md. */
+const WHY_NOW_FACTS = [
+  "89% said their technology investments had not fully delivered expected results.",
+  "87% said poor data quality had affected their organization\u2019s ability to achieve value from digital initiatives.",
+];
+
+const PROOF_ALT =
+  "OpsIQ Owner Home for a fictional demo business, showing the main business target (build at least two weeks of operating cash), the recommended action, and the first reason it comes first.";
+
+// Same screen, two captures (art direction): desktop 1440px, and a real 390px-viewport capture for mobile.
+const { props: proofDesktop } = getImageProps({
+  src: "/marketing/opsiq-owner-priority-demo.png",
+  alt: PROOF_ALT,
+  width: 1440,
+  height: 632,
+  quality: 90,
+  sizes: "(min-width: 1152px) 1104px, 100vw",
+});
+const { props: proofMobile } = getImageProps({
+  src: "/marketing/opsiq-owner-priority-demo-mobile.png",
+  alt: PROOF_ALT,
+  width: 1170,
+  height: 1506,
+  quality: 90,
+  sizes: "100vw",
+});
+
+export default function LandingPage({ admissionMode = null }: { admissionMode?: string | null } = {}) {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <PublicSiteHeader />
+      <PublicSiteHeader admissionMode={admissionMode} />
 
       {/* Hero + product proof, side by side at desktop so the proof is visible without scrolling
           (a first-time visitor sees the claim and the evidence for it in the same screen).
@@ -80,7 +145,7 @@ export default function LandingPage() {
       <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:py-16">
         <div className="text-center lg:text-left">
           <p className="mb-4 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-            Free beta &middot; no credit card required
+            <PublicBetaText field="heroBadge" initialMode={admissionMode} />
           </p>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Diagnose your business. Know your next move.
@@ -89,11 +154,15 @@ export default function LandingPage() {
             OpsIQ reads your business numbers, tells you what needs attention and why, and gives
             you an ordered plan for what to do next — then keeps track of what actually happened.
           </p>
-          <div className="mt-10 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
-            <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
-            <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
+          <p className="mt-4 text-sm font-medium text-foreground" data-testid="landing-audience">
+            Built for small and mid-size service business owners who need to know what deserves
+            attention first.
+          </p>
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
+            <PublicBetaCta triggerClassName={`${primaryCta} w-full sm:w-auto`} initialMode={admissionMode} />
+            <PublicLink href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
               Sign in
-            </Link>
+            </PublicLink>
           </div>
         </div>
 
@@ -161,28 +230,90 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem -> outcome: one compact bridge, not a full section, so a visitor who skims past
-          the hero still gets "why should I care" before "how it works". */}
-      <section className="mx-auto w-full max-w-4xl px-6 py-10">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="rounded-lg border border-border bg-background p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Without a diagnosis
-            </p>
-            <p className="mt-2 text-sm text-foreground">
-              Owners find out about a problem when it&rsquo;s already urgent — a slow month that was
-              really a cash-survival risk three months in the making.
-            </p>
+      {/* Real-product proof: one unaltered screenshot of the shipped Owner Home (rectangular crop only),
+          using a fictional demo business. Image-led on purpose; the surrounding copy stays minimal.
+          Art direction: below 640px the same screen, captured at a real 390px viewport, is used so the
+          text stays readable; desktop keeps the original capture. */}
+      <section className="mx-auto w-full max-w-6xl px-6 py-6" data-testid="landing-real-product">
+        <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          See what OpsIQ gives an owner
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-muted-foreground">
+          A real OpsIQ screen using fictional demo data: the issue that deserves attention first,
+          why it matters, and the next action.
+        </p>
+        <figure className="mt-5">
+          <div className="aspect-[1170/1506] overflow-hidden rounded-xl border border-border bg-background shadow-sm sm:aspect-[1440/632]">
+            <picture>
+              <source media="(max-width: 639px)" srcSet={proofMobile.srcSet} sizes="100vw" />
+              <img {...proofDesktop} alt={PROOF_ALT} className="h-full w-full object-cover object-top" />
+            </picture>
           </div>
-          <div className="rounded-lg border border-border bg-background p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              With OpsIQ
-            </p>
-            <p className="mt-2 text-sm text-foreground">
-              The same signal is surfaced, ranked by real urgency, and turned into one clear,
-              owned next action — instead of staying buried in the numbers.
-            </p>
-          </div>
+          <figcaption className="mt-3 text-center text-sm font-medium text-foreground">
+            Fictional demo business &middot; no customer data
+          </figcaption>
+        </figure>
+      </section>
+
+      {/* Input -> output, plus three short differentiators. Replaces the earlier
+          "without/with a diagnosis" bridge so the page does not get longer. */}
+      <section className="mx-auto w-full max-w-4xl px-6 py-10" data-testid="landing-input-output">
+        <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          What you bring, and what you get
+        </h2>
+        <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {INPUT_OUTPUT.map((item) => (
+            <div key={item.label} className="rounded-lg border border-border bg-background p-5">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</dt>
+              <dd className="mt-2 text-sm text-foreground">{item.body}</dd>
+            </div>
+          ))}
+        </dl>
+        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="landing-differentiation">
+          {DIFFERENTIATORS.map((item) => (
+            <li key={item.title} className="border-l-2 py-1 pl-4" style={{ borderColor: "var(--accent-ink)" }}>
+              <p className="text-sm font-semibold">{item.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Why now: independent context, clearly separated from OpsIQ's own interpretation. */}
+      <section className="mx-auto w-full max-w-4xl px-6 py-12" data-testid="landing-why-now">
+        <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          Why this matters now
+        </h2>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          PwC&rsquo;s 2026 Digital Trends in Operations Survey asked 767 US operations and
+          supply-chain leaders about technology investment.
+        </p>
+        <ul className="mt-6 grid grid-cols-1 gap-4">
+          {WHY_NOW_FACTS.map((fact) => (
+            <li key={fact} className="border-l-2 py-1 pl-5 text-sm text-foreground" style={{ borderColor: "var(--accent-ink)" }}>
+              {fact}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-xs text-muted-foreground">
+          These are the views of the surveyed US operations and supply-chain leaders, not of all
+          businesses or of owner-led companies. PwC is cited as independent context only and has
+          not reviewed or endorsed OpsIQ.
+        </p>
+        <div className="mt-6 rounded-lg border border-border bg-background p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            OpsIQ&rsquo;s interpretation
+          </p>
+          <p className="mt-2 text-sm text-foreground">
+            Owning a tool is not the same as getting a result. Decisions need clear evidence,
+            an order of priority, an owned action, and a check on what actually happened. That is
+            what OpsIQ is built to do today.
+          </p>
+          <p className="mt-3 text-sm">
+            <Link href="/resources/future-of-business-decision-making-2026-operations-research" className="text-[var(--primary-text)] hover:underline">
+              Read the research notes &rarr;
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -191,7 +322,7 @@ export default function LandingPage() {
         <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
           How OpsIQ works
         </h2>
-        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
           {HOW_IT_WORKS.map((item, i) => (
             <li key={item.title} className="rounded-lg border border-border bg-background p-6 text-left shadow-sm">
               <span className="font-display text-sm font-semibold text-muted-foreground">
@@ -225,10 +356,10 @@ export default function LandingPage() {
           See what OpsIQ finds in your business.
         </h2>
         <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center">
-          <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
-          <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
+          <PublicBetaCta triggerClassName={`${primaryCta} w-full sm:w-auto`} initialMode={admissionMode} />
+          <PublicLink href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
             Sign in
-          </Link>
+          </PublicLink>
         </div>
       </section>
 

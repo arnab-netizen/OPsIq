@@ -49,7 +49,7 @@ const DOMAINS: Array<{ domain: string; seed: Seed; dashboard: (ws: string, b: st
   {
     domain: "cashflow",
     seed: async (b, ws, d) => {
-      const s = await createCashflowSnapshot(b, { ...period(d), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000, payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000 }, actor, ws);
+      const s = await createCashflowSnapshot(b, { ...period(d), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000, payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000 }, actor, ws);
       await runCashflowDiagnosis(b, s.id, actor, ws);
     },
     dashboard: getCashflowDashboard,

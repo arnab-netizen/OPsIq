@@ -154,7 +154,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] owner-pilot surfaces (live DB)", () 
       {
         periodStart: "2026-01-01",
         periodEnd: "2026-01-31",
-        currency: "USD",
+        currency: "INR", // the business's own currency: the snapshot API refuses figures in any other
         revenue: 450000,
         costOfGoodsOrServices: 120000,
         salaryPayroll: 60000,

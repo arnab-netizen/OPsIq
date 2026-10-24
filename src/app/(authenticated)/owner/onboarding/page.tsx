@@ -1,14 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { lastFullCalendarMonth } from "@/lib/owner-quick-start";
+import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
+import type { EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
+import { useActiveBusiness } from "@/context/active-business-context";
+import { FirstRunRedirect } from "@/components/owner/first-run/FirstRunRedirect";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { displayLabelForField } from "@/domain/owner-finance";
-import { confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
+import { ownerConceptScorePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { describeMissingFirstReadFacts, staleEvidenceNotice, starterStatusPhrase } from "@/domain/owner-mode/owner-onboarding";
+import {
+  BANK_BALANCE_COPY,
+  QUICK_ENTRY_FIELDS,
+  assessQuickEntry,
+  parseQuickAmount,
+  type QuickEntryDraft,
+} from "@/domain/owner-finance/quick-entry";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
@@ -92,29 +107,32 @@ async function api(path: string, init?: RequestInit) {
  * (as opposed to an abstract "any typical month"), and it never straddles today.
  */
 function lastFullMonthStart(): string {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10);
+  return lastFullCalendarMonth(new Date()).start;
 }
 function lastFullMonthEnd(): string {
-  const d = new Date();
-  // Day 0 of the current month is the last day of the previous month.
-  return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10);
+  return lastFullCalendarMonth(new Date()).end;
 }
 
 function confidencePhrase(score: number): string {
-  if (score >= 85) return "High confidence — this is based on solid data.";
-  if (score >= 60) return "Reasonable confidence — a good starting picture.";
-  if (score >= 30) return "Limited confidence — add more data for a fuller picture.";
-  return "Not enough data yet for a reliable read.";
+  const phrase = ownerConceptScorePhrase("DATA_COMPLETENESS", score);
+  if (score >= 85) return `${phrase} — this is based on solid data.`;
+  if (score >= 60) return `${phrase} — a good starting picture.`;
+  if (score >= 30) return `${phrase} — add more data for a fuller picture.`;
+  return `${phrase} — not enough data yet for a reliable read.`;
 }
 
 /**
- * "Essential numbers" — the smallest form that can produce a real first result. Posts directly to
- * the same governed snapshot endpoint /owner/finance's own "Add snapshot" form uses
- * (POST /api/owner/finance/businesses/[businessId]/snapshots) — this is not a second data model,
- * just three of that same form's ~20 fields, all of which stay optional at the API. Immediately
- * follows with a diagnosis run on the snapshot just created, so entering numbers and seeing a
- * first result is one action, not a form followed by an unexplained dashboard (Phase 7).
+ * "Essential numbers" — Guided setup's presentation of the first financial picture. The FOUR core Finance
+ * inputs (revenue, fixed costs, variable costs, cash in hand) are NOT defined here: their field
+ * definitions, blank/zero/invalid parsing and the first-read sufficiency all come from the shared
+ * quick-entry domain (`@/domain/owner-finance/quick-entry` → the canonical
+ * `evaluateFirstReadSufficiency`), exactly as in `QuickFinancialPicture`. This form therefore cannot save
+ * or diagnose until revenue, at least one cost and cash in hand are KNOWN (a known 0 counts).
+ *
+ * What this route adds (GUIDED_SETUP_EXTENSION): a separate optional bank balance that is written to a
+ * Cashflow snapshot (never to the Finance snapshot, and never counted as cash in hand), and amend-on-409
+ * for a same-period Finance snapshot through the governed amendment endpoint. Entering numbers and seeing
+ * a first result is one action (Phase 7).
  */
 function EssentialNumbersForm({
   businessId,
@@ -126,44 +144,34 @@ function EssentialNumbersForm({
   onResult: (cycle: any, bankBalanceWarning?: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveFailure, setSaveFailure] = useState<string | null>(null);
+  const [draft, setDraft] = useState<QuickEntryDraft>({});
+  const [bankText, setBankText] = useState("");
+  const [quality, setQuality] = useState<EvidenceQuality | null>(null);
+  // Synchronous guard: two fast submits must not both pass a state-based `busy` check.
+  const inFlight = useRef(false);
+
+  const assessment = useMemo(() => assessQuickEntry(draft), [draft]);
+  const bank = parseQuickAmount(bankText, { bankBalance: true });
+  const hasErrors = Object.keys(assessment.errors).length > 0 || bank.kind === "invalid";
+  const sufficient = assessment.sufficiency?.sufficient === true;
+  const disabled = busy || hasErrors || !sufficient || quality === null;
+  const feedback = hasErrors || assessment.nothingEntered
+    ? null
+    : sufficient
+      ? "That's enough for a first read."
+      : `Still needed for a first read: ${describeMissingFirstReadFacts(assessment.sufficiency?.missing ?? [])}. Leave anything you don't know blank rather than guessing, and enter 0 only if it really was zero.`;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // The canonical gate is enforced HERE, not left to the diagnosis engine to abstain after saving.
+    if (inFlight.current || disabled) return;
+    inFlight.current = true;
     setBusy(true);
-    setError(null);
-    const fd = new FormData(e.currentTarget);
-    const num = (name: string): number | undefined => {
-      const raw = fd.get(name);
-      if (typeof raw !== "string" || raw.trim() === "") return undefined;
-      const n = Number(raw);
-      return Number.isFinite(n) && n >= 0 ? n : undefined;
-    };
-    const fields = {
-      revenue: num("revenue"),
-      // Fixed and variable costs are genuinely different finance-engine concepts
-      // (src/domain/owner-finance/metrics.ts: contributionMarginPct and breakEvenRevenue
-      // read only variableCostsTotal; fixedCostBurdenPct reads only fixedCostsTotal) and
-      // must never be collapsed into one field just to satisfy a readiness check --
-      // labeling "rent, wages" (fixed) as variableCosts silently corrupts contribution
-      // margin and break-even for every onboarding user. Each field maps to its real
-      // counterpart, matching exactly what src/app/owner/finance's own "Add snapshot"
-      // form posts for the same concepts, so onboarding and Finance always agree.
-      // Either one alone still satisfies the diagnosis engine's "has cost info" gate
-      // (src/domain/owner-finance/data-confidence.ts hasCost) and its own readiness
-      // category (owner-onboarding.service.ts: fixedCosts -> "fixed_costs",
-      // variableCosts -> "expenses"), so a first result is still one field away.
-      fixedCosts: num("fixedCosts"),
-      variableCosts: num("variableCosts"),
-      // cashOnHand means physical cash only on the finance snapshot (see the doc comment on
-      // FinancialSnapshotInput.bankBalance in src/domain/owner-finance/types.ts: bankBalance is
-      // "never persisted on the finance snapshot itself" -- it is enriched at diagnosis time from
-      // a separate OwnerCashflowSnapshot). The finance create/amend schemas
-      // (src/domain/owner-finance/validation.ts) don't even accept a bankBalance field, so it must
-      // never be folded in here.
-      cashOnHand: num("cashOnHand"),
-    };
-    const bankBalance = num("bankBalance");
+    setSaveFailure(null);
+    // Known values only (blank = unknown and omitted; a known 0 is kept) — from the shared parser.
+    const fields = { ...assessment.values };
+    const bankBalance = bank.kind === "value" ? bank.value : undefined;
     const periodStart = lastFullMonthStart();
     const periodEnd = lastFullMonthEnd();
     try {
@@ -171,7 +179,7 @@ function EssentialNumbersForm({
       try {
         const snapshot = await api(`/api/owner/finance/businesses/${businessId}/snapshots`, {
           method: "POST",
-          body: JSON.stringify({ periodStart, periodEnd, currency, ...fields }),
+          body: JSON.stringify({ periodStart, periodEnd, currency, ...fields, ...(quality ? { evidenceQuality: quality } : {}) }),
         });
         snapshotId = snapshot.id;
       } catch (createErr) {
@@ -189,7 +197,7 @@ function EssentialNumbersForm({
         if (!currentPeriod) throw createErr;
         const amended = await api(`/api/owner/finance/snapshots/${currentPeriod.id}/amend`, {
           method: "POST",
-          body: JSON.stringify({ amendmentReason: "Updated during onboarding essential numbers.", ...fields }),
+          body: JSON.stringify({ amendmentReason: "Updated during onboarding essential numbers.", ...fields, ...(quality ? { evidenceQuality: quality } : {}) }),
         });
         snapshotId = amended.newSnapshotId;
       }
@@ -237,8 +245,8 @@ function EssentialNumbersForm({
             // honestly rather than silently using the stale figure.
             bankBalanceWarning =
               onFile === null
-                ? `Your bank balance couldn't be saved for this period — a cashflow record already exists for it without a bank balance. Add it directly in Cashflow.`
-                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it directly in Cashflow if that figure is wrong.`;
+                ? `Your bank balance couldn't be saved for this period — an earlier record for it exists without a bank balance. Add it with the link below.`
+                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it with the link below if that figure is wrong.`;
           }
           // else: identical value already on file -- genuinely idempotent, nothing to warn about.
         }
@@ -250,9 +258,11 @@ function EssentialNumbersForm({
       });
       onResult(cycle, bankBalanceWarning);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save that. Please try again.");
+      // Governed owner-safe message — never the raw exception text.
+      setSaveFailure(classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
+      inFlight.current = false;
     }
   }
 
@@ -260,89 +270,58 @@ function EssentialNumbersForm({
     <section className="rounded-md border border-border bg-card p-5" data-testid="onboarding-essential-numbers">
       <h2 className="text-base font-semibold text-foreground">Essential numbers</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        A few numbers are enough for a first, real result. An estimate is fine for all of them —
-        you can refine them later in Money. It&rsquo;s fine to fill in just one cost number if
-        that&rsquo;s all you have right now.
+        A few numbers are enough for a first, real result: revenue, any one cost, and your cash in hand.
+        An estimate is fine for all of them — you can refine them later in Money.
       </p>
-      <form onSubmit={submit} className="mt-4 flex flex-col gap-4 max-w-lg">
+      <form onSubmit={submit} noValidate className="mt-4 flex flex-col gap-4 max-w-lg">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {QUICK_ENTRY_FIELDS.map((f) => (
+            <label key={f.name} className="flex flex-col gap-1 text-sm text-foreground">
+              <span>{f.label} ({currency})</span>
+              <input
+                name={f.name}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={draft[f.name] ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
+                aria-invalid={assessment.errors[f.name] ? true : undefined}
+                className="min-h-11 w-full rounded-md border border-border p-2 text-base sm:text-sm"
+                placeholder="Blank = don't know"
+              />
+              {assessment.errors[f.name] ? (
+                <span role="alert" className="text-xs text-destructive">{assessment.errors[f.name]}</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">{f.hint}</span>
+              )}
+            </label>
+          ))}
+        </div>
+        <EvidenceQualityFieldset testId="onboarding-evidence-quality" value={quality} onChange={setQuality} required />
         <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Average monthly sales ({currency})</span>
+          <span>{BANK_BALANCE_COPY.label} ({currency}) — optional</span>
           <input
-            name="revenue"
-            type="number"
-            min={0}
-            step="any"
+            name="bankBalance"
+            type="text"
             inputMode="decimal"
-            className="w-full rounded-md border border-border p-2 text-sm"
-            placeholder="e.g. 15000"
+            autoComplete="off"
+            value={bankText}
+            onChange={(e) => setBankText(e.target.value)}
+            aria-invalid={bank.kind === "invalid" ? true : undefined}
+            className="min-h-11 w-full rounded-md border border-border p-2 text-base sm:text-sm"
+            placeholder="e.g. 6000"
           />
-          <span className="text-xs text-muted-foreground">Total sales in a typical month, before costs.</span>
+          {bank.kind === "invalid" ? (
+            <span role="alert" className="text-xs text-destructive">{bank.message}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">{BANK_BALANCE_COPY.hint}</span>
+          )}
         </label>
-        {/* Paired by concept (fixed vs. variable cost, physical cash vs. bank balance) rather than
-            one field per row -- a deliberate grouping, not a decorative grid. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Fixed monthly costs ({currency})</span>
-            <input
-              name="fixedCosts"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 7000"
-            />
-            <span className="text-xs text-muted-foreground">Rent, wages, and other costs that stay the same whether sales go up or down.</span>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Variable monthly costs ({currency})</span>
-            <input
-              name="variableCosts"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 5000"
-            />
-            <span className="text-xs text-muted-foreground">Cost of goods, delivery, and other costs that rise and fall with how much you sell.</span>
-          </label>
+        <div aria-live="polite" className="min-h-5 text-sm text-foreground" data-testid="onboarding-first-read-feedback">
+          {feedback}
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Cash in the till ({currency})</span>
-            <input
-              name="cashOnHand"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 3000"
-            />
-            <span className="text-xs text-muted-foreground">
-              Physical cash you have right now — notes and coins, not what&rsquo;s in the bank.
-            </span>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-foreground">
-            <span>Money in the bank ({currency})</span>
-            <input
-              name="bankBalance"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              className="w-full rounded-md border border-border p-2 text-sm"
-              placeholder="e.g. 6000"
-            />
-            <span className="text-xs text-muted-foreground">
-              Bank balance right now, across all accounts. (If you already track this in
-              Cashflow for this month, enter it only there or only here — never both.)
-            </span>
-          </label>
-        </div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={busy} className="min-h-[44px] self-start">
+        {saveFailure && <p role="alert" className="text-sm text-destructive">{saveFailure}</p>}
+        <Button type="submit" disabled={disabled} className="min-h-[44px] self-start">
           {busy ? "Working on it…" : "See my first result"}
         </Button>
       </form>
@@ -357,6 +336,7 @@ type FirstResultFinding = {
   severity: string;
   sourceMetric?: string | null;
   missingData?: string[] | null;
+  findingCode?: string | null;
 };
 type FirstResultAction = {
   findingId: string | null;
@@ -365,6 +345,7 @@ type FirstResultAction = {
   verificationMetric?: string | null;
   verificationMethod?: string | null;
   confidence?: number | null;
+  recommendationCode?: string | null;
 };
 
 /**
@@ -402,9 +383,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
         >
           <p className="font-medium">Bank balance not saved</p>
           <p className="mt-1">{bankBalanceWarning}</p>
-          <Link href="/owner/cashflow" className="mt-1 inline-block font-medium underline hover:no-underline">
-            Go to Cashflow →
-          </Link>
+          <BankBalanceEntryLink code="FINREC_CONFIRM_BANK_BALANCE" className="mt-1" />
         </div>
       )}
       <h2 className="text-base font-semibold text-foreground">What OpsIQ found</h2>
@@ -424,7 +403,8 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
           {topAction ? (
             <>
               <p className="mt-1 text-base font-semibold text-foreground">{topAction.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{presentBankBalanceActionText(topAction.recommendationCode ?? top?.findingCode, topAction.description)}</p>
+              <BankBalanceEntryLink code={topAction.recommendationCode ?? top?.findingCode} className="mt-2" />
               {topAction.verificationMethod && (
                 <>
                   <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -454,7 +434,7 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
       {typeof confidenceScore === "number" && (
         <>
           <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            How sure OpsIQ is
+            How complete your information is
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">{confidencePhrase(confidenceScore)}</p>
         </>
@@ -472,60 +452,68 @@ function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanc
 }
 
 export default function OwnerOnboardingPage() {
-  const [businesses, setBusinesses] = useState<any[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  // The business this form writes to IS the active business (header, Money, Start Here all read the same
+  // context); switching here switches it everywhere, so a financial form never silently targets another one.
+  const {
+    businesses,
+    activeBusinessId: selected,
+    needsBusinessRecovery,
+    setActiveBusinessId,
+    loading: contextLoading,
+  } = useActiveBusiness();
   const [state, setState] = useState<any | null>(null);
-  const [readiness, setReadiness] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [firstResult, setFirstResult] = useState<any | null>(null);
   const [bankBalanceWarning, setBankBalanceWarning] = useState<string | null>(null);
 
+  const loadSeq = useRef(0);
   const loadState = useCallback(async (businessId: string) => {
+    const seq = ++loadSeq.current;
     setError(null);
     try {
-      setState(await api(`/api/owner/onboarding?businessId=${businessId}`));
+      const next = await api(`/api/owner/onboarding?businessId=${businessId}`);
+      if (loadSeq.current === seq) setState(next);
     } catch (e) {
+      if (loadSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load onboarding");
       setState(null);
     }
-    try {
-      setReadiness(await api(`/api/owner/readiness?businessId=${businessId}`));
-    } catch {
-      setReadiness(null);
-    }
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const biz = await api("/api/owner/businesses");
-      const list = biz.businesses ?? [];
-      setBusinesses(list);
-      if (list.length > 0) {
-        setSelected((prev) => prev ?? list[0].id);
-        await loadState(selected ?? list[0].id);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- selected is read, not a dependency: this only runs on mount and after business creation, both of which should always resolve to the first/only business
-  }, [loadState]);
-
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading || needsBusinessRecovery) return;
+    if (!selected) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setFirstResult(null);
+    loadState(selected).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [contextLoading, needsBusinessRecovery, selected, loadState]);
 
-  if (loading) return <CardDashboardSkeleton label="Loading onboarding" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading onboarding" />;
+  if (needsBusinessRecovery) {
+    return (
+      <PageContainer narrow data-testid="owner-onboarding-recovery">
+        <p className="mb-3 text-sm">Your previously selected business is no longer available. Choose a business to continue.</p>
+        <BusinessContextSelector businesses={businesses} selectedId={null} onChange={setActiveBusinessId} />
+      </PageContainer>
+    );
+  }
 
-  const selectedBusiness = businesses?.find((b) => b.id === selected) ?? null;
+  const selectedBusiness = businesses.find((b) => b.id === selected) ?? null;
 
   // A real, deterministic read of where the owner actually is in this 3-step flow -- never a
   // decorative counter. Gives the page a sense of progress instead of restating "Welcome to
   // OpsIQ" with no indication of how far along setup is.
-  const step = firstResult ? 3 : (businesses?.length ?? 0) > 0 ? 2 : 1;
+  const step = firstResult ? 3 : businesses.length > 0 ? 2 : 1;
   const stepLabel = step === 1 ? "Business basics" : step === 2 ? "Essential numbers" : "First result";
 
   return (
@@ -544,26 +532,24 @@ export default function OwnerOnboardingPage() {
 
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-          {error} <Button className="ml-2 min-h-[44px]" onClick={() => load()}>Retry</Button>
+          {error} <Button className="ml-2 min-h-[44px]" onClick={() => selected && void loadState(selected)}>Retry</Button>
         </div>
       )}
 
-      {(businesses?.length ?? 0) === 0 ? (
+      {businesses.length === 0 ? (
         <div data-testid="onboarding-empty">
           <h2 className="mb-2 text-sm font-medium text-muted-foreground">Business basics</h2>
-          <CreateBusinessPanel onCreated={load} />
+          <FirstRunRedirect />
         </div>
       ) : (
         <>
-          {(businesses?.length ?? 0) > 1 && (
+          {businesses.length > 1 && (
             <div className="mb-6">
               <BusinessContextSelector
-                businesses={businesses ?? []}
+                businesses={businesses}
                 selectedId={selected}
                 onChange={(businessId) => {
-                  setSelected(businessId);
-                  setFirstResult(null);
-                  loadState(businessId);
+                  setActiveBusinessId(businessId);
                 }}
               />
             </div>
@@ -573,10 +559,15 @@ export default function OwnerOnboardingPage() {
             <FirstResultCard cycle={firstResult} bankBalanceWarning={bankBalanceWarning} />
           ) : (
             <div className="flex flex-col gap-6">
-              {state?.found && !state.canRunFirstDiagnosis && selectedBusiness && (
+              {state?.found && !state.canRunFirstDiagnosis && selectedBusiness && !selectedBusiness.currency && (
+                <p className="rounded-md border border-border bg-card p-4 text-sm" data-testid="onboarding-currency-missing">
+                  {selectedBusiness.name} has no currency set yet. Set its currency in My Business before entering numbers, so they are never recorded in the wrong one.
+                </p>
+              )}
+              {state?.found && !state.canRunFirstDiagnosis && selectedBusiness?.currency && (
                 <EssentialNumbersForm
                   businessId={selectedBusiness.id}
-                  currency={selectedBusiness.currency ?? "USD"}
+                  currency={selectedBusiness.currency}
                   onResult={(cycle, warning) => {
                     setFirstResult(cycle);
                     setBankBalanceWarning(warning ?? null);
@@ -584,20 +575,10 @@ export default function OwnerOnboardingPage() {
                 />
               )}
 
-              {readiness?.found && (
-                <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-readiness">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-xs uppercase text-muted-foreground">Setup progress</div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge
-                        variant={readiness.overallScore >= 70 ? "success-accessible" : readiness.overallScore >= 40 ? "warning-accessible" : "destructive-accessible"}
-                        className="tabular-nums"
-                      >
-                        {Math.round(readiness.overallScore)}/100
-                      </Badge>
-                    </div>
-                  </div>
-                </section>
+              {staleEvidenceNotice(state?.evidenceFreshness) && (
+                <p className="rounded-md border border-border bg-card p-4 text-sm" role="status" data-testid="onboarding-stale-evidence">
+                  {staleEvidenceNotice(state?.evidenceFreshness)}
+                </p>
               )}
 
               {state?.found && (
@@ -618,9 +599,9 @@ export default function OwnerOnboardingPage() {
 
                   <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-confidence">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs uppercase text-muted-foreground">How sure OpsIQ is so far</div>
+                      <div className="text-xs uppercase text-muted-foreground">How much starter information OpsIQ has so far</div>
                       <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
-                        {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
+                        {starterStatusPhrase(state.confidenceBeforeDiagnosis, state.evidenceFreshness)}
                       </Badge>
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">

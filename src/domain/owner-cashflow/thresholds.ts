@@ -31,6 +31,8 @@ export interface CashflowThresholds {
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_CASHFLOW_THRESHOLDS: CashflowThresholds = {
   lowCashRunwayDays: 30,
   criticalCashRunwayDays: 14,

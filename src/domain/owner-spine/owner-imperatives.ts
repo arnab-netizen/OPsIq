@@ -70,6 +70,8 @@ const INTENT_BY_CODE: Readonly<Record<string, OwnerTargetIntent>> = Object.freez
   MKT_OPP_DATA_QUALITY: "EVIDENCE",
   // "Enter the EMI for the recorded debt" (finance opportunity-rules.ts): a data request.
   FIN_NOTABLE_OUTSTANDING_DEBT: "EVIDENCE",
+  // "Add your bank balance to confirm total cash" (finance opportunity-rules.ts): a data request.
+  FIN_LIQUIDITY_UNCONFIRMED: "EVIDENCE",
   // "Use spare capacity to take more orders … absorb more demand" (operations opportunity-rules.ts).
   OPS_OPP_USE_CAPACITY_HEADROOM: "GROW",
   // The decision's own gate-blocker target: review the do-not-repeat memory (record what has changed) —

@@ -108,12 +108,13 @@ export default function OwnerPortfolioPage() {
 
           <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Cross-business ranking</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Each line below orders businesses by one heuristic OpsIQ score. It shows which business scores highest on that score, not a measured amount, and it is not a probability.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>Business needing attention first: <strong>{byId(ranking.mostUrgentBusinessId)}</strong> <span className="text-muted-foreground">(it has the most urgent thing needing action — not a judgement of its overall health)</span></div>
               <div>Highest profit opportunity: <strong>{byId(ranking.highestProfitOpportunityBusinessId)}</strong></div>
               <div>Highest cash risk: <strong>{byId(ranking.highestCashRiskBusinessId)}</strong></div>
               <div>Worst execution problem: <strong>{byId(ranking.worstExecutionProblemBusinessId)}</strong></div>
-              <div>Best growth candidate: <strong>{byId(ranking.bestGrowthCandidateBusinessId)}</strong></div>
+              <div>Best growth candidate: <strong>{byId(ranking.bestGrowthCandidateBusinessId)}</strong> <span className="text-muted-foreground">(a ranking only — it is not advice to invest; see the investment recommendation below)</span></div>
             </div>
           </section>
 
@@ -133,11 +134,36 @@ export default function OwnerPortfolioPage() {
             </section>
           )}
 
-          {view.investmentRecommendation && (
+          {view.investmentRecommendation ? (
             <section className="border rounded-lg p-4 bg-card">
               <div className="text-xs uppercase text-muted-foreground">Investment recommendation</div>
               <div className="font-semibold">{view.investmentRecommendation.businessName}</div>
               <p className="text-xs text-muted-foreground">{view.investmentRecommendation.reason}</p>
+            </section>
+          ) : view.investmentAssessment ? (
+            <section className="border rounded-lg p-4 bg-card" data-testid="investment-abstention">
+              <div className="text-xs uppercase text-muted-foreground">
+                {view.investmentAssessment.status === "HELD" ? "Investment recommendation on hold" : "No investment recommendation"}
+              </div>
+              <p className="text-sm">{view.investmentAssessment.summary}</p>
+            </section>
+          ) : null}
+
+          {Array.isArray(view.investmentAssessment?.held) && view.investmentAssessment.held.length > 0 && (
+            <section className="border rounded-lg p-4 bg-card" data-testid="investment-holds">
+              <h2 className="font-bold mb-2">Held for now</h2>
+              <div className="space-y-3">
+                {view.investmentAssessment.held.map((h: any) => (
+                  <div key={h.businessId} className="text-sm">
+                    <div className="font-semibold">{h.businessName}</div>
+                    <p className="text-xs text-muted-foreground">{h.ownerStatement}</p>
+                    {Array.isArray(h.reasons) && h.reasons.map((r: string, i: number) => (
+                      <p key={i} className="text-xs text-muted-foreground">{r}</p>
+                    ))}
+                    {h.nextStep && <p className="text-xs">Before OpsIQ reassesses: {h.nextStep}</p>}
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 
@@ -178,9 +204,9 @@ export default function OwnerPortfolioPage() {
                     <tr key={b.businessId} className="border-b">
                       <td className="py-1 pr-3 font-medium">{b.name}{!b.hasData && <span className="text-muted-foreground"> (no data)</span>}</td>
                       <td className="py-1 px-2"><Badge variant={HEALTH_VARIANT(b.overallHealthScore)}>{score(b.overallHealthScore)}</Badge></td>
-                      <td className="py-1 px-2"><Badge variant={RISK_VARIANT(b.survivalRiskScore)}>{score(b.survivalRiskScore)}</Badge></td>
+                      <td className="py-1 px-2">{b.survivalRiskScore === null || b.survivalRiskScore === undefined ? <span className="text-muted-foreground" title="Not measured yet">n/m</span> : <Badge variant={RISK_VARIANT(b.survivalRiskScore)}>{score(b.survivalRiskScore)}</Badge>}</td>
                       <td className="py-1 px-2">{score(b.growthOpportunityScore)}</td>
-                      <td className="py-1 px-2"><Badge variant={RISK_VARIANT(b.executionRiskScore)}>{score(b.executionRiskScore)}</Badge></td>
+                      <td className="py-1 px-2">{b.executionRiskScore === null || b.executionRiskScore === undefined ? <span className="text-muted-foreground" title="Not measured yet">n/m</span> : <Badge variant={RISK_VARIANT(b.executionRiskScore)}>{score(b.executionRiskScore)}</Badge>}</td>
                       <td className="py-1 px-2">{score(b.financialScore)}</td>
                       <td className="py-1 px-2">{score(b.salesScore)}</td>
                       <td className="py-1 px-2">{score(b.operationsScore)}</td>

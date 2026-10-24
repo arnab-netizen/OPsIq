@@ -107,7 +107,7 @@ async function seed(workspaceId: string, name: string) {
   } as any, actor, workspaceId);
   await runSalesDiagnosis(b.id, sSnap.id, actor, workspaceId);
   const cf = await createCashflowSnapshot(b.id, {
-    ...period(), currency: "INR", cashInHand: 5000, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
+    ...period(), currency: "INR", cashInHand: 5000, bankBalance: 0, dailyCollections: 200, receivables: 20000, receivablesOverdue: 15000,
     payables: 12000, upcomingEmi: 5000, rentDue: 4000, salaryDue: 5000, vendorDue: 3000, taxDue: 2000, ownerWithdrawal: 4000,
   }, actor, workspaceId);
   await runCashflowDiagnosis(b.id, cf.id, actor, workspaceId);

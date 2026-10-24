@@ -22,6 +22,9 @@
  *     when that state is unsafe (the last completed Finance diagnosis is never replaced by an OLDER
  *     period's cycle, and an amended SAFE/WATCH is not proof of safety): a SAFE/WATCH amended half counts
  *     as missing;
+ *   - a half whose material cash evidence is incomplete (Cash flow: total cash not established from BOTH components,
+ *     read through the read-time projection; Finance: liquidity unconfirmed) counts, when SAFE/WATCH, as MISSING — never
+ *     affirmative proof of safety (an unsafe half keeps its own state);
  *   - a missing half is AT_RISK (the base's missing-half rule: growth blocked, non-growth allowed);
  *   - the in-progress current period (PROVISIONAL — provisional-cash-finance.ts) only tightens: effective =
  *     worse(completed state, provisional state); provisional SAFE/WATCH alone never proves safety (the
@@ -40,6 +43,8 @@ import {
 } from "@/domain/owner-finance/cash-safety-gate";
 import { mapImpactAreaToSensitivity, RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { cashFlowEvidenceGaps, financeEvidenceGaps } from "@/services/owner-spine/current-cash-finance-reading";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 
 const VALID_STATES = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
@@ -66,6 +71,12 @@ const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 export interface ConsultingHalfRead {
   state: string | null | undefined;
   snapshot?: { periodEnd?: unknown; supersededById?: unknown } | null;
+  /**
+   * The half's material cash evidence is incomplete (Cash flow: total cash not established from BOTH components; Finance:
+   * liquidity unconfirmed). A SAFE/WATCH half in that condition is not proof of safety: it counts as MISSING (AT_RISK —
+   * growth blocked, non-growth allowed), exactly like an amended SAFE/WATCH half. An unsafe half keeps its own state.
+   */
+  evidenceGap?: boolean;
 }
 
 /**
@@ -86,7 +97,8 @@ export function consultingBusinessEvidenceState(
     const periodEnd = r?.snapshot?.periodEnd instanceof Date ? r.snapshot.periodEnd.getTime() : typeof r?.snapshot?.periodEnd === "string" ? Date.parse(r.snapshot.periodEnd) : null;
     if (periodEnd !== null && Number.isFinite(periodEnd) && periodEnd > nowMs) return null;
     const amended = r?.snapshot?.supersededById !== null && r?.snapshot?.supersededById !== undefined;
-    return !amended || !SAFE_STATES.has(st) ? st : null;
+    // A safe-looking half is proof of safety only while it is current-as-amended AND its cash evidence is complete.
+    return (!amended && r?.evidenceGap !== true) || !SAFE_STATES.has(st) ? st : null;
   };
   const anyCompleted = validState(cash?.state ?? null) !== null || validState(finance?.state ?? null) !== null;
   const completed = anyCompleted ? consultingBusinessCashState(half(cash) ?? "AT_RISK", half(finance) ?? "AT_RISK") : null;
@@ -177,26 +189,29 @@ export async function enforceCashSafetyForPromotion(
     Promise.all(businesses.map(async ({ id: businessId }) => {
       // The latest COMPLETED cycle of each half, as recorded — an amended Finance snapshot's cycle included
       // (never skipped for an older period's), judged by consultingBusinessEvidenceState.
-      const [cashRow, finRow, provisional] = (await Promise.all([
+      const [cashRaw, finRow, provisional] = (await Promise.all([
         deps.db.ownerCashflowCycle.findFirst({
           where: { workspaceId, businessId, ...current },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { cashflowState: true, snapshot: { select: { periodEnd: true } } },
+          // The whole snapshot: completeness of the cash position (and the re-projection of a pre-fix cycle) is judged from it.
+          select: { cashflowState: true, generatedAt: true, snapshot: true },
         }),
         deps.db.ownerFinanceCycle.findFirst({
           where: { workspaceId, businessId, ...current },
           orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
-          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } } },
+          select: { survivalState: true, snapshot: { select: { periodEnd: true, supersededById: true } }, findings: { select: { code: true } } },
         }),
         loadProvisionalCashFinance(deps.db, { workspaceId, businessId }, now),
       ])) as [
-        { cashflowState: string; snapshot?: { periodEnd: Date } | null } | null,
-        { survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null } | null,
+        { cashflowState: string; generatedAt?: Date | null; snapshot?: ({ periodEnd: Date } & Record<string, unknown>) | null } | null,
+        { survivalState: string; snapshot?: { periodEnd: Date; supersededById: string | null } | null; findings?: Array<{ code: string }> } | null,
         Awaited<ReturnType<typeof loadProvisionalCashFinance>>,
       ];
+      // Same read-time projection and evidence facts as every other current surface (cycle-projection.ts).
+      const cashRow = cashRaw ? projectCashflowCycleRow(cashRaw) : null;
       return consultingBusinessEvidenceState(
-        cashRow ? { state: cashRow.cashflowState, snapshot: cashRow.snapshot ?? null } : null,
-        finRow ? { state: finRow.survivalState, snapshot: finRow.snapshot ?? null } : null,
+        cashRow ? { state: cashRow.cashflowState, snapshot: cashRow.snapshot ?? null, evidenceGap: cashFlowEvidenceGaps(cashRow).length > 0 } : null,
+        finRow ? { state: finRow.survivalState, snapshot: finRow.snapshot ?? null, evidenceGap: financeEvidenceGaps(finRow.findings).length > 0 } : null,
         provisional,
         now.getTime()
       );

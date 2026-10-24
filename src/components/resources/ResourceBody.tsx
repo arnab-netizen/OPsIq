@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PublicLink } from "@/components/navigation/PublicLink";
 import type { ReactNode } from "react";
 import type { ResourceBlock, ResourceInline, TableAlign } from "@/domain/resources/resource-content";
 import { ResourceCtaPanel } from "@/components/resources/ResourceCtaPanel";
@@ -39,9 +39,9 @@ function renderInline(nodes: ResourceInline[], keyPrefix: string): ReactNode[] {
       case "link":
         if (node.href.startsWith("/")) {
           return (
-            <Link key={key} href={node.href} className={linkClass}>
+            <PublicLink key={key} href={node.href} className={linkClass}>
               {renderInline(node.children, key)}
-            </Link>
+            </PublicLink>
           );
         }
         return (

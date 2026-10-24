@@ -40,12 +40,14 @@ const STATUS_LABEL: Record<string, string> = {
   DANGER: "Danger",
   CRITICAL: "Critical",
 };
-// Verified against GuidanceClassification (src/domain/owner-guidance/guidance-classification.ts).
+// Verified against GuidanceClassification (src/domain/owner-guidance/guidance-classification.ts). These describe THIS PAGE'S
+// guidance workflow (readiness to review), never the owner's permission to commit money, capacity or a plan: that comes only
+// from the canonical advice policy beside the main-target card. Wording is scoped to "guidance" so it cannot read as approval.
 const CLASSIFICATION_LABEL: Record<string, string> = {
-  GUIDANCE_READY: "Ready",
-  GUIDANCE_READY_WITH_LOW_CONFIDENCE: "Ready — low confidence",
-  GUIDANCE_BLOCKED_MISSING_DATA: "Blocked — missing data",
-  GUIDANCE_BLOCKED_UNSAFE: "Blocked — unsafe",
+  GUIDANCE_READY: "Guidance ready to review",
+  GUIDANCE_READY_WITH_LOW_CONFIDENCE: "Guidance ready to review — limited evidence",
+  GUIDANCE_BLOCKED_MISSING_DATA: "Guidance needs more information",
+  GUIDANCE_BLOCKED_UNSAFE: "Guidance held by a safety check",
   GUIDANCE_REQUIRES_OWNER_DECISION: "Requires owner decision",
   GUIDANCE_REQUIRES_PROFESSIONAL_REVIEW: "Requires professional review",
   GUIDANCE_REQUIRES_OUTCOME_CHECK: "Requires outcome check",
@@ -196,8 +198,12 @@ export default function OwnerNowViewPage() {
         <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {STATUS_LABEL[view.supplierInventoryStatus] ?? view.supplierInventoryStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {STATUS_LABEL[view.growthReadinessStatus] ?? view.growthReadinessStatus}</Badge>
         <Badge variant="default-accessible">{CLASSIFICATION_LABEL[view.classification] ?? view.classification}</Badge>
-        {view.confidenceCapped && <Badge variant="warning-accessible">Low confidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
+        {view.confidenceCapped && <Badge variant="warning-accessible">Limited evidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
       </section>
+      <p data-testid="now-guidance-scope" style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        The guidance label above describes this page&apos;s guidance only. Whether OpsIQ supports committing money, capacity or a plan is
+        decided by your main target&apos;s advice status{data.ownerDecision?.advicePolicy && !data.ownerDecision.advicePolicy.canMakeMaterialCommitment ? " — which does not support a commitment on the current evidence" : ""}.
+      </p>
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (
         <section style={{ background: "#fffbeb", padding: 16, borderRadius: 8 }}>

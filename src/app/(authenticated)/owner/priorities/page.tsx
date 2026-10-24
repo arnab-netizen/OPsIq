@@ -101,6 +101,7 @@ const BRIDGE_TERMINAL_STATUSES = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECO
  *  filtered out of the merged list above before a badge is ever rendered for it), but the mapping
  *  is complete rather than assuming that filter can never change. */
 function bridgeStatusLabel(status: string, canStart: boolean): string {
+  if (status === "OUTCOME_DISPUTED") return "Outcome disputed";
   if (BRIDGE_TERMINAL_STATUSES.has(status)) return "Completed";
   // Mirrors the action-text branch above exactly (canStart ? "start this" : "continue"): canStart
   // false on a non-terminal item means IN_PROGRESS (or another in-flight, non-startable status).
@@ -109,6 +110,7 @@ function bridgeStatusLabel(status: string, canStart: boolean): string {
 }
 
 function bridgeStatusVariant(status: string, canStart: boolean): PriorityItem["statusVariant"] {
+  if (status === "OUTCOME_DISPUTED") return "default-accessible";
   if (BRIDGE_TERMINAL_STATUSES.has(status)) return "success-accessible";
   if (!canStart) return "default-accessible";
   return undefined; // fall through to the normal severity-tier variant

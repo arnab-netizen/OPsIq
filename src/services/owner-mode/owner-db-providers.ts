@@ -20,6 +20,8 @@ import {
   type OwnerDomainProviders,
 } from "./owner-domain-ingestion";
 import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { cashflowTotalCash } from "@/domain/owner-finance/liquidity";
+import { loadEffectiveCashflowRow, type CashflowReadClient } from "@/services/owner-cashflow/effective-cashflow.service";
 
 export interface OwnerDbProviderDeps {
   db: PrismaClient;
@@ -74,7 +76,8 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
   // legacy null-business rows reports those domains as missing (it never inflates REAL_DB readiness).
   // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
   const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes, reputationRow] = await Promise.all([
-    db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId, periodEnd: { lte: new Date() } }, orderBy: { periodEnd: "desc" } }),
+    // The current Cashflow row through the ONE selector (latest period at or before now; ties by the domain rule).
+    loadEffectiveCashflowRow(workspaceId, businessId, new Date(), db as unknown as CashflowReadClient),
     db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId })),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
     db.ownerCapacitySnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" } }),
@@ -123,12 +126,12 @@ export function buildProvidersFromRows(rows: OwnerDomainRows, deps: OwnerDbProvi
   // ── finance_cash (REAL_DB) ──
   providers.finance_cash = (): DomainState => {
     if (!cashflow && !finance) return state({ sourceType: "DATA_SOURCE_MISSING", confidence: "none", summary: "no cashflow/finance snapshot persisted", realData: false, missing: true });
-    const cash = (cashflow?.cashInHand ?? 0) + (cashflow?.bankBalance ?? 0);
+    const cash = cashflowTotalCash(cashflow);
     const fresh = freshnessOf(cashflow?.periodEnd ?? finance?.periodEnd ?? null, now, windowDays);
     const riskFlags: string[] = [];
-    if (cashflow && cash <= 0) riskFlags.push("cash_negative");
+    if (cash !== null && cash <= 0) riskFlags.push("cash_negative");
     if ((cashflow?.receivablesOverdue ?? 0) > 0) riskFlags.push("receivables_overdue");
-    return state({ sourceType: "REAL_DB", confidence: fresh === "fresh" ? "high" : "medium", freshness: fresh, realData: true, summary: `cash=${cash}, receivables=${cashflow?.receivables ?? "n/a"}, payables=${cashflow?.payables ?? "n/a"}`, riskFlags });
+    return state({ sourceType: "REAL_DB", confidence: fresh === "fresh" ? "high" : "medium", freshness: fresh, realData: true, summary: `cash=${cash ?? "not fully recorded (cash in hand and bank balance both needed)"}, receivables=${cashflow?.receivables ?? "n/a"}, payables=${cashflow?.payables ?? "n/a"}`, riskFlags });
   };
 
   // ── margin_pricing (REAL_DB_SERVICE — derived from finance snapshot) ──

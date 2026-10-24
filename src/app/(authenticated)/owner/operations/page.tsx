@@ -1,5 +1,7 @@
 "use client";
 
+import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
 import { DomainDataGapNotice, DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
 import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
 import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
@@ -503,7 +505,7 @@ export default function OwnerOperationsPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -677,6 +679,16 @@ function OperationsCycleView({
 }) {
   const state = score?.operationsState ?? cycle.operationsState;
   const dataConfidence = Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore);
+  // UNKNOWN is never healthy / zero-risk: the one spine rule decides whether these are shown as scores.
+  const presentedScores = presentScores(
+    {
+      health: Number(score?.healthScore ?? cycle.healthScore ?? 0),
+      risk: Number(score?.riskScore ?? cycle.riskScore ?? 0),
+      opportunity: Number(score?.opportunityScore ?? cycle.opportunityScore ?? 0),
+    },
+    assessScoreAvailability({ dataConfidenceScore: dataConfidence, missingCritical: missing }),
+    { health: "Health", risk: "Risk", opportunity: "Opportunity" },
+  );
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -692,21 +704,16 @@ function OperationsCycleView({
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
         </div>
         <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
-          {[
-            ["Health", score?.healthScore ?? cycle.healthScore],
-            ["Risk", score?.riskScore ?? cycle.riskScore],
-            ["Opportunity", score?.opportunityScore ?? cycle.opportunityScore],
-          ].map(([label, value]) => (
-            <div key={label as string}>
-              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
-                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+          {presentedScores.scores.map((s) => (
+            <div key={s.kind}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">{s.value}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
             </div>
           ))}
         </div>
+        {presentedScores.note && <p className="mt-2 text-sm text-foreground" data-testid="score-availability-note">{presentedScores.note}</p>}
         <p className="mt-3 text-sm text-muted-foreground">
-          Data confidence {dataConfidence}/100 — how much of this reading rests on real, supplied numbers.
+          Data completeness {dataConfidence}/100 — how much of this reading rests on real, supplied numbers.
         </p>
       </div>
 
@@ -719,7 +726,7 @@ function OperationsCycleView({
           domainLabel="Operations"
           businessId={businessId}
           missing={missing.map(humanizeMetricKey)}
-          fallback={`⚠ Data confidence is critically low (${dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.`}
+          fallback={`⚠ Data completeness is critically low (${dataConfidence}/100). Diagnosis results are not yet reliable; confirm them with the missing critical inputs below before relying on them.`}
         />
       )}
 
@@ -747,7 +754,7 @@ function OperationsCycleView({
           OwnerFinanceFinding, so this is the same real component, not a look-alike copy. */}
       <section className="border-t border-border pt-4">
         <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-4">Findings ({cycle.findings.length})</h2>
-        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected — this may indicate missing input data rather than smooth operations. Check data confidence above.</p>}
+        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected — this may indicate missing input data rather than smooth operations. Check data completeness above.</p>}
         <div className="flex flex-col gap-6">
           {cycle.findings.map((f: any) => (
             <FindingCard key={f.id} finding={f} />

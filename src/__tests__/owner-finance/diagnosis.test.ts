@@ -16,7 +16,7 @@ function profitable(): FinancialSnapshotInput {
   return {
     periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", businessModel: "service",
     revenue: 100000, costOfGoodsOrServices: 30000, rent: 10000, salaryPayroll: 20000,
-    utilities: 5000, marketingSpend: 5000, cashOnHand: 200000, orderCount: 1000, customerCount: 800,
+    utilities: 5000, marketingSpend: 5000, cashOnHand: 200000, bankBalance: 0, orderCount: 1000, customerCount: 800,
   };
 }
 const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
@@ -47,7 +47,7 @@ describe("owner-finance diagnosis — risk findings", () => {
   it("negative net margin emits a negative-margin finding", () => {
     const r = diagnoseFinanceSnapshot(
       { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 100000 },
+        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 100000, bankBalance: 0 },
       { now: NOW }
     );
     expect(codes(r.riskFindings)).toContain("FIN_NEGATIVE_NET_MARGIN");
@@ -56,7 +56,7 @@ describe("owner-finance diagnosis — risk findings", () => {
   it("below break-even emits break-even risk and recovery opportunity", () => {
     const r = diagnoseFinanceSnapshot(
       { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-        revenue: 30000, fixedCosts: 40000, variableCosts: 6000, cashOnHand: 100000 },
+        revenue: 30000, fixedCosts: 40000, variableCosts: 6000, cashOnHand: 100000, bankBalance: 0 },
       { now: NOW }
     );
     expect(codes(r.riskFindings)).toContain("FIN_BELOW_BREAK_EVEN");
@@ -66,7 +66,7 @@ describe("owner-finance diagnosis — risk findings", () => {
   it("low/insolvent runway escalates to a critical runway finding", () => {
     const r = diagnoseFinanceSnapshot(
       { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000 },
+        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000, bankBalance: 0 },
       { now: NOW }
     );
     const runwayFinding = r.riskFindings.find((f) => f.code === "FIN_INSOLVENT_RUNWAY");
@@ -133,7 +133,7 @@ describe("owner-finance diagnosis — structure & invariants", () => {
   it("all finding scores are bounded (0..100) and confidence 0..1", () => {
     const r = diagnoseFinanceSnapshot(
       { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000,
+        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000, bankBalance: 0,
         loanEmiDebtPayments: 30000, receivables: 40000, discountAmount: 15000, refundAmount: 5000 },
       { now: NOW }
     );
@@ -160,7 +160,7 @@ describe("owner-finance diagnosis — structure & invariants", () => {
 
   it("does not invent source values for non-computable metrics", () => {
     const r = diagnoseFinanceSnapshot(
-      { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", cashOnHand: 1000 },
+      { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", cashOnHand: 1000, bankBalance: 0 },
       { now: NOW }
     );
     // No revenue/costs → no margin/break-even findings fabricated.

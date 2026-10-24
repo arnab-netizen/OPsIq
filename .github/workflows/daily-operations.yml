@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
+      OPSIQ_DB_TARGET: ci
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
       DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
@@ -70,6 +71,7 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     env:
+      OPSIQ_DB_TARGET: ci
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
       DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public

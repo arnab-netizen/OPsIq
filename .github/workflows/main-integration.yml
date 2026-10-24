@@ -84,6 +84,7 @@ jobs:
     timeout-minutes: 110
 
     env:
+      OPSIQ_DB_TARGET: ci
       TEST_WITH_DB: "true"
       NODE_OPTIONS: "--max-old-space-size=4096"
 

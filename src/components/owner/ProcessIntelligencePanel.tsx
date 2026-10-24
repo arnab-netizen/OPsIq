@@ -9,8 +9,10 @@
  * DATA_INSUFFICIENT renders honestly. No fraud/negligence wording; no hidden staff score.
  */
 
+import { allowedProcessTaskActions, approveActionLabel } from "@/domain/owner-mode/process-execution-bridge";
 import type { ReactNode } from "react";
 import { Badge } from "@/ui/primitives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 
 // ── Executive Cockpit layout (progressive disclosure, anti-overload, mobile-friendly) ──────────────────
 
@@ -147,7 +149,7 @@ export function ProcessIntelligencePanel({ data }: { data: ProcessIntelligenceVi
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>{top.ownerExplanation}</p>
         {top.missingData.length > 0 && (
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#b45309" }} data-testid="pi-missing-data">
-            Needed: {top.missingData.join("; ")}
+            Needed: {ownerMissingItems(top.missingData).join("; ")}
           </p>
         )}
       </div>
@@ -194,7 +196,7 @@ export function ProcessIntelligencePanel({ data }: { data: ProcessIntelligenceVi
       </div>
 
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: "#b45309" }} data-testid="pi-missing-data">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 13, color: "#b45309" }} data-testid="pi-missing-data">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
 
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
@@ -334,7 +336,7 @@ export function SopChecklistCorrectionsPanel({ data }: { data: SopChecklistCorre
                 <span style={{ color: "#6b7280" }}>Review in {d.reviewAfterDays}d</span>
               </div>
               {d.missingData.length > 0 && (
-                <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="sop-item-missing">Missing data: {d.missingData.join("; ")}</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="sop-item-missing">Missing data: {ownerMissingItems(d.missingData).join("; ")}</p>
               )}
             </li>
           );
@@ -524,7 +526,7 @@ export function EffectivenessPanel({ data }: { data: EffectivenessView | null })
               <span data-testid="eff-item-approval">
                 <Badge variant={e.approvalLevel === "OWNER" ? "destructive" : "default"}>{APPROVAL_LABEL[e.approvalLevel] ?? e.approvalLevel}</Badge>
               </span>
-              {e.missingData.length > 0 && <span style={{ color: "#b45309" }} data-testid="eff-item-missing">Missing: {e.missingData.join("; ")}</span>}
+              {e.missingData.length > 0 && <span style={{ color: "#b45309" }} data-testid="eff-item-missing">Missing: {ownerMissingItems(e.missingData).join("; ")}</span>}
             </div>
           </li>
         ))}
@@ -621,7 +623,7 @@ export function OwnerWorkloadReductionPanel({ data }: { data: OwnerWorkloadReduc
         </details>
       )}
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="owr-missing">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="owr-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
       {rest.length > 0 && (
         <details data-testid="owr-more">
@@ -720,7 +722,7 @@ export function ApprovalPolicyPanel({ data }: { data: ApprovalPolicyView | null 
         </details>
       )}
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="app-missing">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="app-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
       <span data-testid="app-summary" style={{ fontSize: 12, color: "#6b7280" }}>
         {s.autoAllowed} auto · {s.managerRequired} manager · {s.ownerRequired} owner · {s.neverAuto} never-auto · {s.needsData} needs-data
@@ -910,7 +912,7 @@ export function CashProfitPanel({ data }: { data: CashProfitProtectionView | nul
         </details>
       )}
       {top.missingData.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="cp-missing">Missing data: {top.missingData.join("; ")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="cp-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
       )}
       <span data-testid="cp-summary" style={{ fontSize: 12, color: "#6b7280" }}>
         {s.total} risk(s) · {s.critical} critical · {s.high} high · {s.ownerReviewRequired} need owner review
@@ -973,19 +975,7 @@ const FAMILY_LABEL: Record<string, string> = {
 /** Which interactive actions are valid for the top route, from its status + approval + route (mirrors the
  *  server guardrails so the UI never OFFERS an impossible/unsafe transition; the server still re-checks). */
 function allowedBridgeActions(r: BridgedRouteView): string[] {
-  const terminal = r.status === "COMPLETED" || r.status === "REJECTED";
-  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
-  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
-  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
-  if (terminal) return ["REQUEST_REASSESSMENT"];
-  const out: string[] = [];
-  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
-  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
-  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
-  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
-  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
-  out.push("REQUEST_REASSESSMENT");
-  return out;
+  return allowedProcessTaskActions(r);
 }
 const ACTION_LABEL: Record<string, string> = {
   START: "Start", APPROVE: "Approve", DELEGATE: "Delegate", SUBMIT_EVIDENCE: "Submit evidence", COMPLETE: "Complete",
@@ -1059,7 +1049,7 @@ export function ProcessExecutionBridgePanel({ data, onAction }: { data: ProcessE
               onClick={() => onAction(top.taskKey, a)}
               style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #d1d5db", background: a === "COMPLETE" || a === "APPROVE" ? "#111827" : "#fff", color: a === "COMPLETE" || a === "APPROVE" ? "#fff" : "#111827", cursor: "pointer" }}
             >
-              {ACTION_LABEL[a] ?? a}
+              {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
             </button>
           ))}
         </div>
@@ -1199,7 +1189,7 @@ export function OpportunityPanel({ data }: { data: ExternalOpportunityView | nul
             </details>
           )}
           {top.missingData.length > 0 && (
-            <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="opp-missing">Missing data: {top.missingData.join("; ")}</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="opp-missing">Missing data: {ownerMissingItems(top.missingData).join("; ")}</p>
           )}
         </>
       )}

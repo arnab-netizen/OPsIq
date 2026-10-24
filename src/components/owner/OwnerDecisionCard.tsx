@@ -8,20 +8,28 @@
  * which target wins.
  */
 import Link from "next/link";
+import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
+import { presentBankBalanceActionText } from "@/domain/owner-finance/bank-balance-entry";
 import { Badge, Disclosure } from "@/ui/primitives";
+import { ownerTargetConfidencePhrase, OWNER_CONFIDENCE_CONCEPT } from "@/domain/owner-spine/confidence-vocabulary";
+import type { OwnerAdviceMode } from "@/domain/owner-spine/owner-advice-policy";
 import { OWNER_WHAT_CHANGED_WINDOW_DAYS, ownerTargetHref, type CurrentOwnerDecision, type OwnerDecisionTarget } from "@/domain/owner-spine/owner-decision";
 
 type Detail = "full" | "compact";
 
+/**
+ * Modes where "N confidence" would misdescribe the target: a request for data or a refresh is about the evidence, not
+ * advice OpsIQ is confident in. The label comes from the canonical advice policy (never decided here).
+ */
+const POLICY_BADGE_LABEL: Partial<Record<OwnerAdviceMode, string>> = {
+  REFRESH_REQUIRED: "Refresh the analysis first",
+  EVIDENCE_REQUIRED: "Needs your information",
+  CONFLICT_REQUIRES_RESOLUTION: "Figures disagree",
+};
+
 const SEVERITY_LABEL: Record<string, string> = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const SEVERITY_VARIANT = (s: string | null): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
   s === "critical" || s === "high" ? "destructive-accessible" : s === "medium" ? "warning-accessible" : s === "low" ? "default-accessible" : "muted-accessible";
-const CONFIDENCE_LABEL: Record<string, string> = {
-  high: "High confidence",
-  moderate: "Moderate confidence",
-  low: "Low confidence",
-  insufficient: "Not enough evidence",
-};
 const CONFIDENCE_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "muted-accessible"> = {
   high: "success-accessible",
   moderate: "default-accessible",
@@ -49,11 +57,14 @@ export function OwnerDecisionCard({
   heading?: string;
 }) {
   const p = decision.primaryTarget;
+  const policy = decision.advicePolicy;
+  const policyBadge = policy ? POLICY_BADGE_LABEL[policy.mode] : undefined;
   return (
     <section
       data-testid="owner-decision"
       data-owner-decision-state={decision.state}
       data-primary-candidate-id={decision.primaryCandidateId ?? ""}
+      data-owner-advice-mode={policy?.mode ?? ""}
       className="flex flex-col gap-3 border-l-2 py-1 pl-5"
       style={{ borderColor: "var(--accent-ink)" }}
     >
@@ -67,8 +78,8 @@ export function OwnerDecisionCard({
         )}
         {(p || decision.state === "NO_EVIDENCE") && (
           <Badge variant={CONFIDENCE_VARIANT[decision.confidence.level] ?? "muted-accessible"}>
-            <span data-testid="owner-decision-confidence">
-              {p && decision.confidence.level === "insufficient" ? "Very low confidence" : CONFIDENCE_LABEL[decision.confidence.level] ?? decision.confidence.level}
+            <span data-testid="owner-decision-confidence" title={OWNER_CONFIDENCE_CONCEPT.TARGET_CONFIDENCE.measures}>
+              {policyBadge ?? (p ? ownerTargetConfidencePhrase(decision.confidence.level) : "No main target yet — not enough information")}
             </span>
           </Badge>
         )}
@@ -80,7 +91,7 @@ export function OwnerDecisionCard({
             {p.title}
           </strong>
           <p className="m-0 text-xs text-muted-foreground">Area: {p.domainLabel}</p>
-          {p.explanation && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{p.explanation}</p>}
+          {p.explanation && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{presentBankBalanceActionText(p.findingCode, p.explanation)}</p>}
           {decision.whyThisWins.length > 0 && (
             <div data-testid="owner-decision-why">
               <span className="text-sm font-medium text-foreground">Why this comes first</span>
@@ -91,6 +102,7 @@ export function OwnerDecisionCard({
               </ul>
             </div>
           )}
+          <BankBalanceEntryLink code={p.findingCode} />
           <Link data-testid="owner-decision-go" href={ownerTargetHref(p)} className="inline-flex self-start items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             Work on this in {p.domainLabel} →
           </Link>
@@ -103,11 +115,29 @@ export function OwnerDecisionCard({
               : "None of your diagnosed areas has an open action right now."}
           </strong>
           {decision.whatToDoFirst && <p className="mt-1.5 text-sm text-muted-foreground">{decision.whatToDoFirst}</p>}
+          {policy && policy.mode !== "SUPPORTED" && decision.state === "NO_OPEN_ACTIONS" && (
+            // "Nothing open" is only a claim when the evidence supports it: stale or missing evidence is never read as resolved.
+            <p data-testid="owner-decision-empty-policy" className="mt-1.5 text-sm text-muted-foreground">
+              {policy.ownerStatement} {policy.nextEvidenceAction}
+            </p>
+          )}
           <p className="mt-2 text-sm">
             <Link href="/owner/data" className="text-[var(--primary-text)] underline">
               {decision.state === "NO_EVIDENCE" ? "Add your business information" : "Add your latest figures so OpsIQ can re-check"}
             </Link>
           </p>
+        </div>
+      )}
+
+      {policy && policy.mode !== "SUPPORTED" && (
+        <div data-testid="owner-decision-advice-policy" className="flex flex-col gap-1">
+          <p className="m-0 text-sm text-foreground">{policy.ownerStatement}</p>
+          {policy.nextEvidenceAction && detail === "full" && <p className="m-0 text-sm text-muted-foreground">{policy.nextEvidenceAction}</p>}
+          {!policy.canMakeMaterialCommitment && policy.canAct && policy.mode !== "REFRESH_REQUIRED" && policy.mode !== "EVIDENCE_REQUIRED" && (
+            <p data-testid="owner-decision-no-commitment" className="m-0 text-sm text-muted-foreground">
+              OpsIQ does not support committing money, capacity or a plan on this evidence yet.
+            </p>
+          )}
         </div>
       )}
 

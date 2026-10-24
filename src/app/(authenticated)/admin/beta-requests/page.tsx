@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, LoadingState, Table } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
+import { betaApprovalEmailNotice, type BetaApprovalEmailNotice } from "@/domain/admin/beta-approval-email-notice";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createClientIdempotencyKey } from "@/lib/client-idempotency";
 
@@ -31,6 +32,7 @@ interface BetaRequestRow {
   conversionPath: string | null;
   invitedAt: string | null;
   invitedBy: string | null;
+  inviteExpired?: boolean;
   createdAt: string;
 }
 
@@ -78,6 +80,7 @@ export default function AdminBetaRequestsPage() {
   const [state, setState] = useState<ListState>({ rows: null, loading: true, error: null, forbidden: false });
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [inviteNotices, setInviteNotices] = useState<Record<string, BetaApprovalEmailNotice>>({});
 
   useEffect(() => {
     void loadAndApply(setState);
@@ -85,16 +88,21 @@ export default function AdminBetaRequestsPage() {
     // so this intentionally has no other dependencies.
   }, []);
 
-  const handleInvite = async (betaRequestId: string) => {
+  const handleInvite = async (betaRequestId: string, kind: "invite" | "resend-invite" = "invite") => {
     setInvitingId(betaRequestId);
     setInviteErrors((prev) => {
       const next = { ...prev };
       delete next[betaRequestId];
       return next;
     });
+    setInviteNotices((prev) => {
+      const next = { ...prev };
+      delete next[betaRequestId];
+      return next;
+    });
     try {
-      const idempotencyKey = createClientIdempotencyKey(`beta-invite-${betaRequestId}`);
-      const res = await fetch(`/api/admin/beta-requests/${betaRequestId}/invite`, {
+      const idempotencyKey = createClientIdempotencyKey(`beta-${kind}-${betaRequestId}`);
+      const res = await fetch(`/api/admin/beta-requests/${betaRequestId}/${kind}`, {
         method: "POST",
         headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
       });
@@ -102,12 +110,13 @@ export default function AdminBetaRequestsPage() {
         throw new Error("Failed to invite this request");
       }
       const result = await res.json();
+      setInviteNotices((prev) => ({ ...prev, [betaRequestId]: betaApprovalEmailNotice(result.emailDelivery, result.emailDeliveryReason) }));
       setState((s) => ({
         ...s,
         rows:
           s.rows?.map((row) =>
             row.id === betaRequestId
-              ? { ...row, status: result.status, invitedAt: result.invitedAt, invitedBy: result.invitedBy }
+              ? { ...row, status: result.status, invitedAt: result.invitedAt, invitedBy: result.invitedBy, inviteExpired: kind === "invite" ? false : row.inviteExpired }
               : row
           ) ?? null,
       }));
@@ -184,16 +193,37 @@ export default function AdminBetaRequestsPage() {
             header: "",
             render: (row: BetaRequestRow) => (
               <div className="flex flex-col items-start gap-1">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={row.status === "INVITED" || invitingId === row.id}
-                  isLoading={invitingId === row.id}
-                  onClick={() => void handleInvite(row.id)}
-                >
-                  {row.status === "INVITED" ? "Invited" : "Invite"}
-                </Button>
+                {row.status === "INVITED" && !row.inviteExpired ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={invitingId === row.id}
+                    isLoading={invitingId === row.id}
+                    onClick={() => void handleInvite(row.id, "resend-invite")}
+                  >
+                    Resend invitation email
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={invitingId === row.id}
+                    isLoading={invitingId === row.id}
+                    onClick={() => void handleInvite(row.id)}
+                  >
+                    {row.status === "INVITED" ? "Re-invite (expired)" : "Invite"}
+                  </Button>
+                )}
                 {inviteErrors[row.id] && <p className="text-xs text-destructive">{inviteErrors[row.id]}</p>}
+                {inviteNotices[row.id] && (
+                  <p
+                    role="status"
+                    data-testid="invite-email-notice"
+                    className={inviteNotices[row.id].tone === "success" ? "text-xs text-green-700" : "text-xs text-amber-700"}
+                  >
+                    {inviteNotices[row.id].text}
+                  </p>
+                )}
               </div>
             ),
           },

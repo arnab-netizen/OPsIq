@@ -84,9 +84,10 @@ describe("command-center priority strip", () => {
     expect(accuracy!.severity).toBe("critical");
   });
 
-  it("reflects a paused/limited confidence when strong recommendations are blocked (no misleading green)", () => {
+  it("reflects limited evidence when strong recommendations are blocked (no misleading green) — as an evidence description, never a permission", () => {
     const cards = buildPriorityCommandStrip(input({ guidance: { nextBestInput: "revenue_sales", canProceedWithStrongRecommendation: false } }));
-    expect(cards.every((c) => /paused|directional/i.test(c.confidenceNote))).toBe(true);
+    expect(cards.every((c) => /information it needs is missing|confirm with more data/i.test(c.confidenceNote))).toBe(true);
+    expect(cards.every((c) => !/safe to act|paused/i.test(c.confidenceNote))).toBe(true);
   });
 
   it("surfaces do-not-do and cash/margin risk as distinct cards", () => {

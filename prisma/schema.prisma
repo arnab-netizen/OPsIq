@@ -88,6 +88,7 @@ model BillingAccount {
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   stripeCustomerId   String?       @unique(map: "uk_stripe_customer_id") @map("stripe_customer_id")
+  paddleCustomerId   String?       @unique @map("paddle_customer_id")
   subscription       Subscription?
 
   @@index([status])
@@ -802,6 +803,7 @@ model Plan {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   stripePriceId    String?          @map("stripe_price_id")
+  paddlePriceId    String?          @unique @map("paddle_price_id")
   planCapabilities PlanCapability[]
   subscriptions    Subscription[]
 
@@ -1254,6 +1256,8 @@ model Subscription {
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   stripeSubscriptionId String?        @map("stripe_subscription_id")
+  paddleSubscriptionId String?        @unique @map("paddle_subscription_id")
+  cancelAtPeriodEnd    Boolean        @default(false) @map("cancel_at_period_end")
   lastEventTimestamp   DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
   billingAccount       BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
   plan                 Plan           @relation(fields: [planId], references: [id])
@@ -2747,6 +2751,14 @@ model OwnerBusiness {
   strategyVerifications   OwnerStrategyVerification[]
   dataIntakes             OwnerDataIntake[]
 
+  ownerDecisionRecords    OwnerDecisionRecord[]
+  firstResultInteractions OwnerFirstResultInteraction[]
+  qboOAuthStates          QboOAuthState[]
+  qboConnections          QboConnection[]
+  ownerOutcomeAssessments OwnerOutcomeAssessment[]
+
+  // Target of the composite tenant-aware FKs of the owner outcome tables: a child row cannot name a business of another workspace.
+  @@unique([id, workspaceId], map: "owner_businesses_id_workspace_id_key")
   @@index([workspaceId])
   @@index([workspaceId, isActive])
   @@map("owner_businesses")
@@ -2930,6 +2942,8 @@ model OwnerFinancialSnapshot {
   currency             String
   businessModelType    String?             @map("business_model_type")
   industryTemplate     String?             @map("industry_template")
+  /// ACTUAL | GOOD_ESTIMATE | ROUGH_ESTIMATE. NULL = recorded before provenance existed (unspecified; never treated as ACTUAL).
+  evidenceQuality      String?             @map("evidence_quality")
   revenue              Float?
   costOfGoods          Float?              @map("cost_of_goods")
   fixedCosts           Float?              @map("fixed_costs")
@@ -2940,7 +2954,17 @@ model OwnerFinancialSnapshot {
   deliveryCost         Float?              @map("delivery_cost")
   marketingSpend       Float?              @map("marketing_spend")
   discountAmount       Float?              @map("discount_amount")
+  /// COMPATIBILITY AGGREGATE of refund + rework + complaint. For a leakageCompVersion = NULL (legacy) row this is the ONLY
+  /// persisted leakage figure and its composition is UNKNOWN (which components were supplied was never stored). For a
+  /// component-aware row it is derived from the three component columns and is never the source of component coverage.
   refundReworkCost     Float?              @map("refund_rework_cost")
+  /// Separately persisted leakage components (D9). NULL = UNKNOWN; 0 = an explicit known zero. Only ever set on a row with
+  /// leakageCompVersion = 1 (enforced by owner_fin_snapshots_leakage_component_contract_check). Never backfilled.
+  refundAmount         Float?              @map("refund_amount")
+  reworkCost           Float?              @map("rework_cost")
+  complaintCost        Float?              @map("complaint_cost")
+  /// NULL = legacy combined-aggregate contract (components unknowable). 1 = the three component columns above are authoritative.
+  leakageCompVersion   Int?                @map("leakage_component_version")
   debtPayments         Float?              @map("debt_payments")
   totalDebtOutstanding Float?              @map("total_debt_outstanding")
   cashOnHand           Float?              @map("cash_on_hand")
@@ -7011,4 +7035,227 @@ model RateLimitBucket {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("rate_limit_buckets")
+}
+
+// === Owner Outcome Persistence v1 (additive) ===
+// Links existing facts; replaces none. Both tables are APPEND-ONLY (DB trigger blocks UPDATE/DELETE):
+// a later diagnosis or assessment never rewrites what the owner saw/decided or what OpsIQ could conclude then.
+
+/// The owner's response to a canonical, persisted decision candidate (domain action / compliance item).
+/// One row per decision event; a later decision on the same candidate is a new row (sequence + 1, supersedesId).
+/// `recommendationSnapshot` is built by the server from the persisted source at decision time and never rewritten.
+/// The outcome contract columns are null/unknown when not supplied (null != 0); direction is never defaulted to "up".
+model OwnerDecisionRecord {
+  id                        String                   @id @db.Uuid
+  workspaceId               String                   @map("workspace_id") @db.Uuid
+  businessId                String                   @map("business_id") @db.Uuid
+  candidateId               String                   @map("candidate_id")
+  candidateSource           String                   @map("candidate_source") // domain_action | compliance_item
+  domain                    String
+  sourceId                  String                   @map("source_id") @db.Uuid
+  findingCode               String?                  @map("finding_code")
+  recommendationCode        String?                  @map("recommendation_code")
+  decisionState             String                   @map("decision_state") // ACCEPTED | REJECTED | DEFERRED | MODIFIED
+  sequence                  Int
+  supersedesId              String?                  @map("supersedes_id") @db.Uuid
+  decidedById               String                   @map("decided_by_id") @db.Uuid
+  decidedAt                 DateTime                 @map("decided_at")
+  ownerReason               String?                  @map("owner_reason") @db.Text
+  revisitAt                 DateTime?                @map("revisit_at")
+  recommendationSnapshot    Json                     @map("recommendation_snapshot")
+  decisionContractVersion   String                   @map("decision_contract_version")
+  commitmentDescription     String?                  @map("commitment_description") @db.Text
+  verificationMetric        String?                  @map("verification_metric")
+  baselineValue             Float?                   @map("baseline_value")
+  baselineProvenance        String?                  @map("baseline_provenance") // MEASURED | OWNER_REPORTED | EXTERNAL_SOURCE | UNKNOWN
+  targetDirection           String?                  @map("target_direction") // up | down | unknown (null only when no contract: REJECTED/DEFERRED)
+  targetValue               Float?                   @map("target_value")
+  observationWindowDays     Int?                     @map("observation_window_days")
+  intendedCompletionAt      DateTime?                @map("intended_completion_at")
+  expectedMeasurementSource String?                  @map("expected_measurement_source")
+  requestFingerprint        String                   @map("request_fingerprint")
+  idempotencyKey            String?                  @map("idempotency_key")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
+  business                  OwnerBusiness            @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  supersedes                OwnerDecisionRecord?     @relation("OwnerDecisionSupersedes", fields: [supersedesId, workspaceId, businessId, candidateId], references: [id, workspaceId, businessId, candidateId], onDelete: Restrict)
+  supersededBy              OwnerDecisionRecord[]    @relation("OwnerDecisionSupersedes")
+  assessments               OwnerOutcomeAssessment[]
+
+  @@unique([workspaceId, businessId, candidateId, sequence], map: "owner_decision_records_candidate_sequence_key")
+  // Target of supersedes / assessment-chain FKs: same workspace, business AND candidate.
+  @@unique([id, workspaceId, businessId, candidateId], map: "owner_decision_records_tenant_chain_key")
+  @@unique([workspaceId, idempotencyKey], map: "owner_decision_records_ws_idempotency_key")
+  @@index([workspaceId, businessId, candidateId])
+  @@index([workspaceId, businessId, decidedAt])
+  @@map("owner_decision_records")
+}
+
+/// Canonical outcome spine: a LINKAGE + PROVENANCE record and a VERSIONED, immutable assessment snapshot.
+/// Every row is the output of `assessOwnerOutcome()` over a server-built `OwnerOutcomeInput`; clients never supply
+/// conclusions. Authoritative facts stay in System A verification rows / System B OwnerActionOutcome.
+/// Current assessment for a chain = highest `version` (unique per chain, so a racing writer cannot duplicate one).
+model OwnerOutcomeAssessment {
+  id                         String                   @id @db.Uuid
+  workspaceId                String                   @map("workspace_id") @db.Uuid
+  businessId                 String                   @map("business_id") @db.Uuid
+  chainKey                   String                   @map("chain_key")
+  version                    Int
+  previousAssessmentId       String?                  @map("previous_assessment_id") @db.Uuid
+  ownerDecisionId            String?                  @map("owner_decision_id") @db.Uuid
+  ownerDecisionState         String?                  @map("owner_decision_state")
+  commitmentFidelity         String                   @map("commitment_fidelity") // AS_RECOMMENDED | MODIFIED_BY_OWNER | NOT_COMMITTED | NO_DECISION
+  decisionLinkState          String                   @map("decision_link_state") // LINKED | UNLINKED_NO_DECISION
+  sourceSystem               String                   @map("source_system") // SYSTEM_A | SYSTEM_B | NONE
+  sourceLinkState            String                   @map("source_link_state") // LINKED | NO_EXECUTION_SOURCE_LINKED
+  domain                     String
+  canonicalActionId          String                   @map("canonical_action_id")
+  systemAActionId            String?                  @map("system_a_action_id") @db.Uuid
+  systemAVerificationId      String?                  @map("system_a_verification_id") @db.Uuid
+  processTaskId              String?                  @map("process_task_id") @db.Uuid
+  processTaskKey             String?                  @map("process_task_key")
+  ownerActionOutcomeId       String?                  @map("owner_action_outcome_id")
+  reassessmentEventId        String?                  @map("reassessment_event_id")
+  learningCandidateRef       String?                  @map("learning_candidate_ref")
+  newerDiagnosisDomain       String?                  @map("newer_diagnosis_domain")
+  newerDiagnosisCycleId      String?                  @map("newer_diagnosis_cycle_id") @db.Uuid
+  newerDiagnosisEvidenceAsOf DateTime?                @map("newer_diagnosis_evidence_as_of")
+  policyVersion              String                   @map("policy_version")
+  assessedAt                 DateTime                 @map("assessed_at")
+  assessedById               String?                  @map("assessed_by_id") @db.Uuid
+  executionStatus            String                   @map("execution_status")
+  observationStatus          String                   @map("observation_status")
+  measurementResult          String                   @map("measurement_result")
+  targetAttainment           String                   @map("target_attainment")
+  issueResolution            String                   @map("issue_resolution")
+  causalAttribution          String                   @map("causal_attribution")
+  learningEligibility        String                   @map("learning_eligibility")
+  verificationStatus         String                   @map("verification_status")
+  evidenceQuality            String                   @map("evidence_quality")
+  verifierKind               String                   @map("verifier_kind")
+  independentlyVerified      Boolean                  @map("independently_verified")
+  selfVerified               Boolean                  @map("self_verified")
+  disputed                   Boolean
+  externalInterference       Boolean                  @map("external_interference")
+  measuredAt                 DateTime?                @map("measured_at")
+  verifiedAt                 DateTime?                @map("verified_at")
+  learningBlockers           String[]                 @map("learning_blockers")
+  nextVerificationAction     String                   @map("next_verification_action") @db.Text
+  inputSnapshot              Json                     @map("input_snapshot")
+  assessmentFingerprint      String                   @map("assessment_fingerprint")
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  business                   OwnerBusiness            @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  ownerDecision              OwnerDecisionRecord?     @relation(fields: [ownerDecisionId, workspaceId, businessId, chainKey], references: [id, workspaceId, businessId, candidateId], onDelete: Restrict)
+  previous                   OwnerOutcomeAssessment?  @relation("OwnerOutcomeAssessmentPrevious", fields: [previousAssessmentId, workspaceId, businessId, chainKey], references: [id, workspaceId, businessId, chainKey], onDelete: Restrict)
+  next                       OwnerOutcomeAssessment[] @relation("OwnerOutcomeAssessmentPrevious")
+
+  @@unique([workspaceId, chainKey, version], map: "owner_outcome_assessments_chain_version_key")
+  // Target of the previous-assessment FK: same workspace, business AND chain.
+  @@unique([id, workspaceId, businessId, chainKey], map: "owner_outcome_assessments_tenant_chain_key")
+  @@index([workspaceId, businessId, chainKey])
+  @@index([workspaceId, processTaskId])
+  @@index([workspaceId, ownerDecisionId])
+  @@map("owner_outcome_assessments")
+}
+
+
+// ─── QuickBooks Online — business-scoped connection persistence (read-only integration) ────────────────────
+// QBO-specific tables (not the generic External* tables): ExternalConnection is unique per (workspace, provider) and
+// carries no business / realm / environment, and ExternalOAuthToken has no rotation fence or refresh expiry, so a
+// per-business Intuit realm cannot be represented there without changing legacy connector semantics.
+// Tenancy: every row carries (workspaceId, businessId) bound to owner_businesses(id, workspace_id) by a composite FK.
+
+/// One-time OAuth authorization intent. Stores the SHA-256 of the state only — never the clear-text state.
+model QboOAuthState {
+  id            String    @id @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  businessId    String    @map("business_id") @db.Uuid
+  initiatedById String    @map("initiated_by_id") @db.Uuid
+  environment   String
+  scope         String
+  stateHash     String    @map("state_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  expiresAt     DateTime  @map("expires_at")
+  consumedAt    DateTime? @map("consumed_at")
+  finalizedAt   DateTime? @map("finalized_at")
+
+  business OwnerBusiness @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@unique([stateHash], map: "qbo_oauth_states_state_hash_key")
+  @@index([workspaceId, businessId])
+  @@index([expiresAt])
+  @@map("qbo_oauth_states")
+}
+
+/// A business's binding to one Intuit realm in one environment. Rows are never deleted; DISCONNECTED is terminal-until-reconnect.
+model QboConnection {
+  id                String    @id @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String    @map("business_id") @db.Uuid
+  environment       String
+  realmId           String    @map("realm_id")
+  status            String
+  connectedById     String    @map("connected_by_id") @db.Uuid
+  connectedAt       DateTime  @map("connected_at")
+  reauthRequiredAt  DateTime? @map("reauth_required_at")
+  lastErrorCode     String?   @map("last_error_code")
+  disconnectedAt    DateTime? @map("disconnected_at")
+  disconnectedById  String?   @map("disconnected_by_id") @db.Uuid
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  business OwnerBusiness        @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  token    QboConnectionToken?
+
+  @@unique([workspaceId, businessId, environment, realmId], map: "qbo_connections_binding_key")
+  @@unique([id, workspaceId], map: "qbo_connections_tenant_key")
+  @@index([workspaceId, businessId])
+  @@index([environment, realmId])
+  @@map("qbo_connections")
+}
+
+/// Encrypted token pair (AES-256-GCM, workspace-bound key via encryptOAuthToken). `revision` fences rotation writes.
+model QboConnectionToken {
+  connectionId              String    @id @map("connection_id") @db.Uuid
+  workspaceId               String    @map("workspace_id") @db.Uuid
+  accessTokenCiphertext     String    @map("access_token_ciphertext")
+  refreshTokenCiphertext    String    @map("refresh_token_ciphertext")
+  tokenType                 String    @map("token_type")
+  accessTokenExpiresAt      DateTime  @map("access_token_expires_at")
+  refreshTokenExpiresAt     DateTime  @map("refresh_token_expires_at")
+  refreshTokenHardExpiresAt DateTime? @map("refresh_token_hard_expires_at")
+  grantedScope              String    @map("granted_scope")
+  intuitTid                 String?   @map("intuit_tid")
+  revision                  Int       @default(1)
+  rotatedAt                 DateTime? @map("rotated_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@unique([connectionId, workspaceId], map: "qbo_connection_tokens_tenant_key")
+  @@index([workspaceId])
+  @@map("qbo_connection_tokens")
+}
+
+/// First-run: an owner asking to improve the first Money read, and first-value feedback. Append-only, tenant-scoped.
+/// (Accepting an action and correcting evidence are NOT stored here: they are OwnerDecisionRecord and a snapshot amendment.)
+model OwnerFirstResultInteraction {
+  id             String        @id @db.Uuid
+  workspaceId    String        @map("workspace_id") @db.Uuid
+  businessId     String        @map("business_id") @db.Uuid
+  snapshotId     String?       @map("snapshot_id") @db.Uuid
+  kind           String // IMPROVEMENT_REQUESTED | FEEDBACK | RESULT_VIEWED | QUESTION_SKIPPED
+  /// Progressive-question identity (an OwnerInputCategory) for IMPROVEMENT_REQUESTED and QUESTION_SKIPPED.
+  questionCategory String?     @map("question_category")
+  rating         String? // USEFUL | PARTLY_USEFUL | NOT_USEFUL (FEEDBACK only)
+  reason         String? // WRONG_PRIORITY | MISSING_INFORMATION | RECOMMENDATION_IMPRACTICAL | EXPLANATION_UNCLEAR | OTHER
+  idempotencyKey String        @map("idempotency_key")
+  createdBy      String        @map("created_by") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+  business       OwnerBusiness @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@unique([workspaceId, idempotencyKey], map: "owner_first_result_interactions_ws_idem_key")
+  @@index([workspaceId, businessId, kind])
+  @@map("owner_first_result_interactions")
 }

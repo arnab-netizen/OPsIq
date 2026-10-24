@@ -24,8 +24,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm rounded-md",
-  md: "h-10 px-4 text-sm rounded-md",
+  // Below sm every button is a 44px target; desktop sizes are unchanged.
+  sm: "h-11 sm:h-8 px-3 text-sm rounded-md",
+  md: "h-11 sm:h-10 px-4 text-sm rounded-md",
   lg: "h-12 px-6 text-base rounded-lg",
 };
 

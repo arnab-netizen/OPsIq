@@ -1,3 +1,4 @@
+import { PublicLink } from "@/components/navigation/PublicLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -82,9 +83,9 @@ export default async function ResourcePage({ params }: ResourcePageProps) {
             &larr; All resources
           </Link>
           <span aria-hidden="true" className="mx-2 text-muted-foreground">·</span>
-          <Link href="/" className="text-[var(--primary-text)] hover:underline">
+          <PublicLink href="/" className="text-[var(--primary-text)] hover:underline">
             Back to OpsIQ
-          </Link>
+          </PublicLink>
         </p>
       </article>
 

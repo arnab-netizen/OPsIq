@@ -29,7 +29,7 @@ Legacy alias: `NEXT_PUBLIC_API_URL` is accepted by `validate-deployment.ts` only
 
 | Variable | Value / format | Notes |
 |---|---|---|
-| `MIGRATION_DATABASE_URL` | **direct** (non-pooler) `postgresql` URL | Used only by `prisma migrate deploy` (advisory locks/DDL need a direct endpoint). Falls back to `DATABASE_URL` when unset — fine for local/single-endpoint Postgres. The production migration gate (`.github/workflows/migrate-production.yml`) is **manual-only** and uses the `PRODUCTION_DATABASE_URL` secret. |
+| `MIGRATION_DATABASE_URL` | **direct** (non-pooler) `postgresql` URL | Used only by `prisma migrate deploy` (advisory locks/DDL need a direct endpoint). Never selected implicitly: the Prisma CLI reads it only for an explicit `OPSIQ_DB_TARGET=production` with `OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true` (local Prisma commands use `OPSIQ_DB_TARGET=local` with a loopback `DATABASE_URL`). The production migration gate (`.github/workflows/migrate-production.yml`) is **manual-only** and uses the `PRODUCTION_DATABASE_URL` secret. |
 
 ## 3. Optional (feature-gated; absence disables a feature, never blocks boot)
 

@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-09-25T12:38:27.619Z",
-  "node_version": "v22.22.2",
-  "npm_version": "10.9.7",
+  "timestamp": "2026-10-16T07:10:57.960Z",
+  "node_version": "v22.22.0",
+  "npm_version": "10.9.4",
   "environment_checks": [
     {
       "name": "NODE_ENV",
@@ -17,6 +17,18 @@
     },
     {
       "name": "NEXT_PUBLIC_APP_URL",
+      "category": "EXTERNAL_RUNTIME_REQUIRED",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "RESEND_API_KEY",
+      "category": "EXTERNAL_RUNTIME_REQUIRED",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "ALERT_FROM_EMAIL",
       "category": "EXTERNAL_RUNTIME_REQUIRED",
       "present": false,
       "value": "[NOT SET]"
@@ -82,6 +94,8 @@
     "Required env DATABASE_URL not set"
   ],
   "warnings": [
-    "External runtime env NEXT_PUBLIC_APP_URL not set - will be needed at deployment"
+    "External runtime env NEXT_PUBLIC_APP_URL not set - will be needed at deployment",
+    "External runtime env RESEND_API_KEY not set - will be needed at deployment",
+    "External runtime env ALERT_FROM_EMAIL not set - will be needed at deployment"
   ]
 }

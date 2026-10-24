@@ -130,7 +130,7 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
   section "PHASE 4: Database Validation"
 
   echo -e "${BLUE}→${NC} Validating database connection"
-  if timeout 10 npx prisma db execute --stdin <<< "SELECT 1;" > /dev/null 2>&1; then
+  if OPSIQ_DB_TARGET=local timeout 10 npx prisma db execute --stdin <<< "SELECT 1;" > /dev/null 2>&1; then
     pass "Database connection works"
     DB_READY=true
   else
@@ -139,7 +139,7 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
 
   if [[ "$DB_READY" == true ]]; then
     echo -e "${BLUE}→${NC} Deploying migrations"
-    if timeout 30 npx prisma migrate deploy > /dev/null 2>&1; then
+    if OPSIQ_DB_TARGET=local timeout 30 npx prisma migrate deploy > /dev/null 2>&1; then
       pass "Migrations deployed"
     else
       fail "Migration deploy failed"

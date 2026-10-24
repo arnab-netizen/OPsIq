@@ -8,6 +8,8 @@
 import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
+import { LIQUIDITY_UNCONFIRMED_FINDING_CODE, liquidityUnconfirmedStatement } from "./liquidity";
+import { leakageCoverage, LEAKAGE_COMPONENTS, importantFieldValue } from "./cost-model";
 import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
@@ -24,6 +26,7 @@ interface OppArgs {
   evidence: string[];
   missingData?: string[];
   verificationMetric: string;
+  valueIsLowerBound?: boolean;
 }
 
 function opportunity(args: OppArgs): OwnerFinding {
@@ -43,6 +46,7 @@ function opportunity(args: OppArgs): OwnerFinding {
     evidence: args.evidence,
     missingData: args.missingData ?? [],
     verificationMetric: args.verificationMetric,
+    ...(args.valueIsLowerBound ? { valueIsLowerBound: true } : {}),
   };
 }
 
@@ -180,19 +184,28 @@ export function buildFinanceOpportunityFindings(
   // Leakage reduction opportunity: requires at least 2% leakage ratio.
   // Below 2% is within normal operational tolerance (rounding, small discounts).
   if (m.costLeakageRatioPct !== null && m.costLeakageRatioPct >= 2) {
+    // Partial coverage: the figure is only what was ENTERED (a lower bound). Say "at least", name what is missing, and
+    // let confidence follow coverage (a claim about the whole group cannot be as strong as one about all of it).
+    const cov = leakageCoverage(input);
+    const partial = !cov.complete;
+    const coverageFactor = 0.5 + 0.5 * (cov.known.length / LEAKAGE_COMPONENTS.length);
     findings.push(
       opportunity({
         code: "FIN_OPP_LEAKAGE_REDUCTION",
-        title: "Recover margin by cutting cost leakage",
-        summary: "Discounts/refunds/rework are recoverable margin; tightening them lifts profit directly.",
+        title: partial ? "Recover margin by cutting the leakage you already know about" : "Recover margin by cutting cost leakage",
+        summary: partial
+          ? `At least ${pct(m.costLeakageRatioPct)} of sales is leaking through ${cov.known.join(" and ")}. ${cov.unknown.join(", ")} not entered yet, so the real figure is at least this much.`
+          : "Discounts/refunds/rework are recoverable margin; tightening them lifts profit directly.",
+        valueIsLowerBound: partial,
+        missingData: partial ? cov.unknown : undefined,
         sourceMetric: "costLeakageRatioPct",
         sourceValue: m.costLeakageRatioPct,
         threshold: t.highCostLeakageRatioPct,
         severity: m.costLeakageRatioPct > t.highCostLeakageRatioPct ? "medium" : "low",
-        confidence: conf,
+        confidence: partial ? conf * coverageFactor : conf,
         impactScore: clampScore(m.costLeakageRatioPct * 3),
         urgencyScore: 40,
-        evidence: [`costLeakageRatioPct = ${pct(m.costLeakageRatioPct)}`],
+        evidence: [partial ? `costLeakageRatioPct >= ${pct(m.costLeakageRatioPct)} (lower bound: ${cov.unknown.join(", ")} not entered)` : `costLeakageRatioPct = ${pct(m.costLeakageRatioPct)}`],
         verificationMetric: "costLeakageRatioPct",
       })
     );
@@ -227,7 +240,7 @@ export function buildFinanceOpportunityFindings(
     //   2. Any IMPORTANT_FIELDS not in the priority list (forward-compatibility catch-all).
     function isMissingField(f: string): boolean {
       if (f === "fixedCosts" && coveredByComponents) return false;
-      const v = input[f as keyof FinancialSnapshotInput];
+      const v = importantFieldValue(input, f);
       return v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v));
     }
     const priorityOrdered = IMPORTANT_FIELD_PRIORITY_ORDER.filter(isMissingField);
@@ -291,6 +304,43 @@ export function buildFinanceOpportunityFindings(
           "enter the monthly repayment amount (or 0 if there is no fixed schedule)",
         ],
         verificationMetric: "debtServicePressurePct",
+      })
+    );
+  }
+
+  // Liquidity is incomplete: either the bank balance is unknown (cash in hand recorded) or the cash in hand itself is
+  // unknown, so total liquid funds (and therefore cash runway) cannot be confirmed. A data request — never a survival
+  // verdict, never a claim that liquidity is zero, and never a demand that the owner invent a figure. The same finding
+  // code covers every incomplete position so the survival-evidence guard (UNKNOWN is neither safe nor dangerous) holds.
+  if (m.liquidityStatus !== "COMPLETE") {
+    const cashUnknown = m.liquidityStatus === "UNKNOWN" || m.liquidityStatus === "PHYSICAL_UNKNOWN";
+    findings.push(
+      opportunity({
+        code: LIQUIDITY_UNCONFIRMED_FINDING_CODE,
+        title: cashUnknown
+          ? "Add your cash position, if you know it, to confirm how long your cash will last"
+          : "Add your bank balance to confirm how long your cash will last",
+        summary: liquidityUnconfirmedStatement(m.liquidityStatus),
+        sourceMetric: "totalLiquidFunds",
+        sourceValue: null,
+        threshold: null,
+        severity: "medium",
+        confidence: 1,
+        impactScore: 40,
+        urgencyScore: 30,
+        evidence: cashUnknown
+          ? [
+              "cash in hand is not known (it was left blank, which is not the same as 0)",
+              "cash runway and days of cash cover need both cash in hand and the bank balance",
+              "add cash in hand and the bank balance only if you know them — enter 0 only if there really is none",
+            ]
+          : [
+              "cash in hand is recorded; bank balance is not",
+              "cash runway and days of cash cover need both cash in hand and the bank balance",
+              "enter the total across your bank accounts (or 0 if you hold nothing in the bank)",
+            ],
+        missingData: cashUnknown ? ["cashOnHand", "bankBalance"] : ["bankBalance"],
+        verificationMetric: "totalLiquidFunds",
       })
     );
   }

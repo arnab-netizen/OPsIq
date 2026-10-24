@@ -100,7 +100,9 @@ describe("MinimumOwnerCockpit — profit leak heading", () => {
     const section = getByTestId("cockpit-profit-leak-section");
     expect(section).toBeDefined();
     expect(queryByText("Profit leak detected")).toBeNull();
-    expect(getByText("No profit leak detected yet")).toBeInTheDocument();
+    // The placeholder means "this check cannot rate a leak" — never "there is no leak".
+    expect(queryByText("No profit leak detected yet")).toBeNull();
+    expect(getByText("Not enough activity data to rate profit leaks yet")).toBeInTheDocument();
     // The body's own explanation is preserved unchanged.
     expect(
       getByText("No clear profit-leak signal yet — OpsIQ needs the listed data before it can point to a leak.")

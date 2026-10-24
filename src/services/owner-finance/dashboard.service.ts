@@ -8,14 +8,20 @@
  * action, and missing-critical-data. Returns an explicit empty state. Reads
  * persisted data only — no mock, nothing invented.
  */
+import { assessScoreAvailability, type ScoreAvailability } from "@/domain/owner-spine/score-availability";
+import { profitPosition, type ProfitPosition } from "@/domain/owner-finance/profit-position";
+import { financeScoreAvailability } from "@/domain/owner-finance/score-availability";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
+import { attachCurrentFinanceEvidenceRationale } from "@/domain/owner-finance/actions";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { baselineFindingInclude, financeMeasuredBaseline, type BaselineFindingRow } from "./baseline.service";
 import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
 import { currentEffectiveFinancialSnapshotQuery, inProgressFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
+import { cashPositionChangedSince } from "@/services/owner-finance/liquidity.service";
+import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
 
 export interface FinanceDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
@@ -49,8 +55,12 @@ export interface FinanceDashboardPayload {
     opportunityScore: number;
     dataConfidenceScore: number;
     survivalState: string;
+    /** Whether the three scores may be shown as scores (UNKNOWN is never healthy/zero-risk): see owner-spine/score-availability.ts. */
+    scoreAvailability: ScoreAvailability;
   } | null;
   recommendedNextAction: any | null;
+  /** Net profit and margin on the diagnosed snapshot (KNOWN) or UNKNOWN with the reason; null before any diagnosis. */
+  profitPosition: ProfitPosition | null;
   missingCriticalData: string[];
   cycleHistory: Array<{
     id: string;
@@ -89,7 +99,7 @@ export async function getFinanceDashboard(
       businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
       inProgressSnapshot: null, latestSnapshotPeriodState: null, diagnosisTargetSnapshot: null,
       diagnosisTargetReason: null, latestSnapshotDiagnosis: null,
-      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
+      latestCycle: null, domainScore: null, recommendedNextAction: null, profitPosition: null, missingCriticalData: [],
       cycleHistory: [],
     };
   }
@@ -175,8 +185,14 @@ export async function getFinanceDashboard(
         findings: rankOwnerFindingsBySeverity(latestCycle.findings),
         // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
         // owner's engaged or completed work for the same key.
-        actions: await Promise.all(
-          dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
+        // `evidenceRationale` is not persisted: it is derived here, at read time, from the CURRENT diagnosis's
+        // finding for each action's findingCode (never from the action's own, possibly older, baseline
+        // findingId, which is left untouched). An action whose finding is no longer raised gets none.
+        actions: attachCurrentFinanceEvidenceRationale(
+          await Promise.all(
+            dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
+          ),
+          latestCycle.findings
         ),
       }
     : null;
@@ -189,6 +205,9 @@ export async function getFinanceDashboard(
         opportunityScore: latestCycle.growthOpportunityScore,
         dataConfidenceScore: latestCycle.dataConfidenceScore,
         survivalState: latestCycle.survivalState,
+        scoreAvailability: latestCycle.snapshot
+          ? financeScoreAvailability(rowToFinanceInput(latestCycle.snapshot), latestCycle.dataConfidenceScore)
+          : assessScoreAvailability({ dataConfidenceScore: latestCycle.dataConfidenceScore, missingCritical: [] }),
       }
     : null;
 
@@ -209,7 +228,7 @@ export async function getFinanceDashboard(
     ? await db.ownerFinanceCycle.findFirst({
         where: { businessId: selectedBusinessId, workspaceId, snapshotId: diagnosisTargetSnapshot.id },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        select: { id: true, createdAt: true, survivalState: true },
+        select: { id: true, createdAt: true, generatedAt: true, survivalState: true },
       })
     : null;
 
@@ -222,8 +241,8 @@ export async function getFinanceDashboard(
           : "completed"
         : "provisional";
 
-  // Finance diagnosis dependency tracking: bank-balance enrichment (ownerCashflowSnapshot, ≤45-day
-  // freshness window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
+  // Finance diagnosis dependency tracking: bank-balance enrichment (the Cashflow snapshot, within the
+  // liquidity contract's BANK_BALANCE_FRESHNESS_DAYS window) and confirmed cash_debt intake are both read by runFinanceDiagnosis besides the
   // snapshot itself (diagnosis.service.ts). A newer eligible one arriving after the last cycle ran means
   // the existing diagnosis was not computed from all currently-available evidence — recommend a re-run
   // without claiming the snapshot itself is new data.
@@ -232,16 +251,10 @@ export async function getFinanceDashboard(
     const snapshotEnd = diagnosisTargetSnapshot.periodEnd instanceof Date
       ? diagnosisTargetSnapshot.periodEnd
       : new Date(diagnosisTargetSnapshot.periodEnd as string);
-    const freshnessFloor = new Date(snapshotEnd.getTime() - 45 * 86_400_000);
     const [newerCashflow, newerIntake] = await Promise.all([
-      db.ownerCashflowSnapshot.findFirst({
-        where: {
-          workspaceId, businessId: selectedBusinessId,
-          periodEnd: { lte: snapshotEnd, gte: freshnessFloor },
-          createdAt: { gt: targetCycle.createdAt },
-        },
-        select: { id: true },
-      }),
+      // The cash position this diagnosis depends on, through the ONE selector: a new OR EDITED bank balance on the
+      // effective Cashflow row(s) for this Finance period since the diagnosis gathered its evidence.
+      cashPositionChangedSince(workspaceId, selectedBusinessId, snapshotEnd, targetCycle.generatedAt),
       diagnosisTargetSnapshot.totalDebtOutstanding == null || diagnosisTargetSnapshot.debtPayments == null
         ? db.ownerDataIntake.findFirst({
             where: {
@@ -252,7 +265,7 @@ export async function getFinanceDashboard(
           })
         : null,
     ]);
-    return Boolean(newerCashflow || newerIntake);
+    return newerCashflow || Boolean(newerIntake);
   })();
 
   return {
@@ -271,6 +284,9 @@ export async function getFinanceDashboard(
     latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
+    profitPosition: latestCycle?.snapshot
+      ? profitPosition(rowToFinanceInput(latestCycle.snapshot), (businesses.find((b: any) => b.id === selectedBusinessId) as any)?.currency ?? latestCycle.snapshot.currency)
+      : null,
     // From the diagnosis TARGET snapshot — the same snapshot diagnosisTargetSnapshot/the diagnosis
     // button point at. Reading `latestCycle?.snapshot` instead would show a stale amended-and-
     // superseded snapshot's missing-data list (the old diagnosis's own snapshot) while the button is

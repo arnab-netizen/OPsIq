@@ -271,3 +271,33 @@ describe("Owner Trust page — governed error handling (Section U)", () => {
     expect(hasOperatorUnsafeContent(alert.textContent ?? "")).toBe(false);
   });
 });
+
+describe("Owner Trust page — raw metric keys stay out of ordinary copy (E1-E4)", () => {
+  it("shows friendly metric labels in primary text and keeps raw keys only inside Technical reference", async () => {
+    explanationCards = [
+      explanationCard({
+        whatWasDetected: "cashDaysOfCosts is below the safe level",
+        sourceDataUsed: { metric: "fixedCostBurdenPct", valueLabel: "62%", thresholdLabel: "50%", evidence: ["netMarginPct = 8", "dataConfidenceScore = 70"] },
+        calculationUsed: "fixedCostBurdenPct = 62, above the 50 threshold; cashDaysOfCosts = 12.",
+        verification: { method: "Re-measure dataConfidenceScore next snapshot", metric: "cashDaysOfCosts" },
+      }),
+    ];
+    const { container } = renderPage();
+    await waitFor(() => expect(screen.getByText(/cash days of costs is below the safe level/)).toBeInTheDocument());
+
+    // Everything visible outside <details> disclosures: no raw camelCase identifier.
+    const clone = container.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll("details").forEach((d) => d.remove());
+    for (const key of ["cashDaysOfCosts", "fixedCostBurdenPct", "netMarginPct", "dataConfidenceScore"]) {
+      expect(clone.textContent).not.toContain(key);
+    }
+    expect(clone.textContent).toContain("fixed cost burden %");
+    expect(clone.textContent).toContain("net margin %");
+    expect(clone.textContent).toContain("data confidence score");
+
+    // Raw identifiers remain reachable in the Technical reference.
+    const disclosure = screen.getAllByText("Technical reference")[0].closest("details") as HTMLElement;
+    expect(disclosure.textContent).toContain("fixedCostBurdenPct");
+    expect(disclosure.textContent).toContain("cashDaysOfCosts");
+  });
+});

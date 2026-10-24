@@ -68,10 +68,12 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
     "/api/auth/beta-status", // Display-only: whether public registration is open. Carries no authority — signup independently re-checks the flag server-side
     "/api/auth/verify-email", // Email-verification redemption - authorized by the single-use, hashed, expiring verification token, not session auth
     "/api/auth/resend-verification", // Verification-resend request - public and enumeration-resistant by design, rate-limited per IP and email
+    "/api/product-events", // Anonymous, name-only funnel beacon (closed allowlist, no payload, no identity); per-IP and global write caps
   ],
   WEBHOOK_SIGNED: [
     "/api/webhooks/stripe", // Signature verification is mandatory
     "/api/webhooks/resend", // HMAC-SHA256 (svix) signature verification — fail-closed when RESEND_WEBHOOK_SECRET unset
+    "/api/webhooks/paddle", // HMAC-SHA256 Paddle-Signature verification + timestamp tolerance — fail-closed when PADDLE_WEBHOOK_SECRET unset
   ],
   PRIVACY: [
     // A user filing a privacy request (access/export, deletion, correction) may be
@@ -118,8 +120,10 @@ export const EXEMPTION_REASONS = {
   "/api/auth/reset-password": "Password-reset redemption endpoint - authorized by the single-use, sha256-hashed, 1-hour-expiring reset token from the emailed link, not session auth; rate-limited per IP",
   "/api/auth/beta-status": "Display-only open-beta flag read - carries no authority, signup independently re-checks the flag server-side",
   "/api/auth/verify-email": "Email-verification redemption endpoint - authorized by the single-use, sha256-hashed, 7-day-expiring verification token from the emailed link, not session auth; rate-limited per IP",
+  "/api/product-events": "Anonymous name-only funnel beacon from the public site - closed two-name allowlist, no payload or identity, size-limited, per-IP and global write-capped, always answers 204",
   "/api/auth/resend-verification": "Verification-resend request endpoint - public and enumeration-resistant by design; rate-limited per IP and email",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
+  "/api/webhooks/paddle": "Billing webhook with mandatory HMAC-SHA256 Paddle-Signature verification + timestamp tolerance - fail-closed when PADDLE_WEBHOOK_SECRET unset; tenant resolved from persisted provider ids, never from the caller",
   "/api/webhooks/resend": "Email webhook with HMAC-SHA256 (svix) signature verification + timestamp tolerance - fail-closed when RESEND_WEBHOOK_SECRET unset",
   "/api/privacy-requests": "Privacy request (access/export, deletion, correction) endpoint - public and enumeration-resistant by design (a locked-out user isn't authenticated); rate-limited per IP and email",
   "/api/beta-requests": "Controlled-beta access request endpoint - public and enumeration-resistant by design (a visitor requesting beta access has no account yet); rate-limited per IP and email",

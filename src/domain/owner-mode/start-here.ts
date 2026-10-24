@@ -39,6 +39,8 @@ export interface StartHereInput {
   /** From OnboardingState.canRunFirstDiagnosis — the real "enough for a first read" signal. */
   canRunFirstDiagnosis: boolean;
   missingMinimum: MissingMinimum[];
+  /** Categories the owner has actually supplied (OnboardingState via /api/owner/onboarding). */
+  suppliedCategories: readonly OwnerInputCategory[];
   requirements: ProfileInputRequirements;
   /** Whether the owner has acted on at least one task/priority (status moved past PROPOSED). */
   hasEngagedAPriority: boolean;
@@ -48,8 +50,23 @@ function categoryComplete(category: OwnerInputCategory, input: StartHereInput): 
   const applicable =
     input.requirements.minimumRequired.includes(category) || input.requirements.recommended.includes(category);
   if (!applicable) return { complete: true, applicable: false };
-  const missing = input.missingMinimum.some((m) => m.category === category);
-  return { complete: !missing, applicable: true };
+  // Complete only when the category was actually supplied. Absence from `missingMinimum` is not
+  // evidence: a recommended (non-minimum) category never appears there even when nothing was added.
+  return { complete: input.suppliedCategories.includes(category), applicable: true };
+}
+
+/**
+ * Whether the owner has acted on (moved past PROPOSED) a priority of THIS business. Start Here is a
+ * per-business setup checklist, so only a task stamped with the selected businessId counts: another
+ * business's task, and a workspace-level task (businessId null) acted on elsewhere, must never make a
+ * new business's "Review your first priorities" step look complete.
+ */
+export function hasEngagedPriorityForBusiness(
+  tasks: ReadonlyArray<{ businessId?: string | null; status?: string | null }>,
+  businessId: string | null,
+): boolean {
+  if (!businessId) return false;
+  return tasks.some((t) => t.businessId === businessId && Boolean(t.status) && t.status !== "PROPOSED");
 }
 
 export function computeStartHereSteps(input: StartHereInput): StartHereStep[] {
@@ -73,7 +90,7 @@ export function computeStartHereSteps(input: StartHereInput): StartHereStep[] {
       ifSkipped: "OpsIQ can't tell you whether the business is financially safe yet.",
       complete: input.canRunFirstDiagnosis,
       applicable: true,
-      href: "/owner/finance",
+      href: "/owner/data",
     },
     {
       id: "customers",

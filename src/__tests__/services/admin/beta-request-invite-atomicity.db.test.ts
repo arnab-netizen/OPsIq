@@ -111,7 +111,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] markBetaRequestInvited — grant/aud
     expect(row?.status).toBe("INVITED");
     expect(row?.invitedBy).toBe(ACTOR_ID);
 
-    expect(mockedEmitAuditEvent).toHaveBeenCalledTimes(1);
+    // The state-transition audit event is still emitted exactly once, inside the transaction. The invitation email is a
+    // separate side effect that writes its own attempt / provider-result events AFTER commit (outside the transaction).
+    const transitionCalls = mockedEmitAuditEvent.mock.calls.filter((c) => c[0].eventName === "beta_request.marked_invited");
+    expect(transitionCalls).toHaveLength(1);
+    expect(transitionCalls[0][1]).toBeTruthy();
+    const emailCalls = mockedEmitAuditEvent.mock.calls.filter((c) => String(c[0].eventName).startsWith("beta_request.invite_email_"));
+    expect(emailCalls.every((c) => c[1] === undefined)).toBe(true);
     expect(mockedEmitAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventName: "beta_request.marked_invited", entityId: id, actorId: ACTOR_ID }),
       expect.anything() // the transaction client

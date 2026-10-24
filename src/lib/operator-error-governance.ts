@@ -122,12 +122,26 @@ function extractServerTags(error: unknown): { httpStatus?: number; serverClassif
 function extractTechnicalDetails(error: unknown): string {
   if (error instanceof Error) {
     return JSON.stringify({
-      message: error.message,
+      message: scrubLogText(error.message),
       name: error.name,
-      stack: error.stack,
+      stack: error.stack ? scrubLogText(error.stack) : error.stack,
     });
   }
-  return String(error);
+  return scrubLogText(String(error));
+}
+
+/**
+ * Server-log hygiene: driver/ORM messages echo the values that were being written (an email, a business name in
+ * "Invalid `prisma.x.create()` invocation"), and thrown messages can carry bearer/verification tokens or connection
+ * strings. Diagnostics keep the error class, code and location; identifying values and credentials are masked.
+ */
+export function scrubLogText(text: string): string {
+  return text
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[email]")
+    .replace(/[a-z][a-z0-9+.-]*:\/\/[^\s"'`]+/gi, (m) => `${m.split("://")[0]}://[redacted]`)
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, "Bearer [redacted]")
+    .replace(/\b(token|password|secret|api[_-]?key)(["']?\s*[=:]\s*["']?)[^\s"',}]+/gi, "$1$2[redacted]")
+    .replace(/\b[A-Fa-f0-9]{32,}\b/g, "[hex-redacted]");
 }
 
 /**

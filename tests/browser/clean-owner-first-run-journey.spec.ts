@@ -22,8 +22,8 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { resolveTestDatabase } from "../../src/infra/test-database-guard";
-import { Client } from "pg";
 import { randomUUID } from "crypto";
+import { completeFirstRunBusinessStep, verifyEmailAndChoosePassword } from "./first-run-helpers";
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
 // Same guard as the vitest harness (a substring regex could be satisfied by "?x=@localhost:" or a
@@ -70,32 +70,20 @@ test.describe("Clean-owner first-run journey", () => {
   const email = `clean-owner-${rand}@example.com`;
   const password = "correct-horse-battery-staple";
   const workspaceName = `Clean Owner Workspace ${rand}`;
-  const businessName = `Clean Owner Bakery ${rand}`;
 
   test("signup, create first business, and complete the first-run journey", async ({ page }) => {
     // ── Signup ──
     await page.goto("/signup", { waitUntil: "networkidle" });
     await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByLabel("Workspace Name", { exact: true }).fill(workspaceName);
-    for (const cb of await page.locator('input[type="checkbox"]').all()) {
-      if (!(await cb.isChecked())) await cb.check();
-    }
+    await page.getByLabel("Business name", { exact: true }).fill(workspaceName);
     const [signupResponse] = await Promise.all([
       page.waitForResponse((r) => r.url().includes("/api/auth/signup") && r.request().method() === "POST"),
       page.click('button[type="submit"]'),
     ]);
     expect(signupResponse.status(), "signup must succeed").toBe(201);
 
-    // ── Verify (local DB shortcut — no email provider configured in local dev) ──
-    const client = new Client({ connectionString: DATABASE_URL });
-    await client.connect();
-    try {
-      const result = await client.query("UPDATE users SET email_verified_at = now() WHERE email = $1 RETURNING id", [email]);
-      expect(result.rowCount).toBe(1);
-    } finally {
-      await client.end();
-    }
+    // ── Verify (explicit click on a locally minted link — no email provider in local dev) and choose the password ──
+    await verifyEmailAndChoosePassword(page, { email, password, databaseUrl: DATABASE_URL });
 
     // ── Login ──
     await page.goto("/login", { waitUntil: "networkidle" });
@@ -120,18 +108,10 @@ test.describe("Clean-owner first-run journey", () => {
     assertNoRawTokens(await bodyText(page), "Start Here");
     await assertNoDeadLinks(page);
 
-    // ── Create the first business (My Business — exercises the P0-1 fix path) ──
-    await page.goto("/owner/data", { waitUntil: "networkidle" });
-    await page.locator('[data-testid="data-hub-business-name"]').fill(businessName);
-    const businessTypeSelect = page.locator('select[name="businessType"]');
-    await businessTypeSelect.selectOption({ index: 1 });
-    await page.locator('select[name="currency"]').selectOption("INR");
-    const [createResponse] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/api/owner/recovery/businesses") && r.request().method() === "POST"),
-      page.getByRole("button", { name: /save business profile/i }).click(),
-    ]);
-    expect(createResponse.status(), "business creation must succeed").toBe(201);
-    await expect(page.getByText(businessName)).toBeVisible({ timeout: 10000 });
+    // ── Create the first business through first-run: the name typed at signup is inherited (never re-asked) ──
+    await completeFirstRunBusinessStep(page, { currency: "INR" });
+    await expect(page.getByText(workspaceName).first()).toBeVisible({ timeout: 10000 });
+    expect(await page.locator('input[name="name"]').count(), "the business name must not be asked a second time").toBe(0);
 
     // ── Business must be visible/active on Home in the SAME session, no reload (P0-1 root cause) ──
     await page.goto("/owner/cockpit", { waitUntil: "networkidle" });

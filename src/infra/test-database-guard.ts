@@ -1,3 +1,11 @@
+import {
+  DATABASE_IDENTITY_SQL,
+  classifyDatabaseIdentity,
+  classifyRemoteDatabaseUrl,
+  databaseIdentityFromRow,
+  type DatabaseEnv,
+} from "./production-db-identity";
+
 /**
  * Test-harness database guard (used by vitest-global-setup.ts).
  *
@@ -32,6 +40,12 @@
  *    accepted (pg's `socket:` scheme ignores the hostname), and an encoded
  *    socket-path hostname is not a loopback name either.
  * 5. Messages are sanitized: no URL, host, user, password or database name.
+ * 6. The remote opt-in means "a remote NON-PRODUCTION database", not "any remote database". Under the opt-in
+ *    every database variable must (a) parse as a postgres: URL with a real hostname and no host/hostaddr override
+ *    and (b) not resolve to a known production endpoint (src/infra/production-db-identity.ts) — checked before
+ *    any connection. Then `verifyRemoteTestDatabaseIdentity` reads the connected database's own identity
+ *    (Neon endpoint/branch) in a read-only session and refuses production or an unreadable identity, so a
+ *    production credential in a mislabeled secret cannot ride through a TEST_DATABASE_URL.
  *
  * Loopback is the only location trusted without opt-in because a remote
  * production database cannot be reached at the runner's loopback address; this
@@ -53,12 +67,21 @@ export class TestDatabaseGuardError extends Error {
   }
 }
 
+/** Sanitized refusal reasons for the remote-test identity layers (no URL, host, user or password). */
+export const REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION = "REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION";
+export const REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED = "REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED";
+export const REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE = "REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE";
+
 export interface TestDatabaseResolution {
   mode: "db" | "no-db";
   /** The database URL every test process must use. */
   databaseUrl: string;
   /** Sanitized description, safe to log. */
   target: "loopback" | "remote-test-opt-in" | "no-db-placeholder";
+}
+
+export function isLoopbackDatabaseUrl(url: string): boolean {
+  return isLoopback(url);
 }
 
 function isLoopback(url: string): boolean {
@@ -96,13 +119,71 @@ export function resolveTestDatabase(env: Readonly<Record<string, string | undefi
   for (const name of TEST_DATABASE_VARIABLES) {
     const value = env[name]?.trim();
     if (!value) continue;
-    if (!isLoopback(value) && !remoteAllowed) {
+    if (isLoopback(value)) continue;
+    if (!remoteAllowed) {
       throw new TestDatabaseGuardError(
         `${name} points at a non-loopback database. DB tests run only against the runner's own throwaway database ` +
           "unless OPSIQ_ALLOW_REMOTE_TEST_DB=true explicitly declares a remote TEST database."
       );
     }
+    // Remote opt-in = a remote NON-PRODUCTION database. Static identity check, before any connection.
+    const verdict = classifyRemoteDatabaseUrl(value, env);
+    if (verdict === "production") {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION} (${name}).`);
+    }
+    if (verdict === "unverifiable") {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE} (${name}): the URL is not a well-formed postgres URL with a plain hostname.`);
+    }
   }
 
   return { mode: "db", databaseUrl, target: isLoopback(databaseUrl) ? "loopback" : "remote-test-opt-in" };
+}
+
+/** Reads the connected database's own identity (a read-only query); supplied by the caller (pg in setup/CLI). */
+export type DatabaseIdentityReader = (url: string, sql: string) => Promise<Record<string, unknown> | undefined | null>;
+
+export interface RemoteDatabaseVariable {
+  name: string;
+  url: string;
+}
+
+/** Every non-loopback database variable present in `env`, de-duplicated by URL (names kept for sanitized messages). */
+export function remoteDatabaseVariables(env: DatabaseEnv, names: readonly string[] = TEST_DATABASE_VARIABLES): RemoteDatabaseVariable[] {
+  const seen = new Map<string, RemoteDatabaseVariable>();
+  for (const name of names) {
+    const value = env[name]?.trim();
+    if (!value || isLoopback(value) || seen.has(value)) continue;
+    seen.set(value, { name, url: value });
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Runtime layer: for each remote database variable, read the connected database's own identity and require
+ * that it POSITIVELY matches the approved OpsIQ test branch (production, unknown, unrelated or unreadable are refused). Runs before any DB test or Prisma
+ * mutation. A read failure is "unverifiable" — fail closed. Never includes URL, host, user or password in an error.
+ */
+export async function verifyRemoteTestDatabaseIdentity(
+  variables: readonly RemoteDatabaseVariable[],
+  env: DatabaseEnv,
+  readIdentity: DatabaseIdentityReader
+): Promise<void> {
+  for (const { name, url } of variables) {
+    let row: Record<string, unknown> | undefined | null;
+    try {
+      row = await readIdentity(url, DATABASE_IDENTITY_SQL);
+    } catch {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE} (${name}): the database identity could not be read.`);
+    }
+    const verdict = classifyDatabaseIdentity(databaseIdentityFromRow(row), env);
+    if (verdict === "production") {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_REJECTED_PRODUCTION} (${name}).`);
+    }
+    if (verdict === "unverifiable") {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_UNVERIFIABLE} (${name}): the database reports no readable identity.`);
+    }
+    if (verdict !== "authorized") {
+      throw new TestDatabaseGuardError(`${REMOTE_TEST_DB_IDENTITY_NOT_AUTHORIZED} (${name}): the database is not the approved OpsIQ test database.`);
+    }
+  }
 }

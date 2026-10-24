@@ -26,6 +26,11 @@ const envRequirements = [
   { name: "NODE_ENV", category: "REQUIRED" },
   { name: "DATABASE_URL", category: "REQUIRED" },
   { name: "NEXT_PUBLIC_APP_URL", category: "EXTERNAL_RUNTIME_REQUIRED" },
+  // Owner signup / verification / password setup all depend on outbound email. Signup is deliberately best-effort (the
+  // account and token are stored, and the operator signal EMAIL_VERIFICATION_NOT_SENT is recorded) so an unconfigured
+  // provider does not fail loudly to the owner: it must be caught here, before the first beta owner signs up.
+  { name: "RESEND_API_KEY", category: "EXTERNAL_RUNTIME_REQUIRED" },
+  { name: "ALERT_FROM_EMAIL", category: "EXTERNAL_RUNTIME_REQUIRED" }, // a sender on a domain verified with the provider
   { name: "SKIP_ENV_VALIDATION", category: "LOCAL_ONLY" },
   { name: "STRIPE_SECRET_KEY", category: "OPTIONAL" }, // STRIPE_API_KEY = legacy alias
   { name: "STRIPE_WEBHOOK_SECRET", category: "OPTIONAL" },
@@ -122,7 +127,7 @@ if (process.env.DATABASE_URL) {
     const error = String(e);
     if (error.includes("pending")) {
       report.prisma_migrations_status = "PENDING_MIGRATIONS";
-      report.warnings.push("Pending migrations found - run 'npx prisma migrate deploy' before deployment");
+      report.warnings.push("Pending migrations found - apply them through the governed migration workflow (.github/workflows/migrate-production.yml for production; npm run db:migrate:deploy for a local database) before deployment");
       console.log(`  ⚠ Pending migrations`);
     } else {
       report.prisma_migrations_status = "ERROR";
