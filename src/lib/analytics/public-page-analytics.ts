@@ -8,8 +8,9 @@
  * strips every query parameter except utm_* campaign tags, plus any
  * fragment, before anything leaves the browser.
  *
- * No custom events are sent. Lead-level attribution remains the beta-request
- * record itself (src/lib/attribution/acquisition-attribution.ts).
+ * The only custom events are the three /agency funnel counters in src/app/agency/agency-events.ts
+ * (no form content, no properties other than a CTA position). Lead-level attribution remains the
+ * beta-request record itself (src/lib/attribution/acquisition-attribution.ts).
  */
 
 /** Exact public pages whose visits are counted. */
