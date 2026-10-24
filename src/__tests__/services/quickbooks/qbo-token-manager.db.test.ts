@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { cfg, connectQbo, grant, seedQboTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
-import { createQboTokenProvider, QboReauthRequiredError } from "@/services/quickbooks/qbo-token-manager";
+import { createQboTokenProvider, QboReauthRequiredError, QBO_ROTATION_PERSIST_ATTEMPTS } from "@/services/quickbooks/qbo-token-manager";
+import { isQboProviderError } from "@/domain/quickbooks/qbo-errors";
 import { loadQboTokensForUse, rotateQboTokens } from "@/services/quickbooks/qbo-connection.service";
 import { acquireQboLock, releaseQboLock, withQboConnectionLock } from "@/services/quickbooks/qbo-connection-lock";
 
@@ -169,5 +170,66 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO per-connection resource lock (real Po
     const t = await seedQboTenant(); const o = await seedQboTenant();
     const { connectionId } = await connectQbo(t, "production");
     await expect(db.qboResourceLock.create({ data: { connectionId, scope: "sync", workspaceId: o.ws, holderToken: randomUUID(), acquiredAt: new Date(), expiresAt: new Date(Date.now() + 1000) } })).rejects.toThrow();
+  });
+
+  describe("a rotated grant is never lost to a database error (Intuit treats the previous refresh token as dead)", () => {
+    /** A database whose Nth `$transaction` calls fail; `afterCommit` makes the failing call commit first, then throw. */
+    const flakyDb = (failures: number, afterCommit = false) => {
+      let seen = 0;
+      return new Proxy(db, {
+        get(target, prop, receiver) {
+          if (prop === "$transaction") {
+            return async (fn: unknown, o?: unknown) => {
+              // only the rotation writes through $transaction on the token manager's persistence path
+              seen++;
+              if (seen <= failures) {
+                if (afterCommit) await (target.$transaction as (...a: unknown[]) => Promise<unknown>).call(target, fn, o);
+                throw new Error("connection terminated unexpectedly");
+              }
+              return (target.$transaction as (...a: unknown[]) => Promise<unknown>).call(target, fn, o);
+            };
+          }
+          const v = Reflect.get(target, prop, receiver);
+          return typeof v === "function" ? v.bind(target) : v;
+        },
+      }) as unknown as typeof db;
+    };
+    const instant = async () => undefined;
+
+    it("transient write failures are retried: the new refresh token is stored exactly once", async () => {
+      const t = await seedQboTenant();
+      const { connectionId } = await connectQbo(t, "production", undefined, expiring());
+      const ep = tokenEndpoint(() => tokenResponse("ACCESS-R", "REFRESH-R"));
+      const p = createQboTokenProvider({ workspaceId: t.ws, connectionId, config: cfg(), fetchImpl: ep.fetchImpl, client: flakyDb(2), sleep: instant });
+      expect(await p.getAccessToken()).toBe("ACCESS-R");
+      expect(ep.calls).toHaveLength(1); // Intuit was asked once; the retry is of the LOCAL write, never of the refresh
+      const stored = await loadQboTokensForUse({ workspaceId: t.ws, connectionId });
+      expect(stored.ok && stored.tokens).toMatchObject({ accessToken: "ACCESS-R", refreshToken: "REFRESH-R", revision: 2 });
+    });
+
+    it("a write that committed but reported an error is recognised and not repeated", async () => {
+      const t = await seedQboTenant();
+      const { connectionId } = await connectQbo(t, "production", undefined, expiring());
+      const ep = tokenEndpoint(() => tokenResponse("ACCESS-C", "REFRESH-C"));
+      const p = createQboTokenProvider({ workspaceId: t.ws, connectionId, config: cfg(), fetchImpl: ep.fetchImpl, client: flakyDb(1, true), sleep: instant });
+      expect(await p.getAccessToken()).toBe("ACCESS-C");
+      expect(ep.calls).toHaveLength(1);
+      expect((await db.qboConnectionToken.findUniqueOrThrow({ where: { connectionId } })).revision).toBe(2);
+    });
+
+    it("when persistence never recovers the failure is bounded, retryable, names no credential, and the stored (older) grant is untouched", async () => {
+      const t = await seedQboTenant();
+      const g = expiring();
+      const { connectionId } = await connectQbo(t, "production", undefined, g);
+      const ep = tokenEndpoint(() => tokenResponse("ACCESS-X", "REFRESH-X"));
+      const p = createQboTokenProvider({ workspaceId: t.ws, connectionId, config: cfg(), fetchImpl: ep.fetchImpl, client: flakyDb(1000), sleep: instant });
+      const err = await p.getAccessToken().then(() => null, (e: unknown) => e);
+      expect(isQboProviderError(err) && err.localReason).toBe("TOKEN_PERSIST_FAILED");
+      expect(isQboProviderError(err) && err.retryable).toBe(true);
+      expect(JSON.stringify(err) + String((err as Error).message)).not.toMatch(/REFRESH-X|ACCESS-X|REFRESH-/);
+      expect(ep.calls).toHaveLength(1);
+      expect(QBO_ROTATION_PERSIST_ATTEMPTS).toBeGreaterThan(1);
+      expect((await db.qboConnectionToken.findUniqueOrThrow({ where: { connectionId } })).revision).toBe(1);
+    });
   });
 });

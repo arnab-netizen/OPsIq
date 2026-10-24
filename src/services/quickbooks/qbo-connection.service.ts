@@ -30,6 +30,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { isValidRealmId, type QboEnvironment, type QboProviderConfig } from "@/domain/quickbooks/qbo-config";
+import { QBO_SANDBOX_REAL_BUSINESS_MESSAGE } from "@/domain/quickbooks/qbo-owner-status";
 import {
   QBO_CONNECTION_STATUS,
   QBO_GRANTED_SCOPE,
@@ -82,6 +83,8 @@ function parse<T>(schema: { safeParse(v: unknown): { success: true; data: T } | 
  * production -> real business only; see qbo-materialization and the provenance trigger). `environment` omitted = a read-only
  * listing, which applies no fixture rule.
  */
+export { QBO_SANDBOX_REAL_BUSINESS_MESSAGE };
+
 async function requireEligibleBusiness(client: Pick<Tx, "ownerBusiness">, workspaceId: string, businessId: string, environment?: QboEnvironment): Promise<void> {
   try {
     await assertBusinessInWorkspace(client as never, workspaceId, businessId);
@@ -102,6 +105,13 @@ async function requireEligibleBusiness(client: Pick<Tx, "ownerBusiness">, worksp
   if (b.isFixtureBusiness && environment !== undefined && environment !== "sandbox") {
     throw new ValidationError("QuickBooks can't be connected to a test business.", {
       fieldErrors: [{ path: "businessId", message: "Test businesses can't be connected" }],
+    });
+  }
+  // The mirror image of the rule above: a QuickBooks SANDBOX company holds invented data and may only ever attach to a test
+  // (fixture) business, so sandbox figures can never reach a real business's Finance, Cashflow or diagnosis.
+  if (!b.isFixtureBusiness && environment === "sandbox") {
+    throw new ValidationError(QBO_SANDBOX_REAL_BUSINESS_MESSAGE, {
+      fieldErrors: [{ path: "businessId", message: "A QuickBooks Sandbox company can only be connected to a test business" }],
     });
   }
 }

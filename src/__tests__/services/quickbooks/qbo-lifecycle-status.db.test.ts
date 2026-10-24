@@ -201,4 +201,27 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO admin health (aggregate only)", () =>
     const dump = JSON.stringify(after);
     for (const secret of [t.ws, u.ws, a.connectionId, a.realmId, "v1gcm", "ACCESS-", "REFRESH-"]) expect(dump).not.toContain(secret);
   });
+
+  describe("Sandbox / test-business isolation is explained, not just enforced", () => {
+    const statusIn = (t: { ws: string; biz: string }, environment: "sandbox" | "production") =>
+      getQboOwnerStatus({ workspaceId: t.ws, businessId: t.biz }, { env: envFor(environment) });
+
+    it("a Sandbox deployment does not offer Connect for a real business and says why", async () => {
+      const real = await seedQboTenant();
+      const s = await statusIn(real, "sandbox");
+      expect(s.actions.connect).toBe(false);
+      expect(s.connectBlockedReason).toMatch(/test business/i);
+    });
+
+    it("a Sandbox deployment offers Connect for a test business; a production deployment does not (and says why)", async () => {
+      const fx = await seedQboTenant({ fixture: true });
+      expect((await statusIn(fx, "sandbox")).actions.connect).toBe(true);
+      expect((await statusIn(fx, "sandbox")).connectBlockedReason).toBeNull();
+      const prodOnTest = await statusIn(fx, "production");
+      expect(prodOnTest.actions.connect).toBe(false);
+      expect(prodOnTest.connectBlockedReason).toMatch(/sandbox/i);
+      const real = await seedQboTenant();
+      expect((await statusIn(real, "production")).actions.connect).toBe(true);
+    });
+  });
 });

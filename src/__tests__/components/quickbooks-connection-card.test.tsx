@@ -9,7 +9,7 @@ import { QuickBooksConnectionCard } from "@/components/owner/QuickBooksConnectio
 const BASE = {
   available: true, environment: "production", state: "NOT_CONNECTED", freshness: "NEVER", companyName: null, connectedAt: null,
   lastAttemptAt: null, lastSuccessAt: null, accountingBasis: "ACCRUAL", monthsRemaining: null, failure: null, staleNotice: null,
-  actions: { connect: true, reconnect: false, disconnect: false, refresh: false }, periods: [], ownerControlledMonths: 0, notices: [],
+  actions: { connect: true, reconnect: false, disconnect: false, refresh: false }, periods: [], ownerControlledMonths: 0, notices: [], connectBlockedReason: null,
 };
 const A = (o: Record<string, unknown>) => ({ ...BASE, ...o });
 const fetchMock = vi.fn();

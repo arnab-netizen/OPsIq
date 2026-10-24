@@ -36,6 +36,7 @@ export interface QboStatusView {
   periods: Period[];
   ownerControlledMonths: number;
   notices: string[];
+  connectBlockedReason: string | null;
 }
 
 const STATE_LABEL: Record<QboStatusView["state"], { text: string; variant: "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible" }> = {
@@ -244,6 +245,7 @@ export function QuickBooksConnectionCard({ businessId }: { businessId: string })
         </dl>
       )}
       {status.staleNotice && <p className="mt-2 text-sm text-foreground" data-testid="qbo-stale">{status.staleNotice}</p>}
+      {status.connectBlockedReason && <p className="mt-2 text-sm text-foreground" data-testid="qbo-blocked">{status.connectBlockedReason}</p>}
       {status.notices.map((n) => (
         <p key={n} className="mt-2 text-sm text-foreground" data-testid="qbo-refusal">{n}</p>
       ))}

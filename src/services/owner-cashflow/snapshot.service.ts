@@ -158,10 +158,10 @@ export async function createCashflowSnapshotInTx(
 }
 
 /** The figures an integration may refresh on a Cashflow row it controls (all others are untouched). */
-export type IntegrationCashflowFigures = Partial<Record<"bankBalance" | "receivables" | "receivablesOverdue" | "payables" | "payablesOverdue", number>>;
+export type IntegrationCashflowFigures = Partial<Record<"bankBalance" | "receivables" | "receivablesOverdue" | "payables" | "payablesOverdue", number | null>>;
 
 export type IntegrationCashflowUpdateResult =
-  | { ok: true; changed: boolean; snapshot: NonNullable<Awaited<ReturnType<typeof db.ownerCashflowSnapshot.findFirst>>>; changedFields: Record<string, { before: number | null; after: number }> }
+  | { ok: true; changed: boolean; snapshot: NonNullable<Awaited<ReturnType<typeof db.ownerCashflowSnapshot.findFirst>>>; changedFields: Record<string, { before: number | null; after: number | null }> }
   | { ok: false; reason: "NOT_FOUND" | "EDITED_SINCE" };
 
 /**
@@ -187,11 +187,13 @@ export async function updateCashflowFiguresFromIntegrationInTx(
   if (!current) return { ok: false, reason: "NOT_FOUND" };
   if (current.updatedAt.getTime() !== p.expectedUpdatedAt.getTime()) return { ok: false, reason: "EDITED_SINCE" };
 
-  const changedFields: Record<string, { before: number | null; after: number }> = {};
-  const data: Record<string, number> = {};
-  for (const [field, after] of Object.entries(p.figures) as Array<[keyof IntegrationCashflowFigures, number]>) {
+  const changedFields: Record<string, { before: number | null; after: number | null }> = {};
+  const data: Record<string, number | null> = {};
+  // A number sets the figure; null returns it to UNKNOWN (the integration no longer supplies it). The row is integration-authored
+  // here (the compare-and-set above proves nobody else wrote it), so a recorded value can only be the integration's own.
+  for (const [field, after] of Object.entries(p.figures) as Array<[keyof IntegrationCashflowFigures, number | null]>) {
     const before = (current[field] as number | null) ?? null;
-    if (before !== null && Math.round(before * 100) === Math.round(after * 100)) continue;
+    if (after === null ? before === null : before !== null && Math.round(before * 100) === Math.round(after * 100)) continue;
     changedFields[field] = { before, after };
     data[field] = after;
   }

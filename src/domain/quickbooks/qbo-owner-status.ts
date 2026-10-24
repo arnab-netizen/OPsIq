@@ -76,3 +76,13 @@ export function ownerActionsFor(state: QboOwnerState): { connect: boolean; recon
     case "SYNC_ERROR": return { connect: false, reconnect: false, disconnect: true, refresh: true };
   }
 }
+
+/** Why Connect is not offered for a business in this deployment (the same rules the server enforces on connect). */
+export const QBO_SANDBOX_REAL_BUSINESS_MESSAGE = "A QuickBooks Sandbox company holds test data and can only be connected to a test business.";
+export const QBO_PRODUCTION_TEST_BUSINESS_MESSAGE = "A test business can only be connected to a QuickBooks Sandbox company.";
+
+export function connectBlockedReason(environment: "sandbox" | "production" | null, isTestBusiness: boolean): string | null {
+  if (environment === "sandbox" && !isTestBusiness) return QBO_SANDBOX_REAL_BUSINESS_MESSAGE;
+  if (environment === "production" && isTestBusiness) return QBO_PRODUCTION_TEST_BUSINESS_MESSAGE;
+  return null;
+}

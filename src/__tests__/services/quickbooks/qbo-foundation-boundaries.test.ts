@@ -146,4 +146,30 @@ describe("QuickBooks V1 boundaries", () => {
       expect(schema, forbidden).not.toContain(forbidden);
     }
   });
+
+  describe("ONE_QBO_RUNTIME_PATH: nothing outside the governed flow can create or drive a QuickBooks connection", () => {
+    const runtimeFiles = walk("src").filter((f) => /\.(ts|tsx)$/.test(f) && !f.startsWith("src/__tests__") && !f.startsWith("src/generated") && !/\.test\.tsx?$/.test(f));
+    const filesMatching = (re: RegExp) => runtimeFiles.filter((f) => re.test(code(f))).sort();
+
+    it("only the connection service writes qbo_connections / qbo_connection_tokens", () => {
+      expect(filesMatching(/\bqboConnection\.(create|createMany|upsert)\b/)).toEqual(["src/services/quickbooks/qbo-connection.service.ts"]);
+      expect(filesMatching(/\bqboConnectionToken\.(create|createMany|upsert|update|updateMany)\b/)).toEqual(["src/services/quickbooks/qbo-connection.service.ts"]);
+    });
+
+    it("the generic connector layer has exactly one write site and it refuses QuickBooks", () => {
+      expect(filesMatching(/\bownerConnector\.(create|createMany|upsert)\b/)).toEqual(["src/services/integration-fabric/connector-registry.service.ts"]);
+      const registry = code("src/services/integration-fabric/connector-registry.service.ts");
+      expect(registry).toMatch(/isRetiredConnectorProvider/);
+    });
+
+    it("the Intuit read client is constructed only inside the QuickBooks services", () => {
+      for (const f of filesMatching(/\bcreateQboReadClient\s*\(/)) expect(f.startsWith("src/services/quickbooks/"), f).toBe(true);
+    });
+
+    it("OAuth token/refresh/revoke calls to Intuit are made only by the QuickBooks OAuth service", () => {
+      // the endpoint constants live in the QuickBooks domain config and nowhere else
+      expect(filesMatching(/oauth\.platform\.intuit\.com|\/oauth2\/v1\/tokens/)).toEqual(["src/domain/quickbooks/qbo-config.ts"]);
+      expect(filesMatching(/\brefreshQboTokens\s*\(|\bexchangeQboAuthorizationCode\s*\(|\brevokeQboToken\s*\(/).every((f) => f.startsWith("src/services/quickbooks/"))).toBe(true);
+    });
+  });
 });

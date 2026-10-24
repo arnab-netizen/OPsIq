@@ -23,6 +23,9 @@ import { trackQboWorkspace } from "@/__tests__/test-helpers/qbo-task-cleanup";
 const seedTenant = async (): Promise<Tenant> => {
   const t = await seedBaseTenant();
   trackQboWorkspace(t.ws);
+  // These suites exercise connection mechanics against a Sandbox company, which may only attach to TEST (fixture) businesses.
+  // Real-business behaviour is covered by the explicit "real business" cases below.
+  await db.ownerBusiness.updateMany({ where: { workspaceId: t.ws }, data: { isFixtureBusiness: true } });
   return t;
 };
 import * as connectRoute from "@/app/api/owner/integrations/quickbooks/connect/route";

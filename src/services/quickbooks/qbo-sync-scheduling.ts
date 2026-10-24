@@ -8,7 +8,9 @@
  * Two independent protections (each tested on its own): the scheduler's fenced task lease protects the TASK; the
  * per-connection advisory lock inside runQboSync protects the PROVIDER RESOURCE. Idempotency keys:
  *   daily          qbo-sync:<connection>:daily:<UTC day>
- *   webhook        qbo-sync:<connection>:wh:<10-minute bucket>        (a burst of events coalesces into one task)
+ *   webhook        qbo-sync:<connection>:wh:<arming instant>          (every event that arrives while the pending marker is armed
+ *                  shares ONE task; an event arriving after a run claimed the marker re-arms it and gets its own task)
+ *   wh follow-up   qbo-sync:<connection>:whc:<arming instant>         (a run finished and found the marker re-armed mid-run)
  *   owner / connect qbo-sync:<connection>:owner:<5-minute bucket>
  *   continuation   qbo-sync:<connection>:cont:<kind>:<UTC day>:<cursor>
  * A key identifies one logical task for the life of its row, so every generation embeds its own marker.
@@ -26,13 +28,15 @@ export const QBO_PRODUCER_MAX_PAGES = 25;
 
 const MAX_ATTEMPTS = 3;
 
-export type QboTaskKeyKind = "daily" | "wh" | "owner" | "cont";
+export type QboTaskKeyKind = "daily" | "wh" | "whc" | "owner" | "cont";
 
 export function qboSyncKey(connectionId: string, kind: QboTaskKeyKind, now: Date, extra = ""): string {
   const day = now.toISOString().slice(0, 10);
   switch (kind) {
     case "daily": return `qbo-sync:${connectionId}:daily:${day}`;
-    case "wh": return `qbo-sync:${connectionId}:wh:${Math.floor(now.getTime() / 600_000)}`;
+    // `now` is the instant the pending marker was armed (not the wall clock): one arming <-> one task.
+    case "wh": return `qbo-sync:${connectionId}:wh:${now.getTime()}`;
+    case "whc": return `qbo-sync:${connectionId}:whc:${now.getTime()}`;
     case "owner": return `qbo-sync:${connectionId}:owner:${Math.floor(now.getTime() / 300_000)}`;
     case "cont": return `qbo-sync:${connectionId}:cont:${extra}:${day}`;
   }
@@ -56,42 +60,82 @@ export async function enqueueQboSync(
 export interface QboProducerResult {
   candidatesFound: number;
   enqueued: number;
+  /** Connections whose daily task this invocation created (ids only). */
+  enqueuedConnectionIds: string[];
+}
+
+export interface QboProducerLimits {
+  pageSize?: number;
+  maxPages?: number;
 }
 
 /**
- * One task per ACTIVE connection per day. The scan pages through ALL active connections by id (keyset), so no connection can be
- * starved behind a fixed window (an earlier fixed-size scan ordered by an unchanging column would never reach connection #201).
- * Enqueueing is one idempotent insert, so re-scanning costs nothing; each connection is its own task with its own retry /
- * dead-letter, so one failing connection cannot starve or block the rest.
+ * Enqueue today's daily task (and any pending-webhook task) for ACTIVE connections that do not have one yet.
+ *
+ * Termination and fairness: every page selects only connections whose task for this day / this marker does NOT yet exist, in id
+ * order after the page cursor. A connection enqueued on an earlier invocation is therefore never selected again, so a day's
+ * invocations make progress through ALL connections even when one invocation's page budget (pageSize x maxPages, 5,000 by
+ * default) is smaller than the number of connections; nothing is starved behind a fixed window. The cursor strictly advances
+ * within an invocation, so no connection repeats and the loop ends after at most `maxPages` selects plus one idempotent insert
+ * per candidate. Each connection is its own task with its own retry / dead-letter, so one failing connection cannot block others.
  */
-export async function enqueueDueQboSyncTasks(now: Date = new Date()): Promise<QboProducerResult> {
+export async function enqueueDueQboSyncTasks(now: Date = new Date(), limits: QboProducerLimits = {}): Promise<QboProducerResult> {
+  const pageSize = limits.pageSize ?? QBO_PRODUCER_PAGE_SIZE;
+  const maxPages = limits.maxPages ?? QBO_PRODUCER_MAX_PAGES;
   const scheduler = new DatabaseSchedulerProvider();
+  const dailyKeyPrefix = (id: string) => qboSyncKey(id, "daily", now);
+  const day = now.toISOString().slice(0, 10);
   let enqueued = 0;
   let found = 0;
-  let cursor: string | undefined;
-  for (let page = 0; page < QBO_PRODUCER_MAX_PAGES; page++) {
-    const batch = (await db.qboConnection.findMany({
-      where: { status: "ACTIVE" },
-      select: { id: true, workspaceId: true, syncState: { select: { webhookPendingAt: true } } },
-      orderBy: { id: "asc" },
-      take: QBO_PRODUCER_PAGE_SIZE,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    })) as Array<{ id: string; workspaceId: string; syncState: { webhookPendingAt: Date | null } | null }>;
+  const enqueuedConnectionIds: string[] = [];
+
+  let cursor = "00000000-0000-0000-0000-000000000000";
+  for (let page = 0; page < maxPages; page++) {
+    const batch = await db.$queryRaw<Array<{ id: string; workspace_id: string }>>`
+      SELECT c.id, c.workspace_id
+      FROM qbo_connections c
+      WHERE c.status = 'ACTIVE' AND c.id > ${cursor}::uuid
+        AND NOT EXISTS (
+          SELECT 1 FROM scheduled_tasks t
+          WHERE t.idempotency_key = 'qbo-sync:' || c.id::text || ':daily:' || ${day}
+        )
+      ORDER BY c.id
+      LIMIT ${pageSize}
+    `;
     if (batch.length === 0) break;
     for (const c of batch) {
       found++;
-      const r = await enqueueQboSync({ workspaceId: c.workspaceId, connectionId: c.id, trigger: "SCHEDULED", key: qboSyncKey(c.id, "daily", now) }, scheduler);
-      if (r.created) enqueued++;
-      // A webhook that arrived but whose own task has not run (lost enqueue / earlier failure) is picked up here as well.
-      if (c.syncState?.webhookPendingAt) {
-        const w = await enqueueQboSync({ workspaceId: c.workspaceId, connectionId: c.id, trigger: "WEBHOOK", key: qboSyncKey(c.id, "wh", now) }, scheduler);
-        if (w.created) enqueued++;
+      const r = await enqueueQboSync({ workspaceId: c.workspace_id, connectionId: c.id, trigger: "SCHEDULED", key: dailyKeyPrefix(c.id) }, scheduler);
+      if (r.created) {
+        enqueued++;
+        enqueuedConnectionIds.push(c.id);
       }
     }
     cursor = batch[batch.length - 1].id;
-    if (batch.length < QBO_PRODUCER_PAGE_SIZE) break;
+    if (batch.length < pageSize) break;
   }
-  return { candidatesFound: found, enqueued };
+
+  // A webhook that armed the marker but whose task was never created (a crash between the two writes) is repaired here, with the
+  // same progress guarantee: connections whose marker already has its task are not selected again.
+  cursor = "00000000-0000-0000-0000-000000000000";
+  for (let page = 0; page < maxPages; page++) {
+    const batch = await db.$queryRaw<Array<{ id: string; workspace_id: string; armed: Date }>>`
+      SELECT c.id, c.workspace_id, s.webhook_pending_at AS armed
+      FROM qbo_connections c
+      JOIN qbo_sync_state s ON s.connection_id = c.id
+      WHERE c.status = 'ACTIVE' AND s.webhook_pending_at IS NOT NULL AND c.id > ${cursor}::uuid
+      ORDER BY c.id
+      LIMIT ${pageSize}
+    `;
+    if (batch.length === 0) break;
+    for (const c of batch) {
+      const w = await enqueueQboSync({ workspaceId: c.workspace_id, connectionId: c.id, trigger: "WEBHOOK", key: qboSyncKey(c.id, "wh", c.armed) }, scheduler);
+      if (w.created) enqueued++;
+    }
+    cursor = batch[batch.length - 1].id;
+    if (batch.length < pageSize) break;
+  }
+  return { candidatesFound: found, enqueued, enqueuedConnectionIds };
 }
 
 /** Build the handler. Deps are injectable for tests; production passes process.env. */
@@ -116,6 +160,18 @@ export function createQboSyncTaskHandler(makeDeps: () => QboSyncDeps): TaskHandl
           await enqueueQboSync({
             workspaceId: context.workspaceId, connectionId, trigger: "CONTINUATION",
             key: qboSyncKey(connectionId, "cont", new Date(), `${outcome.kind}:${outcome.nextCursor}`),
+          });
+        }
+        // A webhook that arrived DURING this run re-armed the pending marker after the run claimed it: its own task may have been
+        // skipped (this run held the lock) or may never be created. Now that the lock is released, request one follow-up run.
+        const pending = await db.qboSyncState.findFirst({
+          where: { connectionId, workspaceId: context.workspaceId },
+          select: { webhookPendingAt: true },
+        });
+        if (pending?.webhookPendingAt) {
+          await enqueueQboSync({
+            workspaceId: context.workspaceId, connectionId, trigger: "WEBHOOK",
+            key: qboSyncKey(connectionId, "whc", pending.webhookPendingAt),
           });
         }
         return {

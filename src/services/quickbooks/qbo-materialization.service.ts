@@ -168,7 +168,7 @@ async function materializeFinance(
     revenue: f.revenue, costOfGoods: f.costOfGoods, receivables: f.receivables,
     overdueReceivables: f.overdueReceivables, payables: f.payables, overduePayables: f.overduePayables,
   };
-  if (Object.values(candidate).every((v) => v === null)) return { result: "UNCHANGED" };
+  const nothingSupplied = Object.values(candidate).every((v) => v === null);
   const { periodStart, periodEnd } = isoPeriod(month);
   const start = fromIsoDate(month.start);
   const end = fromIsoDate(month.end);
@@ -181,6 +181,7 @@ async function materializeFinance(
       const current = await findCurrentFinancialSnapshotForPeriodInTx(tx, { workspaceId: c.workspaceId, businessId: c.businessId, periodStart: start, periodEnd: end });
 
       if (!current) {
+        if (nothingSupplied) return { result: "UNCHANGED" };
         // An owner-entered period that overlaps this month (a quarter, year-to-date, custom range) stays the owner's evidence.
         const overlapping = await listOverlappingCurrentFinancialSnapshotIdsInTx(tx, { workspaceId: c.workspaceId, businessId: c.businessId, periodStart: start, periodEnd: end });
         if (overlapping.length > 0) {
@@ -217,7 +218,7 @@ async function materializeFinance(
       if (foreignOrigin(prov, c)) return { result: "REFUSED", refusal: "REALM_MISMATCH" };
 
       const changed: string[] = [];
-      const amend: Record<string, number> = {};
+      const amend: Record<string, number | null> = {};
       const cmp: Array<[string, number | null | undefined, number | null, string]> = [
         ["revenue", current.revenue, f.revenue, "revenue"],
         ["costOfGoods", current.costOfGoods, f.costOfGoods, "costOfGoodsOrServices"],
@@ -226,12 +227,21 @@ async function materializeFinance(
         ["payables", current.payables, f.payables, "payables"],
         ["overduePayables", current.overduePayables, f.overduePayables, "payablesOverdue"],
       ];
+      const amendPatch: Record<string, number | null> = {};
       for (const [name, recorded, incoming, inputKey] of cmp) {
         if (incoming !== null && figuresDiffer(recorded, incoming)) {
           changed.push(name);
-          amend[inputKey] = incoming;
+          amendPatch[inputKey] = incoming;
+        } else if (incoming === null && recorded !== null && recorded !== undefined) {
+          // This version is QuickBooks-authored (it has provenance), so every recorded value among these six figures came from a
+          // QuickBooks read. The newest read no longer supplies it (absent section, ambiguous, or not derivable): it returns to
+          // UNKNOWN. A stated 0 is a number and never takes this branch. Carrying it forward would present a stale figure under
+          // the newest observation's provenance.
+          changed.push(`${name}:withdrawn`);
+          amendPatch[inputKey] = null;
         }
       }
+      Object.assign(amend, amendPatch);
       if (changed.length === 0) return { result: "UNCHANGED" };
 
       const input = financialSnapshotAmendSchema.safeParse({
@@ -262,7 +272,6 @@ async function materializeCashflow(
 ): Promise<TargetResult> {
   const f = figures.cashflow;
   const present = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null)) as Record<string, number>;
-  if (Object.keys(present).length === 0) return { result: "UNCHANGED" };
   const start = fromIsoDate(month.start);
   const end = fromIsoDate(month.end);
 
@@ -272,6 +281,7 @@ async function materializeCashflow(
       const existing = await findCashflowSnapshotForPeriodInTx(tx, { workspaceId: c.workspaceId, businessId: c.businessId, periodStart: start, periodEnd: end });
 
       if (!existing) {
+        if (Object.keys(present).length === 0) return { result: "UNCHANGED" };
         const parsed = cashflowSnapshotCreateSchema.safeParse({
           periodStart: month.start, periodEnd: month.end, currency: businessCurrency,
           bankBalance: f.bankBalance ?? undefined, receivables: f.receivables ?? undefined,
@@ -294,7 +304,7 @@ async function materializeCashflow(
       if (foreignOrigin(prov, c)) return { result: "REFUSED", refusal: "REALM_MISMATCH" };
 
       const upd = await updateCashflowFiguresFromIntegrationInTx(tx, {
-        snapshotId: existing.id, workspaceId: c.workspaceId, expectedUpdatedAt: prov.targetUpdatedAt, figures: present,
+        snapshotId: existing.id, workspaceId: c.workspaceId, expectedUpdatedAt: prov.targetUpdatedAt, figures: f,
         audit: SYSTEM, auditExtra: { source: "QUICKBOOKS_ONLINE", connectionId: c.id },
       });
       if (!upd.ok) return { result: "OWNER_CONTROLLED" }; // the owner (or anyone) wrote the row since QuickBooks last did

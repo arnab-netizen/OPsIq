@@ -30,6 +30,18 @@ async function fullBaseline(t: QboTenant, id: string, f: FakeIntuit) {
   return outcomes;
 }
 
+/**
+ * A Sandbox connection sitting on a business that is no longer a test business (the flag changed after connecting, or a row was
+ * written around the service). The service refuses to CREATE such a connection (see the persistence suite); this proves the
+ * sync + materialization + database layers still keep Sandbox evidence out of a real business.
+ */
+async function sandboxConnectionOnDemotedBusiness() {
+  const t = await seedQboTenant({ fixture: true });
+  const c = await connectQbo(t, "sandbox");
+  await db.ownerBusiness.update({ where: { id: t.biz }, data: { isFixtureBusiness: false } });
+  return { t, c };
+}
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO V1 sync (real Postgres, fake Intuit)", () => {
   beforeAll(() => { /* each test seeds its own tenant */ });
 
@@ -236,6 +248,72 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO V1 sync (real Postgres, fake Intuit)"
     expect(await db.ownerFinancialSnapshot.findUniqueOrThrow({ where: { id: quarter.id } })).toMatchObject({ revenue: 90_000, supersededById: null });
   });
 
+  describe("withdrawn figures are never carried forward (missing != zero)", () => {
+    const refreshed = async (next: Partial<MonthBooks>) => {
+      const t = await seedQboTenant();
+      const { connectionId } = await connectQbo(t);
+      const f = makeFakeIntuit(allMonths());
+      await fullBaseline(t, connectionId, f);
+      const k = monthKeys(12)[1]; // inside the daily refresh window
+      f.books.set(k, { ...books(1), ...next });
+      const o = await run(t, connectionId, f);
+      const snaps = await db.ownerFinancialSnapshot.findMany({ where: { workspaceId: t.ws, businessId: t.biz, periodStart: D(k) }, orderBy: { version: "asc" } });
+      const cash = await db.ownerCashflowSnapshot.findFirstOrThrow({ where: { workspaceId: t.ws, businessId: t.biz, periodStart: D(k) } });
+      return { t, o, snaps, current: snaps[snaps.length - 1], cash, k, connectionId };
+    };
+
+    it("receivables, overdue receivables and cost of goods that the newest read no longer supplies return to UNKNOWN while a changed figure is amended", async () => {
+      const r = await refreshed({ income: 20_000, cogs: null, arTotal: null, arCurrent: null });
+      expect(r.snaps.map((x) => x.version)).toEqual([1, 2]);
+      expect(r.current).toMatchObject({ revenue: 20_000, costOfGoods: null, receivables: null, overdueReceivables: null, payables: 2_500, supersededById: null });
+      expect(r.snaps[0]).toMatchObject({ costOfGoods: 4_001, receivables: 7_000 }); // history keeps what was true then
+      expect(r.cash).toMatchObject({ receivables: null, receivablesOverdue: null, bankBalance: 20_001 });
+    });
+
+    it("a withdrawal alone (nothing else changed) still creates a version that clears the figure", async () => {
+      const r = await refreshed({ cogs: null });
+      expect(r.snaps.map((x) => x.version)).toEqual([1, 2]);
+      expect(r.current).toMatchObject({ revenue: 10_001, costOfGoods: null });
+      const prov = await db.qboCanonicalProvenance.findMany({ where: { workspaceId: r.t.ws, periodStart: D(r.k), targetType: "FINANCIAL_SNAPSHOT" }, orderBy: { materializedAt: "asc" } });
+      expect(prov.map((p) => p.action)).toEqual(["CREATED", "AMENDED"]);
+    });
+
+    it("a vanished bank account clears the Cashflow bank balance rather than keeping the old balance", async () => {
+      const r = await refreshed({ bank: null });
+      expect(r.cash.bankBalance).toBeNull();
+      expect(r.cash).toMatchObject({ receivables: 7_000 });
+    });
+
+    it("a STATED zero is a number, not a missing figure: it replaces a non-zero value and stays 0", async () => {
+      const r = await refreshed({ cogs: 0, arTotal: 0, arCurrent: 0, bank: 0 });
+      expect(r.current).toMatchObject({ costOfGoods: 0, receivables: 0, overdueReceivables: 0 });
+      expect(r.cash).toMatchObject({ bankBalance: 0, receivables: 0, receivablesOverdue: 0 });
+    });
+
+    it("an unchanged re-read after the withdrawal creates nothing further (no churn between unknown and unknown)", async () => {
+      const r = await refreshed({ cogs: null });
+      const f2 = makeFakeIntuit({ ...allMonths(), [r.k]: { ...books(1), cogs: null } });
+      const o = await run(r.t, r.connectionId, f2);
+      expect(o.status === "SYNCED" && o.counts.canonicalAmended).toBe(0);
+      expect(await db.ownerFinancialSnapshot.count({ where: { workspaceId: r.t.ws, businessId: r.t.biz, periodStart: D(r.k) } })).toBe(2);
+    });
+
+    it("a manual owner amendment of the same month is never cleared or overwritten by a withdrawal", async () => {
+      const t = await seedQboTenant();
+      const { connectionId } = await connectQbo(t);
+      const f = makeFakeIntuit(allMonths());
+      await fullBaseline(t, connectionId, f);
+      const k = monthKeys(12)[1];
+      const current = await db.ownerFinancialSnapshot.findFirstOrThrow({ where: { workspaceId: t.ws, businessId: t.biz, periodStart: D(k), supersededById: null } });
+      await amendFinancialSnapshot(current.id, { amendmentReason: "Owner corrected cost of goods", costOfGoodsOrServices: 3_333 }, t.actor, t.ws);
+      f.books.set(k, { ...books(1), cogs: null, arTotal: null, arCurrent: null });
+      await run(t, connectionId, f);
+      const after = await db.ownerFinancialSnapshot.findMany({ where: { workspaceId: t.ws, businessId: t.biz, periodStart: D(k) }, orderBy: { version: "asc" } });
+      expect(after).toHaveLength(2);
+      expect(after[1]).toMatchObject({ costOfGoods: 3_333, receivables: 7_000, supersededById: null });
+    });
+  });
+
   it("basis mismatch: a Cash report among Accrual requests is preserved with its basis but never materialized", async () => {
     const t = await seedQboTenant();
     const { connectionId } = await connectQbo(t);
@@ -246,8 +324,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO V1 sync (real Postgres, fake Intuit)"
   });
 
   it("sandbox isolation: a sandbox connection to a REAL business keeps evidence but never materializes; to a fixture business it does", async () => {
-    const real = await seedQboTenant();
-    const rc = await connectQbo(real, "sandbox");
+    const { t: real, c: rc } = await sandboxConnectionOnDemotedBusiness();
     const f = makeFakeIntuit(allMonths());
     const o = await runQboSync({ workspaceId: real.ws, connectionId: rc.connectionId, trigger: "SCHEDULED" }, depsFor(f, "sandbox"));
     expect(o.status === "SYNCED" && o.counts.refused).toBe(6);
@@ -262,8 +339,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO V1 sync (real Postgres, fake Intuit)"
   });
 
   it("DB backstop: provenance for sandbox->real (or production->fixture) is rejected even if a service forgot", async () => {
-    const real = await seedQboTenant();
-    const rc = await connectQbo(real, "sandbox");
+    const { t: real, c: rc } = await sandboxConnectionOnDemotedBusiness();
     const snap = await db.ownerFinancialSnapshot.create({ data: { id: randomUUID(), workspaceId: real.ws, businessId: real.biz, periodStart: D("2026-01-01"), periodEnd: D("2026-01-31"), currency: "USD", dataConfidenceScore: 1, missingCriticalData: [] } });
     const obs = await db.qboReportSnapshot.create({ data: { id: randomUUID(), workspaceId: real.ws, businessId: real.biz, connectionId: rc.connectionId, environment: "sandbox", realmId: rc.realmId, reportType: "PROFIT_AND_LOSS", periodStart: D("2026-01-01"), periodEnd: D("2026-01-31"), accountingBasis: "ACCRUAL", basisSource: "REQUESTED", currency: "USD", version: 1, contentHash: "a".repeat(64), parserVersion: 1, noReportData: false, values: { v: {} }, acquiredAt: new Date(), lastConfirmedAt: new Date() } });
     await expect(db.qboCanonicalProvenance.create({ data: { id: randomUUID(), workspaceId: real.ws, businessId: real.biz, connectionId: rc.connectionId, environment: "sandbox", realmId: rc.realmId, targetType: "FINANCIAL_SNAPSHOT", financialSnapshotId: snap.id, periodStart: D("2026-01-01"), periodEnd: D("2026-01-31"), action: "CREATED", accountingBasis: "ACCRUAL", currency: "USD", plObservationId: obs.id, derivedValues: {}, materializedAt: new Date() } })).rejects.toThrow(/QBO_ENVIRONMENT_ISOLATION/);

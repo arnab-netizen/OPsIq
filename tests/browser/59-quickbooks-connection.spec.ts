@@ -6,7 +6,7 @@
  * Connect call and Intuit redirect, no raw-JSON callback UX (denial round-trip), connecting/connected/stale/error/reconnect/
  * disconnected states, disconnect with confirmation, reconnect, phone-width layout and accessibility of the card.
  *
- * Requires the server to run with QUICKBOOKS_CLIENT_ID / _CLIENT_SECRET / _REDIRECT_URI and QUICKBOOKS_ENVIRONMENT=sandbox.
+ * Requires the server to run with QUICKBOOKS_CLIENT_ID / _CLIENT_SECRET / _REDIRECT_URI and QUICKBOOKS_ENVIRONMENT=production (a real business never connects a Sandbox company; the server enforces it).
  */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -84,7 +84,7 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
     const connectCall = page.waitForRequest((r) => r.url().includes("/api/owner/integrations/quickbooks/connect") && r.method() === "POST");
     await page.getByTestId("qbo-connect").click();
     const body = (await connectCall).postDataJSON();
-    expect(body).toEqual({ businessId, environment: "sandbox" });
+    expect(body).toEqual({ businessId, environment: "production" });
     await page.waitForURL(/appcenter\.intuit\.com/);
     const u = new URL(intuitUrl);
     expect(u.searchParams.get("scope")).toBe("com.intuit.quickbooks.accounting");
@@ -96,7 +96,7 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
 
   test("callback never shows raw JSON: a denial round-trip lands back on My Business with a plain sentence", async ({ page }) => {
     await authenticateUser(page, E2E_OWNER.email, E2E_OWNER.password);
-    const start = await page.request.post("/api/owner/integrations/quickbooks/connect", { data: { businessId, environment: "sandbox" } });
+    const start = await page.request.post("/api/owner/integrations/quickbooks/connect", { data: { businessId, environment: "production" } });
     expect(start.status()).toBe(200);
     const state = new URL(((await start.json()) as { authorizationUrl: string }).authorizationUrl).searchParams.get("state") as string;
     // Intuit redirects the browser to the callback PAGE (the registered redirect URI), not to the JSON API.
@@ -126,7 +126,7 @@ test.describe.serial("QuickBooks Online — owner lifecycle (real browser)", () 
     connectionId = randomUUID();
     await sql(
       `INSERT INTO qbo_connections (id, workspace_id, business_id, environment, realm_id, status, connected_by_id, connected_at, version, updated_at)
-       VALUES ($1,$2,$3,'sandbox',$4,'ACTIVE',$5, now(), 1, now())`,
+       VALUES ($1,$2,$3,'production',$4,'ACTIVE',$5, now(), 1, now())`,
       [connectionId, E2E_WORKSPACE_ID, businessId, REALM, E2E_OWNER.userId],
     );
 

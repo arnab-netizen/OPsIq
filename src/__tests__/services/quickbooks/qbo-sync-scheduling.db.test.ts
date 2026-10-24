@@ -64,6 +64,23 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     await db.scheduledTask.deleteMany({ where: { taskName: TASK_NAME_QBO_SYNC, workspaceId: t.ws } });
   }, 120_000);
 
+  it("a small per-invocation budget still makes progress through every connection: consecutive invocations never repeat a connection", async () => {
+    const t = await seedQboTenant();
+    for (let i = 0; i < 6; i++) await connectQbo(await seedQboTenant());
+    void t;
+    const now = new Date();
+    // both invocations inside ONE cleanup scope: removing the first one's tasks in between would legitimately re-select them
+    const { r1, r2 } = await runQboProducerForTest(async () => ({
+      r1: await enqueueDueQboSyncTasks(now, { pageSize: 2, maxPages: 2 }),
+      r2: await enqueueDueQboSyncTasks(now, { pageSize: 2, maxPages: 2 }),
+    }));
+    // each invocation is bounded by its budget (pageSize x maxPages) ...
+    expect(r1.enqueuedConnectionIds.length).toBeLessThanOrEqual(4);
+    expect(r2.enqueuedConnectionIds.length).toBeLessThanOrEqual(4);
+    // ... and the second never selects a connection the first already enqueued (progress, no repetition)
+    expect(r1.enqueuedConnectionIds.filter((id) => r2.enqueuedConnectionIds.includes(id))).toEqual([]);
+  }, 120_000);
+
   it("duplicate enqueue of the same logical task yields one row (idempotency key)", async () => {
     const t = await seedQboTenant();
     const { connectionId } = await connectQbo(t);
@@ -212,7 +229,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     expect(r2.connectionsTriggered).toBe(1);
     expect(r3.connectionsTriggered).toBe(1);
     const tasks = await db.scheduledTask.findMany({ where: { idempotencyKey: { startsWith: `qbo-sync:${connectionId}:wh:` } } });
-    expect(tasks.length).toBeLessThanOrEqual(2); // at most one per 10-minute bucket (a bucket boundary may fall between calls)
+    expect(tasks).toHaveLength(1); // every event of the burst shares the marker's single task
     const st = await db.qboSyncState.findUniqueOrThrow({ where: { connectionId } });
     expect(st.webhookPendingAt).not.toBeNull();
     expect(st.lastWebhookAt).not.toBeNull();
@@ -221,6 +238,60 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
     const { runQboSync } = await import("@/services/quickbooks/qbo-sync.service");
     await runQboSync({ workspaceId: t.ws, connectionId, trigger: "WEBHOOK" }, { env, readClientFactory: () => makeFakeIntuit(allMonths()).reader });
     expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId } })).webhookPendingAt).toBeNull();
+  });
+
+  describe("webhook coalescing never loses a refresh", () => {
+    it("an event arriving AFTER a run claimed the marker gets its own task (the old 10-minute bucket would have dropped it)", async () => {
+      const t = await seedQboTenant();
+      const { connectionId, realmId } = await connectQbo(t);
+      const env = envFor("production");
+      const { runQboSync } = await import("@/services/quickbooks/qbo-sync.service");
+      await reactToQboWebhook({ realmIds: [realmId] }, { env, now: () => new Date(Date.now() - 5_000) });
+      await runQboSync({ workspaceId: t.ws, connectionId, trigger: "WEBHOOK" }, { env, readClientFactory: () => makeFakeIntuit(allMonths()).reader });
+      expect((await db.qboSyncState.findUniqueOrThrow({ where: { connectionId } })).webhookPendingAt).toBeNull();
+      await reactToQboWebhook({ realmIds: [realmId] }, { env });
+      const tasks = await db.scheduledTask.findMany({ where: { idempotencyKey: { startsWith: `qbo-sync:${connectionId}:wh:` } } });
+      expect(tasks).toHaveLength(2);
+      expect(new Set(tasks.map((x) => x.idempotencyKey)).size).toBe(2);
+    });
+
+    it("an event that arrives DURING a run is picked up by a follow-up run requested when that run finishes", async () => {
+      const t = await seedQboTenant();
+      const { connectionId, realmId } = await connectQbo(t);
+      const env = envFor("production");
+      const f = makeFakeIntuit(allMonths());
+      let fired = false;
+      const inner = f.reader.reportWithMeta.bind(f.reader);
+      f.reader.reportWithMeta = (async (name: never, params: never) => {
+        if (!fired) { fired = true; await reactToQboWebhook({ realmIds: [realmId] }, { env }); }
+        return inner(name, params);
+      }) as never;
+      const { taskId } = await enqueueQboSync({ workspaceId: t.ws, connectionId, trigger: "SCHEDULED", key: qboSyncKey(connectionId, "daily", new Date()) });
+      await dueNow(taskId);
+      await new DatabaseSchedulerProvider().processTaskById(taskId, handlers(f));
+      expect((await taskRow(taskId)).status).toBe("completed");
+      const follow = await db.scheduledTask.findMany({ where: { idempotencyKey: { startsWith: `qbo-sync:${connectionId}:whc:` } } });
+      expect(follow).toHaveLength(1);
+    });
+
+    it("one payload naming several realms resolves each independently: an unknown or disconnected realm never suppresses another", async () => {
+      const a = await seedQboTenant(); const b = await seedQboTenant(); const c = await seedQboTenant();
+      const ca = await connectQbo(a); const cb = await connectQbo(b); const cc = await connectQbo(c);
+      await disconnectQboConnection({ workspaceId: c.ws, actorId: c.actor, connectionId: cc.connectionId });
+      const r = await reactToQboWebhook({ realmIds: [ca.realmId, "1234500000", cc.realmId, cb.realmId] }, { env: envFor("production") });
+      expect(r).toEqual({ realmsReceived: 4, connectionsTriggered: 2 });
+      for (const x of [ca, cb]) expect(await db.scheduledTask.count({ where: { idempotencyKey: { startsWith: `qbo-sync:${x.connectionId}:wh:` } } })).toBe(1);
+      expect(await db.scheduledTask.count({ where: { idempotencyKey: { startsWith: `qbo-sync:${cc.connectionId}:` } } })).toBe(0);
+    });
+
+    it("a missed webhook (marker armed, task never created) is repaired by the daily producer", async () => {
+      const t = await seedQboTenant();
+      const { connectionId } = await connectQbo(t);
+      const armedAt = new Date(Date.now() - 3_600_000);
+      await db.qboSyncState.create({ data: { connectionId, workspaceId: t.ws, businessId: t.biz, lifecycle: "SYNCED", webhookPendingAt: armedAt } });
+      await runQboProducerForTest(() => enqueueDueQboSyncTasks(new Date()));
+      expect(await db.scheduledTask.count({ where: { idempotencyKey: qboSyncKey(connectionId, "wh", armedAt) } })).toBe(1);
+    });
   });
 
   it("webhook events are triggers only: no event content can alter a figure", async () => {

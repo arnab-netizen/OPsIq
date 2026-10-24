@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { resolveQboConfig, type QboEnvironment } from "@/domain/quickbooks/qbo-config";
 import { QBO_V1_DEFAULT_BASIS, QBO_BASELINE_MONTHS, closedMonths, toIsoDate, type QboAccountingBasis, type QboFreshness } from "@/domain/quickbooks/qbo-report-model";
 import { QBO_REFUSAL_OWNER_TEXT, QBO_MATERIALIZATION_REFUSALS, type QboMaterializationRefusal } from "@/domain/quickbooks/qbo-derivation";
-import { QBO_STALE_NOTICE, deriveQboOwnerState, ownerActionsFor, ownerFailureText, type QboOwnerState } from "@/domain/quickbooks/qbo-owner-status";
+import { QBO_STALE_NOTICE, connectBlockedReason, deriveQboOwnerState, ownerActionsFor, ownerFailureText, type QboOwnerState } from "@/domain/quickbooks/qbo-owner-status";
 import { assertBusinessInWorkspace, BusinessScopeError } from "@/services/owner-mode/business-scope";
 import { NotFoundError } from "@/infra/errors";
 import { listFinancialSnapshotPeriodSources } from "@/services/owner-finance/snapshot.service";
@@ -39,6 +39,8 @@ export interface QboOwnerStatus {
   ownerControlledMonths: number;
   /** Owner-safe reasons months were not filled from QuickBooks on the last run (bounded wording, never provider detail). */
   notices: string[];
+  /** Plain-language reason Connect is not offered for this business here (Sandbox/test-business isolation), else null. */
+  connectBlockedReason: string | null;
 }
 
 const PERIOD_LIMIT = QBO_BASELINE_MONTHS;
@@ -55,6 +57,7 @@ export async function getQboOwnerStatus(
     if (e instanceof BusinessScopeError) throw new NotFoundError("OwnerBusiness", input.businessId);
     throw e;
   }
+  const biz = (await client.ownerBusiness.findFirst({ where: { id: input.businessId, workspaceId: input.workspaceId }, select: { isFixtureBusiness: true } })) as { isFixtureBusiness: boolean } | null;
   const cfg = resolveQboConfig(deps.env);
   const deploymentEnv = cfg.available ? cfg.config.environment : null;
 
@@ -86,6 +89,7 @@ export async function getQboOwnerStatus(
     .filter((k): k is QboMaterializationRefusal => (QBO_MATERIALIZATION_REFUSALS as readonly string[]).includes(k))
     .map((k) => QBO_REFUSAL_OWNER_TEXT[k]);
   const actions = ownerActionsFor(state);
+  const blocked = connectBlockedReason(deploymentEnv, biz?.isFixtureBusiness === true);
 
   return {
     available: cfg.available,
@@ -100,7 +104,8 @@ export async function getQboOwnerStatus(
     monthsRemaining,
     failure: state === "SYNC_ERROR" || state === "REAUTH_REQUIRED" ? ownerFailureText(state === "REAUTH_REQUIRED" ? "REAUTH_REQUIRED" : sync?.lastErrorCode ?? null) : null,
     staleNotice: state === "STALE" ? QBO_STALE_NOTICE : null,
-    actions: { ...actions, connect: actions.connect && cfg.available, reconnect: actions.reconnect && cfg.available },
+    actions: { ...actions, connect: actions.connect && cfg.available && !blocked, reconnect: actions.reconnect && cfg.available && !blocked },
+    connectBlockedReason: blocked,
     periods,
     notices: state === "CONNECTED" || state === "STALE" || state === "IMPORTING" ? notices : [],
     ownerControlledMonths: typeof summary?.ownerControlled === "number" ? summary.ownerControlled : 0,
