@@ -41,6 +41,7 @@ import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.servi
 import { POST as financeDiagnose } from "@/app/api/owner/finance/businesses/[businessId]/diagnoses/route";
 import { POST as createTask } from "@/app/api/owner/tasks/route";
 import { GET as billingStatus } from "@/app/api/billing/status/route";
+import { createPurchaseOrder } from "@/services/owner-procurement/purchase-order.service";
 import { POST as vendorApprove } from "@/app/api/owner/vendor/[vendorId]/approve/route";
 import { POST as vendorSuspend } from "@/app/api/owner/vendor/[vendorId]/suspend/route";
 import { POST as poTransition } from "@/app/api/owner/procurement/purchase-orders/[poId]/transition/route";
@@ -144,12 +145,44 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] direct API bypass attempts against t
 
   describe("owner decisions: semantic gating through the real routes (unpaid, enforcement ON)", () => {
     const U = "44444444-4444-4444-8444-444444444444";
-    it("vendor approve and purchase-order transition are paid continuation (402); vendor suspend is a safety action and is never a commercial denial", async () => {
+    it("vendor approve is paid continuation (402); vendor suspend is a safety action and never a commercial denial", async () => {
       const t = await tenant();
       as(t);
       expect((await vendorApprove(req(`/api/owner/vendor/${U}/approve`, "POST", {}), ctx({ vendorId: U }))).status).toBe(402);
-      expect((await poTransition(req(`/api/owner/procurement/purchase-orders/${U}/transition`, "POST", {}), ctx({ poId: U }))).status).toBe(402);
       expect((await vendorSuspend(req(`/api/owner/vendor/${U}/suspend`, "POST", {}), ctx({ vendorId: U }))).status).not.toBe(402);
+    });
+
+    it("purchase orders: an unpaid owner can CANCEL (never 402) but every forward transition is paid (402)", async () => {
+      const t = await tenant();
+      as(t);
+      const order = await createPurchaseOrder({ businessId: t.business, poNumber: `PO-${randomUUID().slice(0, 8)}`, vendorName: "Acme", lineItems: [{ description: "x", quantity: 1, unitPrice: 10 }], totalAmount: 10, currency: "INR" } as any, t.user, t.ws);
+      const post = (toStatus: string) => poTransition(req(`/api/owner/procurement/purchase-orders/${order.id}/transition`, "POST", { toStatus }), ctx({ poId: order.id }));
+      for (const forward of ["REVIEWED", "APPROVED", "ISSUED", "DELIVERED"]) expect((await post(forward)).status, forward).toBe(402);
+      expect((await db.purchaseOrder.findFirst({ where: { id: order.id } }))?.status).toBe("DRAFT"); // nothing advanced
+      const cancelled = await post("CANCELLED");
+      expect(cancelled.status).toBe(200);
+      expect((await db.purchaseOrder.findFirst({ where: { id: order.id } }))?.status).toBe("CANCELLED");
+    });
+
+    it("purchase orders: a paid owner can progress forward; enforcement OFF behaves as before", async () => {
+      const t = await tenant();
+      as(t);
+      const plan = randomUUID(), ba = randomUUID(), sub = randomUUID(), now = new Date();
+      await db.plan.create({ data: { id: plan, name: `PO plan ${plan.slice(0, 8)}`, priceMonthly: 0, priceYearly: 0, updatedAt: now } });
+      await db.billingAccount.create({ data: { id: ba, workspaceId: t.ws, providerCustomerId: `cus_${ba}`, updatedAt: now } });
+      await db.subscription.create({ data: { id: sub, billingAccountId: ba, planId: plan, status: "active", currentPeriodStart: new Date(now.getTime() - 86400000), currentPeriodEnd: new Date(now.getTime() + 20 * 86400000), updatedAt: now } });
+      const order = await createPurchaseOrder({ businessId: t.business, poNumber: `PO-${randomUUID().slice(0, 8)}`, vendorName: "Acme", lineItems: [{ description: "x", quantity: 1, unitPrice: 10 }], totalAmount: 10, currency: "INR" } as any, t.user, t.ws);
+      const post = (toStatus: string) => poTransition(req(`/api/owner/procurement/purchase-orders/${order.id}/transition`, "POST", { toStatus }), ctx({ poId: order.id }));
+      expect((await post("REVIEWED")).status).toBe(200);
+
+      process.env.BILLING_PAYWALL_ENFORCEMENT = "off";
+      const t2 = await tenant();
+      as(t2);
+      const order2 = await createPurchaseOrder({ businessId: t2.business, poNumber: `PO-${randomUUID().slice(0, 8)}`, vendorName: "Acme", lineItems: [{ description: "x", quantity: 1, unitPrice: 10 }], totalAmount: 10, currency: "INR" } as any, t2.user, t2.ws);
+      expect((await poTransition(req(`/api/owner/procurement/purchase-orders/${order2.id}/transition`, "POST", { toStatus: "REVIEWED" }), ctx({ poId: order2.id }))).status).toBe(200);
+      await db.subscription.deleteMany({ where: { id: sub } });
+      await db.billingAccount.deleteMany({ where: { id: ba } });
+      await db.plan.deleteMany({ where: { id: plan } });
     });
 
     it("constraints: CREATE is free capture (never 402); ACCEPT and RESOLVE are paid (402)", async () => {
@@ -180,10 +213,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] direct API bypass attempts against t
       expect((await guardrails(req("/api/owner/guardrails/screen", "POST", {}), ctx())).status).not.toBe(402);
     });
 
-    it("startup arbitration is paid continuation; startup analysis is not route-gated (its first run is free, gated inside the service) and pure capture is never denied", async () => {
+    it("startup analysis and arbitration are not route-gated (the free first journey is decided in the service) and pure capture is never denied", async () => {
       const t = await tenant();
       as(t);
-      expect((await arbitrate(req(`/api/owner/startup/sessions/${U}/arbitrate`, "POST", {}), ctx({ sessionId: U }))).status).toBe(402);
+      expect((await arbitrate(req(`/api/owner/startup/sessions/${U}/arbitrate`, "POST", {}), ctx({ sessionId: U }))).status).not.toBe(402);
       expect((await startupAnalysis(req(`/api/owner/startup/sessions/${U}/analysis`, "POST", { action: "RECORD_HYPOTHESIS_RESULT" }), ctx({ sessionId: U }))).status).not.toBe(402);
     });
 

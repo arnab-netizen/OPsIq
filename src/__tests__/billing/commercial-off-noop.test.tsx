@@ -26,7 +26,7 @@ vi.mock("@/services/owner-budget/budget.service", () => ({ reassessBudget: m.rea
 
 import { ALL_COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
 import { assertCommercialAccess } from "@/services/billing/commercial-access.service";
-import { assertCommercialCapability, assertDiagnosisAllowance, canPerformCommercialCapability } from "@/services/billing/commercial-policy.service";
+import { assertCommercialCapability, assertDiagnosisAllowance, assertStartupAnalysisAllowance, canPerformCommercialCapability } from "@/services/billing/commercial-policy.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { CommercialGateHost } from "@/components/commercial/CommercialGateHost";
@@ -52,6 +52,7 @@ describe.each(OFF_VALUES)("enforcement flag = %j (anything but exactly 'on')", (
     }
     await expect(assertCommercialAccess(WS)).resolves.toBeUndefined();
     await expect(assertDiagnosisAllowance({ $queryRaw: m.queryRaw, $executeRaw: m.executeRaw, subscription: { findFirst: m.subscriptionFindFirst } } as never, WS)).resolves.toBeUndefined();
+    await expect(assertStartupAnalysisAllowance({ $queryRaw: m.queryRaw, $executeRaw: m.executeRaw, subscription: { findFirst: m.subscriptionFindFirst } } as never, WS, WS)).resolves.toBeUndefined();
     expect(m.subscriptionFindFirst).not.toHaveBeenCalled();
     expect(m.queryRaw).not.toHaveBeenCalled();
     expect(m.executeRaw).not.toHaveBeenCalled();

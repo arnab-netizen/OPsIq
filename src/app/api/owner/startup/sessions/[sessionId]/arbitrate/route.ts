@@ -77,5 +77,5 @@ export const POST = withCanonicalEnforcement(
 
     return canonicalJson(result, { status: 201 });
   },
-  { requireCommercial: "reassessment", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

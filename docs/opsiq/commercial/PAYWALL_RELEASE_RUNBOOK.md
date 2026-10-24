@@ -13,6 +13,12 @@ Contract: **first diagnosis free; continuing the OpsIQ loop is Pro.** The gate s
 | Migration | none (the first-diagnosis invariant is derived from existing tables) → `PRODUCTION_MIGRATION_REQUIRED=NO` |
 | Paddle | untouched by this change; live approval, price and plan seed are separate owner steps |
 
+## 0a. Product contract summary
+
+- **One free diagnosis per workspace.** It is either the first owner-domain diagnosis or the first complete Startup diagnostic session through its first system recommendation. Startup does not receive an extra allowance; an abandoned first Startup session stays the free session (resume it), a second session is paid.
+- **Purchase orders:** cancelling is always free (a risk-reducing stop action); review, approve, issue and deliver are paid.
+- **No grandfathering** (see step 4 below).
+
 ## 1. Before enabling (owner steps, all manual)
 
 1. **Owner decisions** (recorded in `OWNER_DECISIONS.md`): RB1 to RB3 are resolved: one free diagnosis per workspace shared by every mode, the handler classifications, and no grandfathering. `docs/opsiq/commercial/RELEASE_BLOCKERS.json` still lists RB4 (price and live Paddle plan), the unproven Preview enforcement-ON acceptance, and the external Paddle Live approval as open. The enable tool refuses while `open` is non-empty; clear an item only by a reviewed commit.

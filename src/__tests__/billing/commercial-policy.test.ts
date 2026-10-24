@@ -11,6 +11,7 @@ import {
   assertCommercialCapability,
   assertDiagnosisAllowance,
   canPerformCommercialCapability,
+  startupSessionIsFreeJourney,
 } from "@/services/billing/commercial-policy.service";
 
 const WS = "11111111-1111-4111-8111-111111111111";
@@ -129,3 +130,21 @@ describe("commercial policy: state matrix", () => {
     });
   });
 });
+
+describe("Startup free journey rule (pure)", () => {
+  const s = (o: Partial<{ ownerDiagnosisExists: boolean; otherSessionHasAnalysis: boolean; sessionDeliveredRecommendation: boolean }> = {}) =>
+    startupSessionIsFreeJourney({ ownerDiagnosisExists: false, otherSessionHasAnalysis: false, sessionDeliveredRecommendation: false, ...o });
+  it("the first session is free from its first step until it has delivered its first recommendation", () => {
+    expect(s()).toBe(true);
+  });
+  it("is paid once the session delivered its recommendation (new analysis, rebuilds, reassessment)", () => {
+    expect(s({ sessionDeliveredRecommendation: true })).toBe(false);
+  });
+  it("is paid when another Startup session already holds the free journey (second session, abandoned first)", () => {
+    expect(s({ otherSessionHasAnalysis: true })).toBe(false);
+  });
+  it("is paid from the first step when an owner diagnosis already consumed the workspace allowance", () => {
+    expect(s({ ownerDiagnosisExists: true })).toBe(false);
+  });
+});
+

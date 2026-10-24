@@ -3,7 +3,7 @@
  * Full lifecycle management for OwnerStartupSession.
  * All mutations emit audit events. Workspace isolation enforced on all operations.
  */
-import { assertDiagnosisAllowance } from "@/services/billing/commercial-policy.service";
+import { assertStartupAnalysisAllowance } from "@/services/billing/commercial-policy.service";
 import { randomUUID, createHash } from "crypto";
 import { db } from "@/lib/db";
 import { validateStartup } from "@/domain/owner-strategy/startup-mode";
@@ -484,9 +484,10 @@ export async function screenIdeaRecord(
   const result = screenIdea(ideaInput, profile);
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Commercial gate: Startup analysis shares the workspace's single free diagnosis (first analysis free,
-    // later analysis needs entitlement). Same tx + advisory lock as the owner diagnosis writers. No-op when OFF.
-    await assertDiagnosisAllowance(tx, workspaceId);
+    // Commercial gate: the workspace's one free diagnosis may be the FIRST Startup diagnostic session, end to end
+    // through its first system recommendation; everything else needs entitlement. Same tx + advisory lock as the
+    // owner diagnosis writers. No-op when OFF.
+    await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     await tx.startupIdeaRecord.update({
       where: { id: ideaId },
       data: {
@@ -545,9 +546,10 @@ export async function generateAndPersistHypotheses(
   const hypothesisIds: string[] = [];
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Commercial gate: Startup analysis shares the workspace's single free diagnosis (first analysis free,
-    // later analysis needs entitlement). Same tx + advisory lock as the owner diagnosis writers. No-op when OFF.
-    await assertDiagnosisAllowance(tx, workspaceId);
+    // Commercial gate: the workspace's one free diagnosis may be the FIRST Startup diagnostic session, end to end
+    // through its first system recommendation; everything else needs entitlement. Same tx + advisory lock as the
+    // owner diagnosis writers. No-op when OFF.
+    await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     for (const h of prioritized) {
       const id = randomUUID();
       hypothesisIds.push(id);
@@ -806,9 +808,10 @@ export async function buildAndPersistEconomicModel(
   const result = buildEconomicModel(inputs);
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Commercial gate: Startup analysis shares the workspace's single free diagnosis (first analysis free,
-    // later analysis needs entitlement). Same tx + advisory lock as the owner diagnosis writers. No-op when OFF.
-    await assertDiagnosisAllowance(tx, workspaceId);
+    // Commercial gate: the workspace's one free diagnosis may be the FIRST Startup diagnostic session, end to end
+    // through its first system recommendation; everything else needs entitlement. Same tx + advisory lock as the
+    // owner diagnosis writers. No-op when OFF.
+    await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     const existing = await tx.startupEconomicModel.findFirst({
       where: { ideaId, workspaceId },
       orderBy: { versionNumber: "desc" },
@@ -880,9 +883,10 @@ export async function assessAndPersistReadiness(
   const result = assessReadiness(inputs);
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Commercial gate: Startup analysis shares the workspace's single free diagnosis (first analysis free,
-    // later analysis needs entitlement). Same tx + advisory lock as the owner diagnosis writers. No-op when OFF.
-    await assertDiagnosisAllowance(tx, workspaceId);
+    // Commercial gate: the workspace's one free diagnosis may be the FIRST Startup diagnostic session, end to end
+    // through its first system recommendation; everything else needs entitlement. Same tx + advisory lock as the
+    // owner diagnosis writers. No-op when OFF.
+    await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     await tx.startupReadinessAssessment.create({
       data: {
         id: assessmentId,
@@ -946,9 +950,10 @@ export async function createSystemRecommendation(
   const recId = randomUUID();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Commercial gate: Startup analysis shares the workspace's single free diagnosis (first analysis free,
-    // later analysis needs entitlement). Same tx + advisory lock as the owner diagnosis writers. No-op when OFF.
-    await assertDiagnosisAllowance(tx, workspaceId);
+    // Commercial gate: the workspace's one free diagnosis may be the FIRST Startup diagnostic session, end to end
+    // through its first system recommendation; everything else needs entitlement. Same tx + advisory lock as the
+    // owner diagnosis writers. No-op when OFF.
+    await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     await tx.startupSystemRecommendation.create({
       data: {
         id: recId,
@@ -2029,6 +2034,8 @@ export async function runIdeaArbitration(
 
   const recordId = randomUUID();
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Arbitration is part of the free first journey; a later arbitration cycle is paid continuation.
+    await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     await tx.goalArbitrationRecord.create({
       data: {
         id: recordId,

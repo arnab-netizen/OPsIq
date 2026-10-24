@@ -134,7 +134,7 @@ describe("commercial coverage registry", () => {
   it("every enforcement kind in the registry is one this suite knows how to verify", () => {
     const known = new Set([
       "none", "requireCommercial", "route:assertCommercialAccess", "service:diagnosis-allowance",
-      "service:scheduled-reassessment-skip", "service:capture-free-reassessment-paid", "handler:assertCommercialCapability", "staff-only-guard",
+      "service:scheduled-reassessment-skip", "service:startup-free-journey", "service:capture-free-reassessment-paid", "handler:assertCommercialCapability", "staff-only-guard",
     ]);
     expect(registry.filter((e) => !known.has(e.enforcement)).map((e) => key(e.method, e.route))).toEqual([]);
   });
@@ -152,23 +152,32 @@ describe("commercial coverage registry", () => {
     expect(fn.indexOf("canPerformCommercialCapability(")).toBeLessThan(fn.indexOf("reassessBudget("));
   });
 
-  it("Startup Mode shares the workspace allowance: every qualifying analysis writer is gated in its transaction, capture is not", () => {
+  it("Startup Mode: the first complete diagnostic session is the workspace's free diagnosis; every qualifying writer and arbitration is gated in its transaction, capture is not", () => {
     const src = readFileSync(join(process.cwd(), "src/services/owner-strategy/startup-session.service.ts"), "utf8");
-    for (const fn of ["screenIdeaRecord", "generateAndPersistHypotheses", "buildAndPersistEconomicModel", "assessAndPersistReadiness", "createSystemRecommendation"]) {
+    for (const fn of ["screenIdeaRecord", "generateAndPersistHypotheses", "buildAndPersistEconomicModel", "assessAndPersistReadiness", "createSystemRecommendation", "runIdeaArbitration"]) {
       const body = src.slice(src.indexOf(`export async function ${fn}(`));
-      const tx = body.indexOf("db.$transaction(");
-      const gate = body.indexOf("assertDiagnosisAllowance(tx, workspaceId)");
+      const end = body.indexOf("\nexport ", 10);
+      const scope = end === -1 ? body : body.slice(0, end);
+      const tx = scope.indexOf("db.$transaction(");
+      const gate = scope.indexOf("assertStartupAnalysisAllowance(tx, workspaceId, sessionId)");
       expect(gate, fn).toBeGreaterThan(tx);
-      expect(gate, fn).toBeLessThan(body.indexOf("\nexport ", 10) === -1 ? Infinity : body.indexOf("\nexport ", 10));
     }
     const capture = src.slice(src.indexOf("export async function recordHypothesisResult("));
-    expect(capture.slice(0, capture.indexOf("\nexport ", 10))).not.toContain("assertDiagnosisAllowance");
-    const analysis = handlers.find((h) => h.route === "/api/owner/startup/sessions/[sessionId]/analysis" && h.method === "POST")!;
-    expect(wrapperCall(analysis.source, "POST") ?? "").not.toContain("requireCommercial");
+    expect(capture.slice(0, capture.indexOf("\nexport ", 10))).not.toMatch(/assertStartup|assertDiagnosisAllowance/);
+    for (const route of ["analysis", "arbitrate"]) {
+      const h = handlers.find((x) => x.route === `/api/owner/startup/sessions/[sessionId]/${route}` && x.method === "POST")!;
+      expect(wrapperCall(h.source, "POST") ?? "", route).not.toContain("requireCommercial");
+    }
     const policy = readFileSync(join(process.cwd(), "src/services/billing/commercial-policy.service.ts"), "utf8");
     for (const table of ["startup_idea_record", "startup_hypothesis", "startup_economic_model", "startup_readiness_assessment", "startup_system_recommendation"]) {
       expect(policy, table).toContain(table);
     }
+  });
+
+  it("purchase orders: cancelling is a free safety action; forward progression is gated; the route is not wholly gated", () => {
+    const h = handlers.find((x) => x.route === "/api/owner/procurement/purchase-orders/[poId]/transition" && x.method === "POST")!;
+    expect(wrapperCall(h.source, "POST") ?? "").not.toContain("requireCommercial");
+    expect(h.source).toMatch(/toStatus !== "CANCELLED"[\s\S]{0,200}assertCommercialCapability\(/);
   });
 
   it("staff-only handlers are unreachable by a self-serve owner capability bundle; owner-role expansion fails this test until reclassified", () => {

@@ -9,9 +9,9 @@ Contract: **FIRST DIAGNOSIS FREE; CONTINUING OPSIQ LOOP = PRO.** This document i
 | Free | Paid (requires an entitled subscription when enforcement is ON) |
 |---|---|
 | Signup, business setup/onboarding, required data entry and capture (including spend entries, constraint capture, SOP training assignment) | Governed execution of a recommendation: start/complete/verify actions and tasks, proof review, accept/resolve a constraint, record SOP training completion |
-| The **one** free diagnosis per **workspace**, shared by every owner diagnosis domain and Startup Mode | Any second or later diagnosis or analysis in any mode, re-diagnosis, reassessment, new priorities/recommendations (including the reassessment a spend entry would trigger) |
-| Highest-priority problem, evidence and reasoning, first recommended move (read-only viewing stays free forever) | Resolving governed approvals and recording owner decisions/outcomes; vendor approval; purchase-order transitions |
-| Account safety, auth, billing, cancellation, support, feedback, privacy/deletion; vendor suspension (a safety action) | Scheduled reassessment of the recurring loop |
+| The **one** free diagnosis per **workspace**, shared by every owner diagnosis domain and Startup Mode | Any second or later diagnosis or analysis in any mode (a second Startup session, new Startup analysis or recommendations after the first recommendation), re-diagnosis, reassessment, new priorities/recommendations (including the reassessment a spend entry would trigger) |
+| Highest-priority problem, evidence and reasoning, first recommended move (read-only viewing stays free forever) | Resolving governed approvals and recording owner decisions/outcomes; vendor approval; purchase-order forward progression (review, approve, issue, deliver) |
+| Account safety, auth, billing, cancellation, support, feedback, privacy/deletion; vendor suspension and purchase-order cancellation (risk-reducing stop actions, never blocked) | Scheduled reassessment of the recurring loop |
 | Stateless calculators (guardrails, tender, vendor assessment); the public `/agency` tool | |
 
 Entitlement is `resolveAccess` over the persisted subscription: `active` is paid (a scheduled cancellation stays entitled until period end); `past_due` keeps access for 7 days after the missed renewal date, then denies; `paused`, `canceled`, no subscription, or any lookup error deny (fail closed). **There is no grandfathering**: existing OPEN_BETA workspaces follow the same rules when enforcement is intentionally enabled.
@@ -22,8 +22,8 @@ Entitlement is `resolveAccess` over the persisted subscription: `active` is paid
 2. **Capability model** `src/domain/commercial/commercial-capability.ts`: callers ask for a capability, never for payment mechanics.
 3. **Policy** `src/services/billing/commercial-policy.service.ts`: `canPerformCommercialCapability`, `assertCommercialCapability`, `assertDiagnosisAllowance`.
 4. **Route layer**: `withCanonicalEnforcement(handler, { requireCommercial })` evaluates after authentication and server-side workspace derivation and before the handler.
-5. **Service layer**: the eight owner diagnosis-cycle writers and the five qualifying Startup Mode analysis writers call `assertDiagnosisAllowance(tx, workspaceId)` inside the transaction that persists the result, under one workspace advisory lock, so no route, job or future caller can create a diagnosis around the gate. A static test fails if any other file inserts into a cycle table.
-6. **Semantic splits**: multiplexed handlers gate only the paid action (`constraints` ACCEPT/RESOLVE); `budget/spend` always persists the entry and defers only the reassessment, returning `reassessment: { status: "REQUIRES_SUBSCRIPTION", capability: "reassessment" }`.
+5. **Service layer**: the eight owner diagnosis-cycle writers call `assertDiagnosisAllowance(tx, workspaceId)`; the five Startup analysis writers and idea arbitration call `assertStartupAnalysisAllowance(tx, workspaceId, sessionId)`; both inside the transaction that persists the result, under one workspace advisory lock, so no route, job or future caller can create a diagnosis around the gate. A static test fails if any other file inserts into a cycle table.
+6. **Semantic splits**: multiplexed handlers gate only the paid action (`constraints` ACCEPT/RESOLVE, purchase-order forward transitions with CANCELLED free); `budget/spend` always persists the entry and defers only the reassessment, returning `reassessment: { status: "REQUIRES_SUBSCRIPTION", capability: "reassessment" }`.
 7. **Scheduled loop**: `scanDueReassessments` skips workspaces that are not entitled.
 8. **Denial** is `PlanLimitError`: HTTP 402, code `PLAN_LIMIT_EXCEEDED`, `details.capability`. Never a raw 500.
 9. **Staff surfaces** (consulting workbench) are NON_COMMERCIAL for the owner paywall; a test computes the self-serve owner capability bundle and fails if any of them becomes owner-reachable.
@@ -34,7 +34,7 @@ A workspace has used its one free diagnosis iff **at least one** of these persis
 
 Race safety: the check runs in the persisting transaction under `pg_advisory_xact_lock(hashtext('commercial_first_diagnosis:'||workspaceId))`. Concurrent first diagnoses, even across an owner domain and Startup Mode, serialize; the loser sees the winner's committed row and gets the 402. `FIRST_DIAGNOSIS_INVARIANT_REQUIRES_SCHEMA_CHANGE=NO`.
 
-Consequence of the literal rule for Startup Mode: the first qualifying analysis action consumes the allowance, so a later action (for example hypothesis generation after screening) is paid continuation. Pure capture such as `RECORD_HYPOTHESIS_RESULT` stays free.
+**Startup Mode free unit = the first complete diagnostic session, not one request.** A Startup session is the workspace's free journey iff, from persisted rows only: no owner-domain cycle exists (otherwise Startup is paid from the first step), no OTHER Startup session holds qualifying analysis, and THIS session has not yet produced a system recommendation (`startup_system_recommendation`). The first session to persist analysis is therefore the designated free session; it can run screening, hypotheses, economic model, readiness, arbitration and its first system recommendation unpaid, and the delivery of that first recommendation is the completion point. After that, new analysis, rebuilds, arbitration, another recommendation, or another session is paid continuation. An abandoned first session stays the free session: resuming it completes free, a new session is paid. A Startup journey in progress also holds the allowance against owner-domain diagnoses (no second free journey). Raw capture (`RECORD_HYPOTHESIS_RESULT`) is never gated. `STARTUP_FREE_SESSION_REQUIRES_SCHEMA_CHANGE=NO`.
 
 ## 4. Census summary
 
@@ -44,22 +44,23 @@ Handlers inspected: **647** (316 GET, 331 mutating). Mutating handlers were trac
 |---|---|
 | FREE_READ | 253 |
 | FREE_FOUNDATION | 118 |
-| PAID_CONTINUATION | 106 |
+| PAID_CONTINUATION | 104 |
 | NON_COMMERCIAL | 95 |
 | ACCOUNT_LIFECYCLE | 41 |
-| FREE_FIRST_VALUE | 32 |
-| MIXED_ACTION_SPLIT | 2 |
+| FREE_FIRST_VALUE | 33 |
+| MIXED_ACTION_SPLIT | 3 |
 
 | Enforcement | Count |
 |---|---|
 | none | 514 |
-| requireCommercial | 104 |
+| requireCommercial | 102 |
 | staff-only-guard | 15 |
-| service:diagnosis-allowance | 10 |
+| service:diagnosis-allowance | 9 |
+| handler:assertCommercialCapability | 2 |
+| service:startup-free-journey | 2 |
 | service:scheduled-reassessment-skip | 1 |
 | route:assertCommercialAccess | 1 |
 | service:capture-free-reassessment-paid | 1 |
-| handler:assertCommercialCapability | 1 |
 
 ## 5. Bypasses
 
@@ -67,8 +68,8 @@ Handlers inspected: **647** (316 GET, 331 mutating). Mutating handlers were trac
 
 | Root cause | Instances | Fix |
 |---|---|---|
-| RC1 diagnosis writers (cycles and Startup analysis) had no commercial check | 13 writers | in-transaction `assertDiagnosisAllowance`, one shared workspace allowance |
-| RC2 owner routes guarded by capability+workspace only | 104 routes | declarative `requireCommercial`, verified by the coverage test; mixed routes gated per action |
+| RC1 diagnosis writers (cycles and Startup analysis) had no commercial check | 14 writers | in-transaction `assertDiagnosisAllowance`, one shared workspace allowance |
+| RC2 owner routes guarded by capability+workspace only | 102 routes | declarative `requireCommercial`, verified by the coverage test; mixed routes gated per action |
 | RC3 scheduled reassessment ran for every workspace | 1 job | entitlement skip in `scanDueReassessments` |
 | RC4 spend entry triggered a reassessment unconditionally | 1 route | capture persisted, reassessment gated, controlled deferral result |
 | RC5 consulting/staff workbench shared the capability model with no stated commercial class | 15 handlers | classified NON_COMMERCIAL for the owner paywall, with an owner-bundle reachability test |
@@ -562,7 +563,7 @@ Resolved (see `OWNER_DECISIONS.md`): allowance scope, all handler classification
 | GET | `/api/owner/procurement/purchase-orders` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
 | POST | `/api/owner/procurement/purchase-orders` | MUTATION | Creates a PurchaseOrder governed record. | FREE_FOUNDATION | none (free by contract) | Business data entry. | LOW | commercial-coverage |
 | GET | `/api/owner/procurement/purchase-orders/[poId]` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
-| POST | `/api/owner/procurement/purchase-orders/[poId]/transition` | MUTATION | Transitions PurchaseOrder status (REVIEWED/APPROVED/ISSUED/DELIVERED/CANCELLED). | PAID_CONTINUATION | route: requireCommercial=approval_resolution | Standalone procurement workflow versus governed approval resolution. | LOW | commercial-coverage + commercial-policy + route/DB gate tests |
+| POST | `/api/owner/procurement/purchase-orders/[poId]/transition` | MUTATION | Transitions PurchaseOrder status (REVIEWED/APPROVED/ISSUED/DELIVERED/CANCELLED). | MIXED_ACTION_SPLIT | handler: assertCommercialCapability(approval_resolution) on the paid action only | Standalone procurement workflow versus governed approval resolution. | LOW | commercial-coverage + commercial-policy + route/DB gate tests |
 | POST | `/api/owner/profit-leak` | READ | Pure profit leak identification (identifyProfitLeaks) from submitted signals; no writes. | FREE_FIRST_VALUE | none (free by contract) | Stateless analysis. | LOW | commercial-coverage |
 | GET | `/api/owner/proof-risk/queue` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
 | GET | `/api/owner/public-signals` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
@@ -631,9 +632,9 @@ Resolved (see `OWNER_DECISIONS.md`): allowance scope, all handler classification
 | GET | `/api/owner/startup/sessions/[sessionId]` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
 | PATCH | `/api/owner/startup/sessions/[sessionId]` | MUTATION | Transitions OwnerStartupSession status via CAS with staleness checks against current owner decision (transitionSession). | FREE_FOUNDATION | none (free by contract) | Lifecycle bookkeeping; cannot create decision itself. | LOW | commercial-coverage |
 | POST | `/api/owner/startup/sessions/[sessionId]/activate` | MUTATION | Hands off a startup session to a new OwnerBusiness (creates ownerBusiness, updates objectives/execution plan, session ACTIVE); idempotent. | PAID_CONTINUATION | route: requireCommercial=governed_execution | Moves from validation into governed execution of the plan. | HIGH | commercial-coverage + commercial-policy + route/DB gate tests |
-| POST | `/api/owner/startup/sessions/[sessionId]/analysis` | MUTATION | Multi-action analysis dispatcher: SCREEN, GENERATE_HYPOTHESES, BUILD_ECONOMIC_MODEL, ASSESS_READINESS, RECORD_HYPOTHESIS_RESULT, BUILD_SYSTEM_RECOMMEN | FREE_FIRST_VALUE | service: assertDiagnosisAllowance (in-tx, advisory lock, shared workspace allowance) | Produces first startup diagnosis and recommendation; repeated reruns are continuation. | HIGH | commercial-coverage |
+| POST | `/api/owner/startup/sessions/[sessionId]/analysis` | MUTATION | Multi-action analysis dispatcher: SCREEN, GENERATE_HYPOTHESES, BUILD_ECONOMIC_MODEL, ASSESS_READINESS, RECORD_HYPOTHESIS_RESULT, BUILD_SYSTEM_RECOMMEN | FREE_FIRST_VALUE | service: assertStartupAnalysisAllowance (first complete Startup session free; in-tx, same advisory lock) | Produces first startup diagnosis and recommendation; repeated reruns are continuation. | HIGH | commercial-coverage |
 | GET | `/api/owner/startup/sessions/[sessionId]/arbitrate` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
-| POST | `/api/owner/startup/sessions/[sessionId]/arbitrate` | MIXED | POST runs idea arbitration (runIdeaArbitration) and writes GoalArbitrationRecord ranking ideas; GET reads it. | PAID_CONTINUATION | route: requireCommercial=reassessment | See question on startup arbitration. | LOW | commercial-coverage + commercial-policy + route/DB gate tests |
+| POST | `/api/owner/startup/sessions/[sessionId]/arbitrate` | MIXED | POST runs idea arbitration (runIdeaArbitration) and writes GoalArbitrationRecord ranking ideas; GET reads it. | FREE_FIRST_VALUE | service: assertStartupAnalysisAllowance (first complete Startup session free; in-tx, same advisory lock) | See question on startup arbitration. | LOW | commercial-coverage |
 | GET | `/api/owner/startup/sessions/[sessionId]/blueprint` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |
 | POST | `/api/owner/startup/sessions/[sessionId]/blueprint` | MIXED | POST creates execution blueprint (objective, tasks, KPIs, risks, resource allocations, initiative, execution plan) from owner decision, superseding pr | PAID_CONTINUATION | route: requireCommercial=governed_execution | Generates the governed execution plan and tasks. | HIGH | commercial-coverage + commercial-policy + route/DB gate tests |
 | GET | `/api/owner/startup/sessions/[sessionId]/candidates` | READ | read | FREE_READ | none (free by contract) | read-only view of already-persisted records; viewing never creates diagnosis/recommendation value, so stays free (first move stays viewable read-only) | NONE | commercial-coverage |

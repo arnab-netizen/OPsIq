@@ -122,3 +122,69 @@ export async function assertDiagnosisAllowance(tx: Prisma.TransactionClient, wor
   const decision = decideCommercialCapability({ capability, enforced: true, entitled: false, priorDiagnosisCount: used ? 1 : 0 });
   if (!decision.allowed) deny(decision, capability);
 }
+
+/**
+ * Persisted state of the workspace's Startup free-journey question, derived only from rows (no flags, no counters):
+ *  - ownerDiagnosisExists: an owner-domain diagnosis cycle already consumed the workspace's one free diagnosis;
+ *  - otherSessionHasAnalysis: a DIFFERENT Startup session already holds qualifying analysis (it is the free journey);
+ *  - sessionDeliveredRecommendation: THIS session already produced its first system recommendation (free value delivered).
+ */
+export interface StartupJourneyState {
+  ownerDiagnosisExists: boolean;
+  otherSessionHasAnalysis: boolean;
+  sessionDeliveredRecommendation: boolean;
+}
+
+export async function readStartupJourneyState(
+  reader: Pick<Prisma.TransactionClient, "$queryRaw">,
+  workspaceId: string,
+  sessionId: string,
+): Promise<StartupJourneyState> {
+  const rows = await reader.$queryRaw<Array<{ owner_cycle: boolean; other_session: boolean; delivered: boolean }>>`
+    SELECT (
+      EXISTS (SELECT 1 FROM recovery_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_finance_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_cashflow_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_sales_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_operations_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_sop_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_marketing_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+      OR EXISTS (SELECT 1 FROM owner_strategy_cycles c JOIN owner_businesses b ON b.id = c.business_id WHERE b.workspace_id = ${workspaceId}::uuid)
+    ) AS owner_cycle,
+    (
+      EXISTS (SELECT 1 FROM startup_idea_record r WHERE r.workspace_id = ${workspaceId}::uuid AND r.session_id <> ${sessionId}::uuid AND r.screening_data IS NOT NULL)
+      OR EXISTS (SELECT 1 FROM startup_hypothesis r WHERE r.workspace_id = ${workspaceId}::uuid AND r.session_id <> ${sessionId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_economic_model r WHERE r.workspace_id = ${workspaceId}::uuid AND r.session_id <> ${sessionId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_readiness_assessment r WHERE r.workspace_id = ${workspaceId}::uuid AND r.session_id <> ${sessionId}::uuid)
+      OR EXISTS (SELECT 1 FROM startup_system_recommendation r WHERE r.workspace_id = ${workspaceId}::uuid AND r.session_id <> ${sessionId}::uuid)
+    ) AS other_session,
+    EXISTS (SELECT 1 FROM startup_system_recommendation r WHERE r.workspace_id = ${workspaceId}::uuid AND r.session_id = ${sessionId}::uuid) AS delivered`;
+  const row = rows[0];
+  return { ownerDiagnosisExists: row?.owner_cycle === true, otherSessionHasAnalysis: row?.other_session === true, sessionDeliveredRecommendation: row?.delivered === true };
+}
+
+/** Pure rule: may this Startup session's analysis step run free? Otherwise it is paid continuation. */
+export function startupSessionIsFreeJourney(state: StartupJourneyState): boolean {
+  return !state.ownerDiagnosisExists && !state.otherSessionHasAnalysis && !state.sessionDeliveredRecommendation;
+}
+
+/**
+ * Startup Mode gate. The workspace's single free diagnosis may be ONE whole Startup diagnostic session, from its
+ * first analysis step through its first system recommendation; it is never "one request" and never a second
+ * allowance. Server-authoritative from persisted rows, serialized with the owner diagnosis writers by the same
+ * workspace advisory lock, so concurrent sessions (or a Startup session racing an owner diagnosis) cannot both
+ * become free. The first session to persist analysis is the designated free session; abandoning it does not mint
+ * another (a different session is then paid continuation). Call INSIDE the persisting transaction, before the
+ * write. OFF = returns immediately with no query.
+ */
+export async function assertStartupAnalysisAllowance(tx: Prisma.TransactionClient, workspaceId: string, sessionId: string): Promise<void> {
+  if (!isPaywallEnforced()) return;
+  const entitled = await readEntitlement(tx, workspaceId);
+  if (entitled === null) deny({ allowed: false, reason: "entitlement_unverifiable" }, COMMERCIAL_CAPABILITIES.SUBSEQUENT_DIAGNOSIS);
+  if (entitled) return;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"commercial_first_diagnosis:" + workspaceId}))`;
+  const state = await readStartupJourneyState(tx, workspaceId, sessionId);
+  if (startupSessionIsFreeJourney(state)) return;
+  deny({ allowed: false, reason: "first_diagnosis_used" }, COMMERCIAL_CAPABILITIES.SUBSEQUENT_DIAGNOSIS);
+}
+

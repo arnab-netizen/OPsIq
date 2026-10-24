@@ -2900,8 +2900,8 @@
  {
   "method": "POST",
   "route": "/api/owner/procurement/purchase-orders/[poId]/transition",
-  "classification": "PAID_CONTINUATION",
-  "enforcement": "requireCommercial",
+  "classification": "MIXED_ACTION_SPLIT",
+  "enforcement": "handler:assertCommercialCapability",
   "capability": "approval_resolution"
  },
  {
@@ -3329,7 +3329,7 @@
   "method": "POST",
   "route": "/api/owner/startup/sessions/[sessionId]/analysis",
   "classification": "FREE_FIRST_VALUE",
-  "enforcement": "service:diagnosis-allowance"
+  "enforcement": "service:startup-free-journey"
  },
  {
   "method": "GET",
@@ -3340,9 +3340,8 @@
  {
   "method": "POST",
   "route": "/api/owner/startup/sessions/[sessionId]/arbitrate",
-  "classification": "PAID_CONTINUATION",
-  "enforcement": "requireCommercial",
-  "capability": "reassessment"
+  "classification": "FREE_FIRST_VALUE",
+  "enforcement": "service:startup-free-journey"
  },
  {
   "method": "GET",
