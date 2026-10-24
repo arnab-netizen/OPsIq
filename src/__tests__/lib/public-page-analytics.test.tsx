@@ -23,7 +23,7 @@ vi.mock("@vercel/analytics/next", () => ({
 import { PublicPageAnalytics } from "@/components/analytics/PublicPageAnalytics";
 
 describe("isPublicAnalyticsPath", () => {
-  it.each(["/", "/about", "/beta", "/privacy", "/terms", "/resources", "/resources/", "/resources/profitable-but-short-on-cash", "/tools/profit-margin-calculator", "/tools/profit-margin-calculator/"])(
+  it.each(["/", "/about", "/beta", "/privacy", "/terms", "/resources", "/resources/", "/resources/profitable-but-short-on-cash", "/tools/profit-margin-calculator", "/tools/profit-margin-calculator/", "/agency", "/agency/"])(
     "counts public page %s",
     (path) => expect(isPublicAnalyticsPath(path)).toBe(true)
   );
@@ -44,6 +44,8 @@ describe("isPublicAnalyticsPath", () => {
     "/tools",
     "/tools/other-tool",
     "/tools/profit-margin-calculatorx",
+    "/agencyx",
+    "/agency/internal",
   ])("never counts non-public path %s", (path) => expect(isPublicAnalyticsPath(path)).toBe(false));
 });
 
