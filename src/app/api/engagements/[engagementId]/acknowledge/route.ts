@@ -68,7 +68,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
     await recordIdempotencyError(idempotencyKey, err);
     throw error;
   }
-}, {
+}, { requireCommercial: "continuation_action",
   requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
   requireWorkspace: true,
 });

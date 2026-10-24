@@ -126,5 +126,5 @@ export const PATCH = withCanonicalEnforcement(
     });
     return canonicalJson({ profile: dto }, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

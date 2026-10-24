@@ -30,5 +30,5 @@ export const PATCH = withCanonicalEnforcement(
     const input = await parseRequestBody(ctx.request!, cashflowActionUpdateSchema);
     return updateCashflowAction(params.actionId, input, ctx.verifiedActorId, ctx.verifiedWorkspaceId);
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

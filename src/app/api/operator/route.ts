@@ -177,7 +177,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     }
   }
 
-  const updatePayload: any = {
+  const updatePayload: Record<string, unknown> = {
     status,
   };
 
@@ -297,4 +297,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     await recordIdempotencyResponse(idempotencyKey, 200, result);
   }
   return result;
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });
+}, { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

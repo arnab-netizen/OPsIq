@@ -81,4 +81,4 @@ export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return canonicalJson(updated, { status: 200 });
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE] });
+}, { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE] });

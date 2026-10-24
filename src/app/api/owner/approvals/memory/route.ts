@@ -40,7 +40,7 @@ export const POST = withCanonicalEnforcement(
     });
     return canonicalJson({ ok: true }, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );
 
 export const GET = withCanonicalEnforcement(

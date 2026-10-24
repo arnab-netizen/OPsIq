@@ -65,7 +65,7 @@ export const POST = withCanonicalEnforcement(
     });
     return canonicalJson(dto, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.CONSULTING_APPROVE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.CONSULTING_APPROVE], requireWorkspace: true }
 );
 
 export const GET = withCanonicalEnforcement(
@@ -105,5 +105,5 @@ export const PATCH = withCanonicalEnforcement(
     const dto = await initiateAppeal({ ...input, workspaceId: ws, actorId });
     return canonicalJson(dto, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.CONSULTING_APPROVE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.CONSULTING_APPROVE], requireWorkspace: true }
 );

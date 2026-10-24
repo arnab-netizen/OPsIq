@@ -41,7 +41,7 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  {
+  { requireCommercial: "reassessment",
     requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE],
     requireWorkspace: true,
   }

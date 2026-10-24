@@ -82,5 +82,5 @@ export const PATCH = withCanonicalEnforcement(
     // Return the plain payload (the canonical wrapper serialises the handler's return value).
     return getInterventionState(engagementId, workspaceId);
   },
-  { requireCapabilities: [CAPABILITIES.INTERVENTION_MANAGE], requireWorkspace: true }
+  { requireCommercial: "reassessment", requireCapabilities: [CAPABILITIES.INTERVENTION_MANAGE], requireWorkspace: true }
 );

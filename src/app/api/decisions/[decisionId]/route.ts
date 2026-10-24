@@ -81,5 +81,5 @@ export const PATCH = withCanonicalEnforcement(
       throw lifecycleError;
     }
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
+  { requireCommercial: "approval_resolution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
 );

@@ -72,7 +72,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
       { status: 500 }
     );
   }
-}, {
+}, { requireCommercial: "reassessment",
   requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
   requireWorkspace: true,
 });

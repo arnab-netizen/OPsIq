@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "comment": "The enable tool refuses while `open` is non-empty. Clear an item only by a reviewed commit once the owner has decided it (see PAYWALL_BOUNDARY.md section 7).",
+  "open": [
+    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: allowance scope and size (per workspace implemented)",
+    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: classification of the 26 CLASSIFICATION_REQUIRES_DECISION handlers and 5 unenforced HIGH bypasses (PAYWALL_BOUNDARY.md sections 5 and 7)",
+    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: grandfathering or exemption of existing OPEN_BETA workspaces",
+    "PRE_GO_LIVE_OWNER_DECISION_REQUIRED: final launch price (public-pricing.ts) and live Paddle price/plan seed"
+  ]
+}

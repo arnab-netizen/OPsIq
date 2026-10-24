@@ -24,5 +24,5 @@ export const POST = withCanonicalEnforcement(
     const result = await acceptFirstResultAction(ctx.verifiedWorkspaceId, ctx.verifiedActorId, body.businessId, body.idempotencyKey, body.readCycleId);
     return canonicalJson(result, { status: result.replayed ? 200 : 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );
