@@ -66,6 +66,7 @@ fixtures with sanitized Sandbox captures during Sandbox acceptance (see §12).**
   Observations are still kept; only canonical materialization is refused.
 - **Periods:** closed calendar months only (period convention identical to manual entry: first day … last day, 00:00Z). A month counts as closed one UTC day after it ends, so it has ended in every company time zone before its figures are read.
 - **Owner-entered ranges:** a current manual snapshot whose period *overlaps* a month (a quarter, year-to-date, custom range) keeps that month owner-controlled; QuickBooks never creates a competing monthly row beside it.
+- **Missing is not zero, and nothing is carried forward:** a stated `0.00` is the number 0; an absent section / unreadable cell / unusable (negative) value is *unknown* (null). When the newest read no longer supplies a figure that a QuickBooks-authored version recorded, the next version returns it to unknown (Finance amend, Cashflow in-place update) — the old number never survives under the newest observation's provenance. Owner-authored versions are never touched. History keeps what was true at the time.
 - **Refusals are visible:** every refused month records a bounded reason (currency mismatch/unknown, basis mismatch, sandbox isolation, realm mismatch, contradictory figures); the owner card shows the plain-language sentence for each. The
   in-progress month never produces a snapshot (no daily version churn).
 - **Evidence quality:** ledger-derived figures are `ACTUAL` ("These numbers come from your bank, accounts or sales records.").
