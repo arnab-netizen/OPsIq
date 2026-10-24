@@ -1,8 +1,10 @@
 /**
  * QuickBooks Online — business-scoped connection, one-time OAuth state and encrypted token persistence.
  *
- * Service layer only: no routes, no sync, no evidence, no QBO API calls. Callers (a later PR) own the HTTP surface,
- * the capability check and the Intuit code exchange; this module owns the durable, tenant-safe state.
+ * Persistence layer for the connection lifecycle: no routes and no QBO API calls of its own. The connect/callback orchestration
+ * (qbo-connect-callback.service) and the HTTP routes own the capability check and the Intuit code exchange; synchronisation,
+ * observations and canonical adoption live in the other QuickBooks V1 services (see docs/opsiq/product/QBO_V1_ARCHITECTURE.md).
+ * This module owns the durable, tenant-safe connection state.
  *
  * Flow:   beginQboAuthorization -> (browser at Intuit) -> consumeQboAuthorizationState -> exchange code (caller)
  *         -> finalizeQboConnection.
@@ -74,8 +76,13 @@ function parse<T>(schema: { safeParse(v: unknown): { success: true; data: T } | 
   return r.data;
 }
 
-/** Real, active, non-fixture business inside the workspace; a foreign or missing id is a uniform NotFound. */
-async function requireEligibleBusiness(client: Pick<Tx, "ownerBusiness">, workspaceId: string, businessId: string): Promise<void> {
+/**
+ * An active business inside the workspace; a foreign or missing id is a uniform NotFound. A fixture (test) business may be
+ * connected ONLY to a Sandbox company, and canonical evidence is routed by the same rule (Sandbox -> fixture business only,
+ * production -> real business only; see qbo-materialization and the provenance trigger). `environment` omitted = a read-only
+ * listing, which applies no fixture rule.
+ */
+async function requireEligibleBusiness(client: Pick<Tx, "ownerBusiness">, workspaceId: string, businessId: string, environment?: QboEnvironment): Promise<void> {
   try {
     await assertBusinessInWorkspace(client as never, workspaceId, businessId);
   } catch (e) {
@@ -92,7 +99,7 @@ async function requireEligibleBusiness(client: Pick<Tx, "ownerBusiness">, worksp
       fieldErrors: [{ path: "businessId", message: "Business is archived" }],
     });
   }
-  if (b.isFixtureBusiness) {
+  if (b.isFixtureBusiness && environment !== undefined && environment !== "sandbox") {
     throw new ValidationError("QuickBooks can't be connected to a test business.", {
       fieldErrors: [{ path: "businessId", message: "Test businesses can't be connected" }],
     });
@@ -150,7 +157,7 @@ export async function beginQboAuthorization(
   }
   const client = deps.client ?? db;
   const now = deps.now ?? (() => new Date());
-  await requireEligibleBusiness(client, v.workspaceId, v.businessId);
+  await requireEligibleBusiness(client, v.workspaceId, v.businessId, v.environment);
 
   const req = createQboAuthorizationRequest(config, { now });
   const createdAt = now();
@@ -256,7 +263,7 @@ export async function finalizeQboConnection(
         throw new FinalizeRefusal("AUTHORIZATION_NOT_CONSUMED");
       }
       if (state.finalizedAt) throw new FinalizeRefusal("AUTHORIZATION_ALREADY_FINALIZED");
-      await requireEligibleBusiness(tx, a.workspaceId, a.businessId);
+      await requireEligibleBusiness(tx, a.workspaceId, a.businessId, a.environment);
 
       const holder = await tx.qboConnection.findFirst({ where: { environment: a.environment, realmId, status: LIVE } });
       if (holder && (holder.workspaceId !== a.workspaceId || holder.businessId !== a.businessId)) {
@@ -298,6 +305,17 @@ export async function finalizeQboConnection(
             data: { ...tokenData, revision: { increment: 1 }, rotatedAt: now },
           })
         : await tx.qboConnectionToken.create({ data: { connectionId: connection.id, workspaceId: a.workspaceId, ...tokenData } });
+
+      if (reconnected) {
+        // A fresh authorization ends the failure streak the owner was shown (the next sync re-establishes the rest).
+        const prevSync = await tx.qboSyncState.findFirst({ where: { connectionId: connection.id, workspaceId: a.workspaceId }, select: { lastSuccessAt: true } });
+        if (prevSync) {
+          await tx.qboSyncState.update({
+            where: { connectionId: connection.id },
+            data: { consecutiveFailures: 0, lastErrorCode: null, lifecycle: prevSync.lastSuccessAt ? "SYNCED" : "NEVER_SYNCED", version: { increment: 1 } },
+          });
+        }
+      }
 
       const fin = await tx.qboOAuthState.updateMany({
         where: { id: a.authorizationId, workspaceId: a.workspaceId, finalizedAt: null },

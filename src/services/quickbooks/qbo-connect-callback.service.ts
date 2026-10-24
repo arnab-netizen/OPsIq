@@ -73,7 +73,7 @@ export async function startQboConnect(
 // ─── Callback ────────────────────────────────────────────────────────────────
 
 export type CallbackResult =
-  | { ok: true; businessId: string; environment: QboEnvironment; reconnected: boolean; next: typeof QBO_CALLBACK_SUCCESS_NEXT_PATH }
+  | { ok: true; businessId: string; connectionId: string; environment: QboEnvironment; reconnected: boolean; next: typeof QBO_CALLBACK_SUCCESS_NEXT_PATH }
   | { ok: false; code: QboConnectFailureCode };
 
 function single(params: URLSearchParams, name: string): string | null {
@@ -140,7 +140,7 @@ export async function completeQboCallback(
     const finalized = await finalizeQboConnection({ authorization, realmId: verifiedRealm, grant }, deps);
     if (!finalized.ok) return { ok: false, code: mapFinalizeFailure(finalized.reason) };
     return {
-      ok: true, businessId: authorization.businessId, environment: authorization.environment,
+      ok: true, businessId: authorization.businessId, connectionId: finalized.connection.id, environment: authorization.environment,
       reconnected: finalized.reconnected, next: QBO_CALLBACK_SUCCESS_NEXT_PATH,
     };
   } catch (e) {

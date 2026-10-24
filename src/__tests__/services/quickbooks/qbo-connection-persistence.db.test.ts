@@ -7,7 +7,14 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { resolveQboConfig, type QboEnvironment, type QboProviderConfig } from "@/domain/quickbooks/qbo-config";
-import { seedTenant, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
+import { seedTenant as seedBaseTenant, type Tenant } from "@/__tests__/owner-outcome/outcome-db-fixtures";
+import { trackQboWorkspace } from "@/__tests__/test-helpers/qbo-task-cleanup";
+
+const seedTenant = async (): Promise<Tenant> => {
+  const t = await seedBaseTenant();
+  trackQboWorkspace(t.ws);
+  return t;
+};
 import {
   beginQboAuthorization, consumeQboAuthorizationState, finalizeQboConnection, rotateQboTokens, loadQboTokensForUse,
   markQboReauthorizationRequired, disconnectQboConnection, listQboConnectionsForBusiness,
@@ -78,11 +85,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connection persistence (real Postgres
       const b = await beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: A.biz, environment: "sandbox" }, cfg("sandbox"), { now: () => t0 });
       expect(await consumeQboAuthorizationState({ workspaceId: A.ws, actorId: A.actor, environment: "sandbox", state: stateOf(b.authorizationUrl) })).toEqual({ ok: false, reason: "EXPIRED" });
     });
-    it("begin: foreign-workspace business, fixture business, environment mismatch are rejected", async () => {
+    it("begin: foreign-workspace business, production-on-fixture business, environment mismatch are rejected; sandbox-on-fixture is allowed", async () => {
       await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: B.biz, environment: "sandbox" }, cfg("sandbox"))).rejects.toMatchObject({ name: "NotFoundError" });
       const fx = randomUUID();
       await db.ownerBusiness.create({ data: { id: fx, workspaceId: A.ws, name: "fx", businessType: "generic_local_service", currency: "INR", isFixtureBusiness: true } });
-      await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: fx, environment: "sandbox" }, cfg("sandbox"))).rejects.toMatchObject({ name: "ValidationError" });
+      await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: fx, environment: "production" }, cfg("production"))).rejects.toMatchObject({ name: "ValidationError" });
+      await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: fx, environment: "sandbox" }, cfg("sandbox"))).resolves.toMatchObject({ authorizationUrl: expect.any(String) });
       await expect(beginQboAuthorization({ workspaceId: A.ws, actorId: A.actor, businessId: A.biz, environment: "production" }, cfg("sandbox"))).rejects.toMatchObject({ name: "ValidationError" });
     });
   });
@@ -181,6 +189,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connection persistence (real Postgres
       await disconnectQboConnection({ workspaceId: t.ws, actorId: t.actor, connectionId: c1.fin.connection.id });
       const c2 = await connect(t, t.biz, "sandbox", realm);
       expect(c2.fin.ok && c2.fin.reconnected && c2.fin.connection.id === c1.fin.connection.id && c2.fin.connection.status === "ACTIVE").toBe(true);
+    });
+    it("reconnect ends the failure streak the owner was shown", async () => {
+      const t = await seedTenant(); const realm = nextRealm();
+      const c1 = await connect(t, t.biz, "sandbox", realm);
+      if (!c1.fin.ok) throw new Error("x");
+      const id = c1.fin.connection.id;
+      await db.qboSyncState.create({ data: { connectionId: id, workspaceId: t.ws, businessId: t.biz, lifecycle: "FAILING", consecutiveFailures: 3, lastErrorCode: "REAUTH_REQUIRED", lastSuccessAt: new Date() } });
+      await disconnectQboConnection({ workspaceId: t.ws, actorId: t.actor, connectionId: id });
+      await connect(t, t.biz, "sandbox", realm);
+      expect(await db.qboSyncState.findUniqueOrThrow({ where: { connectionId: id } })).toMatchObject({ lifecycle: "SYNCED", consecutiveFailures: 0, lastErrorCode: null });
     });
   });
 
