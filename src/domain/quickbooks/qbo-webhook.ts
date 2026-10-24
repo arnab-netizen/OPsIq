@@ -13,10 +13,14 @@
  *   legacy   { "eventNotifications": [ { "realmId": "123", "dataChangeEvent": { "entities": [ ... ] } } ] }
  *   CloudEvents  one event object or an array of them, each carrying the company id as `intuitaccountid`
  *                (also tolerated: `realmId`), e.g. { "specversion": "1.0", "id": "...", "type": "qbo.invoice.created.v1", ... }
- * Intuit's published schema for the CloudEvents format and the exact acknowledgement deadline could not be re-verified from the
- * build environment (developer.intuit.com unreachable); the parser therefore reads only the one field it needs and ignores
- * everything else, and the route does no provider calls before answering (DB writes only), keeping it well inside the ~3 second
- * window Intuit documented for the legacy format.
+ * Contract points (Intuit's developer guidance on webhooks, as published): the signature is the base64 HMAC-SHA256 of the raw
+ * payload keyed by the verifier token; the endpoint must answer HTTP 200 within 3 seconds and do any real work asynchronously;
+ * delivery can be duplicated, retried and out of order, and one notification can name several companies; missed events are healed
+ * by reconciliation. Here that means: signature first, realm ids only, two small DB writes per connection, no provider call before
+ * answering, and the scheduled report re-reads (daily for the 3 newest closed months, a full 12-month reconcile every 7 days) as
+ * the reconciliation for anything a collapsed, dropped or reordered event could have missed. The exact current CloudEvents field
+ * list could not be re-fetched from the build environment (Intuit hosts are not reachable), so the parser reads only the one
+ * field it needs and ignores everything else.
  */
 import { createHmac, timingSafeEqual } from "crypto";
 import { isValidRealmId } from "./qbo-identifiers";

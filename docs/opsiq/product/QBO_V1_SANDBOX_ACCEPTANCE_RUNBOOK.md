@@ -9,12 +9,14 @@ not have: network access to Intuit hosts and Sandbox credentials/authorization. 
 
 ## 0. Prerequisites (names only — never paste values anywhere)
 Server config on a **preview/staging** deployment (NOT production), pointing at a disposable database:
-`QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, `QUICKBOOKS_REDIRECT_URI` (= `https://<preview-host>/api/owner/integrations/quickbooks/callback`,
-registered in the Intuit developer portal), `QUICKBOOKS_ENVIRONMENT=sandbox`, `OAUTH_TOKEN_ENCRYPTION_KEY`, `CRON_SECRET`,
+`QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, `QUICKBOOKS_REDIRECT_URI` (= `https://<preview-host>/owner/integrations/quickbooks/callback` — the callback PAGE, not the
+`/api/...` route that earlier branches' Preview configuration registered; this exact URI must be registered in the Intuit developer portal), `QUICKBOOKS_ENVIRONMENT=sandbox`, `OAUTH_TOKEN_ENCRYPTION_KEY`, `CRON_SECRET`,
 `QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN` (only for step 9). Apply the migration `20261024090000_qbo_v1_sync_evidence_provenance` to that database.
-Use an Intuit **Sandbox company** (not a real company). Sandbox evidence can only be materialized into a *fixture* business
-(`isFixtureBusiness = true`, created through the acceptance path); on a real business it is stored as observations only and every
-month reports `SANDBOX_ISOLATION` — which is itself a useful check (step 6).
+Use an Intuit **Sandbox company** (not a real company). A Sandbox company holds invented data and the server only lets it attach to a
+**test business** (`isFixtureBusiness = true`): Connect is refused for a real business (and the card explains why), and a production
+deployment refuses a test business. Owners cannot see test businesses in the UI, so on the **disposable acceptance database** an
+operator marks one business (`UPDATE owner_businesses SET is_fixture_business = true WHERE id = '<acceptance business>'`) before connecting.
+The branch-scoped Preview configuration must be created for THIS PR's branch (earlier branches' configuration does not apply).
 
 ## 1. Connect / callback / encryption / realm binding
 Sign in → My Business → Connected accounts → **Connect QuickBooks** → authorize the Sandbox company.
@@ -42,14 +44,14 @@ Revoke the app's access from Intuit's side (My Apps) and refresh: connection bec
 Disconnect (confirm) → Intuit should show the grant revoked; local tokens deleted; history kept. Reconnect the same company → same connection row.
 
 ## 6. Isolation
-Connect the Sandbox company to a **real** (non-fixture) business: observations stored, `0` canonical snapshots, summary shows refusals.
+Try to connect the Sandbox company to a **real** (non-fixture) business: Connect is not offered (the card says a Sandbox company can only be connected to a test business) and a direct `POST /api/owner/integrations/quickbooks/connect` is refused with a `ValidationError`; nothing is created. Defence in depth: if a connection ever sat on a business that stopped being a test business, materialization still refuses every month (`SANDBOX_ISOLATION`) and a database trigger rejects the provenance row.
 
 ## 7. Stale analysis
 After a QuickBooks refresh changes a figure, the Money page shows newer figures and **no diagnosis is run automatically**; re-run analysis manually.
 
 ## 8. Webhook (optional)
 Register `https://<preview-host>/api/webhooks/quickbooks` for the Sandbox app and set the verifier token. Change a Sandbox invoice:
-expect `qbo_sync_state.webhook_pending_at` set and one `qbo-sync` task with key `qbo-sync:<id>:wh:<bucket>`. Record the payload format
+expect `qbo_sync_state.webhook_pending_at` set and one `qbo-sync` task with key `qbo-sync:<id>:wh:<marker arming instant, epoch ms>`. Record the payload format
 Intuit actually sends (legacy `eventNotifications` vs CloudEvents) and its signature header; adjust `qbo-webhook.ts` if the field names differ.
 
 ## 9. Production enablement (separate, owner-authorized step)

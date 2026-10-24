@@ -49,6 +49,47 @@ describe("QBO report parser — modern / reordered shape (semantic, not position
   });
 });
 
+describe("QBO report parser — tolerance of announced Reports API response changes (row order, hierarchy, extra columns, nulls)", () => {
+  const cd = (...v: string[]) => v.map((value) => ({ value }));
+  const col = (title: string, key: string) => ({ ColTitle: title, ColType: "Money", MetaData: [{ Name: "ColKey", Value: key }] });
+  const header = { ReportName: "ProfitAndLoss", ReportBasis: "Accrual", StartPeriod: "2026-09-01", EndPeriod: "2026-09-30", Currency: "USD", Option: [{ Name: "NoReportData", Value: "false" }] };
+  const income = (children = true) => ({
+    type: "Section", group: "Income", Header: { ColData: cd("Income", "") },
+    Rows: { Row: children ? [{ type: "Section", Header: { ColData: cd("Product sales", "") }, Rows: { Row: [] }, Summary: { ColData: cd("Total Product sales", "999.00") } }] : [] },
+    Summary: { ColData: cd("Total Income", "12000.50") },
+  });
+  const cogs = { type: "Section", group: "COGS", Rows: { Row: [] }, Summary: { ColData: cd("Total Cost of Goods Sold", "4000.00") } };
+  const body = (rows: unknown[], columns: unknown[] = [{ ColTitle: "", ColType: "Account" }, col("Total", "total")]) => ({ Header: header, Columns: { Column: columns }, Rows: { Row: rows } });
+
+  it("section ORDER does not matter: the same figures whichever section comes first", () => {
+    const a = parseProfitAndLoss(body([income(), cogs]), SEP);
+    const b = parseProfitAndLoss(body([cogs, income()]), SEP);
+    expect(a.values).toEqual(b.values);
+    expect(a.values.income).toBe(12000.5);
+    expect(a.values.cogs).toBe(4000);
+  });
+
+  it("a group's OWN total is read, never a child's subtotal and never a sum of children (hierarchy-safe)", () => {
+    expect(parseProfitAndLoss(body([income(true), cogs]), SEP).values.income).toBe(12000.5);
+    expect(parseProfitAndLoss(body([income(false), cogs]), SEP).values.income).toBe(12000.5);
+  });
+
+  it("extra, unknown columns and sections are ignored; the amount column is found by key even when it is not the last", () => {
+    const columns = [{ ColTitle: "", ColType: "Account" }, col("Total", "total"), col("% of Income", "pct"), col("Prior period", "prior")];
+    const wide = (g: Record<string, unknown>) => ({ ...g, Summary: { ColData: [...(g.Summary as { ColData: unknown[] }).ColData, { value: "50.00" }, { value: "9.00" }] } });
+    const unknown = { type: "Section", group: "SomethingNew", Rows: { Row: [] }, Summary: { ColData: cd("Brand new section", "123456.00", "1.00", "2.00") } };
+    const r = parseProfitAndLoss(body([wide(income()), unknown, wide(cogs)], columns), SEP);
+    expect(r.values).toMatchObject({ income: 12000.5, cogs: 4000 });
+  });
+
+  it("a total cell that is empty or missing is NULL (unknown), and is never turned into 0", () => {
+    const blank = { ...cogs, Summary: { ColData: cd("Total Cost of Goods Sold", "") } };
+    expect(parseProfitAndLoss(body([income(), blank]), SEP).values.cogs).toBeNull();
+    const noSummary = { type: "Section", group: "COGS", Rows: { Row: [] } };
+    expect(parseProfitAndLoss(body([income(), noSummary]), SEP).values.cogs).toBeNull();
+  });
+});
+
 describe("zero vs missing", () => {
   it("a stated 0.00 is 0; an absent section is null (never 0)", () => {
     const body = HISTORICAL_PL();

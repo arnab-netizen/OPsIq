@@ -172,4 +172,11 @@ describe("QuickBooks V1 boundaries", () => {
       expect(filesMatching(/\brefreshQboTokens\s*\(|\bexchangeQboAuthorizationCode\s*\(|\brevokeQboToken\s*\(/).every((f) => f.startsWith("src/services/quickbooks/"))).toBe(true);
     });
   });
+
+  it("WEBHOOK_ACK_FAST: the webhook route makes no provider call and imports neither the Intuit client nor the OAuth service", () => {
+    const route = code("src/app/api/webhooks/quickbooks/route.ts");
+    expect(route).not.toMatch(/qbo-client|qbo-oauth|qbo-http|\bfetch\s*\(/);
+    const service = code("src/services/quickbooks/qbo-webhook.service.ts");
+    expect(service).not.toMatch(/qbo-client|qbo-oauth|qbo-http|\bfetch\s*\(/);
+  });
 });

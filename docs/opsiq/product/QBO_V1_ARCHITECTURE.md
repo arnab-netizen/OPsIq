@@ -89,7 +89,7 @@ fixtures with sanitized Sandbox captures during Sandbox acceptance (see §12).**
 | Owner amends a QuickBooks-derived Finance period | the amendment is a new version without provenance ⇒ owner-controlled for good |
 | Cashflow row (updated in place) | provenance stores the row's `updated_at` stamp; any later write is the owner's ⇒ compare-and-set fails ⇒ owner-controlled |
 | Period produced by a *different* QuickBooks company | never overwritten (`REALM_MISMATCH`) |
-| Sandbox ⇄ real business | sandbox evidence only into fixture businesses, production only into real ones (`SANDBOX_ISOLATION`; DB trigger backstop) |
+| Sandbox ⇄ real business | a Sandbox company attaches only to a test (fixture) business and production only to a real one — refused at Connect (begin AND finalize) and explained on the owner card; materialization (`SANDBOX_ISOLATION`) and a DB trigger are the backstops |
 
 ## 6. Persistence (migration `20261024090000_qbo_v1_sync_evidence_provenance`, additive)
 
@@ -115,7 +115,7 @@ transaction/session would starve every other query (deadlock) or silently drop. 
   acquired by one atomic `INSERT … ON CONFLICT … WHERE expired` on the database clock, renewed before every report read and before the progress cursor moves (a lost lease stops the run), released in `finally`,
   expiring on crash. Tested independently (`qbo-token-manager.db.test.ts`, `qbo-sync-scheduling.db.test.ts`).
 - Short critical sections that fit one transaction (observation identity, canonical period write) use `pg_advisory_xact_lock`.
-- Refresh is serialized per connection; a waiter re-reads and reuses the newer revision; rotation is a CAS on `revision`.
+- Refresh is serialized per connection; a waiter re-reads and reuses the newer revision; rotation is a CAS on `revision`. Intuit treats the previous refresh token as dead once a new one is issued, so the local write of a rotated grant is retried (4 attempts, backoff, post-commit recognised) before a bounded, retryable `TOKEN_PERSIST_FAILED` surfaces; if the database never recovers the next run's `invalid_grant` becomes `REAUTH_REQUIRED` and the owner reconnects (no credential is ever logged).
 
 ## 8. Token lifecycle
 
@@ -127,7 +127,7 @@ attempts, exponential backoff, dead-letter). No dedicated refresh scheduler.
 
 - `POST /api/webhooks/quickbooks`: `intuit-signature` = base64 HMAC-SHA256 of the raw body keyed by `QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN`
   (constant-time; unset ⇒ 401). Accepts the legacy `eventNotifications` shape and CloudEvents (company id from `intuitaccountid`).
-  Extracts **realm ids only**; marks the sync state and enqueues one idempotent task per 10-minute bucket; unknown/inactive companies
+  Extracts **realm ids only**; marks the sync state and enqueues one idempotent task per *arming of the pending marker* (key = the marker's instant: a burst shares one task; an event after a run claimed the marker gets its own; a run that finishes and finds the marker re-armed enqueues a follow-up `whc` task; the daily producer repairs an armed marker whose task was never created); unknown/inactive companies
   are acknowledged identically. Events are triggers, never financial values.
   `UNVERIFIED — Intuit's exact CloudEvents field names and acknowledgement deadline (could not reach the documentation); the route
   does DB-only work so it answers in milliseconds.`

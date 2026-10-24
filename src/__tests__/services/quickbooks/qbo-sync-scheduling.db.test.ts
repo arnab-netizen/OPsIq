@@ -57,7 +57,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO sync via the existing scheduler (real
       ids.push(c.id);
     }
     const now = new Date();
-    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now));
+    // an explicit page budget: the default (5,000 connections) is a production bound, and this shared test database holds
+    // connections other files seeded, so the assertion must not depend on how many of those there are
+    await runQboProducerForTest(() => enqueueDueQboSyncTasks(now, { maxPages: 10_000 }));
     const have = await db.scheduledTask.count({ where: { idempotencyKey: { in: ids.map((id) => qboSyncKey(id, "daily", now)) } } });
     expect(have).toBe(extra);
     // a few hundred due tasks must not linger for suites that drain the shared scheduler table in batches
