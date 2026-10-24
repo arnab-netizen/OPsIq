@@ -12,11 +12,15 @@ const clarityConfigured =
 
 // CSP unsafe-inline is temporary until nonce-based enforcement is implemented.
 // unsafe-eval is excluded in production (Next.js built bundles don't require it).
-const buildCspDirectives = (extraScriptOrigins: readonly string[] = []) => [
+const buildCspDirectives = (
+  extraScriptOrigins: readonly string[] = [],
+  extra: { frameSrc?: readonly string[]; imgSrc?: readonly string[] } = {},
+) => [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${extraScriptOrigins.map((o) => ` ${o}`).join("")}${isProd ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob:${(extra.imgSrc ?? []).map((o) => ` ${o}`).join("")}`,
+  ...(extra.frameSrc ? [`frame-src 'self' ${extra.frameSrc.join(" ")}`] : []),
   "font-src 'self' data:",
   "connect-src 'self' https:",
   "frame-ancestors 'none'",
@@ -26,6 +30,13 @@ const buildCspDirectives = (extraScriptOrigins: readonly string[] = []) => [
 
 const cspDirectives = buildCspDirectives();
 const publicClarityCspDirectives = buildCspDirectives(CLARITY_SCRIPT_ORIGINS);
+
+// /pay (Paddle Default Payment Link) is the ONLY route allowed to load Paddle.js and frame Paddle's hosted
+// checkout. connect-src already permits https:. Verified against Paddle's sandbox in the commercial runbook.
+const payCspDirectives = buildCspDirectives(["https://cdn.paddle.com"], {
+  frameSrc: ["https://buy.paddle.com", "https://sandbox-buy.paddle.com"],
+  imgSrc: ["https://*.paddle.com"],
+});
 
 // Public pages that may run Clarity (superset of the exact app-level allowlist in clarity-policy.ts; the app decides
 // eligibility, the CSP only has to permit the script on pages where it may legitimately load).
@@ -106,6 +117,7 @@ const nextConfig: NextConfig = {
             : []),
         ],
       },
+      { source: "/pay", headers: [{ key: "Content-Security-Policy", value: payCspDirectives }] },
       // Later matching rules override earlier ones for the same header key (Next.js "Header Overriding Behavior"), so
       // these rules replace ONLY the Content-Security-Policy on the public pages, and only when Clarity is configured.
       // Everything else about the response headers stays as set above.

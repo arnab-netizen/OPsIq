@@ -108,7 +108,13 @@ describe("CSP when Clarity is NOT configured (fail closed)", () => {
     ["empty project id", { VERCEL_ENV: "production", NEXT_PUBLIC_CLARITY_PROJECT_ID: "   ", NODE_ENV: "production" }],
     ["malformed project id", { VERCEL_ENV: "production", NEXT_PUBLIC_CLARITY_PROJECT_ID: "bad id;x", NODE_ENV: "production" }],
   ])("%s: no Clarity origin anywhere and a single header rule, exactly as before", async (_label, env) => {
-    const rules = await loadRules(env);
+    const allRules = await loadRules(env);
+    // `/pay` carries its own Paddle checkout CSP (commercial billing, unrelated to Clarity). Everything else must be
+    // exactly the single global rule, and the /pay rule must never mention Clarity.
+    const payRules = allRules.filter((r) => r.source === "/pay");
+    expect(payRules).toHaveLength(1);
+    expect(JSON.stringify(payRules[0].headers)).not.toMatch(/clarity/i);
+    const rules = allRules.filter((r) => r.source !== "/pay");
     expect(rules).toHaveLength(1);
     expect(rules[0].source).toBe("/(.*)");
     for (const path of [...PUBLIC, ...PRIVATE]) {

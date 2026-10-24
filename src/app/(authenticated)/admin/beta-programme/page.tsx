@@ -31,6 +31,16 @@ interface BetaRequestRow {
   createdAt: string;
 }
 
+/** Mirrors the API's bound on the operator reason (the server enforces it; this only stops over-long typing). */
+const REASON_MAX_LENGTH = 500;
+
+interface SettingsPatch {
+  admissionMode?: string;
+  capacityLimit?: number;
+  capacityIncreaseConfirmation?: { from: number; to: number };
+  reason?: string;
+}
+
 interface Settings {
   admissionMode: string;
   capacityLimit: number;
@@ -131,6 +141,9 @@ export default function AdminBetaProgrammePage() {
   const [modeInput, setModeInput] = useState("");
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  // A capacity increase is never sent by Save alone: it waits here for an explicit confirmation of that exact change.
+  const [pendingIncrease, setPendingIncrease] = useState<{ from: number; to: number } | null>(null);
+  const [increaseReason, setIncreaseReason] = useState("");
   const [bootstrapAcknowledge, setBootstrapAcknowledge] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
   const [capacity, setCapacity] = useState<OverviewCapacity | null | "unavailable">(null);
@@ -195,7 +208,7 @@ export default function AdminBetaProgrammePage() {
    * Sends ONLY what the operator changed. A page left open for hours must not overwrite a newer capacity or mode with
    * stale form values, and "Stop new signups now" sends the mode alone.
    */
-  const saveSettings = async (patch: { admissionMode?: string; capacityLimit?: number }) => {
+  const saveSettings = async (patch: SettingsPatch) => {
     setSettingsSaving(true);
     setSettingsError(null);
     try {
@@ -210,6 +223,8 @@ export default function AdminBetaProgrammePage() {
       refreshCapacity();
       setModeInput(result.admissionMode);
       setCapacityInput(String(result.capacityLimit));
+      setPendingIncrease(null);
+      setIncreaseReason("");
     } catch (e) {
       const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "action" });
       setSettingsError(governed.operatorMessage);
@@ -218,12 +233,38 @@ export default function AdminBetaProgrammePage() {
     }
   };
 
-  const handleSaveSettings = () => {
-    const patch: { admissionMode?: string; capacityLimit?: number } = {};
-    if (settings && modeInput !== settings.admissionMode) patch.admissionMode = modeInput;
-    if (settings && Number(capacityInput) !== settings.capacityLimit) patch.capacityLimit = Number(capacityInput);
-    if (Object.keys(patch).length === 0) return Promise.resolve();
-    return saveSettings(patch);
+  const handleSaveSettings = async () => {
+    if (!settings) return;
+    const modePatch: SettingsPatch = {};
+    if (modeInput !== settings.admissionMode) modePatch.admissionMode = modeInput;
+    const proposedCapacity = Number(capacityInput);
+    if (proposedCapacity > settings.capacityLimit) {
+      // An increase is held for explicit confirmation (below). A mode change made in the same click is still applied
+      // now and on its own, so switching the admission mode never depends on the capacity confirmation.
+      const increase = { from: settings.capacityLimit, to: proposedCapacity };
+      setSettingsError(null);
+      if (Object.keys(modePatch).length > 0) await saveSettings(modePatch);
+      // Opened after the mode save, which refreshes the form from the server's answer.
+      setCapacityInput(String(increase.to));
+      setPendingIncrease(increase);
+      setIncreaseReason("");
+      return;
+    }
+    // A decrease (the fast way to fail closed) and a mode-only change are sent directly, with only what changed.
+    setPendingIncrease(null);
+    const patch: SettingsPatch = { ...modePatch };
+    if (proposedCapacity !== settings.capacityLimit) patch.capacityLimit = proposedCapacity;
+    if (Object.keys(patch).length === 0) return;
+    await saveSettings(patch);
+  };
+
+  const handleConfirmIncrease = () => {
+    if (!pendingIncrease || increaseReason.trim().length === 0) return Promise.resolve();
+    return saveSettings({
+      capacityLimit: pendingIncrease.to,
+      capacityIncreaseConfirmation: { from: pendingIncrease.from, to: pendingIncrease.to },
+      reason: increaseReason.trim(),
+    });
   };
 
   const handleStopSignups = () => saveSettings({ admissionMode: "CLOSED" });
@@ -457,12 +498,41 @@ export default function AdminBetaProgrammePage() {
             />
           </div>
           <div>
-            <Input label="Capacity limit" type="number" inputMode="numeric" min={1} value={capacityInput} onChange={(e) => setCapacityInput(e.target.value)} className="w-full sm:w-32" />
+            <Input label="Capacity limit" type="number" inputMode="numeric" min={1} value={capacityInput} onChange={(e) => { setCapacityInput(e.target.value); setPendingIncrease(null); }} className="w-full sm:w-32" />
           </div>
           <Button className="min-h-11 w-full sm:w-auto" onClick={() => void handleSaveSettings()} isLoading={settingsSaving} disabled={settingsSaving}>
             Save
           </Button>
         </div>
+        {pendingIncrease && (
+          <div className="space-y-3 rounded border border-amber-300 bg-amber-50 p-4" data-testid="capacity-increase-confirmation">
+            <h3 className="font-semibold">Increase capacity from {pendingIncrease.from} to {pendingIncrease.to}</h3>
+            <p className="text-sm text-gray-800">
+              Current capacity: <strong>{pendingIncrease.from}</strong> &middot; New capacity: <strong>{pendingIncrease.to}</strong>.
+              More people will be able to join. Nothing changes until you confirm.
+            </p>
+            <Input
+              label="Reason for the increase"
+              value={increaseReason}
+              maxLength={REASON_MAX_LENGTH}
+              onChange={(e) => setIncreaseReason(e.target.value)}
+              className="w-full"
+            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                className="min-h-11 w-full sm:w-auto"
+                onClick={() => void handleConfirmIncrease()}
+                isLoading={settingsSaving}
+                disabled={settingsSaving || increaseReason.trim().length === 0}
+              >
+                Confirm increase
+              </Button>
+              <Button variant="secondary" className="min-h-11 w-full sm:w-auto" onClick={() => { setPendingIncrease(null); setCapacityInput(String(settings?.capacityLimit ?? "")); }} disabled={settingsSaving}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
         {settingsError && !bootstrapPreview?.qaContaminationDetected && <p className="text-sm text-destructive">{settingsError}</p>}
         {settings?.source === "legacy" && (
           <p className="text-xs text-muted-foreground">

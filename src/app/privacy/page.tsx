@@ -9,7 +9,7 @@ export const metadata = {
   description: "How OpsIQ handles your information during beta.",
 };
 
-const POLICY_VERSION = "2026-10-16";
+const POLICY_VERSION = "2026-10-17";
 
 export default function PrivacyPage() {
   return (
@@ -57,6 +57,13 @@ export default function PrivacyPage() {
             but no other link parameters), the referring website, and general browser, device,
             and country information. OpsIQ sets no cookies for this, sends it no name, email, or
             account information, and does not record visits to signed-in pages.
+          </p>
+          <p className="mt-2">
+            <strong>Billing.</strong> If you subscribe to a paid plan, Paddle collects your payment details, billing
+            name and address, and tax information and handles your payment as Merchant of Record under{" "}
+            <a href="https://www.paddle.com/legal/privacy" className="text-[var(--primary-text)] hover:underline">Paddle&rsquo;s privacy policy</a>.
+            OpsIQ receives and stores only Paddle&rsquo;s customer and subscription identifiers, your subscription status,
+            plan, billing-period dates, and whether a cancellation is scheduled. OpsIQ never receives or stores your card number.
           </p>
         </section>
 
@@ -117,6 +124,7 @@ export default function PrivacyPage() {
             OpsIQ runs on third-party infrastructure to operate: Vercel (application hosting, and
             page-visit analytics for our public pages), Microsoft (Clarity behavioral analytics on
             our public pages, only if you allow it),
+            Paddle (payment processing and Merchant of Record, only if you subscribe to a paid plan),
             Neon (Postgres database hosting), Resend (transactional email, e.g. verification and
             password-reset emails), and Sentry (error monitoring — configured to scrub cookies,
             authorization headers, request bodies, and never to include your email or IP address

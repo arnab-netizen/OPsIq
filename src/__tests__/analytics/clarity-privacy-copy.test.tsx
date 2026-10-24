@@ -21,7 +21,7 @@ const text = (c: HTMLElement) => c.textContent!.replace(/\s+/g, " ");
 
 describe("/privacy", () => {
   it("states the new policy version", async () => {
-    expect(text(await page({}))).toMatch(/Version 2026-10-16/);
+    expect(text(await page({}))).toMatch(/Version 2026-10-17/);
   });
 
   it("discloses Microsoft Clarity: public pages only, behavioral analytics, optional/explicit consent, Strict masking", async () => {
