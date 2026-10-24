@@ -2934,65 +2934,67 @@ model RecoveryVerification {
 // Reuses OwnerBusiness; does not mutate any recovery_* or owner_metric_snapshots.
 
 model OwnerFinancialSnapshot {
-  id                   String              @id @db.Uuid
-  workspaceId          String              @map("workspace_id") @db.Uuid
-  businessId           String              @map("business_id") @db.Uuid
-  periodStart          DateTime            @map("period_start")
-  periodEnd            DateTime            @map("period_end")
+  id                   String                   @id @db.Uuid
+  workspaceId          String                   @map("workspace_id") @db.Uuid
+  businessId           String                   @map("business_id") @db.Uuid
+  periodStart          DateTime                 @map("period_start")
+  periodEnd            DateTime                 @map("period_end")
   currency             String
-  businessModelType    String?             @map("business_model_type")
-  industryTemplate     String?             @map("industry_template")
+  businessModelType    String?                  @map("business_model_type")
+  industryTemplate     String?                  @map("industry_template")
   /// ACTUAL | GOOD_ESTIMATE | ROUGH_ESTIMATE. NULL = recorded before provenance existed (unspecified; never treated as ACTUAL).
-  evidenceQuality      String?             @map("evidence_quality")
+  evidenceQuality      String?                  @map("evidence_quality")
   revenue              Float?
-  costOfGoods          Float?              @map("cost_of_goods")
-  fixedCosts           Float?              @map("fixed_costs")
-  variableCosts        Float?              @map("variable_costs")
+  costOfGoods          Float?                   @map("cost_of_goods")
+  fixedCosts           Float?                   @map("fixed_costs")
+  variableCosts        Float?                   @map("variable_costs")
   rent                 Float?
   payroll              Float?
   utilities            Float?
-  deliveryCost         Float?              @map("delivery_cost")
-  marketingSpend       Float?              @map("marketing_spend")
-  discountAmount       Float?              @map("discount_amount")
+  deliveryCost         Float?                   @map("delivery_cost")
+  marketingSpend       Float?                   @map("marketing_spend")
+  discountAmount       Float?                   @map("discount_amount")
   /// COMPATIBILITY AGGREGATE of refund + rework + complaint. For a leakageCompVersion = NULL (legacy) row this is the ONLY
   /// persisted leakage figure and its composition is UNKNOWN (which components were supplied was never stored). For a
   /// component-aware row it is derived from the three component columns and is never the source of component coverage.
-  refundReworkCost     Float?              @map("refund_rework_cost")
+  refundReworkCost     Float?                   @map("refund_rework_cost")
   /// Separately persisted leakage components (D9). NULL = UNKNOWN; 0 = an explicit known zero. Only ever set on a row with
   /// leakageCompVersion = 1 (enforced by owner_fin_snapshots_leakage_component_contract_check). Never backfilled.
-  refundAmount         Float?              @map("refund_amount")
-  reworkCost           Float?              @map("rework_cost")
-  complaintCost        Float?              @map("complaint_cost")
+  refundAmount         Float?                   @map("refund_amount")
+  reworkCost           Float?                   @map("rework_cost")
+  complaintCost        Float?                   @map("complaint_cost")
   /// NULL = legacy combined-aggregate contract (components unknowable). 1 = the three component columns above are authoritative.
-  leakageCompVersion   Int?                @map("leakage_component_version")
-  debtPayments         Float?              @map("debt_payments")
-  totalDebtOutstanding Float?              @map("total_debt_outstanding")
-  cashOnHand           Float?              @map("cash_on_hand")
+  leakageCompVersion   Int?                     @map("leakage_component_version")
+  debtPayments         Float?                   @map("debt_payments")
+  totalDebtOutstanding Float?                   @map("total_debt_outstanding")
+  cashOnHand           Float?                   @map("cash_on_hand")
   receivables          Float?
-  overdueReceivables   Float?              @map("overdue_receivables")
+  overdueReceivables   Float?                   @map("overdue_receivables")
   payables             Float?
-  overduePayables      Float?              @map("overdue_payables")
-  ownerWithdrawals     Float?              @map("owner_withdrawals")
-  inventoryCashLock    Float?              @map("inventory_cash_lock")
-  orderCount           Float?              @map("order_count")
-  customerCount        Float?              @map("customer_count")
-  repeatCustomerCount  Float?              @map("repeat_customer_count")
-  b2bRevenue           Float?              @map("b2b_revenue")
-  b2cRevenue           Float?              @map("b2c_revenue")
+  overduePayables      Float?                   @map("overdue_payables")
+  ownerWithdrawals     Float?                   @map("owner_withdrawals")
+  inventoryCashLock    Float?                   @map("inventory_cash_lock")
+  orderCount           Float?                   @map("order_count")
+  customerCount        Float?                   @map("customer_count")
+  repeatCustomerCount  Float?                   @map("repeat_customer_count")
+  b2bRevenue           Float?                   @map("b2b_revenue")
+  b2cRevenue           Float?                   @map("b2c_revenue")
   notes                String?
-  dataConfidenceScore  Float               @map("data_confidence_score")
-  missingCriticalData  Json                @map("missing_critical_data")
+  dataConfidenceScore  Float                    @map("data_confidence_score")
+  missingCriticalData  Json                     @map("missing_critical_data")
   // Amendment versioning — same pattern as StartupIdeaRecord (reviseIdea)
-  version              Int                 @default(1)
-  supersededById       String?             @map("superseded_by_id") @db.Uuid
-  amendmentReason      String?             @map("amendment_reason") @db.Text
-  changedFields        Json?               @map("changed_fields")
-  amendedByActorId     String?             @map("amended_by_actor_id") @db.Uuid
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @updatedAt @map("updated_at")
-  business             OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  version              Int                      @default(1)
+  supersededById       String?                  @map("superseded_by_id") @db.Uuid
+  amendmentReason      String?                  @map("amendment_reason") @db.Text
+  changedFields        Json?                    @map("changed_fields")
+  amendedByActorId     String?                  @map("amended_by_actor_id") @db.Uuid
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  business             OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Cascade)
   cycles               OwnerFinanceCycle[]
+  qboProvenance        QboCanonicalProvenance[]
 
+  @@unique([id, workspaceId, businessId], map: "owner_fin_snapshots_tenant_key")
   // Version-aware uniqueness: one row per (business, period, version number)
   @@unique([businessId, periodStart, periodEnd, version], map: "owner_fin_snapshots_bus_period_version_key")
   @@index([workspaceId])
@@ -3173,35 +3175,37 @@ model OwnerFinanceOutcomeSignal {
 // Owner Intelligence Spine reads both domains uniformly.
 
 model OwnerCashflowSnapshot {
-  id                  String               @id @db.Uuid
-  workspaceId         String               @map("workspace_id") @db.Uuid
-  businessId          String               @map("business_id") @db.Uuid
-  periodStart         DateTime             @map("period_start")
-  periodEnd           DateTime             @map("period_end")
+  id                  String                   @id @db.Uuid
+  workspaceId         String                   @map("workspace_id") @db.Uuid
+  businessId          String                   @map("business_id") @db.Uuid
+  periodStart         DateTime                 @map("period_start")
+  periodEnd           DateTime                 @map("period_end")
   currency            String
-  businessModelType   String?              @map("business_model_type")
-  industryTemplate    String?              @map("industry_template")
-  cashInHand          Float?               @map("cash_in_hand")
-  bankBalance         Float?               @map("bank_balance")
-  dailyCollections    Float?               @map("daily_collections")
+  businessModelType   String?                  @map("business_model_type")
+  industryTemplate    String?                  @map("industry_template")
+  cashInHand          Float?                   @map("cash_in_hand")
+  bankBalance         Float?                   @map("bank_balance")
+  dailyCollections    Float?                   @map("daily_collections")
   receivables         Float?
-  receivablesOverdue  Float?               @map("receivables_overdue")
+  receivablesOverdue  Float?                   @map("receivables_overdue")
   payables            Float?
-  payablesOverdue     Float?               @map("payables_overdue")
-  upcomingEmi         Float?               @map("upcoming_emi")
-  rentDue             Float?               @map("rent_due")
-  salaryDue           Float?               @map("salary_due")
-  vendorDue           Float?               @map("vendor_due")
-  taxDue              Float?               @map("tax_due")
-  ownerWithdrawal     Float?               @map("owner_withdrawal")
+  payablesOverdue     Float?                   @map("payables_overdue")
+  upcomingEmi         Float?                   @map("upcoming_emi")
+  rentDue             Float?                   @map("rent_due")
+  salaryDue           Float?                   @map("salary_due")
+  vendorDue           Float?                   @map("vendor_due")
+  taxDue              Float?                   @map("tax_due")
+  ownerWithdrawal     Float?                   @map("owner_withdrawal")
   notes               String?
-  dataConfidenceScore Float                @map("data_confidence_score")
-  missingCriticalData Json                 @map("missing_critical_data")
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  business            OwnerBusiness        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  dataConfidenceScore Float                    @map("data_confidence_score")
+  missingCriticalData Json                     @map("missing_critical_data")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  business            OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Cascade)
   cycles              OwnerCashflowCycle[]
+  qboProvenance       QboCanonicalProvenance[]
 
+  @@unique([id, workspaceId, businessId], map: "owner_cashflow_snapshots_tenant_key")
   @@unique([businessId, periodStart, periodEnd])
   @@index([workspaceId])
   @@index([businessId])
@@ -7157,7 +7161,6 @@ model OwnerOutcomeAssessment {
   @@map("owner_outcome_assessments")
 }
 
-
 // ─── QuickBooks Online — business-scoped connection persistence (read-only integration) ────────────────────
 // QBO-specific tables (not the generic External* tables): ExternalConnection is unique per (workspace, provider) and
 // carries no business / realm / environment, and ExternalOAuthToken has no rotation fence or refresh expiry, so a
@@ -7188,27 +7191,33 @@ model QboOAuthState {
 
 /// A business's binding to one Intuit realm in one environment. Rows are never deleted; DISCONNECTED is terminal-until-reconnect.
 model QboConnection {
-  id                String    @id @db.Uuid
-  workspaceId       String    @map("workspace_id") @db.Uuid
-  businessId        String    @map("business_id") @db.Uuid
-  environment       String
-  realmId           String    @map("realm_id")
-  status            String
-  connectedById     String    @map("connected_by_id") @db.Uuid
-  connectedAt       DateTime  @map("connected_at")
-  reauthRequiredAt  DateTime? @map("reauth_required_at")
-  lastErrorCode     String?   @map("last_error_code")
-  disconnectedAt    DateTime? @map("disconnected_at")
-  disconnectedById  String?   @map("disconnected_by_id") @db.Uuid
-  version           Int       @default(1)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id               String    @id @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  environment      String
+  realmId          String    @map("realm_id")
+  status           String
+  connectedById    String    @map("connected_by_id") @db.Uuid
+  connectedAt      DateTime  @map("connected_at")
+  reauthRequiredAt DateTime? @map("reauth_required_at")
+  lastErrorCode    String?   @map("last_error_code")
+  disconnectedAt   DateTime? @map("disconnected_at")
+  disconnectedById String?   @map("disconnected_by_id") @db.Uuid
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  business OwnerBusiness        @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
-  token    QboConnectionToken?
+  business        OwnerBusiness            @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  token           QboConnectionToken?
+  syncState       QboSyncState?
+  reportSnapshots QboReportSnapshot[]
+  provenance      QboCanonicalProvenance[]
+  resourceLocks   QboResourceLock[]
 
   @@unique([workspaceId, businessId, environment, realmId], map: "qbo_connections_binding_key")
   @@unique([id, workspaceId], map: "qbo_connections_tenant_key")
+  @@unique([id, workspaceId, businessId], map: "qbo_connections_business_key")
+  @@unique([id, workspaceId, businessId, environment, realmId], map: "qbo_connections_realm_key")
   @@index([workspaceId, businessId])
   @@index([environment, realmId])
   @@map("qbo_connections")
@@ -7238,22 +7247,154 @@ model QboConnectionToken {
   @@map("qbo_connection_tokens")
 }
 
+/// Provider-resource lock for one connection (scope: sync | refresh). Compare-and-set row with a DB-clock expiry; see migration notes.
+model QboResourceLock {
+  connectionId String   @map("connection_id") @db.Uuid
+  scope        String
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  holderToken  String   @map("holder_token") @db.Uuid
+  acquiredAt   DateTime @map("acquired_at")
+  expiresAt    DateTime @map("expires_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+
+  @@id([connectionId, scope])
+  @@index([workspaceId])
+  @@index([expiresAt])
+  @@map("qbo_resource_locks")
+}
+
+/// Exactly one current sync state per QBO connection (operational health, baseline progress). NOT a scheduler lease.
+model QboSyncState {
+  connectionId        String    @id @map("connection_id") @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String    @map("business_id") @db.Uuid
+  /// NEVER_SYNCED | BASELINING | SYNCED | FAILING
+  lifecycle           String
+  /// First closed month (UTC date) the baseline has NOT yet completed; advanced only after a month is fully persisted.
+  baselineCursor      DateTime? @map("baseline_cursor") @db.Date
+  baselineCompletedAt DateTime? @map("baseline_completed_at")
+  lastAttemptAt       DateTime? @map("last_attempt_at")
+  lastSuccessAt       DateTime? @map("last_success_at")
+  lastFailureAt       DateTime? @map("last_failure_at")
+  lastErrorCode       String?   @map("last_error_code")
+  consecutiveFailures Int       @default(0) @map("consecutive_failures")
+  lastFullReconcileAt DateTime? @map("last_full_reconcile_at")
+  webhookPendingAt    DateTime? @map("webhook_pending_at")
+  lastWebhookAt       DateTime? @map("last_webhook_at")
+  companyName         String?   @map("company_name")
+  lastRunSummary      Json?     @map("last_run_summary")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  connection QboConnection @relation(fields: [connectionId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
+
+  @@unique([connectionId, workspaceId, businessId], map: "qbo_sync_state_tenant_key")
+  @@index([workspaceId, businessId])
+  @@index([lifecycle])
+  @@map("qbo_sync_state")
+}
+
+/// Immutable, versioned, minimized report observation (allowlisted parsed totals only — never the provider body, never customer rows).
+model QboReportSnapshot {
+  id              String   @id @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  businessId      String   @map("business_id") @db.Uuid
+  connectionId    String   @map("connection_id") @db.Uuid
+  environment     String
+  realmId         String   @map("realm_id")
+  /// PROFIT_AND_LOSS | BALANCE_SHEET | AGED_RECEIVABLES | AGED_PAYABLES
+  reportType      String   @map("report_type")
+  /// Equal to periodEnd for as-of reports (balance sheet, agings).
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+  /// ACCRUAL | CASH
+  accountingBasis String   @map("accounting_basis")
+  /// REPORT_HEADER (stated by Intuit) | REQUESTED (header silent; the requested basis is recorded)
+  basisSource     String   @map("basis_source")
+  currency        String?
+  version         Int
+  contentHash     String   @map("content_hash")
+  parserVersion   Int      @map("parser_version")
+  noReportData    Boolean  @map("no_report_data")
+  values          Json
+  providerTid     String?  @map("provider_tid")
+  acquiredAt      DateTime @map("acquired_at")
+  lastConfirmedAt DateTime @map("last_confirmed_at")
+  confirmCount    Int      @default(0) @map("confirm_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  connection QboConnection            @relation(fields: [connectionId, workspaceId, businessId, environment, realmId], references: [id, workspaceId, businessId, environment, realmId], onDelete: Restrict)
+  asPl       QboCanonicalProvenance[] @relation("QboProvPl")
+  asBs       QboCanonicalProvenance[] @relation("QboProvBs")
+  asAr       QboCanonicalProvenance[] @relation("QboProvAr")
+  asAp       QboCanonicalProvenance[] @relation("QboProvAp")
+
+  @@unique([connectionId, reportType, periodStart, periodEnd, accountingBasis, version], map: "qbo_report_snapshots_identity_version_key")
+  @@unique([id, workspaceId, connectionId], map: "qbo_report_snapshots_tenant_key")
+  @@index([workspaceId, businessId, reportType, periodEnd])
+  @@map("qbo_report_snapshots")
+}
+
+/// Immutable link from a canonical Finance/Cashflow snapshot version to the QBO observations it was derived from.
+/// Written in the SAME transaction as the canonical write. "QuickBooks-controlled" = the current canonical row has provenance.
+model QboCanonicalProvenance {
+  id                  String    @id @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String    @map("business_id") @db.Uuid
+  connectionId        String    @map("connection_id") @db.Uuid
+  environment         String
+  realmId             String    @map("realm_id")
+  /// FINANCIAL_SNAPSHOT | CASHFLOW_SNAPSHOT
+  targetType          String    @map("target_type")
+  financialSnapshotId String?   @map("financial_snapshot_id") @db.Uuid
+  cashflowSnapshotId  String?   @map("cashflow_snapshot_id") @db.Uuid
+  periodStart         DateTime  @map("period_start") @db.Date
+  periodEnd           DateTime  @map("period_end") @db.Date
+  /// CREATED | AMENDED | UPDATED
+  action              String
+  accountingBasis     String    @map("accounting_basis")
+  currency            String
+  plObservationId     String?   @map("pl_observation_id") @db.Uuid
+  bsObservationId     String?   @map("bs_observation_id") @db.Uuid
+  arObservationId     String?   @map("ar_observation_id") @db.Uuid
+  apObservationId     String?   @map("ap_observation_id") @db.Uuid
+  derivedValues       Json      @map("derived_values")
+  /// Cashflow rows are updated in place: the row's updated_at as stamped by this write. A later difference = the owner edited it.
+  targetUpdatedAt     DateTime? @map("target_updated_at")
+  materializedAt      DateTime  @map("materialized_at")
+
+  connection        QboConnection           @relation(fields: [connectionId, workspaceId, businessId, environment, realmId], references: [id, workspaceId, businessId, environment, realmId], onDelete: Restrict)
+  financialSnapshot OwnerFinancialSnapshot? @relation(fields: [financialSnapshotId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
+  cashflowSnapshot  OwnerCashflowSnapshot?  @relation(fields: [cashflowSnapshotId, workspaceId, businessId], references: [id, workspaceId, businessId], onDelete: Restrict)
+  plObservation     QboReportSnapshot?      @relation("QboProvPl", fields: [plObservationId, workspaceId, connectionId], references: [id, workspaceId, connectionId], onDelete: Restrict)
+  bsObservation     QboReportSnapshot?      @relation("QboProvBs", fields: [bsObservationId, workspaceId, connectionId], references: [id, workspaceId, connectionId], onDelete: Restrict)
+  arObservation     QboReportSnapshot?      @relation("QboProvAr", fields: [arObservationId, workspaceId, connectionId], references: [id, workspaceId, connectionId], onDelete: Restrict)
+  apObservation     QboReportSnapshot?      @relation("QboProvAp", fields: [apObservationId, workspaceId, connectionId], references: [id, workspaceId, connectionId], onDelete: Restrict)
+
+  @@index([workspaceId, businessId, periodEnd])
+  @@index([financialSnapshotId])
+  @@index([cashflowSnapshotId])
+  @@map("qbo_canonical_provenance")
+}
+
 /// First-run: an owner asking to improve the first Money read, and first-value feedback. Append-only, tenant-scoped.
 /// (Accepting an action and correcting evidence are NOT stored here: they are OwnerDecisionRecord and a snapshot amendment.)
 model OwnerFirstResultInteraction {
-  id             String        @id @db.Uuid
-  workspaceId    String        @map("workspace_id") @db.Uuid
-  businessId     String        @map("business_id") @db.Uuid
-  snapshotId     String?       @map("snapshot_id") @db.Uuid
-  kind           String // IMPROVEMENT_REQUESTED | FEEDBACK | RESULT_VIEWED | QUESTION_SKIPPED
+  id               String        @id @db.Uuid
+  workspaceId      String        @map("workspace_id") @db.Uuid
+  businessId       String        @map("business_id") @db.Uuid
+  snapshotId       String?       @map("snapshot_id") @db.Uuid
+  kind             String // IMPROVEMENT_REQUESTED | FEEDBACK | RESULT_VIEWED | QUESTION_SKIPPED
   /// Progressive-question identity (an OwnerInputCategory) for IMPROVEMENT_REQUESTED and QUESTION_SKIPPED.
-  questionCategory String?     @map("question_category")
-  rating         String? // USEFUL | PARTLY_USEFUL | NOT_USEFUL (FEEDBACK only)
-  reason         String? // WRONG_PRIORITY | MISSING_INFORMATION | RECOMMENDATION_IMPRACTICAL | EXPLANATION_UNCLEAR | OTHER
-  idempotencyKey String        @map("idempotency_key")
-  createdBy      String        @map("created_by") @db.Uuid
-  createdAt      DateTime      @default(now()) @map("created_at")
-  business       OwnerBusiness @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  questionCategory String?       @map("question_category")
+  rating           String? // USEFUL | PARTLY_USEFUL | NOT_USEFUL (FEEDBACK only)
+  reason           String? // WRONG_PRIORITY | MISSING_INFORMATION | RECOMMENDATION_IMPRACTICAL | EXPLANATION_UNCLEAR | OTHER
+  idempotencyKey   String        @map("idempotency_key")
+  createdBy        String        @map("created_by") @db.Uuid
+  createdAt        DateTime      @default(now()) @map("created_at")
+  business         OwnerBusiness @relation(fields: [businessId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
 
   @@unique([workspaceId, idempotencyKey], map: "owner_first_result_interactions_ws_idem_key")
   @@index([workspaceId, businessId, kind])

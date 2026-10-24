@@ -676,6 +676,11 @@ export const AUDIT_EVENTS = {
   QBO_REALM_BINDING_CONFLICT: "qbo.realm_binding_conflict",
   QBO_AUTHORIZATION_DENIED: "qbo.authorization_denied",
   QBO_AUTHORIZATION_FAILED: "qbo.authorization_failed",
+  QBO_BASELINE_COMPLETED: "qbo.baseline_completed",
+  QBO_SYNC_FAILED: "qbo.sync_failed",
+  QBO_SYNC_RECOVERED: "qbo.sync_recovered",
+  QBO_CANONICAL_MATERIALIZED: "qbo.canonical_materialized",
+  QBO_REVOCATION_FAILED: "qbo.revocation_failed",
 
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",
