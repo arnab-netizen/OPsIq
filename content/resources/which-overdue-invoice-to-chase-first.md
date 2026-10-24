@@ -71,7 +71,7 @@ Intuit QuickBooks' 2025 Small Business Late Payments Report, based on a January 
 
 ## Where a tool can help
 
-OpsIQ is a business diagnostic tool built to read your business numbers, show what needs attention and why, and give an ordered plan with an owner and a time frame. Findings are ranked by severity and urgency, with the evidence shown, and you decide which actions to take. On the OpsIQ homepage, an illustrative bakery example flags overdue receivables as a critical cash risk. OpsIQ is in free beta, and you can request access from the [homepage](/).
+OpsIQ is a business diagnostic tool built to read your business numbers, show what needs attention and why, and give an ordered plan with an owner and a time frame. Findings are ranked by severity and urgency, with the evidence shown, and you decide which actions to take. On the OpsIQ homepage, an illustrative bakery example flags overdue receivables as a critical cash risk. OpsIQ is in free beta, and you can request access on the [beta page](/beta).
 
 ## Self-check
 
