@@ -198,12 +198,14 @@ export async function runPreflights(mode, args, io) {
       return r.status === 200 ? pass("6 production health", "HTTP 200") : fail("6 production health", `HTTP ${r.status}`);
     });
     await step("7 production readiness and schema current", async () => {
+      // /api/readiness computes is_ready = startup complete AND migration history current AND database/queue healthy
+      // (see src/app/api/readiness/route.ts); the migration detail itself is logged, not exposed, so is_ready is the signal.
       const r = await io.http(`${args.productionUrl}/api/readiness`);
       let j = {};
       try { j = JSON.parse(r.text); } catch { /* fail below */ }
-      return r.status === 200 && j.is_ready === true && j.migration_history_current === true && (j.pending_migrations ?? 0) === 0
-        ? pass("7 production readiness and schema current", "ready, migration history current")
-        : fail("7 production readiness and schema current", `HTTP ${r.status}, is_ready=${j.is_ready}, migrations current=${j.migration_history_current}`);
+      return r.status === 200 && j.is_ready === true && j.startup_complete === true && j.database_healthy === true
+        ? pass("7 production readiness and schema current", "ready (includes migration history current)")
+        : fail("7 production readiness and schema current", `HTTP ${r.status}, is_ready=${j.is_ready}, startup_complete=${j.startup_complete}, database_healthy=${j.database_healthy}`);
     });
     await step("8 deployment corresponds to expected SHA", async () => {
       const r = await io.http(`${args.productionUrl}/api/internal/build-info`);

@@ -36,7 +36,7 @@ function makeIo(over: any = {}) {
     sleep: async () => undefined,
     http: async (url: string) => {
       if (url.endsWith("/api/health")) return { status: 200, text: "{}" };
-      if (url.endsWith("/api/readiness")) return { status: 200, text: JSON.stringify({ is_ready: true, migration_history_current: true, pending_migrations: 0 }) };
+      if (url.endsWith("/api/readiness")) return { status: 200, text: JSON.stringify({ is_ready: over.ready ?? true, startup_complete: true, database_healthy: true }) };
       if (url.endsWith("/api/internal/build-info")) return { status: 200, text: JSON.stringify({ commit: over.servedSha ?? SHA, environment: "production" }) };
       if (url.endsWith("/pricing")) return { status: 200, text: over.pricingText ?? "US$ 19 per month" };
       if (url.endsWith("/pay")) return { status: 200, text: over.payText ?? "Checkout" };
@@ -109,6 +109,7 @@ describe("enable: preflights fail closed", () => {
   it("wrong repository", () => refuses({ git: { "remote get-url origin": "https://github.com/evil/OPsIq" } }, /FAIL .*1 repository identity/));
   it("dirty tree", () => refuses({ git: { "status --porcelain": " M a.ts\n" } }, /FAIL .*2 clean working tree/));
   it("origin/main moved", () => refuses({ git: { "rev-parse origin/main": `${"b".repeat(40)}\n` } }, /FAIL .*3 origin\/main/));
+  it("Production not ready (readiness includes migration currency)", () => refuses({ ready: false }, /FAIL .*7 production readiness/));
   it("Production serving a different commit", () => refuses({ servedSha: "c".repeat(40) }, /FAIL .*8 deployment corresponds/));
   it("price still to be announced", () => refuses({ pricingText: "The price is to be announced." }, /FAIL .*9 pricing/));
   it("/pay unavailable", () => refuses({ payText: "Payments are not available right now." }, /FAIL .*10 \/pay/));
