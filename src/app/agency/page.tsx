@@ -5,6 +5,7 @@ import { ResourceDefaultCta } from "@/components/resources/ResourceCtaPanel";
 import { DEFAULT_SOCIAL_IMAGE } from "@/services/resources/resource-seo";
 import { absoluteUrl } from "@/lib/site";
 import { AgencyDiagnosticClient } from "./AgencyDiagnosticClient";
+import { AgencyCtaTracker } from "./AgencyCtaTracker";
 
 const PATH = "/agency";
 // Title kept at 60 characters or fewer and description at 155 or fewer so search results do not truncate them.
@@ -45,13 +46,15 @@ export default function AgencyDiagnosticPage() {
         <AgencyDiagnosticClient />
 
         <p className="mt-6 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-          Educational tool, not financial, tax or legal advice. Everything is calculated in your browser: nothing you enter is sent or
-          stored, and there is no email capture. Thresholds (delivery margin above 50% of adjusted gross income, overhead at or below
+          Educational tool, not financial, tax or legal advice. The numbers you enter stay in your browser and are not sent to or stored by
+          OpsIQ. We may collect privacy-preserving usage analytics such as page views, diagnostic starts and completions, and CTA
+          clicks. These events do not include the numbers you enter. There is no email capture. Thresholds (delivery margin above 50% of adjusted gross income, overhead at or below
           30%) come from the Parakeeto agency profitability guide. The order in which issues are ranked is an OpsIQ working heuristic,
           not a published benchmark. The starting numbers are a worked example, not real data.
         </p>
 
         <ResourceDefaultCta />
+        <AgencyCtaTracker />
       </div>
       <PublicSiteFooter />
     </main>

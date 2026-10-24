@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   AGENCY_EXAMPLE_INPUT,
   AGENCY_INPUT_FIELDS,
@@ -8,6 +8,7 @@ import {
   type AgencyDiagnosticInput,
   type AgencyDiagnosticResult,
 } from "@/lib/agency-diagnostic/diagnose";
+import { trackAgencyEvent } from "./agency-events";
 
 type Draft = Record<keyof AgencyDiagnosticInput, string>;
 
@@ -18,13 +19,28 @@ const initialDraft = (): Draft =>
 export function AgencyDiagnosticClient() {
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [result, setResult] = useState<AgencyDiagnosticResult | null>(null);
+  // Funnel counters fire at most once per page mount; no form content is ever passed to them.
+  const started = useRef(false);
+  const completed = useRef(false);
+
+  function markStarted() {
+    if (started.current) return;
+    started.current = true;
+    trackAgencyEvent("AGENCY_DIAGNOSTIC_START");
+  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     const parsed = Object.fromEntries(
       AGENCY_INPUT_FIELDS.map((f) => [f.key, draft[f.key].trim() === "" ? Number.NaN : Number(draft[f.key])])
     ) as AgencyDiagnosticInput;
-    setResult(diagnoseAgency(parsed));
+    const next = diagnoseAgency(parsed);
+    setResult(next);
+    if (next.ok && !completed.current) {
+      markStarted();
+      completed.current = true;
+      trackAgencyEvent("AGENCY_DIAGNOSTIC_COMPLETE");
+    }
   }
 
   return (
@@ -39,7 +55,10 @@ export function AgencyDiagnosticClient() {
               min={0}
               step={f.step}
               value={draft[f.key]}
-              onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+              onChange={(e) => {
+                markStarted();
+                setDraft((d) => ({ ...d, [f.key]: e.target.value }));
+              }}
               className="rounded-md border border-border bg-background px-3 py-2 text-base"
               aria-describedby={`${f.key}-hint`}
             />
