@@ -30,7 +30,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import type { BrowserContext, Page } from "@playwright/test";
 import { timedApiCall } from "./evidence";
-import { assertFixtureCreationCapable, assertBusinessIsFixture } from "./fixture-isolation";
+import { assertFixtureCreationCapable, assertBusinessIsFixture, ACCEPTANCE_FIXTURE_ENDPOINTS } from "./fixture-isolation";
 
 export const MUTATING_DOMAINS = [
   "finance",
@@ -100,21 +100,18 @@ export async function resolveOrCreateDomainBusiness(
   await assertFixtureCreationCapable(context, page);
 
   const name = `OPSIQ Acceptance - ${domainDisplayName(domain)} - ${runId}`;
-  const res = await timedApiCall(context, "POST", "/api/owner/recovery/businesses", () =>
-    page.request.post("/api/owner/recovery/businesses", {
+  // Dedicated fixture-only route: the fixture flag is hard-wired server-side (not a request field), so
+  // this can never create an ordinary business, and it requires the narrow ACCEPTANCE_FIXTURE_WRITE
+  // authority rather than SYSTEM_ADMIN. Without it the route answers 401/403 and creates nothing, and
+  // the preflight above stops the run first.
+  const res = await timedApiCall(context, "POST", ACCEPTANCE_FIXTURE_ENDPOINTS.business, () =>
+    page.request.post(ACCEPTANCE_FIXTURE_ENDPOINTS.business, {
       data: {
         name,
         businessType: "generic_local_service",
         currency: "INR",
         b2cSupported: true,
         b2bSupported: false,
-        // Marks this as synthetic acceptance data at creation time (see
-        // OwnerBusiness.isFixtureBusiness), rather than relying on the
-        // "OPSIQ Acceptance - ..." name to keep it out of ordinary owners'
-        // views. Requires the acceptance account to hold SYSTEM_ADMIN in the
-        // target environment: without it the route answers 403 and creates
-        // nothing (fail closed), and the preflight above stops the run first.
-        isFixtureBusiness: true,
       },
     })
   );

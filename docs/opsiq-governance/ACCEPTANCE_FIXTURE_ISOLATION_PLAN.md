@@ -46,25 +46,29 @@ Status: **IMPLEMENTED** (local/dev; not yet deployed to production — see
 - **Every real acceptance/QA business-creation path is now fixture-aware**:
   `tests/production/helpers/domain-business.ts`'s `resolveOrCreateDomainBusiness()`
   (used by 7 production acceptance specs to create their own dedicated
-  business) always sends `isFixtureBusiness: true`. This does not depend on
-  a human remembering to pass the flag — it is unconditional in the helper
-  every spec calls. It is still only honored in practice once the
-  `PRODUCTION_ACCEPTANCE_EMAIL` account itself holds `SYSTEM_ADMIN` in the
-  target environment; without it the route now answers 403 and creates
-  nothing. The helper therefore (1) runs an acceptance **preflight**
+  business) now creates it ONLY through the dedicated fixture-only route
+  `POST /api/admin/acceptance-fixtures/businesses` (no fixture flag in the request;
+  fixture is hard-wired server-side, so it cannot create an ordinary business).
+  That route requires the narrow `ACCEPTANCE_FIXTURE_WRITE` authority held by
+  `ROLES.ACCEPTANCE_FIXTURE_OPERATOR`, NOT `SYSTEM_ADMIN` — see
+  `ACCEPTANCE_FIXTURE_AUTHORITY.md` for the least-privilege design, threat model
+  and activation procedure. Without that authority the route answers 401/403 and
+  creates nothing. The helper therefore (1) runs an acceptance **preflight**
   (`tests/production/helpers/fixture-isolation.ts`:
-  `GET /api/admin/fixture-businesses` with the nil workspace id, SYSTEM_ADMIN-
-  only, read-only, always empty) and stops the run before creating anything
-  if the actor is not capable, and (2) after creating, proves the row is a
+  `GET /api/admin/acceptance-fixtures/capability`, which declares the SAME gate as
+  the create routes, read-only, no data) and stops the run before creating anything
+  if the actor lacks the authority, and (2) after creating, proves the row is a
   fixture by confirming it is absent from the ordinary owner list — HTTP 201
   is never treated as proof. The Startup acceptance spec does the same for its
-  session.
+  session and blueprint. (`SYSTEM_ADMIN` still passes every one of these gates, and
+  the owner-route `isFixtureBusiness`/`isFixtureRecord` flags remain
+  `SYSTEM_ADMIN`-only and fail closed, unchanged.)
 - **Required acceptance preflight**: any Production acceptance that creates
   synthetic businesses/sessions must call `assertFixtureCreationCapable()`
   first and `assertBusinessIsFixture()` / `assertStartupSessionIsFixture()`
-  after each create. The acceptance account must hold SYSTEM_ADMIN in the
-  target environment, otherwise the run stops with `FIXTURE ISOLATION
-  UNAVAILABLE`.
+  after each create. The acceptance account must hold `ACCEPTANCE_FIXTURE_WRITE`
+  (via `acceptance_fixture_operator`) in its own workspace, otherwise the run
+  stops with `FIXTURE ISOLATION UNAVAILABLE`.
 - **Startup Mode blueprint output is also fixture-tagged, structurally**:
   `OwnerBusiness.isFixtureBusiness` only covers the business row itself.
   Startup Mode's `createBlueprint()`
