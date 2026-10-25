@@ -270,7 +270,8 @@ export function QuickFinancialPicture({
                 disabled={locked}
                 error={assessment.errors[f.name]}
                 onChange={(e) => {
-                  setDraft((d) => ({ ...d, [f.name]: e.target.value }));
+                  const typedValue = e.target.value;
+                  setDraft((d) => ({ ...d, [f.name]: typedValue }));
                   if (phase.kind === "error") setPhase({ kind: "idle" });
                 }}
               />

@@ -206,7 +206,7 @@ export function CashflowEntryEditor({
                     value={draft[f]}
                     error={assessment?.errors[f]}
                     disabled={busy || phase.name === "confirming"}
-                    onChange={(e) => setDraft((d) => ({ ...d, [f]: e.target.value }))}
+                    onChange={(e) => { const typedValue = e.target.value; setDraft((d) => ({ ...d, [f]: typedValue })); }}
                   />
                 ))}
               </div>

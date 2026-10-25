@@ -125,7 +125,7 @@ export function FinancePeriodEditor({
                 value={markedUnknown ? "" : draft[f.name] ?? ""}
                 disabled={markedUnknown}
                 error={messages[f.name]}
-                onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
+                onChange={(e) => { const typedValue = e.target.value; setDraft((d) => ({ ...d, [f.name]: typedValue })); }}
               />
               {canMarkUnknown && (
                 <label className="mt-1 flex min-h-11 items-center gap-2 text-sm text-foreground">
@@ -135,7 +135,7 @@ export function FinancePeriodEditor({
                     aria-label={`I don't know ${f.label}`}
                     data-testid={`finance-period-unknown-${f.name}`}
                     checked={markedUnknown}
-                    onChange={(e) => setUnknown((u) => ({ ...u, [f.name]: e.target.checked }))}
+                    onChange={(e) => { const typedChecked = e.target.checked; setUnknown((u) => ({ ...u, [f.name]: typedChecked })); }}
                   />
                   I don&apos;t know this figure
                 </label>

@@ -115,6 +115,8 @@ export interface QboReadClient {
   /** Pages through a query (1000 per page by default) until a short page, lazily. */
   paginate(spec: Omit<QboQuerySpec, "startPosition">, options?: QboCallOptions & { maxPages?: number }): AsyncGenerator<QboQueryPage, void, void>;
   report(name: QboReportName, params?: QboReportParams, options?: QboCallOptions): Promise<Record<string, unknown>>;
+  /** Same GET as `report`, also returning Intuit's per-request trace id (a diagnostic, never an idempotency key). */
+  reportWithMeta(name: QboReportName, params?: QboReportParams, options?: QboCallOptions): Promise<{ body: Record<string, unknown>; intuitTid: string | null }>;
 }
 
 export function createQboReadClient(opts: QboClientOptions): QboReadClient {
@@ -271,6 +273,10 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
     },
 
     async report(name, params, call) {
+      return (await this.reportWithMeta(name, params, call)).body;
+    },
+
+    async reportWithMeta(name, params, call) {
       if (!isReportName(name)) throw new QboProviderError({ kind: "BAD_REQUEST", localReason: "INVALID_REPORT" });
       let clean: Record<string, string>;
       try {
@@ -278,8 +284,7 @@ export function createQboReadClient(opts: QboClientOptions): QboReadClient {
       } catch {
         throw new QboProviderError({ kind: "BAD_REQUEST", localReason: "INVALID_REPORT_PARAMS" });
       }
-      const { body } = await getJson(["reports", name], clean, call);
-      return body;
+      return getJson(["reports", name], clean, call);
     },
   };
 }

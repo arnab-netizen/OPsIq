@@ -2,9 +2,10 @@
  * QuickBooks Online — pure OAuth 2.0 provider calls (Intuit authorization-code flow).
  *
  * No database, no routes, no persistence: this module only builds the authorization request and
- * talks to Intuit's OAuth endpoints. The later connection-flow PR will persist what it needs.
+ * talks to Intuit's OAuth endpoints (code exchange, refresh, revoke). Persistence is qbo-connection.service; the flow is
+ * qbo-connect-callback.service; refresh-on-demand is qbo-token-manager.
  *
- * CONTRACT FOR THE LATER CONNECTION-FLOW PR
+ * CONTRACT OF THE CONNECTION FLOW
  *   start:    createQboAuthorizationRequest(config) -> { authorizationUrl, state, stateHash, stateExpiresAt }
  *             Persist ONLY { stateHash, stateExpiresAt } bound to the initiating actor + workspace +
  *             business; send the browser to authorizationUrl. The clear-text state is not stored.

@@ -23,6 +23,12 @@ interface OverviewData {
   requests: { requested: number; invited: number; revoked: number; rejected: number };
   customers: { registered: number; awaitingVerification: number; active: number; verifiedNoPassword: number };
   readiness: { status: string; checks: Record<string, boolean> };
+  quickbooks?: {
+    connections: { active: number; reauthRequired: number; disconnected: number; error: number };
+    activeHealth: { neverSynced: number; baselining: number; failing: number; stale: number };
+    lastFailureCodes: Record<string, number>;
+    staleAfterHours: number;
+  } | null;
 }
 
 interface PageState {
@@ -94,7 +100,7 @@ export default function AdminOverviewPage() {
   }
   if (!state.data) return <GovernedEmptyState reason="no_data" />;
 
-  const { capacity, requests, customers, readiness, journey } = state.data;
+  const { capacity, requests, customers, readiness, journey, quickbooks } = state.data;
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -152,6 +158,27 @@ export default function AdminOverviewPage() {
             <p className="text-xs text-muted-foreground">
               Counts of people and events only. No names, emails or financial figures are shown here.
               {journey.truncated ? " This window had more events than can be counted exactly, so the numbers are a minimum." : ""}
+            </p>
+          </>
+        )}
+      </section>
+
+      <section className="space-y-3" data-testid="qbo-health">
+        <h2 className="text-lg font-semibold">QuickBooks sync health</h2>
+        {!quickbooks && <p className="text-sm text-muted-foreground">QuickBooks health couldn&rsquo;t load. The rest of this page is unaffected.</p>}
+        {quickbooks && (
+          <>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <StatTile label="Connected" value={quickbooks.connections.active} />
+              <StatTile label="Need reconnecting" value={quickbooks.connections.reauthRequired} />
+              <StatTile label="Failing" value={quickbooks.activeHealth.failing} sublabel="Connected, last refresh failed" />
+              <StatTile label="Stale" value={quickbooks.activeHealth.stale} sublabel={`No successful refresh in ${quickbooks.staleAfterHours} hours`} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Counts only: {quickbooks.activeHealth.neverSynced} connected but not yet imported, {quickbooks.activeHealth.baselining} importing,
+              {" "}{quickbooks.connections.disconnected} disconnected.
+              {Object.keys(quickbooks.lastFailureCodes).length > 0 ? ` Last failure causes: ${Object.entries(quickbooks.lastFailureCodes).map(([k, v]) => `${k} ×${v}`).join(", ")}.` : ""}
+              {" "}No companies, tokens or figures are shown here.
             </p>
           </>
         )}

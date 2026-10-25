@@ -273,8 +273,8 @@ describe("IngestResult shape", () => {
   });
 
   it("returns correct provider from parsed event", async () => {
-    const result = await ingestIntegrationEvent({ ...validEvent, provider: "QUICKBOOKS" }, ACTOR);
-    expect(result.provider).toBe("QUICKBOOKS");
+    const result = await ingestIntegrationEvent({ ...validEvent, provider: "XERO" }, ACTOR);
+    expect(result.provider).toBe("XERO");
   });
 });
 

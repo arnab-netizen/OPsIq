@@ -238,7 +238,7 @@ export function OwnerDoNotRepeatPanel({ businessId, onChanged, focusRuleId = nul
                   id={`dnr-changed-${r.id}`}
                   rows={2}
                   value={drafts[r.id] ?? ""}
-                  onChange={(e) => setDrafts((d) => ({ ...d, [r.id]: e.target.value }))}
+                  onChange={(e) => { const typedValue = e.target.value; setDrafts((d) => ({ ...d, [r.id]: typedValue })); }}
                   placeholder="For example: new supplier terms cut the cost that made this fail."
                 />
                 {errors[r.id] && <p className="text-destructive text-xs">{errors[r.id]}</p>}

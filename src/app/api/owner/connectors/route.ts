@@ -14,7 +14,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
-import { CONNECTOR_PROVIDERS, CONNECTOR_STATUSES } from "@/domain/integration-fabric/integration-contracts";
+import { CONNECTOR_STATUSES, REGISTRABLE_CONNECTOR_PROVIDERS } from "@/domain/integration-fabric/integration-contracts";
 import {
   registerConnector,
   disconnectConnector,
@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const registerSchema = z.object({
-  provider: z.enum(CONNECTOR_PROVIDERS),
+  provider: z.enum(REGISTRABLE_CONNECTOR_PROVIDERS),
   businessId: z.string().uuid().optional(),
   tokenExpiresAt: z.string().datetime().optional(),
 });

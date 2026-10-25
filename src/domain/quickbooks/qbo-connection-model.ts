@@ -41,7 +41,8 @@ export type QboTokenWriteFailure = (typeof QBO_TOKEN_WRITE_FAILURES)[number];
 
 export const QBO_GRANTED_SCOPE = QBO_ACCOUNTING_SCOPE;
 
-const uuid = z.string().uuid();
+// Identifier shape, as the workspace middleware enforces it (8-4-4-4-12 hex); not RFC-version-restricted.
+const uuid = z.guid();
 const environment = z.enum(["sandbox", "production"]);
 
 export const QboBeginAuthorizationSchema = z.object({

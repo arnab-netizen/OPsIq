@@ -74,7 +74,7 @@ function TaskIcon() {
  *    Integrations have no owner-facing page at all yet — each renders as a non-interactive row
  *    (no `<a>`, not part of the tab order) with a "Coming soon" pill and a one-line explanation,
  *    so neither looks like a broken control nor implies a working feature the app doesn't have
- *    (no QuickBooks/HubSpot connection exists; there is no working AI assistant surface).
+ *    (QuickBooks connects from My Business → Connected accounts, not from this row; no other connection exists; there is no working AI assistant surface).
  *    Inventory has no nav entry at all: its one system-generated signal is wired to nothing and
  *    always displays a wrong result today (see its removal comment in the "business" section
  *    below) — a known-wrong live feature, not merely unfinished. Nothing here invents a new page
@@ -346,7 +346,7 @@ const NAV_SECTIONS: NavSection[] = [
     // broken link. AI Copilot and Integrations have no owner-facing page in this app at all --
     // each is a non-interactive "Coming soon" row (see the `state`/`href`-optional contract on
     // NavItem above), not a placeholder page built merely to populate this list, and not a claim
-    // that a working AI assistant or a live QuickBooks/HubSpot connection exists today.
+    // that a working AI assistant or any connection other than QuickBooks (on My Business) exists today.
     id: "more-from-opsiq",
     title: "More from OpsIQ",
     collapsedByDefault: true,
@@ -400,7 +400,7 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Integrations",
         requiresOwner: true,
         state: "coming-soon",
-        blurb: "Connect QuickBooks, HubSpot, and other tools you already use.",
+        blurb: "QuickBooks connects from My Business. More tools are coming.",
       },
       // /api/scenario requires ACTION_VIEW, which no self-serve beta owner holds (it is not
       // part of OWNER_SCOPED_CAPABILITIES). Gated to match; was previously visible to every
