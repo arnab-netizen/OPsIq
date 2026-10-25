@@ -453,7 +453,12 @@ export async function approveErasureRequest(c: ClientBase, requestId: string, ap
   try { plan = await planQboErasure(c, scope); } finally { await c.query("ROLLBACK"); }
   if (plan.manifestHash !== req.manifest_hash) throw new ErasureRefusedError("MANIFEST_DRIFT", "the data changed since the dry-run; run the dry-run again");
   if (plan.blockers.length > 0) throw new ErasureRefusedError("BLOCKERS_PRESENT", `${plan.blockers.length} blocker(s) must be resolved before approval`);
-  await c.query(`UPDATE privacy_erasure_requests SET status = 'APPROVED', approved_by = $2, approved_at = now(), updated_at = now() WHERE id = $1 AND status = 'DRY_RUN_RECORDED'`, [requestId, approver]);
+  try {
+    await c.query(`UPDATE privacy_erasure_requests SET status = 'APPROVED', approved_by = $2, approved_at = now(), updated_at = now() WHERE id = $1 AND status = 'DRY_RUN_RECORDED'`, [requestId, approver]);
+  } catch (e) {
+    if (/differ|approv/i.test(String((e as Error)?.message ?? ""))) throw new ErasureRefusedError("TWO_PERSON_RULE", "the approving database login must differ from the requesting login");
+    throw e;
+  }
 }
 
 /* ───────────────────────────── verification ───────────────────────────── */
