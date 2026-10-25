@@ -2294,6 +2294,24 @@
   "enforcement": "none"
  },
  {
+  "method": "POST",
+  "route": "/api/owner/integrations/quickbooks/disconnect",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/integrations/quickbooks/status",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/integrations/quickbooks/sync",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
   "method": "GET",
   "route": "/api/owner/inventory/stock-items",
   "classification": "FREE_READ",
@@ -3960,6 +3978,12 @@
   "method": "POST",
   "route": "/api/webhooks/paddle",
   "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/quickbooks",
+  "classification": "NON_COMMERCIAL",
   "enforcement": "none"
  },
  {

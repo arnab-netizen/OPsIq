@@ -51,6 +51,7 @@ import {
   enqueueDueReassessmentScanTasks,
   enqueueDueRiskReviewScanTasks,
 } from "@/services/scheduler/scheduler-producers";
+import { enqueueDueQboSyncTasks } from "@/services/quickbooks/qbo-sync-scheduling";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -75,6 +76,9 @@ function verifyCronSecret(request: Request): boolean {
   const b = Buffer.from(secret);
   return a.length === b.length && timingSafeEqual(a, b);
 }
+
+/** The batch (producer + claimed tasks) must finish inside the platform limit; leases of unfinished tasks are reclaimed on the next run. */
+export const maxDuration = 300;
 
 export async function GET(request: Request): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
@@ -107,6 +111,15 @@ export async function GET(request: Request): Promise<NextResponse> {
       { context: "load" }
     );
     errors.push(`producers: ${governed.operatorMessage}`);
+    captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
+  }
+
+  // QuickBooks producer runs on its own: a failure here must not hide the other producers' results, and theirs must not hide this.
+  try {
+    results.producers = results.producers ?? {};
+    (results.producers as Record<string, unknown>).qboSync = await enqueueDueQboSyncTasks();
+  } catch (err) {
+    errors.push("producers.qboSync: failed to enqueue QuickBooks sync tasks");
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
   }
 
