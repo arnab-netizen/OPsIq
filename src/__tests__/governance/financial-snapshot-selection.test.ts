@@ -95,8 +95,9 @@ const READER_PATTERNS: readonly RegExp[] = [
   /["'`]ownerFinanceCycle["'`]/,
 ];
 
+const ERASURE_PATH = "src/services/privacy-erasure/"; // governed deletion of QuickBooks-derived data: it removes/nulls snapshot rows and never selects evidence for a decision, so it is not a reader
 function readers(): string[] {
-  return FILES.filter((f) => rel(f) !== SELECTOR && READER_PATTERNS.some((re) => re.test(readFileSync(f, "utf8")))).map(rel).sort();
+  return FILES.filter((f) => rel(f) !== SELECTOR && !rel(f).startsWith(ERASURE_PATH) && READER_PATTERNS.some((re) => re.test(readFileSync(f, "utf8")))).map(rel).sort();
 }
 
 describe("financial snapshot selection is centralised", () => {
@@ -124,6 +125,7 @@ describe("financial snapshot selection is centralised", () => {
     for (const file of FILES) {
       const r = rel(file);
       if (r === MODEL_SERVICE || r === SELECTOR) continue;
+    if (r.startsWith(ERASURE_PATH)) continue; // deletion path, see ERASURE_PATH
       const src = stripComments(readFileSync(file, "utf8"));
       const re = /\bownerFinancialSnapshot\b|\bowner_financial_snapshots\b/g;
       let m: RegExpExecArray | null;
