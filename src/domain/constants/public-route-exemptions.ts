@@ -74,6 +74,7 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
     "/api/webhooks/stripe", // Signature verification is mandatory
     "/api/webhooks/resend", // HMAC-SHA256 (svix) signature verification — fail-closed when RESEND_WEBHOOK_SECRET unset
     "/api/webhooks/paddle", // HMAC-SHA256 Paddle-Signature verification + timestamp tolerance — fail-closed when PADDLE_WEBHOOK_SECRET unset
+    "/api/webhooks/quickbooks", // HMAC-SHA256 intuit-signature verification (constant time) — fail-closed when QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN unset; trigger-only
   ],
   PRIVACY: [
     // A user filing a privacy request (access/export, deletion, correction) may be
@@ -124,6 +125,7 @@ export const EXEMPTION_REASONS = {
   "/api/auth/resend-verification": "Verification-resend request endpoint - public and enumeration-resistant by design; rate-limited per IP and email",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
   "/api/webhooks/paddle": "Billing webhook with mandatory HMAC-SHA256 Paddle-Signature verification + timestamp tolerance - fail-closed when PADDLE_WEBHOOK_SECRET unset; tenant resolved from persisted provider ids, never from the caller",
+  "/api/webhooks/quickbooks": "QuickBooks Online webhook with mandatory HMAC-SHA256 intuit-signature verification - fail-closed when QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN unset; payload is a trigger only (realm ids), never financial data; unknown companies are acknowledged identically",
   "/api/webhooks/resend": "Email webhook with HMAC-SHA256 (svix) signature verification + timestamp tolerance - fail-closed when RESEND_WEBHOOK_SECRET unset",
   "/api/privacy-requests": "Privacy request (access/export, deletion, correction) endpoint - public and enumeration-resistant by design (a locked-out user isn't authenticated); rate-limited per IP and email",
   "/api/beta-requests": "Controlled-beta access request endpoint - public and enumeration-resistant by design (a visitor requesting beta access has no account yet); rate-limited per IP and email",

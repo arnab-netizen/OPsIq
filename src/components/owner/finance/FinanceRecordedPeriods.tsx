@@ -4,7 +4,7 @@
  * "Your saved periods" — every period that holds figures, with what is known and what is not, and a way to update it.
  * Presentation only: the period wording and amounts come from existing domain formatters.
  */
-import { Button } from "@/ui/primitives";
+import { Badge, Button } from "@/ui/primitives";
 import { periodLabel } from "@/domain/owner-first-run/first-money-read";
 import { formatCashflowAmount } from "@/domain/owner-cashflow/edit-flow";
 import { recordedFiguresFromRow } from "@/domain/owner-finance/snapshot-amend-form";
@@ -46,12 +46,20 @@ export function FinanceRecordedPeriods({
           return (
             <li key={id} className="flex flex-wrap items-center justify-between gap-2 p-3" data-testid="finance-saved-period">
               <div className="min-w-0">
-                <p className="font-medium text-foreground">{periodTextOf(row)}{version > 1 ? ` · updated ${version - 1} time${version === 2 ? "" : "s"}` : ""}</p>
+                <p className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+                  <span>{periodTextOf(row)}{version > 1 ? ` · updated ${version - 1} time${version === 2 ? "" : "s"}` : ""}</span>
+                  {row.source === "QUICKBOOKS" && <Badge variant="muted-accessible" data-testid="finance-saved-period-source">From QuickBooks</Badge>}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   Revenue: {rec.revenue === null ? "not entered" : formatCashflowAmount(rec.revenue, currency)} · Cash in hand:{" "}
                   {rec.cashOnHand === null ? "not entered" : formatCashflowAmount(rec.cashOnHand, currency)}
                   {unknownCount > 0 ? " — you can add what's missing" : ""}
                 </p>
+                {row.source === "QUICKBOOKS" && (
+                  <p className="text-sm text-muted-foreground" data-testid="finance-saved-period-qbo-note">
+                    Imported from your QuickBooks books. If you change it here, this month becomes yours and QuickBooks will no longer replace it.
+                  </p>
+                )}
                 {timing && timing !== "completed" && (
                   <p className="text-sm text-muted-foreground" data-testid="finance-saved-period-timing">{SAVED_PERIOD_TIMING_NOTE[timing]}</p>
                 )}

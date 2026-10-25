@@ -175,12 +175,25 @@ describe("financial snapshot selection is centralised", () => {
     const exported = [...src.matchAll(/^export\s+(?:async\s+)?(?:function|const|let|class)\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]).sort();
     expect(exported).toEqual([
       "amendFinancialSnapshot",
+      // Reviewed (QuickBooks V1): the transactional cores of amend/create on a CALLER's transaction client — the same code the
+      // manual paths run, so an integration's canonical write and its provenance row commit atomically.
+      "amendFinancialSnapshotInTx",
       "createFinancialSnapshot",
+      "createFinancialSnapshotInTx",
+      // Reviewed (QuickBooks V1): ONE exact period's un-superseded version on the caller's transaction, to decide create-vs-amend
+      // under the per-period advisory lock. Keyed by the exact period: it selects no "latest" and no "current".
+      "findCurrentFinancialSnapshotForPeriodInTx",
       "getFinancialSnapshot",
+      // Reviewed (QuickBooks V1): recent periods with who authored them (QuickBooks vs owner), unordered, for the connection
+      // status. It selects no "latest" and no "current".
+      "listFinancialSnapshotPeriodSources",
       // Reviewed (A1 liquidity lineage): every version of ONE snapshot's own period, scoped by workspace +
       // business, unordered — cash-semantics resolution only. It selects no "latest" and no "current".
       "listFinancialSnapshotVersions",
       "listFinancialSnapshots",
+      // Reviewed (QuickBooks V1): ids of un-superseded versions whose period overlaps (not equal to) a month, on the caller's
+      // transaction — the overlap guard that keeps owner-entered ranges authoritative. It selects no "latest" and no "current".
+      "listOverlappingCurrentFinancialSnapshotIdsInTx",
       // Reviewed (compare-at-write): a share lock on ONE snapshot row by id, scoped by workspace + business, that
       // reports whether it is still un-superseded. It selects no "latest" and no "current"; it serialises a decision
       // against a concurrent amendment (which takes the same row FOR UPDATE).

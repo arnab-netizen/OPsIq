@@ -9,6 +9,12 @@
 /** Fixed internal landing for the success marker. Never taken from the request. */
 export const QBO_CALLBACK_SUCCESS_NEXT_PATH = "/owner/home" as const;
 
+/** The owner surface the browser returns to after Intuit's redirect (the existing "My Business" page's integrations area). */
+export const QBO_OWNER_LANDING_PATH = "/owner/data" as const;
+
+/** Query key carrying ONE closed outcome token back to the owner surface. Never a provider value, secret or identifier. */
+export const QBO_OUTCOME_QUERY_KEY = "quickbooks" as const;
+
 export const QBO_CONNECT_FAILURE_CODES = [
   "CONFIGURATION_UNAVAILABLE",
   "INVALID_STATE",
@@ -77,4 +83,51 @@ export type QboProviderDenialCode = (typeof KNOWN_PROVIDER_ERRORS)[number] | "OT
 /** Closed-set classification of the attacker-controllable `error` query value. The raw value is never kept. */
 export function classifyProviderDenial(raw: unknown): QboProviderDenialCode {
   return typeof raw === "string" && (KNOWN_PROVIDER_ERRORS as readonly string[]).includes(raw) ? (raw as QboProviderDenialCode) : "OTHER";
+}
+
+/** Outcome tokens the owner surface understands: connect results plus the two generic wrapper-level failures. */
+export const QBO_OUTCOME_TOKENS = [
+  "connected",
+  "reconnected",
+  "signin_required",
+  "unavailable",
+  ...QBO_CONNECT_FAILURE_CODES.map((c) => c.toLowerCase()),
+] as const;
+export type QboOutcomeToken = (typeof QBO_OUTCOME_TOKENS)[number];
+
+const OUTCOME_SET: ReadonlySet<string> = new Set(QBO_OUTCOME_TOKENS);
+
+export function isQboOutcomeToken(v: unknown): v is QboOutcomeToken {
+  return typeof v === "string" && OUTCOME_SET.has(v);
+}
+
+/** Relative redirect target for a callback outcome. Fixed path + one closed token: no provider text can enter the URL. */
+export function qboOutcomeRedirectPath(token: QboOutcomeToken): string {
+  return `${QBO_OWNER_LANDING_PATH}?${QBO_OUTCOME_QUERY_KEY}=${token}`;
+}
+
+/** Owner wording for an outcome token shown on the owner surface (fixed sentences only). */
+export function qboOutcomeMessage(token: string): { tone: "success" | "info" | "error"; text: string } | null {
+  if (!isQboOutcomeToken(token)) return null;
+  if (token === "connected") return { tone: "success", text: "QuickBooks is connected. OpsIQ is importing your recent months now." };
+  if (token === "reconnected") return { tone: "success", text: "QuickBooks is reconnected. OpsIQ is refreshing your figures." };
+  if (token === "signin_required") return { tone: "error", text: "Please sign in to OpsIQ, then connect QuickBooks again." };
+  if (token === "unavailable") return { tone: "error", text: "QuickBooks could not be connected right now. Please try again." };
+  const code = token.toUpperCase() as QboConnectFailureCode;
+  const denied = code === "USER_DENIED" || code === "PROVIDER_DENIED";
+  const sentence = TABLE[code].message;
+  return { tone: denied ? "info" : "error", text: sentence };
+}
+
+/**
+ * Map the callback API's response to ONE closed outcome token for the browser hop. Only the response STATUS and the closed
+ * `status` / `code` / `reconnected` fields are read; any other text (provider or otherwise) is ignored, so nothing but a member of
+ * QBO_OUTCOME_TOKENS can ever leave this function.
+ */
+export function qboOutcomeTokenFromCallbackResponse(httpStatus: number, body: unknown): QboOutcomeToken {
+  if (httpStatus === 401 || httpStatus === 403) return "signin_required";
+  const b = (typeof body === "object" && body !== null ? body : {}) as { status?: unknown; code?: unknown; reconnected?: unknown };
+  if (httpStatus === 200 && b.status === "CONNECTED") return b.reconnected === true ? "reconnected" : "connected";
+  if (typeof b.code === "string" && (QBO_CONNECT_FAILURE_CODES as readonly string[]).includes(b.code)) return b.code.toLowerCase() as QboOutcomeToken;
+  return "unavailable";
 }

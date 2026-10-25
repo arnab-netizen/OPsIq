@@ -14,6 +14,7 @@ import { countVerifiedWithoutPassword } from "@/services/admin/limbo-accounts.se
 import { getJourneyFunnel } from "@/services/admin/journey-funnel.service";
 import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
 import { ensureCriticalReadiness } from "@/infra/critical-readiness";
+import { getQboAdminHealth } from "@/services/quickbooks/qbo-admin-health.service";
 
 export const GET = withCanonicalEnforcement(
   async () => {
@@ -55,6 +56,9 @@ export const GET = withCanonicalEnforcement(
     // Aggregates only (no payloads, emails or money). A failure here must not hide the admission/capacity controls.
     const journey = await getJourneyFunnel(7).catch(() => null);
 
+    // QuickBooks sync health: counts only (no tenant ids, tokens or values). A failure here must not hide the admission controls.
+    const quickbooks = await getQboAdminHealth().catch(() => null);
+
     const readinessResult = await ensureCriticalReadiness();
     const readiness = { status: readinessResult.status, checks: readinessResult.checks };
 
@@ -73,6 +77,7 @@ export const GET = withCanonicalEnforcement(
       requests: { requested: requestedCount, invited: invitedCount, revoked: revokedCount, rejected: rejectedCount },
       customers: { registered: registeredCount, awaitingVerification: awaitingVerificationCount, active: activeCount, verifiedNoPassword: verifiedNoPasswordCount },
       readiness,
+      quickbooks,
     };
   },
   { requireCapabilities: [CAPABILITIES.CUSTOMER_ACCESS_MANAGE] }

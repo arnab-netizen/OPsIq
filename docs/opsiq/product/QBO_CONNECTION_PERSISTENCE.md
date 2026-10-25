@@ -1,6 +1,8 @@
 # QuickBooks Online — business-scoped connection persistence
 
-`QBO_READ_ONLY` · `PRODUCTION_MIGRATION_REQUIRED=YES` (`20261008090000_qbo_connection_tenancy_persistence`, additive) · `NO_OWNER_SURFACE` (API routes exist, no owner UI) · `NO_SYNC` · `NO_EVIDENCE_ADOPTION` · `NO_WRITE_API`
+`QBO_READ_ONLY` · `PRODUCTION_MIGRATION_REQUIRED=YES` (`20261008090000_qbo_connection_tenancy_persistence`, additive) · `NO_WRITE_API`
+
+> **Scope note.** This document describes the three *connection* tables (OAuth state, connection, encrypted tokens). Synchronisation, report observations, provenance, canonical Finance adoption, the owner UI, webhooks and the scheduler are described in [`QBO_V1_ARCHITECTURE.md`](QBO_V1_ARCHITECTURE.md), which is the authoritative QuickBooks architecture. The "Known limitations" below that were true of this persistence-only slice are superseded there.
 
 ## Architecture decision: `QBO_SPECIFIC`
 The generic `ExternalConnection` is unique per `(workspace, provider)` and has no business, realm or environment; `ExternalOAuthToken` has no rotation fence or refresh expiry. Per-business realms cannot be represented there without changing legacy Google Sheets connector semantics, so three QBO tables are added and the shared `encryptOAuthToken()` / `decryptOAuthToken()` (AES-256-GCM, workspace-bound HKDF key) is reused unchanged. No second crypto, no parallel generic framework.
@@ -28,9 +30,8 @@ Enforced by service checks under advisory locks AND by partial unique indexes `q
 ## Migration safety
 Additive only; three new empty tables; no existing uniqueness changes (no preflight data dependency). Tested only on throwaway loopback Postgres. NOT applied to production here; production application goes through the owner-approved `migrate-production.yml` workflow before this change is deployed.
 
-## Known limitations
-- Connect and callback API routes now exist (`POST /api/owner/integrations/quickbooks/connect`, `GET …/callback`, added after this slice). Still none: owner UI, disconnect route, status route, scheduler (`refreshQboTokens` is not invoked anywhere), importer.
-- Revoking the grant at Intuit is the caller's step; `disconnectQboConnection` is local and removes the token ciphertext.
-- A state consumed but whose code exchange fails is burned (the user restarts authorization).
-- No business-condition re-evaluation hook yet: nothing consumes QBO data until the sync/evidence slice.
-- Actor ids are recorded, not FK-linked, matching the owner-outcome tables; capability checks belong to the future route layer.
+## Superseded limitations (kept for history)
+This slice originally shipped without a connect UI, disconnect/status routes, scheduler, importer or evidence adoption. All of those now
+exist (see `QBO_V1_ARCHITECTURE.md`). Still true here: revoking the grant at Intuit is performed by the lifecycle service
+(`disconnectQuickBooks`), not by `disconnectQboConnection` (local only, idempotent, removes the token ciphertext); a state consumed
+whose code exchange fails is burned (the owner restarts authorization); actor ids are recorded, not FK-linked.
