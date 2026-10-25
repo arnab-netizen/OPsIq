@@ -98,7 +98,7 @@ async function runErasure(t: Pick<QboTenant, "ws" | "biz">, o: { revoke?: Revoke
   try {
     const { id } = await createErasureRequest(c, { scope: { workspaceId: t.ws, businessId: t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: o.requestedBy ?? "operator-a" });
     const dry = await recordDryRun(c, id);
-    expect(dry.blockers).toEqual([]);
+    expect(dry.blockers, JSON.stringify(dry.blockers)).toEqual([]);
     await approve2(id, o.approvedBy ?? "operator-b");
     const res = await executeQboErasure(c, { requestId: id, confirmToken: dry.confirmToken, revoke: o.revoke });
     return { id, dry, res };
@@ -496,7 +496,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hosti
 
       // dry run recorded: the SAME login cannot approve (the database stamps session_user itself), nor skip to EXECUTING
       const dry = await recordDryRun(op, id);
-      expect(dry.blockers).toEqual([]);
+      expect(dry.blockers, JSON.stringify(dry.blockers)).toEqual([]);
       expect(await attempt(op, `UPDATE privacy_erasure_requests SET status='APPROVED', approved_by='operator-z', approved_at=now(), updated_at=now() WHERE id=$1`, [id])).toMatch(/must differ from the requesting login/);
       expect(await attempt(op, `UPDATE privacy_erasure_requests SET status='EXECUTING', updated_at=now() WHERE id=$1`, [id])).toMatch(/illegal privacy erasure transition/);
       await expect(approveErasureRequest(op, id, "operator-b")).rejects.toThrow(/different|login|two/i);
@@ -519,4 +519,114 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hosti
       expect(await qboCounts(s.t)).toEqual(before);
     } finally { await op.end(); await op2.end(); }
   }, 180_000);
+});
+
+/* ───────── P4: every classified derived family, seeded with real rows and checked directly ───────── */
+const ins = (table: string, o: Record<string, unknown>) => {
+  const keys = Object.keys(o);
+  return admin.query(`INSERT INTO "${table}" (${keys.map((k) => `"${k}"`).join(",")}) VALUES (${keys.map((_, i) => `$${i + 1}`).join(",")})`, keys.map((k) => o[k]));
+};
+const LEARNING_CHILDREN = [
+  "controlled_learning_candidate_audit_entries", "controlled_learning_consent_records", "controlled_learning_harm_events", "controlled_learning_privacy_controls",
+  "controlled_learning_regression_results", "controlled_learning_rejections", "controlled_learning_reviews", "controlled_learning_rollback_events",
+  "controlled_learning_rollout_flags", "controlled_learning_attribution_reviews",
+] as const;
+
+/** Learning candidate + ALL child rows hanging off a QuickBooks-derived action / outcome / decision. */
+async function seedLearning(t: QboTenant, actionId: string, outcomeId: string, decisionId: string) {
+  const now = new Date();
+  const cand = `lc_${randomUUID()}`;
+  await ins("controlled_learning_candidates", { id: cand, workspaceId: t.ws, businessId: t.biz, sourceOwnerDecisionId: decisionId, sourceActionId: actionId, sourceOutcomeId: outcomeId, eligibilityStatus: "ELIGIBLE", rejectionReasons: "[]", evidenceSourceType: "x", evidenceSummary: "derived from QuickBooks-based outcome", auditFingerprint: randomUUID(), metadata: "{}", updatedAt: now });
+  const base = { workspaceId: t.ws, candidateId: cand, updatedAt: now };
+  const harm = `h_${randomUUID()}`;
+  await ins("controlled_learning_candidate_audit_entries", { id: `c_${randomUUID()}`, workspaceId: t.ws, candidateId: cand, action: "a", detail: "d", timestamp: now });
+  await ins("controlled_learning_consent_records", { id: `c_${randomUUID()}`, ...base, consentGiven: true, consentBy: "u", consentAt: now, consentScope: "s", consentNotes: "n" });
+  await ins("controlled_learning_harm_events", { id: harm, ...base, harmType: "x", severity: "LOW", detectedBy: "u", detectedAt: now, harmDescription: "d" });
+  await ins("controlled_learning_privacy_controls", { id: `c_${randomUUID()}`, ...base, controlType: "x", appliedBy: "u", appliedAt: now, reason: "r" });
+  await ins("controlled_learning_regression_results", { id: `c_${randomUUID()}`, ...base, testRunId: "t", testVerdict: "PASS", regressionScore: 1, testedBy: "u", testedAt: now, testNotes: "n" });
+  await ins("controlled_learning_rejections", { id: `c_${randomUUID()}`, ...base, rejectedBy: "u", rejectedAt: now, rejectionReason: "r", rejectionCode: "c" });
+  await ins("controlled_learning_reviews", { id: `c_${randomUUID()}`, ...base, reviewerId: "u", decision: "APPROVE", reviewNotes: "n", reviewedAt: now });
+  await ins("controlled_learning_rollback_events", { id: `c_${randomUUID()}`, ...base, rolledBackBy: "u", rolledBackAt: now, rollbackReason: "r", rollbackCode: "c" });
+  await ins("controlled_learning_rollout_flags", { id: `c_${randomUUID()}`, ...base, rolloutStage: "s", rolloutPct: 1, enabledBy: "u", enabledAt: now, flagNotes: "n" });
+  await ins("controlled_learning_attribution_reviews", { id: `c_${randomUUID()}`, ...base, harmEventId: harm, reviewedBy: "u", reviewedAt: now, verdict: "v", confidenceScore: 0.5, reviewNotes: "n" });
+  return cand;
+}
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] every derived family is erased, directly (P4)", () => {
+  it("action outcomes, learning candidates + 10 child tables, approval evidence, first-result interactions, operating memory on every source id, budget plans", async () => {
+    const s = await seedHistory({ diagnose: true });
+    const other = await seedHistory({ diagnose: true });
+    const soft = await seedSoftFamily(s.t, s.cycle.id);
+    const oSoft = await seedSoftFamily(other.t, other.cycle.id);
+    const now = new Date();
+    const mk = async (t: QboTenant, sf: { actionId: string; decisionId: string }, tag: string) => {
+      const outcomeId = `o_${randomUUID()}`;
+      await ins("owner_action_outcomes", { id: outcomeId, workspaceId: t.ws, businessId: t.biz, actionId: sf.actionId, outcomeStatus: "x", updatedAt: now });
+      const cand = await seedLearning(t, sf.actionId, outcomeId, sf.decisionId);
+      const approval = (await admin.query(`SELECT id FROM owner_approval_requests WHERE workspace_id=$1 LIMIT 1`, [t.ws])).rows[0].id;
+      await admin.query(`INSERT INTO owner_approval_evidences (workspace_id, approval_id, evidence_type, description, submitted_by) VALUES ($1,$2,'NOTE','derived',$3)`, [t.ws, approval, t.actor]);
+      const snap = (await admin.query(`SELECT id FROM owner_financial_snapshots WHERE workspace_id=$1 LIMIT 1`, [t.ws])).rows[0].id;
+      await ins("owner_first_result_interactions", { id: randomUUID(), workspace_id: t.ws, business_id: t.biz, snapshot_id: snap, kind: "RESULT_VIEWED", idempotency_key: `${tag}-${randomUUID()}`, created_by: t.actor });
+      for (const src of [outcomeId, cand]) await admin.query(`INSERT INTO operating_memory_entries (workspace_id, memory_type, source_model, source_id, key, summary, data) VALUES ($1,'OUTCOME','X',$2,'k','derived from QuickBooks figures','{"v":1}'::jsonb)`, [t.ws, src]);
+      // budget plans: one written after the first QuickBooks import (derived), one long before it (owner history), plus a plan linked to a derived reassessment
+      const mkBudget = async (reId: string, planId: string, createdAt: Date | null) => {
+        await ins("budget_reassessments", { id: reId, workspace_id: t.ws, business_id: t.biz, trigger_event_id: `ev-${reId}`, trigger_class: "x", mode: "m", confidence: "c", top_constraint: "t", next_best_action: "n", decision_type: "d", plan: JSON.stringify({ revenue: 20_000 }), ...(createdAt ? { created_at: createdAt } : {}) });
+        await ins("budget_plan_snapshots", { id: planId, workspace_id: t.ws, business_id: t.biz, reassessment_id: reId, version: 1, mode: "m", confidence: "c", plan: JSON.stringify({ revenue: 20_000 }), ...(createdAt ? { created_at: createdAt } : {}) });
+      };
+      const derived = { re: randomUUID(), plan: randomUUID() };
+      const old = { re: randomUUID(), plan: randomUUID() };
+      await mkBudget(derived.re, derived.plan, null);
+      await mkBudget(old.re, old.plan, new Date("2001-01-01T00:00:00Z"));
+      return { outcomeId, cand, derived, old };
+    };
+    const mine = await mk(s.t, soft, "a");
+    const theirs = await mk(other.t, oSoft, "b");
+
+    const fam = async (t: QboTenant) => ({
+      outcomes: await count(`SELECT count(*)::int AS n FROM owner_action_outcomes WHERE "workspaceId"=$1`, [t.ws]),
+      candidates: await count(`SELECT count(*)::int AS n FROM controlled_learning_candidates WHERE "workspaceId"=$1`, [t.ws]),
+      children: await count(LEARNING_CHILDREN.map((x) => `SELECT count(*) FROM "${x}" WHERE "workspaceId"='${t.ws}'`).join(" UNION ALL ").replace(/^/, "SELECT sum(count)::int AS n FROM (") + ") q"),
+      evidence: await count(`SELECT count(*)::int AS n FROM owner_approval_evidences WHERE workspace_id=$1`, [t.ws]),
+      firstResult: await count(`SELECT count(*)::int AS n FROM owner_first_result_interactions WHERE workspace_id=$1`, [t.ws]),
+      memory: await count(`SELECT count(*)::int AS n FROM operating_memory_entries WHERE workspace_id=$1`, [t.ws]),
+      assignments: await count(`SELECT count(*)::int AS n FROM owner_action_assignments WHERE workspace_id=$1`, [t.ws]),
+      budgetRe: await count(`SELECT count(*)::int AS n FROM budget_reassessments WHERE workspace_id=$1`, [t.ws]),
+      budgetPlans: await count(`SELECT count(*)::int AS n FROM budget_plan_snapshots WHERE workspace_id=$1`, [t.ws]),
+    });
+    const before = await fam(s.t);
+    expect(before).toMatchObject({ outcomes: 1, candidates: 1, children: 10, evidence: 1, firstResult: 1, assignments: 1, budgetRe: 2, budgetPlans: 2 });
+    expect(before.memory).toBe(3);
+    const otherBefore = await fam(other.t);
+
+    const { res } = await runErasure(s.t);
+    expect(res.verification.result).toBe("PASS");
+    expect(await fam(s.t)).toEqual({ outcomes: 0, candidates: 0, children: 0, evidence: 0, firstResult: 0, memory: 0, assignments: 0, budgetRe: 1, budgetPlans: 1 });
+    // the pre-import budget history is the owner's and stays; only the post-import plan (and the plan linked to it) went
+    expect(await count(`SELECT count(*)::int AS n FROM budget_reassessments WHERE id=$1`, [mine.old.re])).toBe(1);
+    expect(await count(`SELECT count(*)::int AS n FROM budget_plan_snapshots WHERE id=$1`, [mine.old.plan])).toBe(1);
+    expect(await count(`SELECT count(*)::int AS n FROM budget_plan_snapshots WHERE id=$1`, [mine.derived.plan])).toBe(0);
+    expect(res.counts).toMatchObject({ owner_action_outcomes: 1, controlled_learning_candidates: 1, owner_first_result_interactions: 1, budget_reassessments: 1, budget_plan_snapshots: 1, operating_memory_entries: 3 });
+    expect(await fam(other.t)).toEqual(otherBefore); // the other tenant: nothing touched
+    expect(theirs.cand).toBeTruthy();
+  }, 240_000);
+
+  it("a PROMOTED / ADMITTED learning candidate derived from QuickBooks is a BLOCKER: nothing is erased", async () => {
+    const s = await seedHistory({ diagnose: true });
+    const soft = await seedSoftFamily(s.t, s.cycle.id);
+    const outcomeId = `o_${randomUUID()}`;
+    await ins("owner_action_outcomes", { id: outcomeId, workspaceId: s.t.ws, businessId: s.t.biz, actionId: soft.actionId, outcomeStatus: "x", updatedAt: new Date() });
+    const cand = await seedLearning(s.t, soft.actionId, outcomeId, soft.decisionId);
+    await ins("controlled_learning_admissions", { id: `a_${randomUUID()}`, workspaceId: s.t.ws, candidateId: cand, admittedBy: "u", admittedAt: new Date(), sourceLabel: "s", evidenceOrigin: "e", eligibilityStatus: "ELIGIBLE", admissionNotes: "n", updatedAt: new Date() });
+    const before = await qboCounts(s.t);
+    const c = await asUser("erasure_operator_t");
+    try {
+      const { id } = await createErasureRequest(c, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: "operator-a" });
+      const dry = await recordDryRun(c, id);
+      expect(dry.blockers.map((b) => b.code)).toContain("LEARNING_PROMOTED_REQUIRES_REVIEW");
+      await approve2(id, "operator-b").catch(() => undefined);
+      await expect(executeQboErasure(c, { requestId: id, confirmToken: dry.confirmToken })).rejects.toThrow();
+    } finally { await c.end(); }
+    expect(await qboCounts(s.t)).toEqual(before);
+    expect(await count(`SELECT count(*)::int AS n FROM controlled_learning_candidates WHERE "workspaceId"=$1`, [s.t.ws])).toBe(1);
+  }, 240_000);
 });
