@@ -69,3 +69,29 @@ Intuit actually sends (legacy `eventNotifications` vs CloudEvents) and its signa
 ## 9. Production enablement (separate, owner-authorized step)
 Apply the migration to production through the owner-approved workflow, set the production values of the names in §0 (with
 `QUICKBOOKS_ENVIRONMENT=production`), register the production redirect URI/webhook, deploy. Nothing in this PR does any of that.
+
+## Addendum: findings from the first real Sandbox run (Oct 2026)
+
+These corrections come from a real Intuit Sandbox acceptance run on an isolated Preview + database.
+
+### Preview scheduling: what actually runs
+- Vercel Cron does not run on Preview deployments, so the daily producer never ticks there on its own.
+- "Refresh now" (`POST /api/owner/integrations/quickbooks/sync`) enqueues an owner task. On the verified build it was also picked up and run within seconds of the request, so a Refresh now alone proved a sync on Preview. Do not rely on that alone as proof of the scheduler.
+- Owner Refresh now is de-duplicated per 5-minute window (`...:owner:<bucket>`); a second click inside the window returns `alreadyRequested: true` and does no work.
+- A signed webhook only records a pending task (`...:wh:<ts>`, trigger WEBHOOK). It is drained only when the canonical scheduler route runs.
+- To prove the scheduler on Preview, call the canonical route `GET /api/internal/cron/scheduler` with `Authorization: Bearer <CRON_SECRET>`. Use a Preview-only, branch-scoped, Sensitive `CRON_SECRET` generated fresh for the run; never reuse the Production value. Never put it in a URL, screenshot, log or chat. Redeploy after adding it (env is snapshotted per deployment).
+- The route fails closed: no header or a wrong secret returns 401.
+- After the run, delete the variable AND redeploy; deleting alone does not stop the already-running deployment from honouring it. Then confirm the old secret returns 401.
+
+### Fresh-database bootstrap (invite-only signup)
+- A fresh database has no `beta_requests` rows, so signup is refused ("Beta registration isn't available"). Do not open the whole Preview to public beta.
+- Seed exactly one `beta_requests` row for the acceptance email: `status='INVITED'`, `invited_at=now()`, `invited_by` an operator-bootstrap label. The table has no DB defaults for `id` or `updated_at`; supply them.
+- Verification email needs `RESEND_API_KEY` (branch-scoped), optionally `ALERT_FROM_EMAIL` (default `alerts@opsiq.app`; the sending domain must be verified in Resend) and `NEXT_PUBLIC_APP_URL` set to the public Preview alias, otherwise the link is not usable (`BASE_URL_NOT_PUBLIC`).
+- Adding a branch-scoped variable through the dashboard dialog can also create an all-Preview duplicate; check for and remove strays.
+
+### Sandbox facts to expect
+- The test business is hidden from the owner UI by design, so connected/stale/error states for it must be observed through `GET .../quickbooks/status?businessId=` and the database, not the owner screens.
+- The consent link expires after about 10 minutes; an expired link is refused with a clear message and the flow can simply be restarted.
+- Intuit reuses an existing grant, so a reconnect may complete without showing the consent screen.
+- If the portal toggle "Enable cloud event payload format" is on, webhooks arrive in CloudEvents format.
+- Reports for months with no Sandbox activity can legitimately return no data; unavailable canonical fields are stored as NULL and listed as missing, never as zero.
