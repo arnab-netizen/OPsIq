@@ -138,6 +138,26 @@ implying immediacy.
    new write paths just for this).
 3. Mark `FULFILLED` (step 4).
 
+### 3d. QUICKBOOKS / INTUIT DATA ERASURE (operator-run — there is NO self-service button)
+
+Use this when a user asks for the data imported from their QuickBooks Online company to be deleted, or revokes consent and asks for deletion. It is separate from **disconnecting**, which only stops processing: it revokes at Intuit (best effort), deletes the stored token and keeps already-imported history. Erasure removes that history.
+
+Do **not** run raw `DELETE` / `UPDATE` on QuickBooks tables: the evidence tables are append-only on purpose and the database refuses. The only supported path is the governed operator tool `scripts/privacy/qbo-erasure.ts` (design: `docs/opsiq/product/QBO_ERASURE_DESIGN.md`). It has no HTTP endpoint.
+
+Preconditions: verify the requester's identity as in section 2; two different operators (requester and approver); an operator login that is a member of the database role `opsiq_privacy_eraser`, passed as `ERASURE_DATABASE_URL` (never the application `DATABASE_URL`).
+
+1. `request` — records who asked, why (`USER_DATA_ERASURE_REQUEST` or `USER_REVOKED_CONSENT`) and which workspace + business.
+2. `dry-run` — read-only. Prints per-table counts, the exact canonical (Finance / Cashflow) handling and any **blockers**, and records a manifest hash. Resolve every blocker first (for example a promoted learning record derived from QuickBooks outcomes needs manual review). A blocker means the registry does not fully understand a reference; never bypass it.
+3. `approve` — a **second** operator approves the exact dry-run. If the data changed since the dry-run, approval is refused: run the dry-run again.
+4. `execute` — needs the confirmation token printed by the dry-run. It revokes at Intuit (best effort; deletion proceeds even if Intuit is unreachable), then deletes everything in ONE transaction, verifies, and only then commits. Any failure rolls the whole erasure back.
+5. `verify` — prints `QBO_ERASURE_VERIFICATION=PASS|FAIL`. Attach the PASS output and the request id to the privacy request.
+
+What is removed: the connection, token, sync state and webhook markers, OAuth states, every raw report observation and provenance row, the QuickBooks-controlled Finance and Cashflow figures (whole chains), every diagnosis cycle, finding, action, verification and outcome signal derived from them, and the decision, assessment, approval, assignment, self-evaluation, memory and learning rows derived from those. Owner-amended periods keep only the figures the owner entered themselves; QuickBooks-attributed figures and the import note are removed. Periods the owner entered before QuickBooks, and all other tenants, are untouched.
+
+What is deliberately retained: the audit-event rows themselves (hash chain intact, no row deleted) with the Intuit company identifier (`realmId`) removed from their payload, and the erasure tombstone (request id, operator names, counts — no realm id, company name or figures). Retention outside the database (Vercel logs, Sentry, backups, Neon point-in-time history) follows each provider's own retention and is not reached by this tool; tell the user that honestly if asked.
+
+Production execution requires separate explicit owner authorization, the `--production-authorization=<request id>` flag, and the production prerequisites in the design document (eraser role, separate operator login, least-privilege runtime role). Never run it on Production by default.
+
 ## 4. Closing the request
 
 Whichever path above you took, close the row explicitly:

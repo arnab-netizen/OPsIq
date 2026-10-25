@@ -7400,3 +7400,29 @@ model OwnerFirstResultInteraction {
   @@index([workspaceId, businessId, kind])
   @@map("owner_first_result_interactions")
 }
+
+/// Governed QuickBooks / Intuit User Data erasure: authorization + tombstone (counts only — never realm ids, company names or values).
+/// Raw SQL only (src/services/privacy-erasure); no application code reads or writes it. No FK on purpose: the tombstone outlives the business.
+model PrivacyErasureRequest {
+  id               String    @id @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  scope            String    @default("QBO_INTUIT_DATA")
+  reasonCode       String    @map("reason_code")
+  privacyRequestId String?   @map("privacy_request_id") @db.Uuid
+  status           String
+  requestedBy      String    @map("requested_by")
+  approvedBy       String?   @map("approved_by")
+  approvedAt       DateTime? @map("approved_at")
+  manifestHash     String?   @map("manifest_hash")
+  dryRunAt         DateTime? @map("dry_run_at")
+  executedAt       DateTime? @map("executed_at")
+  resultCode       String?   @map("result_code")
+  resultCounts     Json?     @map("result_counts")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, businessId])
+  @@index([status])
+  @@map("privacy_erasure_requests")
+}

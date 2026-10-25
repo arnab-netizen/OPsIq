@@ -1,0 +1,386 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- raw SQL rows */
+/**
+ * Governed QuickBooks / Intuit User Data erasure — HOSTILE proof on a DISPOSABLE PostgreSQL (database name opsiq_erasure_test*).
+ *
+ *   OPSIQ_DB_TARGET=local TEST_WITH_DB=true DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/opsiq_erasure_test \
+ *     npx vitest run src/__tests__/privacy-erasure/qbo-erasure.db.test.ts
+ *
+ * The test connects as three different database users: the superuser (seeding and assertions), `erasure_operator_t` (a member of
+ * opsiq_privacy_eraser) and `app_runtime_t` (an ordinary non-member application login). Nothing here touches Production.
+ */
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { Client } from "pg";
+import { randomUUID } from "node:crypto";
+import { db } from "@/lib/db";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { connectQbo, envFor, makeFakeIntuit, monthKeys, seedQboTenant, type MonthBooks, type QboTenant } from "@/__tests__/test-helpers/qbo-db-fixtures";
+import { runQboSync } from "@/services/quickbooks/qbo-sync.service";
+import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
+import { amendFinancialSnapshot, createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import { disconnectQboConnection } from "@/services/quickbooks/qbo-connection.service";
+import { reactToQboWebhook } from "@/services/quickbooks/qbo-webhook.service";
+import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler, enqueueDueQboSyncTasks, enqueueQboSync, qboSyncKey } from "@/services/quickbooks/qbo-sync-scheduling";
+import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
+import {
+  ErasureRefusedError, approveErasureRequest, assertExecutionTarget, createErasureRequest, executeQboErasure, recordDryRun, verifyQboErasure,
+  type RevokeHook,
+} from "@/services/privacy-erasure/qbo-erasure.service";
+
+const BASE_URL = process.env.DATABASE_URL ?? "";
+const urlFor = (user: string) => { const u = new URL(BASE_URL); u.username = user; u.password = "pw"; return u.toString(); };
+const env = envFor("production");
+const books = (n: number): MonthBooks => ({ income: 20_000 + n, cogs: 9_000, bank: 15_000, arTotal: 8_000, arCurrent: 3_000, apTotal: 6_000, apCurrent: 1_000 });
+const allMonths = () => Object.fromEntries(monthKeys(12).map((k, i) => [k, books(i)]));
+const D = (k: string) => new Date(`${k}T00:00:00.000Z`);
+
+let admin: Client;
+beforeAll(async () => {
+  if (!SHOULD_RUN_DB_TESTS) return;
+  if (!/opsiq_erasure_test/.test(BASE_URL)) throw new Error("refusing to run: DATABASE_URL must be the disposable opsiq_erasure_test database");
+  admin = new Client({ connectionString: BASE_URL });
+  await admin.connect();
+  await admin.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='erasure_operator_t') THEN CREATE ROLE erasure_operator_t LOGIN PASSWORD 'pw' NOSUPERUSER; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='app_runtime_t') THEN CREATE ROLE app_runtime_t LOGIN PASSWORD 'pw' NOSUPERUSER; END IF;
+  END $$`);
+  await admin.query(`GRANT opsiq_privacy_eraser TO erasure_operator_t`);
+  await admin.query(`GRANT ALL ON ALL TABLES IN SCHEMA public TO erasure_operator_t, app_runtime_t`);
+  await admin.query(`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO erasure_operator_t, app_runtime_t`);
+});
+afterAll(async () => { await admin?.end(); });
+
+const asUser = async (user: string) => { const c = new Client({ connectionString: urlFor(user) }); await c.connect(); return c; };
+const count = async (sql: string, params: unknown[] = []) => Number((await admin.query(sql, params)).rows[0].n);
+
+async function seedHistory(opts: { diagnose?: boolean } = {}) {
+  const t = await seedQboTenant();
+  const conn = await connectQbo(t);
+  const f = makeFakeIntuit(allMonths(), "Erasure Test Co");
+  for (let i = 0; i < 4; i++) await runQboSync({ workspaceId: t.ws, connectionId: conn.connectionId, trigger: "SCHEDULED" }, { env, readClientFactory: () => f.reader });
+  const latestKey = monthKeys(12)[0];
+  const snap = await db.ownerFinancialSnapshot.findFirstOrThrow({ where: { workspaceId: t.ws, businessId: t.biz, periodStart: D(latestKey), supersededById: null } });
+  let cycle: any = null;
+  if (opts.diagnose !== false) cycle = await runFinanceDiagnosis(t.biz, snap.id, t.actor, t.ws);
+  return { t, ...conn, f, latestKey, snap, cycle };
+}
+
+/** Seed the soft-linked, append-only family that hangs off a diagnosis (decision -> 2 assessments, memory, assignment, approval, self-evaluation). */
+async function seedSoftFamily(t: QboTenant, cycleId: string) {
+  const action = await db.ownerFinanceAction.findFirstOrThrow({ where: { workspaceId: t.ws, businessId: t.biz, cycleId } });
+  const decisionId = randomUUID();
+  const candidate = `finance_action:${action.id}`;
+  await admin.query(
+    `INSERT INTO owner_decision_records (id, workspace_id, business_id, candidate_id, candidate_source, domain, source_id, decision_state, sequence, decided_by_id, decided_at, recommendation_snapshot, decision_contract_version, request_fingerprint)
+     VALUES ($1,$2,$3,$4,'domain_action','finance',$5,'REJECTED',1,$6,now(),'{"note":"derived from QuickBooks-based diagnosis"}'::jsonb,'v1',$7)`,
+    [decisionId, t.ws, t.biz, candidate, action.id, t.actor, randomUUID()]);
+  const a1 = randomUUID();
+  const a2 = randomUUID();
+  const assess = (id: string, version: number, prev: string | null) => admin.query(
+    `INSERT INTO owner_outcome_assessments (id, workspace_id, business_id, chain_key, version, previous_assessment_id, owner_decision_id, owner_decision_state, commitment_fidelity, decision_link_state, source_system, source_link_state, domain, canonical_action_id, system_a_action_id, policy_version, assessed_at, execution_status, observation_status, measurement_result, target_attainment, issue_resolution, causal_attribution, learning_eligibility, verification_status, evidence_quality, verifier_kind, independently_verified, self_verified, disputed, external_interference, learning_blockers, next_verification_action, input_snapshot, assessment_fingerprint)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,'REJECTED','AS_RECOMMENDED','LINKED','SYSTEM_A','LINKED','finance',$8,$9,'p1',now(),'NOT_STARTED','NOT_STARTED','NOT_MEASURABLE','UNKNOWN','NOT_YET_REASSESSED','NOT_ASSESSED','NOT_ELIGIBLE','UNVERIFIED','NONE','NONE',false,false,false,false,ARRAY[]::text[],'none','{"derived":"from QuickBooks diagnosis"}'::jsonb,$10)`,
+    [id, t.ws, t.biz, candidate, version, prev, decisionId, candidate, action.id, randomUUID()]);
+  await assess(a1, 1, null);
+  await assess(a2, 2, a1);
+  await admin.query(`INSERT INTO operating_memory_entries (workspace_id, memory_type, source_model, source_id, key, summary, data) VALUES ($1,'OUTCOME','OwnerDecisionRecord',$2,'k','derived from QuickBooks figures','{"v":1}'::jsonb)`, [t.ws, decisionId]);
+  await admin.query(`INSERT INTO owner_action_assignments (workspace_id, business_id, idempotency_key, action_id, action_domain, assigned_to, assigned_by_id, created_by, updated_at) VALUES ($1,$2,$3,$4,'finance','someone',$5,$5,now())`, [t.ws, t.biz, randomUUID(), action.id, t.actor]);
+  await admin.query(`INSERT INTO owner_approval_requests (workspace_id, idempotency_key, business_id, action_id, action_domain, requested_by, created_by, updated_at) VALUES ($1,$2,$3,$4,'finance',$5,$5,now())`, [t.ws, randomUUID(), t.biz, action.id, t.actor]);
+  await admin.query(`INSERT INTO owner_self_evaluation (workspace_id, action_id, expected_outcome, result) VALUES ($1,$2,'x','pending')`, [t.ws, action.id]);
+  // An unrelated assessment that merely POINTS at the erased cycle: the pointer is detached, the row is kept.
+  const pointer = randomUUID();
+  await admin.query(
+    `INSERT INTO owner_outcome_assessments (id, workspace_id, business_id, chain_key, version, owner_decision_id, owner_decision_state, commitment_fidelity, decision_link_state, source_system, source_link_state, domain, canonical_action_id, newer_diagnosis_domain, newer_diagnosis_cycle_id, newer_diagnosis_evidence_as_of, policy_version, assessed_at, execution_status, observation_status, measurement_result, target_attainment, issue_resolution, causal_attribution, learning_eligibility, verification_status, evidence_quality, verifier_kind, independently_verified, self_verified, disputed, external_interference, learning_blockers, next_verification_action, input_snapshot, assessment_fingerprint)
+     VALUES ($1,$2,$3,'sales_action:other',1,NULL,NULL,'NO_DECISION','UNLINKED_NO_DECISION','NONE','NO_EXECUTION_SOURCE_LINKED','sales','sales:other','finance',$4,now(),'p1',now(),'NOT_STARTED','NOT_STARTED','NOT_MEASURABLE','UNKNOWN','NOT_YET_REASSESSED','NOT_ASSESSED','NOT_ELIGIBLE','UNVERIFIED','NONE','NONE',false,false,false,false,ARRAY[]::text[],'none','{}'::jsonb,$5)`,
+    [pointer, t.ws, t.biz, cycleId, randomUUID()]);
+  return { actionId: action.id, decisionId, assessments: [a1, a2], pointer };
+}
+
+async function runErasure(t: Pick<QboTenant, "ws" | "biz">, o: { revoke?: RevokeHook; requestedBy?: string; approvedBy?: string } = {}) {
+  const c = await asUser("erasure_operator_t");
+  try {
+    const { id } = await createErasureRequest(c, { scope: { workspaceId: t.ws, businessId: t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: o.requestedBy ?? "operator-a" });
+    const dry = await recordDryRun(c, id);
+    expect(dry.blockers).toEqual([]);
+    await approveErasureRequest(c, id, o.approvedBy ?? "operator-b");
+    const res = await executeQboErasure(c, { requestId: id, confirmToken: dry.confirmToken, revoke: o.revoke });
+    return { id, dry, res };
+  } finally { await c.end(); }
+}
+
+const qboCounts = async (t: Pick<QboTenant, "ws" | "biz">) => ({
+  connections: await count(`SELECT count(*)::int AS n FROM qbo_connections WHERE workspace_id=$1 AND business_id=$2`, [t.ws, t.biz]),
+  tokens: await count(`SELECT count(*)::int AS n FROM qbo_connection_tokens WHERE workspace_id=$1`, [t.ws]),
+  syncState: await count(`SELECT count(*)::int AS n FROM qbo_sync_state WHERE workspace_id=$1`, [t.ws]),
+  observations: await count(`SELECT count(*)::int AS n FROM qbo_report_snapshots WHERE workspace_id=$1`, [t.ws]),
+  provenance: await count(`SELECT count(*)::int AS n FROM qbo_canonical_provenance WHERE workspace_id=$1`, [t.ws]),
+  financeSnapshots: await count(`SELECT count(*)::int AS n FROM owner_financial_snapshots WHERE workspace_id=$1`, [t.ws]),
+  cashflowSnapshots: await count(`SELECT count(*)::int AS n FROM owner_cashflow_snapshots WHERE workspace_id=$1`, [t.ws]),
+  financeCycles: await count(`SELECT count(*)::int AS n FROM owner_finance_cycles WHERE workspace_id=$1`, [t.ws]),
+  tasks: await count(`SELECT count(*)::int AS n FROM scheduled_tasks WHERE workspace_id=$1 AND task_name='qbo-sync'`, [t.ws]),
+});
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — hostile", () => {
+  it("connected business with FULL history + diagnosis + decision family: everything Intuit-derived is erased, other tenants and owner data untouched", async () => {
+    const other = await seedHistory({ diagnose: true }); // a different tenant with the same shape: must be untouched
+    const otherBefore = await qboCounts(other.t);
+    expect(otherBefore.observations).toBeGreaterThan(0);
+
+    const s = await seedHistory({ diagnose: true });
+    const soft = await seedSoftFamily(s.t, s.cycle.id);
+    // an owner-only period (no QuickBooks involvement) with its own diagnosis: must survive
+    const ownerSnap: any = await createFinancialSnapshot(s.t.biz, { periodStart: "2024-01-01", periodEnd: "2024-01-31", currency: "USD", revenue: 777, evidenceQuality: "ACTUAL" } as any, s.t.actor, s.t.ws).catch(() => null);
+
+    const before = await qboCounts(s.t);
+    expect(before.connections).toBe(1); expect(before.tokens).toBe(1); expect(before.observations).toBeGreaterThan(0);
+    expect(before.provenance).toBeGreaterThan(0); expect(before.financeCycles).toBe(1);
+    const realmAudit = await count(`SELECT count(*)::int AS n FROM audit_events WHERE workspace_id=$1 AND event_name LIKE 'qbo.%' AND payload ? 'realmId'`, [s.t.ws]);
+    expect(realmAudit).toBeGreaterThan(0);
+    const auditChain = (await admin.query(`SELECT id, previous_hash, event_name, occurred_at FROM audit_events WHERE workspace_id=$1 ORDER BY id`, [s.t.ws])).rows;
+
+    const { id, res } = await runErasure(s.t, { revoke: async () => "REVOKED" });
+    expect(res.status).toBe("ERASED");
+    expect(res.revocation).toBe("REVOKED");
+    expect(res.verification.result).toBe("PASS");
+
+    const after = await qboCounts(s.t);
+    expect(after).toMatchObject({ connections: 0, tokens: 0, syncState: 0, observations: 0, provenance: 0, financeSnapshots: ownerSnap ? 1 : 0, cashflowSnapshots: 0, financeCycles: 0, tasks: 0 });
+    expect(await count(`SELECT count(*)::int AS n FROM owner_finance_actions WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_finance_findings WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_decision_records WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_outcome_assessments WHERE workspace_id=$1 AND id = ANY($2::uuid[])`, [s.t.ws, soft.assessments])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM operating_memory_entries WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_action_assignments WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_approval_requests WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_self_evaluation WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    // pointer-only assessment: kept, pointer detached
+    const ptr = (await admin.query(`SELECT newer_diagnosis_cycle_id FROM owner_outcome_assessments WHERE id=$1`, [soft.pointer])).rows[0];
+    expect(ptr.newer_diagnosis_cycle_id).toBeNull();
+    // business, owner-only data and the audit chain survive; realm id is gone from audit payloads; chain columns identical
+    expect(await count(`SELECT count(*)::int AS n FROM owner_businesses WHERE id=$1`, [s.t.biz])).toBe(1);
+    if (ownerSnap) expect(await count(`SELECT count(*)::int AS n FROM owner_financial_snapshots WHERE id=$1`, [ownerSnap.id])).toBe(1);
+    expect(await count(`SELECT count(*)::int AS n FROM audit_events WHERE workspace_id=$1 AND event_name LIKE 'qbo.%' AND payload ? 'realmId'`, [s.t.ws])).toBe(0);
+    expect((await admin.query(`SELECT id, previous_hash, event_name, occurred_at FROM audit_events WHERE workspace_id=$1 ORDER BY id`, [s.t.ws])).rows.filter((r: any) => auditChain.some((a: any) => a.id === r.id))).toEqual(auditChain);
+    expect(await count(`SELECT count(*)::int AS n FROM audit_events WHERE workspace_id=$1 AND payload::text LIKE $2`, [s.t.ws, `%${s.realmId}%`])).toBe(0);
+    // tombstone: counts only, never a realm id / company name
+    const tomb = (await admin.query(`SELECT status, result_code, result_counts, approved_by, requested_by FROM privacy_erasure_requests WHERE id=$1`, [id])).rows[0];
+    expect(tomb).toMatchObject({ status: "EXECUTED", result_code: "ERASED", approved_by: "operator-b", requested_by: "operator-a" });
+    expect(JSON.stringify(tomb.result_counts)).not.toContain(s.realmId);
+    expect(JSON.stringify(tomb.result_counts)).not.toContain("Erasure Test Co");
+    // the other tenant is byte-for-byte unaffected
+    expect(await qboCounts(other.t)).toEqual(otherBefore);
+  }, 180_000);
+
+  it("DISCONNECTED business with retained history (ordinary disconnect kept it) is erased on request", async () => {
+    const s = await seedHistory({ diagnose: false });
+    await disconnectQboConnection({ workspaceId: s.t.ws, actorId: s.t.actor, connectionId: s.connectionId });
+    const mid = await qboCounts(s.t);
+    expect(mid.observations).toBeGreaterThan(0); expect(mid.tokens).toBe(0); // disconnect retains history, drops tokens
+    const { res } = await runErasure(s.t);
+    expect(res.verification.result).toBe("PASS");
+    expect(await qboCounts(s.t)).toMatchObject({ connections: 0, observations: 0, provenance: 0, financeSnapshots: 0, cashflowSnapshots: 0 });
+  }, 120_000);
+
+  it("owner-amended QuickBooks period: owner's re-stated figure kept, every other QuickBooks figure removed, history removed; manual-first period untouched", async () => {
+    const t = await seedQboTenant();
+    // manual-first month: the owner entered it BEFORE QuickBooks, so QuickBooks must treat it as owner-controlled
+    const keys = monthKeys(12);
+    const manualKey = keys[3];
+    const [y, m] = manualKey.split("-").map(Number);
+    const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    const manual: any = await createFinancialSnapshot(t.biz, { periodStart: manualKey, periodEnd: end, currency: "USD", revenue: 12_345, evidenceQuality: "ACTUAL" } as any, t.actor, t.ws);
+    const conn = await connectQbo(t);
+    const f = makeFakeIntuit(allMonths());
+    for (let i = 0; i < 4; i++) await runQboSync({ workspaceId: t.ws, connectionId: conn.connectionId, trigger: "SCHEDULED" }, { env, readClientFactory: () => f.reader });
+    expect(await count(`SELECT count(*)::int AS n FROM qbo_canonical_provenance WHERE financial_snapshot_id=$1`, [manual.id])).toBe(0); // owner-controlled
+    const manualCycle = await runFinanceDiagnosis(t.biz, manual.id, t.actor, t.ws);
+
+    const latest = keys[0];
+    const qboSnap = await db.ownerFinancialSnapshot.findFirstOrThrow({ where: { workspaceId: t.ws, businessId: t.biz, periodStart: D(latest), supersededById: null } });
+    expect(qboSnap.costOfGoods).toBe(9_000);
+    const amended = (await amendFinancialSnapshot(qboSnap.id, { amendmentReason: "owner restated revenue", revenue: 31_000 } as any, t.actor, t.ws)).snapshot as any;
+    await runFinanceDiagnosis(t.biz, amended.id, t.actor, t.ws); // a diagnosis on the MIXED version: derived from QuickBooks figures too
+
+    const { res } = await runErasure(t);
+    expect(res.verification.result).toBe("PASS");
+    const kept = (await admin.query(`SELECT * FROM owner_financial_snapshots WHERE id=$1`, [amended.id])).rows[0];
+    expect(Number(kept.revenue)).toBe(31_000);            // the owner's own act
+    expect(kept.cost_of_goods).toBeNull();                // QuickBooks' figure
+    expect(kept.receivables).toBeNull();
+    expect(kept.overdue_receivables).toBeNull();
+    expect(kept.payables).toBeNull();
+    expect(kept.overdue_payables).toBeNull();
+    expect(kept.notes).toBeNull();                        // "Imported from QuickBooks Online."
+    expect(await count(`SELECT count(*)::int AS n FROM owner_financial_snapshots WHERE id=$1`, [qboSnap.id])).toBe(0); // superseded QuickBooks version gone
+    expect(await count(`SELECT count(*)::int AS n FROM owner_finance_cycles WHERE snapshot_id=$1`, [amended.id])).toBe(0); // diagnosis on mixed values gone
+    // manual-first period and its diagnosis are exactly as the owner left them
+    const manualRow = (await admin.query(`SELECT revenue FROM owner_financial_snapshots WHERE id=$1`, [manual.id])).rows[0];
+    expect(Number(manualRow.revenue)).toBe(12_345);
+    expect(await count(`SELECT count(*)::int AS n FROM owner_finance_cycles WHERE id=$1`, [manualCycle.id])).toBe(1);
+    // every other QuickBooks-only period is gone
+    expect(await count(`SELECT count(*)::int AS n FROM owner_financial_snapshots WHERE workspace_id=$1 AND id <> ALL($2::uuid[])`, [t.ws, [manual.id, amended.id]])).toBe(0);
+  }, 180_000);
+
+  it("pending webhook task + pending daily sync + stale token: all cancelled; nothing can recreate the data without a fresh OAuth connection", async () => {
+    const s = await seedHistory({ diagnose: false });
+    await db.qboConnection.update({ where: { id: s.connectionId }, data: { status: "REAUTH_REQUIRED", reauthRequiredAt: new Date(), lastErrorCode: "REFRESH_INVALID" } });
+    await db.qboConnection.update({ where: { id: s.connectionId }, data: { status: "ACTIVE", reauthRequiredAt: null, lastErrorCode: null } });
+    await reactToQboWebhook({ realmIds: [s.realmId] }, { env });
+    await enqueueQboSync({ workspaceId: s.t.ws, connectionId: s.connectionId, trigger: "SCHEDULED", key: qboSyncKey(s.connectionId, "daily", new Date()) });
+    expect((await qboCounts(s.t)).tasks).toBeGreaterThan(0);
+    expect(await count(`SELECT count(*)::int AS n FROM qbo_sync_state WHERE connection_id=$1 AND webhook_pending_at IS NOT NULL`, [s.connectionId])).toBe(1);
+
+    const { res } = await runErasure(s.t, { revoke: async () => "FAILED" }); // Intuit unreachable: deletion still proceeds
+    expect(res.revocation).toBe("FAILED");
+    expect(res.verification.result).toBe("PASS");
+    const after = await qboCounts(s.t);
+    expect(after).toMatchObject({ tasks: 0, syncState: 0, tokens: 0, connections: 0 });
+
+    // 1. a stale webhook for the erased company triggers nothing
+    expect(await reactToQboWebhook({ realmIds: [s.realmId] }, { env })).toEqual({ realmsReceived: 1, connectionsTriggered: 0 });
+    // 2. the daily producer enqueues nothing for the business
+    await enqueueDueQboSyncTasks(new Date());
+    expect(await count(`SELECT count(*)::int AS n FROM scheduled_tasks WHERE workspace_id=$1 AND task_name='qbo-sync'`, [s.t.ws])).toBe(0);
+    // 3. a task for the erased connection id that somehow still arrives runs as a no-op: no provider call, nothing written
+    const { taskId } = await enqueueQboSync({ workspaceId: s.t.ws, connectionId: s.connectionId, trigger: "SCHEDULED", key: qboSyncKey(s.connectionId, "ghost", new Date()) });
+    await db.scheduledTask.update({ where: { id: taskId }, data: { scheduledFor: new Date(Date.now() - 1000) } });
+    const calls = s.f.calls.length;
+    const handlers = new Map<string, TaskHandler>([[TASK_NAME_QBO_SYNC, createQboSyncTaskHandler(() => ({ env, readClientFactory: () => s.f.reader }))]]);
+    await new DatabaseSchedulerProvider().processTaskById(taskId, handlers);
+    expect(s.f.calls.length).toBe(calls);
+    const reappeared = await qboCounts(s.t);
+    expect(reappeared).toMatchObject({ connections: 0, observations: 0, provenance: 0, financeSnapshots: 0, cashflowSnapshots: 0 });
+    // QBO_ERASED_DATA_CAN_REAPPEAR_WITHOUT_NEW_OAUTH=NO
+    await db.scheduledTask.deleteMany({ where: { id: taskId } });
+  }, 180_000);
+
+  it("idempotent: re-executing is a no-op, and a second request on the already-erased business verifies PASS with nothing to do", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const first = await runErasure(s.t);
+    const c = await asUser("erasure_operator_t");
+    try {
+      const again = await executeQboErasure(c, { requestId: first.id, confirmToken: first.dry.confirmToken });
+      expect(again.status).toBe("ALREADY_EXECUTED");
+      expect(again.verification.result).toBe("PASS");
+    } finally { await c.end(); }
+    const second = await runErasure(s.t);
+    expect(second.res.verification.result).toBe("PASS");
+    expect(Object.values(second.dry.counts).reduce((a, b) => a + b, 0)).toBe(0);
+  }, 180_000);
+
+  it("blockers: a table the registry does not know that references a QuickBooks-derived row blocks approval (fail closed)", async () => {
+    const s = await seedHistory({ diagnose: true });
+    await admin.query(`CREATE TABLE IF NOT EXISTS zz_unregistered_probe (workspace_id uuid, note text)`);
+    await admin.query(`GRANT ALL ON zz_unregistered_probe TO erasure_operator_t`);
+    await admin.query(`INSERT INTO zz_unregistered_probe VALUES ($1, $2)`, [s.t.ws, `see cycle ${s.cycle.id}`]);
+    const c = await asUser("erasure_operator_t");
+    try {
+      const { id } = await createErasureRequest(c, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_REVOKED_CONSENT", requestedBy: "operator-a" });
+      const dry = await recordDryRun(c, id);
+      expect(dry.blockers.map((b) => b.code)).toContain("UNREGISTERED_REFERENCE");
+      await expect(approveErasureRequest(c, id, "operator-b")).rejects.toMatchObject({ code: "BLOCKERS_PRESENT" });
+      expect(await count(`SELECT count(*)::int AS n FROM qbo_report_snapshots WHERE workspace_id=$1`, [s.t.ws])).toBeGreaterThan(0);
+    } finally { await c.end(); await admin.query(`DROP TABLE IF EXISTS zz_unregistered_probe`); }
+  }, 120_000);
+
+  it("drift: data that changes between approval and execution is refused and nothing is erased", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const c = await asUser("erasure_operator_t");
+    try {
+      const { id } = await createErasureRequest(c, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: "operator-a" });
+      const dry = await recordDryRun(c, id);
+      await approveErasureRequest(c, id, "operator-b");
+      await new Promise((r) => setTimeout(r, 1100));
+      s.f.books.set(s.latestKey, { ...books(0), income: 5_000 });
+      await runQboSync({ workspaceId: s.t.ws, connectionId: s.connectionId, trigger: "SCHEDULED" }, { env, readClientFactory: () => s.f.reader });
+      const before = await qboCounts(s.t);
+      await expect(executeQboErasure(c, { requestId: id, confirmToken: dry.confirmToken })).rejects.toMatchObject({ code: "MANIFEST_DRIFT" });
+      expect(await qboCounts(s.t)).toEqual(before);
+    } finally { await c.end(); }
+  }, 180_000);
+
+  it("UNAUTHORIZED attempts all fail: wrong token, not approved, same-person approval, wrong role, wrong business, UPDATE, non-disposable target", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const victim = await seedHistory({ diagnose: false });
+    const before = await qboCounts(s.t);
+    const op = await asUser("erasure_operator_t");
+    const app = await asUser("app_runtime_t");
+    try {
+      const { id } = await createErasureRequest(op, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: "operator-a" });
+      // not approved / no dry-run
+      await expect(executeQboErasure(op, { requestId: id, confirmToken: "x" })).rejects.toMatchObject({ code: "NOT_APPROVED" });
+      await recordDryRun(op, id);
+      await expect(approveErasureRequest(op, id, "operator-a")).rejects.toMatchObject({ code: "TWO_PERSON_RULE" });
+      await approveErasureRequest(op, id, "operator-b");
+      // wrong confirmation token
+      await expect(executeQboErasure(op, { requestId: id, confirmToken: "0".repeat(24) })).rejects.toMatchObject({ code: "CONFIRMATION_TOKEN_MISMATCH" });
+      // the database itself refuses a forged same-person approval
+      await expect(admin.query(`UPDATE privacy_erasure_requests SET approved_by = requested_by WHERE id=$1`, [id])).rejects.toThrow();
+      expect(await qboCounts(s.t)).toEqual(before);
+
+      const probe = async (c: Client, sql: string, params: unknown[]) => { await c.query("SAVEPOINT p"); const r = await c.query(sql, params).then(() => "OK", (e) => String(e.message)); await c.query("ROLLBACK TO SAVEPOINT p"); return r; };
+      // Raw SQL hostility. Each runs in its own transaction and is rolled back.
+      const attempt = async (c: Client, sql: string, params: unknown[], setup?: string) => {
+        await c.query("BEGIN");
+        try { if (setup) await c.query(setup, [id]); return await c.query(sql, params).then(() => "OK", (e) => String(e.message)); } finally { await c.query("ROLLBACK"); }
+      };
+      const del = `DELETE FROM qbo_report_snapshots WHERE workspace_id=$1 AND business_id=$2`;
+      const forge = `SELECT set_config('opsiq.erasure_request_id', $1, true)`;
+      // 1. ordinary runtime session, no GUC
+      expect(await attempt(app, del, [s.t.ws, s.t.biz])).toMatch(/immutable evidence/);
+      // 2. ordinary runtime session that forges the GUC AND an EXECUTING row (it is not a member of the eraser role)
+      await app.query("BEGIN");
+      await app.query(`UPDATE privacy_erasure_requests SET status='EXECUTING' WHERE id=$1`, [id]);
+      await app.query(forge, [id]);
+      expect(await app.query(del, [s.t.ws, s.t.biz]).then(() => "OK", (e) => String(e.message))).toMatch(/immutable evidence/);
+      await app.query("ROLLBACK");
+      // 3. eraser-role member with the GUC but the request merely APPROVED (not EXECUTING)
+      expect(await attempt(op, del, [s.t.ws, s.t.biz], forge)).toMatch(/immutable evidence/);
+      // 4. eraser-role member, request EXECUTING for business A, deleting business B's evidence
+      await op.query("BEGIN");
+      await op.query(`UPDATE privacy_erasure_requests SET status='EXECUTING' WHERE id=$1`, [id]);
+      await op.query(forge, [id]);
+      expect(await probe(op, del, [victim.t.ws, victim.t.biz])).toMatch(/immutable evidence/);
+      // 5. ...and even authorized, UPDATE of provenance / observations stays impossible
+      expect(await probe(op, `UPDATE qbo_canonical_provenance SET action='UPDATED' WHERE workspace_id=$1`, [s.t.ws])).toMatch(/append-only/);
+      expect(await probe(op, `UPDATE qbo_report_snapshots SET content_hash='x' WHERE workspace_id=$1`, [s.t.ws])).toMatch(/immutable/);
+      await op.query("ROLLBACK");
+      expect(await qboCounts(s.t)).toEqual(before);
+      expect(await qboCounts(victim.t)).toMatchObject({ connections: 1 });
+    } finally { await op.end(); await app.end(); }
+
+    // non-disposable target guard
+    const fake = { query: async () => ({ rows: [{ db: "neondb" }] }) } as any;
+    await expect(assertExecutionTarget(fake, "req-1")).rejects.toMatchObject({ code: "NON_DISPOSABLE_DATABASE" });
+    await expect(assertExecutionTarget(fake, "req-1", "something-else")).rejects.toMatchObject({ code: "NON_DISPOSABLE_DATABASE" });
+    await expect(assertExecutionTarget(fake, "req-1", "req-1")).resolves.toBeUndefined();
+    expect(ErasureRefusedError).toBeDefined();
+  }, 180_000);
+
+  it("NORMAL runtime immutability is unchanged: ordinary sessions still cannot delete or rewrite QuickBooks evidence, decisions or assessments", async () => {
+    const s = await seedHistory({ diagnose: true });
+    const soft = await seedSoftFamily(s.t, s.cycle.id);
+    // through the application's own Prisma client (superuser, no erasure authorization)
+    await expect(db.qboReportSnapshot.deleteMany({ where: { workspaceId: s.t.ws } })).rejects.toThrow();
+    await expect(db.qboCanonicalProvenance.deleteMany({ where: { workspaceId: s.t.ws } })).rejects.toThrow();
+    await expect(db.qboCanonicalProvenance.updateMany({ where: { workspaceId: s.t.ws }, data: { action: "UPDATED" } })).rejects.toThrow();
+    await expect(admin.query(`DELETE FROM owner_decision_records WHERE id=$1`, [soft.decisionId])).rejects.toThrow(/append-only/);
+    await expect(admin.query(`UPDATE owner_decision_records SET decision_state='REJECTED' WHERE id=$1`, [soft.decisionId])).rejects.toThrow(/append-only/);
+    await expect(admin.query(`DELETE FROM owner_outcome_assessments WHERE id=$1`, [soft.assessments[0]])).rejects.toThrow(/append-only/);
+    await expect(admin.query(`UPDATE owner_outcome_assessments SET version=version WHERE id=$1`, [soft.assessments[0]])).rejects.toThrow(/append-only/);
+    // and the superuser — a member of every role — still cannot bypass without an EXECUTING request naming this business
+    await admin.query("BEGIN");
+    await admin.query(`SELECT set_config('opsiq.erasure_request_id', $1, true)`, [randomUUID()]);
+    await expect(admin.query(`DELETE FROM qbo_report_snapshots WHERE workspace_id=$1`, [s.t.ws])).rejects.toThrow(/immutable evidence/);
+    await admin.query("ROLLBACK");
+    expect((await qboCounts(s.t)).observations).toBeGreaterThan(0);
+  }, 180_000);
+
+  it("standalone verifier reports FAIL while QuickBooks data exists and PASS only after erasure", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const pre = await verifyQboErasure(admin as any, { workspaceId: s.t.ws, businessId: s.t.biz });
+    expect(pre.result).toBe("FAIL");
+    expect(pre.checks.connections.pass).toBe(false);
+    await runErasure(s.t);
+    const post = await verifyQboErasure(admin as any, { workspaceId: s.t.ws, businessId: s.t.biz });
+    expect(post.result).toBe("PASS");
+  }, 120_000);
+});
