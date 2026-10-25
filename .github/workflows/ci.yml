@@ -488,6 +488,16 @@ jobs:
         run: npm test -- '.db.test.ts' --maxWorkers=1
         continue-on-error: false
 
+      - name: QBO erasure DB proof (disposable database, non-superuser schema owner)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE opsiq_schema_owner LOGIN PASSWORD 'pw' CREATEROLE"
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE opsiq_erasure_test OWNER opsiq_schema_owner"
+          export DATABASE_URL='postgresql://opsiq_schema_owner:pw@localhost:5432/opsiq_erasure_test'
+          npx prisma migrate deploy
+          TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/privacy-erasure/qbo-erasure.db.test.ts
+
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing
   # check caught -- governance tests in this repo assert string content via

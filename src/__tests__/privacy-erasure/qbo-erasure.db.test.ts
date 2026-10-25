@@ -29,6 +29,7 @@ import {
 } from "@/services/privacy-erasure/qbo-erasure.service";
 
 const BASE_URL = process.env.DATABASE_URL ?? "";
+const ON_DEDICATED_DB = /opsiq_erasure_test/.test(BASE_URL);
 const urlFor = (user: string) => { const u = new URL(BASE_URL); u.username = user; u.password = "pw"; return u.toString(); };
 const env = envFor("production");
 const books = (n: number): MonthBooks => ({ income: 20_000 + n, cogs: 9_000, bank: 15_000, arTotal: 8_000, arCurrent: 3_000, apTotal: 6_000, apCurrent: 1_000 });
@@ -37,8 +38,8 @@ const D = (k: string) => new Date(`${k}T00:00:00.000Z`);
 
 let admin: Client;
 beforeAll(async () => {
-  if (!SHOULD_RUN_DB_TESTS) return;
-  if (!/opsiq_erasure_test/.test(BASE_URL)) throw new Error("refusing to run: DATABASE_URL must be the disposable opsiq_erasure_test database");
+  // Runs only against the dedicated disposable database (own CI step + local docker); on any other DB the suites are skipped, never run.
+  if (!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB) return;
   admin = new Client({ connectionString: BASE_URL });
   await admin.connect();
   // The REAL least-privilege topology (same code the operator runs): `admin` is the NON-superuser schema owner that applied the migrations;
@@ -118,7 +119,7 @@ const qboCounts = async (t: Pick<QboTenant, "ws" | "biz">) => ({
   tasks: await count(`SELECT count(*)::int AS n FROM scheduled_tasks WHERE workspace_id=$1 AND task_name='qbo-sync'`, [t.ws]),
 });
 
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — hostile", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] governed QuickBooks erasure — hostile", () => {
   it("connected business with FULL history + diagnosis + decision family: everything Intuit-derived is erased, other tenants and owner data untouched", async () => {
     const other = await seedHistory({ diagnose: true }); // a different tenant with the same shape: must be untouched
     const otherBefore = await qboCounts(other.t);
@@ -399,7 +400,7 @@ async function attempt(c: Client, sql: string, params: unknown[] = [], pre: Arra
   } finally { await c.query("ROLLBACK"); }
 }
 
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hostile runtime credential", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] least-privilege role model — hostile runtime credential", () => {
   it("the verifier reports the runtime + eraser logins as least-privilege (catalog-only, safe against Production)", async () => {
     const r = await verifyRoleTopology(admin, NAMES);
     expect(r.checks.filter((x) => !x.ok)).toEqual([]);
@@ -466,7 +467,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hosti
 
 const del = (t: Pick<QboTenant, "ws" | "biz">) => `DELETE FROM qbo_report_snapshots WHERE workspace_id='${t.ws}' AND business_id='${t.biz}'`;
 
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hostile OPERATOR login (the eraser can still only do the governed deletion)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] least-privilege role model — hostile OPERATOR login (the eraser can still only do the governed deletion)", () => {
   it("the eraser cannot do DDL, touch unrelated tables, skip a lifecycle step, approve its own request, or delete with a request that is not EXECUTING in the same transaction", async () => {
     const s = await seedHistory({ diagnose: false });
     const op = await asUser("erasure_operator_t");
@@ -553,7 +554,7 @@ async function seedLearning(t: QboTenant, actionId: string, outcomeId: string, d
   return cand;
 }
 
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] every derived family is erased, directly (P4)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] every derived family is erased, directly (P4)", () => {
   it("action outcomes, learning candidates + 10 child tables, approval evidence, first-result interactions, operating memory on every source id, budget plans", async () => {
     const s = await seedHistory({ diagnose: true });
     const other = await seedHistory({ diagnose: true });
@@ -648,7 +649,7 @@ const REVIEWED_NOT_HANDLED = [
   "recovery_actions", "recovery_cycles", "recovery_findings", "recovery_verifications", "startup_execution_blueprint", "startup_execution_plans",
   "startup_initiatives", "startup_owner_decision",
 ];
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] schema-wide soft-link coverage", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] schema-wide soft-link coverage", () => {
   it("every table with a soft-link-looking column is handled or explicitly reviewed (a new one fails until classified)", async () => {
     const { HANDLED_TABLES } = await import("@/services/privacy-erasure/qbo-erasure.service");
     const r = await admin.query(
@@ -699,7 +700,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] schema-wide soft-link coverage", () 
 });
 
 /* ───────── P5: mixed authorship, hostile ───────── */
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] mixed authorship (P5)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] mixed authorship (P5)", () => {
   const QBO_FIN_COLS = ["cost_of_goods", "overdue_receivables", "payables", "overdue_payables"] as const;
 
   it("FINANCE: QuickBooks fills the six fields, the owner amends one, later a second, QuickBooks syncs the others, then erasure: only the owner's two figures survive", async () => {
@@ -762,7 +763,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] mixed authorship (P5)", () => {
 });
 
 /* ───────── P6: revocation-failure semantics, through the REAL disconnect path (policy B) ───────── */
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] revocation outcomes never block erasure and never leave a way to keep processing (P6)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] revocation outcomes never block erasure and never leave a way to keep processing (P6)", () => {
   type Scenario = { name: string; expect: string; fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>; preDisconnect?: boolean; hookThrows?: boolean; maxMs?: number };
   const hang = (url: string, init?: RequestInit) => new Promise<Response>((_, rej) => { init?.signal?.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError"))); });
   const SCENARIOS: Scenario[] = [
@@ -816,7 +817,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] revocation outcomes never block eras
 });
 
 /* ───────── P9: the tombstone is minimal ───────── */
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] erasure tombstone minimisation (P9)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] erasure tombstone minimisation (P9)", () => {
   it("only opaque ids, operator refs, timestamps, status and counts can be stored; nothing Intuit-derived, after a real erasure either", async () => {
     const cols = (await admin.query(`SELECT column_name FROM information_schema.columns WHERE table_name='privacy_erasure_requests' ORDER BY 1`)).rows.map((r: any) => r.column_name);
     expect(cols).toEqual([
