@@ -57,7 +57,8 @@ export function AgencyDiagnosticClient() {
               value={draft[f.key]}
               onChange={(e) => {
                 markStarted();
-                setDraft((d) => ({ ...d, [f.key]: e.target.value }));
+                const typedValue = e.target.value;
+                setDraft((d) => ({ ...d, [f.key]: typedValue }));
               }}
               className="rounded-md border border-border bg-background px-3 py-2 text-base"
               aria-describedby={`${f.key}-hint`}

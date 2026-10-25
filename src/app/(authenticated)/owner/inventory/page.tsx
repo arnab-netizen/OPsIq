@@ -224,14 +224,14 @@ export default function InventoryPage() {
 
       <Modal isOpen={isModalOpen} onClose={() => { setShowCreate(false); setEditItem(null); }} title={modalTitle}>
         <div className="space-y-3">
-          <Input aria-label="SKU" placeholder="SKU" value={form.sku ?? ""} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
-          <Input aria-label="Name" placeholder="Name" value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <Input aria-label="Unit" placeholder="Unit (e.g. pcs)" value={form.unit ?? ""} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
-          <Input aria-label="Current Qty" type="number" placeholder="Current Qty" value={form.currentQty ?? ""} onChange={(e) => setForm((f) => ({ ...f, currentQty: e.target.value }))} />
-          <Input aria-label="Reorder Point" type="number" placeholder="Reorder Point" value={form.reorderPoint ?? ""} onChange={(e) => setForm((f) => ({ ...f, reorderPoint: e.target.value }))} />
-          <Input aria-label="Safety Stock" type="number" placeholder="Safety Stock" value={form.safetyStock ?? ""} onChange={(e) => setForm((f) => ({ ...f, safetyStock: e.target.value }))} />
-          <Input aria-label="Lead Time (days)" type="number" placeholder="Lead Time (days)" value={form.leadTimeDays ?? ""} onChange={(e) => setForm((f) => ({ ...f, leadTimeDays: e.target.value }))} />
-          <Input aria-label="Daily Usage" type="number" placeholder="Daily Usage" value={form.dailyUsage ?? ""} onChange={(e) => setForm((f) => ({ ...f, dailyUsage: e.target.value }))} />
+          <Input aria-label="SKU" placeholder="SKU" value={form.sku ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, sku: typedValue })); }} />
+          <Input aria-label="Name" placeholder="Name" value={form.name ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, name: typedValue })); }} />
+          <Input aria-label="Unit" placeholder="Unit (e.g. pcs)" value={form.unit ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, unit: typedValue })); }} />
+          <Input aria-label="Current Qty" type="number" placeholder="Current Qty" value={form.currentQty ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, currentQty: typedValue })); }} />
+          <Input aria-label="Reorder Point" type="number" placeholder="Reorder Point" value={form.reorderPoint ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, reorderPoint: typedValue })); }} />
+          <Input aria-label="Safety Stock" type="number" placeholder="Safety Stock" value={form.safetyStock ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, safetyStock: typedValue })); }} />
+          <Input aria-label="Lead Time (days)" type="number" placeholder="Lead Time (days)" value={form.leadTimeDays ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, leadTimeDays: typedValue })); }} />
+          <Input aria-label="Daily Usage" type="number" placeholder="Daily Usage" value={form.dailyUsage ?? ""} onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, dailyUsage: typedValue })); }} />
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => { setShowCreate(false); setEditItem(null); }}>Cancel</Button>
