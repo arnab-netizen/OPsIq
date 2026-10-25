@@ -1,0 +1,380 @@
+name: Provision ACCEPTANCE_FIXTURE_OPERATOR
+
+# Manual trigger only. Governed Production path for the narrow ACCEPTANCE_FIXTURE_OPERATOR role (the
+# least-privilege authority that lets the Production acceptance account create isolated FIXTURE records, and
+# nothing else -- see docs/opsiq-governance/ACCEPTANCE_FIXTURE_AUTHORITY.md). Three modes, mutually exclusive:
+#
+#   DISCOVER  read-only. Resolves the Production acceptance user and the workspace the application's
+#             authorization loader resolves for it, and reports whether an active system_admin or
+#             acceptance_fixture_operator assignment exists. Runs scripts/inspect-acceptance-fixture-operator-target.ts.
+#   DRY_RUN   read-only. Pins an explicit workspace_id, re-resolves the workspace independently and requires
+#             exact equality, runs scripts/provision-acceptance-fixture-operator.ts WITHOUT --apply, then
+#             re-inspects and requires the observable state to be identical before and after.
+#   APPLY     potentially mutating. Same pinned workspace, then the same provisioner WITH --apply and the exact
+#             confirm phrase. It exists so the owner can authorize a grant later through the same strong gates;
+#             building it is not an authorization to dispatch it.
+#
+# WHAT THIS WORKFLOW CAN NEVER DO: accept an arbitrary role (the role is a constant inside the provisioner and
+# is not an input anywhere here), accept an arbitrary target (the account is fixed by the protected secret
+# PRODUCTION_ACCEPTANCE_EMAIL; there is NO email input), grant SYSTEM_ADMIN, touch any other operator role, or
+# run raw SQL. Every database statement is issued by one of two reviewed repository scripts.
+#
+# Modeled on provision-administration-operator.yml and migrate-production.yml: workflow_dispatch only,
+# environment: production (the GitHub Environment is the human approval gate), an owner-pinned exact main SHA,
+# an exact-hostname gate on the production secret before any script runs (the shared
+# scripts/validate-expected-db-host.mjs, not a second implementation) and the same gate again inside both
+# scripts. DISCOVER and DRY_RUN additionally run with PGOPTIONS="-c default_transaction_read_only=on" so
+# Postgres itself rejects any write, independent of what the scripts contain.
+#
+# STEP ORDERING CONTRACT: Group 1 validates only the raw dispatch inputs and reads no repository file. Group 2
+# starts with Checkout main, then verifies HEAD exactly equals expected_main_sha (equality, not ancestry), and
+# only then does any step import or execute a repository file (host-format validation, npm ci, the
+# workflow-level host gate, the scripts). A regression test asserts that ordering.
+#
+# SCRIPT-INJECTION HARDENING: every ${{ inputs.* }} / ${{ secrets.* }} used in a run: block is passed through
+# the step's env: first and referenced as a shell variable, never interpolated into the script text. if:
+# conditions use the runner's expression engine and are safe as direct inputs.* references.
+#
+# SECRET HYGIENE: PRODUCTION_DATABASE_URL and PRODUCTION_ACCEPTANCE_EMAIL are only ever passed as step env.
+# Neither is echoed; the run summary never contains the email or any connection string. Only the two bare
+# database hostnames, the workspace UUID and a sanitized user id are printed.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'DISCOVER (read-only), DRY_RUN (read-only provisioner preview) or APPLY (mutates production; needs the exact confirm phrase)'
+        required: true
+        default: 'DISCOVER'
+        type: choice
+        options:
+          - DISCOVER
+          - DRY_RUN
+          - APPLY
+      expected_main_sha:
+        description: 'Required. Exact 40-character lowercase hex commit SHA on main this dispatch is authorized against. If main has advanced past it, the run refuses.'
+        required: true
+        type: string
+      expected_database_host:
+        description: 'Required. Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) - never a URL, credentials, path or query string'
+        required: true
+        type: string
+      workspace_id:
+        description: 'DRY_RUN and APPLY: the workspace UUID reported by DISCOVER (required). DISCOVER: must be left empty.'
+        required: false
+        default: ''
+        type: string
+      confirm:
+        description: 'APPLY: must be exactly "GRANT ACCEPTANCE FIXTURE OPERATOR". DISCOVER and DRY_RUN: leave empty.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provision-acceptance-fixture-operator
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision ACCEPTANCE_FIXTURE_OPERATOR
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      # ---- Group 1: input-only validation, no repository content needed ----
+
+      - name: Validate mode input
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          case "$MODE" in
+            DISCOVER|DRY_RUN|APPLY) ;;
+            *)
+              echo "::error::Invalid mode '$MODE'. Must be DISCOVER, DRY_RUN or APPLY."
+              exit 1
+              ;;
+          esac
+          echo "✓ Mode: $MODE"
+
+      - name: Validate expected_main_sha format (reject non-40-char SHA input)
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          if ! echo "$EXPECTED_MAIN_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::expected_main_sha must be a full 40-character lowercase hex commit SHA."
+            exit 1
+          fi
+          echo "✓ expected_main_sha format valid"
+
+      - name: Validate workspace_id (UUID required for DRY_RUN and APPLY, empty for DISCOVER)
+        env:
+          MODE: ${{ inputs.mode }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+        run: |
+          if [ "$MODE" = "DISCOVER" ]; then
+            if [ -n "$WORKSPACE_ID" ]; then
+              echo "::error::workspace_id must be empty in DISCOVER mode (DISCOVER resolves the workspace; it does not accept one)."
+              exit 1
+            fi
+            echo "✓ workspace_id empty, as required for DISCOVER"
+          else
+            if ! echo "$WORKSPACE_ID" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+              echo "::error::workspace_id must be a well-formed UUID in $MODE mode."
+              exit 1
+            fi
+            echo "✓ workspace_id format valid"
+          fi
+
+      - name: Confirm explicit intent (APPLY requires the exact phrase; other modes require none)
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$MODE" = "APPLY" ]; then
+            if [ "$CONFIRM" != "GRANT ACCEPTANCE FIXTURE OPERATOR" ]; then
+              echo "::error::APPLY mode requires the confirm input to be exactly \"GRANT ACCEPTANCE FIXTURE OPERATOR\". Aborting."
+              exit 1
+            fi
+            echo "✓ Explicit confirmation received for APPLY"
+          else
+            if [ -n "$CONFIRM" ]; then
+              echo "::error::confirm must be empty in $MODE mode; a confirmation phrase is meaningful only for APPLY."
+              exit 1
+            fi
+            echo "✓ No confirmation supplied, as required for $MODE"
+          fi
+
+      # ---- Group 2: repository-dependent. Nothing above reads a repository file. Checkout happens first,
+      # SHA equality is verified immediately after, and every step below runs only once both succeeded. ----
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify checked-out SHA exactly equals expected_main_sha
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          echo "Checked-out SHA: $CURRENT_SHA"
+          echo "Expected main SHA: $EXPECTED_MAIN_SHA"
+          if [ "$CURRENT_SHA" != "$EXPECTED_MAIN_SHA" ]; then
+            echo "::error::main's current HEAD does not exactly equal expected_main_sha. main has moved since this dispatch was authorized - refusing. Re-authorize against the current SHA and re-dispatch."
+            exit 1
+          fi
+          echo "✓ Checked-out SHA matches expected_main_sha exactly"
+          echo "MAIN_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Validate expected_database_host format (bare hostname only)
+        env:
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          node --input-type=module -e "
+            const { isValidExpectedHost } = await import(process.cwd() + '/scripts/validate-expected-db-host.mjs');
+            const r = isValidExpectedHost(process.env.EXPECTED_DATABASE_HOST);
+            if (!r.ok) { console.error('::error::' + r.reason); process.exit(1); }
+            console.log('✓ expected_database_host format valid');
+          "
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ PRODUCTION_DATABASE_URL secret is configured"
+
+      - name: Preflight check - PRODUCTION_ACCEPTANCE_EMAIL secret exists
+        env:
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+        run: |
+          if [ -z "$PRODUCTION_ACCEPTANCE_EMAIL" ]; then
+            echo "::error::PRODUCTION_ACCEPTANCE_EMAIL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ PRODUCTION_ACCEPTANCE_EMAIL secret is configured"
+
+      - name: Remove local environment files
+        run: |
+          rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+          echo "✓ Removed all local .env files to prevent placeholder contamination"
+
+      - name: Verify exact production database host matches owner-pinned expectation (workflow-level gate)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: node scripts/validate-expected-db-host.mjs
+
+      # ---- DISCOVER: read-only ----
+
+      - name: DISCOVER - resolve the Production acceptance account (read-only)
+        if: inputs.mode == 'DISCOVER'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          # Postgres itself rejects any write on this session, independent of what the script contains.
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          npx tsx scripts/inspect-acceptance-fixture-operator-target.ts \
+            --expected-database-host "$EXPECTED_DATABASE_HOST" \
+            --require-read-only | tee "$RUNNER_TEMP/discover.txt"
+          echo "DISCOVER_COMPLETED=true" >> "$GITHUB_ENV"
+
+      # ---- DRY_RUN / APPLY common pre-check: pin the workspace (read-only) ----
+
+      - name: Pre-check - re-resolve the workspace and require exact equality with workspace_id (read-only)
+        if: inputs.mode == 'DRY_RUN' || inputs.mode == 'APPLY'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          npx tsx scripts/inspect-acceptance-fixture-operator-target.ts \
+            --expected-database-host "$EXPECTED_DATABASE_HOST" \
+            --require-read-only | tee "$RUNNER_TEMP/before.txt"
+          RESOLVED=$(grep '^PRIMARY_WORKSPACE_ID=' "$RUNNER_TEMP/before.txt" | cut -d= -f2)
+          if [ "$RESOLVED" != "$WORKSPACE_ID" ]; then
+            echo "::error::The independently resolved primary workspace does not equal the pinned workspace_id. Refusing. Run DISCOVER and use the workspace it reports."
+            exit 1
+          fi
+          if grep -q '^SYSTEM_ADMIN=YES$' "$RUNNER_TEMP/before.txt"; then
+            echo "::error::The acceptance account already holds an active system_admin assignment. That is outside the expected state; refusing. Investigate before any further action."
+            exit 1
+          fi
+          echo "✓ Pinned workspace equals the independently resolved workspace"
+          echo "✓ The acceptance account does not hold system_admin"
+
+      # ---- DRY_RUN: read-only provisioner preview, then prove nothing changed ----
+
+      - name: DRY_RUN - run the provisioner without --apply (read-only session)
+        if: inputs.mode == 'DRY_RUN'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          TARGET_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          npx tsx scripts/provision-acceptance-fixture-operator.ts \
+            --email "$TARGET_EMAIL" \
+            --workspace-id "$WORKSPACE_ID" \
+            --expected-database-host "$EXPECTED_DATABASE_HOST"
+          echo "DRY_RUN_COMPLETED=true" >> "$GITHUB_ENV"
+
+      - name: DRY_RUN - re-inspect and require the state to be identical (zero writes)
+        if: inputs.mode == 'DRY_RUN'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          npx tsx scripts/inspect-acceptance-fixture-operator-target.ts \
+            --expected-database-host "$EXPECTED_DATABASE_HOST" \
+            --require-read-only | tee "$RUNNER_TEMP/after.txt"
+          BEFORE=$(grep '^STATE_FINGERPRINT=' "$RUNNER_TEMP/before.txt" | cut -d= -f2)
+          AFTER=$(grep '^STATE_FINGERPRINT=' "$RUNNER_TEMP/after.txt" | cut -d= -f2)
+          echo "State fingerprint before: $BEFORE"
+          echo "State fingerprint after:  $AFTER"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" != "$AFTER" ]; then
+            echo "::error::The observable state differs before and after the dry run. A dry run must perform zero writes."
+            exit 1
+          fi
+          echo "DRY_RUN_WRITES=0"
+          echo "DRY_RUN_STATE_IDENTICAL=true" >> "$GITHUB_ENV"
+
+      # ---- APPLY: potentially mutating. Built for a future, separately authorized dispatch. ----
+
+      - name: APPLY - run the provisioner with --apply (grants ONLY acceptance_fixture_operator)
+        if: inputs.mode == 'APPLY'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          TARGET_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          set -euo pipefail
+          echo "APPLY_STARTED=true" >> "$GITHUB_ENV"
+          npx tsx scripts/provision-acceptance-fixture-operator.ts \
+            --email "$TARGET_EMAIL" \
+            --workspace-id "$WORKSPACE_ID" \
+            --expected-database-host "$EXPECTED_DATABASE_HOST" \
+            --apply \
+            --confirm "GRANT ACCEPTANCE FIXTURE OPERATOR"
+          echo "APPLY_SUCCEEDED=true" >> "$GITHUB_ENV"
+
+      - name: APPLY - verify the resulting state (read-only)
+        if: inputs.mode == 'APPLY'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          npx tsx scripts/inspect-acceptance-fixture-operator-target.ts \
+            --expected-database-host "$EXPECTED_DATABASE_HOST" \
+            --require-read-only | tee "$RUNNER_TEMP/after.txt"
+          grep -q '^SYSTEM_ADMIN=NO$' "$RUNNER_TEMP/after.txt" || { echo "::error::SYSTEM_ADMIN is not NO after APPLY."; exit 1; }
+          grep -q '^ACCEPTANCE_FIXTURE_OPERATOR_IN_RESOLVED_WORKSPACE=YES$' "$RUNNER_TEMP/after.txt" || { echo "::error::The acceptance_fixture_operator assignment is not active in the resolved workspace after APPLY."; exit 1; }
+          echo "✓ acceptance_fixture_operator is active in the resolved workspace; system_admin is absent"
+
+      - name: Run summary
+        if: always()
+        env:
+          MODE: ${{ inputs.mode }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          {
+            echo "## Provision ACCEPTANCE_FIXTURE_OPERATOR Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Mode | $MODE |"
+            echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |"
+            echo "| Checked-out main SHA | \`${MAIN_SHA:-unknown}\` |"
+            echo "| Pinned workspace | \`${WORKSPACE_ID:-n/a}\` |"
+            echo "| Expected DB host | \`$EXPECTED_DATABASE_HOST\` |"
+            echo "| Target account | fixed by the protected PRODUCTION_ACCEPTANCE_EMAIL secret (never printed) |"
+            echo "| Role | acceptance_fixture_operator (hard-coded in the script; not an input) |"
+            echo ""
+            if [ "$MODE" = "DISCOVER" ] && [ "${DISCOVER_COMPLETED:-false}" = "true" ]; then
+              echo "**Result:** discovery completed. No production mutation occurred."
+              echo ""
+              echo '```'
+              cat "$RUNNER_TEMP/discover.txt"
+              echo '```'
+            elif [ "$MODE" = "DRY_RUN" ] && [ "${DRY_RUN_COMPLETED:-false}" = "true" ] && [ "${DRY_RUN_STATE_IDENTICAL:-false}" = "true" ]; then
+              echo "**Result:** dry run completed; the observable state was identical before and after (zero writes)."
+            elif [ "$MODE" = "APPLY" ] && [ "${APPLY_SUCCEEDED:-false}" = "true" ]; then
+              echo "**Result:** APPLY completed. See the job logs for the provisioner's own outcome (created / reactivated / already held)."
+            elif [ "$MODE" = "APPLY" ] && [ "${APPLY_STARTED:-false}" != "true" ]; then
+              echo "**Result: NOT_EXECUTED** - a gate did not pass; the provisioner never ran. No production mutation occurred."
+            else
+              echo "**Result: UNCERTAIN_OR_FAILED** - inspect this job's logs before assuming any outcome."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
