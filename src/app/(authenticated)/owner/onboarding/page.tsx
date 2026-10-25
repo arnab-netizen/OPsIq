@@ -284,7 +284,7 @@ function EssentialNumbersForm({
                 inputMode="decimal"
                 autoComplete="off"
                 value={draft[f.name] ?? ""}
-                onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
+                onChange={(e) => { const typedValue = e.target.value; setDraft((d) => ({ ...d, [f.name]: typedValue })); }}
                 aria-invalid={assessment.errors[f.name] ? true : undefined}
                 className="min-h-11 w-full rounded-md border border-border p-2 text-base sm:text-sm"
                 placeholder="Blank = don't know"

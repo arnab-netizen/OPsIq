@@ -245,11 +245,11 @@ export function ProfitCashCalculator() {
         <div className="mt-3 grid gap-4 sm:grid-cols-3">
           <label className="block text-sm font-medium">
             Your cost per item or job
-            <input key={`priceCost-${resetCount}`} type="number" inputMode="decimal" min={0} step="any" value={priceCost} onChange={(e) => { setPriceCost(e.target.value); setBadInput((b) => ({ ...b, priceCost: e.target.validity.badInput })); }} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 tabular-nums" />
+            <input key={`priceCost-${resetCount}`} type="number" inputMode="decimal" min={0} step="any" value={priceCost} onChange={(e) => { setPriceCost(e.target.value); const typedBadInput = e.target.validity.badInput; setBadInput((b) => ({ ...b, priceCost: typedBadInput })); }} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 tabular-nums" />
           </label>
           <label className="block text-sm font-medium">
             Target gross margin (%)
-            <input key={`priceMargin-${resetCount}`} type="number" inputMode="decimal" min={0} max={MAX_TARGET_MARGIN} step="any" value={priceMargin} onChange={(e) => { setPriceMargin(e.target.value); setBadInput((b) => ({ ...b, priceMargin: e.target.validity.badInput })); }} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 tabular-nums" />
+            <input key={`priceMargin-${resetCount}`} type="number" inputMode="decimal" min={0} max={MAX_TARGET_MARGIN} step="any" value={priceMargin} onChange={(e) => { setPriceMargin(e.target.value); const typedBadInput = e.target.validity.badInput; setBadInput((b) => ({ ...b, priceMargin: typedBadInput })); }} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 tabular-nums" />
           </label>
           <div className="text-sm font-medium">
             Price to charge

@@ -111,7 +111,7 @@ export function FirstResultCorrection({
                 value={markedUnknown ? "" : draft[f.name] ?? ""}
                 disabled={markedUnknown}
                 error={assessment.errors[f.name]}
-                onChange={(e) => setDraft((d) => ({ ...d, [f.name]: e.target.value }))}
+                onChange={(e) => { const typedValue = e.target.value; setDraft((d) => ({ ...d, [f.name]: typedValue })); }}
               />
               {isRecorded && (
                 <label className="mt-1 flex min-h-11 items-center gap-2 text-sm text-foreground">
@@ -120,7 +120,7 @@ export function FirstResultCorrection({
                     name={`${f.name}-unknown`}
                     data-testid={`first-result-correction-unknown-${f.name}`}
                     checked={markedUnknown}
-                    onChange={(e) => setUnknown((u) => ({ ...u, [f.name]: e.target.checked }))}
+                    onChange={(e) => { const typedChecked = e.target.checked; setUnknown((u) => ({ ...u, [f.name]: typedChecked })); }}
                   />
                   I don&apos;t know this figure
                 </label>
