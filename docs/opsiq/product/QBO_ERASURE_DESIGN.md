@@ -44,3 +44,41 @@ Known gaps (honest): action outcomes and learning candidates need a client-accou
 3. Keep `ERASURE_DATABASE_URL` out of Vercel; use it only from an operator machine.
 4. Production execution needs separate explicit owner authorization per request.
 5. Production QuickBooks remains disabled; no Production credentials or webhook verifier exist.
+
+## Hostile review (PR #637 second pass)
+
+Threat model: the runtime database credential (`DATABASE_URL`) is compromised.
+
+- RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS=YES today. Production runs as `neondb_owner`, which owns every table and function and holds CREATEROLE and BYPASSRLS, so it can drop triggers, rewrite SECURITY DEFINER functions or edit the tombstone. The guards are only as strong as the role split below.
+- Required topology: `neondb_owner` becomes migrator only (CI/operator). A SQL-created `opsiq_app` runtime role owns nothing and has DML only. At least two named operator logins are members of NOLOGIN `opsiq_privacy_eraser`. Roles must be created with SQL, never the Neon console/API (those inherit neon_superuser). Verify on a throwaway Neon project first, then switch the Vercel DATABASE_URL to opsiq_app and rotate the owner credentials. Drop the leftover `qbo_sandbox_601_app`. Not yet run against Production.
+- DB-enforced authorisation: `qbo_erasure_authorized` is SECURITY DEFINER with pinned search_path. It needs session_user in the eraser role, the GUC `opsiq.erasure_request_id`, a request EXECUTING with `executing_xid` equal to the current transaction, an approver and manifest hash, and approver login different from requester login.
+- LEAST_PRIVILEGE_ROLE_TEST=PASS on disposable PG 18 with a non-superuser schema owner.
+
+### Derived data, authorship and revocation
+
+- Every classified derived family has a direct DB fixture test (Finance, Cashflow, decisions, outcomes, approvals, learning, budget reassessments/plan snapshots/owner budget actions, soft links). A reference from an unregistered table is a BLOCKER (UNREGISTERED_REFERENCE).
+- Mixed authorship: Finance is decided per field from changed_fields and fails closed; Cashflow fails closed on any QBO column of a row written after the last QuickBooks stamp. Owner-completed budget actions and promoted learning candidates block for manual review.
+- Revocation policy B: the Intuit revoke runs before the erasing transaction, any outcome (REVOKED, ALREADY_INVALID, FAILED, SKIPPED, NOT_NEEDED) never blocks deletion, tokens are deleted inside the transaction, no retry loop exists because no token is kept, and only the outcome code is recorded in the tombstone.
+- Tombstone minimisation: no realm id, company name, token or report value; counts and the revocation code only.
+
+### External retention (what erasure does and does not reach)
+
+| System | QBO data can enter | Retention | Deletion control | Intuit user data impact |
+| --- | --- | --- | --- | --- |
+| Neon primary DB | YES | until erased | this erasure | removed by erasure |
+| Neon PITR / branches | YES | plan dependent (see backup runbook) | none; expires | persists until the window ends; a restore must re-run erasure |
+| GitHub Actions pg_dump artifacts (scheduled-backup.yml) | YES | 35 days (backup), 14 days (secondary artifact) | none per request; expires | persists up to 35 days; owner decision: exclude QBO tables with --exclude-table-data, or accept and disclose |
+| Vercel runtime logs | NO row data (ids and counts only) | Vercel plan retention | log retention | none by design |
+| Sentry | NO by design (scrubbed, redacted) | Sentry plan | project retention | residual risk: raw exception text |
+| Resend | NO | n/a | n/a | none |
+| Paddle | NO | n/a | n/a | none |
+| Clarity / Vercel Analytics | NO (public pages only, allowlists) | n/a | n/a | none |
+| AI providers | NO (structural exclusion, and no Production AI key) | n/a | n/a | none |
+| Console logs | NO (tested) | n/a | n/a | none |
+| User exports | to the user only | user's control | n/a | n/a |
+
+Permanent deletion is not promised everywhere: backups and recovery windows are bounded, not instant.
+
+### Data-sale boundary
+
+Code-level verdict: no path sends QuickBooks-derived data to analytics, advertising, replay, mail, billing or AI services (tests in qbo-data-sale-boundary.test.ts). The exact Intuit data-sale clause text could not be retrieved programmatically, so the owner must confirm the clause and vendor contracts before the public statement is made.
