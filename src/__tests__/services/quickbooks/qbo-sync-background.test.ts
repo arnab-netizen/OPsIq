@@ -13,9 +13,10 @@ const h = vi.hoisted(() => ({
   enqueued: [] as string[],
 }));
 
-vi.mock("@/lib/db", () => ({
-  db: { qboSyncState: { findFirst: vi.fn(async () => ({ baselineCursor: h.cursor, baselineCompletedAt: null })) } },
-}));
+vi.mock("@/lib/db", () => {
+  const mockDb = { qboSyncState: { findFirst: vi.fn(async () => ({ baselineCursor: h.cursor, baselineCompletedAt: null })) } };
+  return { db: mockDb, getDbInstance: () => mockDb };
+});
 vi.mock("@/infra/scheduler", () => ({
   DatabaseSchedulerProvider: class {
     async processTaskById(id: string) { h.processed.push(id); h.now += h.passMs; return true; }
