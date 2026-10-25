@@ -20,6 +20,7 @@ import { getPolicyContext } from "@/services/auth";
 import { ROLES } from "@/domain/constants/roles";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { hasCapability } from "@/policies/capability-check";
+import { grantAcceptanceFixtureOperator, revokeAcceptanceFixtureOperator } from "../../../../scripts/provision-acceptance-fixture-operator";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] acceptance fixture role scoping (real getPolicyContext)", () => {
@@ -69,5 +70,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] acceptance fixture role scoping (rea
     expect(await has(wsA)).toBe(true);
     await db.userRoleAssignment.update({ where: { id: row.id }, data: { isActive: false, revokedAt: new Date() } });
     expect(await has(wsA)).toBe(false);
+  });
+
+  it("grant -> revoke -> re-grant through the real provisioner: authorized, then not, then authorized again on the SAME row", async () => {
+    const email = `fx-scope-${userId}@example.com`;
+    const first = await grantAcceptanceFixtureOperator({ userId, email, workspaceId: wsA, grantedBy: userId });
+    expect(first.outcome).toBe("created");
+    expect(await has(wsA)).toBe(true);
+    await revokeAcceptanceFixtureOperator({ userId, email, workspaceId: wsA, assignmentId: first.assignmentId, grantedBy: userId });
+    expect(await has(wsA)).toBe(false);
+    const again = await grantAcceptanceFixtureOperator({ userId, email, workspaceId: wsA, grantedBy: userId });
+    expect(again.outcome).toBe("reactivated");
+    expect(again.assignmentId).toBe(first.assignmentId);
+    expect(await has(wsA)).toBe(true);
+    expect(await has(wsB)).toBe(false);
+    expect(await db.userRoleAssignment.count({ where: { userId, role: ROLES.ACCEPTANCE_FIXTURE_OPERATOR } })).toBe(1);
   });
 });
