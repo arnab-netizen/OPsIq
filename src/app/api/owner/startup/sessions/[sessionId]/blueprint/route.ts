@@ -10,6 +10,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createBlueprint } from "@/services/owner-strategy/startup-execution-blueprint.service";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import { resolveFixtureRequest } from "@/policies/fixture-creation.policy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -51,11 +52,9 @@ const postSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const body = await parseRequestBody(ctx.request!, postSchema);
-    // isFixtureRecord is only ever honored for a SYSTEM_ADMIN-capable actor (acceptance/QA
-    // tooling) — a self-serve owner's request body can carry it and it is silently ignored
-    // without that capability. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
-    const isFixtureRecord =
-      body.isFixtureRecord === true && ctx.verifiedCapabilities.has(CAPABILITIES.SYSTEM_ADMIN);
+    // Fail closed: an explicit isFixtureRecord:true without SYSTEM_ADMIN is a 403 and creates
+    // nothing. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+    const isFixtureRecord = resolveFixtureRequest(body.isFixtureRecord, ctx.verifiedCapabilities, "startup blueprint record", CAPABILITIES.SYSTEM_ADMIN);
     const result = await createBlueprint(
       ctx.verifiedWorkspaceId,
       ctx.verifiedActorId,

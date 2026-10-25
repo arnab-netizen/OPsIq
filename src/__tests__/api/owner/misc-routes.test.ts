@@ -31,6 +31,7 @@
  * DB-backed services are mocked. Tests run without PostgreSQL.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ForbiddenError } from "@/infra/errors";
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 
@@ -726,15 +727,12 @@ describe("[startup-sessions-post] POST /api/owner/startup/sessions", () => {
     );
   });
 
-  it("ORDINARY_CALLER_CANNOT_CREATE_FIXTURE: a caller without SYSTEM_ADMIN gets isFixtureBusiness=false even when the body requests true", async () => {
+  it("ORDINARY_CALLER_CANNOT_CREATE_FIXTURE: a caller without SYSTEM_ADMIN requesting isFixtureBusiness=true is refused and nothing is created", async () => {
     mocks.createStartupSession.mockResolvedValue("sess-id-3");
     // No verifiedCapabilities set on this ctx -- the same as every real non-admin owner caller.
     const ctx = makeBodyCtx({ ...MINIMAL_SESSION_BODY, isFixtureBusiness: true });
-    await startupSessionsPost(ctx);
-    expect(mocks.createStartupSession).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId: WS, actorId: ACTOR }),
-      { isFixtureBusiness: false }
-    );
+    await expect(startupSessionsPost(ctx)).rejects.toThrow(ForbiddenError);
+    expect(mocks.createStartupSession).not.toHaveBeenCalled();
   });
 
   it("SYSTEM_ADMIN_CAN_CREATE_FIXTURE: a SYSTEM_ADMIN-capable caller requesting isFixtureBusiness=true is honored", async () => {
