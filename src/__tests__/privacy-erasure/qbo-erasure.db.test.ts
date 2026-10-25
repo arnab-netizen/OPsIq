@@ -18,6 +18,7 @@ import { runQboSync } from "@/services/quickbooks/qbo-sync.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { amendFinancialSnapshot, createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { disconnectQboConnection } from "@/services/quickbooks/qbo-connection.service";
+import { disconnectQuickBooks } from "@/services/quickbooks/qbo-lifecycle.service";
 import { reactToQboWebhook } from "@/services/quickbooks/qbo-webhook.service";
 import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler, enqueueDueQboSyncTasks, enqueueQboSync, qboSyncKey } from "@/services/quickbooks/qbo-sync-scheduling";
 import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
@@ -758,4 +759,58 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] mixed authorship (P5)", () => {
     expect(await count(`SELECT count(*)::int AS n FROM owner_cashflow_snapshots WHERE id=$1`, [other.id])).toBe(0); // untouched since QuickBooks: whole row deleted
     expect(res.counts).toMatchObject({ owner_cashflow_snapshots_scrubbed: 1 });
   }, 240_000);
+});
+
+/* ───────── P6: revocation-failure semantics, through the REAL disconnect path (policy B) ───────── */
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] revocation outcomes never block erasure and never leave a way to keep processing (P6)", () => {
+  type Scenario = { name: string; expect: string; fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>; preDisconnect?: boolean; hookThrows?: boolean; maxMs?: number };
+  const hang = (url: string, init?: RequestInit) => new Promise<Response>((_, rej) => { init?.signal?.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError"))); });
+  const SCENARIOS: Scenario[] = [
+    { name: "revoke succeeds", expect: "REVOKED", fetchImpl: async () => new Response("{}", { status: 200 }) },
+    { name: "provider error (503)", expect: "FAILED", fetchImpl: async () => new Response("{}", { status: 503 }) },
+    { name: "network failure", expect: "FAILED", fetchImpl: async () => { throw new TypeError("fetch failed"); } },
+    { name: "Intuit hangs until the client timeout", expect: "FAILED", fetchImpl: hang, maxMs: 60_000 },
+    { name: "token already invalid at Intuit (invalid_grant)", expect: "ALREADY_INVALID", fetchImpl: async () => new Response('{"error":"invalid_grant"}', { status: 400 }) },
+    { name: "connection already disconnected by the owner", expect: "NOT_NEEDED", preDisconnect: true, fetchImpl: async () => new Response("{}", { status: 200 }) },
+    { name: "the revoke hook itself blows up", expect: "FAILED", hookThrows: true },
+  ];
+  for (const sc of SCENARIOS) {
+    it(`${sc.name}: erasure completes, no token material remains, nothing can process the business afterwards (${sc.expect})`, async () => {
+      const s = await seedHistory({ diagnose: false });
+      const calls: string[] = [];
+      const fetchImpl = (async (url: string, init?: RequestInit) => { calls.push(url); return (sc.fetchImpl ?? (async () => new Response("{}", { status: 200 })))(url, init); }) as never;
+      if (sc.preDisconnect) await disconnectQuickBooks({ workspaceId: s.t.ws, businessId: s.t.biz, actorId: s.t.actor }, { env, fetchImpl });
+      const callsBeforeErasure = calls.length;
+      const revoke: RevokeHook = async (scope) => {
+        if (sc.hookThrows) throw new Error("db hiccup");
+        return (await disconnectQuickBooks({ workspaceId: scope.workspaceId, businessId: scope.businessId, actorId: s.t.actor }, { env, fetchImpl })).revocation as never;
+      };
+      const { id, res } = await runErasure(s.t, { revoke });
+      expect(res.revocation).toBe(sc.expect);
+      expect(res.verification.result).toBe("PASS");
+      // local erasure never depends on Intuit: no credential, connection, sync marker or history remains
+      expect(await qboCounts(s.t)).toMatchObject({ connections: 0, tokens: 0, syncState: 0, observations: 0, provenance: 0, tasks: 0 });
+      expect(await count(`SELECT count(*)::int AS n FROM qbo_connection_tokens WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+      // the revocation attempt happened at most once (no retry loop that would need the token kept) and never for a connection that was already gone
+      expect(calls.length - callsBeforeErasure).toBe(sc.hookThrows || sc.preDisconnect ? 0 : 1);
+      // the tombstone records the outcome code only (no token, realm, company or provider text)
+      const tomb = (await admin.query(`SELECT result_counts FROM privacy_erasure_requests WHERE id=$1`, [id])).rows[0].result_counts;
+      expect(tomb.revocation).toBe(sc.expect);
+      expect(JSON.stringify(tomb)).not.toMatch(new RegExp(`${s.realmId}|Erasure Test Co|refresh|access_token|intuit_tid`, "i"));
+      // PROCESSING STOPS EVEN IF INTUIT STILL TRUSTS THE GRANT: a late webhook, the daily producer and a ghost sync task do nothing and make no provider call
+      const total = calls.length;
+      expect(await reactToQboWebhook({ realmIds: [s.realmId] }, { env })).toEqual({ realmsReceived: 1, connectionsTriggered: 0 });
+      await enqueueDueQboSyncTasks(new Date());
+      expect(await count(`SELECT count(*)::int AS n FROM scheduled_tasks WHERE workspace_id=$1 AND task_name='qbo-sync'`, [s.t.ws])).toBe(0);
+      const { taskId } = await enqueueQboSync({ workspaceId: s.t.ws, connectionId: s.connectionId, trigger: "SCHEDULED", key: qboSyncKey(s.connectionId, "ghost-p6", new Date()) });
+      await db.scheduledTask.update({ where: { id: taskId }, data: { scheduledFor: new Date(Date.now() - 1000) } });
+      const readerCalls = s.f.calls.length;
+      const handlers = new Map<string, TaskHandler>([[TASK_NAME_QBO_SYNC, createQboSyncTaskHandler(() => ({ env, readClientFactory: () => s.f.reader }))]]);
+      await new DatabaseSchedulerProvider().processTaskById(taskId, handlers);
+      expect(s.f.calls.length).toBe(readerCalls);
+      expect(calls.length).toBe(total);
+      expect(await qboCounts(s.t)).toMatchObject({ connections: 0, observations: 0, provenance: 0, financeSnapshots: 0, cashflowSnapshots: 0 });
+      await db.scheduledTask.deleteMany({ where: { id: taskId } });
+    }, sc.maxMs ?? 180_000);
+  }
 });
