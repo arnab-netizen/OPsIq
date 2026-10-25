@@ -19,16 +19,23 @@ vi.mock("fs", () => {
 });
 
 import { resolveOrCreateDomainBusiness } from "../../../tests/production/helpers/domain-business";
+import { resetFixtureCapabilityPreflight } from "../../../tests/production/helpers/fixture-isolation";
 
 describe("resolveOrCreateDomainBusiness", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetFixtureCapabilityPreflight();
   });
 
   it("always sends isFixtureBusiness: true when creating a dedicated acceptance business", async () => {
     let capturedBody: unknown;
     const page = {
       request: {
+        get: vi.fn(async (url: string) =>
+          url.startsWith("/api/admin/fixture-businesses")
+            ? { status: () => 200, ok: () => true, json: async () => ({ businesses: [] }) }
+            : { status: () => 200, ok: () => true, json: async () => [] }
+        ),
         post: vi.fn(async (_url: string, opts: { data: unknown }) => {
           capturedBody = opts.data;
           return { ok: () => true, status: () => 201, json: async () => ({ id: "biz-123" }) };

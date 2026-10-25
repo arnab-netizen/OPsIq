@@ -241,3 +241,32 @@ describe("[db] handOffStartupSessionToBusiness — guards", () => {
     expect(await db.ownerBusiness.count({ where: { workspaceId: ws } })).toBe(0);
   });
 });
+
+describe("[db] handOffStartupSessionToBusiness — fixture provenance", () => {
+  it("a fixture (acceptance) Startup session hands off to a fixture business, hidden from the ordinary list", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    createdWorkspaces.push(ws);
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake, ideas: [viableIdea] }, { isFixtureBusiness: true });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" }, { isFixtureRecord: true });
+
+    const { businessId } = await handOffStartupSessionToBusiness(ws, sessionId, actor);
+    const row = await db.ownerBusiness.findUnique({ where: { id: businessId } });
+    expect(row?.isFixtureBusiness).toBe(true);
+    const { listBusinesses } = await import("@/services/founder-recovery/business.service");
+    expect((await listBusinesses(ws)).map((b: { id: string }) => b.id)).not.toContain(businessId);
+  });
+
+  it("a real (non-fixture) Startup session still hands off to a real business", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const { sessionId } = await seedExecutionPlannedSession(ws);
+    const { businessId } = await handOffStartupSessionToBusiness(ws, sessionId, actor);
+    const row = await db.ownerBusiness.findUnique({ where: { id: businessId } });
+    expect(row?.isFixtureBusiness).toBe(false);
+  });
+});

@@ -12,11 +12,24 @@ Status: **IMPLEMENTED** (local/dev; not yet deployed to production — see
   in `src/services/founder-recovery/business.service.ts` accepts
   `opts.isFixtureBusiness`, defaulting to `false`. The only caller that can
   set it `true` is `POST /api/owner/recovery/businesses`, and only when the
-  requesting actor holds `CAPABILITIES.SYSTEM_ADMIN` — a self-serve owner's
-  request body can carry `isFixtureBusiness: true` and it is silently
-  ignored without that capability (verified by
-  `src/__tests__/founder-recovery/fixture-flag-rbac.db.test.ts`, which
-  exercises the real route through the real canonical auth wrapper).
+  requesting actor holds `CAPABILITIES.SYSTEM_ADMIN`. **An explicit fixture
+  request is atomic with fixture authorization: it either creates a true
+  fixture or creates nothing.** A request carrying `isFixtureBusiness: true`
+  without that capability is refused with HTTP 403 (`ForbiddenError`,
+  `CAPABILITY_NOT_GRANTED`) before any write: no row, no audit event, and
+  never a silent downgrade to a real-looking business. Absent/`false`
+  requests behave as before. The rule lives in one place,
+  `src/policies/fixture-creation.policy.ts` (`resolveFixtureRequest`), used by
+  `POST /api/owner/recovery/businesses`, `POST /api/owner/startup/sessions`
+  and `POST /api/owner/startup/sessions/[sessionId]/blueprint`
+  (`isFixtureRecord`). Verified by
+  `src/__tests__/founder-recovery/fixture-flag-rbac.db.test.ts`,
+  `startup-session-fixture-rbac.db.test.ts` and
+  `startup-blueprint-fixture-rbac.db.test.ts`, which exercise the real
+  routes through the real canonical auth wrapper.
+- **Startup handoff carries provenance**: `handOffStartupSessionToBusiness`
+  creates the business with `isFixtureBusiness` copied from the session, so a
+  fixture Startup session can no longer hand off to an owner-visible business.
 - **Filtered from ordinary queries**: `listBusinesses()` now filters
   `isFixtureBusiness: false` alongside the existing `isActive: true`.
 - **Governed acceptance path**: `listFixtureBusinesses(workspaceId)` (same
@@ -37,7 +50,21 @@ Status: **IMPLEMENTED** (local/dev; not yet deployed to production — see
   a human remembering to pass the flag — it is unconditional in the helper
   every spec calls. It is still only honored in practice once the
   `PRODUCTION_ACCEPTANCE_EMAIL` account itself holds `SYSTEM_ADMIN` in the
-  target environment; see "Remaining gap" below.
+  target environment; without it the route now answers 403 and creates
+  nothing. The helper therefore (1) runs an acceptance **preflight**
+  (`tests/production/helpers/fixture-isolation.ts`:
+  `GET /api/admin/fixture-businesses` with the nil workspace id, SYSTEM_ADMIN-
+  only, read-only, always empty) and stops the run before creating anything
+  if the actor is not capable, and (2) after creating, proves the row is a
+  fixture by confirming it is absent from the ordinary owner list — HTTP 201
+  is never treated as proof. The Startup acceptance spec does the same for its
+  session.
+- **Required acceptance preflight**: any Production acceptance that creates
+  synthetic businesses/sessions must call `assertFixtureCreationCapable()`
+  first and `assertBusinessIsFixture()` / `assertStartupSessionIsFixture()`
+  after each create. The acceptance account must hold SYSTEM_ADMIN in the
+  target environment, otherwise the run stops with `FIXTURE ISOLATION
+  UNAVAILABLE`.
 - **Startup Mode blueprint output is also fixture-tagged, structurally**:
   `OwnerBusiness.isFixtureBusiness` only covers the business row itself.
   Startup Mode's `createBlueprint()`
