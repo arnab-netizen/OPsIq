@@ -9,15 +9,19 @@
  *
  * Callers MUST run this before any write so a refusal leaves no row and no audit event behind.
  */
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ForbiddenError } from "@/infra/errors";
 
-/** `requiredCapability` is passed explicitly by each route (CAPABILITIES.SYSTEM_ADMIN) so the
- *  requirement is visible at every call site. */
+/** The only capability that may authorize fixture creation. */
+export type FixtureCreationCapability = typeof CAPABILITIES.SYSTEM_ADMIN;
+
+/** Each route passes `CAPABILITIES.SYSTEM_ADMIN` explicitly so the requirement stays visible at the
+ *  call site; the parameter type is the literal, so any weaker capability is a compile error. */
 export function resolveFixtureRequest(
   requested: boolean | undefined,
   verifiedCapabilities: ReadonlySet<string>,
   what: "business" | "startup session" | "startup blueprint record",
-  requiredCapability: string
+  requiredCapability: FixtureCreationCapability
 ): boolean {
   if (requested !== true) return false;
   if (!verifiedCapabilities.has(requiredCapability)) {
@@ -28,3 +32,12 @@ export function resolveFixtureRequest(
   }
   return true;
 }
+
+/** Compile-time guard (this file is compiled by `tsc` and `next build`; test files are excluded from
+ *  tsc, so the guard must live here): fails to compile if the required-capability parameter is ever
+ *  widened beyond exactly CAPABILITIES.SYSTEM_ADMIN. */
+type IsExactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type AssertTrue<T extends true> = T;
+export type FixtureCapabilityParameterIsExactlySystemAdmin = AssertTrue<
+  IsExactly<Parameters<typeof resolveFixtureRequest>[3], typeof CAPABILITIES.SYSTEM_ADMIN>
+>;
