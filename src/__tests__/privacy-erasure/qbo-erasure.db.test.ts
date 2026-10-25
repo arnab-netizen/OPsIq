@@ -630,3 +630,69 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] every derived family is erased, dire
     expect(await count(`SELECT count(*)::int AS n FROM controlled_learning_candidates WHERE "workspaceId"=$1`, [s.t.ws])).toBe(1);
   }, 240_000);
 });
+
+/**
+ * Schema-wide drift guard. Every public table that carries a soft-link-looking column (…action/cycle/snapshot/decision/… id) must be either
+ * HANDLED by the erasure or in this REVIEWED list. The reviewed tables are not erased by id, but they are NOT unprotected: the dry-run
+ * residue scan inspects every column of every table, so any row that actually references an erased id / realm id / company name is a
+ * BLOCKER. A NEW table with such a column fails this test until a human classifies it (handle it, or add it here with that reasoning).
+ */
+const REVIEWED_NOT_HANDLED = [
+  "business_condition_profiles", "case_benchmark_results", "delegated_tasks", "external_connection_consents", "external_oauth_tokens", "external_sync_jobs",
+  "goal_arbitration_records", "operational_events", "owner_budget_overrides", "owner_marketing_actions", "owner_marketing_cycles",
+  "owner_marketing_findings", "owner_marketing_verifications", "owner_operations_actions", "owner_operations_cycles", "owner_operations_findings",
+  "owner_operations_verifications", "owner_reassessment_events", "owner_sales_actions", "owner_sales_cycles", "owner_sales_findings", "owner_sales_verifications",
+  "owner_sop_actions", "owner_sop_cycles", "owner_sop_findings", "owner_sop_verifications", "owner_startup_session", "owner_strategy_actions",
+  "owner_strategy_cycles", "owner_strategy_findings", "owner_strategy_verifications", "process_execution_tasks", "recommendations", "recommendations_legacy",
+  "recovery_actions", "recovery_cycles", "recovery_findings", "recovery_verifications", "startup_execution_blueprint", "startup_execution_plans",
+  "startup_initiatives", "startup_owner_decision",
+];
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] schema-wide soft-link coverage", () => {
+  it("every table with a soft-link-looking column is handled or explicitly reviewed (a new one fails until classified)", async () => {
+    const { HANDLED_TABLES } = await import("@/services/privacy-erasure/qbo-erasure.service");
+    const r = await admin.query(
+      `SELECT DISTINCT c.relname AS t FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped JOIN pg_type ty ON ty.oid=a.atttypid
+       WHERE n.nspname='public' AND c.relkind='r' AND ty.typname IN ('uuid','text','varchar','jsonb','json')
+       AND a.attname ~* '(action|cycle|snapshot|decision|assessment|outcome|candidate|verification|finding|approval|diagnosis|connection|reassessment|signal|source)_?id'
+       AND c.relname NOT LIKE 'controlled_learning_%' ORDER BY 1`);
+    const unclassified = r.rows.map((x: any) => x.t as string).filter((t) => !HANDLED_TABLES.has(t) && !REVIEWED_NOT_HANDLED.includes(t) && !t.startsWith("qbo_"));
+    expect(unclassified).toEqual([]);
+    // the reviewed list must not rot: every entry still exists
+    const existing = new Set(r.rows.map((x: any) => x.t as string));
+    expect(REVIEWED_NOT_HANDLED.filter((t) => !existing.has(t))).toEqual([]);
+  });
+  async function budgetActionFor(t: QboTenant, re: string, extra: Record<string, unknown>) {
+    const cols = (await admin.query(`SELECT a.attname AS n, ty.typname AS ty, a.attnotnull AS nn, a.atthasdef AS hd FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_type ty ON ty.oid=a.atttypid WHERE c.relname='owner_budget_actions' AND a.attnum>0 AND NOT a.attisdropped`)).rows;
+    const row: Record<string, unknown> = {};
+    for (const c of cols) {
+      if (!c.nn || c.hd) continue;
+      row[c.n] = c.n === "workspace_id" ? t.ws : c.n === "business_id" ? t.biz : c.ty === "uuid" ? randomUUID() : c.ty === "int4" ? 1 : c.ty === "timestamp" || c.ty === "timestamptz" ? new Date() : c.ty === "bool" ? false : c.ty === "jsonb" ? "{}" : `x-${randomUUID()}`;
+    }
+    await ins("owner_budget_actions", { ...row, reassessment_id: re, ...extra });
+  }
+  const seedReassessment = async (t: QboTenant) => {
+    const re = randomUUID();
+    await ins("budget_reassessments", { id: re, workspace_id: t.ws, business_id: t.biz, trigger_event_id: `ev-${re}`, trigger_class: "x", mode: "m", confidence: "c", top_constraint: "t", next_best_action: "n", decision_type: "d", plan: "{}" });
+    return re;
+  };
+  it("budget actions: a system-authored one is erased with its plan; one carrying an owner-recorded completion is a BLOCKER (never silently destroyed)", async () => {
+    const a = await seedHistory({ diagnose: false });
+    const reA = await seedReassessment(a.t);
+    await budgetActionFor(a.t, reA, {});
+    const { res } = await runErasure(a.t);
+    expect(res.verification.result).toBe("PASS");
+    expect(await count(`SELECT count(*)::int AS n FROM owner_budget_actions WHERE workspace_id=$1`, [a.t.ws])).toBe(0);
+    expect(res.counts).toMatchObject({ owner_budget_actions: 1, budget_reassessments: 1 });
+
+    const b = await seedHistory({ diagnose: false });
+    const reB = await seedReassessment(b.t);
+    await budgetActionFor(b.t, reB, { completion_notes: "I did this myself and wrote it down" });
+    const c = await asUser("erasure_operator_t");
+    try {
+      const { id } = await createErasureRequest(c, { scope: { workspaceId: b.t.ws, businessId: b.t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: "operator-a" });
+      const dry = await recordDryRun(c, id);
+      expect(dry.blockers.map((x) => x.code)).toContain("BUDGET_ACTION_OWNER_COMPLETION_REQUIRES_REVIEW");
+    } finally { await c.end(); }
+    expect(await count(`SELECT count(*)::int AS n FROM owner_budget_actions WHERE workspace_id=$1`, [b.t.ws])).toBe(1);
+  }, 240_000);
+});

@@ -69,7 +69,7 @@ export const HANDLED_TABLES: ReadonlySet<string> = new Set([
   "owner_cashflow_cycles", "owner_cashflow_findings", "owner_cashflow_actions", "owner_cashflow_verifications",
   "owner_decision_records", "owner_outcome_assessments", "owner_action_assignments", "owner_approval_requests", "owner_approval_evidences",
   "owner_self_evaluation", "owner_action_outcomes", "controlled_learning_candidates", "operating_memory_entries", "owner_first_result_interactions",
-  "budget_reassessments", "budget_plan_snapshots", "scheduled_tasks", "audit_events", "privacy_erasure_requests",
+  "budget_reassessments", "budget_plan_snapshots", "owner_budget_actions", "scheduled_tasks", "audit_events", "privacy_erasure_requests",
 ]);
 
 interface IdSets {
@@ -79,7 +79,7 @@ interface IdSets {
   cashflowCycles: string[]; cashflowActions: string[]; cashflowVerifications: string[];
   decisions: string[]; candidateKeys: string[]; assessments: string[]; pointerAssessments: string[];
   assignments: string[]; approvals: string[]; approvalEvidence: string[]; selfEvals: string[]; actionOutcomes: string[];
-  learningCandidates: string[]; operatingMemory: string[]; firstResult: string[]; scheduledTasks: string[]; budgetReassessments: string[]; budgetPlans: string[];
+  learningCandidates: string[]; operatingMemory: string[]; firstResult: string[]; scheduledTasks: string[]; budgetReassessments: string[]; budgetPlans: string[]; budgetActions: string[];
 }
 
 export interface Blocker { code: string; detail: string }
@@ -265,6 +265,12 @@ export async function planQboErasure(c: Sql, scope: ErasureScope): Promise<Erasu
 const importFloor = (await rows<{ t: Date | null }>(c, `SELECT min(materialized_at) AS t FROM qbo_canonical_provenance WHERE workspace_id = $1 AND business_id = $2`, [ws, biz]))[0]?.t ?? null;
 const budgetReassessments = importFloor ? await ids(c, `SELECT id FROM budget_reassessments WHERE workspace_id = $1 AND business_id = $2 AND created_at >= $3 ORDER BY id`, [ws, biz, importFloor]) : [];
 const budgetPlans = importFloor ? await ids(c, `SELECT id FROM budget_plan_snapshots WHERE workspace_id = $1 AND business_id = $2 AND (created_at >= $3 OR reassessment_id = ANY($4::uuid[])) ORDER BY id`, [ws, biz, importFloor, budgetReassessments]) : [];
+// Budget actions generated from those plans: system-authored, so deleted with them UNLESS the owner has recorded a completion (notes /
+// evidence / completed_at) - owner-authored content is never silently destroyed: that case is a BLOCKER for manual review.
+const budgetLink = `(reassessment_id = ANY($3::uuid[]) OR plan_snapshot_id = ANY($4::uuid[]))`;
+const budgetActions = await ids(c, `SELECT id FROM owner_budget_actions WHERE workspace_id = $1 AND business_id = $2 AND ${budgetLink} AND completed_at IS NULL AND completion_notes IS NULL AND completion_evidence IS NULL ORDER BY id`, [ws, biz, budgetReassessments, budgetPlans]);
+const budgetActionsOwned = await num(c, `SELECT count(*)::int AS n FROM owner_budget_actions WHERE workspace_id = $1 AND business_id = $2 AND ${budgetLink} AND NOT (completed_at IS NULL AND completion_notes IS NULL AND completion_evidence IS NULL)`, [ws, biz, budgetReassessments, budgetPlans]);
+if (budgetActionsOwned > 0) blockers.push({ code: "BUDGET_ACTION_OWNER_COMPLETION_REQUIRES_REVIEW", detail: `${budgetActionsOwned} budget action(s) derived from QuickBooks-based plans carry owner-recorded completion; manual review required before erasure` });
 const scheduledTasks = await ids(c, `SELECT id FROM scheduled_tasks WHERE workspace_id = $1 AND task_name = 'qbo-sync' AND payload->>'connectionId' = ANY($2::text[]) ORDER BY id`, [ws, connIds]);
 
   const idSets: IdSets = {
@@ -272,14 +278,14 @@ const scheduledTasks = await ids(c, `SELECT id FROM scheduled_tasks WHERE worksp
     cashflowAffected: sorted(cashflowAffected), cashflowDelete: sorted(cashflowDelete),
     financeCycles, financeActions, financeVerifications, financeSignals, cashflowCycles, cashflowActions, cashflowVerifications,
     decisions, candidateKeys, assessments, pointerAssessments, assignments, approvals, approvalEvidence, selfEvals, actionOutcomes,
-    learningCandidates, operatingMemory, firstResult, scheduledTasks, budgetReassessments, budgetPlans,
+    learningCandidates, operatingMemory, firstResult, scheduledTasks, budgetReassessments, budgetPlans, budgetActions,
   };
 
   // ── Residue scan: anything else that mentions an id we are erasing, or this business's realm / company name
   const erasedRefs = uniq([
     ...connIds, ...financeAffected, ...cashflowAffected, ...financeCycles, ...financeFindings, ...financeActions, ...financeVerifications, ...financeSignals,
     ...cashflowCycles, ...cashflowFindings, ...cashflowActions, ...cashflowVerifications, ...decisions, ...assessments, ...approvals, ...assignments,
-    ...selfEvals, ...actionOutcomes, ...learningCandidates, ...reportSnapshots, ...provenance, ...budgetReassessments, ...budgetPlans,
+    ...selfEvals, ...actionOutcomes, ...learningCandidates, ...reportSnapshots, ...provenance, ...budgetReassessments, ...budgetPlans, ...budgetActions,
   ]);
   // The learning child tables are discovered from the catalog (candidateId), so they are handled too; anything else is a BLOCKER.
 const hits = await residueScan(c, ws, { ids: erasedRefs, needles }, new Set([...HANDLED_TABLES, ...learningChildTables]));
@@ -296,7 +302,7 @@ const hits = await residueScan(c, ws, { ids: erasedRefs, needles }, new Set([...
     owner_decision_records: decisions.length, owner_outcome_assessments_deleted: assessments.length, owner_outcome_assessments_detached: pointerAssessments.length,
     owner_action_assignments: assignments.length, owner_approval_requests: approvals.length, owner_approval_evidences: approvalEvidence.length,
     owner_self_evaluation: selfEvals.length, owner_action_outcomes: actionOutcomes.length, controlled_learning_candidates: learningCandidates.length,
-    operating_memory_entries: operatingMemory.length, owner_first_result_interactions: firstResult.length, budget_reassessments: budgetReassessments.length, budget_plan_snapshots: budgetPlans.length, scheduled_tasks: scheduledTasks.length,
+    operating_memory_entries: operatingMemory.length, owner_first_result_interactions: firstResult.length, budget_reassessments: budgetReassessments.length, budget_plan_snapshots: budgetPlans.length, owner_budget_actions: budgetActions.length, scheduled_tasks: scheduledTasks.length,
     audit_events_realm_scrubbed: await num(c, `SELECT count(*)::int AS n FROM audit_events WHERE workspace_id = $1 AND event_name LIKE 'qbo.%' AND payload ? 'realmId'`, [ws]),
   };
   const canonical = {
@@ -497,12 +503,12 @@ export async function verifyQboErasure(
       (await gone("owner_action_assignments", "id", p.ids.assignments)) + (await gone("owner_approval_requests", "id", p.ids.approvals)) +
       (await gone("owner_self_evaluation", "id", p.ids.selfEvals)) + (await gone("owner_action_outcomes", "id", p.ids.actionOutcomes, "text")) +
       (await gone("controlled_learning_candidates", "id", p.ids.learningCandidates, "text")) + (await gone("operating_memory_entries", "id", p.ids.operatingMemory)) +
-      (await gone("owner_first_result_interactions", "id", p.ids.firstResult)) + (await gone("budget_plan_snapshots", "id", p.ids.budgetPlans)) + (await gone("budget_reassessments", "id", p.ids.budgetReassessments)));
+      (await gone("owner_first_result_interactions", "id", p.ids.firstResult)) + (await gone("owner_budget_actions", "id", p.ids.budgetActions)) + (await gone("budget_plan_snapshots", "id", p.ids.budgetPlans)) + (await gone("budget_reassessments", "id", p.ids.budgetReassessments)));
     put("detachedAssessmentPointers", p.ids.pointerAssessments.length === 0 ? 0 : await num(c, `SELECT count(*)::int AS n FROM owner_outcome_assessments WHERE id = ANY($1::uuid[]) AND newer_diagnosis_cycle_id IS NOT NULL`, [p.ids.pointerAssessments]));
     const erasedRefs = uniq([
       ...p.ids.connections, ...p.ids.financeAffected.filter((x) => p.ids.financeDelete.includes(x)), ...p.ids.cashflowDelete, ...p.ids.financeCycles, ...p.ids.financeActions,
       ...p.ids.financeVerifications, ...p.ids.financeSignals, ...p.ids.cashflowCycles, ...p.ids.cashflowActions, ...p.ids.cashflowVerifications, ...p.ids.decisions,
-      ...p.ids.assessments, ...p.ids.approvals, ...p.ids.assignments, ...p.ids.selfEvals, ...p.ids.actionOutcomes, ...p.ids.learningCandidates, ...p.ids.reportSnapshots, ...p.ids.provenance, ...p.ids.budgetReassessments, ...p.ids.budgetPlans,
+      ...p.ids.assessments, ...p.ids.approvals, ...p.ids.assignments, ...p.ids.selfEvals, ...p.ids.actionOutcomes, ...p.ids.learningCandidates, ...p.ids.reportSnapshots, ...p.ids.provenance, ...p.ids.budgetReassessments, ...p.ids.budgetPlans, ...p.ids.budgetActions,
     ]);
     // Generic residue scan over EVERY workspace-scoped table (not just ours). Only the tombstone is exempt; audit_events is checked for needles only.
     const residue = await residueScan(c, ws, { ids: erasedRefs, needles: p.needles }, new Set(["privacy_erasure_requests"]));
@@ -638,6 +644,7 @@ export async function executeQboErasure(c: ClientBase, input: ExecuteInput): Pro
     add("owner_outcome_assessments", await deleteLeafFirst(c, "owner_outcome_assessments", "previous_assessment_id", s.assessments, "uuid"));
     add("owner_decision_records", await deleteLeafFirst(c, "owner_decision_records", "supersedes_id", s.decisions, "uuid"));
     await del("owner_first_result_interactions", "owner_first_result_interactions", "id", s.firstResult);
+await del("owner_budget_actions", "owner_budget_actions", "id", s.budgetActions);
 await del("budget_plan_snapshots", "budget_plan_snapshots", "id", s.budgetPlans);
 await del("budget_reassessments", "budget_reassessments", "id", s.budgetReassessments);
     // Cycles cascade to their findings and actions (verifications / signals are already gone).
