@@ -696,3 +696,66 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] schema-wide soft-link coverage", () 
     expect(await count(`SELECT count(*)::int AS n FROM owner_budget_actions WHERE workspace_id=$1`, [b.t.ws])).toBe(1);
   }, 240_000);
 });
+
+/* ───────── P5: mixed authorship, hostile ───────── */
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] mixed authorship (P5)", () => {
+  const QBO_FIN_COLS = ["cost_of_goods", "overdue_receivables", "payables", "overdue_payables"] as const;
+
+  it("FINANCE: QuickBooks fills the six fields, the owner amends one, later a second, QuickBooks syncs the others, then erasure: only the owner's two figures survive", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const period = D(s.latestKey);
+    const head = async () => (await admin.query(`SELECT * FROM owner_financial_snapshots WHERE workspace_id=$1 AND business_id=$2 AND period_start=$3 AND superseded_by_id IS NULL`, [s.t.ws, s.t.biz, period])).rows[0];
+    const v1 = await head();
+    expect(Number(v1.revenue)).toBeGreaterThan(0);
+    for (const col of ["revenue", "cost_of_goods", "receivables", "overdue_receivables", "payables", "overdue_payables"]) expect(v1[col], col).not.toBeNull();
+
+    const a1 = (await amendFinancialSnapshot(v1.id, { amendmentReason: "owner restated revenue", revenue: 31_000 } as any, s.t.actor, s.t.ws)).snapshot as any;
+    const a2 = (await amendFinancialSnapshot(a1.id, { amendmentReason: "owner corrected receivables", receivables: 9_500 } as any, s.t.actor, s.t.ws)).snapshot as any;
+    // QuickBooks later reports different values for the OTHER fields
+    s.f.books.set(s.latestKey, { ...books(0), cogs: 9_500, arTotal: 8_500, apTotal: 6_500 });
+    await new Promise((r) => setTimeout(r, 1100));
+    await runQboSync({ workspaceId: s.t.ws, connectionId: s.connectionId, trigger: "SCHEDULED" }, { env, readClientFactory: () => s.f.reader });
+    const before = await head();
+    expect(Number(before.revenue)).toBe(31_000); // owner-controlled figures are never overwritten by QuickBooks
+    expect(Number(before.receivables)).toBe(9_500);
+    const chainBefore = await count(`SELECT count(*)::int AS n FROM owner_financial_snapshots WHERE workspace_id=$1 AND business_id=$2 AND period_start=$3`, [s.t.ws, s.t.biz, period]);
+    expect(chainBefore).toBeGreaterThanOrEqual(3);
+
+    const { res } = await runErasure(s.t);
+    expect(res.verification.result).toBe("PASS");
+    const rows = (await admin.query(`SELECT * FROM owner_financial_snapshots WHERE workspace_id=$1 AND business_id=$2 AND period_start=$3`, [s.t.ws, s.t.biz, period])).rows;
+    expect(rows).toHaveLength(1); // every superseded QuickBooks-touched version is gone
+    const kept = rows[0];
+    expect(kept.superseded_by_id).toBeNull();
+    expect(Number(kept.revenue)).toBe(31_000);
+    expect(Number(kept.receivables)).toBe(9_500);
+    for (const col of QBO_FIN_COLS) expect(kept[col], col).toBeNull();
+    expect(kept.notes).toBeNull();
+    expect(await count(`SELECT count(*)::int AS n FROM qbo_canonical_provenance WHERE workspace_id=$1`, [s.t.ws])).toBe(0);
+    // the remaining chain is valid: no dangling pointer, exactly one head
+    expect(await count(`SELECT count(*)::int AS n FROM owner_financial_snapshots x WHERE x.workspace_id=$1 AND x.superseded_by_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM owner_financial_snapshots y WHERE y.id = x.superseded_by_id)`, [s.t.ws])).toBe(0);
+    expect(a2.id).toBeTruthy();
+    // the erased-away confidence is recomputed from what is actually left (never from the deleted QuickBooks figures)
+    expect(kept.missing_critical_data).toBeTruthy();
+  }, 240_000);
+
+  it("CASHFLOW fails closed: an owner write after QuickBooks keeps only the owner's untouched columns; an owner edit of a QuickBooks-attributed column cannot be told apart, so it is cleared", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const row = (await admin.query(`SELECT id FROM owner_cashflow_snapshots WHERE workspace_id=$1 AND business_id=$2 ORDER BY period_start DESC LIMIT 1`, [s.t.ws, s.t.biz])).rows[0];
+    await new Promise((r) => setTimeout(r, 50));
+    await admin.query(`UPDATE owner_cashflow_snapshots SET rent_due = 900, bank_balance = 777, updated_at = now() WHERE id = $1`, [row.id]);
+    const other = (await admin.query(`SELECT id FROM owner_cashflow_snapshots WHERE workspace_id=$1 AND business_id=$2 AND id <> $3 ORDER BY period_start DESC LIMIT 1`, [s.t.ws, s.t.biz, row.id])).rows[0];
+    const otherBefore = (await admin.query(`SELECT bank_balance FROM owner_cashflow_snapshots WHERE id=$1`, [other.id])).rows[0];
+    expect(otherBefore.bank_balance).not.toBeNull();
+
+    const { res } = await runErasure(s.t);
+    expect(res.verification.result).toBe("PASS");
+    const kept = (await admin.query(`SELECT rent_due, bank_balance, receivables, notes FROM owner_cashflow_snapshots WHERE id=$1`, [row.id])).rows[0];
+    expect(Number(kept.rent_due)).toBe(900); // owner-only column survives
+    expect(kept.bank_balance).toBeNull(); // QuickBooks-attributed column: authorship per field is unknowable, so FAIL CLOSED
+    expect(kept.receivables).toBeNull();
+    expect(kept.notes).toBeNull();
+    expect(await count(`SELECT count(*)::int AS n FROM owner_cashflow_snapshots WHERE id=$1`, [other.id])).toBe(0); // untouched since QuickBooks: whole row deleted
+    expect(res.counts).toMatchObject({ owner_cashflow_snapshots_scrubbed: 1 });
+  }, 240_000);
+});
