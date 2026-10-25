@@ -250,7 +250,7 @@ export async function planQboErasure(c: Sql, scope: ErasureScope): Promise<Erasu
         AND ("sourceActionId" = ANY($3::text[]) OR "sourceOutcomeId" = ANY($4::text[]) OR "sourceOwnerDecisionId" = ANY($5::text[])) ORDER BY id`,
     [ws, biz, allActions, actionOutcomes, decisions]);
   const learningChildTables = (await rows<{ table_name: string }>(
-    c, `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name = 'candidateId' AND table_name LIKE 'controlled_learning_%' AND table_name <> 'controlled_learning_candidates' ORDER BY 1`,
+    c, `SELECT DISTINCT c.relname AS table_name FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid = a.attrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND a.attname = 'candidateId' AND NOT a.attisdropped AND c.relname LIKE 'controlled_learning_%' AND c.relname <> 'controlled_learning_candidates' ORDER BY 1`,
   )).map((r) => r.table_name);
   if (learningCandidates.length > 0) {
     const promoted = await num(c, `SELECT count(*)::int AS n FROM controlled_learning_candidates WHERE id = ANY($1::text[]) AND ("promotedAt" IS NOT NULL OR "promotionLocked" = true)`, [learningCandidates]);
@@ -325,9 +325,12 @@ export async function residueScan(
   if (refs.ids.length === 0 && refs.needles.length === 0) return [];
   const cols = await rows<{ table_name: string; column_name: string; data_type: string }>(
     c,
-    `SELECT c.table_name, c.column_name, c.data_type FROM information_schema.columns c
-       JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
-      WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE' ORDER BY c.table_name, c.ordinal_position`,
+    `SELECT c.relname AS table_name, a.attname AS column_name,
+            CASE WHEN t.typcategory = 'A' THEN 'ARRAY' WHEN t.typname = 'varchar' THEN 'character varying' ELSE t.typname END AS data_type
+       FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+       JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+       JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
+      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') ORDER BY c.relname, a.attnum`,
   );
   const byTable = new Map<string, Array<{ column_name: string; data_type: string }>>();
   for (const col of cols) {
@@ -338,12 +341,13 @@ export async function residueScan(
   const needlePatterns = refs.needles.map(likeLiteral);
   const hits: Array<{ table: string; column: string; hits: number }> = [];
   for (const [table, tcols] of byTable) {
+    if (table === "_prisma_migrations") continue; // migration history (DDL names, timestamps): never user data; the eraser has no privilege on it
     // audit_events legitimately keeps opaque OpsIQ ids (no values); only realm ids / company names are residue there.
     const auditOnlyNeedles = table === "audit_events";
     if (skipTables.has(table) && !auditOnlyNeedles) continue;
     const scopeCol = tcols.find((x) => x.column_name === "workspace_id") ?? tcols.find((x) => x.column_name === "workspaceId");
-    if (!scopeCol) continue;
-    const usable = tcols.filter((x) => x.column_name !== scopeCol.column_name && x.column_name !== "id" && ["uuid", "text", "character varying", "json", "jsonb", "ARRAY"].includes(x.data_type));
+    // A table with NO workspace column is scanned too, unscoped (fail closed): a reference there is a BLOCKER, never a skip.
+    const usable = tcols.filter((x) => x.column_name !== scopeCol?.column_name && x.column_name !== "id" && ["uuid", "text", "character varying", "json", "jsonb", "ARRAY"].includes(x.data_type));
     const conds: Array<{ column: string; sql: string; params: unknown[] }> = [];
     for (const col of usable) {
       const q = `"${col.column_name}"`;
@@ -357,7 +361,7 @@ export async function residueScan(
       }
     }
     if (conds.length === 0) continue;
-    const scopeSql = `"${table}" WHERE "${scopeCol.column_name}"::text = $1`;
+    const scopeSql = scopeCol ? `"${table}" WHERE "${scopeCol.column_name}"::text = $1` : `"${table}" WHERE $1::text IS NOT NULL`;
     // One probe per (table, bind-kind); drill into columns only on a hit.
     for (const kind of ["uuid", "text"] as const) {
       const group = conds.filter((x) => (kind === "uuid") === x.sql.includes("uuid[]"));

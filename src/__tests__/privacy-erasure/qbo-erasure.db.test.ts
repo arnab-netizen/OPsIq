@@ -21,6 +21,7 @@ import { disconnectQboConnection } from "@/services/quickbooks/qbo-connection.se
 import { reactToQboWebhook } from "@/services/quickbooks/qbo-webhook.service";
 import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler, enqueueDueQboSyncTasks, enqueueQboSync, qboSyncKey } from "@/services/quickbooks/qbo-sync-scheduling";
 import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
+import { applyRoleTopology, verifyRoleTopology } from "@/services/privacy-erasure/role-topology";
 import {
   ErasureRefusedError, approveErasureRequest, assertExecutionTarget, createErasureRequest, executeQboErasure, recordDryRun, verifyQboErasure,
   type RevokeHook,
@@ -39,17 +40,15 @@ beforeAll(async () => {
   if (!/opsiq_erasure_test/.test(BASE_URL)) throw new Error("refusing to run: DATABASE_URL must be the disposable opsiq_erasure_test database");
   admin = new Client({ connectionString: BASE_URL });
   await admin.connect();
-  await admin.query(`DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='erasure_operator_t') THEN CREATE ROLE erasure_operator_t LOGIN PASSWORD 'pw' NOSUPERUSER; END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='app_runtime_t') THEN CREATE ROLE app_runtime_t LOGIN PASSWORD 'pw' NOSUPERUSER; END IF;
-  END $$`);
-  await admin.query(`GRANT opsiq_privacy_eraser TO erasure_operator_t`);
-  await admin.query(`GRANT ALL ON ALL TABLES IN SCHEMA public TO erasure_operator_t, app_runtime_t`);
-  await admin.query(`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO erasure_operator_t, app_runtime_t`);
+  // The REAL least-privilege topology (same code the operator runs): `admin` is the NON-superuser schema owner that applied the migrations;
+  // the runtime and the two eraser logins are separate roles that own nothing.
+  await applyRoleTopology(admin, { runtimeRole: "app_runtime_t", eraserLogins: ["erasure_operator_t", "erasure_operator_t2"] });
+  for (const r of ["app_runtime_t", "erasure_operator_t", "erasure_operator_t2"]) await admin.query(`ALTER ROLE ${r} PASSWORD 'pw'`);
 });
 afterAll(async () => { await admin?.end(); });
 
 const asUser = async (user: string) => { const c = new Client({ connectionString: urlFor(user) }); await c.connect(); return c; };
+const approve2 = async (id: string, name: string) => { const a = await asUser("erasure_operator_t2"); try { return await approveErasureRequest(a, id, name); } finally { await a.end(); } };
 const count = async (sql: string, params: unknown[] = []) => Number((await admin.query(sql, params)).rows[0].n);
 
 async function seedHistory(opts: { diagnose?: boolean } = {}) {
@@ -100,7 +99,7 @@ async function runErasure(t: Pick<QboTenant, "ws" | "biz">, o: { revoke?: Revoke
     const { id } = await createErasureRequest(c, { scope: { workspaceId: t.ws, businessId: t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: o.requestedBy ?? "operator-a" });
     const dry = await recordDryRun(c, id);
     expect(dry.blockers).toEqual([]);
-    await approveErasureRequest(c, id, o.approvedBy ?? "operator-b");
+    await approve2(id, o.approvedBy ?? "operator-b");
     const res = await executeQboErasure(c, { requestId: id, confirmToken: dry.confirmToken, revoke: o.revoke });
     return { id, dry, res };
   } finally { await c.end(); }
@@ -276,7 +275,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — host
       const { id } = await createErasureRequest(c, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_REVOKED_CONSENT", requestedBy: "operator-a" });
       const dry = await recordDryRun(c, id);
       expect(dry.blockers.map((b) => b.code)).toContain("UNREGISTERED_REFERENCE");
-      await expect(approveErasureRequest(c, id, "operator-b")).rejects.toMatchObject({ code: "BLOCKERS_PRESENT" });
+      await expect(approve2(id, "operator-b")).rejects.toMatchObject({ code: "BLOCKERS_PRESENT" });
       expect(await count(`SELECT count(*)::int AS n FROM qbo_report_snapshots WHERE workspace_id=$1`, [s.t.ws])).toBeGreaterThan(0);
     } finally { await c.end(); await admin.query(`DROP TABLE IF EXISTS zz_unregistered_probe`); }
   }, 120_000);
@@ -287,7 +286,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — host
     try {
       const { id } = await createErasureRequest(c, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: "operator-a" });
       const dry = await recordDryRun(c, id);
-      await approveErasureRequest(c, id, "operator-b");
+      await approve2(id, "operator-b");
       await new Promise((r) => setTimeout(r, 1100));
       s.f.books.set(s.latestKey, { ...books(0), income: 5_000 });
       await runQboSync({ workspaceId: s.t.ws, connectionId: s.connectionId, trigger: "SCHEDULED" }, { env, readClientFactory: () => s.f.reader });
@@ -308,8 +307,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — host
       // not approved / no dry-run
       await expect(executeQboErasure(op, { requestId: id, confirmToken: "x" })).rejects.toMatchObject({ code: "NOT_APPROVED" });
       await recordDryRun(op, id);
-      await expect(approveErasureRequest(op, id, "operator-a")).rejects.toMatchObject({ code: "TWO_PERSON_RULE" });
-      await approveErasureRequest(op, id, "operator-b");
+      await expect(approve2(id, "operator-a")).rejects.toMatchObject({ code: "TWO_PERSON_RULE" });
+      await approve2(id, "operator-b");
       // wrong confirmation token
       await expect(executeQboErasure(op, { requestId: id, confirmToken: "0".repeat(24) })).rejects.toMatchObject({ code: "CONFIRMATION_TOKEN_MISMATCH" });
       // the database itself refuses a forged same-person approval
@@ -328,7 +327,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — host
       expect(await attempt(app, del, [s.t.ws, s.t.biz])).toMatch(/immutable evidence/);
       // 2. ordinary runtime session that forges the GUC AND an EXECUTING row (it is not a member of the eraser role)
       await app.query("BEGIN");
-      await app.query(`UPDATE privacy_erasure_requests SET status='EXECUTING' WHERE id=$1`, [id]);
+      // The runtime login has NO privilege on the tombstone at all: it can neither forge an EXECUTING row nor read one.
+      expect(await probe(app, `UPDATE privacy_erasure_requests SET status='EXECUTING' WHERE id=$1`, [id])).toMatch(/permission denied/);
+      expect(await probe(app, `INSERT INTO privacy_erasure_requests (id, workspace_id, business_id, reason_code, status, requested_by, updated_at) VALUES (gen_random_uuid(), $1, $2, 'USER_DATA_ERASURE_REQUEST', 'REQUESTED', 'x', now())`, [s.t.ws, s.t.biz])).toMatch(/permission denied/);
+      expect(await probe(app, `SELECT 1 FROM privacy_erasure_requests`, [])).toMatch(/permission denied/);
       await app.query(forge, [id]);
       expect(await app.query(del, [s.t.ws, s.t.biz]).then(() => "OK", (e) => String(e.message))).toMatch(/immutable evidence/);
       await app.query("ROLLBACK");
@@ -383,4 +385,138 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] governed QuickBooks erasure — host
     const post = await verifyQboErasure(admin as any, { workspaceId: s.t.ws, businessId: s.t.biz });
     expect(post.result).toBe("PASS");
   }, 120_000);
+});
+
+/* ───────────────────────────── least-privilege role model: hostile runtime + hostile operator ───────────────────────────── */
+const NAMES = { runtimeRole: "app_runtime_t", eraserLogins: ["erasure_operator_t", "erasure_operator_t2"] } as const;
+/** Run one statement inside its own transaction, ALWAYS rolled back; resolves to "OK" or the error message. */
+async function attempt(c: Client, sql: string, params: unknown[] = [], pre: Array<[string, unknown[]?]> = []): Promise<string> {
+  await c.query("BEGIN");
+  try {
+    for (const [p, a] of pre) await c.query(p, a ?? []);
+    return await c.query(sql, params).then(() => "OK", (e) => String(e.message));
+  } finally { await c.query("ROLLBACK"); }
+}
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hostile runtime credential", () => {
+  it("the verifier reports the runtime + eraser logins as least-privilege (catalog-only, safe against Production)", async () => {
+    const r = await verifyRoleTopology(admin, NAMES);
+    expect(r.checks.filter((x) => !x.ok)).toEqual([]);
+    expect(r.result).toBe("PASS");
+    // and it is not vacuous: the SCHEMA OWNER fails the very same checks when named as the runtime
+    const bad = await verifyRoleTopology(admin, { runtimeRole: "opsiq_schema_owner", eraserLogins: NAMES.eraserLogins });
+    expect(bad.result).toBe("FAIL");
+    expect(bad.checks.filter((x) => !x.ok).length).toBeGreaterThanOrEqual(4);
+  }, 60_000);
+
+  it("a COMPROMISED runtime credential cannot delete evidence, disable or replace the guards, forge an approval, become the eraser or grant itself the role", async () => {
+    const s = await seedHistory({ diagnose: true });
+    const soft = await seedSoftFamily(s.t, s.cycle.id);
+    const app = await asUser("app_runtime_t");
+    try {
+      const before = await qboCounts(s.t);
+      const trg = (await admin.query(`SELECT tgname FROM pg_trigger WHERE tgrelid = 'qbo_report_snapshots'::regclass AND NOT tgisinternal LIMIT 1`)).rows[0].tgname;
+      // 1. deleting the evidence (guard raises) and the derived decision / assessment rows
+      expect(await attempt(app, `DELETE FROM qbo_report_snapshots WHERE workspace_id=$1`, [s.t.ws])).toMatch(/immutable evidence/);
+      expect(await attempt(app, `DELETE FROM qbo_canonical_provenance WHERE workspace_id=$1`, [s.t.ws])).toMatch(/append-only/);
+      expect(await attempt(app, `DELETE FROM owner_decision_records WHERE id=$1`, [soft.decisionId])).toMatch(/append-only/);
+      expect(await attempt(app, `DELETE FROM owner_outcome_assessments WHERE id=$1`, [soft.assessments[0]])).toMatch(/append-only/);
+      expect(await attempt(app, `UPDATE owner_outcome_assessments SET version = version WHERE id=$1`, [soft.assessments[0]])).toMatch(/append-only/);
+      // 2. TRUNCATE skips row triggers - the runtime has no TRUNCATE privilege
+      for (const t of ["qbo_report_snapshots", "qbo_canonical_provenance", "owner_decision_records", "owner_outcome_assessments"]) {
+        expect(await attempt(app, `TRUNCATE ${t} CASCADE`)).toMatch(/permission denied/);
+      }
+      // 3. switching the guards off / replacing them (all need OWNERSHIP, which the runtime does not have)
+      expect(await attempt(app, `ALTER TABLE qbo_report_snapshots DISABLE TRIGGER USER`)).toMatch(/must be owner/);
+      expect(await attempt(app, `ALTER TABLE qbo_report_snapshots DISABLE TRIGGER ${trg}`)).toMatch(/must be owner/);
+      expect(await attempt(app, `DROP TRIGGER ${trg} ON qbo_report_snapshots`)).toMatch(/must be owner/);
+      expect(await attempt(app, `DROP TABLE qbo_report_snapshots CASCADE`)).toMatch(/must be owner/);
+      expect(await attempt(app, `CREATE OR REPLACE FUNCTION qbo_report_snapshots_guard() RETURNS trigger AS $f$ BEGIN RETURN COALESCE(NEW, OLD); END $f$ LANGUAGE plpgsql`)).toMatch(/must be owner|permission denied for schema public/);
+      expect(await attempt(app, `CREATE OR REPLACE FUNCTION qbo_erasure_authorized(uuid, uuid) RETURNS boolean AS $f$ SELECT true $f$ LANGUAGE sql`)).toMatch(/must be owner|permission denied for schema public/);
+      expect(await attempt(app, `CREATE FUNCTION public.zz_shadow() RETURNS int AS $f$ SELECT 1 $f$ LANGUAGE sql`)).toMatch(/permission denied for schema public/);
+      expect(await attempt(app, `CREATE SCHEMA zz_evil`)).toMatch(/permission denied/);
+      expect(await attempt(app, `SET session_replication_role = replica`)).toMatch(/permission denied to set parameter/);
+      // 4. forging an approved erasure
+      expect(await attempt(app, `INSERT INTO privacy_erasure_requests (id, workspace_id, business_id, reason_code, status, requested_by, updated_at) VALUES (gen_random_uuid(), $1, $2, 'USER_DATA_ERASURE_REQUEST', 'REQUESTED', 'x', now())`, [s.t.ws, s.t.biz])).toMatch(/permission denied/);
+      expect(await attempt(app, `UPDATE privacy_erasure_requests SET status = 'EXECUTING'`)).toMatch(/permission denied/);
+      // a TEMPORARY table of the same name must not shadow the real one inside the authorization function
+      const shadow = await attempt(app, del(s.t), [], [
+        [`CREATE TEMP TABLE privacy_erasure_requests (id uuid, workspace_id uuid, business_id uuid, status text, approved_by text, manifest_hash text, approved_db_user text, requested_db_user text, executing_xid text)`],
+        [`INSERT INTO pg_temp.privacy_erasure_requests VALUES (gen_random_uuid(), '${s.t.ws}', '${s.t.biz}', 'EXECUTING', 'a', 'h', 'b', 'c', pg_current_xact_id()::text)`],
+        [`SELECT set_config('opsiq.erasure_request_id', (SELECT id::text FROM pg_temp.privacy_erasure_requests LIMIT 1), true)`],
+      ]);
+      expect(shadow).toMatch(/immutable evidence/);
+      // 5. becoming / granting the eraser role
+      expect(await attempt(app, `SET ROLE opsiq_privacy_eraser`)).toMatch(/permission denied to set role/);
+      expect(await attempt(app, `GRANT opsiq_privacy_eraser TO app_runtime_t`)).toMatch(/permission denied|must have admin option/);
+      expect(await attempt(app, `ALTER ROLE app_runtime_t SUPERUSER`)).toMatch(/permission denied|must be superuser/);
+      expect(await attempt(app, `ALTER ROLE app_runtime_t CREATEROLE`)).toMatch(/permission denied/);
+      expect(await attempt(app, `CREATE ROLE zz_evil LOGIN`)).toMatch(/permission denied/);
+      expect(await attempt(app, `SET ROLE opsiq_schema_owner`)).toMatch(/permission denied to set role/);
+      expect(await attempt(app, `UPDATE _prisma_migrations SET logs = 'x'`)).toMatch(/permission denied/);
+      // 6. nothing changed
+      expect(await qboCounts(s.t)).toEqual(before);
+      // 7. the ordinary application work the runtime exists for still works
+      expect(await attempt(app, `SELECT count(*) FROM qbo_report_snapshots WHERE workspace_id=$1`, [s.t.ws])).toBe("OK");
+      expect(await attempt(app, `UPDATE qbo_sync_state SET updated_at = now() WHERE workspace_id=$1`, [s.t.ws])).toBe("OK");
+    } finally { await app.end(); }
+  }, 180_000);
+});
+
+const del = (t: Pick<QboTenant, "ws" | "biz">) => `DELETE FROM qbo_report_snapshots WHERE workspace_id='${t.ws}' AND business_id='${t.biz}'`;
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] least-privilege role model — hostile OPERATOR login (the eraser can still only do the governed deletion)", () => {
+  it("the eraser cannot do DDL, touch unrelated tables, skip a lifecycle step, approve its own request, or delete with a request that is not EXECUTING in the same transaction", async () => {
+    const s = await seedHistory({ diagnose: false });
+    const op = await asUser("erasure_operator_t");
+    const op2 = await asUser("erasure_operator_t2");
+    try {
+      const before = await qboCounts(s.t);
+      const forge = `SELECT set_config('opsiq.erasure_request_id', $1, true)`;
+      // no DDL, no tables outside the registry, nothing on the migration history
+      expect(await attempt(op, `ALTER TABLE qbo_report_snapshots DISABLE TRIGGER USER`)).toMatch(/must be owner/);
+      expect(await attempt(op, `CREATE OR REPLACE FUNCTION qbo_erasure_authorized(uuid, uuid) RETURNS boolean AS $f$ SELECT true $f$ LANGUAGE sql`)).toMatch(/must be owner|permission denied for schema public/);
+      expect(await attempt(op, `GRANT opsiq_privacy_eraser TO erasure_operator_t`)).toMatch(/permission denied|must have admin option/);
+      expect(await attempt(op, `TRUNCATE qbo_report_snapshots`)).toMatch(/permission denied/);
+      expect(await attempt(op, `DELETE FROM owner_businesses WHERE id=$1`, [s.t.biz])).toMatch(/permission denied/);
+      expect(await attempt(op, `UPDATE owner_businesses SET name = 'x' WHERE id=$1`, [s.t.biz])).toMatch(/permission denied/);
+      expect(await attempt(op, `SELECT 1 FROM _prisma_migrations`)).toMatch(/permission denied/);
+      expect(await attempt(op, `DELETE FROM privacy_erasure_requests`)).toMatch(/tombstone|cannot be deleted|permission denied/);
+
+      // lifecycle: a bare request cannot jump anywhere
+      const { id } = await createErasureRequest(op, { scope: { workspaceId: s.t.ws, businessId: s.t.biz }, reasonCode: "USER_DATA_ERASURE_REQUEST", requestedBy: "operator-a" });
+      const row = async () => (await admin.query(`SELECT status, requested_db_user, approved_db_user, approved_by, manifest_hash, executing_xid FROM privacy_erasure_requests WHERE id=$1`, [id])).rows[0];
+      expect(await row()).toMatchObject({ status: "REQUESTED", requested_db_user: "erasure_operator_t", approved_db_user: null });
+      expect(await attempt(op, `UPDATE privacy_erasure_requests SET status='EXECUTING', approved_by='z', approved_at=now(), manifest_hash='h', updated_at=now() WHERE id=$1`, [id])).toMatch(/illegal privacy erasure transition/);
+      expect(await attempt(op, `UPDATE privacy_erasure_requests SET status='APPROVED', approved_by='z', approved_at=now(), manifest_hash='h', updated_at=now() WHERE id=$1`, [id])).toMatch(/illegal privacy erasure transition/);
+      // a forged INSERT can neither start in a later state nor claim another requester login
+      expect(await attempt(op, `INSERT INTO privacy_erasure_requests (id, workspace_id, business_id, reason_code, status, requested_by, updated_at) VALUES (gen_random_uuid(), $1, $2, 'USER_DATA_ERASURE_REQUEST', 'EXECUTING', 'x', now())`, [s.t.ws, s.t.biz])).toMatch(/bare REQUESTED/);
+      const forged = await op.query(`INSERT INTO privacy_erasure_requests (id, workspace_id, business_id, reason_code, status, requested_by, requested_db_user, updated_at) VALUES (gen_random_uuid(), $1, $2, 'USER_DATA_ERASURE_REQUEST', 'REQUESTED', 'x', 'somebody_else', now()) RETURNING requested_db_user`, [s.t.ws, s.t.biz]);
+      expect(forged.rows[0].requested_db_user).toBe("erasure_operator_t");
+
+      // dry run recorded: the SAME login cannot approve (the database stamps session_user itself), nor skip to EXECUTING
+      const dry = await recordDryRun(op, id);
+      expect(dry.blockers).toEqual([]);
+      expect(await attempt(op, `UPDATE privacy_erasure_requests SET status='APPROVED', approved_by='operator-z', approved_at=now(), updated_at=now() WHERE id=$1`, [id])).toMatch(/must differ from the requesting login/);
+      expect(await attempt(op, `UPDATE privacy_erasure_requests SET status='EXECUTING', updated_at=now() WHERE id=$1`, [id])).toMatch(/illegal privacy erasure transition/);
+      await expect(approveErasureRequest(op, id, "operator-b")).rejects.toThrow(/different|login|two/i);
+      // the approver cannot rewrite the recorded manifest while approving, and cannot choose which login is recorded
+      expect(await attempt(op2, `UPDATE privacy_erasure_requests SET status='APPROVED', approved_by='operator-b', approved_at=now(), manifest_hash='0000', updated_at=now() WHERE id=$1`, [id])).toMatch(/binds to the recorded dry-run manifest/);
+      await op2.query(`UPDATE privacy_erasure_requests SET status='APPROVED', approved_by='operator-b', approved_db_user='forged_login', approved_at=now(), updated_at=now() WHERE id=$1`, [id]);
+      expect(await row()).toMatchObject({ status: "APPROVED", approved_db_user: "erasure_operator_t2", requested_db_user: "erasure_operator_t" });
+      // approval and manifest are frozen from here on
+      expect(await attempt(op2, `UPDATE privacy_erasure_requests SET manifest_hash='0000', updated_at=now() WHERE id=$1`, [id])).toMatch(/immutable once approved/);
+
+      // APPROVED is not enough to delete, with or without the setting
+      expect(await attempt(op, del(s.t), [], [[forge, [id]]])).toMatch(/immutable evidence/);
+      // a COMMITTED EXECUTING row authorizes nothing in a later transaction (the claim is bound to the claiming transaction's xid)
+      await op.query("BEGIN");
+      await op.query(`UPDATE privacy_erasure_requests SET status='EXECUTING', updated_at=now() WHERE id=$1`, [id]);
+      await op.query("COMMIT");
+      expect((await row()).status).toBe("EXECUTING");
+      expect(await attempt(op, del(s.t), [], [[forge, [id]]])).toMatch(/immutable evidence/);
+      expect(await attempt(op2, del(s.t), [], [[forge, [id]]])).toMatch(/immutable evidence/);
+      expect(await qboCounts(s.t)).toEqual(before);
+    } finally { await op.end(); await op2.end(); }
+  }, 180_000);
 });

@@ -7412,10 +7412,13 @@ model PrivacyErasureRequest {
   privacyRequestId String?   @map("privacy_request_id") @db.Uuid
   status           String
   requestedBy      String    @map("requested_by")
+  requestedDbUser  String    @default("") @map("requested_db_user")
   approvedBy       String?   @map("approved_by")
+  approvedDbUser   String?   @map("approved_db_user")
   approvedAt       DateTime? @map("approved_at")
   manifestHash     String?   @map("manifest_hash")
   dryRunAt         DateTime? @map("dry_run_at")
+  executingXid     String?   @map("executing_xid")
   executedAt       DateTime? @map("executed_at")
   resultCode       String?   @map("result_code")
   resultCounts     Json?     @map("result_counts")
