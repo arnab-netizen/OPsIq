@@ -222,6 +222,11 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.BETA_PROGRAM_MANAGE,
     CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
   ],
+
+  // Acceptance fixture authority — a SEPARATE narrow role: EXACTLY one capability. It grants no
+  // OWNER_* (the holder keeps whatever owner rights its OTHER roles give it), no SYSTEM_ADMIN, no
+  // user/role administration. See docs/opsiq-governance/ACCEPTANCE_FIXTURE_AUTHORITY.md.
+  [ROLES.ACCEPTANCE_FIXTURE_OPERATOR]: [CAPABILITIES.ACCEPTANCE_FIXTURE_WRITE],
 };
 
 // ─── Self-serve owner scoping ───────────────────────────────────────────────
@@ -303,6 +308,7 @@ const INTERNAL_ONLY_CAPABILITIES: readonly CapabilityName[] = [
   CAPABILITIES.BETA_REQUEST_INVITE,
   CAPABILITIES.BETA_PROGRAM_MANAGE,
   CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
+  CAPABILITIES.ACCEPTANCE_FIXTURE_WRITE,
 ];
 
 // ─── Policy Context ─────────────────────────────────────────────────────────

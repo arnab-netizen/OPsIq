@@ -25,7 +25,7 @@ function makePage(opts: { probe: number; created?: { status: number; body: unkno
   const page = {
     request: {
       get: vi.fn(async (url: string) => {
-        if (url.startsWith("/api/admin/fixture-businesses")) return res(opts.probe, { businesses: [] });
+        if (url === "/api/admin/acceptance-fixtures/capability") return res(opts.probe, { acceptanceFixtureAuthority: true });
         return res(200, opts.listBody ?? []);
       }),
       post: vi.fn(async (url: string) => {
