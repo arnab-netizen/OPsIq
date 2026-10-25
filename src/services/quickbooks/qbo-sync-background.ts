@@ -15,6 +15,8 @@ import { toIsoDate } from "@/domain/quickbooks/qbo-report-model";
 import { enqueueQboSync, qboSyncKey } from "./qbo-sync-scheduling";
 
 export const QBO_BACKGROUND_BUDGET_MS = 50_000;
+/** A further pass is started only if the slowest pass seen so far, times this factor, still fits inside the remaining budget. */
+export const QBO_PASS_SAFETY_FACTOR = 1.5;
 
 /** Enqueue (idempotently, 5-minute bucket) an owner/post-connect sync for one connection. */
 export function requestQboSyncNow(input: { workspaceId: string; connectionId: string }, now: Date = new Date()) {
@@ -23,21 +25,28 @@ export function requestQboSyncNow(input: { workspaceId: string; connectionId: st
 
 export async function processQboSyncChain(
   input: { workspaceId: string; connectionId: string; taskId: string },
-  opts: { budgetMs?: number; now?: () => Date } = {},
+  opts: { budgetMs?: number; now?: () => Date; clock?: () => number } = {},
 ): Promise<{ ran: number }> {
   const scheduler = new DatabaseSchedulerProvider();
   const handlers = getProductionTaskHandlers();
-  const deadline = Date.now() + (opts.budgetMs ?? QBO_BACKGROUND_BUDGET_MS);
+  const clock = opts.clock ?? Date.now;
+  const deadline = clock() + (opts.budgetMs ?? QBO_BACKGROUND_BUDGET_MS);
+  let slowestPassMs = 0;
   let taskId = input.taskId;
   let ran = 0;
   try {
-    for (let i = 0; i < 8 && Date.now() < deadline; i++) {
+    for (let i = 0; i < 8 && clock() < deadline; i++) {
+      const passStarted = clock();
       if (await scheduler.processTaskById(taskId, handlers)) ran++;
+      slowestPassMs = Math.max(slowestPassMs, clock() - passStarted);
       const st = await db.qboSyncState.findFirst({
         where: { connectionId: input.connectionId, workspaceId: input.workspaceId },
         select: { baselineCursor: true, baselineCompletedAt: true },
       });
       if (!st?.baselineCursor) break;
+      // The function is killed at maxDuration and a killed pass strands its task lease until the next cron drain. The handler has
+      // already enqueued the durable continuation, so stopping here loses nothing: never START a pass that could not finish.
+      if (clock() + slowestPassMs * QBO_PASS_SAFETY_FACTOR >= deadline) break;
       const kind = st.baselineCompletedAt === null ? "BASELINE" : "RECONCILE";
       const next = await enqueueQboSync({
         workspaceId: input.workspaceId, connectionId: input.connectionId, trigger: "CONTINUATION",

@@ -35,7 +35,7 @@ session on the Preview:
    businesses, so confirm the result with `GET /api/owner/integrations/quickbooks/status?businessId=<id>` and the DB.)
 Expect status `CONNECTING` then `IMPORTING`. Verify in the DB: `qbo_connections` has one ACTIVE row with the Sandbox realm; `qbo_connection_tokens` ciphertext starts `v1gcm.`.
 
-## 2. Four reports — capture the REAL 2026 shape (the one unverified item)
+## 2. Four reports — the REAL 2026 shape (captured and verified: see "Acceptance result")
 Run the first sync (it starts after the connection is made; to repeat, `POST /api/owner/integrations/quickbooks/sync` with `{businessId}` — Preview has no cron tick). Expect `qbo_report_snapshots` rows for PROFIT_AND_LOSS, BALANCE_SHEET,
 AGED_RECEIVABLES, AGED_PAYABLES with `currency`, `accounting_basis` (`basis_source = REPORT_HEADER`), non-null `values.v` totals.
 If any month shows `last_error_code = REPORT_*`, the real response differs from the parser's structural assumptions:
@@ -95,3 +95,49 @@ These corrections come from a real Intuit Sandbox acceptance run on an isolated 
 - Intuit reuses an existing grant, so a reconnect may complete without showing the consent screen.
 - If the portal toggle "Enable cloud event payload format" is on, webhooks arrive in CloudEvents format.
 - Reports for months with no Sandbox activity can legitimately return no data; unavailable canonical fields are stored as NULL and listed as missing, never as zero.
+
+
+## Acceptance result — real Intuit Sandbox run COMPLETED (25 Oct 2026): PASS
+
+Accepted PR head for the Sandbox run: `bb4e52f52f7193d8660007c22dc782c10d7946db`. This replaces every earlier "Not proven" /
+"unverified" statement about real Sandbox behaviour. **No Production authorization is implied** (see the last subsection).
+
+Evidence (real Intuit Sandbox company, Preview deployment of this branch, throwaway Sandbox database; no Production resource touched):
+
+- Real OAuth connect/callback, encrypted token storage, realm binding and refresh-token rotation: PASS.
+- Four real reports (P&L, Balance Sheet, A/R aging, A/P aging) x 12 closed months, parsed and materialized with provenance: PASS.
+- Idempotent re-sync (observations confirmed, not duplicated) and backdated-change versioning (new version, old one kept): PASS.
+- Missing is not zero; owner-controlled (manual) figures win over QuickBooks observations (manual-first), owner-edit precedence: PASS.
+- Stale analysis: refreshed figures mark the existing analysis out of date and never re-run it automatically: PASS.
+- Real signed webhook, and missed-webhook reconciliation by the scheduler drain: PASS.
+- Disconnect (refresh token revoked at Intuit, history kept) and reconnect of the same company: PASS. A second binding of the same
+  company is refused (`REALM_ALREADY_BOUND`) — intended isolation.
+- Read-only: no accounting write-back path exists (GET reports only; the only POSTs are OAuth token calls): PASS.
+- Connected-state phone layout, canonical real-browser spec `tests/browser/59-quickbooks-connection.spec.ts` at 390x800
+  (no horizontal overflow, Refresh/Disconnect >= 40 px tall, no serious/critical axe violations): non-Sandbox config
+  6 passed / 1 expected skip; Sandbox config 1 passed / 6 expected skips. The Sandbox fixture business is hidden from the owner UI
+  by design, so the connected card is exercised through the spec's own connection-state setup, not the hidden fixture.
+
+### Initial/refresh "60 s timeout" investigation
+
+Observed: Vercel runtime logs showed `Task timed out after 60 seconds` on the OAuth callback and Refresh-now routes. Finding:
+the entries are not caused by the import. The callback/Refresh routes persist a `qbo-sync` ScheduledTask and answer in well under a
+second (logged 0.24-0.84 s); the work runs after the response through the same scheduler. Every qbo-sync task in the Sandbox
+database completed in 5-8 s on attempt 1 (no retries, no dead letters). The same timeout entry was also logged for a callback that
+failed in 841 ms with no import at all, and for Production `GET /` (300 s) — it is a cold-start invocation-lifetime effect that is
+not specific to QuickBooks and is tracked separately. Hardening made here: the after-response accelerator
+(`processQboSyncChain`) no longer starts a continuation pass it could not finish inside its 50 s budget (the durable continuation
+task already exists, so nothing is lost); unit-tested. Residual operational note: the Vercel cron drain is daily (03:00 UTC), so a
+very large first import relies on the accelerator plus the owner's Refresh to progress faster than one drain a day.
+
+### Findings recorded as non-blocking
+- Refresh API on a disconnected connection answers 404 (API only). The card hides Refresh when disconnected and maps any failure
+  to an owner-safe message; no raw text reaches the UI. Follow-up P3: return a clean typed error.
+- The 20 px-tall transient "Dismiss" text button is not covered by the repository's launch-path 44 px rule or by this spec. P3.
+- `scripts/seed-e2e-owner.ts` hardcoded INR for a USD business; fixed to derive the currency from the seeded business.
+
+### What Sandbox acceptance does NOT authorize
+Merge, the Production database migration (`20261024090000_qbo_v1_sync_evidence_provenance`, run only through the owner-approved
+`migrate-production` workflow, before the merge because the Production build gate fails on an unapplied migration), Production
+Intuit credentials / redirect / webhook configuration, or enabling QuickBooks in Production. Intuit's Production credentials are
+unlocked only after the app-details and compliance steps in the Intuit developer portal are complete.
