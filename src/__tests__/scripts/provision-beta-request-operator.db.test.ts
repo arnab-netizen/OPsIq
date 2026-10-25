@@ -203,11 +203,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-beta-request-operator CLI 
         timeout: CHILD_TIMEOUT_MS,
       });
       return { status: 0, stdout, stderr: "" };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const failure = error as { status?: unknown; stdout?: unknown; stderr?: unknown };
       return {
-        status: typeof error.status === "number" ? error.status : 1,
-        stdout: String(error.stdout ?? ""),
-        stderr: String(error.stderr ?? ""),
+        status: typeof failure.status === "number" ? failure.status : 1,
+        stdout: String(failure.stdout ?? ""),
+        stderr: String(failure.stderr ?? ""),
       };
     }
   }
