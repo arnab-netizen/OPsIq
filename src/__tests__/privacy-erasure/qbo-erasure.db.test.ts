@@ -814,3 +814,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] revocation outcomes never block eras
     }, sc.maxMs ?? 180_000);
   }
 });
+
+/* ───────── P9: the tombstone is minimal ───────── */
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] erasure tombstone minimisation (P9)", () => {
+  it("only opaque ids, operator refs, timestamps, status and counts can be stored; nothing Intuit-derived, after a real erasure either", async () => {
+    const cols = (await admin.query(`SELECT column_name FROM information_schema.columns WHERE table_name='privacy_erasure_requests' ORDER BY 1`)).rows.map((r: any) => r.column_name);
+    expect(cols).toEqual([
+      "approved_at", "approved_by", "approved_db_user", "business_id", "created_at", "dry_run_at", "executed_at", "executing_xid", "id", "manifest_hash",
+      "privacy_request_id", "reason_code", "requested_by", "requested_db_user", "result_code", "result_counts", "scope", "status", "updated_at", "workspace_id",
+    ]);
+    const s = await seedHistory({ diagnose: true });
+    const { id } = await runErasure(s.t, { revoke: async () => "REVOKED" });
+    const row = (await admin.query(`SELECT * FROM privacy_erasure_requests WHERE id=$1`, [id])).rows[0];
+    const dump = JSON.stringify(row);
+    expect(dump).not.toContain(s.realmId);
+    expect(dump).not.toContain("Erasure Test Co");
+    expect(dump).not.toMatch(/refresh_token|access_token|intuit_tid|company_name|realm_id|realmId/i);
+    for (const v of Object.values(row.result_counts as Record<string, unknown>)) expect(["number", "string"]).toContain(typeof v); // counts and the revocation code only
+  }, 240_000);
+});
