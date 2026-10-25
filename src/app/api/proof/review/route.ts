@@ -21,4 +21,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
     requiredPermission: GuidedExecutionPermission.PROOF_REVIEW_LOW_RISK,
     command: { ...body.command, workspaceId, actorId },
   });
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_VALIDATE] });
+}, { requireCommercial: "governed_execution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_VALIDATE] });

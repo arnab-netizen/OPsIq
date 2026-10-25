@@ -68,7 +68,7 @@ export const POST = withCanonicalEnforcement(
     });
     return canonicalJson(dto, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );
 
 export const GET = withCanonicalEnforcement(
@@ -115,5 +115,5 @@ export const PATCH = withCanonicalEnforcement(
     const dto = await recordOutcome({ ...input, workspaceId: ws, actorId });
     return canonicalJson(dto, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

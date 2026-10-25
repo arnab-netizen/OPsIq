@@ -12,6 +12,7 @@
  * transaction can exceed the pooled-connection limit (the Prisma P2028 the
  * cashflow runtime proof caught). This keeps the governed write atomic and fast.
  */
+import { assertDiagnosisAllowance } from "@/services/billing/commercial-policy.service";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
@@ -113,6 +114,8 @@ export async function runMarketingDiagnosis(
   let createdActionCount = 0;
   await db.$transaction(
     async (tx: any) => {
+      // Commercial gate: first diagnosis free; later cycles need entitlement. Same tx + advisory lock => race-safe.
+      await assertDiagnosisAllowance(tx, workspaceId);
       await tx.ownerMarketingCycle.create({
         data: {
           id: cycleId,

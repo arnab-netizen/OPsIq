@@ -40,7 +40,7 @@ const ctx = (url: string, body?: unknown) => ({
   verifiedWorkspaceId: WS, verifiedActorId: ACTOR,
   request: new Request(url, body === undefined ? undefined : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
 });
-const opts = (h: unknown) => (h as { __options?: { requireCapabilities: string[]; requireWorkspace: boolean } }).__options;
+const opts = (h: unknown) => (h as { __options?: { requireCapabilities: string[]; requireWorkspace: boolean; requireCommercial?: string } }).__options;
 const call = (h: unknown, c: unknown, biz = BIZ) => (h as (c: unknown, p: Record<string, string>) => Promise<unknown>)(c, { businessId: biz });
 const base = `http://t/api/owner/businesses/${BIZ}`;
 
@@ -50,7 +50,7 @@ describe("capabilities", () => {
   it("reads are OWNER_VIEW; every write is OWNER_MANAGE; all require a workspace", () => {
     expect(opts(decisionsGet)).toEqual({ requireCapabilities: ["owner:view"], requireWorkspace: true });
     expect(opts(chainGet)).toEqual({ requireCapabilities: ["owner:view"], requireWorkspace: true });
-    for (const h of [decisionsPost, contractsPost, chainPost, linkPost]) expect(opts(h)).toEqual({ requireCapabilities: ["owner:manage"], requireWorkspace: true });
+    for (const h of [decisionsPost, contractsPost, chainPost, linkPost]) expect(opts(h)).toEqual({ requireCommercial: "approval_resolution", requireCapabilities: ["owner:manage"], requireWorkspace: true }); // writes are paid continuation (dormant unless BILLING_PAYWALL_ENFORCEMENT=on); reads stay free
   });
 });
 

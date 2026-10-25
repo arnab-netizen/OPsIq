@@ -26,5 +26,5 @@ export const PATCH = withCanonicalEnforcement(
     const input = await parseRequestBody(ctx.request!, marketingActionUpdateSchema);
     return updateMarketingAction(params.actionId, input, ctx.verifiedActorId, ctx.verifiedWorkspaceId);
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

@@ -15,6 +15,8 @@ import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mappin
 import { reassessBudget } from "./budget.service";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
+import { canPerformCommercialCapability } from "@/services/billing/commercial-policy.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 
 export { SCHEDULER_SYSTEM_ACTOR };
@@ -70,6 +72,14 @@ export async function scanDueReassessments(
   let skipped = 0;
   for (const t of targets) {
     const triggerEventId = `scheduled_review_due:${t.businessId}:${bucket}`;
+    // Commercial gate: scheduled reassessment is a continuation of the recurring loop. Workspaces that are
+    // not entitled (when the paywall is enforced) are skipped, never partially processed. No-op when OFF.
+    const commercial = await canPerformCommercialCapability(t.workspaceId, COMMERCIAL_CAPABILITIES.REASSESSMENT);
+    if (!commercial.allowed) {
+      skipped++;
+      businesses.push({ ...t, ok: false });
+      continue;
+    }
     try {
       await reassessBudget(t.businessId, t.workspaceId, { actorId, kind: "scheduled_review_due", triggerEventId });
       reassessed++;

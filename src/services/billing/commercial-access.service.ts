@@ -12,13 +12,12 @@
  * a status outside the paid/grace policy (see resolveAccess), or a lookup error → not entitled.
  */
 import { db } from "@/lib/db";
-import { PlanLimitError } from "@/infra/errors";
+import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
+import { assertCommercialCapability, isPaywallEnforced } from "@/services/billing/commercial-policy.service";
 import { commercialStateFromStatus, resolveAccess, type AccessLevel, type CommercialState } from "@/domain/billing/paddle";
 import { isPaddleConfigured, resolvePaddleEnvironment } from "@/services/billing/paddle-client";
 
-export function isPaywallEnforced(): boolean {
-  return process.env.BILLING_PAYWALL_ENFORCEMENT === "on";
-}
+export { isPaywallEnforced };
 
 export interface BillingStatusDTO {
   provider: "paddle";
@@ -64,20 +63,10 @@ export async function getBillingStatus(workspaceId: string): Promise<BillingStat
   };
 }
 
-/** Throws PlanLimitError (HTTP 402) when the paywall is enforced and the workspace is not entitled. */
+/**
+ * Throws PlanLimitError (HTTP 402) when the paywall is enforced and the workspace is not entitled.
+ * Retained for existing callers; delegates to the central policy (approval resolution capability).
+ */
 export async function assertCommercialAccess(workspaceId: string): Promise<void> {
-  if (!isPaywallEnforced()) return;
-  let entitled = false;
-  try {
-    const sub = await db.subscription.findFirst({
-      where: { billingAccount: { workspaceId } },
-      select: { status: true, currentPeriodEnd: true },
-    });
-    entitled = resolveAccess(sub).entitled;
-  } catch {
-    entitled = false; // fail closed on lookup failure
-  }
-  if (!entitled) {
-    throw new PlanLimitError("governed_execution", "An active subscription is required to continue governed execution");
-  }
+  await assertCommercialCapability(workspaceId, COMMERCIAL_CAPABILITIES.APPROVAL_RESOLUTION);
 }
