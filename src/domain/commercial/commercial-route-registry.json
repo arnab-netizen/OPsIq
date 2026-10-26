@@ -46,6 +46,30 @@
   "capability": "governed_execution"
  },
  {
+  "method": "POST",
+  "route": "/api/admin/acceptance-fixtures/businesses",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/acceptance-fixtures/capability",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/acceptance-fixtures/startup-sessions",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/acceptance-fixtures/startup-sessions/[sessionId]/blueprint",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
   "method": "GET",
   "route": "/api/admin/administration-audit",
   "classification": "NON_COMMERCIAL",

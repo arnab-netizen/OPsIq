@@ -11,6 +11,7 @@ export const ROLE_LABELS: Record<RoleName, string> = {
   viewer: "Viewer",
   beta_request_operator: "Beta Request Operator",
   administration_operator: "Administration Operator",
+  acceptance_fixture_operator: "Acceptance Fixture Operator",
 };
 
 export function formatRole(role: string): string {

@@ -90,6 +90,9 @@ const EXEMPT_SCRIPTS: Record<string, { reason: string }> = {
   "assert-approved-staging-database.ts": {
     reason: "PURE preflight — validates a staging URL string against the approved-endpoint allowlist; opens no connection, makes no HTTP calls, never mutates, never prints the URL",
   },
+  "inspect-acceptance-fixture-operator-target.ts": {
+    reason: "READ_ONLY inspector — only findUnique/findMany/count/SHOW statements, emits no audit event, makes no HTTP calls, host-gated before any connection, optionally refuses unless the DB session is read-only; run by provision-acceptance-fixture-operator.yml (DISCOVER/DRY_RUN) and never mutates",
+  },
   "assert-restore-target.mjs": {
     reason: "PURE preflight — classifies OPSIQ_DB_TARGET/DATABASE_URL for scripts/restore-database.sh (local loopback or approved staging only; production refused); opens no connection, makes no HTTP calls, never mutates, never prints the URL",
   },

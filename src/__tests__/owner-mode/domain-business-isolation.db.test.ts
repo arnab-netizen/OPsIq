@@ -185,12 +185,12 @@ describe("[db] cross-domain acceptance-business isolation", () => {
     const fakeBusinessId = randomUUID();
     const fakePage = {
       request: {
-        // The helper now preflights fixture capability (SYSTEM_ADMIN-only admin read) and verifies
+        // The helper now preflights fixture authority (ACCEPTANCE_FIXTURE_WRITE capability probe) and verifies
         // the created business is absent from the ordinary owner list before returning its id.
         get: async (url: string) => {
-          if (url.startsWith("/api/admin/fixture-businesses")) {
+          if (url === "/api/admin/acceptance-fixtures/capability") {
             capabilityProbeCount++;
-            return { ok: () => true, status: () => 200, json: async () => ({ businesses: [] }) };
+            return { ok: () => true, status: () => 200, json: async () => ({ acceptanceFixtureAuthority: true }) };
           }
           return { ok: () => true, status: () => 200, json: async () => [] };
         },

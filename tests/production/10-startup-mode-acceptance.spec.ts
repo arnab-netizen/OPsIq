@@ -23,7 +23,7 @@ import {
   finalizeEvidence,
   timedApiCall,
 } from "./helpers/evidence";
-import { assertFixtureCreationCapable, assertStartupSessionIsFixture } from "./helpers/fixture-isolation";
+import { assertFixtureCreationCapable, assertStartupSessionIsFixture, ACCEPTANCE_FIXTURE_ENDPOINTS } from "./helpers/fixture-isolation";
 
 const SPEC_NAME = "phase13-startup-mode";
 const ACCEPTANCE_TAG = `OPSIQ Production Acceptance - ${new Date().toISOString().slice(0, 19)}Z`;
@@ -112,8 +112,11 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   test("13-01 — create a clearly-tagged Startup acceptance session + idea", async () => {
     // Stop BEFORE creating anything if this actor cannot create fixtures.
     await assertFixtureCreationCapable(context, page);
-    const created = await timedApiCall(context, "POST", "/api/owner/startup/sessions", () =>
-      page.request.post("/api/owner/startup/sessions", {
+    // Dedicated fixture-only route: the fixture flag is hard-wired server-side (not a request field),
+    // so this cannot create an ordinary session, and it requires the narrow ACCEPTANCE_FIXTURE_WRITE
+    // authority rather than SYSTEM_ADMIN. Without it the route answers 401/403 and creates nothing.
+    const created = await timedApiCall(context, "POST", ACCEPTANCE_FIXTURE_ENDPOINTS.startupSession, () =>
+      page.request.post(ACCEPTANCE_FIXTURE_ENDPOINTS.startupSession, {
         data: {
           sessionLabel: ACCEPTANCE_TAG,
           intake: {
@@ -124,13 +127,6 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
             skills: [],
           },
           ideas: [{ name: ACCEPTANCE_TAG, industry: "Automotive Services", structural: {} }],
-          // Marks this as synthetic acceptance data at creation time (see
-          // OwnerStartupSession.isFixtureBusiness), rather than relying on the "OPSIQ Production
-          // Acceptance - ..." label to keep it out of ordinary owners' Startup planning history —
-          // mirrors domain-business.ts's isFixtureBusiness flag for business creation. Requires
-          // the acceptance account to hold SYSTEM_ADMIN in the target environment; without it
-          // the route answers 403 and creates nothing (the preflight above stops the run first).
-          isFixtureBusiness: true,
         },
       })
     );
@@ -208,9 +204,9 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     const bpRes = await timedApiCall(
       context,
       "POST",
-      "/api/owner/startup/sessions/:sessionId/blueprint",
+      "/api/admin/acceptance-fixtures/startup-sessions/:sessionId/blueprint",
       () =>
-        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/blueprint`, {
+        page.request.post(ACCEPTANCE_FIXTURE_ENDPOINTS.startupBlueprint(handoffSessionId), {
           data: {
             ideaId: handoffIdeaId,
             ownerDecisionId,
@@ -218,12 +214,6 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
             objectiveDescription: "Live production acceptance execution blueprint",
             targetMetricName: "monthly_revenue_cents",
             targetValue: 500000,
-            // Marks every record this blueprint creates (objective, tasks, KPIs, risks,
-            // resource allocation, constraint) as a fixture at creation time — see
-            // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md. Requires the acceptance account to hold
-            // SYSTEM_ADMIN in the target environment; without it the route answers 403 and
-            // creates nothing.
-            isFixtureRecord: true,
           },
         })
     );

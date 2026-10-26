@@ -27,16 +27,18 @@ describe("resolveOrCreateDomainBusiness", () => {
     resetFixtureCapabilityPreflight();
   });
 
-  it("always sends isFixtureBusiness: true when creating a dedicated acceptance business", async () => {
+  it("creates acceptance businesses ONLY through the fixture-only route and never sends a fixture flag", async () => {
     let capturedBody: unknown;
+    let capturedUrl = "";
     const page = {
       request: {
         get: vi.fn(async (url: string) =>
-          url.startsWith("/api/admin/fixture-businesses")
-            ? { status: () => 200, ok: () => true, json: async () => ({ businesses: [] }) }
+          url === "/api/admin/acceptance-fixtures/capability"
+            ? { status: () => 200, ok: () => true, json: async () => ({ acceptanceFixtureAuthority: true }) }
             : { status: () => 200, ok: () => true, json: async () => [] }
         ),
-        post: vi.fn(async (_url: string, opts: { data: unknown }) => {
+        post: vi.fn(async (url: string, opts: { data: unknown }) => {
+          capturedUrl = url;
           capturedBody = opts.data;
           return { ok: () => true, status: () => 201, json: async () => ({ id: "biz-123" }) };
         }),
@@ -46,6 +48,8 @@ describe("resolveOrCreateDomainBusiness", () => {
     const id = await resolveOrCreateDomainBusiness(undefined, page as never, "finance");
 
     expect(id).toBe("biz-123");
-    expect(capturedBody).toMatchObject({ isFixtureBusiness: true });
+    expect(capturedUrl).toBe("/api/admin/acceptance-fixtures/businesses");
+    expect(capturedBody).not.toHaveProperty("isFixtureBusiness");
+    expect(capturedBody).not.toHaveProperty("isFixtureRecord");
   });
 });

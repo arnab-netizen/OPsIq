@@ -15,6 +15,9 @@ export const AUDIT_EVENTS = {
   ROLE_ASSIGNED: "role.assigned",
   ROLE_REVOKED: "role.revoked",
 
+  // Acceptance fixtures (authority-bearing creates through /api/admin/acceptance-fixtures/*)
+  ACCEPTANCE_FIXTURE_CREATED: "acceptance_fixture.created",
+
   // Session
   SESSION_CREATED: "session.created",
   SESSION_EXPIRED: "session.expired",
