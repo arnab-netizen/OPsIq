@@ -5,7 +5,7 @@
  * The lane runs ONLY the specs that tests/production/production-spec-manifest.json marks safeLane=true.
  * Playwright's own *.spec.ts discovery is never used. This module is consumed by:
  *   - playwright.production.config.ts  (testMatch)
- *   - .github/workflows/production-owner-acceptance.yml  (explicit file list: `node scripts/production-safe-specs.mjs`)
+ *   - .github/workflows/production-owner-acceptance.yml  (explicit file list: `node scripts/production-safe-specs.cjs`)
  *
  * It throws (CLI: exit 1, nothing on stdout) when ANY of these hold, so a new or mis-declared spec can never
  * reach Production silently:

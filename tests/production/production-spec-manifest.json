@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "Canonical classification of EVERY tests/production/*.spec.ts and the single source of the LIVE Production acceptance lane. Only entries with safeLane=true run in .github/workflows/production-owner-acceptance.yml; Playwright discovery of *.spec.ts is NOT used. Validated fail-closed by scripts/production-safe-specs.mjs (used by playwright.production.config.ts and the workflow) and by src/__tests__/deployment/production-acceptance-mutation-classification.test.ts. A spec absent from this file, classified UNKNOWN, or classified NON_FIXTURE_PERSISTENT_MUTATION can never reach the live lane.",
+  "description": "Canonical classification of EVERY tests/production/*.spec.ts and the single source of the LIVE Production acceptance lane. Only entries with safeLane=true run in .github/workflows/production-owner-acceptance.yml; Playwright discovery of *.spec.ts is NOT used. Validated fail-closed by scripts/production-safe-specs.cjs (used by playwright.production.config.ts and the workflow) and by src/__tests__/deployment/production-acceptance-mutation-classification.test.ts. A spec absent from this file, classified UNKNOWN, or classified NON_FIXTURE_PERSISTENT_MUTATION can never reach the live lane.",
   "classifications": [
     "READ_ONLY_REAL_DATA",
     "FIXTURE_ISOLATED_MUTATION",
