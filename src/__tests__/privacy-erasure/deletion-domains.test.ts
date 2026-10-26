@@ -30,7 +30,8 @@ describe("global secure-delete boundary", () => {
   });
 
   it("one missing domain keeps it INCOMPLETE and names the domain", () => {
-    const { NEON_BRANCHES: _omit, ...rest } = all;
+    const rest: Record<string, string> = { ...all };
+    delete rest.NEON_BRANCHES;
     const r = evaluateGlobalSecureDelete({ databaseVerification: "PASS", executedAt, attestations: rest, now });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.pendingDomains).toEqual(["NEON_BRANCHES"]);
