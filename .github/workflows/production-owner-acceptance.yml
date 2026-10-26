@@ -7,23 +7,18 @@ name: Production Owner Acceptance (LIVE)
 # production app behaves the same way for a real Owner account. Neither
 # supersedes the other -- both are required.
 #
-# Scope (current): tests/production/10-startup-mode-acceptance.spec.ts
-# (Startup Mode handoff, PR #325/#326); tests/production/20-existing-business-
-# acceptance.spec.ts (existing-business owner journey: Trinity Services
-# read-only + Finance closed loop); and the full-domain-acceptance expansion
-# (each domain independently isolated, on its OWN dedicated synthetic
-# acceptance business created via tests/production/helpers/domain-business.ts
-# -- never a shared business across domains, see that helper's header for
-# why): tests/production/21-sales-acceptance.spec.ts,
-# 22-operations-acceptance.spec.ts, 23-strategy-acceptance.spec.ts,
-# 24-cashflow-acceptance.spec.ts, 25-marketing-acceptance.spec.ts,
-# 26-recovery-acceptance.spec.ts; and tests/production/27-growth-pricing-
-# acceptance.spec.ts (Growth Pricing owner UI, PR #359 -- workspace-scoped,
-# not per-business, so it mutates price-tier data directly rather than via
-# helpers/domain-business.ts). Playwright discovers every *.spec.ts file
-# under testDir (tests/production) automatically -- this list is
-# documentation, not a file-selection gate; keep it in sync as domains are
-# added.
+# Scope: ONLY the specs that tests/production/production-spec-manifest.json
+# marks safeLane=true (a FIXTURE_ISOLATED_MUTATION / READ_ONLY_REAL_DATA /
+# REVERSIBLE_REAL_DATA_MUTATION classification with its fixture or rollback
+# mechanism documented). The run step passes that explicit file list to
+# Playwright (`node scripts/production-safe-specs.cjs`); Playwright never
+# auto-discovers tests/production/*.spec.ts here. A spec that is unclassified,
+# UNKNOWN or NON_FIXTURE_PERSISTENT_MUTATION fails closed and cannot run.
+# tests/production/27-growth-pricing-acceptance.spec.ts is deliberately
+# EXCLUDED: it creates, approves and supersedes real workspace price tiers that
+# ordinary owners can see, with no fixture semantics and no rollback
+# (GROWTH_PRICING_LIVE_MUTATION_SAFETY=OPEN, see
+# docs/opsiq-governance/PRODUCTION_ACCEPTANCE_SAFE_LANE.md).
 #
 # Fails closed if PRODUCTION_ACCEPTANCE_EMAIL/PASSWORD secrets are absent, if
 # BASE_URL does not resolve to the exact checked-out main commit in the
@@ -135,7 +130,12 @@ jobs:
           BASE_URL: ${{ env.BASE_URL }}
           PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
           PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
-        run: npx playwright test --config=playwright.production.config.ts
+        run: |
+          set -euo pipefail
+          mapfile -t SAFE_SPECS < <(node scripts/production-safe-specs.cjs)
+          echo "Live lane runs ${#SAFE_SPECS[@]} manifest-approved spec(s):"
+          printf '  %s\n' "${SAFE_SPECS[@]}"
+          npx playwright test --config=playwright.production.config.ts "${SAFE_SPECS[@]}"
 
       - name: Verify no credential/session leakage in captured evidence (fail-closed)
         if: always()
