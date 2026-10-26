@@ -121,6 +121,15 @@ fi
 # ([^:]+ cannot contain ':', so it cannot run past the user/password
 # separator; [^@]+ cannot contain '@', so it cannot run past the
 # credentials/host separator), unlike the old parsing bug's greedy `.*`.
+# Option B gate: refuse to dump while Production holds QuickBooks/Intuit User Data (fail closed).
+GATE_OUT=$(bash "$(dirname "$0")/backup-qbo-gate.sh" 2>&1)
+GATE_RC=$?
+echo "$GATE_OUT" | tee -a "$LOG_FILE"
+if [ "$GATE_RC" -ne 0 ]; then
+  echo "ERROR: backup refused by the QBO backup gate" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
 REDACTED_URL=$(echo "$DATABASE_URL" | sed -E 's#(://[^:/@]+:)[^@]+(@)#\1***\2#')
 
 echo "Starting database backup..." | tee "$LOG_FILE"

@@ -140,6 +140,9 @@ jobs:
         id: backup
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          # Governed flag, set in the GitHub "production" environment when QBO is enabled. The backup
+          # script ALSO probes the database for qbo_* rows, so the flag is not the only protection.
+          PRODUCTION_QBO_ENABLED: ${{ vars.PRODUCTION_QBO_ENABLED }}
         run: |
           mkdir -p backup-output
           bash scripts/backup-database.sh backup-output 9
