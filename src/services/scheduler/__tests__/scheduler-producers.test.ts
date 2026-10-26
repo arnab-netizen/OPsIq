@@ -30,6 +30,7 @@ vi.mock("@/infra/scheduler", () => ({
 
 import {
   enqueueDueEmailRetryTasks,
+  EMAIL_RETRY_MIN_SPACING_MS,
   enqueueDueFinanceLearningBridgeTasks,
 } from "@/services/scheduler/scheduler-producers";
 import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE } from "@/infra/scheduler-handlers";
@@ -74,9 +75,27 @@ describe("enqueueDueEmailRetryTasks", () => {
 
     expect(alertFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { emailDeliveryStatus: "FAILED", emailAttemptCount: { lt: 3 } },
+        where: expect.objectContaining({
+          emailDeliveryStatus: "FAILED",
+          emailAttemptCount: { lt: 3 },
+        }),
       })
     );
+  });
+
+  it("enforces a minimum spacing between attempts so cron cadence cannot compress retries", async () => {
+    alertFindMany.mockResolvedValue([]);
+    const before = Date.now();
+    await enqueueDueEmailRetryTasks();
+    const after = Date.now();
+
+    expect(EMAIL_RETRY_MIN_SPACING_MS).toBeGreaterThanOrEqual(23 * 60 * 60 * 1000);
+    const where = (alertFindMany.mock.calls[0][0] as { where: { OR: Array<Record<string, unknown>> } }).where;
+    expect(where.OR).toHaveLength(2);
+    expect(where.OR[0]).toEqual({ emailLastAttemptAt: null });
+    const cutoff = (where.OR[1].emailLastAttemptAt as { lte: Date }).lte.getTime();
+    expect(cutoff).toBeGreaterThanOrEqual(before - EMAIL_RETRY_MIN_SPACING_MS);
+    expect(cutoff).toBeLessThanOrEqual(after - EMAIL_RETRY_MIN_SPACING_MS);
   });
 
   it("produces a fresh idempotency key once the alert's attempt count advances (no permanent block)", async () => {
