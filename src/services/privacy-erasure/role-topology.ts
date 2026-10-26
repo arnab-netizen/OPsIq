@@ -17,7 +17,9 @@
 import type { ClientBase } from "pg";
 import { ERASURE_ROLE, HANDLED_TABLES } from "./qbo-erasure.service";
 
-export const RUNTIME_DENIED_TABLES = ["privacy_erasure_requests", "_prisma_migrations"] as const;
+export const RUNTIME_DENIED_TABLES = ["privacy_erasure_requests"] as const;
+/** Runtime may READ the migration ledger (startup checks) but never write it. */
+export const RUNTIME_READONLY_TABLES = ["_prisma_migrations"] as const;
 export interface RoleTopologyNames { runtimeRole: string; eraserLogins: readonly string[] }
 
 const IDENT = /^[a-z_][a-z0-9_]{2,62}$/;
@@ -47,6 +49,7 @@ export function roleTopologyStatements(names: RoleTopologyNames, database: strin
   s.push(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${rt}`);
   s.push(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${rt}`);
   for (const t of RUNTIME_DENIED_TABLES) s.push(`DO $$ BEGIN IF to_regclass('public.${t}') IS NOT NULL THEN REVOKE ALL ON TABLE public."${t}" FROM ${rt}; END IF; END $$`);
+  for (const t of RUNTIME_READONLY_TABLES) s.push(`DO $$ BEGIN IF to_regclass('public.${t}') IS NOT NULL THEN REVOKE ALL ON TABLE public."${t}" FROM ${rt}; GRANT SELECT ON TABLE public."${t}" TO ${rt}; END IF; END $$`);
   s.push(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${rt}`);
   s.push(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${rt}`);
   // Eraser group: read everything (the residue scan must be able to see every table, or it would silently scan fewer), write only the registry.
@@ -99,6 +102,12 @@ export async function verifyRoleTopology(c: ClientBase, names: RoleTopologyNames
       if (!e.present) continue;
       const anyPriv = await one(`SELECT has_table_privilege($1, $2, 'SELECT') OR has_table_privilege($1, $2, 'INSERT') OR has_table_privilege($1, $2, 'UPDATE') OR has_table_privilege($1, $2, 'DELETE') OR has_table_privilege($1, $2, 'TRUNCATE') OR has_table_privilege($1, $2, 'TRIGGER') OR has_table_privilege($1, $2, 'REFERENCES') AS v`, [rt, `public.${t}`]);
       add(`runtime has NO privilege on ${t}`, !anyPriv.v);
+    }
+    for (const t of RUNTIME_READONLY_TABLES) {
+      const e = await one(`SELECT to_regclass($1) IS NOT NULL AS present`, [`public.${t}`]);
+      if (!e.present) continue;
+      const r = await one(`SELECT has_table_privilege($1, $2, 'SELECT') AS r, (has_table_privilege($1, $2, 'INSERT') OR has_table_privilege($1, $2, 'UPDATE') OR has_table_privilege($1, $2, 'DELETE') OR has_table_privilege($1, $2, 'TRUNCATE') OR has_table_privilege($1, $2, 'TRIGGER') OR has_table_privilege($1, $2, 'REFERENCES')) AS w`, [rt, `public.${t}`]);
+      add(`runtime has SELECT only (no write) on ${t}`, !!r.r && !r.w);
     }
     add("runtime has no TRUNCATE / TRIGGER / REFERENCES on any public table", Number((await one(`SELECT count(*)::int AS n FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r','p') AND (has_table_privilege($1, c.oid, 'TRUNCATE') OR has_table_privilege($1, c.oid, 'TRIGGER') OR has_table_privilege($1, c.oid, 'REFERENCES'))`, [rt])).n) === 0);
     add("runtime cannot change session_replication_role (cannot switch triggers off)", !(await one(`SELECT has_parameter_privilege($1, 'session_replication_role', 'SET') AS v`, [rt])).v);

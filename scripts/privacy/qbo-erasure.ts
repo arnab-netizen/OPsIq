@@ -15,6 +15,17 @@
  * Production runs additionally need --production-authorization=<request id> AND separate explicit owner authorization — never run by default.
  */
 import { Client } from "pg";
+import { evaluateGlobalSecureDelete, attestationsFromOptions, neonWindowFromOptions } from "../../src/services/privacy-erasure/deletion-domains";
+function printGlobal(opts: Record<string, string>, db: string, executedAt: Date): string {
+  const g = evaluateGlobalSecureDelete({ databaseVerification: db as "PASS" | "FAIL", executedAt, attestations: attestationsFromOptions(opts), neonHistoryWindowMs: neonWindowFromOptions(opts) });
+  console.log(`DATABASE_ERASURE=${g.databaseErasure}`);
+  console.log(`GLOBAL_SECURE_DELETE=${g.globalSecureDelete}`);
+  console.log(`PENDING_DELETION_DOMAINS=${g.pendingDomains.join(",") || "none"}`);
+  for (const x of g.rejectedAttestations) console.log(`REJECTED_ATTESTATION ${x.code}: ${x.reason}`);
+  if (g.globalSecureDelete === "INCOMPLETE") console.log("NOTICE: database erasure is NOT total success; recoverable copies outside the live database are still pending.");
+  return g.globalSecureDelete;
+}
+
 import {
   ERASURE_REASON_CODES,
   ErasureRefusedError,
@@ -77,6 +88,7 @@ async function main() {
       const r = await executeQboErasure(client, { requestId: need(opts, "request"), confirmToken: need(opts, "confirm"), revoke, productionAuthorization: opts["production-authorization"] });
       out({ command: cmd, status: r.status, requestId: r.requestId, revocation: r.revocation, counts: r.counts, verification: r.verification });
       console.log(`QBO_ERASURE_VERIFICATION=${r.verification.result}`);
+      printGlobal(opts, r.verification.result, new Date());
       return;
     }
     if (cmd === "verify" || cmd === "status") {
@@ -87,6 +99,7 @@ async function main() {
       const v = await verifyQboErasure(client, { workspaceId: row.workspace_id, businessId: row.business_id });
       out({ command: cmd, requestId: row.id, verification: v });
       console.log(`QBO_ERASURE_VERIFICATION=${v.result}`);
+      if (printGlobal(opts, v.result, row.executed_at ? new Date(row.executed_at) : new Date()) === "INCOMPLETE") process.exitCode = 2;
       return;
     }
     throw new ErasureRefusedError("UNKNOWN_COMMAND", "commands: request | dry-run | approve | execute | verify | status");

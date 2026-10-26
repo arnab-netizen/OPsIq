@@ -23,7 +23,7 @@ Operator flow: `request` -> `dry-run` (manifest hash, counts, blockers, confirma
 - **DELETE** — `qbo_connections`, `qbo_connection_tokens`, `qbo_resource_locks`, `qbo_sync_state` (incl. webhook-pending marker and company name), `qbo_oauth_states`, `qbo_report_snapshots` (raw provider payloads), `qbo_canonical_provenance`; every Finance/Cashflow cycle, finding, action, verification and Finance outcome signal derived from affected snapshots; soft-linked derived rows: owner decision records, outcome assessments, action assignments, approval requests and evidences, self-evaluations, action outcomes, controlled-learning candidates (+ children), operating-memory entries, first-result interactions; pending `qbo-sync` scheduled tasks.
 - **ANONYMIZE** — `audit_events` rows are kept (hash chain covers id|workspace|event|timestamp only, so it is unaffected); the `realmId` payload key is removed from `qbo.*` events.
 - **SCRUB** — owner-amended Finance/Cashflow periods (see below).
-- **RETAIN (legal / integrity)** — the erasure tombstone (ids, operator names, counts). External retention (Vercel logs, Sentry, provider backups, Neon history) is outside the database and follows each provider; it is not claimed to be erased.
+- **RETAIN (legal / integrity)** — the erasure tombstone (ids, operator names, counts). Recoverable copies outside the database (backups, Neon history and branches, operator exports) are NOT out of scope: each is a deletion domain of the global secure-delete boundary below, and an erasure is not complete until every one is handled. Metadata-only copies (Vercel logs, Sentry) hold no QBO User Data by design (allowlists and scrubbing) and follow each provider retention.
 - **NOT QBO DATA** — owner-entered snapshots, other tenants, businesses themselves.
 - **BLOCKER (fail closed)** — a learning record promoted or admitted from QuickBooks-derived outcomes; an unrecognized Finance chain shape; and any reference to an erased id, realm id or company name found in a table the registry does not know (generic residue scan across every workspace-scoped table).
 
@@ -77,8 +77,33 @@ Threat model: the runtime database credential (`DATABASE_URL`) is compromised.
 | Console logs | NO (tested) | n/a | n/a | none |
 | User exports | to the user only | user's control | n/a | n/a |
 
-Permanent deletion is not promised everywhere: backups and recovery windows are bounded, not instant.
+A bounded backup window is not secure deletion. Until every domain in the global secure-delete boundary below is handled, the tool reports DATABASE_ERASURE=PASS with GLOBAL_SECURE_DELETE=INCOMPLETE, which is not total erasure success. This supersedes any earlier wording that treated backups as outside the tool.
 
 ### Data-sale boundary
 
 Code-level verdict: no path sends QuickBooks-derived data to analytics, advertising, replay, mail, billing or AI services (tests in qbo-data-sale-boundary.test.ts). The exact Intuit data-sale clause text could not be retrieved programmatically, so the owner must confirm the clause and vendor contracts before the public statement is made.
+
+## Global secure-delete boundary (infrastructure pass)
+
+Intuit's Developer Terms define "Securely Delete" as permanent sanitisation so that the data is unrecoverable from any and all media. Backup and recovery copies are therefore a compliance gate for Production QuickBooks enablement, not a privacy-policy disclosure. The compliance boundary is: live database, recoverable backups, point-in-time history, branches, and any operator-made copy that contains QuickBooks / Intuit User Data. Metadata-only copies are not User Data.
+
+Result vocabulary (printed by the erasure tool, `execute` and `verify`):
+
+- `DATABASE_ERASURE=PASS|FAIL` is the structural proof of the live database only.
+- `GLOBAL_SECURE_DELETE=COMPLETE|INCOMPLETE` is COMPLETE only when the database passed AND every external domain is attested. `DATABASE_ERASURE=PASS` with `GLOBAL_SECURE_DELETE=INCOMPLETE` must never be reported as total erasure success. `verify` exits 2 while incomplete.
+- `PENDING_DELETION_DOMAINS` names what is still open. An attestation that predates the database erasure, is not an ISO timestamp, or is in the future is rejected (`deletion-domains.ts`).
+
+| Domain | Copy | Holds QBO User Data once QBO is live | How it is deleted | Evidence |
+|---|---|---|---|---|
+| DATABASE | Neon production branch | yes | governed erasure transaction | tool (`DATABASE_ERASURE`) |
+| GITHUB_BACKUP_ARTIFACTS | full `pg_dump` of the whole database, uploaded daily, 35 day retention | yes (whole database, including derived Finance/Cashflow/budget values, which cannot be excluded without dropping the owner's own data from recovery) | delete the whole artifact set, then take a fresh backup: `scripts/privacy/purge-backup-artifacts.ts` (refuses while a backup run is queued or in progress; selection is by name, never by date) | `--attest-github-backup-artifacts` |
+| NEON_HISTORY_WINDOW | point-in-time history | yes | not row-purgeable; leaves only when the window elapses (documented maximum 6 hours on the Free plan, 7 days Launch, 30 days Scale, configurable down, 0 disables it); no restore or branch from a pre-erasure point during the window | `--attest-neon-history-window`, accepted only at or after erasure time plus the window |
+| NEON_BRANCHES | branches created from a pre-erasure point | yes if created while QBO data existed | delete (or recreate from a post-erasure point) | `--attest-neon-branches` |
+| OPERATOR_EXPORTS | any dump, export or restore copy an operator made | yes | operator deletes; none are created by automation | `--attest-operator-exports` |
+
+Branch policy (`NEON_BRANCH_ERASURE_POLICY`): while Production holds QuickBooks data, branches from Production are limited to schema-only branches, or data-bearing branches that expire (branch TTL) within the history window and are listed. Any data-bearing branch that exists at erasure time is deleted or recreated before NEON_BRANCHES is attested. A branch never propagates a later erasure: it is an independent copy.
+
+Crypto-erasure (per-connection data-encryption key destroyed on erasure) was evaluated and is not required for V1. Reasons: canonical Finance and Cashflow values are indexed, aggregated and mixed with owner-authored fields, so payload encryption would break SQL aggregation and provenance joins; derived analyses, decisions and budget values would still hold plaintext QuickBooks-derived figures, so it would not cover them without re-architecting them too; and nothing verified says Intuit regards unrecoverable ciphertext as Securely Deleted. The bounded, deterministic controls above cover the same copies. Revisit only if backup retention can no longer be bounded (for example a long history window).
+
+Production enablement gate (all must hold before any Production QuickBooks credential is added): the runtime login holds no ownership and cannot bypass the guards (role cutover, `RUNTIME_ROLE_LEAST_PRIVILEGE=PASS` on Production); the backup artifact purge control is adopted and rehearsed; the Neon plan and history window are decided and the branch policy is followed; written processor terms are confirmed for every processor that receives QuickBooks User Data (Neon, Vercel; GitHub for backup artifacts); and the Privacy Policy deletion wording is deployed only after these hold.
+
