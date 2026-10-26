@@ -107,3 +107,13 @@ Crypto-erasure (per-connection data-encryption key destroyed on erasure) was eva
 
 Production enablement gate (all must hold before any Production QuickBooks credential is added): the runtime login holds no ownership and cannot bypass the guards (role cutover, `RUNTIME_ROLE_LEAST_PRIVILEGE=PASS` on Production); the backup artifact purge control is adopted and rehearsed; the Neon plan and history window are decided and the branch policy is followed; written processor terms are confirmed for every processor that receives QuickBooks User Data (Neon, Vercel; GitHub for backup artifacts); and the Privacy Policy deletion wording is deployed only after these hold.
 
+
+## Owner decisions in principle (backup and recovery copies)
+
+These decisions are recorded here so the design matches the enablement gate. They do not authorize any Production change by themselves.
+
+- GitHub whole-database backups are prohibited while Production QuickBooks is enabled (Option B). A `qbo_*`-only exclusion is not sufficient, because Intuit-derived values also sit in `audit_events.payload`, snapshots, diagnoses, decisions and budgets. The GitHub backup artifact row above is therefore a domain that must be empty (`QBO_CONTAINING_GITHUB_ARTIFACTS=0`) before the first connection. The fail-closed gate is delivered separately (PR #642).
+- Neon history retention target is 0 seconds for Production. Until it is set and verified (API reports 0, point-in-time restore to a pre-change timestamp is refused), the history window stays a deletion domain and `GLOBAL_SECURE_DELETE` stays INCOMPLETE.
+- No Production Neon branch or snapshot may contain QuickBooks data that has been erased. Branches and snapshots remain deletion domains in the verifier.
+- `GLOBAL_SECURE_DELETE` is INCOMPLETE until every domain attests clean; a database-only erasure is never reported as complete.
+- The least-privilege runtime role (`opsiq_app`, not an owner, no DDL, read-only migration ledger, no access to the erasure ledger) is mandatory before the first QuickBooks connection. The Production cutover is a separate, owner-approved, witnessed change.
