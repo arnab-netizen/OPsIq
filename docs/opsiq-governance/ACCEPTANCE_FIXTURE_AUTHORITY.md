@@ -100,8 +100,21 @@ its own workspace. Delta: **+ `acceptance_fixture:write`**, nothing else. Not gr
 
 ## 6. Activation (owner decision, separate from this change)
 
-`scripts/provision-acceptance-fixture-operator.ts` (dry run by default; requires `--expected-database-host`,
-`--workspace-id`, and the exact confirm phrase `GRANT ACCEPTANCE FIXTURE OPERATOR` with `--apply`). No migration, no
-schema change, no further code deployment. Rollback: the same script with `--revoke` and
-`REVOKE ACCEPTANCE FIXTURE OPERATOR`; revocation takes effect on the next request (capabilities are resolved per
+The Production path is the governed workflow `.github/workflows/provision-acceptance-fixture-operator.yml`
+(`workflow_dispatch` only, GitHub Environment `production`, secrets `PRODUCTION_DATABASE_URL` and
+`PRODUCTION_ACCEPTANCE_EMAIL`). The target account is fixed by that secret; there is no email or role input.
+Every run is pinned to an exact `expected_main_sha` and an exact `expected_database_host`, and the host is
+verified at the workflow level and again inside both scripts before any database connection.
+
+1. `DISCOVER` (read-only, Postgres session forced read-only): resolves the acceptance user and the workspace the
+   authorization loader resolves for it, and reports whether `system_admin` / `acceptance_fixture_operator` are
+   active. Runs `scripts/inspect-acceptance-fixture-operator-target.ts`.
+2. `DRY_RUN` (read-only): pins the `workspace_id` DISCOVER reported, re-resolves it independently and requires
+   equality, runs `scripts/provision-acceptance-fixture-operator.ts` without `--apply`, then re-inspects and requires
+   an identical state fingerprint (zero writes).
+3. `APPLY`: the same provisioner with `--apply` and the exact phrase `GRANT ACCEPTANCE FIXTURE OPERATOR`. Dispatching
+   it is a separate, explicit owner authorization.
+
+Rollback: the provisioner with `--revoke` and `REVOKE ACCEPTANCE FIXTURE OPERATOR` (a revoked row is preserved and a
+later re-grant reactivates the same row); revocation takes effect on the next request (capabilities are resolved per
 request). Until granted, acceptance specs stop at the preflight with `FIXTURE ISOLATION UNAVAILABLE`.

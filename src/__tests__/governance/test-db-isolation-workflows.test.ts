@@ -136,6 +136,7 @@ describe("a NEW secret-database workflow that mutates cannot appear without a de
     "migrate-production.yml",
     "production-db-status.yml",
     "provision-administration-operator.yml",
+    "provision-acceptance-fixture-operator.yml",
     "scheduled-backup.yml",
     "migrate-staging.yml",
     "reset-staging-db.yml",

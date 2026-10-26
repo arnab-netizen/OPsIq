@@ -106,7 +106,8 @@ const SCOPE = "workspace";
 //     strict path or this narrow test-only path;
 //   - is unreachable in a production CLI invocation: the owner's shell does
 //     not set VITEST or NODE_ENV=test, so isTestEnvironment() is false there,
-//     regardless of --apply. (No GitHub workflow runs this script.)
+//     regardless of --apply. (The governed production path is
+//     .github/workflows/provision-acceptance-fixture-operator.yml, which never sets either.)
 const TEST_ONLY_SINGLE_LABEL_HOST_PATTERN = /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
 
 function isTestEnvironment(): boolean {
