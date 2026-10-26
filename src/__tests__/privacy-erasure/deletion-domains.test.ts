@@ -2,12 +2,21 @@ import { describe, it, expect } from "vitest";
 import {
   EXTERNAL_DELETION_DOMAINS,
   attestationsFromOptions,
-  evaluateGlobalSecureDelete,
+  evaluateGlobalSecureDelete as evaluateRaw,
+  blockingNeonCopies,
+  parseNeonInventory,
+  type NeonInventory,
   neonWindowFromOptions,
 } from "@/services/privacy-erasure/deletion-domains";
 
 const executedAt = new Date("2026-11-01T10:00:00Z");
 const now = new Date("2026-12-10T00:00:00Z");
+// Default: a clean post-erasure inventory (only the default branch). Tests of the inventory rule override it.
+const cleanInventory: NeonInventory = {
+  capturedAt: "2026-11-01T12:00:00Z",
+  entries: [{ kind: "BRANCH", id: "br-main", name: "production", isDefault: true, createdAt: "2026-01-01T00:00:00Z" }],
+};
+const evaluateGlobalSecureDelete = (i: Parameters<typeof evaluateRaw>[0]) => evaluateRaw({ neonInventory: cleanInventory, ...i });
 const all = {
   GITHUB_BACKUP_ARTIFACTS: "2026-11-01T11:00:00Z",
   NEON_HISTORY_WINDOW: "2026-12-02T00:00:00Z",
@@ -88,5 +97,67 @@ describe("global secure-delete boundary", () => {
       EXTERNAL_DELETION_DOMAINS.map((d) => d.code).sort(),
     );
     expect(attestationsFromOptions({})).toEqual({});
+  });
+});
+
+describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
+  const firstImport = new Date("2026-10-01T00:00:00Z");
+  it("is never COMPLETE without an inventory, even with every attestation", () => {
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now });
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.pendingDomains).toEqual(["NEON_BRANCHES"]);
+  });
+  it("is never COMPLETE with an inventory captured before the erasure", () => {
+    const stale: NeonInventory = { ...cleanInventory, capturedAt: "2026-11-01T09:00:00Z" };
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: stale });
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+  });
+  it("a surviving restore branch from the Intuit-data window blocks PASS despite a NEON_BRANCHES attestation", () => {
+    const inv: NeonInventory = {
+      capturedAt: "2026-11-01T12:00:00Z",
+      entries: [
+        ...cleanInventory.entries,
+        { kind: "BRANCH", id: "br-restore", name: "restore-proof", createdAt: "2026-10-20T00:00:00Z" },
+        { kind: "SNAPSHOT", id: "snap-1", createdAt: "2026-10-25T00:00:00Z" },
+      ],
+    };
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: inv, dataFirstImportedAt: firstImport });
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.blockingCopies.map((c) => c.id).sort()).toEqual(["br-restore", "snap-1"]);
+    expect(r.pendingDomains).toContain("NEON_BRANCHES");
+    expect(r.rejectedAttestations.some((x) => x.code === "NEON_BRANCHES" && x.reason.includes("br-restore"))).toBe(true);
+  });
+  it("a branch created at a timestamp inside the window blocks even if created after the erasure", () => {
+    const inv: NeonInventory = {
+      capturedAt: "2026-11-02T12:00:00Z",
+      entries: [{ kind: "BRANCH", id: "br-pit", createdAt: "2026-11-02T00:00:00Z", parentTimestamp: "2026-10-15T00:00:00Z" }],
+    };
+    expect(blockingNeonCopies(inv, firstImport, executedAt).map((c) => c.id)).toEqual(["br-pit"]);
+  });
+  it("copies from before the first import or after the erasure do not block; default branch never blocks", () => {
+    const inv: NeonInventory = {
+      capturedAt: "2026-11-02T12:00:00Z",
+      entries: [
+        { kind: "BRANCH", id: "old", createdAt: "2026-09-01T00:00:00Z" },
+        { kind: "BRANCH", id: "new", createdAt: "2026-11-01T11:00:00Z" },
+        { kind: "BRANCH", id: "main", isDefault: true, createdAt: "2026-10-10T00:00:00Z" },
+      ],
+    };
+    expect(blockingNeonCopies(inv, firstImport, executedAt)).toEqual([]);
+  });
+  it("an unparseable timestamp fails closed", () => {
+    const inv: NeonInventory = { capturedAt: "2026-11-02T12:00:00Z", entries: [{ kind: "BRANCH", id: "x", createdAt: "garbage" }] };
+    expect(blockingNeonCopies(inv, undefined, executedAt).map((c) => c.id)).toEqual(["x"]);
+  });
+  it("passes once the copies are deleted and the inventory re-captured", () => {
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: cleanInventory, dataFirstImportedAt: firstImport });
+    expect(r.globalSecureDelete).toBe("COMPLETE");
+    expect(r.blockingCopies).toEqual([]);
+  });
+  it("parseNeonInventory rejects malformed input", () => {
+    expect(() => parseNeonInventory("{}")).toThrow();
+    expect(() => parseNeonInventory(JSON.stringify({ capturedAt: "nope", entries: [] }))).toThrow();
+    expect(() => parseNeonInventory(JSON.stringify({ capturedAt: "2026-11-01T00:00:00Z", entries: [{ kind: "X", id: "a", createdAt: "2026-01-01" }] }))).toThrow();
+    expect(parseNeonInventory(JSON.stringify(cleanInventory)).entries).toHaveLength(1);
   });
 });

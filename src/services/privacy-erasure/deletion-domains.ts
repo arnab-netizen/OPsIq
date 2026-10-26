@@ -56,6 +56,8 @@ export interface GlobalSecureDeleteReport {
   pendingDomains: ExternalDeletionDomainCode[];
   /** Attestations supplied but rejected, with the reason. */
   rejectedAttestations: { code: ExternalDeletionDomainCode; reason: string }[];
+  /** Known branches/snapshots that may still hold the target's Intuit data. Any entry blocks PASS. */
+  blockingCopies: BlockingNeonCopy[];
 }
 
 /** attestations: domain code -> ISO-8601 time at which the operator confirmed the purge. */
@@ -70,6 +72,13 @@ export function evaluateGlobalSecureDelete(input: {
    */
   neonHistoryWindowMs?: number;
   now?: Date;
+  /**
+   * Live Neon branch/snapshot inventory captured AFTER the erasure. Without it the NEON_BRANCHES domain
+   * can never be attested: a copy we have not listed is a copy we cannot claim is gone.
+   */
+  neonInventory?: NeonInventory;
+  /** When Intuit data first entered the database (earliest import). Omitted = assume always present. */
+  dataFirstImportedAt?: Date;
 }): GlobalSecureDeleteReport {
   const now = input.now ?? new Date();
   const neonWindowMs = input.neonHistoryWindowMs ?? NEON_MAX_HISTORY_WINDOW_MS;
@@ -93,9 +102,25 @@ export function evaluateGlobalSecureDelete(input: {
       pending.push(d.code);
     }
   }
+  const forcePending = (code: ExternalDeletionDomainCode, reason: string) => {
+    if (!pending.includes(code)) pending.push(code);
+    if (!rejected.some((r) => r.code === code && r.reason === reason)) rejected.push({ code, reason });
+  };
+  const blockingCopies = blockingNeonCopies(input.neonInventory, input.dataFirstImportedAt, input.executedAt);
+  if (!input.neonInventory) {
+    forcePending("NEON_BRANCHES", "no Neon branch/snapshot inventory supplied (--neon-inventory); cannot claim copies are gone");
+  } else if (new Date(input.neonInventory.capturedAt).getTime() < input.executedAt.getTime()) {
+    forcePending("NEON_BRANCHES", "branch/snapshot inventory was captured before the database erasure");
+  } else if (blockingCopies.length > 0) {
+    forcePending(
+      "NEON_BRANCHES",
+      "known copies still exist: " + blockingCopies.map((c) => c.kind + ":" + c.id).join(", ") + " (delete them, then re-capture the inventory)",
+    );
+  }
   return {
+    blockingCopies,
     databaseErasure: input.databaseVerification,
-    globalSecureDelete: input.databaseVerification === "PASS" && pending.length === 0 ? "COMPLETE" : "INCOMPLETE",
+    globalSecureDelete: input.databaseVerification === "PASS" && pending.length === 0 && blockingCopies.length === 0 ? "COMPLETE" : "INCOMPLETE",
     pendingDomains: pending,
     rejectedAttestations: rejected,
   };
@@ -115,4 +140,52 @@ export function neonWindowFromOptions(opts: Record<string, string>): number | un
   const h = Number(raw);
   if (!Number.isFinite(h) || h < 0 || h > 24 * 30) throw new Error("--neon-history-window-hours must be between 0 and 720");
   return h * 60 * 60 * 1000;
+}
+
+export interface NeonInventoryEntry {
+  kind: "BRANCH" | "SNAPSHOT";
+  id: string;
+  name?: string;
+  /** Default/primary branch: it is the live database that the erasure itself cleaned. */
+  isDefault?: boolean;
+  createdAt: string;
+  /** Branch created "at a timestamp": the data it holds is as of this time, not createdAt. */
+  parentTimestamp?: string;
+}
+export interface NeonInventory {
+  capturedAt: string;
+  entries: NeonInventoryEntry[];
+}
+export interface BlockingNeonCopy {
+  kind: "BRANCH" | "SNAPSHOT";
+  id: string;
+  name?: string;
+  dataAsOf: string;
+}
+
+/**
+ * Every non-default branch/snapshot whose data-as-of time falls inside [dataFirstImportedAt, executedAt)
+ * may hold the target's Intuit data and is its own deletion domain. Each one blocks GLOBAL_SECURE_DELETE.
+ */
+export function blockingNeonCopies(inv: NeonInventory | undefined, firstImportedAt: Date | undefined, executedAt: Date): BlockingNeonCopy[] {
+  if (!inv) return [];
+  const out: BlockingNeonCopy[] = [];
+  for (const e of inv.entries) {
+    if (e.isDefault) continue;
+    const asOf = new Date(e.parentTimestamp ?? e.createdAt);
+    if (!Number.isFinite(asOf.getTime())) { out.push({ kind: e.kind, id: e.id, name: e.name, dataAsOf: "UNPARSEABLE" }); continue; }
+    if (asOf.getTime() >= executedAt.getTime()) continue;
+    if (firstImportedAt && asOf.getTime() < firstImportedAt.getTime()) continue;
+    out.push({ kind: e.kind, id: e.id, name: e.name, dataAsOf: asOf.toISOString() });
+  }
+  return out;
+}
+
+/** `--neon-inventory <file>` JSON: { capturedAt, entries: [...] } (shape of NeonInventory). */
+export function parseNeonInventory(raw: string): NeonInventory {
+  const j = JSON.parse(raw) as NeonInventory;
+  if (!j || typeof j.capturedAt !== "string" || !Array.isArray(j.entries)) throw new Error("--neon-inventory: expected { capturedAt, entries[] }");
+  if (!Number.isFinite(new Date(j.capturedAt).getTime())) throw new Error("--neon-inventory: capturedAt is not a timestamp");
+  for (const e of j.entries) if (!e || (e.kind !== "BRANCH" && e.kind !== "SNAPSHOT") || typeof e.id !== "string" || typeof e.createdAt !== "string") throw new Error("--neon-inventory: malformed entry");
+  return j;
 }

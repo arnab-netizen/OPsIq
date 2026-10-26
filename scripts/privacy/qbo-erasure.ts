@@ -15,12 +15,16 @@
  * Production runs additionally need --production-authorization=<request id> AND separate explicit owner authorization — never run by default.
  */
 import { Client } from "pg";
-import { evaluateGlobalSecureDelete, attestationsFromOptions, neonWindowFromOptions } from "../../src/services/privacy-erasure/deletion-domains";
+import { readFileSync } from "node:fs";
+import { evaluateGlobalSecureDelete, attestationsFromOptions, neonWindowFromOptions, parseNeonInventory } from "../../src/services/privacy-erasure/deletion-domains";
 function printGlobal(opts: Record<string, string>, db: string, executedAt: Date): string {
-  const g = evaluateGlobalSecureDelete({ databaseVerification: db as "PASS" | "FAIL", executedAt, attestations: attestationsFromOptions(opts), neonHistoryWindowMs: neonWindowFromOptions(opts) });
+  const g = evaluateGlobalSecureDelete({ databaseVerification: db as "PASS" | "FAIL", executedAt, attestations: attestationsFromOptions(opts), neonHistoryWindowMs: neonWindowFromOptions(opts),
+    neonInventory: opts["neon-inventory"] ? parseNeonInventory(readFileSync(opts["neon-inventory"], "utf8")) : undefined,
+    dataFirstImportedAt: opts["data-first-imported-at"] ? new Date(opts["data-first-imported-at"]) : undefined });
   console.log(`DATABASE_ERASURE=${g.databaseErasure}`);
   console.log(`GLOBAL_SECURE_DELETE=${g.globalSecureDelete}`);
   console.log(`PENDING_DELETION_DOMAINS=${g.pendingDomains.join(",") || "none"}`);
+  for (const c of g.blockingCopies) console.log(`BLOCKING_COPY ${c.kind} ${c.id}${c.name ? " (" + c.name + ")" : ""} data-as-of ${c.dataAsOf}`);
   for (const x of g.rejectedAttestations) console.log(`REJECTED_ATTESTATION ${x.code}: ${x.reason}`);
   if (g.globalSecureDelete === "INCOMPLETE") console.log("NOTICE: database erasure is NOT total success; recoverable copies outside the live database are still pending.");
   return g.globalSecureDelete;
