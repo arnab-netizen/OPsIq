@@ -27,3 +27,13 @@ export const acceptanceFixtureBlueprintSchema = z.strictObject({
   deadline: z.string().optional(),
   initialTaskTitles: z.array(z.string()).optional(),
 });
+
+/**
+ * GET .../cashflow/actions/[actionId]/gate-verdict query. `toStatus` is pinned to the one transition
+ * this endpoint predicts -- "completed" carries additional completion-evidence validation independent
+ * of the owner-action gate, so a gate-only verdict cannot predict that mutation's outcome. strictObject
+ * also refuses any other query parameter (no accidental extra scope).
+ */
+export const acceptanceGateVerdictQuerySchema = z.strictObject({
+  toStatus: z.literal("in_progress"),
+});

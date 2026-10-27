@@ -27,7 +27,7 @@
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { writeFileSync } from "fs";
-import { authenticateProductionOwner } from "./helpers/production-auth";
+import { newSharedAuthenticatedContext } from "./helpers/shared-auth";
 import {
   startEvidenceCollection,
   captureOnFailure,
@@ -35,10 +35,18 @@ import {
   finalizeEvidence,
   timedApiCall,
 } from "./helpers/evidence";
-import { runDomainDiagnosisAndAwaitResult } from "./helpers/domain-diagnosis";
 import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
 import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
+import { bindFixtureTarget, type FixtureBusinessTarget } from "./helpers/fixture-target";
+import {
+  saveFixtureSnapshot,
+  runFixtureDiagnosis,
+  assertFixtureNotOnOwnerDashboard,
+  readFixtureCycle,
+  cycleOrdinal,
+  driveFixtureActionLifecycle,
+} from "./helpers/fixture-domain-loop";
 
 const SPEC_NAME = "phase22-operations";
 const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
@@ -47,16 +55,18 @@ test.describe("PROD-22 — Operations Owner journey live production acceptance",
   let context: BrowserContext;
   let page: Page;
   let acceptanceBusinessId = "";
+  let fx: FixtureBusinessTarget;
+  let snapshotId = "";
+  let lastCycleOrdinal = 0;
   let trinityBusinessId: string | null = null;
   let trinityFound = false;
   let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
-    page = await context.newPage();
+    // One login for the whole run (global-setup); this spec never logs in again. See helpers/shared-auth.ts.
+    ({ context, page } = await newSharedAuthenticatedContext(browser));
     watchPage(page);
     registerActionDialogHandler(page);
-    await authenticateProductionOwner(page);
     await startEvidenceCollection(context, page, SPEC_NAME);
 
     // Operations gets its OWN dedicated acceptance business -- never the
@@ -64,6 +74,8 @@ test.describe("PROD-22 — Operations Owner journey live production acceptance",
     // See helpers/domain-business.ts's header for the root cause this fixes.
     try {
       acceptanceBusinessId = await resolveOrCreateDomainBusiness(context, page, "operations");
+      // Created-and-hidden is not enough: bind the id so every mutation can only target THIS fixture.
+      fx = await bindFixtureTarget(context, page, "operations", acceptanceBusinessId);
     } catch (e) {
       blockedUpstreamReason = `BLOCKED_SETUP: could not create Operations's dedicated acceptance business: ${
         e instanceof Error ? e.message : String(e)
@@ -126,147 +138,80 @@ test.describe("PROD-22 — Operations Owner journey live production acceptance",
       expect(typeof rec.priorityScore, "PRIORITIZATION: must carry a numeric priority score").toBe("number");
       expect(typeof rec.expectedImpactScore, "DATA_GROUNDING: must carry a numeric impact score").toBe("number");
       expect(rec.verificationMetric, "VERIFIABILITY: must name how it will be verified").toBeTruthy();
-      await page.goto(`/owner/operations?businessId=${trinityBusinessId}`, { waitUntil: "networkidle" });
+      // READ-ONLY: select Trinity in the page's own business selector (client-side state only) -- the page does not
+      // read ?businessId=, so a query parameter would not show Trinity.
+      await page.goto("/owner/operations", { waitUntil: "networkidle" });
+      await page.locator('select[name="businessSelector"]').selectOption(trinityBusinessId!);
+      await page.waitForLoadState("networkidle");
       await checkpointScreenshot(context, page, SPEC_NAME, "trinity-operations-recommendation");
     });
   });
-
-  test.describe("Operations closed loop (acceptance business)", () => {
+  // ─── Acceptance fixture: full Operations closed loop (governed API, bound to the verified fixture) ──
+  //
+  // Production run #17 root cause: the previous version drove the ordinary Operations UI at
+  // /owner/operations?businessId=<fixture>. The page ignores that parameter and takes its business from the
+  // fixture-free owner list, so every UI save/diagnosis hit an ORDINARY business. Every mutation below goes through
+  // fixture-domain-loop.ts, which is refused unless it targets the bound fixture (or one of its own actions). The UI
+  // is read-only here.
+  test.describe("Operations closed loop (acceptance fixture)", () => {
     test.describe.configure({ mode: "serial" });
 
-    test("22-03 — navigate to Operations for the dedicated acceptance business", async () => {
-      await page.goto(`/owner/operations?businessId=${acceptanceBusinessId}`, { waitUntil: "networkidle" });
-      await expect(page.locator('select[name="businessSelector"]')).toBeVisible();
+    test("22-03 — the fixture is addressable by its own id and is NOT offered by the ordinary Operations UI (positive isolation)", async () => {
+      await assertFixtureNotOnOwnerDashboard(context, page, fx);
+      // Hidden from ordinary owners: the page's own selector must not list it.
+      await page.goto("/owner/operations", { waitUntil: "networkidle" });
+      const select = page.locator('select[name="businessSelector"]');
+      if ((await select.count()) > 0) {
+        const values = await select.locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+        expect(values, "a hidden fixture must never appear in the ordinary owner business selector").not.toContain(acceptanceBusinessId);
+      }
     });
 
-    test("22-04 — real UI: add an operations snapshot with deliberately stressed synthetic inputs", async () => {
-      await page.getByRole("button", { name: "+ Add operations snapshot" }).click();
-      const today = new Date();
-      const periodEnd = today.toISOString().slice(0, 10);
-      const periodStart = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-        .toISOString()
-        .slice(0, 10);
-      await page.locator('input[name="periodStart"]').fill(periodStart);
-      await page.locator('input[name="periodEnd"]').fill(periodEnd);
-      // Deliberately stressed inputs -- critical completion rate, critical
-      // delay rate, critical rework, high complaints, over-capacity
-      // utilization, critical delivery failure, critical SOP non-compliance,
-      // high idle time. Synthetic data on the dedicated acceptance business
-      // only, never Trinity.
-      await page.locator('input[name="ordersReceived"]').fill("200");
-      await page.locator('input[name="ordersCompleted"]').fill("130");
-      await page.locator('input[name="ordersDelayed"]').fill("70");
-      await page.locator('input[name="reworkCount"]').fill("30");
-      await page.locator('input[name="complaints"]').fill("15");
-      await page.locator('input[name="staffHours"]').fill("500");
-      await page.locator('input[name="machineCapacityUnits"]').fill("150");
-      await page.locator('input[name="idleHours"]').fill("150");
-      await page.locator('input[name="deliveryAttempts"]').fill("100");
-      await page.locator('input[name="deliveryFailures"]').fill("30");
-      await page.locator('input[name="sopChecks"]').fill("100");
-      await page.locator('input[name="sopMisses"]').fill("50");
-      await page.getByRole("button", { name: /Save snapshot/ }).click();
-      await page.waitForLoadState("networkidle");
-      await checkpointScreenshot(context, page, SPEC_NAME, "snapshot-saved");
+    test("22-04 — governed API: save an operations snapshot with deliberately stressed synthetic inputs on the fixture", async () => {
+      // Deliberately stressed inputs -- delayed orders, rework, idle capacity, delivery failures and missed SOP checks. Synthetic data on the bound fixture only.
+      const saved = await saveFixtureSnapshot(context, page, fx, {
+        ordersReceived: 200,
+        ordersCompleted: 130,
+        ordersDelayed: 70,
+        reworkCount: 30,
+        complaints: 15,
+        staffHours: 500,
+        machineCapacityUnits: 150,
+        idleHours: 150,
+        deliveryAttempts: 100,
+        deliveryFailures: 30,
+        sopChecks: 100,
+        sopMisses: 50,
+      });
+      snapshotId = saved.id;
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("22-05 — real UI: run operations diagnosis and see a visible diagnosis result (not merely a 200 response)", async () => {
-      await runDomainDiagnosisAndAwaitResult(
-        page,
-        `/api/owner/operations/businesses/${acceptanceBusinessId}/diagnoses`,
-        "Run operations diagnosis",
-        /Latest diagnosis|Findings \(/
-      );
-      await checkpointScreenshot(context, page, SPEC_NAME, "diagnosis-result");
+    test("22-05 — governed API: run operations diagnosis on the fixture and see a real result on its own dashboard", async () => {
+      const cycle = await runFixtureDiagnosis(context, page, fx, snapshotId);
+      const stored = await readFixtureCycle(context, page, fx, String(cycle.id));
+      expect(stored.id, "the fixture's own cycle must read back by its id").toBe(cycle.id);
+      lastCycleOrdinal = cycleOrdinal(fx, cycle);
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("22-06 — action lifecycle: Assign -> Start -> Complete -> Verify outcome, each step's owner-visible status confirmed", async () => {
-      const actionsSection = page.locator("section", { hasText: "Operations actions" });
-      const count = await actionsSection.locator(".border.rounded.p-3").count();
-      test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this diagnosis produced zero findings/actions for the synthetic snapshot -- not a defect, but not exercisable this run.");
-
-      // Capture this action's own id AND title before any mutation, and
-      // locate its card by title from here on -- never by position.
-      // Completing an action deterministically triggers an automatic
-      // re-diagnosis (updateOperationsAction -> runOperationsDiagnosis),
-      // applying the run #6 lesson proactively. Separately (workflow run
-      // 32953759246), when multiple actions tie at the priorityScore
-      // [0,100] clamp ceiling (a real, common occurrence for a
-      // "deliberately stressed" scenario with several simultaneous critical
-      // findings), a plain `.first()` locator can silently resolve to a
-      // DIFFERENT, untouched action after any mutation reorders the tied
-      // rows -- the dashboard query's ordering was made fully deterministic
-      // to fix that, but this test also stops relying on card position at
-      // all, so it verifies "this exact action transitioned" independently
-      // of whether the list's order is stable.
-      const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/operations/dashboard", () =>
-        page.request.get(`/api/owner/operations/dashboard?businessId=${acceptanceBusinessId}`)
-      );
-      const targetAction = (await dashboardBefore.json()).latestCycle.actions[0];
-      const actionId: string = targetAction.id;
-      const actionTitle: string = targetAction.title;
-      const card = actionsSection.locator(".border.rounded.p-3", { hasText: actionTitle });
-      await expect(card, "exactly one action card must match the captured title").toHaveCount(1);
-
-      await card.getByRole("button", { name: "Assign" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(card).toContainText("assigned");
-
-      await card.getByRole("button", { name: "Start" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(card).toContainText("in_progress");
-
-      // UX-06 Wave B1: "Complete" now opens a same-page inline form (Section X.2, Z) instead of
-      // immediately mutating via window.prompt() -- fill it and click "Save completion" to drive
-      // the same PATCH the old dialog-answered flow did. registerActionDialogHandler is still
-      // registered above defensively (see its own doc comment) but has nothing to intercept here.
-      await card.getByRole("button", { name: "Complete" }).click();
-      await card.getByLabel("Completion notes").fill("Live production acceptance: completion notes");
-      await card.getByLabel("Completion evidence").fill("acceptance-test-evidence-reference");
-      await card.getByRole("button", { name: "Save completion" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(async () => {
-        const res = await timedApiCall(context, "GET", "/api/owner/operations/actions/:actionId", () =>
-          page.request.get(`/api/owner/operations/actions/${actionId}`)
-        );
-        expect(res.status()).toBe(200);
-        expect((await res.json()).status).toBe("completed");
-      }).toPass({ timeout: 15000 });
-      await checkpointScreenshot(context, page, SPEC_NAME, "action-completed");
-
-      const verifyRes = await timedApiCall(context, "POST", "/api/owner/operations/actions/:actionId/verify", () =>
-        page.request.post(`/api/owner/operations/actions/${actionId}/verify`, {
-          data: { beforeValue: 100, afterValue: 50, targetDirection: "down" },
-        })
-      );
-      expect(verifyRes.ok(), `Verify outcome request failed: ${verifyRes.status()}`).toBe(true);
-      const verified = await timedApiCall(context, "GET", "/api/owner/operations/actions/:actionId", () =>
-        page.request.get(`/api/owner/operations/actions/${actionId}`)
-      );
-      const verifiedBody = await verified.json();
-      expect(verifiedBody.status).toBe("completed");
-      expect(
-        ["verified_improved", "verified_not_improved", "inconclusive", "disputed"]
-      ).toContain(verifiedBody.verifications?.[0]?.status);
-      await checkpointScreenshot(context, page, SPEC_NAME, "action-verified");
+    test("22-06 — action lifecycle on the fixture: Assign -> Start -> Complete -> Verify outcome, each step read back by the action's own id", async () => {
+      const outcome = await driveFixtureActionLifecycle(context, page, fx);
+      test.skip(outcome.skippedReason !== null, outcome.skippedReason ?? undefined);
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("22-07 — reassessment: running diagnosis again produces a second, owner-visible cycle in history", async () => {
-      await runDomainDiagnosisAndAwaitResult(
-        page,
-        `/api/owner/operations/businesses/${acceptanceBusinessId}/diagnoses`,
-        "Run operations diagnosis",
-        /Cycle #2|Diagnosis history/
-      );
+    test("22-07 — reassessment: running operations diagnosis again leaves at least two cycles in the fixture's history", async () => {
+      const again = await runFixtureDiagnosis(context, page, fx, snapshotId);
+      expect(cycleOrdinal(fx, again), "the fixture's cycle history must have grown (a later cycle ordinal)").toBeGreaterThan(lastCycleOrdinal);
       expect(fatalErrors()).toHaveLength(0);
     });
-  });
+  }); // end Operations closed loop (acceptance fixture)
+
 
   test("22-08 — no 5xx responses were observed anywhere in this journey", () => {
     expect(networkFailures).toEqual([]);
+    expect(fx?.serverErrors ?? []).toEqual([]);
   });
 
   test("22-09 — record findings for the acceptance report", () => {

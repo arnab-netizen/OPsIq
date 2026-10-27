@@ -75,8 +75,9 @@ describe("/api/admin/acceptance-fixtures/* declare one identical gate (preflight
     }
   })(root);
 
-  it("finds the capability probe and all three write routes", () => {
+  it("finds the capability probe and all write/read routes", () => {
     expect(routes.map((r) => r.slice(root.length)).sort()).toEqual([
+      "/businesses/[businessId]/cashflow/actions/[actionId]/gate-verdict/route.ts",
       "/businesses/route.ts",
       "/capability/route.ts",
       "/startup-sessions/[sessionId]/blueprint/route.ts",
