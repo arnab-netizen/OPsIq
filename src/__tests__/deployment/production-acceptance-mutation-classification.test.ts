@@ -192,9 +192,11 @@ describe("the SAFE manifest", () => {
       const src = read(s.file);
       if (!MUTATION_SIGNAL.test(src)) continue;
       const viaBusinessFixture = /resolveOrCreateDomainBusiness\(/.test(src);
+      // bindVerifiedFixtureStartupSession() calls assertStartupSessionIsFixture() and then binds every later mutation
+      // to that one session (see helpers/fixture-target.ts).
       const viaStartupFixture =
         /assertFixtureCreationCapable\(/.test(src) &&
-        /assertStartupSessionIsFixture\(/.test(src) &&
+        /(assertStartupSessionIsFixture|bindVerifiedFixtureStartupSession)\(/.test(src) &&
         /ACCEPTANCE_FIXTURE_ENDPOINTS\.startupSession/.test(src);
       expect(viaBusinessFixture || viaStartupFixture, `${s.file} mutates without a fixture mechanism`).toBe(true);
     }
@@ -203,8 +205,9 @@ describe("the SAFE manifest", () => {
   it("no SAFE spec creates a business or startup session through an ordinary (non-fixture) route", () => {
     for (const s of safe) {
       const src = read(s.file);
-      expect(src, s.file).not.toMatch(/["'`]\/api\/owner\/businesses["'`]\s*,/);
-      expect(src, s.file).not.toMatch(/post\(\s*["'`]\/api\/owner\/startup\/sessions["'`]/);
+      // Creation through an ordinary (non-fixture) route. Reads of the owner list are legitimate (they prove isolation).
+      expect(src, s.file).not.toMatch(/\.request\.(post|fetch)\(\s*["'`]\/api\/owner\/(recovery\/)?businesses["'`]/);
+      expect(src, s.file).not.toMatch(/\.request\.(post|fetch)\(\s*["'`]\/api\/owner\/startup\/sessions["'`]/);
     }
   });
 

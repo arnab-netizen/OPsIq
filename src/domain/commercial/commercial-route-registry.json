@@ -53,6 +53,12 @@
  },
  {
   "method": "GET",
+  "route": "/api/admin/acceptance-fixtures/businesses/[businessId]/cashflow/actions/[actionId]/gate-verdict",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
   "route": "/api/admin/acceptance-fixtures/capability",
   "classification": "NON_COMMERCIAL",
   "enforcement": "none"
