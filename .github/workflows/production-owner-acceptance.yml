@@ -20,6 +20,13 @@ name: Production Owner Acceptance (LIVE)
 # (GROWTH_PRICING_LIVE_MUTATION_SAFETY=OPEN, see
 # docs/opsiq-governance/PRODUCTION_ACCEPTANCE_SAFE_LANE.md).
 #
+# Mutation targeting (Production run #17 remediation): the browser UI is READ-ONLY against ordinary businesses.
+# Every mutation is a governed API call bound to a verified hidden fixture id (tests/production/helpers/
+# fixture-target.ts), because the owner pages select their business from a fixture-free list and ignore
+# ?businessId=. Authentication happens ONCE (tests/production/global-setup.ts -> helpers/shared-auth.ts); the
+# login limiter is a real security control and is not weakened. The shared login state lives outside the
+# uploaded artifact and is deleted below before the upload step.
+#
 # Fails closed if PRODUCTION_ACCEPTANCE_EMAIL/PASSWORD secrets are absent, if
 # BASE_URL does not resolve to the exact checked-out main commit in the
 # production environment, or if production is unhealthy/not ready. Retries
@@ -143,9 +150,9 @@ jobs:
           LEAK_CHECK_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
         run: bash scripts/verify-no-secret-leak.sh production-test-results /tmp/.opsiq-acceptance-session-tokens
 
-      - name: Remove session-token scratch file (never part of the uploaded artifact)
+      - name: Remove session-token scratch file and the shared login state (never part of the uploaded artifact)
         if: always()
-        run: rm -f /tmp/.opsiq-acceptance-session-tokens
+        run: rm -f /tmp/.opsiq-acceptance-session-tokens /tmp/.opsiq-acceptance-auth-state.json
 
       - name: Upload acceptance evidence (screenshots/sanitized network+console logs/report)
         if: always()

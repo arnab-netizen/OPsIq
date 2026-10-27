@@ -101,15 +101,16 @@ describe("(A/G) runFinanceDiagnosisAndAwaitResult() — reproduces and fixes the
     expect(predicate(nonMatchingRes)).toBe(false);
   });
 
-  it("source: 01-06 and 01-08 both use runFinanceDiagnosisAndAwaitResult(), not a raw waitForLoadState('networkidle') + one-shot assertion", () => {
+  it("source: 01-06 and 01-08 both run the diagnosis through the bound fixture helper and read the result back by id, not a raw waitForLoadState('networkidle') + one-shot assertion", () => {
     const idx06 = EXISTING_BUSINESS_SPEC_SRC.indexOf("01-06 —");
     const idx08 = EXISTING_BUSINESS_SPEC_SRC.indexOf("01-08 —");
     expect(idx06).toBeGreaterThan(-1);
     expect(idx08).toBeGreaterThan(-1);
-    const block06 = EXISTING_BUSINESS_SPEC_SRC.slice(idx06, idx06 + 300);
-    const block08 = EXISTING_BUSINESS_SPEC_SRC.slice(idx08, idx08 + 300);
-    expect(block06).toContain("runFinanceDiagnosisAndAwaitResult(page, acceptanceBusinessId)");
-    expect(block08).toContain("runFinanceDiagnosisAndAwaitResult(page, acceptanceBusinessId)");
+    const block06 = EXISTING_BUSINESS_SPEC_SRC.slice(idx06, idx06 + 600);
+    const block08 = EXISTING_BUSINESS_SPEC_SRC.slice(idx08, idx08 + 600);
+    expect(block06).toContain("runFixtureDiagnosis(context, page, fx, snapshotId)");
+    expect(block08).toContain("runFixtureDiagnosis(context, page, fx, snapshotId)");
+    expect(block08).toContain("cycleOrdinal(fx, again)");
     expect(block06).not.toContain('waitForLoadState("networkidle")');
     expect(block08).not.toContain('waitForLoadState("networkidle")');
   });
@@ -131,7 +132,7 @@ describe("(H) domain isolation — Trinity and Finance are independent serial bl
   });
 
   it("Finance closed loop tests are nested in their OWN, SEPARATE test.describe.configure({mode:'serial'}) block", () => {
-    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test.describe("Finance closed loop (acceptance business)"');
+    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test.describe("Finance closed loop (acceptance fixture)"');
     expect(idx).toBeGreaterThan(-1);
     const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 200);
     expect(block).toContain('test.describe.configure({ mode: "serial" })');
@@ -155,7 +156,7 @@ describe("(H) domain isolation — Trinity and Finance are independent serial bl
 
   it("the Trinity describe block closes before the Finance describe block opens (declaration order preserved: 01-01..03 before 01-04..08)", () => {
     const trinityCloseIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf("end Trinity Services");
-    const financeOpenIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test.describe("Finance closed loop (acceptance business)"');
+    const financeOpenIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test.describe("Finance closed loop (acceptance fixture)"');
     expect(trinityCloseIdx).toBeGreaterThan(-1);
     expect(financeOpenIdx).toBeGreaterThan(trinityCloseIdx);
   });

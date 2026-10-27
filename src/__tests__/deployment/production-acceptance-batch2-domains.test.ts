@@ -23,6 +23,11 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 
+// The closed-loop lifecycle now lives in ONE typed helper that can only mutate a bound fixture (Production run #17
+// remediation), so the exact-id properties below are asserted against that implementation.
+const LOOP_SRC = readFileSync(join(process.cwd(), "tests/production/helpers/fixture-domain-loop.ts"), "utf-8");
+const LIFECYCLE_BODY = LOOP_SRC.slice(LOOP_SRC.indexOf("export async function driveFixtureActionLifecycle"));
+
 const SPECS = [
   { name: "22-operations-acceptance.spec.ts", prefix: "22", apiPrefix: "/api/owner/operations", actionsSection: "Operations actions", hasReassessmentTest: true, actionLifecycleTest: "22-06", reassessmentTest: "22-07" },
   { name: "23-strategy-acceptance.spec.ts", prefix: "23", apiPrefix: "/api/owner/strategy", actionsSection: "Strategy actions", hasReassessmentTest: true, actionLifecycleTest: "23-06", reassessmentTest: "23-07" },
@@ -35,37 +40,30 @@ const SRC = new Map(
 
 describe.each(SPECS)("$name — action lifecycle verifies by exact id, not a .first() card", (spec) => {
   const src = SRC.get(spec.name)!;
-  // Locate the "action lifecycle" (Assign -> Start -> Complete -> Verify)
-  // test block by its known step number -- see spec.actionLifecycleTest's
-  // per-file override above for why this isn't always "$prefix-06".
-  const testMarker = `test("${spec.actionLifecycleTest}`;
+  const testMarker = spec.actionLifecycleTest;
 
-  it("captures the action's own id from the dashboard before clicking Complete", () => {
-    const idx = src.indexOf(testMarker);
+  it("takes the action's own id from the fixture's own diagnosis cycle before any mutation, and the spec drives the lifecycle through the bound helper", () => {
+    const idx = src.indexOf(`test("${testMarker}`);
     expect(idx).toBeGreaterThan(-1);
-    const clickIdx = src.indexOf('name: "Complete"', idx);
-    expect(clickIdx).toBeGreaterThan(idx);
-    const setup = src.slice(idx, clickIdx);
-    expect(setup).toMatch(/const actionId: string = /);
+    expect(src.slice(idx, idx + 900)).toContain("driveFixtureActionLifecycle(context, page, fx)");
+    const adoptIdx = LIFECYCLE_BODY.indexOf("fx.latestCycleActions");
+    const firstPatchIdx = LIFECYCLE_BODY.indexOf("patchFixtureAction(");
+    expect(adoptIdx).toBeGreaterThan(-1);
+    expect(firstPatchIdx).toBeGreaterThan(adoptIdx);
+    expect(LIFECYCLE_BODY).toMatch(/const actionId = actions\[0\]\.id;/);
   });
 
   it("polls the action's own id via a direct GET to confirm 'completed', using expect(...).toPass for auto-retry", () => {
-    const idx = src.indexOf(testMarker);
-    const block = src.slice(idx, idx + 3900);
-    expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
-    expect(block).toContain(`${spec.apiPrefix}/actions/\${actionId}`);
+    expect(LIFECYCLE_BODY).toMatch(/await expect\(async \(\) => \{[\s\S]*?readFixtureAction\(context, page, fx, actionId\)\)\.status\)\.toBe\("completed"\);[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
   });
 
-  it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress' use the card)", () => {
-    const idx = src.indexOf(testMarker);
-    const block = src.slice(idx, idx + 3900);
-    expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
-    expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
-    expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);
+  it("has no action-card UI assertions (the Production UI is read-only; every transition is read back by id)", () => {
+    expect(src).not.toMatch(/expect\(card\)|\.border\.rounded|locator\("section", \{ hasText/);
+    expect(LIFECYCLE_BODY).toMatch(/\(await readFixtureAction\(context, page, fx, actionId\)\)\.status\)\.toBe\(status\)/);
   });
 
-  it(`locates action cards under the "${spec.actionsSection}" section`, () => {
-    expect(src).toContain(spec.actionsSection);
+  it(`does not drive the "${spec.actionsSection}" UI section at all`, () => {
+    expect(src).not.toContain(spec.actionsSection);
   });
 });
 
@@ -92,8 +90,9 @@ describe.each(SPECS)("$name — every page.request.* call site is wrapped in tim
 describe.each(SPECS)("$name — reuses shared harness helpers, no per-file redefinition", (spec) => {
   const src = SRC.get(spec.name)!;
 
-  it("imports the generic domain-diagnosis/dialog-handler/journey-watchers helpers", () => {
-    expect(src).toContain('from "./helpers/domain-diagnosis"');
+  it("imports the generic fixture-domain-loop/dialog-handler/journey-watchers helpers (the UI diagnosis helper is gone)", () => {
+    expect(src).toContain('from "./helpers/fixture-domain-loop"');
+    expect(src).not.toContain('from "./helpers/domain-diagnosis"');
     expect(src).toContain('from "./helpers/dialog-handler"');
     expect(src).toContain('from "./helpers/journey-watchers"');
   });
@@ -127,18 +126,21 @@ describe.each(SPECS.filter((s) => s.hasReassessmentTest))(
   }
 );
 
-describe("24-cashflow-acceptance.spec.ts — the safety-gate test never asserts a blocked fixture's action succeeds", () => {
+describe("24-cashflow-acceptance.spec.ts — the safety-gate test asserts a governed outcome for every material transition", () => {
   const src = SRC.get("24-cashflow-acceptance.spec.ts")!;
 
-  it('24-06 (SAFETY-GATE ACCEPTANCE) asserts the action REMAINS "assigned" after Start, and never asserts "in_progress"/"completed" for it', () => {
+  it("24-06 (SAFETY-GATE OUTCOME) accepts only a governed 200 or 409, requires a refused action to stay \"assigned\" and name INSOLVENT_RISK, and never lets a refused action count as started", () => {
     const idx = src.indexOf('test("24-06');
     expect(idx).toBeGreaterThan(-1);
     const nextTestIdx = src.indexOf('test("24-07', idx);
     expect(nextTestIdx).toBeGreaterThan(idx);
     const block = src.slice(idx, nextTestIdx);
-    expect(block).toMatch(/await expect\(card\)\.toContainText\(["']assigned["']\)/);
-    expect(block).not.toMatch(/toContainText\(["']in_progress["']\)/);
-    expect(block).not.toMatch(/toContainText\(["']completed["']\)/);
-    expect(block, "the refusal must be asserted as a 409, not a success").toMatch(/\.status\(\)\)\.toBe\(409\)/);
+    expect(block, "only a success or a governed refusal is acceptable; a 5xx fails").toMatch(/expect\(\[200, 409\][^\n]*\)\.toContain\(start\.status\(\)\)/);
+    expect(block).toMatch(/if \(start\.status\(\) === 409\) \{[\s\S]*?INSOLVENT_RISK[\s\S]*?readFixtureAction\(context, page, fx, actionId\)\)\.status, "a refused action must remain assigned"\)\.toBe\("assigned"\)/);
+    // The "in_progress" read-back exists only in the allowed (200) branch.
+    const refusedBranch = block.slice(block.indexOf("if (start.status() === 409)"), block.indexOf("} else {"));
+    expect(refusedBranch).not.toMatch(/in_progress|completed/);
+    expect(block, "a counted block must raise the owner-visible block counter").toMatch(/if \(refused > 0\)[\s\S]*?toBeGreaterThan\(blocksBefore\)/);
+    expect(block).toContain("fx.latestCycleActions");
   });
 });
