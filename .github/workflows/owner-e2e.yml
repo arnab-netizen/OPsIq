@@ -124,7 +124,7 @@ jobs:
           ' 2>&1 | head -60
           echo "PWFAIL_END"
           echo "APPLOG_BEGIN"; tail -40 /tmp/app.log || true; echo "APPLOG_END"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report

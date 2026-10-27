@@ -50,7 +50,7 @@ jobs:
             if(d.count!==100||pass!==100){console.error("LLB DB not 100/100:",d.count,pass);process.exit(1);}
             console.log("LLB DB 100/100 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: llb-db-ledger
@@ -121,7 +121,7 @@ jobs:
         run: npx playwright test tests/browser/37-local-legal-desktop.spec.ts --project=chromium
       - name: Local/Legal mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/38-local-legal-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: llb-browser-shard-${{ matrix.shard }}

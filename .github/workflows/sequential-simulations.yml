@@ -54,7 +54,7 @@ jobs:
             if(d.sims!==50||d.passSims!==50){console.error("SIM DB not 50/50:",d.sims,d.passSims);process.exit(1);}
             console.log("SIM DB 50/50 sims OK across",d.events,"events");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sim-db-ledger
@@ -147,7 +147,7 @@ jobs:
         run: npx playwright test tests/browser/41-simulations-desktop.spec.ts --project=chromium
       - name: Simulations mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/42-simulations-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sim-browser-shard-${{ matrix.shard }}

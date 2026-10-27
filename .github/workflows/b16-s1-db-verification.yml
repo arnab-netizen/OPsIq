@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: b16-s1-test-results
           path: |
