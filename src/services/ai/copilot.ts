@@ -21,6 +21,7 @@ import {
   type AiValidatorStatus,
 } from "./validator";
 import type { AiContext, AiProvider, AiRequest, AiRiskLevel, AiTaskType } from "./provider";
+import { excludeIntuitData } from "./provider";
 
 // ── In-memory AI call ledger (Decision-OS §H) ────────────────────────────────
 export interface AiCallLedgerEntry {
@@ -172,7 +173,7 @@ export async function runGovernedAiTask<T>(
     },
   };
 
-  const res = await provider.generate(request);
+  const res = await excludeIntuitData(provider, context).generate(request);
   if (!res.ok) {
     const ledgerEntry = record({
       ...base, modelProvider: res.modelProvider, modelName: "n/a", outputHash: "n/a",
@@ -258,7 +259,7 @@ export async function runMissingQuestionTask(
     },
   };
 
-  const res = await provider.generate(request);
+  const res = await excludeIntuitData(provider, context).generate(request);
 
   if (!res.ok) {
     const ledgerEntry = record({
