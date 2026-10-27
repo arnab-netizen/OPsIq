@@ -37,6 +37,20 @@
  * user or password. It fails closed on any uncertainty (missing URL, missing
  * migrations directory, unreachable database, missing history table).
  *
+ * ─── Credential separation (least-privilege runtime role) ────────────────────
+ *
+ * A production build must never see a MIGRATOR credential: the runtime
+ * connects as the least-privilege role and the schema owner's URL belongs
+ * only to the governed migration workflows. The gate therefore BLOCKS when
+ * any migrator-credential variable (MIGRATOR_CREDENTIAL_VARIABLES) is present
+ * in the production build environment. When OPSIQ_REQUIRE_RUNTIME_ROLE names
+ * the runtime role (set at the owner-authorized cutover), the gate also
+ * requires that DATABASE_URL really authenticates AS that role, that the
+ * session is not that of a superuser / role-creating / RLS-bypassing login,
+ * and that the role has every grant it needs (no unreadable application
+ * table other than the erasure ledger) — so a release whose migration added
+ * a table the runtime cannot use is refused BEFORE it is promoted.
+ *
  * Preview, CI and local builds (VERCEL_ENV != production) are not gated.
  * OPSIQ_RELEASE_GATE_FORCE=1 turns the gate ON outside Vercel (operator dry
  * run / tests); there is deliberately no switch that turns it off in
@@ -48,6 +62,19 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const RELEASE_PROCEDURE_DOC = "docs/deployment/PRODUCTION_RELEASE_PROCEDURE.md";
+
+/** Credentials that belong to the governed migration path only; a production BUILD / RUNTIME environment must not carry them. */
+export const MIGRATOR_CREDENTIAL_VARIABLES = [
+  "MIGRATION_DATABASE_URL",
+  "OWNER_DATABASE_URL",
+  "PRODUCTION_DATABASE_URL",
+  "OPSIQ_RUNTIME_PROBE_DATABASE_URL",
+];
+
+/** Application tables the runtime role must NOT be able to read (kept in step with RUNTIME_DENIED_TABLES in role-topology.ts; asserted by a test). */
+export const RUNTIME_DENIED_TABLES = ["privacy_erasure_requests"];
+
+const ROLE_NAME = /^[a-z_][a-z0-9_]{0,62}$/;
 
 /** Committed migrations: [{ name, checksum }] sorted by name, or null when unreadable (fail closed). */
 export function listCommittedMigrations(migrationsDir) {
@@ -161,7 +188,58 @@ async function readMigrationRows(databaseUrl) {
   throw new Error(`could not read production migration history (error code ${code})`);
 }
 
-export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows } = {}) {
+/**
+ * Who the production DATABASE_URL actually authenticates as, and whether that session is least-privilege.
+ * Returns { currentUser, dangerous: [attribute names], ungranted: [table names] }. Read-only.
+ */
+async function readRuntimeIdentity(databaseUrl) {
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({ connectionString: databaseUrl, connectionTimeoutMillis: 15000 });
+  try {
+    await client.connect();
+    await client.query("BEGIN READ ONLY");
+    await client.query("SET LOCAL statement_timeout = 10000");
+    const who = await client.query(
+      "SELECT current_user AS u, (SELECT rolsuper OR rolcreaterole OR rolcreatedb OR rolbypassrls OR rolreplication FROM pg_roles WHERE rolname = current_user) AS dangerous"
+    );
+    const gaps = await client.query(
+      `SELECT c.relname FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p')
+         AND NOT has_table_privilege(current_user, c.oid, 'SELECT') AND c.relname <> ALL ($1::text[]) ORDER BY 1`,
+      [RUNTIME_DENIED_TABLES]
+    );
+    await client.query("COMMIT");
+    return { currentUser: who.rows[0].u, dangerous: Boolean(who.rows[0].dangerous), ungranted: gaps.rows.map((r) => r.relname) };
+  } catch (e) {
+    const code = e && typeof e === "object" && "code" in e ? String(e.code) : "unknown";
+    throw new Error(`could not verify the runtime database role (error code ${code})`);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+/** Pure decision for the credential-separation / runtime-role rules. Never contains connection details. */
+export function evaluateRuntimeRole({ env, identity }) {
+  const exposed = MIGRATOR_CREDENTIAL_VARIABLES.filter((n) => (env[n] ?? "").trim() !== "");
+  if (exposed.length > 0) {
+    return { ok: false, lines: [`[release-gate] BLOCKED: migrator credential variable(s) present in the production build environment: ${exposed.join(", ")}. The schema owner's credential belongs only to the governed migration workflows; remove it from Vercel (the runtime must never be able to fall back to it).`] };
+  }
+  const required = (env.OPSIQ_REQUIRE_RUNTIME_ROLE ?? "").trim();
+  if (!required) return { ok: true, lines: [] };
+  if (!ROLE_NAME.test(required)) {
+    return { ok: false, lines: ["[release-gate] BLOCKED: OPSIQ_REQUIRE_RUNTIME_ROLE is not a valid role name (fail closed)."] };
+  }
+  if (!identity) return { ok: false, lines: ["[release-gate] BLOCKED: the runtime database role could not be verified (fail closed)."] };
+  const lines = [];
+  if (identity.currentUser !== required) lines.push(`[release-gate] BLOCKED: DATABASE_URL authenticates as a role other than the required runtime role "${required}".`);
+  if (identity.dangerous) lines.push("[release-gate] BLOCKED: the runtime login holds a dangerous attribute (superuser / createrole / createdb / bypassrls / replication).");
+  if (identity.ungranted.length > 0) {
+    lines.push(`[release-gate] BLOCKED: the runtime role cannot read ${identity.ungranted.length} application table(s): ${identity.ungranted.slice(0, 20).join(", ")}${identity.ungranted.length > 20 ? ", …" : ""}.`);
+    lines.push("[release-gate] A migration added a table the runtime role has no grant on. Run the governed role reconcile (docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md), then redeploy.");
+  }
+  return { ok: lines.length === 0, lines };
+}
+
+export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows, readIdentity = readRuntimeIdentity } = {}) {
   const enforced = env.VERCEL_ENV === "production" || env.OPSIQ_RELEASE_GATE_FORCE === "1";
   if (!enforced && env.VERCEL === "1" && !env.VERCEL_ENV) {
     // On Vercel but the target environment is not exposed (system env vars disabled):
@@ -195,7 +273,27 @@ export async function runGate({ env = process.env, cwd = process.cwd(), readRows
     };
   }
   const result = evaluateMigrationGate({ committed, rows });
-  return { exitCode: result.ok ? 0 : 1, output: formatGateReport(result), result };
+  let report = formatGateReport(result);
+  let ok = result.ok;
+  const requiredRole = (env.OPSIQ_REQUIRE_RUNTIME_ROLE ?? "").trim();
+  let identity = null;
+  if (requiredRole && ROLE_NAME.test(requiredRole)) {
+    try {
+      identity = await readIdentity(databaseUrl);
+    } catch (e) {
+      identity = null;
+      report += `\n[release-gate] ${e instanceof Error ? e.message : "runtime role unavailable"}`;
+    }
+  }
+  const roleDecision = evaluateRuntimeRole({ env, identity });
+  if (!roleDecision.ok) {
+    ok = false;
+    report += `\n${roleDecision.lines.join("\n")}`;
+    report += `\n[release-gate] Procedure: ${RELEASE_PROCEDURE_DOC}`;
+  } else if (requiredRole) {
+    report += `\n[release-gate] PASS: runtime role "${requiredRole}" verified (least-privilege, all application tables granted).`;
+  }
+  return { exitCode: ok ? 0 : 1, output: report, result: { ...result, ok } };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
