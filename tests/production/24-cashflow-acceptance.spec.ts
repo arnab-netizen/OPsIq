@@ -199,16 +199,23 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("24-06 — SAFETY-GATE OUTCOME: every material transition on an INSOLVENT_RISK fixture is a governed 200 or 409 (never a 5xx); a 409 names INSOLVENT_RISK, leaves the action assigned and is counted", async () => {
+    test("24-06 — SAFETY-GATE OUTCOME: every material transition on an INSOLVENT_RISK fixture is governed by, and matches, the canonical owner-action gate verdict (never a 5xx; never a generic 200-or-409 acceptance)", async () => {
       // The gate (owner-action-gate-policy.ts) refuses a NON-protective material step while cash is unsafe and lets
       // a protective one through, so which of the cycle's actions is refused is decided by the product's policy, not
-      // by this spec. The refusal rule itself is proven in src/__tests__/owner-mode/owner-action-gate.test.ts; this
-      // test proves the LIVE outcome of each transition is governed and consistent, for the fixture's own actions only.
+      // by this spec. The refusal rule itself is proven in src/__tests__/owner-mode/owner-action-gate.test.ts.
+      //
+      // Per-action, this test does NOT just accept whichever of {200, 409} the real PATCH returns: it first asks
+      // the acceptance-only, read-only gate-verdict endpoint (same canonical assessOwnerActionGate/
+      // evaluateOwnerActionGate the real mutation uses, zero audit writes, zero mutation) what the transition's
+      // outcome SHOULD be, then requires the real PATCH to match that prediction exactly. The verdict is fetched
+      // immediately before each action's own PATCH -- never cached, never reused across actions -- so both calls
+      // independently evaluate current Production state through the same canonical logic (TOCTOU discipline).
       const actions = [...fx.latestCycleActions];
       test.skip(
         actions.length === 0,
         "SKIPPED_NO_ACTIONS_GENERATED: this diagnosis produced zero findings/actions for the synthetic snapshot -- not a defect, but not exercisable this run."
       );
+      const CANONICAL_BLOCK_CODES = new Set(["DO_NOT_REPEAT_BLOCKED", "CAPACITY_BLOCKED", "CASH_SAFETY_BLOCKED", "MARGIN_SAFETY_BLOCKED", "COMPLIANCE_BLOCKED"]);
       const countBlocks = async () =>
         (await (await fixtureRead(context, page, fx, `/api/owner/control-center?businessId=${fx.businessId}`)).json()).sections.financeBlocked as number;
       const blocksBefore = await countBlocks();
@@ -217,15 +224,29 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
       for (const { id: actionId } of actions) {
         const assign = await patchFixtureAction(context, page, fx, actionId, { status: "assigned" });
         expect(assign.ok(), `assign failed: HTTP ${assign.status()}`).toBe(true);
+
+        const verdictRes = await fixtureRead(
+          context,
+          page,
+          fx,
+          `/api/admin/acceptance-fixtures/businesses/${fx.businessId}/cashflow/actions/${actionId}/gate-verdict?toStatus=in_progress`
+        );
+        expect(verdictRes.status(), `gate-verdict GET failed: HTTP ${verdictRes.status()}`).toBe(200);
+        const verdict = (await verdictRes.json()) as { allowed: boolean; expectedMutationStatus: 200 | 409; code?: string };
+
         const start = await patchFixtureAction(context, page, fx, actionId, { status: "in_progress" });
-        expect([200, 409], `start returned HTTP ${start.status()}, which is neither a success nor a governed refusal`).toContain(start.status());
-        if (start.status() === 409) {
+        expect(start.status(), "the real PATCH's HTTP status must match the canonical verdict's prediction exactly").toBe(verdict.expectedMutationStatus);
+
+        if (verdict.allowed) {
+          allowed += 1;
+          expect(start.ok(), `start failed: HTTP ${start.status()}`).toBe(true);
+          expect((await readFixtureAction(context, page, fx, actionId)).status).toBe("in_progress");
+        } else {
           refused += 1;
+          expect(start.status()).toBe(409);
+          expect(verdict.code && CANONICAL_BLOCK_CODES.has(verdict.code), `unexpected block code: ${verdict.code}`).toBe(true);
           expect((await start.json()).error).toMatch(/INSOLVENT_RISK/);
           expect((await readFixtureAction(context, page, fx, actionId)).status, "a refused action must remain assigned").toBe("assigned");
-        } else {
-          allowed += 1;
-          expect((await readFixtureAction(context, page, fx, actionId)).status).toBe("in_progress");
         }
       }
       console.log(`PROD-24 GATE_OUTCOME: refused=${refused} allowed=${allowed} (protective steps are allowed by policy at INSOLVENT_RISK)`);

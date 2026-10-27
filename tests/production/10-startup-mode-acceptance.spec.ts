@@ -28,6 +28,7 @@ import {
   bindVerifiedFixtureStartupSession,
   bindFixtureTarget,
   fixtureMutate,
+  adoptStartupOwnedId,
   type FixtureStartupTarget,
 } from "./helpers/fixture-target";
 import { readFixtureSnapshots } from "./helpers/fixture-domain-loop";
@@ -153,6 +154,10 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     expect(sessionRes.status()).toBe(200);
     handoffIdeaId = (await sessionRes.json()).session.ideas[0].id;
     expect(handoffIdeaId).toBeTruthy();
+    // Proven by construction: this GET's path carries only the bound session id, so an idea in ITS OWN
+    // response belongs to this fixture session. Adopting it is what lets later mutation bodies (SCREEN
+    // analysis, the GO decision) reference it without the fail-closed body-id guard refusing them.
+    adoptStartupOwnedId(startup, handoffIdeaId);
   });
 
   test("13-02 — drive the session through screening and the required lifecycle statuses up to APPROVED", async () => {
@@ -190,6 +195,10 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     expect(decisionRes.status()).toBe(201);
     const ownerDecisionId = (await decisionRes.json()).ownerDecisionId;
     expect(ownerDecisionId).toBeTruthy();
+    // Proven by construction: this POST's path was already bound to the session (assertMutationBound), so
+    // the decision id it returns belongs to this fixture session. Adopting it lets the blueprint body below
+    // reference it without the fail-closed body-id guard refusing it.
+    adoptStartupOwnedId(startup, ownerDecisionId);
 
     const approveRes = await fixtureMutate(context, page, startup, "PATCH", `/api/owner/startup/sessions/${startup.sessionId}`, { status: "APPROVED" });
     expect(approveRes.status()).toBe(200);

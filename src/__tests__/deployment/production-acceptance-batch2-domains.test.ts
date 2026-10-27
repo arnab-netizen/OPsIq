@@ -126,19 +126,27 @@ describe.each(SPECS.filter((s) => s.hasReassessmentTest))(
   }
 );
 
-describe("24-cashflow-acceptance.spec.ts — the safety-gate test asserts a governed outcome for every material transition", () => {
+describe("24-cashflow-acceptance.spec.ts — the safety-gate test asserts the real PATCH against the canonical gate-verdict prediction, never a generic 200-or-409 acceptance", () => {
   const src = SRC.get("24-cashflow-acceptance.spec.ts")!;
 
-  it("24-06 (SAFETY-GATE OUTCOME) accepts only a governed 200 or 409, requires a refused action to stay \"assigned\" and name INSOLVENT_RISK, and never lets a refused action count as started", () => {
+  it("24-06 (SAFETY-GATE OUTCOME) never uses a generic [200, 409] acceptance, instead requires the real PATCH status to equal the gate-verdict endpoint's prediction, requires a refused action to stay \"assigned\" and name INSOLVENT_RISK, and never lets a refused action count as started", () => {
     const idx = src.indexOf('test("24-06');
     expect(idx).toBeGreaterThan(-1);
     const nextTestIdx = src.indexOf('test("24-07', idx);
     expect(nextTestIdx).toBeGreaterThan(idx);
     const block = src.slice(idx, nextTestIdx);
-    expect(block, "only a success or a governed refusal is acceptable; a 5xx fails").toMatch(/expect\(\[200, 409\][^\n]*\)\.toContain\(start\.status\(\)\)/);
-    expect(block).toMatch(/if \(start\.status\(\) === 409\) \{[\s\S]*?INSOLVENT_RISK[\s\S]*?readFixtureAction\(context, page, fx, actionId\)\)\.status, "a refused action must remain assigned"\)\.toBe\("assigned"\)/);
-    // The "in_progress" read-back exists only in the allowed (200) branch.
-    const refusedBranch = block.slice(block.indexOf("if (start.status() === 409)"), block.indexOf("} else {"));
+    // OPSIQ-LIVE-ACCEPTANCE-CORRECTION Finding 5: a generic "either is fine" acceptance is never sufficient proof.
+    expect(block, "a generic [200, 409] acceptance is prohibited -- the real outcome must be compared against a specific prediction").not.toMatch(/expect\(\[200,\s*409\]/);
+    // The acceptance-only, read-only gate-verdict endpoint (same canonical calculation as the mutation, zero
+    // audit writes / zero mutation) must be queried for toStatus=in_progress, and the real PATCH's status must
+    // be required to equal its prediction exactly.
+    expect(block).toMatch(/cashflow\/actions\/\$\{actionId\}\/gate-verdict\?toStatus=in_progress/);
+    expect(block).toMatch(/expect\(start\.status\(\)[^)]*\)\.toBe\(verdict\.expectedMutationStatus\)/);
+    expect(block, "the verdict must be fetched fresh for each action's own transition, not cached/reused").toMatch(/for \(const \{ id: actionId \} of actions\) \{[\s\S]*?fixtureRead\([\s\S]*?gate-verdict[\s\S]*?patchFixtureAction\([^}]*status: "in_progress"/);
+    expect(block).toMatch(/if \(verdict\.allowed\) \{/);
+    expect(block).toMatch(/\} else \{[\s\S]*?INSOLVENT_RISK[\s\S]*?readFixtureAction\(context, page, fx, actionId\)\)\.status, "a refused action must remain assigned"\)\.toBe\("assigned"\)/);
+    // The "in_progress" read-back exists only in the allowed branch.
+    const refusedBranch = block.slice(block.indexOf("} else {"), block.lastIndexOf("}"));
     expect(refusedBranch).not.toMatch(/in_progress|completed/);
     expect(block, "a counted block must raise the owner-visible block counter").toMatch(/if \(refused > 0\)[\s\S]*?toBeGreaterThan\(blocksBefore\)/);
     expect(block).toContain("fx.latestCycleActions");

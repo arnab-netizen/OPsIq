@@ -10,9 +10,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   assertMutationBound,
   assertReadBound,
+  assertBodyIdsBound,
+  isIdentifierKey,
   bindFixtureTarget,
   bindFixtureStartupSession,
   adoptActionsFromCycle,
+  adoptStartupOwnedId,
   fixtureMutate,
   FixtureBindingError,
   type FixtureBusinessTarget,
@@ -134,6 +137,50 @@ describe("assertReadBound", () => {
   });
 });
 
+describe("assertReadBound -- the acceptance-only Cashflow gate-verdict path (one exact path, not a broad allow rule)", () => {
+  function cashflowTarget(adopted: string[] = [ACTION]): FixtureBusinessTarget {
+    return { kind: "business", domain: "cashflow", businessId: FIXTURE, adoptedActionIds: new Set(adopted), ownedRecordIds: new Set<string>(), latestCycleActions: [], serverErrors: [] };
+  }
+
+  it("allows the bound fixture's own businessId + an adopted action + toStatus=in_progress", () => {
+    const t = cashflowTarget([ACTION]);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}/cashflow/actions/${ACTION}/gate-verdict?toStatus=in_progress`)).not.toThrow();
+  });
+
+  it("refuses another business id in the businessId slot", () => {
+    const t = cashflowTarget([ACTION]);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${ORDINARY_QA}/cashflow/actions/${ACTION}/gate-verdict?toStatus=in_progress`)).toThrow(FixtureBindingError);
+  });
+
+  it("refuses an unadopted action id, even one that is merely 'known' (ownedRecordIds, not adoptedActionIds)", () => {
+    const t = cashflowTarget([]);
+    t.ownedRecordIds.add(FOREIGN_ACTION); // a snapshot/cycle id, not an action -- must not satisfy the adopted-action requirement
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}/cashflow/actions/${FOREIGN_ACTION}/gate-verdict?toStatus=in_progress`)).toThrow(FixtureBindingError);
+  });
+
+  it("refuses another domain entirely (the target's own domain gates the whole branch)", () => {
+    const t = target("sales", [ACTION]); // a sales fixture, not cashflow
+    t.ownedRecordIds.add(FIXTURE);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}/cashflow/actions/${ACTION}/gate-verdict?toStatus=in_progress`)).toThrow(FixtureBindingError);
+  });
+
+  it("refuses another target status", () => {
+    const t = cashflowTarget([ACTION]);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}/cashflow/actions/${ACTION}/gate-verdict?toStatus=completed`)).toThrow(FixtureBindingError);
+  });
+
+  it("refuses an additional unexpected query parameter", () => {
+    const t = cashflowTarget([ACTION]);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}/cashflow/actions/${ACTION}/gate-verdict?toStatus=in_progress&extra=1`)).toThrow(FixtureBindingError);
+  });
+
+  it("does not add a broad /api/admin/acceptance-fixtures/** allow rule -- a sibling path under the same prefix is still refused", () => {
+    const t = cashflowTarget([ACTION]);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}/cashflow/actions/${ACTION}/something-else`)).toThrow(FixtureBindingError);
+    expect(() => assertReadBound(t, `/api/admin/acceptance-fixtures/businesses/${FIXTURE}`)).toThrow(FixtureBindingError);
+  });
+});
+
 describe("assertReadBound -- reads are addressed by id; only records a response proved are readable", () => {
   it("allows the fixture's own snapshot/cycle lists and refuses another business's", () => {
     expect(() => assertReadBound(target(), `/api/owner/sales/businesses/${FIXTURE}/snapshots`)).not.toThrow();
@@ -243,6 +290,171 @@ describe("bindFixtureTarget -- the id must be a hidden fixture AND addressable b
   it("refuses a non-UUID id", async () => {
     const { page } = fakePage();
     await expect(bindFixtureTarget(undefined, page as never, "sales", "not-a-uuid")).rejects.toThrow(FixtureBindingError);
+  });
+});
+
+describe("fixtureMutate -- a request-body identifier must be proven to belong to the bound target, not just the path", () => {
+  beforeEach(() => resetFixtureCapabilityPreflight());
+
+  it("REFUSES an unowned snapshotId in the body and sends nothing (the runFixtureDiagnosis gap)", async () => {
+    const { page, sent } = fakePage();
+    const t = target();
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/diagnoses`, { snapshotId: ORDINARY_QA })
+    ).rejects.toThrow(FixtureBindingError);
+    expect(page.request.fetch).not.toHaveBeenCalled();
+    expect(sent.some((s) => s.method !== "GET")).toBe(false);
+  });
+
+  it("allows a snapshotId once a response has proven it belongs to the fixture", async () => {
+    const { page } = fakePage();
+    const t = target();
+    t.ownedRecordIds.add(SNAPSHOT);
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/diagnoses`, { snapshotId: SNAPSHOT })
+    ).resolves.toBeDefined();
+    expect(page.request.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("validates recursively: an unowned id nested inside the body is still refused", async () => {
+    const { page } = fakePage();
+    const t = target();
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, {
+        profile: { nested: { snapshotId: ORDINARY_QA } },
+      })
+    ).rejects.toThrow(FixtureBindingError);
+    expect(page.request.fetch).not.toHaveBeenCalled();
+  });
+
+  it("validates an array of ids under a plural *Ids key", async () => {
+    const { page } = fakePage();
+    const t = target();
+    t.ownedRecordIds.add(SNAPSHOT);
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, {
+        snapshotIds: [SNAPSHOT, ORDINARY_QA],
+      })
+    ).rejects.toThrow(FixtureBindingError);
+    expect(page.request.fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not use a broad substring check: a non-id-keyed field holding a foreign-looking UUID is not blocked", async () => {
+    const { page } = fakePage();
+    const t = target();
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, {
+        rationale: `see also ${ORDINARY_QA}`,
+        candidate: ORDINARY_QA,
+      })
+    ).resolves.toBeDefined();
+  });
+
+  it("the bound target's own id (businessId) is always allowed in a body field named *Id", async () => {
+    const { page } = fakePage();
+    const t = target();
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, { businessId: FIXTURE })
+    ).resolves.toBeDefined();
+  });
+
+  it("an adopted action id is allowed in a body field named *Id", async () => {
+    const { page } = fakePage();
+    const t = target("sales", [ACTION]);
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, { linkedActionId: ACTION })
+    ).resolves.toBeDefined();
+  });
+
+  it("startup-session targets: refuses an unowned ideaId / ownerDecisionId in the body", async () => {
+    const { page } = fakePage();
+    const s = bindFixtureStartupSession(SESSION);
+    await expect(
+      fixtureMutate(undefined, page as never, s, "POST", `/api/owner/startup/sessions/${SESSION}/decision`, { ideaId: ORDINARY_QA })
+    ).rejects.toThrow(FixtureBindingError);
+    expect(page.request.fetch).not.toHaveBeenCalled();
+  });
+
+  it("startup-session targets: an id adopted via adoptStartupOwnedId is then allowed in a mutation body", async () => {
+    const { page } = fakePage();
+    const s = bindFixtureStartupSession(SESSION);
+    // handoffIdeaId: adopted from a read of the bound session itself (10-startup-mode-acceptance.spec.ts 13-01).
+    const ideaId = adoptStartupOwnedId(s, ORDINARY_QA);
+    expect(ideaId).toBe(ORDINARY_QA);
+    await expect(
+      fixtureMutate(undefined, page as never, s, "POST", `/api/owner/startup/sessions/${SESSION}/decision`, { ideaId })
+    ).resolves.toBeDefined();
+
+    // ownerDecisionId: a second, distinct id adopted from the decision response, then reused in the blueprint body.
+    const ownerDecisionId = adoptStartupOwnedId(s, TRINITY);
+    await expect(
+      fixtureMutate(undefined, page as never, s, "POST", `/api/admin/acceptance-fixtures/startup-sessions/${SESSION}/blueprint`, {
+        ideaId,
+        ownerDecisionId,
+      })
+    ).resolves.toBeDefined();
+  });
+
+  it("adoptStartupOwnedId refuses a non-UUID", () => {
+    const s = bindFixtureStartupSession(SESSION);
+    expect(() => adoptStartupOwnedId(s, "not-a-uuid")).toThrow(FixtureBindingError);
+  });
+
+  it("assertBodyIdsBound is pure and side-effect free (no network, usable without a browser)", () => {
+    expect(() => assertBodyIdsBound(target(), { snapshotId: ORDINARY_QA })).toThrow(FixtureBindingError);
+    expect(() => assertBodyIdsBound(target(), undefined)).not.toThrow();
+    const t = target();
+    t.ownedRecordIds.add(SNAPSHOT);
+    expect(() => assertBodyIdsBound(t, { snapshotId: SNAPSHOT })).not.toThrow();
+  });
+
+  it("isIdentifierKey catches bare id/ID, snake_case, and camelCase ID variants (post-review hardening)", () => {
+    for (const key of ["id", "Id", "ID", "ids", "Ids", "IDs", "business_id", "business_ids", "snapshotId", "snapshotIds", "snapshotID", "ideaId", "ownerDecisionId"]) {
+      expect(isIdentifierKey(key), `expected "${key}" to be treated as an identifier key`).toBe(true);
+    }
+  });
+
+  it("isIdentifierKey still rejects ordinary lowercase words ending in id (no broad substring check)", () => {
+    for (const key of ["paid", "void", "grid", "valid", "invalid", "liquid", "solid", "rapid", "android", "avoid"]) {
+      expect(isIdentifierKey(key), `expected "${key}" NOT to be treated as an identifier key`).toBe(false);
+    }
+  });
+
+  it("the hardened key matcher closes the snake_case and bare-id bypasses end-to-end through fixtureMutate", async () => {
+    const { page } = fakePage();
+    const t = target();
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, { snapshot_id: ORDINARY_QA })
+    ).rejects.toThrow(FixtureBindingError);
+    await expect(
+      fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, { id: ORDINARY_QA })
+    ).rejects.toThrow(FixtureBindingError);
+    expect(page.request.fetch).not.toHaveBeenCalled();
+  });
+
+  it("validates the exact snapshot it sends (TOCTOU hardening): a getter that differs per read cannot evade the guard", async () => {
+    const { page } = fakePage();
+    const t = target();
+    let reads = 0;
+    const body = {
+      get snapshotId() {
+        reads += 1;
+        // If the validator and the real send each read this independently, the first read (validation) would
+        // see the allowed id and the second (serialization) would see the foreign one -- the snapshot-once
+        // fix means only ONE read ever happens, so this getter's second branch is never reachable.
+        return reads === 1 ? SNAPSHOT : ORDINARY_QA;
+      },
+    };
+    t.ownedRecordIds.add(SNAPSHOT);
+    // Without the snapshot fix this would resolve (validator sees SNAPSHOT, wire would see ORDINARY_QA).
+    // With JSON.parse(JSON.stringify(...)) taken once, the getter is invoked exactly once and its single
+    // result is what both validation and the request body carry.
+    await fixtureMutate(undefined, page as never, t, "POST", `/api/owner/sales/businesses/${FIXTURE}/snapshots`, body);
+    expect(reads).toBe(1);
+    expect(page.request.fetch).toHaveBeenCalledWith(
+      `/api/owner/sales/businesses/${FIXTURE}/snapshots`,
+      expect.objectContaining({ data: { snapshotId: SNAPSHOT } })
+    );
   });
 });
 

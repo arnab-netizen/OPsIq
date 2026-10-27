@@ -58,6 +58,13 @@ export interface FixtureBusinessTarget {
 export interface FixtureStartupTarget {
   readonly kind: "startup-session";
   readonly sessionId: string;
+  /**
+   * Ids proven, by a response to a mutation/read already bound to this session, to belong to it (e.g. the
+   * session's own idea id, or an ownerDecisionId returned by a POST already bound to the session). Adopted
+   * explicitly via `adoptStartupOwnedId` -- unlike the business target's `recordOwned`, these responses carry
+   * no sessionId field to match against, so adoption is a deliberate call, never automatic.
+   */
+  readonly ownedRecordIds: Set<string>;
 }
 
 export type FixtureTarget = FixtureBusinessTarget | FixtureStartupTarget;
@@ -150,7 +157,18 @@ export function assertReadBound(target: FixtureBusinessTarget, rawPath: string):
     `^/api/owner/${domain}/(actions|snapshots|diagnoses|cycles)/${UUID_RE.source}(/(actions|findings))?$`,
     "i"
   ).test(pathname) && search === "";
-  if (!(dashboard || underBusiness || byId)) {
+  // The ONE acceptance-only read-verdict path (Cashflow 24-06): the bound fixture's OWN businessId (literal,
+  // not any owned id), an action already proven adopted (never merely "known" -- a snapshot/cycle id in
+  // ownedRecordIds must not satisfy this), toStatus pinned to exactly "in_progress", and nothing else in the
+  // query string. Deliberately not a /api/admin/acceptance-fixtures/** prefix rule -- one exact path only.
+  const gateVerdictMatch = domain === "cashflow"
+    ? pathname.match(new RegExp(`^/api/admin/acceptance-fixtures/businesses/${businessId}/cashflow/actions/(${UUID_RE.source})/gate-verdict$`, "i"))
+    : null;
+  const gateVerdict =
+    gateVerdictMatch !== null &&
+    [...target.adoptedActionIds].some((a) => a.toLowerCase() === gateVerdictMatch[1].toLowerCase()) &&
+    search === "?toStatus=in_progress";
+  if (!(dashboard || underBusiness || byId || gateVerdict)) {
     throw new FixtureBindingError(`read ${pathname}${search} is not a ${domain} read bound to fixture ${businessId}`);
   }
 }
@@ -207,7 +225,21 @@ export async function bindFixtureTarget(
 
 export function bindFixtureStartupSession(sessionId: string): FixtureStartupTarget {
   if (!UUID_EXACT.test(sessionId)) throw new FixtureBindingError("startup fixture session id is not a UUID");
-  return { kind: "startup-session", sessionId };
+  return { kind: "startup-session", sessionId, ownedRecordIds: new Set<string>() };
+}
+
+/**
+ * Adopts an id into a startup-session target's owned set, so it may be referenced in a LATER mutation body
+ * (e.g. the session's own ideaId, or an ownerDecisionId returned by a POST already bound to the session).
+ * The caller is responsible for the provenance claim -- call this only with an id that came from a read or
+ * mutation response whose REQUEST was already bound to this exact session (never with an id from elsewhere).
+ */
+export function adoptStartupOwnedId(target: FixtureStartupTarget, id: unknown): string {
+  if (typeof id !== "string" || !UUID_EXACT.test(id)) {
+    throw new FixtureBindingError(`startup session ${target.sessionId}: cannot adopt a non-UUID id (${JSON.stringify(id)})`);
+  }
+  target.ownedRecordIds.add(id);
+  return id;
 }
 
 /** Confirms the startup session is hidden from the ordinary session list, then binds it. */
@@ -272,6 +304,80 @@ function recordOwned(target: FixtureBusinessTarget, body: unknown): void {
   }
 }
 
+/**
+ * Semantic identifier key: a bare "id"/"ids" (any case), a snake_case "..._id"/"..._ids" suffix, or a
+ * camelCase "...Id"/"...Ids" / "...ID"/"...IDs" suffix immediately preceded by a lowercase letter or digit
+ * (the word-boundary signal). Deliberately NOT a substring check: a plain lowercase word ending in "id"
+ * ("paid", "void", "grid", "valid", "android", ...) has no such boundary and never matches, because its
+ * "id"/"ID" is not preceded by a capital I and is not the whole key.
+ */
+export function isIdentifierKey(key: string): boolean {
+  if (/^ids?$/i.test(key)) return true; // bare "id" / "ids" (any case) -- unambiguous, no boundary needed
+  if (/_ids?$/i.test(key)) return true; // snake_case "..._id" / "..._ids"
+  return /[a-z0-9]I[dD]s?$/.test(key); // camelCase "...Id"/"...Ids"/"...ID"/"...IDs", capital I required for the boundary
+}
+
+/** The ids a target has already proven ownership of -- the only values a body's *Id/*Ids field may carry. */
+function boundTargetIds(target: FixtureTarget): Set<string> {
+  const ids = target.kind === "startup-session" ? [target.sessionId, ...target.ownedRecordIds] : [target.businessId, ...target.ownedRecordIds, ...target.adoptedActionIds];
+  return new Set(ids.map((s) => s.toLowerCase()));
+}
+
+function targetLabel(target: FixtureTarget): string {
+  return target.kind === "startup-session" ? `startup session ${target.sessionId}` : `${target.domain} fixture ${target.businessId}`;
+}
+
+/**
+ * Recursively walks a mutation body. For every object key isIdentifierKey() treats as an identifier, each UUID-valued string (or, for
+ * an array, each UUID-valued element) must be in `allowed`; anything else is collected as a violation. Every
+ * value is also recursed into regardless of its key, so an id nested under an unrelated key (e.g. `profile`) is
+ * still found.
+ */
+function collectForeignBodyIds(value: unknown, allowed: Set<string>, foreign: Set<string>, path: string): void {
+  if (Array.isArray(value)) {
+    value.forEach((v, i) => collectForeignBodyIds(v, allowed, foreign, `${path}[${i}]`));
+    return;
+  }
+  if (value === null || typeof value !== "object") return;
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (isIdentifierKey(key)) {
+      for (const one of Array.isArray(v) ? v : [v]) {
+        if (typeof one === "string" && UUID_EXACT.test(one) && !allowed.has(one.toLowerCase())) {
+          foreign.add(`${path}.${key}=${one}`);
+        }
+      }
+    }
+    collectForeignBodyIds(v, allowed, foreign, `${path}.${key}`);
+  }
+}
+
+/**
+ * Pure, fail-closed rule for a mutation BODY (companion to assertMutationBound, which only checks the path): every
+ * *Id/*Ids value anywhere in the body must already be proven to belong to the bound target -- its own id
+ * (businessId / startup sessionId), an ownedRecordIds entry, or an adoptedActionIds entry. Throws before anything
+ * is sent. This is what closes the runFixtureDiagnosis gap: `{ snapshotId }` is a body field, invisible to the
+ * path-only check.
+ */
+export function assertBodyIdsBound(target: FixtureTarget, body: unknown): void {
+  if (body === undefined || body === null) return;
+  const foreign = new Set<string>();
+  collectForeignBodyIds(body, boundTargetIds(target), foreign, "body");
+  if (foreign.size > 0) {
+    throw new FixtureBindingError(`mutation body references id(s) not proven to belong to the bound ${targetLabel(target)}: ${[...foreign].join(", ")}`);
+  }
+}
+
+/**
+ * A plain-data snapshot of a mutation body, taken once via JSON round-trip. Playwright serializes `data` to
+ * JSON when it sends the request; validating and sending the SAME snapshot (rather than the original
+ * reference twice) means a getter or a custom toJSON() cannot answer differently to the validator than to
+ * the wire -- what was checked is provably identical to what is sent. Also turns a circular body into a
+ * clear TypeError here rather than a RangeError deep in the recursive walker.
+ */
+function snapshotBody(data: unknown): unknown {
+  return data === undefined ? undefined : JSON.parse(JSON.stringify(data));
+}
+
 /** The ONLY way a Production spec may send a POST/PATCH/PUT/DELETE to a business-scoped domain route. */
 export async function fixtureMutate(
   context: BrowserContext | undefined,
@@ -282,8 +388,10 @@ export async function fixtureMutate(
   data?: unknown
 ): Promise<APIResponse> {
   assertMutationBound(target, method, rawPath);
+  const snapshot = snapshotBody(data);
+  assertBodyIdsBound(target, snapshot);
   const res = await timedApiCall(context, method, label(rawPath), () =>
-    page.request.fetch(rawPath, { method, ...(data === undefined ? {} : { data }) })
+    page.request.fetch(rawPath, { method, ...(snapshot === undefined ? {} : { data: snapshot }) })
   );
   if (target.kind === "business" && res.status() >= 500) target.serverErrors.push({ path: label(rawPath), status: res.status() });
   if (target.kind === "business") {

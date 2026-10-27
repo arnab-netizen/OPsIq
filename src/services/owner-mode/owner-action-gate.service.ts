@@ -38,6 +38,7 @@ import {
   OWNER_MARGIN_ABSTENTION_CODE,
   type OwnerGateConstraints,
   type OwnerGateDoNotRepeatRule,
+  type OwnerGateVerdict,
 } from "@/domain/owner-mode/owner-action-gate-policy";
 import { DNR_SCOPE_PREFIX, parseOwnerDnrKey } from "@/domain/owner-mode/do-not-repeat-scope";
 import { currentEffectiveFinancialSnapshotQuery, type CurrentEffectiveSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
@@ -288,6 +289,17 @@ export function ownerActionGateIntent(input: Pick<OwnerActionGateInput, "intent"
 }
 
 /**
+ * The live verdict for a material transition, read-only: loads the business's current safety state and
+ * evaluates it against the shared policy. Zero audit writes, zero mutation -- the ONE canonical calculation
+ * `enforceOwnerActionGates` (mutation time) and an acceptance-only read-verdict endpoint both reuse, so
+ * there is never a second gate implementation to drift out of sync with the real one.
+ */
+export async function assessOwnerActionGate(input: OwnerActionGateInput, injected?: OwnerActionGateDeps): Promise<OwnerGateVerdict> {
+  const constraints = await loadOwnerGateConstraints(input.workspaceId, input.businessId, injected);
+  return evaluateOwnerActionGate(constraints, { domain: input.domain, intent: ownerActionGateIntent(input), findingId: input.findingId ?? null, findingCode: input.findingCode ?? null });
+}
+
+/**
  * Enforce the owner-mode safety gate on a material action transition. Non-material transitions
  * (assigned/blocked/cancelled) and an active audited opt-out pass. Throws ConflictError (governed) on a
  * safety block. Returns the assessment of an allowed transition.
@@ -297,8 +309,7 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
     workspaceId: input.workspaceId, businessId: input.businessId, actionId: input.actionId, domain: input.domain, toStatus: input.toStatus, marginAbstention,
   });
   if (!MATERIAL_ACTION_STATUSES.has(input.toStatus)) return allowed(null);
-  const constraints = await loadOwnerGateConstraints(input.workspaceId, input.businessId, injected);
-  const verdict = evaluateOwnerActionGate(constraints, { domain: input.domain, intent: ownerActionGateIntent(input), findingId: input.findingId ?? null, findingCode: input.findingCode ?? null });
+  const verdict = await assessOwnerActionGate(input, injected);
   if (!verdict.allowed) {
     await emitAuditEvent({
       workspaceId: input.workspaceId,
