@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, chmodSync, existsSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, chmodSync, existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -78,6 +78,27 @@ describe("backup script refuses to dump when the gate blocks", () => {
     const r = run(BACKUP, { ...base, ...env }, [dir]);
     expect(r.status).not.toBe(0);
     expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  // ROOT-CAUSE REGRESSION (observation-window audit, 2026-10-28): `GATE_OUT=$(cmd); GATE_RC=$?`
+  // is a plain assignment. Under `set -e`, a failing command substitution aborts the script AT
+  // THAT LINE -- before `GATE_RC=$?`, the `echo "$GATE_OUT"`, and the explicit "ERROR: backup
+  // refused..." exit below ever run. pg_dump still never ran (covered above), so this was never
+  // fail-open, but it silently discarded the gate's reason and never wrote $LOG_FILE, leaving no
+  // audit trail for why a run failed. These assertions pin the fix: the reason must reach both
+  // stdout and the on-disk log for every blocked case, not just a bare non-zero exit status.
+  it.each([
+    ["flag true", { PRODUCTION_QBO_ENABLED: "true", FAKE_PSQL_OUT: "0" }],
+    ["qbo rows present", { FAKE_PSQL_OUT: "3" }],
+    ["probe error", { FAKE_PSQL_RC: "1" }],
+  ])("logs the gate's block reason instead of dying silently (%s)", (_n, env) => {
+    const r = run(BACKUP, { ...base, ...env }, [dir]);
+    expect(r.stdout).toContain("QBO_BACKUP_GATE=BLOCK");
+    expect(r.stdout).toContain("ERROR: backup refused by the QBO backup gate");
+    const logFiles = readdirSync(dir).filter((f: string) => f.endsWith(".log"));
+    expect(logFiles.length).toBeGreaterThan(0);
+    const logContent = readFileSync(join(dir, logFiles[0]), "utf8");
+    expect(logContent).toContain("QBO_BACKUP_GATE=BLOCK");
   });
 });
 

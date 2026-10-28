@@ -122,8 +122,22 @@ fi
 # separator; [^@]+ cannot contain '@', so it cannot run past the
 # credentials/host separator), unlike the old parsing bug's greedy `.*`.
 # Option B gate: refuse to dump while Production holds QuickBooks/Intuit User Data (fail closed).
-GATE_OUT=$(bash "$(dirname "$0")/backup-qbo-gate.sh" 2>&1)
-GATE_RC=$?
+#
+# ROOT-CAUSE FIX (observation-window audit, 2026-10-28): `GATE_OUT=$(cmd); GATE_RC=$?` is a
+# plain assignment -- under `set -e` (enabled above), a failing command substitution aborts the
+# script AT THAT LINE, before `GATE_RC=$?`, the `echo "$GATE_OUT"` and the explicit `exit 1`
+# below are ever reached. The backup is still blocked (pg_dump is never invoked -- the script
+# dies with the gate's own exit code first), so this was never a fail-OPEN bug, but it silently
+# discarded the gate's `QBO_BACKUP_GATE=BLOCK reason=...` diagnostic and never created $LOG_FILE,
+# leaving zero audit trail for why a run failed. Confirmed locally: a bare
+# `set -e; x=$(false); echo "unreached"` never prints "unreached". Fix: make the assignment the
+# condition of an `if`, which `set -e` explicitly exempts, so GATE_RC is always captured and the
+# reason is always logged before deciding whether to exit.
+if GATE_OUT=$(bash "$(dirname "$0")/backup-qbo-gate.sh" 2>&1); then
+  GATE_RC=0
+else
+  GATE_RC=$?
+fi
 echo "$GATE_OUT" | tee -a "$LOG_FILE"
 if [ "$GATE_RC" -ne 0 ]; then
   echo "ERROR: backup refused by the QBO backup gate" | tee -a "$LOG_FILE"
