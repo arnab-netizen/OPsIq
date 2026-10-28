@@ -74,7 +74,24 @@ export const MIGRATOR_CREDENTIAL_VARIABLES = [
 /** Application tables the runtime role must NOT be able to read (kept in step with RUNTIME_DENIED_TABLES in role-topology.ts; asserted by a test). */
 export const RUNTIME_DENIED_TABLES = ["privacy_erasure_requests"];
 
+/**
+ * Write-capability probe target: a table the runtime role must legitimately be able to UPDATE and which is
+ * present once migrations are current (see docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md §2). Kept in step with
+ * the identical probe added to probeRuntimeRole() (src/services/privacy-erasure/runtime-role-probe.ts).
+ */
+export const WRITE_CAPABILITY_TARGET_TABLE = "public.startup_status";
+/** Exact PostgreSQL SQLSTATEs the write-capability probe distinguishes — never matched by English error text. */
+export const READ_ONLY_SQL_TRANSACTION_SQLSTATE = "25006";
+export const INSUFFICIENT_PRIVILEGE_SQLSTATE = "42501";
+
 const ROLE_NAME = /^[a-z_][a-z0-9_]{0,62}$/;
+const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
+
+/** Bounded SQLSTATE only — never the server's raw error message, which can echo a hostname on some drivers. */
+function sqlStateOf(e) {
+  const code = e && typeof e === "object" && "code" in e ? String(e.code) : null;
+  return code && SQLSTATE_PATTERN.test(code) ? code : null;
+}
 
 /** Committed migrations: [{ name, checksum }] sorted by name, or null when unreadable (fail closed). */
 export function listCommittedMigrations(migrationsDir) {
@@ -217,6 +234,104 @@ async function readRuntimeIdentity(databaseUrl) {
   }
 }
 
+/**
+ * Canonical runtime WRITE-CAPABILITY proof, pure over an already-connected client (no I/O beyond it — unit
+ * testable with a fake client, no database required). This closes the assurance gap behind the Production
+ * incident this gate exists to prevent: the prior release gate and runtime-role identity checks both ran
+ * inside `BEGIN READ ONLY`, so a release could pass every pre-deploy gate while the runtime's first real
+ * application INSERT still failed with "cannot execute INSERT in a read-only transaction". Steps:
+ *   1. identity — the SAME connection must authenticate as the required runtime role;
+ *   2/3. transaction_read_only and default_transaction_read_only must both read "off" BEFORE any explicit
+ *        transaction is opened (a read replica, or a role-level read-only default, shows up here);
+ *   4. BEGIN — a normal, NOT READ ONLY transaction;
+ *   5. a write-class no-op UPDATE (zero rows by construction: WHERE false) against a table the runtime must
+ *      legitimately be able to write and which exists once migrations are current;
+ *   6. ROLLBACK — ALWAYS, in a finally, whether the UPDATE succeeded or failed. No persistent mutation is
+ *      ever possible: WHERE false guarantees zero rows even if the rollback were somehow skipped.
+ * Any failure (identity mismatch, either read-only setting "on", the UPDATE rejected for any SQLSTATE, an
+ * unexpected error) fails closed with a bounded, secret-free classification — never the server's raw error
+ * message, which can echo a hostname on some drivers.
+ */
+export async function proveWriteCapabilityOnClient(client, requiredRole, targetTable = WRITE_CAPABILITY_TARGET_TABLE) {
+  let who;
+  try {
+    who = await client.query("SELECT current_user AS u, session_user AS s");
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  if (who.rows[0]?.u !== requiredRole) {
+    return { ok: false, code: "IDENTITY_MISMATCH", sqlState: null };
+  }
+
+  let settings;
+  try {
+    settings = await client.query(
+      "SELECT current_setting('transaction_read_only') AS txn, current_setting('default_transaction_read_only') AS dflt"
+    );
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  const { txn, dflt } = settings.rows[0] ?? {};
+  if (txn !== "off") return { ok: false, code: "TRANSACTION_READ_ONLY", sqlState: null };
+  if (dflt !== "off") return { ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null };
+
+  let began = false;
+  try {
+    await client.query("BEGIN");
+    began = true;
+    await client.query(`UPDATE ${targetTable} SET "updated_at" = "updated_at" WHERE false`);
+    return { ok: true, code: "PASS", sqlState: null };
+  } catch (e) {
+    const sqlState = sqlStateOf(e);
+    if (sqlState === READ_ONLY_SQL_TRANSACTION_SQLSTATE) return { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState };
+    if (sqlState === INSUFFICIENT_PRIVILEGE_SQLSTATE) return { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState };
+    return { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState };
+  } finally {
+    if (began) {
+      // Best-effort: a rollback failure must never override the already-decided result above, and this
+      // probe never retries or escalates — the caller's own connection teardown handles a poisoned session.
+      await client.query("ROLLBACK").catch(() => {});
+    }
+  }
+}
+
+/** Connects AS the candidate runtime DATABASE_URL, proves write capability, and always closes the connection. */
+async function readRuntimeWriteCapability(databaseUrl, requiredRole) {
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({ connectionString: databaseUrl, connectionTimeoutMillis: 15000 });
+  try {
+    await client.connect();
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  try {
+    return await proveWriteCapabilityOnClient(client, requiredRole);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+/** Pure decision for the write-capability result. Never contains connection details. */
+export function evaluateWriteCapability(capability, requiredRole) {
+  if (capability && capability.ok) return { ok: true, lines: [] };
+  const sqlState = capability && typeof capability.sqlState === "string" && SQLSTATE_PATTERN.test(capability.sqlState) ? capability.sqlState : null;
+  const suffix = sqlState ? ` (SQLSTATE ${sqlState})` : "";
+  const code = capability?.code ?? "UNVERIFIED";
+  const messages = {
+    IDENTITY_MISMATCH: `the write-capability probe connected as a role other than the required runtime role "${requiredRole}"`,
+    TRANSACTION_READ_ONLY: 'the runtime connection\'s transaction_read_only is "on" — it cannot start a normal read-write transaction',
+    DEFAULT_TRANSACTION_READ_ONLY: 'the runtime role\'s default_transaction_read_only is "on" — every new transaction starts read-only',
+    READ_ONLY_SQL_TRANSACTION: `the write-class no-op UPDATE was rejected as a read-only transaction${suffix}`,
+    INSUFFICIENT_PRIVILEGE: `the runtime role lacks UPDATE privilege on ${WRITE_CAPABILITY_TARGET_TABLE}${suffix}`,
+    CONNECTION_FAILURE: "the write-capability probe could not connect",
+    CONNECTION_OR_QUERY_FAILURE: `the write-capability probe failed before completing${suffix}`,
+    UNEXPECTED_SQLSTATE: `the write-class no-op UPDATE failed unexpectedly${suffix}`,
+    UNVERIFIED: "runtime write capability could not be verified",
+  };
+  const msg = messages[code] ?? messages.UNVERIFIED;
+  return { ok: false, lines: [`[release-gate] BLOCKED: ${msg} (fail closed).`] };
+}
+
 /** Pure decision for the credential-separation / runtime-role rules. Never contains connection details. */
 export function evaluateRuntimeRole({ env, identity }) {
   const exposed = MIGRATOR_CREDENTIAL_VARIABLES.filter((n) => (env[n] ?? "").trim() !== "");
@@ -239,7 +354,7 @@ export function evaluateRuntimeRole({ env, identity }) {
   return { ok: lines.length === 0, lines };
 }
 
-export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows, readIdentity = readRuntimeIdentity } = {}) {
+export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows, readIdentity = readRuntimeIdentity, readWriteCapability = readRuntimeWriteCapability } = {}) {
   const enforced = env.VERCEL_ENV === "production" || env.OPSIQ_RELEASE_GATE_FORCE === "1";
   if (!enforced && env.VERCEL === "1" && !env.VERCEL_ENV) {
     // On Vercel but the target environment is not exposed (system env vars disabled):
@@ -292,6 +407,23 @@ export async function runGate({ env = process.env, cwd = process.cwd(), readRows
     report += `\n[release-gate] Procedure: ${RELEASE_PROCEDURE_DOC}`;
   } else if (requiredRole) {
     report += `\n[release-gate] PASS: runtime role "${requiredRole}" verified (least-privilege, all application tables granted).`;
+    // Least-privilege identity/grants passed; now prove the runtime can actually start a normal read-write
+    // transaction and execute a write-class statement — the assurance gap the prior read-only-only checks
+    // left open (see proveWriteCapabilityOnClient()'s doc comment for the incident this closes).
+    let capability;
+    try {
+      capability = await readWriteCapability(databaseUrl, requiredRole);
+    } catch (e) {
+      capability = { ok: false, code: "UNEXPECTED_ERROR", sqlState: sqlStateOf(e) };
+    }
+    const capabilityDecision = evaluateWriteCapability(capability, requiredRole);
+    if (!capabilityDecision.ok) {
+      ok = false;
+      report += `\n${capabilityDecision.lines.join("\n")}`;
+      report += `\n[release-gate] Procedure: ${RELEASE_PROCEDURE_DOC}`;
+    } else {
+      report += `\n[release-gate] PASS: runtime role "${requiredRole}" verified read-write capable (no-op transaction rolled back).`;
+    }
   }
   return { exitCode: ok ? 0 : 1, output: report, result: { ...result, ok } };
 }

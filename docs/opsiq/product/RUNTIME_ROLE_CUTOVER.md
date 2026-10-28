@@ -69,4 +69,68 @@ The only definer function is `qbo_erasure_authorized(uuid, uuid)`: owned by the 
 7. On any failure: restore `OLD_RUNTIME_URL` as `DATABASE_URL`, remove `OPSIQ_REQUIRE_RUNTIME_ROLE`, redeploy.
 8. Fix the missing NARROW grant in code (never `GRANT ALL`, never owner membership), re-test on a disposable database.
 9. Retry from step 2 (idempotent).
-10. Only after a stable observation period, rotate/revoke the old owner runtime credential (separately authorized; not part of this change).
+10. Only after a stable observation period, rotate/revoke the old owner runtime credential (separately authorized; not part of this change). **Keep `OLD_RUNTIME_URL` (the `neondb_owner` recovery credential) staged and ready to restore as Vercel Production `DATABASE_URL` until step 6's FULL observation window has completed with no `permission denied` / `42501` / read-only error — never revoke, rotate, or let it expire before that window ends, regardless of how clean §7's pre-cutover checklist looked going in.**
+
+## 7. Incident history and the mandatory pre-cutover write-capability checklist
+
+**Incident.** The first `opsiq_app` Production cutover failed after deployment: application startup could
+not execute its first real INSERT (`cannot execute INSERT in a read-only transaction`), even though the
+build-time release gate and the runtime-role identity/grant checks had both passed. Production was
+recovered by restoring a fresh pooled `neondb_owner` Primary URL.
+
+**Forensic result: `ROOT_CAUSE=NOT_REPRODUCED`.** Direct and pooled `opsiq_app` sessions were independently
+re-verified with `current_setting('transaction_read_only')` = `off` and
+`current_setting('default_transaction_read_only')` = `off`; a no-op write-class transaction
+(`BEGIN; UPDATE public.startup_status SET "updated_at" = "updated_at" WHERE false; ROLLBACK;`) PASSED on
+both. The Neon project/branch/Primary were confirmed correct, `opsiq_app` was confirmed on the Primary (not
+a read replica), and no persisted `default_transaction_read_only` role setting, no `rolconfig` read-only
+entry, and no connection-string `options=` / local `PGOPTIONS` requesting read-only mode were found. **Do
+not describe this incident as a confirmed read-replica, pooler, or role-default defect — none of those was
+reproduced.** The proven defect is narrower and purely an *assurance gap*: the release gate's
+migration-state check and the runtime-role identity check both ran inside `BEGIN READ ONLY`, and neither
+one positively proved that the runtime connection could start an ordinary read-write transaction and
+execute a write-class statement. A release could therefore pass every pre-deploy gate while the runtime's
+first real application INSERT still failed.
+
+**The fix (already merged on `main`).** Three independent layers close this gap, all safe against
+Production — every probe runs inside a transaction that is unconditionally rolled back, and the probe
+statement is itself a zero-row no-op (`WHERE false`), so even an unrolled-back probe could never mutate
+data:
+
+- the Production release gate (`scripts/release/production-migration-gate.mjs`), when
+  `OPSIQ_REQUIRE_RUNTIME_ROLE` is set, now BLOCKS the build unless the candidate runtime `DATABASE_URL`
+  proves identity, `transaction_read_only=off`, `default_transaction_read_only=off`, and a successful
+  no-op `UPDATE ... WHERE false` inside a plain (not `READ ONLY`) `BEGIN`/`ROLLBACK`;
+- the governed runtime-role probe (`probeRuntimeRole()`, `src/services/privacy-erasure/runtime-role-probe.ts`,
+  used by `scripts/db/opsiq-role-cutover.ts probe`) now includes the same write-class no-op as one of its
+  ALLOWED statements;
+- `claimStartup()` (`src/services/startup-status.ts`) now captures a best-effort, sanitized, read-only
+  diagnostic (current/session user, both read-only settings, Neon branch/endpoint id, the INSERT's
+  SQLSTATE — never the URL, host, password, or raw server error text) on the SAME checked-out client if the
+  startup INSERT itself ever fails again, so a recurrence is attributable from the first occurrence.
+
+**Mandatory pre-cutover checklist.** Before any future `opsiq_app` Production cutover, require ALL of the
+following to pass, in order, before staging the runtime `DATABASE_URL` or deploying:
+
+1. direct identity proof (`opsiq-role-cutover.ts verify --phase post` against the direct endpoint, or an
+   equivalent manual `SELECT current_user, session_user`) — must report `opsiq_app` / `opsiq_app`;
+2. pooled identity proof — the same check against the POOLED endpoint;
+3. direct endpoint: `current_setting('transaction_read_only')` = `off` AND
+   `current_setting('default_transaction_read_only')` = `off`;
+4. pooled endpoint: the same two settings, both `off`;
+5. direct endpoint: the write-class no-op (`BEGIN; UPDATE public.startup_status SET "updated_at" =
+   "updated_at" WHERE false; ROLLBACK;`) PASSES;
+6. pooled endpoint: the same no-op PASSES;
+7. the governed Production runtime-role probe (`opsiq-role-cutover.ts probe`) → `ROLE_TOPOLOGY_PROBE=PASS`
+   (now includes the write-class no-op above);
+8. the Production release gate's write-capability check PASSES (`OPSIQ_REQUIRE_RUNTIME_ROLE=opsiq_app`,
+   `npm run build` or `OPSIQ_RELEASE_GATE_FORCE=1`) — exact success line: `PASS: runtime role "opsiq_app"
+   verified read-write capable (no-op transaction rolled back)`;
+9. only once ALL eight checks above have passed does the operator stage the `opsiq_app` runtime
+   `DATABASE_URL` in Vercel Production and deploy.
+
+Every no-op write probe in this checklist (steps 5, 6, 7, 8) is a zero-row statement (`WHERE false`) inside
+a transaction that is unconditionally rolled back: it must leave **zero persistent changes** in the
+database, on both success and failure. The `opsiq_app` cutover must **not** proceed while any step above is
+uncertain, skipped, or returns anything other than an unambiguous PASS — read-only uncertainty at any one of
+the eight steps is itself a reason to halt, not a reason to retry blindly.

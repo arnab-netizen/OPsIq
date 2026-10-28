@@ -28,7 +28,7 @@ import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler, enqueueQboSync, qboSyncKe
 import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 import { applyAndVerifyRoleTopology, readModeledTables, roleTopologyStatements, verifyRoleTopology } from "@/services/privacy-erasure/role-topology";
-import { probeRuntimeRole } from "@/services/privacy-erasure/runtime-role-probe";
+import { WRITE_CAPABILITY_PROBE_NAME, probeRuntimeRole } from "@/services/privacy-erasure/runtime-role-probe";
 
 const OWNER_URL = process.env.ROLE_TEST_OWNER_DATABASE_URL ?? "";
 const ON_DEDICATED_DB = /opsiq_runtime_role_test/.test(OWNER_URL) && /opsiq_runtime_role_test/.test(process.env.DATABASE_URL ?? "");
@@ -182,6 +182,69 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] opsiq_app runtim
       const o = new Client({ connectionString: OWNER_URL }); await o.connect();
       try { expect((await probeRuntimeRole(o, ownerRole)).result).toBe("FAIL"); } finally { await o.end(); }
     } finally { await rt.end(); }
+  });
+
+  describe("[db] write-capability probe (closes the Production read-only-transaction assurance gap)", () => {
+    const snapshotStartupStatus = async () =>
+      (await admin.query(`SELECT id, instance_id, status, updated_at FROM public.startup_status ORDER BY id`)).rows;
+
+    it("1. a runtime role with correct DML grants PASSES the write-capability probe", async () => {
+      const rt = await asRuntime();
+      try {
+        const p = await probeRuntimeRole(rt, ownerRole);
+        const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
+        expect(row).toBeTruthy();
+        expect(row!.ok).toBe(true);
+        expect(p.result).toBe("PASS");
+      } finally { await rt.end(); }
+    });
+
+    it("2. a session forced read-only (SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY) FAILS the write-capability probe, by SQLSTATE 25006", async () => {
+      const rt = await asRuntime();
+      try {
+        await rt.query("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY");
+        const p = await probeRuntimeRole(rt, ownerRole);
+        const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
+        expect(row).toBeTruthy();
+        expect(row!.ok).toBe(false);
+        expect(row!.detail).toBe("25006");
+        expect(p.result).toBe("FAIL");
+      } finally {
+        await rt.query("SET SESSION CHARACTERISTICS AS TRANSACTION READ WRITE").catch(() => {});
+        await rt.end();
+      }
+    });
+
+    it("3. a runtime role missing UPDATE on the probe table FAILS the write-capability probe, by SQLSTATE 42501, and the reconcile repairs it", async () => {
+      await admin.query(`REVOKE UPDATE ON TABLE public.startup_status FROM ${RUNTIME}`);
+      const rt = await asRuntime();
+      try {
+        const p = await probeRuntimeRole(rt, ownerRole);
+        const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
+        expect(row).toBeTruthy();
+        expect(row!.ok).toBe(false);
+        expect(row!.detail).toBe("42501");
+        expect(p.result).toBe("FAIL");
+      } finally { await rt.end(); }
+      // the governed reconcile restores the grant (same idempotent apply every other drift test uses)
+      expect((await applyAndVerifyRoleTopology(admin, NAMES)).committed).toBe(true);
+      const repaired = await asRuntime();
+      try {
+        const p2 = await probeRuntimeRole(repaired, ownerRole);
+        expect(p2.result).toBe("PASS");
+      } finally { await repaired.end(); }
+    });
+
+    it("4/5. the no-op probe changes ZERO rows and the outer ROLLBACK leaves startup_status byte-for-byte unchanged", async () => {
+      const before = await snapshotStartupStatus();
+      const rt = await asRuntime();
+      try {
+        const p = await probeRuntimeRole(rt, ownerRole);
+        expect(p.result).toBe("PASS");
+      } finally { await rt.end(); }
+      const after = await snapshotStartupStatus();
+      expect(after).toEqual(before);
+    });
   });
 
   it("cannot become / join the eraser role, reach the erasure ledger, escalate, or bypass the append-only guards; SECURITY DEFINER cannot be shadowed", async () => {

@@ -8,7 +8,17 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 // @ts-expect-error -- plain ESM script without type declarations
-import { MIGRATOR_CREDENTIAL_VARIABLES, RUNTIME_DENIED_TABLES, evaluateRuntimeRole, runGate } from "../../../scripts/release/production-migration-gate.mjs";
+import {
+  MIGRATOR_CREDENTIAL_VARIABLES,
+  RUNTIME_DENIED_TABLES,
+  WRITE_CAPABILITY_TARGET_TABLE,
+  READ_ONLY_SQL_TRANSACTION_SQLSTATE,
+  INSUFFICIENT_PRIVILEGE_SQLSTATE,
+  evaluateRuntimeRole,
+  evaluateWriteCapability,
+  proveWriteCapabilityOnClient,
+  runGate,
+} from "../../../scripts/release/production-migration-gate.mjs";
 import { RUNTIME_DENIED_TABLES as TS_DENIED } from "@/services/privacy-erasure/role-topology";
 
 const ROOT = resolve(__dirname, "../../..");
@@ -24,6 +34,7 @@ function repo(): string {
 const rows = [{ migration_name: NAME, checksum: createHash("sha256").update(SQL).digest("hex"), finished_at: new Date(), rolled_back_at: null }];
 const base = { OPSIQ_RELEASE_GATE_FORCE: "1", DATABASE_URL: "postgresql://opsiq_app:x@db.invalid/neondb" };
 const good = { currentUser: "opsiq_app", dangerous: false, ungranted: [] as string[] };
+const goodCapability = { ok: true, code: "PASS", sqlState: null as string | null };
 
 describe("release gate — migrator credential never reaches the production runtime", () => {
   it("lists every migrator credential variable the repository uses", () => {
@@ -56,15 +67,24 @@ describe("release gate — migrator credential never reaches the production runt
 
 describe("release gate — required runtime role", () => {
   const env = { ...base, OPSIQ_REQUIRE_RUNTIME_ROLE: "opsiq_app" };
-  it("PASSES when DATABASE_URL authenticates as the runtime role with every table granted", async () => {
-    const r = await runGate({ env, cwd: repo(), readRows: async () => rows, readIdentity: async () => good });
+  it("PASSES when DATABASE_URL authenticates as the runtime role with every table granted and write capability proven", async () => {
+    const r = await runGate({ env, cwd: repo(), readRows: async () => rows, readIdentity: async () => good, readWriteCapability: async () => goodCapability });
     expect(r.exitCode).toBe(0);
     expect(r.output).toContain('runtime role "opsiq_app" verified');
+    expect(r.output).toContain('runtime role "opsiq_app" verified read-write capable (no-op transaction rolled back)');
   });
-  it("BLOCKS when DATABASE_URL is the owner (still neondb_owner)", async () => {
-    const r = await runGate({ env, cwd: repo(), readRows: async () => rows, readIdentity: async () => ({ ...good, currentUser: "neondb_owner" }) });
+  it("BLOCKS when DATABASE_URL is the owner (still neondb_owner), and never even attempts the write-capability probe", async () => {
+    let capabilityCalled = false;
+    const r = await runGate({
+      env,
+      cwd: repo(),
+      readRows: async () => rows,
+      readIdentity: async () => ({ ...good, currentUser: "neondb_owner" }),
+      readWriteCapability: async () => { capabilityCalled = true; return goodCapability; },
+    });
     expect(r.exitCode).toBe(1);
     expect(r.output).toContain("other than the required runtime role");
+    expect(capabilityCalled).toBe(false);
   });
   it("BLOCKS when the login holds a dangerous attribute", async () => {
     const r = await runGate({ env, cwd: repo(), readRows: async () => rows, readIdentity: async () => ({ ...good, dangerous: true }) });
@@ -85,11 +105,241 @@ describe("release gate — required runtime role", () => {
   it("an invalid role name is refused without querying", () => {
     expect(evaluateRuntimeRole({ env: { OPSIQ_REQUIRE_RUNTIME_ROLE: "x; DROP" }, identity: good }).ok).toBe(false);
   });
-  it("a migration problem still blocks even when the role is fine", async () => {
-    const r = await runGate({ env, cwd: repo(), readRows: async () => [], readIdentity: async () => good });
+  it("a migration problem still blocks even when the role and write capability are fine", async () => {
+    const r = await runGate({ env, cwd: repo(), readRows: async () => [], readIdentity: async () => good, readWriteCapability: async () => goodCapability });
     expect(r.exitCode).toBe(1);
   });
 });
+
+describe("release gate — runtime WRITE CAPABILITY (closes the read-only-transaction assurance gap)", () => {
+  const env = { ...base, OPSIQ_REQUIRE_RUNTIME_ROLE: "opsiq_app" };
+  const run = (capability: unknown) => runGate({ env, cwd: repo(), readRows: async () => rows, readIdentity: async () => good, readWriteCapability: async () => capability });
+
+  it("1. a genuinely read-write runtime session PASSES, with the exact required success message", async () => {
+    const r = await run(goodCapability);
+    expect(r.exitCode).toBe(0);
+    expect(r.output).toContain('PASS: runtime role "opsiq_app" verified read-write capable (no-op transaction rolled back)');
+  });
+
+  it("2. transaction_read_only=on BLOCKS the build", async () => {
+    const r = await run({ ok: false, code: "TRANSACTION_READ_ONLY", sqlState: null });
+    expect(r.exitCode).toBe(1);
+    expect(r.output).toContain("transaction_read_only");
+    expect(r.output.toLowerCase()).toContain("read-write transaction");
+  });
+
+  it("3. default_transaction_read_only=on BLOCKS the build", async () => {
+    const r = await run({ ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null });
+    expect(r.exitCode).toBe(1);
+    expect(r.output).toContain("default_transaction_read_only");
+  });
+
+  it(`4. the no-op UPDATE throwing ${READ_ONLY_SQL_TRANSACTION_SQLSTATE} (read_only_sql_transaction) BLOCKS, by exact SQLSTATE`, async () => {
+    const r = await run({ ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState: READ_ONLY_SQL_TRANSACTION_SQLSTATE });
+    expect(r.exitCode).toBe(1);
+    expect(r.output).toContain(`SQLSTATE ${READ_ONLY_SQL_TRANSACTION_SQLSTATE}`);
+    expect(r.output).toContain("rejected as a read-only transaction");
+  });
+
+  it(`5. the no-op UPDATE throwing ${INSUFFICIENT_PRIVILEGE_SQLSTATE} (insufficient privilege) BLOCKS, by exact SQLSTATE`, async () => {
+    const r = await run({ ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState: INSUFFICIENT_PRIVILEGE_SQLSTATE });
+    expect(r.exitCode).toBe(1);
+    expect(r.output).toContain(`SQLSTATE ${INSUFFICIENT_PRIVILEGE_SQLSTATE}`);
+    expect(r.output).toContain("lacks UPDATE privilege");
+  });
+
+  it("6. identity wrong: the existing identity failure remains unchanged and write capability is never probed", async () => {
+    let capabilityCalled = false;
+    const r = await runGate({
+      env,
+      cwd: repo(),
+      readRows: async () => rows,
+      readIdentity: async () => ({ ...good, currentUser: "neondb_owner" }),
+      readWriteCapability: async () => { capabilityCalled = true; return goodCapability; },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.output).toContain("other than the required runtime role");
+    expect(r.output).not.toContain("write-capability");
+    expect(capabilityCalled).toBe(false);
+  });
+
+  it("7. the real write-capability check ALWAYS rolls back, whether the no-op UPDATE succeeds or fails", async () => {
+    const calls: string[] = [];
+    const passClient = fakeWriteCapabilityClient(calls, { outcome: "pass" });
+    await proveWriteCapabilityOnClient(passClient, "opsiq_app");
+    expect(calls).toContain("ROLLBACK");
+
+    const calls2: string[] = [];
+    const failClient = fakeWriteCapabilityClient(calls2, { outcome: "readOnly" });
+    await proveWriteCapabilityOnClient(failClient, "opsiq_app");
+    expect(calls2).toContain("ROLLBACK");
+
+    const calls3: string[] = [];
+    const privClient = fakeWriteCapabilityClient(calls3, { outcome: "insufficientPrivilege" });
+    await proveWriteCapabilityOnClient(privClient, "opsiq_app");
+    expect(calls3).toContain("ROLLBACK");
+  });
+
+  it("8. no secret, URL, or host ever appears in a write-capability BLOCKED report", async () => {
+    for (const capability of [
+      { ok: false, code: "TRANSACTION_READ_ONLY", sqlState: null },
+      { ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null },
+      { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState: READ_ONLY_SQL_TRANSACTION_SQLSTATE },
+      { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState: INSUFFICIENT_PRIVILEGE_SQLSTATE },
+      { ok: false, code: "CONNECTION_FAILURE", sqlState: null },
+      { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState: "58030" },
+    ]) {
+      const r = await run(capability);
+      expect(r.exitCode).toBe(1);
+      expect(r.output).not.toContain("db.invalid");
+      expect(r.output).not.toMatch(/postgres(?:ql)?:\/\//i);
+      expect(r.output).not.toMatch(/password/i);
+    }
+  });
+});
+
+describe("evaluateWriteCapability — pure decision, never contains connection details", () => {
+  it("PASSes through a successful capability with no lines", () => {
+    expect(evaluateWriteCapability({ ok: true, code: "PASS", sqlState: null }, "opsiq_app")).toEqual({ ok: true, lines: [] });
+  });
+  it("produces a bounded, sanitized BLOCKED line for every known failure code", () => {
+    for (const capability of [
+      { ok: false, code: "IDENTITY_MISMATCH", sqlState: null },
+      { ok: false, code: "TRANSACTION_READ_ONLY", sqlState: null },
+      { ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null },
+      { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState: READ_ONLY_SQL_TRANSACTION_SQLSTATE },
+      { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState: INSUFFICIENT_PRIVILEGE_SQLSTATE },
+      { ok: false, code: "CONNECTION_FAILURE", sqlState: null },
+      { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: null },
+      { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState: "58030" },
+    ]) {
+      const r = evaluateWriteCapability(capability, "opsiq_app");
+      expect(r.ok).toBe(false);
+      expect(r.lines).toHaveLength(1);
+      expect(r.lines[0]).toMatch(/^\[release-gate\] BLOCKED:/);
+    }
+  });
+  it("fails closed with an UNVERIFIED message when capability is null/missing entirely", () => {
+    const r = evaluateWriteCapability(null, "opsiq_app");
+    expect(r.ok).toBe(false);
+    expect(r.lines[0]).toContain("could not be verified");
+  });
+  it("an unrecognized sqlState (not 5 chars) is never echoed into the message", () => {
+    const r = evaluateWriteCapability({ ok: false, code: "UNEXPECTED_SQLSTATE", sqlState: "not-a-sqlstate" }, "opsiq_app");
+    expect(r.lines[0]).not.toContain("not-a-sqlstate");
+  });
+});
+
+describe("proveWriteCapabilityOnClient — pure logic over a fake client (no database)", () => {
+  it("identity mismatch fails closed before any transaction is opened", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", currentUser: "neondb_owner" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "IDENTITY_MISMATCH", sqlState: null });
+    expect(calls).not.toContain("BEGIN");
+  });
+
+  it("transaction_read_only=on fails closed before BEGIN", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", txn: "on" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "TRANSACTION_READ_ONLY", sqlState: null });
+    expect(calls).not.toContain("BEGIN");
+  });
+
+  it("default_transaction_read_only=on fails closed before BEGIN", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", dflt: "on" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null });
+    expect(calls).not.toContain("BEGIN");
+  });
+
+  it("a successful no-op UPDATE PASSES, using BEGIN (not BEGIN READ ONLY) and the exact zero-row WHERE false statement, then rolls back", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: true, code: "PASS", sqlState: null });
+    expect(calls).toContain("BEGIN");
+    expect(calls.some((c) => c === "BEGIN READ ONLY")).toBe(false);
+    expect(calls.some((c) => c.includes(WRITE_CAPABILITY_TARGET_TABLE) && /WHERE false/.test(c))).toBe(true);
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+  });
+
+  it(`a ${READ_ONLY_SQL_TRANSACTION_SQLSTATE} on the UPDATE fails closed and still rolls back`, async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "readOnly" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState: READ_ONLY_SQL_TRANSACTION_SQLSTATE });
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+  });
+
+  it(`a ${INSUFFICIENT_PRIVILEGE_SQLSTATE} on the UPDATE fails closed and still rolls back`, async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "insufficientPrivilege" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState: INSUFFICIENT_PRIVILEGE_SQLSTATE });
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+  });
+
+  it("an unrecognized SQLSTATE on the UPDATE fails closed (never silently PASSes) and still rolls back", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "other" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe("UNEXPECTED_SQLSTATE");
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+  });
+
+  it("a ROLLBACK failure never overrides the already-decided result", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", rollbackThrows: true });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: true, code: "PASS", sqlState: null });
+  });
+});
+
+/**
+ * Minimal fake pg client for proveWriteCapabilityOnClient()'s four-query sequence (identity, read-only
+ * settings, BEGIN, the no-op UPDATE) plus ROLLBACK. Deliberately far smaller than a full probeRuntimeRole
+ * fake (15+ statements) — this function's entire surface is these five queries.
+ */
+function fakeWriteCapabilityClient(
+  calls: string[],
+  opts: {
+    outcome: "pass" | "readOnly" | "insufficientPrivilege" | "other";
+    currentUser?: string;
+    txn?: string;
+    dflt?: string;
+    rollbackThrows?: boolean;
+  },
+) {
+  return {
+    query: async (sql: string) => {
+      calls.push(sql);
+      if (/current_user AS u, session_user AS s/.test(sql)) {
+        const u = opts.currentUser ?? "opsiq_app";
+        return { rows: [{ u, s: u }] };
+      }
+      if (/current_setting\('transaction_read_only'\)/.test(sql)) {
+        return { rows: [{ txn: opts.txn ?? "off", dflt: opts.dflt ?? "off" }] };
+      }
+      if (sql === "BEGIN") return {};
+      if (/^UPDATE/.test(sql)) {
+        if (opts.outcome === "pass") return { rowCount: 0 };
+        const codes = { readOnly: READ_ONLY_SQL_TRANSACTION_SQLSTATE, insufficientPrivilege: INSUFFICIENT_PRIVILEGE_SQLSTATE, other: "58030" };
+        const err = new Error("simulated") as Error & { code: string };
+        err.code = codes[opts.outcome as "readOnly" | "insufficientPrivilege" | "other"];
+        throw err;
+      }
+      if (sql === "ROLLBACK") {
+        if (opts.rollbackThrows) throw new Error("simulated rollback failure");
+        return {};
+      }
+      throw new Error(`fakeWriteCapabilityClient: unexpected query: ${sql}`);
+    },
+  };
+}
 
 describe("release gate — drift guards", () => {
   it("the gate's denied-table list equals the topology's (one source of truth)", () => {

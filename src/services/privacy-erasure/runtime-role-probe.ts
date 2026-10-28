@@ -31,12 +31,29 @@ const DENIED: Array<[string, string, readonly string[]]> = [
   ["cannot switch triggers off", `SET session_replication_role = replica`, [INSUFFICIENT_PRIVILEGE]],
 ];
 
-/** A statement the runtime MUST be able to run (read-only here; writes are proven in the disposable-database suite). */
+/**
+ * Write-capability probe target: a table the runtime role must legitimately be able to UPDATE and which is
+ * present once migrations are current (see docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md §2). Kept in step
+ * with the identical probe in scripts/release/production-migration-gate.mjs (WRITE_CAPABILITY_TARGET_TABLE).
+ */
+export const WRITE_CAPABILITY_PROBE_NAME =
+  "can execute a write-class no-op UPDATE (zero rows) on public.startup_status — proves the connection is not read-only";
+export const WRITE_CAPABILITY_PROBE_SQL = `UPDATE public.startup_status SET "updated_at" = "updated_at" WHERE false`;
+
+/**
+ * A statement the runtime MUST be able to run. Mostly read-only; the write-capability probe below is the
+ * one EXCEPTION — it is deliberately a real write-class statement (not merely a read), because the
+ * Production incident this closes was a release that passed every READ-ONLY identity/grant check while the
+ * runtime's first real INSERT still failed with "cannot execute INSERT in a read-only transaction". The
+ * caller's outer `BEGIN` (below, not `BEGIN READ ONLY`) plus the final `ROLLBACK` make this safe against
+ * Production: `WHERE false` guarantees zero rows even before that rollback ever runs.
+ */
 const ALLOWED: Array<[string, string]> = [
   ["can SELECT 1", `SELECT 1`],
   ["can read the migration ledger", `SELECT count(*) FROM public._prisma_migrations`],
   ["can read an application table", `SELECT count(*) FROM public.audit_events`],
   ["can call the erasure authorization function (guard triggers need it) and gets false", `SELECT CASE WHEN public.qbo_erasure_authorized(gen_random_uuid(), gen_random_uuid()) THEN 'true' ELSE 'false' END AS v`],
+  [WRITE_CAPABILITY_PROBE_NAME, WRITE_CAPABILITY_PROBE_SQL],
 ];
 
 export async function probeRuntimeRole(c: ClientBase, ownerRole: string): Promise<{ result: "PASS" | "FAIL"; probes: ProbeResult[] }> {
