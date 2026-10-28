@@ -188,6 +188,8 @@ describe("release gate — runtime WRITE CAPABILITY (closes the read-only-transa
       { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState: INSUFFICIENT_PRIVILEGE_SQLSTATE },
       { ok: false, code: "CONNECTION_FAILURE", sqlState: null },
       { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState: "58030" },
+      { ok: false, code: "ROLLBACK_FAILURE", sqlState: "55006" },
+      { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState: READ_ONLY_SQL_TRANSACTION_SQLSTATE, rollbackFailed: true },
     ]) {
       const r = await run(capability);
       expect(r.exitCode).toBe(1);
@@ -212,6 +214,7 @@ describe("evaluateWriteCapability — pure decision, never contains connection d
       { ok: false, code: "CONNECTION_FAILURE", sqlState: null },
       { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: null },
       { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState: "58030" },
+      { ok: false, code: "ROLLBACK_FAILURE", sqlState: "55006" },
     ]) {
       const r = evaluateWriteCapability(capability, "opsiq_app");
       expect(r.ok).toBe(false);
@@ -227,6 +230,52 @@ describe("evaluateWriteCapability — pure decision, never contains connection d
   it("an unrecognized sqlState (not 5 chars) is never echoed into the message", () => {
     const r = evaluateWriteCapability({ ok: false, code: "UNEXPECTED_SQLSTATE", sqlState: "not-a-sqlstate" }, "opsiq_app");
     expect(r.lines[0]).not.toContain("not-a-sqlstate");
+  });
+});
+
+describe("proveWriteCapabilityOnClient — identity requires BOTH current_user AND session_user", () => {
+  it("1. current_user=opsiq_app, session_user=opsiq_app → eligible to continue (proceeds to PASS)", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", currentUser: "opsiq_app", sessionUser: "opsiq_app" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: true, code: "PASS", sqlState: null });
+  });
+
+  it("2. current_user=neondb_owner, session_user=neondb_owner → BLOCK", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", currentUser: "neondb_owner", sessionUser: "neondb_owner" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "IDENTITY_MISMATCH", sqlState: null });
+  });
+
+  it("3. current_user=opsiq_app, session_user=neondb_owner (SET ROLE from a stronger login) → BLOCK", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", currentUser: "opsiq_app", sessionUser: "neondb_owner" });
+    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(r).toEqual({ ok: false, code: "IDENTITY_MISMATCH", sqlState: null });
+  });
+
+  it("4. the identity check runs, and fails closed, BEFORE any BEGIN is ever issued", async () => {
+    const calls: string[] = [];
+    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", currentUser: "opsiq_app", sessionUser: "neondb_owner" });
+    await proveWriteCapabilityOnClient(client, "opsiq_app");
+    expect(calls).not.toContain("BEGIN");
+    expect(calls.some((c) => /UPDATE/.test(c))).toBe(false);
+  });
+
+  it("5. a session_user mismatch is never reported as success, under any current_user/session_user combination", async () => {
+    for (const [currentUser, sessionUser] of [
+      ["neondb_owner", "opsiq_app"],
+      ["opsiq_app", "neondb_owner"],
+      ["neondb_owner", "neondb_owner"],
+      ["some_other_role", "some_other_role"],
+    ] as const) {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", currentUser, sessionUser });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r.ok, `${currentUser}/${sessionUser}`).toBe(false);
+      expect(r.code, `${currentUser}/${sessionUser}`).toBe("IDENTITY_MISMATCH");
+    }
   });
 });
 
@@ -291,11 +340,62 @@ describe("proveWriteCapabilityOnClient — pure logic over a fake client (no dat
     expect(calls[calls.length - 1]).toBe("ROLLBACK");
   });
 
-  it("a ROLLBACK failure never overrides the already-decided result", async () => {
-    const calls: string[] = [];
-    const client = fakeWriteCapabilityClient(calls, { outcome: "pass", rollbackThrows: true });
-    const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
-    expect(r).toEqual({ ok: true, code: "PASS", sqlState: null });
+  describe("ROLLBACK must be CONFIRMED, not merely attempted — a rollback failure never produces a false PASS", () => {
+    it("UPDATE success + ROLLBACK success → PASS", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass" });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r).toEqual({ ok: true, code: "PASS", sqlState: null });
+      expect(calls[calls.length - 1]).toBe("ROLLBACK");
+    });
+
+    it("UPDATE success + ROLLBACK failure → BLOCK (ROLLBACK_FAILURE), never PASS", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", rollbackThrows: true });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r.ok).toBe(false);
+      expect(r.code).toBe("ROLLBACK_FAILURE");
+    });
+
+    it(`UPDATE ${READ_ONLY_SQL_TRANSACTION_SQLSTATE} + ROLLBACK success → read-only failure`, async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "readOnly" });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r).toEqual({ ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState: READ_ONLY_SQL_TRANSACTION_SQLSTATE });
+    });
+
+    it(`UPDATE ${INSUFFICIENT_PRIVILEGE_SQLSTATE} + ROLLBACK success → insufficient privilege failure`, async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "insufficientPrivilege" });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r).toEqual({ ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState: INSUFFICIENT_PRIVILEGE_SQLSTATE });
+    });
+
+    it("UPDATE failure + ROLLBACK failure → FAIL CLOSED; the original substantive failure is preserved, never PASS, with a rollbackFailed marker", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "readOnly", rollbackThrows: true });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r.ok).toBe(false);
+      expect(r.code).toBe("READ_ONLY_SQL_TRANSACTION");
+      expect(r.sqlState).toBe(READ_ONLY_SQL_TRANSACTION_SQLSTATE);
+      expect(r.rollbackFailed).toBe(true);
+
+      const calls2: string[] = [];
+      const client2 = fakeWriteCapabilityClient(calls2, { outcome: "insufficientPrivilege", rollbackThrows: true });
+      const r2 = await proveWriteCapabilityOnClient(client2, "opsiq_app");
+      expect(r2.ok).toBe(false);
+      expect(r2.code).toBe("INSUFFICIENT_PRIVILEGE");
+      expect(r2.rollbackFailed).toBe(true);
+    });
+
+    it("the sanitized BLOCKED report for a ROLLBACK_FAILURE contains no URL, host, password, or raw DB message", () => {
+      const r = evaluateWriteCapability({ ok: false, code: "ROLLBACK_FAILURE", sqlState: "55006" }, "opsiq_app");
+      expect(r.ok).toBe(false);
+      expect(r.lines[0]).toMatch(/^\[release-gate\] BLOCKED:/);
+      expect(r.lines[0]).not.toMatch(/postgres(?:ql)?:\/\//i);
+      expect(r.lines[0]).not.toMatch(/password/i);
+      expect(r.lines[0]).toContain("SQLSTATE 55006");
+    });
   });
 });
 
@@ -309,6 +409,7 @@ function fakeWriteCapabilityClient(
   opts: {
     outcome: "pass" | "readOnly" | "insufficientPrivilege" | "other";
     currentUser?: string;
+    sessionUser?: string;
     txn?: string;
     dflt?: string;
     rollbackThrows?: boolean;
@@ -319,7 +420,8 @@ function fakeWriteCapabilityClient(
       calls.push(sql);
       if (/current_user AS u, session_user AS s/.test(sql)) {
         const u = opts.currentUser ?? "opsiq_app";
-        return { rows: [{ u, s: u }] };
+        const s = opts.sessionUser ?? u;
+        return { rows: [{ u, s }] };
       }
       if (/current_setting\('transaction_read_only'\)/.test(sql)) {
         return { rows: [{ txn: opts.txn ?? "off", dflt: opts.dflt ?? "off" }] };

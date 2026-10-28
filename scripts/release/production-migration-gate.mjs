@@ -29,13 +29,19 @@
  * good deployment and the failed deployment is visible in Vercel and as the
  * commit status on `main`.
  *
- * The gate is READ-ONLY (a single SELECT inside a READ ONLY transaction). It
- * never applies, resolves or edits migrations — the approved migration
- * workflow remains the only production migration path. It reads the database
- * the deployment itself will use (the production DATABASE_URL Vercel injects),
- * so it cannot inspect the wrong database. It never prints the URL, host,
- * user or password. It fails closed on any uncertainty (missing URL, missing
- * migrations directory, unreachable database, missing history table).
+ * The migration-history inspection above and the identity/grant inspection in the next section are both
+ * READ-ONLY (a single SELECT inside a `BEGIN READ ONLY` transaction each). Neither one applies, resolves or
+ * edits migrations — the approved migration workflow remains the only production migration path. The gate
+ * as a WHOLE is not purely read-only, however: when `OPSIQ_REQUIRE_RUNTIME_ROLE` is set (see the next
+ * section), it ALSO executes a runtime write-capability proof (`proveWriteCapabilityOnClient()`) that opens
+ * a normal (not read-only) transaction and runs one zero-row, write-class `UPDATE ... WHERE false`
+ * statement — never any other statement, never more than zero rows, and the rollback of that transaction
+ * must itself be confirmed to succeed before this gate reports anything other than a failure (see
+ * `proveWriteCapabilityOnClient()`'s own doc comment). No path through this file ever causes a persistent
+ * Production data change. Every check reads the database the deployment itself will use (the production
+ * DATABASE_URL Vercel injects), so it cannot inspect the wrong database, and it never prints the URL, host,
+ * user or password. It fails closed on any uncertainty (missing URL, missing migrations directory,
+ * unreachable database, missing history table, an unconfirmed rollback).
  *
  * ─── Credential separation (least-privilege runtime role) ────────────────────
  *
@@ -240,17 +246,27 @@ async function readRuntimeIdentity(databaseUrl) {
  * incident this gate exists to prevent: the prior release gate and runtime-role identity checks both ran
  * inside `BEGIN READ ONLY`, so a release could pass every pre-deploy gate while the runtime's first real
  * application INSERT still failed with "cannot execute INSERT in a read-only transaction". Steps:
- *   1. identity — the SAME connection must authenticate as the required runtime role;
+ *   1. identity — the SAME connection must authenticate as the required runtime role, as BOTH current_user
+ *      AND session_user. session_user identifies the actually-authenticated login; checking current_user
+ *      alone would let a connection authenticated as a stronger login that merely SET ROLE'd to the runtime
+ *      role satisfy this boundary, which it must not (this mirrors the governed runtime probe's own
+ *      existing invariant that current_user = session_user for a genuine runtime connection);
  *   2/3. transaction_read_only and default_transaction_read_only must both read "off" BEFORE any explicit
  *        transaction is opened (a read replica, or a role-level read-only default, shows up here);
  *   4. BEGIN — a normal, NOT READ ONLY transaction;
  *   5. a write-class no-op UPDATE (zero rows by construction: WHERE false) against a table the runtime must
  *      legitimately be able to write and which exists once migrations are current;
- *   6. ROLLBACK — ALWAYS, in a finally, whether the UPDATE succeeded or failed. No persistent mutation is
- *      ever possible: WHERE false guarantees zero rows even if the rollback were somehow skipped.
- * Any failure (identity mismatch, either read-only setting "on", the UPDATE rejected for any SQLSTATE, an
- * unexpected error) fails closed with a bounded, secret-free classification — never the server's raw error
- * message, which can echo a hostname on some drivers.
+ *   6. ROLLBACK — attempted once BEGIN has succeeded, and its OUTCOME IS CHECKED: the function's final
+ *      result is never returned until rollback has been confirmed, because the gate's own success line
+ *      ("no-op transaction rolled back") must never be printed on an unconfirmed cleanup. If rollback
+ *      itself fails after the UPDATE succeeded, this fails closed as ROLLBACK_FAILURE rather than reporting
+ *      the provisional PASS; if rollback fails after the UPDATE already failed, the original substantive
+ *      failure is preserved (never upgraded or downgraded) with an additional `rollbackFailed` marker — in
+ *      no case does a rollback failure ever produce `ok: true`. No persistent mutation is possible in any of
+ *      this regardless of rollback's own outcome: WHERE false guarantees zero rows were ever touched.
+ * Any failure (identity mismatch, either read-only setting "on", the UPDATE rejected for any SQLSTATE, a
+ * rollback that cannot be confirmed, an unexpected error) fails closed with a bounded, secret-free
+ * classification — never the server's raw error message, which can echo a hostname on some drivers.
  */
 export async function proveWriteCapabilityOnClient(client, requiredRole, targetTable = WRITE_CAPABILITY_TARGET_TABLE) {
   let who;
@@ -259,7 +275,11 @@ export async function proveWriteCapabilityOnClient(client, requiredRole, targetT
   } catch (e) {
     return { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: sqlStateOf(e) };
   }
-  if (who.rows[0]?.u !== requiredRole) {
+  const { u, s } = who.rows[0] ?? {};
+  if (u !== requiredRole || s !== requiredRole) {
+    // Both current_user and session_user must equal the required role. The required role name itself is
+    // not a secret (it is operator-configured and already echoed elsewhere in this file); the CONNECTED
+    // identity, if different, is withheld — it could name an unexpected/infrastructure-sensitive login.
     return { ok: false, code: "IDENTITY_MISMATCH", sqlState: null };
   }
 
@@ -276,23 +296,44 @@ export async function proveWriteCapabilityOnClient(client, requiredRole, targetT
   if (dflt !== "off") return { ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null };
 
   let began = false;
+  let provisional;
   try {
     await client.query("BEGIN");
     began = true;
     await client.query(`UPDATE ${targetTable} SET "updated_at" = "updated_at" WHERE false`);
-    return { ok: true, code: "PASS", sqlState: null };
+    provisional = { ok: true, code: "PASS", sqlState: null };
   } catch (e) {
     const sqlState = sqlStateOf(e);
-    if (sqlState === READ_ONLY_SQL_TRANSACTION_SQLSTATE) return { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState };
-    if (sqlState === INSUFFICIENT_PRIVILEGE_SQLSTATE) return { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState };
-    return { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState };
-  } finally {
-    if (began) {
-      // Best-effort: a rollback failure must never override the already-decided result above, and this
-      // probe never retries or escalates — the caller's own connection teardown handles a poisoned session.
-      await client.query("ROLLBACK").catch(() => {});
-    }
+    if (sqlState === READ_ONLY_SQL_TRANSACTION_SQLSTATE) provisional = { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState };
+    else if (sqlState === INSUFFICIENT_PRIVILEGE_SQLSTATE) provisional = { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState };
+    else provisional = { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState };
   }
+
+  if (!began) {
+    // BEGIN itself never ran (unreachable in practice — the catch above always sets `began` before the
+    // UPDATE attempt — but kept explicit so there is never an attempt to roll back a transaction that was
+    // never opened).
+    return provisional;
+  }
+
+  // The explicit transaction's cleanup must be PROVEN, not merely attempted: this function's result is
+  // withheld until ROLLBACK has been confirmed to succeed, so a caller can never be told "rolled back" on
+  // an unconfirmed cleanup.
+  try {
+    await client.query("ROLLBACK");
+  } catch (e) {
+    const rollbackSqlState = sqlStateOf(e);
+    if (provisional.ok) {
+      // The UPDATE itself succeeded, but cleanup could not be confirmed — fail closed. Never report
+      // success when the explicit transaction's own rollback cannot be proven to have completed.
+      return { ok: false, code: "ROLLBACK_FAILURE", sqlState: rollbackSqlState };
+    }
+    // The UPDATE already failed closed; a rollback failure on top of that is additional diagnostic
+    // context only — it never upgrades the result and can never produce a PASS.
+    return { ...provisional, rollbackFailed: true, rollbackSqlState };
+  }
+
+  return provisional;
 }
 
 /** Connects AS the candidate runtime DATABASE_URL, proves write capability, and always closes the connection. */
@@ -326,10 +367,12 @@ export function evaluateWriteCapability(capability, requiredRole) {
     CONNECTION_FAILURE: "the write-capability probe could not connect",
     CONNECTION_OR_QUERY_FAILURE: `the write-capability probe failed before completing${suffix}`,
     UNEXPECTED_SQLSTATE: `the write-class no-op UPDATE failed unexpectedly${suffix}`,
+    ROLLBACK_FAILURE: `the write-capability probe's no-op UPDATE succeeded but its ROLLBACK could not be confirmed${suffix} — refusing to report success on an unconfirmed cleanup`,
     UNVERIFIED: "runtime write capability could not be verified",
   };
   const msg = messages[code] ?? messages.UNVERIFIED;
-  return { ok: false, lines: [`[release-gate] BLOCKED: ${msg} (fail closed).`] };
+  const rollbackNote = capability && capability.rollbackFailed ? " Its ROLLBACK also could not be confirmed afterward." : "";
+  return { ok: false, lines: [`[release-gate] BLOCKED: ${msg} (fail closed).${rollbackNote}`] };
 }
 
 /** Pure decision for the credential-separation / runtime-role rules. Never contains connection details. */
