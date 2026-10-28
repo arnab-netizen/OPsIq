@@ -12,6 +12,7 @@ import {
   MIGRATOR_CREDENTIAL_VARIABLES,
   RUNTIME_DENIED_TABLES,
   WRITE_CAPABILITY_TARGET_TABLE,
+  SCHEMA_SAFETY_SQL,
   READ_ONLY_SQL_TRANSACTION_SQLSTATE,
   INSUFFICIENT_PRIVILEGE_SQLSTATE,
   evaluateRuntimeRole,
@@ -20,6 +21,11 @@ import {
   runGate,
 } from "../../../scripts/release/production-migration-gate.mjs";
 import { RUNTIME_DENIED_TABLES as TS_DENIED } from "@/services/privacy-erasure/role-topology";
+import {
+  WRITE_CAPABILITY_TARGET_TABLE as TS_WRITE_CAPABILITY_TARGET_TABLE,
+  SCHEMA_SAFETY_SQL as TS_SCHEMA_SAFETY_SQL,
+  checkWriteProbeSchemaSafety,
+} from "@/services/privacy-erasure/runtime-role-probe";
 
 const ROOT = resolve(__dirname, "../../..");
 const NAME = "20260101000000_one";
@@ -397,12 +403,89 @@ describe("proveWriteCapabilityOnClient — pure logic over a fake client (no dat
       expect(r.lines[0]).toContain("SQLSTATE 55006");
     });
   });
+
+  describe("schema safety: WHERE false alone is not sufficient — a statement-level UPDATE trigger or UPDATE rewrite rule must also be ruled out BEFORE any write", () => {
+    it("1. no statement-level trigger or rule → capability may continue (proceeds to PASS)", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", unsafeTriggers: 0, unsafeRules: 0 });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r).toEqual({ ok: true, code: "PASS", sqlState: null });
+    });
+
+    it("3. an enabled statement-level UPDATE trigger → BLOCK (UNSAFE_WRITE_PROBE_SCHEMA)", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", unsafeTriggers: 1 });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r).toEqual({ ok: false, code: "UNSAFE_WRITE_PROBE_SCHEMA", sqlState: null });
+    });
+
+    it("5. an UPDATE rewrite rule → BLOCK (UNSAFE_WRITE_PROBE_SCHEMA)", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", unsafeRules: 1 });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r).toEqual({ ok: false, code: "UNSAFE_WRITE_PROBE_SCHEMA", sqlState: null });
+    });
+
+    it("6. a schema-safety inspection failure (catalog query throws) → BLOCK, never silently treated as safe", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", schemaSafetyThrows: true });
+      const r = await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(r.ok).toBe(false);
+      expect(r.code).toBe("CONNECTION_OR_QUERY_FAILURE");
+    });
+
+    it("7. an unsafe schema BLOCKS before any BEGIN is ever issued", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", unsafeTriggers: 1 });
+      await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(calls).not.toContain("BEGIN");
+    });
+
+    it("8. an unsafe schema BLOCKS before the write-class UPDATE (or any DML) is ever issued", async () => {
+      const calls: string[] = [];
+      const client = fakeWriteCapabilityClient(calls, { outcome: "pass", unsafeRules: 1 });
+      await proveWriteCapabilityOnClient(client, "opsiq_app");
+      expect(calls.some((c) => /^UPDATE/.test(c))).toBe(false);
+      expect(calls).not.toContain("ROLLBACK");
+    });
+
+    it("9. the sanitized BLOCKED report for an unsafe schema contains no trigger/rule name, definition, URL, host, or password", () => {
+      const r = evaluateWriteCapability({ ok: false, code: "UNSAFE_WRITE_PROBE_SCHEMA", sqlState: null }, "opsiq_app");
+      expect(r.ok).toBe(false);
+      expect(r.lines[0]).toMatch(/^\[release-gate\] BLOCKED:/);
+      expect(r.lines[0]).not.toMatch(/postgres(?:ql)?:\/\//i);
+      expect(r.lines[0]).not.toMatch(/password/i);
+      // only the fixed, already-public target table name may appear — never an arbitrary trigger/rule identifier
+      expect(r.lines[0]).not.toMatch(/zz_|trigger_name|rule_name/i);
+    });
+
+    it("the real query is parameterized ($1::regclass) — it never interpolates the target table into catalog SQL", () => {
+      expect(SCHEMA_SAFETY_SQL).toContain("$1::regclass");
+      expect(SCHEMA_SAFETY_SQL).not.toContain("${");
+      expect(SCHEMA_SAFETY_SQL).not.toMatch(/startup_status/);
+    });
+  });
+});
+
+describe("schema-safety drift guards — the release gate and the governed runtime probe must share one policy", () => {
+  it("WRITE_CAPABILITY_TARGET_TABLE is byte-identical between the release gate (.mjs) and the governed probe (.ts)", () => {
+    expect(WRITE_CAPABILITY_TARGET_TABLE).toBe(TS_WRITE_CAPABILITY_TARGET_TABLE);
+  });
+  it("SCHEMA_SAFETY_SQL is byte-identical between the release gate (.mjs) and the governed probe (.ts)", () => {
+    expect(SCHEMA_SAFETY_SQL).toBe(TS_SCHEMA_SAFETY_SQL);
+  });
+  it("checkWriteProbeSchemaSafety() (the TS probe's helper) agrees with the release gate's inline check on the same fake catalog result", async () => {
+    const fakeSafe = { query: async () => ({ rows: [{ unsafe_triggers: 0, unsafe_rules: 0 }] }) };
+    expect((await checkWriteProbeSchemaSafety(fakeSafe as never, "public.startup_status")).safe).toBe(true);
+    const fakeUnsafe = { query: async () => ({ rows: [{ unsafe_triggers: 1, unsafe_rules: 0 }] }) };
+    expect((await checkWriteProbeSchemaSafety(fakeUnsafe as never, "public.startup_status")).safe).toBe(false);
+  });
 });
 
 /**
- * Minimal fake pg client for proveWriteCapabilityOnClient()'s four-query sequence (identity, read-only
- * settings, BEGIN, the no-op UPDATE) plus ROLLBACK. Deliberately far smaller than a full probeRuntimeRole
- * fake (15+ statements) — this function's entire surface is these five queries.
+ * Minimal fake pg client for proveWriteCapabilityOnClient()'s query sequence (identity, read-only
+ * settings, schema safety, BEGIN, the no-op UPDATE) plus ROLLBACK. Deliberately far smaller than a full
+ * probeRuntimeRole fake (15+ statements) — this function's entire surface is these six queries.
  */
 function fakeWriteCapabilityClient(
   calls: string[],
@@ -413,6 +496,9 @@ function fakeWriteCapabilityClient(
     txn?: string;
     dflt?: string;
     rollbackThrows?: boolean;
+    unsafeTriggers?: number;
+    unsafeRules?: number;
+    schemaSafetyThrows?: boolean;
   },
 ) {
   return {
@@ -425,6 +511,10 @@ function fakeWriteCapabilityClient(
       }
       if (/current_setting\('transaction_read_only'\)/.test(sql)) {
         return { rows: [{ txn: opts.txn ?? "off", dflt: opts.dflt ?? "off" }] };
+      }
+      if (/unsafe_triggers/.test(sql)) {
+        if (opts.schemaSafetyThrows) throw new Error("simulated schema-safety inspection failure");
+        return { rows: [{ unsafe_triggers: opts.unsafeTriggers ?? 0, unsafe_rules: opts.unsafeRules ?? 0 }] };
       }
       if (sql === "BEGIN") return {};
       if (/^UPDATE/.test(sql)) {

@@ -34,27 +34,90 @@ const DENIED: Array<[string, string, readonly string[]]> = [
 /**
  * Write-capability probe target: a table the runtime role must legitimately be able to UPDATE and which is
  * present once migrations are current (see docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md §2). Kept in step
- * with the identical probe in scripts/release/production-migration-gate.mjs (WRITE_CAPABILITY_TARGET_TABLE).
+ * with the identical constant in scripts/release/production-migration-gate.mjs — a drift test
+ * (runtime-role-release-gate.test.ts) asserts both are byte-identical.
  */
+export const WRITE_CAPABILITY_TARGET_TABLE = "public.startup_status";
 export const WRITE_CAPABILITY_PROBE_NAME =
   "can execute a write-class no-op UPDATE (zero rows) on public.startup_status — proves the connection is not read-only";
-export const WRITE_CAPABILITY_PROBE_SQL = `UPDATE public.startup_status SET "updated_at" = "updated_at" WHERE false`;
+export const WRITE_CAPABILITY_PROBE_SQL = `UPDATE ${WRITE_CAPABILITY_TARGET_TABLE} SET "updated_at" = "updated_at" WHERE false`;
 
 /**
- * A statement the runtime MUST be able to run. Mostly read-only; the write-capability probe below is the
- * one EXCEPTION — it is deliberately a real write-class statement (not merely a read), because the
- * Production incident this closes was a release that passed every READ-ONLY identity/grant check while the
- * runtime's first real INSERT still failed with "cannot execute INSERT in a read-only transaction". The
- * caller's outer `BEGIN` (below, not `BEGIN READ ONLY`) plus the final `ROLLBACK` make this safe against
- * Production: `WHERE false` guarantees zero rows even before that rollback ever runs.
+ * Schema-safety precondition for the write-capability no-op: `WHERE false` guarantees the UPDATE itself
+ * matches zero rows, but that alone does NOT guarantee zero side effects for every possible schema —
+ * PostgreSQL fires a STATEMENT-level UPDATE trigger even when zero rows match (unlike a ROW-level trigger,
+ * which only fires per matched row; verified against real PostgreSQL in runtime-role.db.test.ts). An
+ * UPDATE rewrite RULE is refused on its mere PRESENCE for a different reason: a rule's own effective
+ * row-matching semantics (plain `DO ALSO`, `DO INSTEAD`, a rule-level `WHERE` unrelated to the triggering
+ * command, …) are operator-defined SQL and not safely predictable in general — proving in general whether
+ * any given rule would or would not fire for this specific no-op is fragile, so this refuses unconditionally
+ * on presence rather than attempting that prediction (also verified in runtime-role.db.test.ts: a plain
+ * `DO ALSO` rule does NOT fire for this probe's own `WHERE false` UPDATE, yet the guard still refuses it).
+ * This query proves neither an unsafe trigger nor any UPDATE rule exists on the probe target BEFORE any
+ * write statement is ever attempted. `$1::regclass` is a parameterized relation lookup — never an
+ * interpolated, caller-controlled identifier — so this can only ever inspect the single fixed,
+ * repository-public target table.
+ *   tgtype bit layout (PostgreSQL pg_trigger.tgtype): ROW = 1, UPDATE = 16. A trigger is STATEMENT-level
+ *   exactly when the ROW bit is clear; it fires on UPDATE exactly when the UPDATE bit is set.
+ *   tgisinternal excludes system-internal triggers (e.g. those backing constraints); tgenabled <> 'D'
+ *   excludes a trigger an operator has explicitly disabled (ALTER TABLE ... DISABLE TRIGGER) — a disabled
+ *   trigger cannot fire and is not a threat.
+ *   pg_rewrite.ev_type '2' is PostgreSQL's catalog encoding for an UPDATE rule (the semantic field itself,
+ *   never parsed from `pg_get_ruledef()` text).
+ * Kept in step with the identical SQL in scripts/release/production-migration-gate.mjs — a drift test
+ * (runtime-role-release-gate.test.ts) asserts both are byte-identical.
+ */
+export const SCHEMA_SAFETY_SQL =
+  "SELECT " +
+  "(SELECT count(*)::int FROM pg_trigger t WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal AND t.tgenabled <> 'D' AND (t.tgtype::int & 1) = 0 AND (t.tgtype::int & 16) <> 0) AS unsafe_triggers, " +
+  "(SELECT count(*)::int FROM pg_rewrite r WHERE r.ev_class = $1::regclass AND r.ev_type = '2') AS unsafe_rules";
+
+export type SchemaSafetyCode = "SAFE" | "UNSAFE_WRITE_PROBE_SCHEMA" | "SCHEMA_SAFETY_CHECK_FAILED";
+
+/** Proves (or disproves) the schema-safety precondition above. Never prints a trigger/rule name or definition. */
+export async function checkWriteProbeSchemaSafety(c: ClientBase, targetTable: string): Promise<{ safe: boolean; code: SchemaSafetyCode }> {
+  try {
+    const row = (await c.query<{ unsafe_triggers: number; unsafe_rules: number }>(SCHEMA_SAFETY_SQL, [targetTable])).rows[0];
+    if ((row?.unsafe_triggers ?? 0) > 0 || (row?.unsafe_rules ?? 0) > 0) {
+      return { safe: false, code: "UNSAFE_WRITE_PROBE_SCHEMA" };
+    }
+    return { safe: true, code: "SAFE" };
+  } catch {
+    return { safe: false, code: "SCHEMA_SAFETY_CHECK_FAILED" };
+  }
+}
+
+/**
+ * A statement the runtime MUST be able to run (read-only). The write-capability proof is a SEPARATE,
+ * dedicated step in probeRuntimeRole() below — not a member of this list — because, unlike every statement
+ * here, it must never even be attempted unless checkWriteProbeSchemaSafety() has first proven the target
+ * safe (see that function's doc comment for why `WHERE false` alone is not sufficient).
  */
 const ALLOWED: Array<[string, string]> = [
   ["can SELECT 1", `SELECT 1`],
   ["can read the migration ledger", `SELECT count(*) FROM public._prisma_migrations`],
   ["can read an application table", `SELECT count(*) FROM public.audit_events`],
   ["can call the erasure authorization function (guard triggers need it) and gets false", `SELECT CASE WHEN public.qbo_erasure_authorized(gen_random_uuid(), gen_random_uuid()) THEN 'true' ELSE 'false' END AS v`],
-  [WRITE_CAPABILITY_PROBE_NAME, WRITE_CAPABILITY_PROBE_SQL],
 ];
+
+/**
+ * The write-capability probe, run as its own savepoint-isolated step: schema safety is proven FIRST, and
+ * the write-class no-op is attempted ONLY if that proof succeeds. Proven safe against Production by the
+ * caller's outer `BEGIN` (not `BEGIN READ ONLY`) plus the final `ROLLBACK` in probeRuntimeRole() — but the
+ * schema-safety gate below exists precisely so that guarantee does not rest on `WHERE false` alone.
+ */
+async function runWriteCapabilityProbe(c: ClientBase): Promise<ProbeResult> {
+  const safety = await checkWriteProbeSchemaSafety(c, WRITE_CAPABILITY_TARGET_TABLE);
+  if (!safety.safe) {
+    return { name: WRITE_CAPABILITY_PROBE_NAME, ok: false, detail: safety.code };
+  }
+  try {
+    await c.query(WRITE_CAPABILITY_PROBE_SQL);
+    return { name: WRITE_CAPABILITY_PROBE_NAME, ok: true, detail: "ok" };
+  } catch (e) {
+    return { name: WRITE_CAPABILITY_PROBE_NAME, ok: false, detail: (e as { code?: string }).code ?? "error" };
+  }
+}
 
 export async function probeRuntimeRole(c: ClientBase, ownerRole: string): Promise<{ result: "PASS" | "FAIL"; probes: ProbeResult[] }> {
   const probes: ProbeResult[] = [];
@@ -75,6 +138,10 @@ export async function probeRuntimeRole(c: ClientBase, ownerRole: string): Promis
       }
       i++;
     }
+    await c.query(`SAVEPOINT p${i}`);
+    probes.push(await runWriteCapabilityProbe(c));
+    await c.query(`ROLLBACK TO SAVEPOINT p${i}`);
+    i++;
     for (const [name, template, codes] of DENIED) {
       const sql = template.replace("__OWNER__", ownerRole.replace(/"/g, '""'));
       await c.query(`SAVEPOINT p${i}`);

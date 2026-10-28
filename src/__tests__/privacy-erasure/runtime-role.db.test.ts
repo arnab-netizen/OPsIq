@@ -28,7 +28,7 @@ import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler, enqueueQboSync, qboSyncKe
 import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 import { applyAndVerifyRoleTopology, readModeledTables, roleTopologyStatements, verifyRoleTopology } from "@/services/privacy-erasure/role-topology";
-import { WRITE_CAPABILITY_PROBE_NAME, probeRuntimeRole } from "@/services/privacy-erasure/runtime-role-probe";
+import { WRITE_CAPABILITY_PROBE_NAME, checkWriteProbeSchemaSafety, probeRuntimeRole } from "@/services/privacy-erasure/runtime-role-probe";
 
 const OWNER_URL = process.env.ROLE_TEST_OWNER_DATABASE_URL ?? "";
 const ON_DEDICATED_DB = /opsiq_runtime_role_test/.test(OWNER_URL) && /opsiq_runtime_role_test/.test(process.env.DATABASE_URL ?? "");
@@ -244,6 +244,164 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] opsiq_app runtim
       } finally { await rt.end(); }
       const after = await snapshotStartupStatus();
       expect(after).toEqual(before);
+    });
+
+    it("2. the real catalog query treats TODAY's row-level timestamp trigger as SAFE (ROW bit set) — the baseline is not a false positive", async () => {
+      const row = (await admin.query(
+        `SELECT tgtype::int AS t FROM pg_trigger WHERE tgrelid = 'public.startup_status'::regclass AND tgname = 'startup_status_update_timestamp'`
+      )).rows[0];
+      expect(row).toBeTruthy();
+      expect(row.t & 1).toBe(1); // ROW bit set: this is a row-level trigger, not statement-level
+      const r = await checkWriteProbeSchemaSafety(admin, "public.startup_status");
+      expect(r).toEqual({ safe: true, code: "SAFE" });
+    });
+
+    it("3/7/8. HOSTILE — a FOR EACH STATEMENT UPDATE trigger is a live threat (fires even on a zero-row UPDATE), but the guard detects it and fails closed before BEGIN/UPDATE ever runs, leaving its marker table untouched", async () => {
+      await admin.query(`CREATE TABLE zz_statement_trigger_marker (fired_at timestamptz NOT NULL DEFAULT now())`);
+      await admin.query(`
+        CREATE FUNCTION zz_record_statement_fire() RETURNS trigger AS $$
+        BEGIN
+          INSERT INTO zz_statement_trigger_marker DEFAULT VALUES;
+          RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql
+      `);
+      await admin.query(`
+        CREATE TRIGGER zz_statement_update_trigger
+        AFTER UPDATE ON public.startup_status
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION zz_record_statement_fire()
+      `);
+      try {
+        // Prove the trigger is a LIVE threat: even a zero-row WHERE false UPDATE fires a STATEMENT-level
+        // trigger (unlike a ROW-level trigger, which only fires per matched row). Observed INSIDE the
+        // transaction (own writes are visible before commit/rollback), then ALWAYS rolled back — even if
+        // the assertion itself throws — so a failed expectation here can never leave admin's connection
+        // sitting in an open transaction that would trap the cleanup DROP statements below uncommitted.
+        await admin.query("BEGIN");
+        try {
+          await admin.query(`UPDATE public.startup_status SET "updated_at" = "updated_at" WHERE false`);
+          const liveFire = await admin.query(`SELECT count(*)::int AS n FROM zz_statement_trigger_marker`);
+          expect(liveFire.rows[0].n).toBeGreaterThan(0);
+        } finally {
+          await admin.query("ROLLBACK").catch(() => {});
+        }
+
+        // The catalog check detects it directly.
+        const safety = await checkWriteProbeSchemaSafety(admin, "public.startup_status");
+        expect(safety).toEqual({ safe: false, code: "UNSAFE_WRITE_PROBE_SCHEMA" });
+
+        // The REAL guarded probe refuses before BEGIN/UPDATE ever runs, and the marker stays untouched.
+        const rt = await asRuntime();
+        try {
+          const p = await probeRuntimeRole(rt, ownerRole);
+          const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
+          expect(row).toBeTruthy();
+          expect(row!.ok).toBe(false);
+          expect(row!.detail).toBe("UNSAFE_WRITE_PROBE_SCHEMA");
+          expect(p.result).toBe("FAIL");
+        } finally { await rt.end(); }
+        const after = await admin.query(`SELECT count(*)::int AS n FROM zz_statement_trigger_marker`);
+        expect(after.rows[0].n).toBe(0);
+      } finally {
+        await admin.query(`DROP TRIGGER IF EXISTS zz_statement_update_trigger ON public.startup_status`);
+        await admin.query(`DROP FUNCTION IF EXISTS zz_record_statement_fire()`);
+        await admin.query(`DROP TABLE IF EXISTS zz_statement_trigger_marker`);
+      }
+    });
+
+    it("4. a DISABLED statement-level UPDATE trigger does not produce a false unsafe result (ALTER TABLE ... DISABLE TRIGGER)", async () => {
+      await admin.query(`CREATE TABLE zz_disabled_trigger_marker (fired_at timestamptz NOT NULL DEFAULT now())`);
+      await admin.query(`
+        CREATE FUNCTION zz_record_disabled_fire() RETURNS trigger AS $$
+        BEGIN
+          INSERT INTO zz_disabled_trigger_marker DEFAULT VALUES;
+          RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql
+      `);
+      await admin.query(`
+        CREATE TRIGGER zz_disabled_statement_trigger
+        AFTER UPDATE ON public.startup_status
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION zz_record_disabled_fire()
+      `);
+      await admin.query(`ALTER TABLE public.startup_status DISABLE TRIGGER zz_disabled_statement_trigger`);
+      try {
+        const safety = await checkWriteProbeSchemaSafety(admin, "public.startup_status");
+        expect(safety).toEqual({ safe: true, code: "SAFE" });
+        const rt = await asRuntime();
+        try {
+          const p = await probeRuntimeRole(rt, ownerRole);
+          expect(p.result).toBe("PASS");
+        } finally { await rt.end(); }
+      } finally {
+        await admin.query(`DROP TRIGGER IF EXISTS zz_disabled_statement_trigger ON public.startup_status`);
+        await admin.query(`DROP FUNCTION IF EXISTS zz_record_disabled_fire()`);
+        await admin.query(`DROP TABLE IF EXISTS zz_disabled_trigger_marker`);
+      }
+    });
+
+    it("5/7/8. HOSTILE — an UPDATE rewrite RULE is refused on mere PRESENCE (a conservative policy, verified against real Postgres rule-firing semantics), and the guard fails closed before DML ever runs, leaving its marker table untouched", async () => {
+      // Every setup statement (including the fixture row insert, which must precede CREATE RULE — see
+      // below) is inside this try, so any failure at any step still reaches the cleanup in `finally`.
+      try {
+        await admin.query(`CREATE TABLE zz_rule_marker (fired_at timestamptz NOT NULL DEFAULT now())`);
+        // A row to UPDATE must exist BEFORE the rule is created: PostgreSQL refuses `INSERT ... ON
+        // CONFLICT` on any table that already carries a rule, so the fixture row is seeded first.
+        await admin.query(`DELETE FROM public.startup_status WHERE instance_id = 'zz-rule-test-instance'`);
+        await admin.query(`
+          INSERT INTO public.startup_status (status, version, instance_id)
+          VALUES ('READY', 'zz-rule-test', 'zz-rule-test-instance')
+        `);
+        await admin.query(`
+          CREATE RULE zz_update_rule AS ON UPDATE TO public.startup_status
+          DO ALSO INSERT INTO zz_rule_marker DEFAULT VALUES
+        `);
+        // Prove the rule is a genuine threat for an ORDINARY (row-matching) UPDATE — rolled back, so
+        // nothing persists. (Verified against real PostgreSQL: unlike a STATEMENT-level trigger, a plain
+        // `DO ALSO` rule action is itself gated by the triggering command's own row-matching qualification
+        // — it does NOT fire for this probe's specific `WHERE false` no-op. That is exactly why the guard's
+        // policy is to refuse on the rule's mere PRESENCE rather than trying to predict whether any one
+        // particular no-op statement would trigger any one particular rule shape — predicting rule-firing
+        // semantics in general is fragile; refusing unconditionally is not.)
+        await admin.query("BEGIN");
+        try {
+          await admin.query(`UPDATE public.startup_status SET "updated_at" = now() WHERE instance_id = 'zz-rule-test-instance'`);
+          const liveFire = await admin.query(`SELECT count(*)::int AS n FROM zz_rule_marker`);
+          expect(liveFire.rows[0].n).toBeGreaterThan(0);
+        } finally {
+          await admin.query("ROLLBACK").catch(() => {});
+        }
+
+        const safety = await checkWriteProbeSchemaSafety(admin, "public.startup_status");
+        expect(safety).toEqual({ safe: false, code: "UNSAFE_WRITE_PROBE_SCHEMA" });
+
+        const rt = await asRuntime();
+        try {
+          const p = await probeRuntimeRole(rt, ownerRole);
+          const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
+          expect(row).toBeTruthy();
+          expect(row!.ok).toBe(false);
+          expect(row!.detail).toBe("UNSAFE_WRITE_PROBE_SCHEMA");
+          expect(p.result).toBe("FAIL");
+        } finally { await rt.end(); }
+        const after = await admin.query(`SELECT count(*)::int AS n FROM zz_rule_marker`);
+        expect(after.rows[0].n).toBe(0);
+      } finally {
+        await admin.query(`DROP RULE IF EXISTS zz_update_rule ON public.startup_status`);
+        await admin.query(`DROP TABLE IF EXISTS zz_rule_marker`);
+        await admin.query(`DELETE FROM public.startup_status WHERE instance_id = 'zz-rule-test-instance'`);
+      }
+    });
+
+    it("after every hostile fixture is cleaned up, the target is SAFE again and the probe PASSES (no residue)", async () => {
+      const safety = await checkWriteProbeSchemaSafety(admin, "public.startup_status");
+      expect(safety).toEqual({ safe: true, code: "SAFE" });
+      const rt = await asRuntime();
+      try {
+        expect((await probeRuntimeRole(rt, ownerRole)).result).toBe("PASS");
+      } finally { await rt.end(); }
     });
   });
 
