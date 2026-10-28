@@ -29,13 +29,21 @@
  * good deployment and the failed deployment is visible in Vercel and as the
  * commit status on `main`.
  *
- * The gate is READ-ONLY (a single SELECT inside a READ ONLY transaction). It
- * never applies, resolves or edits migrations — the approved migration
- * workflow remains the only production migration path. It reads the database
- * the deployment itself will use (the production DATABASE_URL Vercel injects),
- * so it cannot inspect the wrong database. It never prints the URL, host,
- * user or password. It fails closed on any uncertainty (missing URL, missing
- * migrations directory, unreachable database, missing history table).
+ * The migration-history inspection above and the identity/grant inspection in the next section are both
+ * READ-ONLY (a single SELECT inside a `BEGIN READ ONLY` transaction each). Neither one applies, resolves or
+ * edits migrations — the approved migration workflow remains the only production migration path. The gate
+ * as a WHOLE is not purely read-only, however: when `OPSIQ_REQUIRE_RUNTIME_ROLE` is set (see the next
+ * section), it ALSO executes a runtime write-capability proof (`proveWriteCapabilityOnClient()`) that, only
+ * after first proving the target schema carries no unsafe statement-level UPDATE trigger or UPDATE rewrite
+ * rule, opens a normal (not read-only) transaction and runs one zero-row, write-class `UPDATE ... WHERE
+ * false` statement — never any other statement, never more than zero rows — and whose rollback must itself
+ * be confirmed to succeed before this gate reports anything other than a failure (see
+ * `proveWriteCapabilityOnClient()`'s own doc comment for the full three-part invariant). No path through
+ * this file ever causes a persistent Production data change. Every check reads the database the deployment
+ * itself will use (the production DATABASE_URL Vercel injects), so it cannot inspect the wrong database,
+ * and it never prints the URL, host,
+ * user or password. It fails closed on any uncertainty (missing URL, missing migrations directory,
+ * unreachable database, missing history table, an unconfirmed rollback).
  *
  * ─── Credential separation (least-privilege runtime role) ────────────────────
  *
@@ -74,7 +82,54 @@ export const MIGRATOR_CREDENTIAL_VARIABLES = [
 /** Application tables the runtime role must NOT be able to read (kept in step with RUNTIME_DENIED_TABLES in role-topology.ts; asserted by a test). */
 export const RUNTIME_DENIED_TABLES = ["privacy_erasure_requests"];
 
+/**
+ * Write-capability probe target: a table the runtime role must legitimately be able to UPDATE and which is
+ * present once migrations are current (see docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md §2). Kept in step with
+ * the identical constant added to probeRuntimeRole() (src/services/privacy-erasure/runtime-role-probe.ts) —
+ * a drift test (runtime-role-release-gate.test.ts) asserts both are byte-identical.
+ */
+export const WRITE_CAPABILITY_TARGET_TABLE = "public.startup_status";
+/**
+ * Schema-safety precondition for the write-capability no-op: `WHERE false` guarantees the UPDATE itself
+ * matches zero rows, but that alone does NOT guarantee zero side effects for every possible schema —
+ * PostgreSQL fires a STATEMENT-level UPDATE trigger even when zero rows match (unlike a ROW-level trigger,
+ * which only fires per matched row; verified against real PostgreSQL in runtime-role.db.test.ts). An
+ * UPDATE rewrite RULE is refused on its mere PRESENCE for a different reason: a rule's own effective
+ * row-matching semantics (plain `DO ALSO`, `DO INSTEAD`, a rule-level `WHERE` unrelated to the triggering
+ * command, …) are operator-defined SQL and not safely predictable in general — proving in general whether
+ * any given rule would or would not fire for this specific no-op is fragile, so this refuses unconditionally
+ * on presence rather than attempting that prediction (also verified in runtime-role.db.test.ts: a plain
+ * `DO ALSO` rule does NOT fire for this probe's own `WHERE false` UPDATE, yet the guard still refuses it).
+ * This query proves neither an unsafe trigger nor any UPDATE rule exists on the probe target BEFORE any
+ * write statement is ever attempted. `$1::regclass` is a parameterized relation lookup — never an
+ * interpolated, caller-controlled identifier — so this can only ever inspect the single fixed,
+ * repository-public target table.
+ *   tgtype bit layout (PostgreSQL pg_trigger.tgtype): ROW = 1, UPDATE = 16. A trigger is STATEMENT-level
+ *   exactly when the ROW bit is clear; it fires on UPDATE exactly when the UPDATE bit is set.
+ *   tgisinternal excludes system-internal triggers (e.g. those backing constraints); tgenabled <> 'D'
+ *   excludes a trigger an operator has explicitly disabled (ALTER TABLE ... DISABLE TRIGGER) — a disabled
+ *   trigger cannot fire and is not a threat.
+ *   pg_rewrite.ev_type '2' is PostgreSQL's catalog encoding for an UPDATE rule (the semantic field itself,
+ *   never parsed from `pg_get_ruledef()` text).
+ * Kept in step with the identical SQL in src/services/privacy-erasure/runtime-role-probe.ts — a drift test
+ * (runtime-role-release-gate.test.ts) asserts both are byte-identical.
+ */
+export const SCHEMA_SAFETY_SQL =
+  "SELECT " +
+  "(SELECT count(*)::int FROM pg_trigger t WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal AND t.tgenabled <> 'D' AND (t.tgtype::int & 1) = 0 AND (t.tgtype::int & 16) <> 0) AS unsafe_triggers, " +
+  "(SELECT count(*)::int FROM pg_rewrite r WHERE r.ev_class = $1::regclass AND r.ev_type = '2') AS unsafe_rules";
+/** Exact PostgreSQL SQLSTATEs the write-capability probe distinguishes — never matched by English error text. */
+export const READ_ONLY_SQL_TRANSACTION_SQLSTATE = "25006";
+export const INSUFFICIENT_PRIVILEGE_SQLSTATE = "42501";
+
 const ROLE_NAME = /^[a-z_][a-z0-9_]{0,62}$/;
+const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
+
+/** Bounded SQLSTATE only — never the server's raw error message, which can echo a hostname on some drivers. */
+function sqlStateOf(e) {
+  const code = e && typeof e === "object" && "code" in e ? String(e.code) : null;
+  return code && SQLSTATE_PATTERN.test(code) ? code : null;
+}
 
 /** Committed migrations: [{ name, checksum }] sorted by name, or null when unreadable (fail closed). */
 export function listCommittedMigrations(migrationsDir) {
@@ -217,6 +272,166 @@ async function readRuntimeIdentity(databaseUrl) {
   }
 }
 
+/**
+ * Canonical runtime WRITE-CAPABILITY proof, pure over an already-connected client (no I/O beyond it — unit
+ * testable with a fake client, no database required). This closes the assurance gap behind the Production
+ * incident this gate exists to prevent: the prior release gate and runtime-role identity checks both ran
+ * inside `BEGIN READ ONLY`, so a release could pass every pre-deploy gate while the runtime's first real
+ * application INSERT still failed with "cannot execute INSERT in a read-only transaction". Steps:
+ *   1. identity — the SAME connection must authenticate as the required runtime role, as BOTH current_user
+ *      AND session_user. session_user identifies the actually-authenticated login; checking current_user
+ *      alone would let a connection authenticated as a stronger login that merely SET ROLE'd to the runtime
+ *      role satisfy this boundary, which it must not (this mirrors the governed runtime probe's own
+ *      existing invariant that current_user = session_user for a genuine runtime connection);
+ *   2/3. transaction_read_only and default_transaction_read_only must both read "off" BEFORE any explicit
+ *        transaction is opened (a read replica, or a role-level read-only default, shows up here);
+ *   4. schema safety — BEFORE any transaction is opened, prove the target has no unsafe statement-level
+ *      UPDATE trigger and no UPDATE rewrite rule at all (see SCHEMA_SAFETY_SQL's doc comment: a zero-row
+ *      `WHERE false` UPDATE still fires a STATEMENT-level trigger regardless of row count, and an UPDATE
+ *      rule's own row-matching semantics are operator-defined SQL not safely predictable in general, so
+ *      "matches zero rows" is NOT by itself sufficient to guarantee zero side effects for every possible
+ *      schema — only for today's schema, which has no such trigger or rule);
+ *   5. BEGIN — a normal, NOT READ ONLY transaction;
+ *   6. a write-class no-op UPDATE (zero rows by construction: WHERE false) against a table the runtime must
+ *      legitimately be able to write and which exists once migrations are current;
+ *   7. ROLLBACK — attempted once BEGIN has succeeded, and its OUTCOME IS CHECKED: the function's final
+ *      result is never returned until rollback has been confirmed, because the gate's own success line
+ *      ("no-op transaction rolled back") must never be printed on an unconfirmed cleanup. If rollback
+ *      itself fails after the UPDATE succeeded, this fails closed as ROLLBACK_FAILURE rather than reporting
+ *      the provisional PASS; if rollback fails after the UPDATE already failed, the original substantive
+ *      failure is preserved (never upgraded or downgraded) with an additional `rollbackFailed` marker — in
+ *      no case does a rollback failure ever produce `ok: true`.
+ * The complete no-persistent-mutation invariant therefore has THREE parts, not one: the target schema is
+ * first proven free of unsafe statement-level UPDATE behavior (step 4); the probe statement itself matches
+ * zero rows (step 6); and success is reported only once the explicit ROLLBACK is confirmed (step 7). Any
+ * failure or uncertainty at any of these — identity mismatch, either read-only setting "on", an unsafe
+ * schema, the UPDATE rejected for any SQLSTATE, a rollback that cannot be confirmed, an unexpected error —
+ * fails closed with a bounded, secret-free classification — never the server's raw error message, which
+ * can echo a hostname on some drivers, and never a trigger/rule name or definition.
+ */
+export async function proveWriteCapabilityOnClient(client, requiredRole, targetTable = WRITE_CAPABILITY_TARGET_TABLE) {
+  let who;
+  try {
+    who = await client.query("SELECT current_user AS u, session_user AS s");
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  const { u, s } = who.rows[0] ?? {};
+  if (u !== requiredRole || s !== requiredRole) {
+    // Both current_user and session_user must equal the required role. The required role name itself is
+    // not a secret (it is operator-configured and already echoed elsewhere in this file); the CONNECTED
+    // identity, if different, is withheld — it could name an unexpected/infrastructure-sensitive login.
+    return { ok: false, code: "IDENTITY_MISMATCH", sqlState: null };
+  }
+
+  let settings;
+  try {
+    settings = await client.query(
+      "SELECT current_setting('transaction_read_only') AS txn, current_setting('default_transaction_read_only') AS dflt"
+    );
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  const { txn, dflt } = settings.rows[0] ?? {};
+  if (txn !== "off") return { ok: false, code: "TRANSACTION_READ_ONLY", sqlState: null };
+  if (dflt !== "off") return { ok: false, code: "DEFAULT_TRANSACTION_READ_ONLY", sqlState: null };
+
+  // Schema safety: proven BEFORE opening any transaction, so a target that develops an unsafe
+  // statement-level UPDATE trigger or UPDATE rewrite rule refuses the probe before BEGIN, UPDATE, or any
+  // other write-class statement ever runs (see SCHEMA_SAFETY_SQL's doc comment for why `WHERE false` alone
+  // is not a sufficient guarantee for every possible future schema).
+  let safetyRow;
+  try {
+    safetyRow = await client.query(SCHEMA_SAFETY_SQL, [targetTable]);
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_OR_QUERY_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  const { unsafe_triggers, unsafe_rules } = safetyRow.rows[0] ?? {};
+  if (Number(unsafe_triggers) > 0 || Number(unsafe_rules) > 0) {
+    return { ok: false, code: "UNSAFE_WRITE_PROBE_SCHEMA", sqlState: null };
+  }
+
+  let began = false;
+  let provisional;
+  try {
+    await client.query("BEGIN");
+    began = true;
+    await client.query(`UPDATE ${targetTable} SET "updated_at" = "updated_at" WHERE false`);
+    provisional = { ok: true, code: "PASS", sqlState: null };
+  } catch (e) {
+    const sqlState = sqlStateOf(e);
+    if (sqlState === READ_ONLY_SQL_TRANSACTION_SQLSTATE) provisional = { ok: false, code: "READ_ONLY_SQL_TRANSACTION", sqlState };
+    else if (sqlState === INSUFFICIENT_PRIVILEGE_SQLSTATE) provisional = { ok: false, code: "INSUFFICIENT_PRIVILEGE", sqlState };
+    else provisional = { ok: false, code: "UNEXPECTED_SQLSTATE", sqlState };
+  }
+
+  if (!began) {
+    // BEGIN itself never ran (unreachable in practice — the catch above always sets `began` before the
+    // UPDATE attempt — but kept explicit so there is never an attempt to roll back a transaction that was
+    // never opened).
+    return provisional;
+  }
+
+  // The explicit transaction's cleanup must be PROVEN, not merely attempted: this function's result is
+  // withheld until ROLLBACK has been confirmed to succeed, so a caller can never be told "rolled back" on
+  // an unconfirmed cleanup.
+  try {
+    await client.query("ROLLBACK");
+  } catch (e) {
+    const rollbackSqlState = sqlStateOf(e);
+    if (provisional.ok) {
+      // The UPDATE itself succeeded, but cleanup could not be confirmed — fail closed. Never report
+      // success when the explicit transaction's own rollback cannot be proven to have completed.
+      return { ok: false, code: "ROLLBACK_FAILURE", sqlState: rollbackSqlState };
+    }
+    // The UPDATE already failed closed; a rollback failure on top of that is additional diagnostic
+    // context only — it never upgrades the result and can never produce a PASS.
+    return { ...provisional, rollbackFailed: true, rollbackSqlState };
+  }
+
+  return provisional;
+}
+
+/** Connects AS the candidate runtime DATABASE_URL, proves write capability, and always closes the connection. */
+async function readRuntimeWriteCapability(databaseUrl, requiredRole) {
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({ connectionString: databaseUrl, connectionTimeoutMillis: 15000 });
+  try {
+    await client.connect();
+  } catch (e) {
+    return { ok: false, code: "CONNECTION_FAILURE", sqlState: sqlStateOf(e) };
+  }
+  try {
+    return await proveWriteCapabilityOnClient(client, requiredRole);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+/** Pure decision for the write-capability result. Never contains connection details. */
+export function evaluateWriteCapability(capability, requiredRole) {
+  if (capability && capability.ok) return { ok: true, lines: [] };
+  const sqlState = capability && typeof capability.sqlState === "string" && SQLSTATE_PATTERN.test(capability.sqlState) ? capability.sqlState : null;
+  const suffix = sqlState ? ` (SQLSTATE ${sqlState})` : "";
+  const code = capability?.code ?? "UNVERIFIED";
+  const messages = {
+    IDENTITY_MISMATCH: `the write-capability probe connected as a role other than the required runtime role "${requiredRole}"`,
+    TRANSACTION_READ_ONLY: 'the runtime connection\'s transaction_read_only is "on" — it cannot start a normal read-write transaction',
+    DEFAULT_TRANSACTION_READ_ONLY: 'the runtime role\'s default_transaction_read_only is "on" — every new transaction starts read-only',
+    READ_ONLY_SQL_TRANSACTION: `the write-class no-op UPDATE was rejected as a read-only transaction${suffix}`,
+    INSUFFICIENT_PRIVILEGE: `the runtime role lacks UPDATE privilege on ${WRITE_CAPABILITY_TARGET_TABLE}${suffix}`,
+    CONNECTION_FAILURE: "the write-capability probe could not connect",
+    CONNECTION_OR_QUERY_FAILURE: `the write-capability probe failed before completing${suffix}`,
+    UNEXPECTED_SQLSTATE: `the write-class no-op UPDATE failed unexpectedly${suffix}`,
+    ROLLBACK_FAILURE: `the write-capability probe's no-op UPDATE succeeded but its ROLLBACK could not be confirmed${suffix} — refusing to report success on an unconfirmed cleanup`,
+    UNSAFE_WRITE_PROBE_SCHEMA: "write-capability probe target has statement-level UPDATE behavior (trigger or rewrite rule); refusing unsafe no-op proof",
+    UNVERIFIED: "runtime write capability could not be verified",
+  };
+  const msg = messages[code] ?? messages.UNVERIFIED;
+  const rollbackNote = capability && capability.rollbackFailed ? " Its ROLLBACK also could not be confirmed afterward." : "";
+  return { ok: false, lines: [`[release-gate] BLOCKED: ${msg} (fail closed).${rollbackNote}`] };
+}
+
 /** Pure decision for the credential-separation / runtime-role rules. Never contains connection details. */
 export function evaluateRuntimeRole({ env, identity }) {
   const exposed = MIGRATOR_CREDENTIAL_VARIABLES.filter((n) => (env[n] ?? "").trim() !== "");
@@ -239,7 +454,7 @@ export function evaluateRuntimeRole({ env, identity }) {
   return { ok: lines.length === 0, lines };
 }
 
-export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows, readIdentity = readRuntimeIdentity } = {}) {
+export async function runGate({ env = process.env, cwd = process.cwd(), readRows = readMigrationRows, readIdentity = readRuntimeIdentity, readWriteCapability = readRuntimeWriteCapability } = {}) {
   const enforced = env.VERCEL_ENV === "production" || env.OPSIQ_RELEASE_GATE_FORCE === "1";
   if (!enforced && env.VERCEL === "1" && !env.VERCEL_ENV) {
     // On Vercel but the target environment is not exposed (system env vars disabled):
@@ -292,6 +507,23 @@ export async function runGate({ env = process.env, cwd = process.cwd(), readRows
     report += `\n[release-gate] Procedure: ${RELEASE_PROCEDURE_DOC}`;
   } else if (requiredRole) {
     report += `\n[release-gate] PASS: runtime role "${requiredRole}" verified (least-privilege, all application tables granted).`;
+    // Least-privilege identity/grants passed; now prove the runtime can actually start a normal read-write
+    // transaction and execute a write-class statement — the assurance gap the prior read-only-only checks
+    // left open (see proveWriteCapabilityOnClient()'s doc comment for the incident this closes).
+    let capability;
+    try {
+      capability = await readWriteCapability(databaseUrl, requiredRole);
+    } catch (e) {
+      capability = { ok: false, code: "UNEXPECTED_ERROR", sqlState: sqlStateOf(e) };
+    }
+    const capabilityDecision = evaluateWriteCapability(capability, requiredRole);
+    if (!capabilityDecision.ok) {
+      ok = false;
+      report += `\n${capabilityDecision.lines.join("\n")}`;
+      report += `\n[release-gate] Procedure: ${RELEASE_PROCEDURE_DOC}`;
+    } else {
+      report += `\n[release-gate] PASS: runtime role "${requiredRole}" verified read-write capable (no-op transaction rolled back).`;
+    }
   }
   return { exitCode: ok ? 0 : 1, output: report, result: { ...result, ok } };
 }
