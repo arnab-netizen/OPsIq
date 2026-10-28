@@ -92,24 +92,34 @@ one positively proved that the runtime connection could start an ordinary read-w
 execute a write-class statement. A release could therefore pass every pre-deploy gate while the runtime's
 first real application INSERT still failed.
 
-**The hardening consists of three independent layers**, all safe against Production — every probe runs
-inside a transaction that is unconditionally rolled back (and that rollback must itself be confirmed to
-succeed before any success is reported), and the probe statement is itself a zero-row no-op (`WHERE
-false`), so even an unconfirmed-rollback probe could never mutate data:
+**The hardening consists of three independent layers**, all safe against Production. The write-capability
+probe's no-persistent-mutation invariant has THREE parts, not one: (1) the target schema is proven free of
+an unsafe statement-level UPDATE trigger or any UPDATE rewrite rule — checked BEFORE any transaction is
+even opened, so an unsafe or unverifiable schema means no `BEGIN`, no write statement, is ever attempted;
+(2) the probe statement itself is a zero-row no-op (`WHERE false`); (3) success is never reported unless
+the explicit `ROLLBACK` that follows is itself confirmed to succeed — an unconfirmed rollback fails closed
+rather than reporting success. `WHERE false` alone is necessary but not sufficient: it does not by itself
+guarantee zero side effects under every possible future schema (see part 1 above).
 
 - the Production release gate (`scripts/release/production-migration-gate.mjs`), when
   `OPSIQ_REQUIRE_RUNTIME_ROLE` is set, BLOCKS the build unless the candidate runtime `DATABASE_URL` proves
   identity as BOTH `current_user` AND `session_user` (a connection that merely `SET ROLE`d to the runtime
-  role does not satisfy this), `transaction_read_only=off`, `default_transaction_read_only=off`, a
-  successful no-op `UPDATE ... WHERE false` inside a plain (not `READ ONLY`) `BEGIN`, and a CONFIRMED
-  `ROLLBACK` — an unconfirmed rollback fails closed rather than reporting success;
+  role does not satisfy this), `transaction_read_only=off`, `default_transaction_read_only=off`, the
+  schema-safety precondition above, a successful no-op `UPDATE ... WHERE false` inside a plain (not
+  `READ ONLY`) `BEGIN`, and a CONFIRMED `ROLLBACK`;
 - the governed runtime-role probe (`probeRuntimeRole()`, `src/services/privacy-erasure/runtime-role-probe.ts`,
-  used by `scripts/db/opsiq-role-cutover.ts probe`) includes the same write-class no-op as one of its
-  ALLOWED statements;
+  used by `scripts/db/opsiq-role-cutover.ts probe`) proves the SAME schema-safety precondition BEFORE
+  opening its own transaction, then runs the identical write-class no-op as a dedicated, savepoint-isolated
+  step — never merely one more entry in its generic read-only `ALLOWED` list, and never attempted at all if
+  the schema is unsafe or unverifiable;
 - `claimStartup()` (`src/services/startup-status.ts`) captures a best-effort, sanitized, read-only
   diagnostic (current/session user, both read-only settings, Neon branch/endpoint id, the INSERT's
   SQLSTATE — never the URL, host, password, or raw server error text) on the SAME checked-out client if the
   startup INSERT itself ever fails again, so a recurrence is attributable from the first occurrence.
+
+Both the release gate and the governed probe share one exported SQL constant and one exported target-table
+constant; a drift test asserts the two are byte-identical, so the two paths cannot silently diverge on this
+policy.
 
 **Mandatory pre-cutover checklist.** Before any future `opsiq_app` Production cutover, EIGHT prerequisite
 checks must PASS, in order. Only then may step 9 stage the runtime `DATABASE_URL` and deploy:
@@ -125,7 +135,7 @@ checks must PASS, in order. Only then may step 9 stage the runtime `DATABASE_URL
    "updated_at" WHERE false; ROLLBACK;`) PASSES, including a CONFIRMED `ROLLBACK`;
 6. pooled endpoint: the same no-op PASSES, including a CONFIRMED `ROLLBACK`;
 7. the governed Production runtime-role probe (`opsiq-role-cutover.ts probe`) → `ROLE_TOPOLOGY_PROBE=PASS`
-   (includes the write-class no-op above);
+   (includes the write-class no-op above, with schema safety proven BEFORE any transaction opens);
 8. the Production release gate's write-capability check PASSES (`OPSIQ_REQUIRE_RUNTIME_ROLE=opsiq_app`,
    `npm run build` or `OPSIQ_RELEASE_GATE_FORCE=1`) — exact success line: `PASS: runtime role "opsiq_app"
    verified read-write capable (no-op transaction rolled back)`.

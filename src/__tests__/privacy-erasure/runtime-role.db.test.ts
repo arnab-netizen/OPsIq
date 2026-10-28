@@ -56,6 +56,27 @@ beforeAll(async () => {
 afterAll(async () => { await admin?.end(); });
 
 const asRuntime = async () => { const c = new Client({ connectionString: urlFor(RUNTIME) }); await c.connect(); return c; };
+/**
+ * Decorates a REAL, already-connected client so every SQL statement it actually sends is also recorded —
+ * proving ordering claims (e.g. "no BEGIN was ever issued") against genuine PostgreSQL wire traffic, not a
+ * mock. Forwards every call unchanged; `calls` is the exact sequence of statement texts sent.
+ */
+function recordingClient(real: Client): { client: Client; calls: string[] } {
+  const calls: string[] = [];
+  const client = new Proxy(real, {
+    get(target, prop, receiver) {
+      if (prop === "query") {
+        return (...args: unknown[]) => {
+          const sql = typeof args[0] === "string" ? args[0] : String((args[0] as { text?: string })?.text ?? args[0]);
+          calls.push(sql);
+          return (target.query as (...a: unknown[]) => unknown).apply(target, args);
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+  return { client, calls };
+}
 const count = async (sql: string, params: unknown[] = []) => Number((await admin.query(sql, params)).rows[0].n);
 async function attempt(c: Client, sql: string, params: unknown[] = [], pre: string[] = []): Promise<string> {
   await c.query("BEGIN");
@@ -292,14 +313,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] opsiq_app runtim
         expect(safety).toEqual({ safe: false, code: "UNSAFE_WRITE_PROBE_SCHEMA" });
 
         // The REAL guarded probe refuses before BEGIN/UPDATE ever runs, and the marker stays untouched.
+        // The query sequence is recorded against the REAL connection (not a mock), proving ordering
+        // against genuine PostgreSQL wire traffic: no BEGIN, no UPDATE, no transactional probing at all.
         const rt = await asRuntime();
         try {
-          const p = await probeRuntimeRole(rt, ownerRole);
+          const { client, calls } = recordingClient(rt);
+          const p = await probeRuntimeRole(client, ownerRole);
           const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
           expect(row).toBeTruthy();
           expect(row!.ok).toBe(false);
           expect(row!.detail).toBe("UNSAFE_WRITE_PROBE_SCHEMA");
           expect(p.result).toBe("FAIL");
+          expect(calls).not.toContain("BEGIN");
+          expect(calls.some((c) => /^UPDATE\s+public\.startup_status/.test(c))).toBe(false);
+          expect(calls.some((c) => c.startsWith("SAVEPOINT"))).toBe(false);
+          // Only the identity query and the schema-safety catalog query were ever sent.
+          expect(calls).toHaveLength(2);
         } finally { await rt.end(); }
         const after = await admin.query(`SELECT count(*)::int AS n FROM zz_statement_trigger_marker`);
         expect(after.rows[0].n).toBe(0);
@@ -377,14 +406,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] opsiq_app runtim
         const safety = await checkWriteProbeSchemaSafety(admin, "public.startup_status");
         expect(safety).toEqual({ safe: false, code: "UNSAFE_WRITE_PROBE_SCHEMA" });
 
+        // Recorded against the REAL connection (not a mock): proves no BEGIN/UPDATE/SAVEPOINT was ever
+        // issued, not merely that the final result happened to be FAIL.
         const rt = await asRuntime();
         try {
-          const p = await probeRuntimeRole(rt, ownerRole);
+          const { client, calls } = recordingClient(rt);
+          const p = await probeRuntimeRole(client, ownerRole);
           const row = p.probes.find((x) => x.name === WRITE_CAPABILITY_PROBE_NAME);
           expect(row).toBeTruthy();
           expect(row!.ok).toBe(false);
           expect(row!.detail).toBe("UNSAFE_WRITE_PROBE_SCHEMA");
           expect(p.result).toBe("FAIL");
+          expect(calls).not.toContain("BEGIN");
+          expect(calls.some((c) => /^UPDATE\s+public\.startup_status/.test(c))).toBe(false);
+          expect(calls.some((c) => c.startsWith("SAVEPOINT"))).toBe(false);
+          expect(calls).toHaveLength(2);
         } finally { await rt.end(); }
         const after = await admin.query(`SELECT count(*)::int AS n FROM zz_rule_marker`);
         expect(after.rows[0].n).toBe(0);

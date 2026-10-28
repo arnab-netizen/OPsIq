@@ -1,9 +1,19 @@
 /**
  * Runtime-role PROBE: connect AS the runtime login and prove, with real statements, what it can and cannot do.
  *
- * Every probe runs inside a transaction that is ALWAYS rolled back, one savepoint per statement, so even a probe that unexpectedly
- * succeeded changes nothing (safe against Production). No credential is read or printed here: the caller supplies an already-connected
- * client. Only SQLSTATEs and booleans are returned.
+ * Every ALLOWED/DENIED probe runs inside one transaction, one savepoint per statement, that is ALWAYS
+ * rolled back by probeRuntimeRole()'s own `finally` — so even a probe that unexpectedly succeeded changes
+ * nothing (safe against Production). The write-capability probe is the ONE exception to "runs inside a
+ * transaction": its schema-safety precondition (see SCHEMA_SAFETY_SQL below) is proven BEFORE that
+ * transaction is ever opened, and if the target is unsafe or unverifiable, the write-capability probe
+ * fails WITHOUT any transaction ever starting — no `BEGIN`, no write statement, no further ALLOWED/DENIED
+ * probing either, since that failure already determines the overall result. The complete invariant for the
+ * governed probe's write-capability result has three parts: (1) the target schema is proven free of unsafe
+ * statement-level UPDATE behavior BEFORE any transaction opens; (2) the capability UPDATE itself matches
+ * zero rows (`WHERE false`); (3) the overall PASS can never be reported if the final `ROLLBACK` rejects —
+ * a rollback failure propagates as a thrown error, never as a false PASS. No credential is read or printed
+ * here: the caller supplies an already-connected client. Only SQLSTATEs and booleans are returned — never a
+ * trigger/rule name or definition.
  */
 import type { ClientBase } from "pg";
 
@@ -101,16 +111,13 @@ const ALLOWED: Array<[string, string]> = [
 ];
 
 /**
- * The write-capability probe, run as its own savepoint-isolated step: schema safety is proven FIRST, and
- * the write-class no-op is attempted ONLY if that proof succeeds. Proven safe against Production by the
- * caller's outer `BEGIN` (not `BEGIN READ ONLY`) plus the final `ROLLBACK` in probeRuntimeRole() — but the
- * schema-safety gate below exists precisely so that guarantee does not rest on `WHERE false` alone.
+ * Attempts the write-capability no-op UPDATE and reports it as a ProbeResult. MUST be called only after
+ * checkWriteProbeSchemaSafety() has already proven the target safe — see probeRuntimeRole() below, which
+ * proves schema safety BEFORE opening any transaction and never calls this otherwise. This function itself
+ * performs no safety check: it exists purely to keep the UPDATE attempt and its result formatting out of
+ * probeRuntimeRole()'s main body.
  */
-async function runWriteCapabilityProbe(c: ClientBase): Promise<ProbeResult> {
-  const safety = await checkWriteProbeSchemaSafety(c, WRITE_CAPABILITY_TARGET_TABLE);
-  if (!safety.safe) {
-    return { name: WRITE_CAPABILITY_PROBE_NAME, ok: false, detail: safety.code };
-  }
+async function attemptWriteCapabilityUpdate(c: ClientBase): Promise<ProbeResult> {
   try {
     await c.query(WRITE_CAPABILITY_PROBE_SQL);
     return { name: WRITE_CAPABILITY_PROBE_NAME, ok: true, detail: "ok" };
@@ -123,6 +130,17 @@ export async function probeRuntimeRole(c: ClientBase, ownerRole: string): Promis
   const probes: ProbeResult[] = [];
   const who = (await c.query<{ u: string; s: string }>(`SELECT current_user AS u, session_user AS s`)).rows[0];
   probes.push({ name: "connected as a non-owner login (current_user = session_user, not the schema owner)", ok: who.u === who.s && who.u !== ownerRole, detail: "identity" });
+
+  // Schema safety is proven BEFORE any transaction is opened — not merely before the write-class UPDATE
+  // within an already-open transaction. An unsafe or unverifiable schema refuses the write-capability
+  // probe closed and stops here: no BEGIN, no UPDATE, and no further ALLOWED/DENIED transactional probing
+  // either, since this failure already determines the overall result and nothing downstream can change it.
+  const safety = await checkWriteProbeSchemaSafety(c, WRITE_CAPABILITY_TARGET_TABLE);
+  if (!safety.safe) {
+    probes.push({ name: WRITE_CAPABILITY_PROBE_NAME, ok: false, detail: safety.code });
+    return { result: "FAIL", probes };
+  }
+
   await c.query("BEGIN");
   try {
     let i = 0;
@@ -139,7 +157,7 @@ export async function probeRuntimeRole(c: ClientBase, ownerRole: string): Promis
       i++;
     }
     await c.query(`SAVEPOINT p${i}`);
-    probes.push(await runWriteCapabilityProbe(c));
+    probes.push(await attemptWriteCapabilityUpdate(c));
     await c.query(`ROLLBACK TO SAVEPOINT p${i}`);
     i++;
     for (const [name, template, codes] of DENIED) {

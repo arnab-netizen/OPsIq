@@ -24,7 +24,9 @@ import { RUNTIME_DENIED_TABLES as TS_DENIED } from "@/services/privacy-erasure/r
 import {
   WRITE_CAPABILITY_TARGET_TABLE as TS_WRITE_CAPABILITY_TARGET_TABLE,
   SCHEMA_SAFETY_SQL as TS_SCHEMA_SAFETY_SQL,
+  WRITE_CAPABILITY_PROBE_NAME as TS_WRITE_CAPABILITY_PROBE_NAME,
   checkWriteProbeSchemaSafety,
+  probeRuntimeRole,
 } from "@/services/privacy-erasure/runtime-role-probe";
 
 const ROOT = resolve(__dirname, "../../..");
@@ -479,6 +481,58 @@ describe("schema-safety drift guards — the release gate and the governed runti
     expect((await checkWriteProbeSchemaSafety(fakeSafe as never, "public.startup_status")).safe).toBe(true);
     const fakeUnsafe = { query: async () => ({ rows: [{ unsafe_triggers: 1, unsafe_rules: 0 }] }) };
     expect((await checkWriteProbeSchemaSafety(fakeUnsafe as never, "public.startup_status")).safe).toBe(false);
+  });
+});
+
+describe("probeRuntimeRole() — schema safety is proven BEFORE any BEGIN (fake client, no database)", () => {
+  /** Minimal fake client: identity, then the schema-safety catalog query, then (only if safe) BEGIN. */
+  function fakeProbeClient(calls: string[], opts: { unsafeTriggers?: number; unsafeRules?: number; schemaThrows?: boolean; currentUser?: string }) {
+    const u = opts.currentUser ?? "opsiq_app";
+    return {
+      query: async (sql: string) => {
+        calls.push(sql);
+        if (/current_user AS u, session_user AS s/.test(sql)) return { rows: [{ u, s: u }] };
+        if (/unsafe_triggers/.test(sql)) {
+          if (opts.schemaThrows) throw new Error("simulated schema-safety inspection failure");
+          return { rows: [{ unsafe_triggers: opts.unsafeTriggers ?? 0, unsafe_rules: opts.unsafeRules ?? 0 }] };
+        }
+        // Reached only if BEGIN/ALLOWED/DENIED ran — i.e. ordering regressed back to pre-fix behavior.
+        if (sql === "BEGIN") return {};
+        throw new Error(`fakeProbeClient: unexpected query (ordering regression?): ${sql}`);
+      },
+    };
+  }
+
+  it("an UNSAFE catalog result → no BEGIN is ever issued, and the write-capability probe is reported FAIL", async () => {
+    const calls: string[] = [];
+    const client = fakeProbeClient(calls, { unsafeTriggers: 1 });
+    const p = await probeRuntimeRole(client as never, "neondb_owner");
+    expect(calls).not.toContain("BEGIN");
+    expect(p.result).toBe("FAIL");
+    const row = p.probes.find((x) => x.name === TS_WRITE_CAPABILITY_PROBE_NAME);
+    expect(row).toEqual({ name: TS_WRITE_CAPABILITY_PROBE_NAME, ok: false, detail: "UNSAFE_WRITE_PROBE_SCHEMA" });
+  });
+
+  it("a catalog INSPECTION FAILURE → no BEGIN is ever issued, and the write-capability probe is reported FAIL", async () => {
+    const calls: string[] = [];
+    const client = fakeProbeClient(calls, { schemaThrows: true });
+    const p = await probeRuntimeRole(client as never, "neondb_owner");
+    expect(calls).not.toContain("BEGIN");
+    expect(p.result).toBe("FAIL");
+    const row = p.probes.find((x) => x.name === TS_WRITE_CAPABILITY_PROBE_NAME);
+    expect(row).toEqual({ name: TS_WRITE_CAPABILITY_PROBE_NAME, ok: false, detail: "SCHEMA_SAFETY_CHECK_FAILED" });
+  });
+
+  it("a SAFE catalog result: the schema-safety query is sent, and only THEN does BEGIN occur — in that exact order", async () => {
+    const calls: string[] = [];
+    const client = fakeProbeClient(calls, {});
+    // This fake does not implement the ALLOWED/DENIED statements that follow BEGIN — it is only asked to
+    // prove the ORDER of the first three statements, so any later "unexpected query" throw is expected
+    // and ignored.
+    await probeRuntimeRole(client as never, "neondb_owner").catch(() => {});
+    expect(calls[0]).toMatch(/current_user AS u, session_user AS s/);
+    expect(calls[1]).toMatch(/unsafe_triggers/);
+    expect(calls[2]).toBe("BEGIN");
   });
 });
 
