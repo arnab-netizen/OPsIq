@@ -9,7 +9,7 @@ export const metadata = {
   description: "How OpsIQ handles your information during beta.",
 };
 
-const POLICY_VERSION = "2026-10-25";
+const POLICY_VERSION = "2026-10-28";
 
 export default function PrivacyPage() {
   return (
@@ -157,7 +157,7 @@ export default function PrivacyPage() {
             You can disconnect QuickBooks at any time from the Data page in OpsIQ. Disconnecting asks Intuit to revoke OpsIQ access, deletes the stored tokens, and stops further imports. If Intuit cannot be reached at that moment, OpsIQ still stops using the connection and tells you so, and you can finish revoking access from your Intuit account. Disconnecting does not delete figures that were already imported: those imported figures, and the snapshots and provenance records derived from them, stay in your OpsIQ workspace until they are deleted as described below. OpsIQ has no fixed automatic expiry for imported QuickBooks data.
           </p>
           <p className="mt-1">
-            There is currently no self-service button to delete imported QuickBooks data. Imported report snapshots and their provenance records are stored as immutable, append-only evidence, so they cannot be removed through the product, and removing them requires a manual database operation by our team that has not yet been automated. To ask for deletion, email support@opsiq.solutions. Requests are handled manually and are not instant, and we will tell you what can and cannot be deleted. Some records, such as audit records of actions taken in your workspace, may be retained as described in the Retention section above.
+            There is currently no self-service button to delete imported QuickBooks data. Imported report snapshots and their provenance records are stored as immutable, append-only evidence, so they cannot be edited or removed through the ordinary product. Deletion is available through a governed process that two members of our team run on request; it is not self-service and it is not instant. To ask for deletion, email support@opsiq.solutions, and we will tell you what can and cannot be deleted. Removing a record from our primary database does not by itself make it unrecoverable everywhere: our process also accounts for backup copies, database history, and any other copy that could still contain it, and we confirm every one of those before treating the request as complete. Some records, such as audit records of actions taken in your workspace, may be retained as described in the Retention section above.
           </p>
         </section>
 
