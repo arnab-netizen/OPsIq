@@ -9,7 +9,7 @@ export const metadata = {
   description: "How OpsIQ handles your information during beta.",
 };
 
-const POLICY_VERSION = "2026-10-17";
+const POLICY_VERSION = "2026-10-28";
 
 export default function PrivacyPage() {
   return (
@@ -139,6 +139,25 @@ export default function PrivacyPage() {
             We retain your account and business data for as long as your account is active. If you
             request deletion (see below), we retain a minimal audit record of the request itself
             for accountability, and otherwise fulfill the deletion per our runbook.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-semibold text-foreground">QuickBooks Online (optional connection)</h2>
+          <p className="mt-1">
+            If you choose to connect QuickBooks Online, you authorize OpsIQ through the Intuit OAuth 2.0 sign-in and consent screen. Connecting is optional. In this version OpsIQ only reads from QuickBooks: it does not create, edit, or delete anything in your QuickBooks company.
+          </p>
+          <p className="mt-1">
+            Once connected, OpsIQ reads four reports from your QuickBooks company: Profit and Loss, Balance Sheet, Aged Receivables, and Aged Payables. These reports come from your QuickBooks company and may include customer and vendor names as they appear in the reports. OpsIQ stores the imported figures as dated snapshots, together with provenance details such as which QuickBooks company and report period they came from and when they were imported, and uses them to populate your OpsIQ finance and cash-flow views and to give decision-support context.
+          </p>
+          <p className="mt-1">
+            Access and refresh tokens are stored encrypted (AES-256-GCM) and are used only on our servers to retrieve the reports you authorized. OpsIQ refreshes the data when you ask it to, when Intuit notifies us of a change, and by a scheduled background process.
+          </p>
+          <p className="mt-1">
+            You can disconnect QuickBooks at any time from the Data page in OpsIQ. Disconnecting asks Intuit to revoke OpsIQ access, deletes the stored tokens, and stops further imports. If Intuit cannot be reached at that moment, OpsIQ still stops using the connection and tells you so, and you can finish revoking access from your Intuit account. Disconnecting does not delete figures that were already imported: those imported figures, and the snapshots and provenance records derived from them, stay in your OpsIQ workspace until they are deleted as described below. OpsIQ has no fixed automatic expiry for imported QuickBooks data.
+          </p>
+          <p className="mt-1">
+            There is currently no self-service button to delete imported QuickBooks data. Imported report snapshots and their provenance records are stored as immutable, append-only evidence, so they cannot be edited or removed through the ordinary product. Deletion is available through a governed process that two members of our team run on request; it is not self-service and it is not instant. To ask for deletion, email support@opsiq.solutions, and we will tell you what can and cannot be deleted. Removing a record from our primary database does not by itself make it unrecoverable everywhere: our process also accounts for backup copies, database history, and any other copy that could still contain it, and we confirm every one of those before treating the request as complete. Some records, such as audit records of actions taken in your workspace, may be retained as described in the Retention section above.
           </p>
         </section>
 

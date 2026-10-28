@@ -109,7 +109,7 @@ describe("buildResourceJsonLd", () => {
 });
 
 describe("buildSitemap", () => {
-  const baseline = ["/", "/about", "/tools/profit-margin-calculator", "/agency", "/privacy", "/terms", "/pricing", "/refund-policy"].map((p) => `https://opsiq.solutions${p}`);
+  const baseline = ["/", "/about", "/tools/profit-margin-calculator", "/agency", "/privacy", "/terms", "/pricing", "/refund-policy", "/support"].map((p) => `https://opsiq.solutions${p}`);
 
   it("keeps the baseline public pages and adds the resource index with no resources", () => {
     const urls = buildSitemap([]).map((e) => e.url);
