@@ -9,7 +9,7 @@
 import { claimStartup, completeStartup, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
-import { withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS, getRawPool } from "@/lib/db";
+import { withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS, CLIENT_SIDE_BACKSTOP_MARGIN_MS, getRawPool } from "@/lib/db";
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -31,16 +31,20 @@ export const DB_CHECK_STATEMENT_TIMEOUT_MS = 4000;
  * than that worst case, or it fires first on a slow-but-legitimate cold
  * start and reports the exact same false "unexpected error" outcome the
  * inner fix was meant to prevent, silently undoing it. Derived from the
- * shared constant, not an independent guess, so the two can never drift
- * out of sync again.
+ * shared constants (including CLIENT_SIDE_BACKSTOP_MARGIN_MS, the inner
+ * primitive's own client-side dead-connection backstop margin -- see its
+ * doc comment in db.ts), not an independent guess, so the two can never
+ * silently drift out of sync again.
  */
-export const DB_CHECK_TIMEOUT_MS = POOL_CONNECTION_TIMEOUT_MS + DB_CHECK_STATEMENT_TIMEOUT_MS + 3000;
+export const DB_CHECK_TIMEOUT_MS =
+  POOL_CONNECTION_TIMEOUT_MS + DB_CHECK_STATEMENT_TIMEOUT_MS + CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3000;
 /**
  * Same reasoning as DB_CHECK_TIMEOUT_MS above, sized against
  * checkMigrationReadiness()'s own MIGRATION_QUERY_STATEMENT_TIMEOUT_MS
  * (src/services/monitoring/migration-check.ts, currently 5000ms).
  */
-export const MIGRATION_READINESS_TIMEOUT_MS = POOL_CONNECTION_TIMEOUT_MS + 5000 + 3000;
+export const MIGRATION_READINESS_TIMEOUT_MS =
+  POOL_CONNECTION_TIMEOUT_MS + 5000 + CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3000;
 
 /**
  * Orchestrate startup checks (runs ONCE per instance).

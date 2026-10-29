@@ -507,11 +507,19 @@ export interface RawQueryClient {
  *
  * CLIENT_SIDE_BACKSTOP_MS exists ONLY for that dead-connection case. It is
  * sized to fire well after the server-side statement_timeout would have
- * settled on any LIVE connection, so on the overwhelming majority of calls
- * (every connection that is actually alive, proven by every existing
- * passing test of this function) it never fires -- the normal success/
- * 57014-cancellation paths below are completely unchanged. If it DOES
- * fire, the client is released WITH an error, which tells pg.Pool to
+ * settled on any LIVE connection running the SET/`fn`/reset sequence as a
+ * SMALL, FIXED number of statements each individually bounded by
+ * `timeoutMs` -- true for every current caller (getSession, the public-
+ * admission read, checkDatabase, checkMigrationReadiness all run exactly
+ * one statement in `fn`; claimStartup runs at most one insert plus one
+ * trivial diagnostic query on error). A hypothetical future caller whose
+ * `fn` runs enough sequential statements for their combined latency to
+ * exceed CLIENT_SIDE_BACKSTOP_MARGIN_MS on a live connection would need a
+ * larger margin or its own per-statement bound -- this is not a universal
+ * guarantee for every imaginable `fn`. For every current, proven case it
+ * never fires (every existing passing test of this function) -- the normal
+ * success/57014-cancellation paths below are completely unchanged. If it
+ * DOES fire, the client is released WITH an error, which tells pg.Pool to
  * discard/destroy the connection and free this pool slot immediately,
  * instead of leaving it orphaned until the OS's own TCP-level detection
  * eventually notices (which can be many minutes on default kernel
@@ -521,6 +529,17 @@ export interface RawQueryClient {
  * no risk of a second caller racing against that abandoned query on the
  * same physical connection.
  */
+/**
+ * Exported so every caller's own outer JS-side race (SESSION_QUERY_TIMEOUT_MS
+ * in auth.ts, DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
+ * startup-orchestrator.ts) can derive a margin guaranteed to exceed this
+ * function's own real worst case, instead of an independently-chosen margin
+ * silently drifting shorter than this one -- the exact failure mode
+ * ACQUISITION_QUEUE_WAIT_MS's own doc comment above already guards against
+ * for a different pair of constants.
+ */
+export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
+
 export class ClientSideExecutionTimeoutError extends Error {
   constructor(label: string, timeoutMs: number) {
     super(
@@ -548,7 +567,7 @@ export async function withRawStatementTimeout<T>(
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
-  const clientSideBackstopMs = safeTimeoutMs + 5_000;
+  const clientSideBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
   let backstopTimer: ReturnType<typeof setTimeout> | undefined;
   const normalPath = (async () => {
     await client.query(`SET statement_timeout = ${safeTimeoutMs}`);
@@ -576,7 +595,7 @@ export async function withRawStatementTimeout<T>(
   } catch (err) {
     clearTimeout(backstopTimer);
     const errorObj = err instanceof Error ? err : new Error(String(err));
-    const isBackstop = errorObj.name === "ClientSideExecutionTimeoutError";
+    const isBackstop = err instanceof ClientSideExecutionTimeoutError;
     const sqlState = (err as { code?: unknown } | null)?.code;
     const isQueryCancellation = !isBackstop && sqlState === POSTGRES_QUERY_CANCELED_SQLSTATE;
 

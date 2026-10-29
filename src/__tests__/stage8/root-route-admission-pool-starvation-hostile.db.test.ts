@@ -56,6 +56,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { Pool } from "pg";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS } from "@/services/beta/public-presentation.service";
 
 const SKIP = !SHOULD_RUN_DB_TESTS;
 
@@ -214,6 +215,7 @@ describe.skipIf(SKIP)("[db] root route admission-mode read under max:1 pool star
  */
 describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level statement_timeout actually applies to this call site", () => {
   let lockHolderPool: Pool | undefined;
+  const ORIGINAL_PUBLIC_BETA_ENABLED = process.env.PUBLIC_BETA_ENABLED;
 
   function goCold(): void {
     const globalForPrisma = globalThis as unknown as { prisma: unknown; prismaPromise: unknown; pgPool: unknown };
@@ -224,6 +226,8 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
   }
 
   afterEach(async () => {
+    if (ORIGINAL_PUBLIC_BETA_ENABLED === undefined) delete process.env.PUBLIC_BETA_ENABLED;
+    else process.env.PUBLIC_BETA_ENABLED = ORIGINAL_PUBLIC_BETA_ENABLED;
     if (lockHolderPool) {
       await lockHolderPool.end().catch(() => undefined);
       lockHolderPool = undefined;
@@ -231,11 +235,16 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
   });
 
   it(
-    "a real ACCESS EXCLUSIVE lock on platform_settings forces a genuine statement_timeout cancellation (SQLSTATE 57014) on the admission read's own SELECT, and the pool recovers after the lock is released",
+    "a real ACCESS EXCLUSIVE lock on platform_settings forces a genuine statement_timeout cancellation (SQLSTATE 57014) on the admission read's own SELECT, and the pool recovers to a verified-working connection after the lock is released",
     async () => {
       assertLocalUrl();
+      // Pins the deterministic legacy fallback (see the acquisition-bound
+      // describe block above) so recovery can be proven with an exact
+      // expected value, not merely "did not throw".
+      delete process.env.PUBLIC_BETA_ENABLED;
       goCold();
       const { getPublicAdmissionMode } = await import("@/services/beta/public-presentation.service");
+      const { getRawPool, withRawStatementTimeout } = await import("@/lib/db");
 
       const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
       lockHolderPool = new Pool({ connectionString: url, max: 1 });
@@ -253,17 +262,35 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
       expect(elapsed).toBeLessThan(8_000);
       expect(mode).toBeNull();
 
+      // Directly confirm the cancellation was the real, expected server-side
+      // mechanism (SQLSTATE 57014), not inferred from timing alone: the
+      // same query, same timeout, against the still-locked table.
+      let caught: unknown;
+      try {
+        const pool = await getRawPool();
+        await withRawStatementTimeout(
+          pool,
+          PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,
+          (client) => client.query(`SELECT admission_mode FROM platform_settings WHERE id = 'global'`),
+          "direct-57014-check",
+        );
+      } catch (err) {
+        caught = err;
+      }
+      expect((caught as { code?: unknown } | null)?.code).toBe("57014");
+
       await lockClient.query("ROLLBACK");
       lockClient.release();
 
       // Pool recovery on the SAME (real, shared) pool: the SELECT that was
       // just cancelled server-side must not have poisoned this connection
-      // for the next caller.
+      // for the next caller. Exact expected value, not merely "did not
+      // throw" -- proves a real query actually ran and returned data.
       const start2 = Date.now();
       const after = await getPublicAdmissionMode();
       const elapsed2 = Date.now() - start2;
       expect(elapsed2).toBeLessThan(2_000);
-      expect(after === null || typeof after === "string").toBe(true);
+      expect(after).toBe("INVITE_ONLY");
     },
     20_000,
   );
