@@ -1,46 +1,59 @@
 /**
- * F-ROOT-ROUTE-300S root-cause proof, against real disposable PostgreSQL.
+ * F-ROOT-ROUTE-300S proof, against real disposable PostgreSQL, that the
+ * root route's public-admission read is bounded under `max:1` pool
+ * contention -- corrected after santa-loop adversarial review.
  *
- * PROVEN ROOT CAUSE of the long-standing Production `GET /` / `HEAD /`
- * "Vercel Runtime Timeout Error: Task timed out after 300 seconds":
+ * SCOPE OF THIS FILE: this proves the ACQUISITION-bound layer specifically
+ * (a queued pool.connect() behind an already-busy sole connection rejects
+ * once connectionTimeoutMillis elapses, rather than waiting indefinitely).
+ * It deliberately does NOT claim to reproduce the exact Production
+ * mechanism byte-for-byte: Production logs show the `GET /` / `HEAD /`
+ * timeouts but carry no query-level tracing, so whether any individual
+ * incident was dominated by acquisition contention or by a stalled query on
+ * an already-acquired connection cannot be distinguished from that evidence
+ * alone. What IS proven by code-reading (see the doc comment on
+ * readPublicAdmissionModeBounded() in
+ * src/services/beta/public-presentation.service.ts) is that the OLD plain
+ * Prisma read had NO Postgres-side statement_timeout at all for the
+ * EXECUTION phase once a connection was acquired -- that gap is real and
+ * unconditional, independent of acquisition timing, and is the same class
+ * of gap getSession()'s own session-lookup query was already hardened
+ * against. The EXECUTION-cancellation mechanism itself (SET statement_timeout
+ * / SQLSTATE 57014 / clean connection reuse) is already proven generically
+ * against withRawStatementTimeout() in
+ * src/__tests__/lib/db-raw-statement-timeout-hostile.db.test.ts; re-proving
+ * it here would be redundant, not additive. This file's job is narrower:
+ * prove the NEW code's acquisition path is genuinely bounded (not merely
+ * "finished before a holder released by chance"), fails closed, and leaves
+ * the shared pool healthy afterward.
  *
- *   src/app/page.tsx calls getPublicAdmissionMode() for every anonymous
- *   visitor (every request with no session cookie -- including the regular
- *   `GET /` / `HEAD /` uptime-monitor traffic observed in Production logs
- *   timing out on a fixed ~5-11 minute cadence). That function's DB read
- *   used to run as a plain, non-transactional Prisma query: NO
- *   statement_timeout, and NO bound on connection ACQUISITION. Production's
- *   pg.Pool is `max: 1` (one shared physical connection per function
- *   instance -- src/lib/db.ts's P0-15 doc comment). Once the pool's one
- *   connection was held by ANY stalled caller, every subsequent anonymous
- *   `/` request queued behind it with nothing to stop it except Vercel's
- *   platform-level 300-second function ceiling.
- *
- * Fix proven here: getPublicAdmissionMode()/getPublicBetaPresentation() now
- * read via getRawPool()/withRawStatementTimeout() -- the SAME primitive
- * getSession()'s own session-lookup query actually uses (deliberately NOT
- * withStatementTimeout()/Prisma's `$transaction({maxWait})`, which races a
- * narrow client-side clock against the pool's real connection behavior --
- * see the doc comment on readPublicAdmissionModeBounded() in
- * src/services/beta/public-presentation.service.ts for why).
- *
- * THIS TEST'S DESIGN: rather than waiting out production's real 90-second
- * POOL_CONNECTION_TIMEOUT_MS (which also applies to the outer JS-side race
- * in the fixed code, making a real-bound test slow), it injects a pg.Pool
- * with the SAME max:1 but a short, test-controlled `connectionTimeoutMillis`
- * via globalForPrisma.pgPool -- the exact technique already established in
+ * TEST DESIGN: rather than waiting out production's real 90-second
+ * POOL_CONNECTION_TIMEOUT_MS, this injects a pg.Pool with the SAME max:1 but
+ * a short, test-controlled `connectionTimeoutMillis` via
+ * globalForPrisma.pgPool -- the exact technique already established in
  * src/__tests__/auth/get-session-fresh-connection-hostile.db.test.ts's
- * `goColdWithPool()`. This was verified empirically (outside this test
- * suite) before relying on it: a pool.connect() call queued behind an
- * already-busy max:1 connection DOES reject once connectionTimeoutMillis
- * elapses -- not just a brand-new/never-connected client -- so a short
- * injected value genuinely exercises the same acquisition-bound mechanism
- * production's real 90s value provides, just on a fast, deterministic
- * timescale.
+ * `goColdWithPool()`. Verified empirically (outside this test suite, against
+ * a throwaway pool, not asserted here) before relying on it: a pool.connect()
+ * call queued behind an already-busy max:1 connection DOES reject once
+ * connectionTimeoutMillis elapses -- not just a brand-new/never-connected
+ * client -- so a short injected value genuinely exercises the same
+ * acquisition-bound mechanism production's real 90s value provides, just on
+ * a fast, deterministic timescale. This file intentionally does NOT attempt
+ * to also run the OLD (pre-fix) code against this same injected pool: doing
+ * so was tried and discarded as invalid -- resetting
+ * globalForPrisma.prisma/prismaPromise (required to force a fresh module
+ * import) makes the OLD code's `db` Prisma-Proxy auto-reinitialize its OWN
+ * pool on first access (db.ts's getDb()/createPrismaClient()), silently
+ * overwriting and clobbering the injected one before the OLD code ever
+ * contends with the holder -- a test-harness artifact, not evidence about
+ * the OLD code's real behavior either way. The OLD code's true, documented
+ * gap (no statement_timeout) is covered by code-reading plus the already-
+ * generic cancellation proof cited above, not by a before/after timing
+ * comparison in this file.
  *
  * Requires: TEST_WITH_DB=true and a migrated local PostgreSQL instance.
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { Pool } from "pg";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
@@ -71,8 +84,18 @@ const TEST_TIMEOUT_MS = 30_000;
 
 describe.skipIf(SKIP)("[db] root route admission-mode read under max:1 pool starvation", () => {
   const pools: Pool[] = [];
+  const ORIGINAL_PUBLIC_BETA_ENABLED = process.env.PUBLIC_BETA_ENABLED;
+
+  beforeEach(() => {
+    // Pins legacyEffectiveSettings()'s fallback to a known, deterministic
+    // value (INVITE_ONLY) so the pool-recovery assertion below can require
+    // an exact result instead of merely "did not throw".
+    delete process.env.PUBLIC_BETA_ENABLED;
+  });
 
   afterEach(async () => {
+    if (ORIGINAL_PUBLIC_BETA_ENABLED === undefined) delete process.env.PUBLIC_BETA_ENABLED;
+    else process.env.PUBLIC_BETA_ENABLED = ORIGINAL_PUBLIC_BETA_ENABLED;
     while (pools.length) {
       const p = pools.pop()!;
       await p.end().catch(() => undefined);
@@ -123,23 +146,26 @@ describe.skipIf(SKIP)("[db] root route admission-mode read under max:1 pool star
       // first".
       expect(elapsed).toBeLessThan(SHORT_CONNECTION_TIMEOUT_MS + 4_000);
       expect(elapsed).toBeGreaterThan(SHORT_CONNECTION_TIMEOUT_MS - 500);
-      // Fails closed: never returns a mode read while starved, and the
-      // function's own try/catch guarantees null rather than throwing.
+      // Fails closed: never returns a mode read while starved. No
+      // connection was ever acquired on this path (pool.connect() itself
+      // rejected), so there is nothing to release/orphan here -- the
+      // acquisition-queue timeout case is inherently clean, unlike a
+      // timeout that fires after a connection was already checked out.
       expect(mode).toBeNull();
 
       await holderDone;
 
-      // Pool recovery: the connection the fixed call's own timeout
-      // abandoned must not have poisoned the pool. A fresh call after the
-      // holder legitimately releases succeeds promptly.
+      // Pool recovery: the timed-out acquisition attempt above must not
+      // have left the pool's sole slot permanently booked. A fresh call
+      // after the holder legitimately releases succeeds promptly AND
+      // returns the exact deterministic legacy fallback (not merely "did
+      // not throw") -- proving the pool actually served a real query, not
+      // just that the function degraded to its own catch-all null again.
       const start2 = Date.now();
       const after = await getPublicAdmissionMode();
       const elapsed2 = Date.now() - start2;
       expect(elapsed2).toBeLessThan(2_000);
-      // Legacy fallback (no platform_settings row has been bootstrapped in
-      // this disposable DB) -- any non-throwing result proves the pool is
-      // healthy again.
-      expect(after === null || typeof after === "string").toBe(true);
+      expect(after).toBe("INVITE_ONLY");
     },
     TEST_TIMEOUT_MS,
   );

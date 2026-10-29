@@ -56,17 +56,13 @@ describe("getSession() reads the session cookie before any DB initialization", (
     expect(withRawStatementTimeout).not.toHaveBeenCalled();
   });
 
-  it("no opsiq_session cookie: resolves near-instantly (no awaited DB-bound work on this path)", async () => {
+  it("no opsiq_session cookie: resolves near-instantly (secondary sanity check only -- with @/lib/db fully mocked, even the OLD call order would also resolve near-instantly; the call-count assertion in the test above is the one that actually discriminates old from new)", async () => {
     const { getSession } = await import("@/services/auth");
 
     const start = Date.now();
     await getSession();
     const elapsed = Date.now() - start;
 
-    // Generous ceiling for CI scheduling jitter -- a real DB round trip
-    // (even a fast one) would never be this close to zero; the old
-    // call-order (getRawPool() before the cookie check) made this path pay
-    // for pool/client construction unconditionally.
     expect(elapsed).toBeLessThan(50);
   });
 
@@ -86,7 +82,7 @@ describe("getSession() reads the session cookie before any DB initialization", (
     expect(result).toBeNull();
   });
 
-  it("invalid/unrecognized cookie still fails closed to null (never authenticated) even though the pool is consulted", async () => {
+  it("a present cookie whose lookup query itself errors (e.g. a connection failure) still fails closed to null -- never authenticated on a DB error", async () => {
     const { getRawPool, withRawStatementTimeout } = await import("@/lib/db");
     (getRawPool as ReturnType<typeof vi.fn>).mockResolvedValue({ connect: vi.fn(), query: vi.fn() });
     (withRawStatementTimeout as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("connection reset"));

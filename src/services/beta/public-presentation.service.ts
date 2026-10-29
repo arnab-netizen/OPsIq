@@ -1,50 +1,59 @@
 /** Server-side lookup of the public presentation. Fails closed to the INVITE_ONLY copy on any error. */
-import { getRawPool, withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS } from "@/lib/db";
+import { getRawPool, withRawStatementTimeout } from "@/lib/db";
 import { legacyEffectiveSettings, isAdmissionMode, type AdmissionMode } from "@/services/beta/platform-settings.service";
 import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/domain/beta/public-presentation";
 
 /**
- * F-ROOT-ROUTE-300S root cause: readEffectiveSettings()'s default `client = db`
- * path ran as a plain (non-transactional) Prisma query with NO statement-level
- * timeout and NO bound on connection ACQUISITION. Under production's `max: 1`
- * pg.Pool (see src/lib/db.ts's P0-15 pool-starvation doc comment), node-postgres
- * has no built-in acquire timeout for a caller queued behind an already-busy
- * sole connection -- that wait is unbounded. The anonymous landing page (every
- * visitor with no session cookie, including external uptime monitors -- the
- * exact `GET /` / `HEAD /` traffic pattern observed timing out in production)
- * called this on every request, so once the pool's one connection was held by
- * ANY stalled caller (anywhere in the process), every subsequent `/` request
- * queued behind it with nothing to stop it except Vercel's platform-level
- * 300-second function ceiling -- reproduced in
- * src/__tests__/stage8/root-route-admission-pool-starvation-hostile.db.test.ts.
+ * F-ROOT-ROUTE-300S root cause, corrected after santa-loop adversarial review
+ * (two independent reviewers traced node-postgres's actual pg-pool internals
+ * and found the first version of this fix overstated the mechanism):
+ *
+ * readEffectiveSettings()'s default `client = db` path ran as a plain
+ * (non-transactional) Prisma query with NO statement_timeout set anywhere.
+ * CORRECTION: connection ACQUISITION against production's `max: 1` pg.Pool
+ * was NOT actually unbounded -- pg-pool applies `connectionTimeoutMillis`
+ * (POOL_CONNECTION_TIMEOUT_MS, 90s in production) to a queued waiter behind
+ * an already-busy connection, not only to a brand-new connection attempt
+ * (verified both by reading pg-pool's own source and by direct empirical
+ * test outside this suite: a second pool.connect() queued behind a held
+ * max:1 connection rejects at exactly the configured timeout). The real,
+ * unconditional gap was QUERY EXECUTION: once a connection was acquired, the
+ * plain Prisma query had no Postgres-side statement_timeout and no
+ * client-side bound at all, so a query that stalled after connecting (e.g.
+ * a Neon connection that goes stale/half-open, plausible for exactly the
+ * low-frequency ~5-11-minute uptime-monitor cadence observed timing out in
+ * production -- each ping is likely to hit a connection that has been idle
+ * long enough to have gone stale) could run indefinitely, bounded only by
+ * Vercel's platform-level 300-second function ceiling. The anonymous
+ * landing page (every visitor with no session cookie, including external
+ * uptime monitors) called this unprotected read on every request.
  *
  * Fix: read this one row with getRawPool()/withRawStatementTimeout() -- the
- * SAME primitive getSession()'s own query actually uses (NOT withStatementTimeout(),
- * which is Prisma's `$transaction({maxWait})`). This is a deliberate choice, not
- * an oversight: db.ts's own F-PROD-STARTUP-COLDSTART forensic documents that
- * `$transaction({maxWait})` races its client-side maxWait clock against the
- * FIRST-EVER physical connection attempt on a fresh pool, independent of real
- * contention -- a legitimately slow-but-healthy cold Neon connection (10-90s,
- * well within the pool's own real connectionTimeoutMillis) would fail that
- * narrower client-side clock and spuriously show the stricter copy even with
- * zero contention. That is exactly why claimStartup()/checkDatabase()/
- * checkMigrationReadiness()/getSession() were all migrated OFF
- * withStatementTimeout() and onto withRawStatementTimeout() -- this read
- * follows that same established precedent instead of inventing a second one.
- * Acquisition is bounded by the pool's real connectionTimeoutMillis (verified
- * empirically: a queued pool.connect() behind an already-busy max:1 connection
- * DOES reject once that bound elapses, not just a fresh connection attempt),
- * execution is bounded by a real Postgres-side `SET LOCAL statement_timeout`
- * (so a cancelled read returns its connection to the pool instead of orphaning
- * it -- the exact failure mode a naive client-side `Promise.race` would NOT
- * fix), and the outer JS race below is a pure defensive backstop sized to
- * exceed that real worst case, mirroring SESSION_QUERY_TIMEOUT_MS in auth.ts
- * exactly. On timeout/any error this still fails closed to the existing
- * `null` / INVITE_ONLY behavior below -- never OPEN_BETA.
+ * SAME raw-pg-client primitive getSession()'s own query actually uses (NOT
+ * withStatementTimeout(), Prisma's `$transaction({maxWait})`, which a prior
+ * version of this fix used and which carries its own, different, narrower
+ * false-failure risk on a legitimately slow-but-healthy fresh connection --
+ * see db.ts's F-PROD-STARTUP-COLDSTART forensic). withRawStatementTimeout()
+ * issues a session-level `SET statement_timeout` (NOT `SET LOCAL` -- there
+ * is no transaction here to scope it to) before the query, so Postgres
+ * itself cancels a stalled query and the connection is cleanly reset and
+ * returned to the pool (SQLSTATE 57014 path) rather than merely abandoned
+ * client-side. Deliberately NO additional outer JS-side race on top of this:
+ * one was present in the version santa-loop reviewed, copied from
+ * getSession()'s own pattern, but on a read whose only failure mode left
+ * uncovered by withRawStatementTimeout() itself is a connection that goes
+ * fully dead before the SET command is even acknowledged -- an outer race
+ * firing in exactly that case would abandon the caller while the checked-out
+ * client stays orphaned on this `max:1` pool until the OS's own TCP
+ * keepalive eventually notices, which is WORSE than relying on
+ * withRawStatementTimeout()'s own connect-time and statement-time bounds
+ * alone. getSession() carries this same latent outer-race/orphan
+ * characteristic already (pre-existing, not introduced here) and is
+ * explicitly out of scope for this PR -- changing it is a separate
+ * root-cause class affecting every one of its ~18 callers, not just this
+ * anonymous route.
  */
 export const PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS = 5000;
-export const PUBLIC_ADMISSION_READ_QUERY_TIMEOUT_MS =
-  POOL_CONNECTION_TIMEOUT_MS + PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS + 3000;
 
 interface PlatformSettingAdmissionModeRow {
   admission_mode: string;
@@ -59,23 +68,15 @@ interface PlatformSettingAdmissionModeRow {
  */
 async function readPublicAdmissionModeBounded(label: string): Promise<AdmissionMode> {
   const pool = await getRawPool();
-  const result = await Promise.race([
-    withRawStatementTimeout(
-      pool,
-      PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,
-      (client) =>
-        client.query<PlatformSettingAdmissionModeRow>(
-          `SELECT admission_mode FROM platform_settings WHERE id = 'global'`
-        ),
-      label
-    ),
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`Public admission-mode lookup timed out after ${PUBLIC_ADMISSION_READ_QUERY_TIMEOUT_MS}ms`)),
-        PUBLIC_ADMISSION_READ_QUERY_TIMEOUT_MS
-      )
-    ),
-  ]);
+  const result = await withRawStatementTimeout(
+    pool,
+    PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,
+    (client) =>
+      client.query<PlatformSettingAdmissionModeRow>(
+        `SELECT admission_mode FROM platform_settings WHERE id = 'global'`
+      ),
+    label
+  );
 
   const row = result.rows[0];
   if (!row) return legacyEffectiveSettings().admissionMode;
