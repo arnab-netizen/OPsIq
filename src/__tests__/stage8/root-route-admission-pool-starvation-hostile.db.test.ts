@@ -197,3 +197,74 @@ describe.skipIf(SKIP)("[db] root route admission-mode read under max:1 pool star
     TEST_TIMEOUT_MS,
   );
 });
+
+/**
+ * Discriminating EXECUTION-level proof (santa-loop round-2 addition): the
+ * tests above prove the ACQUISITION-bound layer. This proves the
+ * EXECUTION-bound layer actually applies to THIS call site's own query and
+ * statement_timeout value (PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS),
+ * not just the shared primitive generically -- by locking the real
+ * `platform_settings` table ACCESS EXCLUSIVE from a second, independent
+ * connection so the admission read's own SELECT genuinely blocks on a live,
+ * responsive backend (not a dead socket) until Postgres's statement_timeout
+ * cancels it (SQLSTATE 57014), then releasing the lock and proving
+ * recovery. Runs against the real, unmodified getRawPool()-managed pool
+ * (no injected short-timeout pool here), so a fresh module state is forced
+ * first to avoid picking up a prior test's injected pool from this file.
+ */
+describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level statement_timeout actually applies to this call site", () => {
+  let lockHolderPool: Pool | undefined;
+
+  function goCold(): void {
+    const globalForPrisma = globalThis as unknown as { prisma: unknown; prismaPromise: unknown; pgPool: unknown };
+    globalForPrisma.prisma = undefined;
+    globalForPrisma.prismaPromise = undefined;
+    globalForPrisma.pgPool = undefined;
+    vi.resetModules();
+  }
+
+  afterEach(async () => {
+    if (lockHolderPool) {
+      await lockHolderPool.end().catch(() => undefined);
+      lockHolderPool = undefined;
+    }
+  });
+
+  it(
+    "a real ACCESS EXCLUSIVE lock on platform_settings forces a genuine statement_timeout cancellation (SQLSTATE 57014) on the admission read's own SELECT, and the pool recovers after the lock is released",
+    async () => {
+      assertLocalUrl();
+      goCold();
+      const { getPublicAdmissionMode } = await import("@/services/beta/public-presentation.service");
+
+      const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
+      lockHolderPool = new Pool({ connectionString: url, max: 1 });
+      const lockClient = await lockHolderPool.connect();
+      await lockClient.query("BEGIN");
+      await lockClient.query("LOCK TABLE platform_settings IN ACCESS EXCLUSIVE MODE");
+
+      const start = Date.now();
+      const mode = await getPublicAdmissionMode();
+      const elapsed = Date.now() - start;
+
+      // PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS is 5000 -- cancelled
+      // close to that bound, not left waiting for the lock indefinitely.
+      expect(elapsed).toBeGreaterThan(4_000);
+      expect(elapsed).toBeLessThan(8_000);
+      expect(mode).toBeNull();
+
+      await lockClient.query("ROLLBACK");
+      lockClient.release();
+
+      // Pool recovery on the SAME (real, shared) pool: the SELECT that was
+      // just cancelled server-side must not have poisoned this connection
+      // for the next caller.
+      const start2 = Date.now();
+      const after = await getPublicAdmissionMode();
+      const elapsed2 = Date.now() - start2;
+      expect(elapsed2).toBeLessThan(2_000);
+      expect(after === null || typeof after === "string").toBe(true);
+    },
+    20_000,
+  );
+});

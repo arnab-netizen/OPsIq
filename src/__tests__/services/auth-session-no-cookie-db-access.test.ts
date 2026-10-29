@@ -10,10 +10,15 @@
  *
  * This is a narrow latency/robustness improvement, NOT the proven root cause
  * of the 300s timeout (pool/client construction here is synchronous module
- * wiring, not a network round trip -- see
+ * wiring, not a network round trip). The actual unbounded-query root cause
+ * and its fix are in src/services/beta/public-presentation.service.ts's own
+ * doc comment and src/lib/db.ts's withRawStatementTimeout() doc comment;
  * src/__tests__/stage8/root-route-admission-pool-starvation-hostile.db.test.ts
- * for the actual unbounded-query root cause and its fix). Mocking
- * `@/lib/db` entirely keeps this test fast and DB-free.
+ * covers the acquisition-bound layer specifically (see that file's own
+ * header for exactly what it does and does not prove), and
+ * src/__tests__/lib/db-raw-statement-timeout-hostile.db.test.ts covers the
+ * execution-bound and dead-connection-backstop layers generically. Mocking
+ * `@/lib/db` entirely keeps THIS test fast and DB-free.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

@@ -22,6 +22,12 @@
  *   - timeoutMs is never string-interpolated from unvalidated input — only a
  *     Math.trunc()'d, Number.isFinite()-checked positive integer ever reaches
  *     the SQL text.
+ *   - F-ROOT-ROUTE-300S santa-loop addition: a `fn` that never settles at all
+ *     (simulating a connection so dead that even `SET statement_timeout`
+ *     itself never gets a response, so the server-side bound above can never
+ *     fire) is caught by a client-side backstop that discards the connection
+ *     — the pool's slot is freed immediately rather than left orphaned, and
+ *     the caller gets a bounded rejection instead of hanging forever.
  *
  * Requires: TEST_WITH_DB=true and a migrated local PostgreSQL instance.
  */
@@ -219,4 +225,37 @@ describe.skipIf(SKIP)("[db] withRawStatementTimeout() shared-primitive hostile h
       /positive finite number/,
     );
   });
+
+  it(
+    "client-side backstop: a fn that never settles at all is discarded after statementTimeoutMs + the fixed margin, not left orphaned, and the pool stays healthy afterward",
+    async () => {
+      const p = freshPool();
+
+      const start = Date.now();
+      await expect(
+        withRawStatementTimeout(p, 300, () => new Promise<never>(() => undefined), "backstop-fire"),
+      ).rejects.toThrow(/client-side backstop fired/);
+      const elapsed = Date.now() - start;
+      // Fires at statementTimeoutMs (300) + the fixed 5s client-side margin
+      // -- neither instantly (it must not pre-empt a live, merely-slow
+      // query) nor indefinitely (it must not hang forever either).
+      expect(elapsed).toBeGreaterThan(5_000);
+      expect(elapsed).toBeLessThan(7_000);
+
+      // Pool recovers immediately: the discarded client's slot is free, so
+      // a fresh borrow succeeds right away rather than waiting for
+      // anything (OS-level dead-socket detection, a recycle, etc.).
+      const recoverStart = Date.now();
+      const result = await withRawStatementTimeout(
+        p,
+        5_000,
+        (client) => client.query<{ one: number }>("SELECT 1 AS one"),
+        "after-backstop",
+      );
+      const recoverElapsed = Date.now() - recoverStart;
+      expect(result.rows).toEqual([{ one: 1 }]);
+      expect(recoverElapsed).toBeLessThan(2_000);
+    },
+    15_000,
+  );
 });

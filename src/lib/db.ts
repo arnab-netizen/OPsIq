@@ -491,6 +491,48 @@ export interface RawQueryClient {
   query: <T = unknown>(text: string, values?: readonly unknown[]) => Promise<{ rows: T[] }>;
 }
 
+/**
+ * F-ROOT-ROUTE-300S santa-loop finding (two independent adversarial reviews
+ * converged on this, round 2): `SET statement_timeout` is a SERVER-side
+ * bound -- it can only cancel a query the server actually received and can
+ * respond to. If the connection is already dead (half-open socket, dropped
+ * mid-handshake, a Neon compute that went away without closing cleanly)
+ * neither the `SET` command nor the query itself will ever get a response,
+ * and nothing server-side can ever fire. Without a client-side backstop,
+ * `withRawStatementTimeout()` would then hang forever on that one `await
+ * client.query(...)` call, and the checked-out client would sit on the
+ * shared pool indefinitely -- under production's `max: 1` pool, that is
+ * the exact pre-existing P0-15 pool-starvation failure mode this whole
+ * primitive exists to prevent, just moved one layer down.
+ *
+ * CLIENT_SIDE_BACKSTOP_MS exists ONLY for that dead-connection case. It is
+ * sized to fire well after the server-side statement_timeout would have
+ * settled on any LIVE connection, so on the overwhelming majority of calls
+ * (every connection that is actually alive, proven by every existing
+ * passing test of this function) it never fires -- the normal success/
+ * 57014-cancellation paths below are completely unchanged. If it DOES
+ * fire, the client is released WITH an error, which tells pg.Pool to
+ * discard/destroy the connection and free this pool slot immediately,
+ * instead of leaving it orphaned until the OS's own TCP-level detection
+ * eventually notices (which can be many minutes on default kernel
+ * settings). The abandoned inner query is never cancelled server-side by
+ * this -- it is only ever abandoned client-side -- but since the client
+ * has already been discarded, nothing else can ever reuse it, so there is
+ * no risk of a second caller racing against that abandoned query on the
+ * same physical connection.
+ */
+export class ClientSideExecutionTimeoutError extends Error {
+  constructor(label: string, timeoutMs: number) {
+    super(
+      `withRawStatementTimeout: client-side backstop fired after ${timeoutMs}ms for "${label}" -- ` +
+      `the connection never responded at all (not even to SET statement_timeout), so the ` +
+      `server-side cancellation this function normally relies on could never be delivered. ` +
+      `The connection has been discarded rather than left orphaned on the pool.`
+    );
+    this.name = "ClientSideExecutionTimeoutError";
+  }
+}
+
 export async function withRawStatementTimeout<T>(
   pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
   timeoutMs: number,
@@ -506,10 +548,23 @@ export async function withRawStatementTimeout<T>(
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
-  try {
+  const clientSideBackstopMs = safeTimeoutMs + 5_000;
+  let backstopTimer: ReturnType<typeof setTimeout> | undefined;
+  const normalPath = (async () => {
     await client.query(`SET statement_timeout = ${safeTimeoutMs}`);
     const result = await fn(client);
     await client.query(`SET statement_timeout = DEFAULT`);
+    return result;
+  })();
+  const backstop = new Promise<never>((_, reject) => {
+    backstopTimer = setTimeout(() => {
+      reject(new ClientSideExecutionTimeoutError(label, clientSideBackstopMs));
+    }, clientSideBackstopMs);
+  });
+
+  try {
+    const result = await Promise.race([normalPath, backstop]);
+    clearTimeout(backstopTimer);
     client.release();
     logger.debug("[db] withRawStatementTimeout completed", {
       label,
@@ -519,11 +574,24 @@ export async function withRawStatementTimeout<T>(
     });
     return result;
   } catch (err) {
-    const sqlState = (err as { code?: unknown } | null)?.code;
-    const isQueryCancellation = sqlState === POSTGRES_QUERY_CANCELED_SQLSTATE;
+    clearTimeout(backstopTimer);
     const errorObj = err instanceof Error ? err : new Error(String(err));
+    const isBackstop = errorObj.name === "ClientSideExecutionTimeoutError";
+    const sqlState = (err as { code?: unknown } | null)?.code;
+    const isQueryCancellation = !isBackstop && sqlState === POSTGRES_QUERY_CANCELED_SQLSTATE;
 
-    if (isQueryCancellation) {
+    if (isBackstop) {
+      // The connection never responded at all. The abandoned normalPath
+      // promise may still settle later (or never) -- silence it so it can
+      // never throw an unhandled rejection or attempt a second release()
+      // once this one has already discarded the client.
+      normalPath.catch(() => undefined);
+      client.release(errorObj);
+      logger.warn("[db] withRawStatementTimeout client-side backstop fired -- connection discarded", {
+        label,
+        clientSideBackstopMs,
+      });
+    } else if (isQueryCancellation) {
       try {
         await client.query(`SET statement_timeout = DEFAULT`);
         client.release();
@@ -548,6 +616,7 @@ export async function withRawStatementTimeout<T>(
       outcome: "error",
       errorName: errorObj.name,
       wasQueryCancellation: isQueryCancellation,
+      wasClientSideBackstop: isBackstop,
     });
     throw errorObj;
   }
