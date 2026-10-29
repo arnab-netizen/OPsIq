@@ -28,8 +28,12 @@ import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/dom
  * long enough to have gone stale) could run indefinitely, bounded only by
  * Vercel's platform-level 300-second function ceiling.
  *
- * Fix: read this one row with getRawPool()/withRawStatementTimeout() -- the
- * SAME raw-pg-client primitive getSession()'s own query actually uses.
+ * Fix (F-ROOT-ROUTE-300S, since superseded below by F-ROOT-ROUTE-FAST-FAIL's
+ * getPublicReadPool() -- this paragraph is kept as history for the
+ * BEGIN/SET LOCAL/COMMIT-or-ROLLBACK mechanism it establishes, not as a
+ * description of the pool this call site reads today): read this one row
+ * with getRawPool()/withRawStatementTimeout() -- the SAME raw-pg-client
+ * primitive getSession()'s own query actually uses.
  * withRawStatementTimeout() runs `fn` inside its own explicit
  * BEGIN/SET LOCAL statement_timeout/COMMIT-or-ROLLBACK, bounded on every
  * side by a client-side backstop (see its doc comment in db.ts for the
@@ -76,28 +80,40 @@ import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/dom
  * low-stakes public read is not a worthwhile trade against re-reviewing a
  * shared safety primitive. The justified target instead shrinks only the
  * two genuinely route-specific, shrinkable components:
- *   - acquisition: 3_000ms (30x smaller than the shared 90_000ms ceiling;
- *     Neon's documented compute-wake latency is typically sub-second, so
- *     this leaves real headroom for a cold dedicated-pool connection
- *     without inheriting the shared pool's full 90s margin for genuine
- *     unavailability);
+ *   - acquisition: 3_000ms (30x smaller than the shared 90_000ms ceiling).
+ *     Santa-loop review finding (round 3): this is NOT "comfortably above
+ *     typical Neon cold-wake latency" -- this codebase's own documented
+ *     figures (see db.ts's cold-compute-wake doc comment) are median
+ *     ~1.8s, p95 ~2.6s, and "several seconds" under a concurrent
+ *     cold-start burst. At p95 that leaves roughly 400ms of margin for
+ *     TCP+TLS+auth on TOP of the wake itself, and burst conditions can
+ *     exceed 3_000ms outright. 3_000ms is chosen deliberately short
+ *     despite this -- not because cold starts are rare, but because this
+ *     value only gates DISPLAY COPY on a low-traffic dedicated pool
+ *     (unlike the shared pool, most real visits hit a warm connection);
+ *     see the trade-off below for why that's an acceptable, and
+ *     non-trivially frequent, cost.
  *   - execution: reduced from 5000ms to 2000ms (still generous for a
  *     single primary-key-indexed SELECT against a small table).
  * Result: PUBLIC_ADMISSION_READ_WORST_CASE_MS = 3_000 + 2_000 + 2*5_000 =
  * 15_000ms -- an 85.7% reduction from 105_000ms, derived from this file's
  * and db.ts's own real constants, not chosen to make a test pass.
  *
- * Named trade-off (fresh-context review finding): the old 90_000ms
- * acquisition bound was ALSO, incidentally, tolerant of a genuinely slow
- * but eventually-successful cold connection (e.g. a sluggish Neon
- * compute-wake taking longer than 3s but less than 90s) -- that request
- * would previously have waited it out and shown the real admission mode.
- * After this fix, that same slow-but-successful case now fails closed to
- * the conservative INVITE_ONLY copy well before the connection would have
- * succeeded. This is accepted deliberately: this value only controls
- * which marketing copy an anonymous visitor sees (never an authorization
- * decision), so bounded latency is worth more here than the small chance
- * of briefly under-selling an open beta during a slow cold start.
+ * Named trade-off (fresh-context + santa-loop review findings): the old
+ * 90_000ms acquisition bound was ALSO, incidentally, tolerant of a
+ * genuinely slow but eventually-successful cold connection (e.g. a Neon
+ * compute-wake landing anywhere in its documented ~1.8s median / ~2.6s p95
+ * / multi-second-burst range) -- that request would previously have
+ * waited it out and shown the real admission mode. After this fix, a cold
+ * dedicated-pool connection that takes longer than 3_000ms (plausible at
+ * or past p95, not merely a rare tail event) now fails closed to the
+ * conservative INVITE_ONLY copy well before the connection would have
+ * succeeded. This is accepted deliberately, honestly stated as a
+ * meaningful-not-negligible frequency: this value only controls which
+ * marketing copy an anonymous visitor sees (never an authorization
+ * decision), so bounded latency on a low-traffic dedicated pool is worth
+ * more here than occasionally under-selling an open beta during a cold
+ * start.
  */
 export const PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS = 2_000;
 

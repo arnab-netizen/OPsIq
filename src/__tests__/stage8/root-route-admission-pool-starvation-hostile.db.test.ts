@@ -1,18 +1,21 @@
 /**
- * F-ROOT-ROUTE-300S proof, against real disposable PostgreSQL, that the
- * root route's public-admission read is bounded under `max:1` pool
- * contention -- corrected after santa-loop adversarial review.
+ * F-ROOT-ROUTE-300S / F-ROOT-ROUTE-FAST-FAIL proof, against real disposable
+ * PostgreSQL, that the root route's public-admission read is bounded --
+ * corrected and extended across multiple rounds of santa-loop adversarial
+ * review. This file now contains THREE describe blocks covering two
+ * related but distinct missions; read each block's own doc comment for
+ * specifics. This header covers what's common to all three.
  *
- * SCOPE OF THIS FILE: this proves the ACQUISITION-bound layer specifically
- * (a queued pool.connect() behind an already-busy sole connection rejects
- * once connectionTimeoutMillis elapses, rather than waiting indefinitely).
- * It deliberately does NOT claim to reproduce the exact Production
- * mechanism byte-for-byte: Production logs show the `GET /` / `HEAD /`
- * timeouts but carry no query-level tracing, so whether any individual
- * incident was dominated by acquisition contention or by a stalled query on
- * an already-acquired connection cannot be distinguished from that evidence
- * alone. What IS proven by code-reading (see the doc comment on
- * readPublicAdmissionModeBounded() in
+ * BLOCK 1 (acquisition-bound under max:1 contention, F-ROOT-ROUTE-300S):
+ * proves a queued pool.connect() behind an already-busy sole connection
+ * rejects once connectionTimeoutMillis elapses, rather than waiting
+ * indefinitely. It deliberately does NOT claim to reproduce the exact
+ * Production mechanism byte-for-byte: Production logs show the `GET /` /
+ * `HEAD /` timeouts but carry no query-level tracing, so whether any
+ * individual incident was dominated by acquisition contention or by a
+ * stalled query on an already-acquired connection cannot be distinguished
+ * from that evidence alone. What IS proven by code-reading (see the doc
+ * comment on readPublicAdmissionModeBounded() in
  * src/services/beta/public-presentation.service.ts) is that the OLD plain
  * Prisma read had NO Postgres-side statement_timeout at all for the
  * EXECUTION phase once a connection was acquired -- that gap is real and
@@ -22,40 +25,52 @@
  * / SQLSTATE 57014 / clean connection reuse) is already proven generically
  * against withRawStatementTimeout() in
  * src/__tests__/lib/db-raw-statement-timeout-hostile.db.test.ts; re-proving
- * it here would be redundant, not additive. This file's job is narrower:
- * prove the NEW code's acquisition path is genuinely bounded (not merely
- * "finished before a holder released by chance"), fails closed, and leaves
- * the shared pool healthy afterward.
+ * it here would be redundant, not additive. Rather than waiting out
+ * Production's real acquisition ceiling, this block injects a pg.Pool with
+ * the SAME max:1 but a short, test-controlled `connectionTimeoutMillis` --
+ * as of F-ROOT-ROUTE-FAST-FAIL, into `globalForPrisma.pgPublicReadPool`
+ * (the public read's own DEDICATED pool slot, real Production value
+ * PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS=3_000ms -- it previously injected
+ * into the SHARED `pgPool` slot against the shared pool's 90s ceiling,
+ * before that fix existed). Same injection technique already established
+ * in src/__tests__/auth/get-session-fresh-connection-hostile.db.test.ts's
+ * `goColdWithPool()`; verified empirically (outside this test suite,
+ * against a throwaway pool, not asserted here) that a pool.connect() call
+ * queued behind an already-busy max:1 connection DOES reject once
+ * connectionTimeoutMillis elapses, not just for a brand-new/never-connected
+ * client, so a short injected value genuinely exercises the same
+ * acquisition-bound mechanism the real production value provides, just on
+ * a fast, deterministic timescale.
  *
- * TEST DESIGN: rather than waiting out production's real 90-second
- * POOL_CONNECTION_TIMEOUT_MS, this injects a pg.Pool with the SAME max:1 but
- * a short, test-controlled `connectionTimeoutMillis` via
- * globalForPrisma.pgPool -- the exact technique already established in
- * src/__tests__/auth/get-session-fresh-connection-hostile.db.test.ts's
- * `goColdWithPool()`. Verified empirically (outside this test suite, against
- * a throwaway pool, not asserted here) before relying on it: a pool.connect()
- * call queued behind an already-busy max:1 connection DOES reject once
- * connectionTimeoutMillis elapses -- not just a brand-new/never-connected
- * client -- so a short injected value genuinely exercises the same
- * acquisition-bound mechanism production's real 90s value provides, just on
- * a fast, deterministic timescale. This file intentionally does NOT attempt
- * to also run the OLD (pre-fix) code against this same injected pool: doing
- * so was tried and discarded as invalid -- resetting
- * globalForPrisma.prisma/prismaPromise (required to force a fresh module
- * import) makes the OLD code's `db` Prisma-Proxy auto-reinitialize its OWN
- * pool on first access (db.ts's getDb()/createPrismaClient()), silently
- * overwriting and clobbering the injected one before the OLD code ever
- * contends with the holder -- a test-harness artifact, not evidence about
- * the OLD code's real behavior either way. The OLD code's true, documented
- * gap (no statement_timeout) is covered by code-reading plus the already-
- * generic cancellation proof cited above, not by a before/after timing
- * comparison in this file.
+ * BLOCK 2 (execution-bound statement_timeout applies to this call site):
+ * see its own doc comment below.
+ *
+ * BLOCK 3 (F-ROOT-ROUTE-FAST-FAIL RED-before/GREEN-after, added later):
+ * unlike block 1's injected-pool technique, this block DOES run a genuine
+ * before/after timing comparison -- see its own doc comment for why that
+ * is valid here even though an earlier attempt at a before/after
+ * comparison for block 1's OLD-vs-NEW acquisition mechanism was tried and
+ * discarded as invalid (resetting globalForPrisma.prisma/prismaPromise to
+ * force a fresh module import made the OLD code's `db` Prisma-Proxy
+ * auto-reinitialize its OWN pool on first access, silently overwriting and
+ * clobbering the injected one before the OLD code ever contended with the
+ * holder -- a test-harness artifact specific to that injection technique,
+ * not evidence about the OLD code's real behavior either way). Block 3's
+ * comparison is different in kind: it compares the FIXED code's own
+ * behavior when the SHARED pool is starved (which the fixed code no longer
+ * reads at all) against what the UNFIXED code's behavior would be under
+ * the same starvation (since the unfixed code DID read that shared slot
+ * via getRawPool()'s normal, un-reset fast path) -- no module
+ * reinitialization or Prisma-Proxy race is involved on either side of that
+ * comparison, so the artifact that invalidated the earlier attempt does
+ * not apply here.
  *
  * Requires: TEST_WITH_DB=true and a migrated local PostgreSQL instance.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { Pool } from "pg";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { POOL_CONNECTION_TIMEOUT_MS } from "@/lib/db";
 import {
   PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,
   PUBLIC_ADMISSION_READ_WORST_CASE_MS,
@@ -390,7 +405,10 @@ describe.skipIf(SKIP)("[db] F-ROOT-ROUTE-FAST-FAIL: public-admission read must s
   // pool's 90s ceiling (the pre-fix behavior) would still be waiting when
   // the holder releases, while a call bounded by the dedicated pool's own
   // much smaller budget (the post-fix behavior, asserted below) would not.
-  const SHARED_POOL_TIMEOUT_MS = 90_000;
+  // Imported from db.ts, not hand-typed -- closes the same drift risk the
+  // PUBLIC_ADMISSION_READ_WORST_CASE_MS import below already addresses
+  // (santa-loop review finding).
+  const SHARED_POOL_TIMEOUT_MS = POOL_CONNECTION_TIMEOUT_MS;
   const HOLD_SECONDS = 20;
   const TEST_TIMEOUT_MS = 30_000;
 

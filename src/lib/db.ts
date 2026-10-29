@@ -203,11 +203,16 @@ export async function getRawPool(): Promise<RawPool> {
  * INVITE_ONLY (a conservative display value, never a crash or an
  * authorization effect) rather than a slightly higher `max` serving more
  * of the burst directly. `max: 1` was kept deliberately: this read's
- * underlying query is cheap enough that queuing behind one connection is
- * normally sub-millisecond, and raising `max` would multiply this pool's
- * own direct-connection count per function instance under concurrent cold
- * starts -- precisely the failure mode createPrismaClient()'s own `max: 1`
- * comment above (P0-15) already documents and fixed for the shared pool.
+ * underlying query itself is cheap (a single primary-key-indexed SELECT),
+ * but the full round trip under withRawStatementTimeout() is 5 sequential
+ * statements on that one connection -- BEGIN, two SET LOCAL, the SELECT,
+ * COMMIT -- so queuing behind an already-busy connection costs several
+ * network round trips, not sub-millisecond (santa-loop review finding).
+ * Raising `max` would multiply this pool's own direct-connection count
+ * per function instance under concurrent cold starts -- precisely the
+ * failure mode createPrismaClient()'s own `max: 1` comment above (P0-15)
+ * already documents and fixed for the shared pool -- which is the real
+ * reason `max: 1` was kept, not an assumption that queuing is free.
  */
 export const PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS = 3_000;
 
