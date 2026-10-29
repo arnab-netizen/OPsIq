@@ -1,4 +1,4 @@
-import { db, getDbInstance, getRawPool, withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS, CLIENT_SIDE_BACKSTOP_MARGIN_MS } from "@/lib/db";
+import { db, getDbInstance, getRawPool, withRawStatementTimeout, withRawStatementTimeoutWorstCaseMs } from "@/lib/db";
 import type { UserRoleAssignment, EngagementMembership } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import type { PolicyContext } from "@/policies/capability-check";
@@ -28,24 +28,22 @@ export const SESSION_STATEMENT_TIMEOUT_MS = 4000;
  * revocation/expiry are always separate prior-or-subsequent writes, never
  * expected to be observed atomically with this read; workspace resolution
  * always runs as its own later, independent query). It now uses
- * withRawStatementTimeout() — a raw pg client bounded by the pool's own
- * connectionTimeoutMillis (POOL_CONNECTION_TIMEOUT_MS) — matching
- * claimStartup()/checkDatabase()/checkMigrationReadiness(). This outer
- * JS-side race is a pure defensive backstop: it MUST stay longer than
- * withRawStatementTimeout()'s own real worst case, which now itself
- * includes the shared primitive's own internal client-side backstop
- * (POOL_CONNECTION_TIMEOUT_MS + SESSION_STATEMENT_TIMEOUT_MS +
- * CLIENT_SIDE_BACKSTOP_MARGIN_MS — see that constant's doc comment in
- * db.ts), so it can only ever fire after the inner bound would already
- * have settled — this is a read, so there is no orphaned-write risk from
- * the outer race abandoning the caller either way, but a pure backstop
- * that can never actually fire first is strictly simpler to reason about
- * than one that could. Derived from the shared constants so the two can
- * never silently drift back out of sync the way an earlier version of this
- * fix did (caught by santa-loop adversarial review).
+ * withRawStatementTimeout() — a raw pg client, inside its own explicit
+ * BEGIN/SET LOCAL/COMMIT-or-ROLLBACK (F-PGBOUNCER-TXN-SAFETY, src/lib/db.ts)
+ * — matching claimStartup()/checkDatabase()/checkMigrationReadiness(). This
+ * outer JS-side race is a pure defensive backstop: it MUST stay longer than
+ * withRawStatementTimeout()'s own real worst case
+ * (withRawStatementTimeoutWorstCaseMs(), which already accounts for that
+ * primitive's own two internal client-side backstops), so it can only ever
+ * fire after the inner bound would already have settled — this is a read,
+ * so there is no orphaned-write risk from the outer race abandoning the
+ * caller either way, but a pure backstop that can never actually fire
+ * first is strictly simpler to reason about than one that could. Derived
+ * from the shared formula, not a hand-rolled copy, so the two can never
+ * silently drift back out of sync the way an earlier version of this fix
+ * did twice (caught by santa-loop adversarial review both times).
  */
-export const SESSION_QUERY_TIMEOUT_MS =
-  POOL_CONNECTION_TIMEOUT_MS + SESSION_STATEMENT_TIMEOUT_MS + CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3000;
+export const SESSION_QUERY_TIMEOUT_MS = withRawStatementTimeoutWorstCaseMs(SESSION_STATEMENT_TIMEOUT_MS) + 3000;
 
 export interface AuthenticatedUser {
   id: string;

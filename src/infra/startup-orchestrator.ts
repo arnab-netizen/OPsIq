@@ -9,7 +9,7 @@
 import { claimStartup, completeStartup, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
-import { withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS, CLIENT_SIDE_BACKSTOP_MARGIN_MS, getRawPool } from "@/lib/db";
+import { withRawStatementTimeout, withRawStatementTimeoutWorstCaseMs, getRawPool } from "@/lib/db";
 import type { getDbInstance } from "@/lib/db";
 import type { logger as loggerSingleton } from "@/infra/logger";
 
@@ -28,29 +28,25 @@ const STARTUP_TIMEOUT_MS = 30000;
 export const DB_CHECK_STATEMENT_TIMEOUT_MS = 4000;
 /**
  * F-PROD-STARTUP-COLDSTART second-mechanism forensic: checkDatabase() now
- * uses withRawStatementTimeout() (a bounded raw pg client, no Prisma
- * interactive transaction — see src/lib/db.ts's own doc comment for why),
- * so its worst case is bounded by the pool's own POOL_CONNECTION_TIMEOUT_MS
- * to acquire a connection, plus its own statement execution timeout — not
- * by ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS, which no
+ * uses withRawStatementTimeout() (a bounded raw pg client inside its own
+ * explicit transaction — see src/lib/db.ts's F-PGBOUNCER-TXN-SAFETY doc
+ * comment for why), so its worst case is withRawStatementTimeoutWorstCaseMs() —
+ * not ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS, which no
  * longer apply to this call site. This outer JS-side race MUST stay longer
  * than that worst case, or it fires first on a slow-but-legitimate cold
  * start and reports the exact same false "unexpected error" outcome the
  * inner fix was meant to prevent, silently undoing it. Derived from the
- * shared constants (including CLIENT_SIDE_BACKSTOP_MARGIN_MS, the inner
- * primitive's own client-side dead-connection backstop margin -- see its
- * doc comment in db.ts), not an independent guess, so the two can never
- * silently drift out of sync again.
+ * shared formula, not a hand-rolled copy, so the two can never silently
+ * drift out of sync again (as happened twice already, caught both times by
+ * santa-loop adversarial review).
  */
-export const DB_CHECK_TIMEOUT_MS =
-  POOL_CONNECTION_TIMEOUT_MS + DB_CHECK_STATEMENT_TIMEOUT_MS + CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3000;
+export const DB_CHECK_TIMEOUT_MS = withRawStatementTimeoutWorstCaseMs(DB_CHECK_STATEMENT_TIMEOUT_MS) + 3000;
 /**
  * Same reasoning as DB_CHECK_TIMEOUT_MS above, sized against
  * checkMigrationReadiness()'s own MIGRATION_QUERY_STATEMENT_TIMEOUT_MS
  * (src/services/monitoring/migration-check.ts, currently 5000ms).
  */
-export const MIGRATION_READINESS_TIMEOUT_MS =
-  POOL_CONNECTION_TIMEOUT_MS + 5000 + CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3000;
+export const MIGRATION_READINESS_TIMEOUT_MS = withRawStatementTimeoutWorstCaseMs(5000) + 3000;
 
 /**
  * Orchestrate startup checks (runs ONCE per instance).

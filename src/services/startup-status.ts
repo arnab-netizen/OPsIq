@@ -568,8 +568,24 @@ export async function claimStartup(): Promise<StartupClaimResult> {
       pool,
       CLAIM_STATEMENT_TIMEOUT_MS,
       async (client) => {
+        // F-PGBOUNCER-TXN-SAFETY: withRawStatementTimeout() now runs this
+        // whole `fn` inside its own explicit transaction (BEGIN/SET LOCAL/
+        // COMMIT-or-ROLLBACK -- see src/lib/db.ts), so the INSERT failing
+        // (including a 57014 statement_timeout cancellation) aborts the
+        // ambient transaction: Postgres fails ANY further statement on it,
+        // including this diagnostic read, with SQLSTATE 25P02 until a
+        // ROLLBACK is issued. A SAVEPOINT isolates just the INSERT attempt
+        // so a failure there can be undone with `ROLLBACK TO SAVEPOINT`
+        // without ending the outer transaction -- keeping the diagnostic
+        // read on the SAME pinned transaction/backend, exactly as before
+        // this fix, rather than losing it or needing a second connection.
+        // Verified against a real local PgBouncer (transaction pool mode):
+        // ROLLBACK TO SAVEPOINT un-aborts the transaction and the
+        // diagnostic read succeeds immediately afterward on the same
+        // client.
+        await client.query("SAVEPOINT claim_attempt");
         try {
-          return await client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
+          const result = await client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
             `
             WITH "previous" AS (
               SELECT "status" FROM "startup_status" WHERE "instance_id" = $1
@@ -594,10 +610,20 @@ export async function claimStartup(): Promise<StartupClaimResult> {
             `,
             [instanceId, now, version, claimToken, staleThreshold],
           );
+          await client.query("RELEASE SAVEPOINT claim_attempt");
+          return result;
         } catch (insertError) {
+          // Undo just the failed INSERT's abort, keeping the OUTER
+          // transaction/backend pinning intact, so the diagnostic read
+          // below runs on the SAME transaction rather than one Postgres
+          // has already marked aborted. If even this fails, the diagnostic
+          // read's own try/catch (inside captureStartupClaimDiagnostic)
+          // returns a bounded diagnosticUnavailable marker instead of
+          // throwing a second, different error.
+          await client.query("ROLLBACK TO SAVEPOINT claim_attempt").catch(() => undefined);
           // Best-effort, read-only, sanitized diagnostic — captured on THIS same client before
-          // withRawStatementTimeout()'s own catch releases/discards it. Never masks insertError: it is
-          // always rethrown unchanged immediately after.
+          // withRawStatementTimeout()'s own catch rolls back/releases or discards it. Never masks
+          // insertError: it is always rethrown unchanged immediately after.
           const diagnostic = await captureStartupClaimDiagnostic(client, insertError);
           logger.error("[STARTUP-STATUS] claim INSERT failed — sanitized diagnostic captured", undefined, {
             instance: instanceId,

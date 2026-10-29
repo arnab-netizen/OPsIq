@@ -485,73 +485,128 @@ export async function withStatementTimeout<T>(
  * potentially leaving the connection in an unknown state and the client is
  * released with the error, telling pg.Pool to discard rather than reuse it.
  */
-const POSTGRES_QUERY_CANCELED_SQLSTATE = "57014";
-
 export interface RawQueryClient {
   query: <T = unknown>(text: string, values?: readonly unknown[]) => Promise<{ rows: T[] }>;
 }
 
 /**
- * F-ROOT-ROUTE-300S santa-loop finding (two independent adversarial reviews
- * converged on this, round 2): `SET statement_timeout` is a SERVER-side
- * bound -- it can only cancel a query the server actually received and can
- * respond to. If the connection is already dead (half-open socket, dropped
- * mid-handshake, a Neon compute that went away without closing cleanly)
- * neither the `SET` command nor the query itself will ever get a response,
- * and nothing server-side can ever fire. Without a client-side backstop,
- * `withRawStatementTimeout()` would then hang forever on that one `await
- * client.query(...)` call, and the checked-out client would sit on the
- * shared pool indefinitely -- under production's `max: 1` pool, that is
- * the exact pre-existing P0-15 pool-starvation failure mode this whole
- * primitive exists to prevent, just moved one layer down.
+ * F-PGBOUNCER-TXN-SAFETY root cause (proven against a real local PgBouncer
+ * 1.26.1 instance in `pool_mode = transaction`, matching Neon's own pooled
+ * endpoint -- Neon's docs state "Neon uses PgBouncer in transaction mode
+ * (`pool_mode=transaction`)" -- not against a mock):
  *
- * CLIENT_SIDE_BACKSTOP_MS exists ONLY for that dead-connection case. It is
- * sized to fire well after the server-side statement_timeout would have
- * settled on any LIVE connection running the SET/`fn`/reset sequence as a
- * SMALL, FIXED number of statements each individually bounded by
- * `timeoutMs` -- true for every current caller (getSession, the public-
- * admission read, checkDatabase, checkMigrationReadiness all run exactly
- * one statement in `fn`; claimStartup runs at most one insert plus one
- * trivial diagnostic query on error). A hypothetical future caller whose
- * `fn` runs enough sequential statements for their combined latency to
- * exceed CLIENT_SIDE_BACKSTOP_MARGIN_MS on a live connection would need a
- * larger margin or its own per-statement bound -- this is not a universal
- * guarantee for every imaginable `fn`. For every current, proven case it
- * never fires (every existing passing test of this function) -- the normal
- * success/57014-cancellation paths below are completely unchanged. If it
- * DOES fire, the client is released WITH an error, which tells pg.Pool to
- * discard/destroy the connection and free this pool slot immediately,
- * instead of leaving it orphaned until the OS's own TCP-level detection
- * eventually notices (which can be many minutes on default kernel
- * settings). The abandoned inner query is never cancelled server-side by
- * this -- it is only ever abandoned client-side -- but since the client
- * has already been discarded, nothing else can ever reuse it, so there is
- * no risk of a second caller racing against that abandoned query on the
- * same physical connection.
- */
-/**
- * Exported so every caller's own outer JS-side race (SESSION_QUERY_TIMEOUT_MS
- * in auth.ts, DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
- * startup-orchestrator.ts) can derive a margin guaranteed to exceed this
- * function's own real worst case, instead of an independently-chosen margin
- * silently drifting shorter than this one -- the exact failure mode
- * ACQUISITION_QUEUE_WAIT_MS's own doc comment above already guards against
- * for a different pair of constants.
+ * The version of this function santa-loop round 3 left in place issued a
+ * plain, SESSION-level `SET statement_timeout = X` with no surrounding
+ * transaction. Both Neon's and PgBouncer's own documentation say `SET`/
+ * `RESET` (session variables) are "Never" supported / "not supported" on a
+ * transaction-pooled connection -- session state is NOT guaranteed to
+ * follow the client to its next statement, because PgBouncer may hand that
+ * client an entirely DIFFERENT backend server connection for it. This was
+ * directly reproduced: with a clean backend, Client A's plain `SET
+ * statement_timeout = 300` followed by Client A fully disconnecting, then
+ * an unrelated Client B connecting and running an UNTIMED query, caused
+ * B's query to be wrongly cancelled at ~300ms -- A's session-level setting
+ * leaked onto a connection that never asked for it. This is not merely "my
+ * own protection might not apply"; it is cross-request interference: if
+ * ANY caller's cleanup (`SET statement_timeout = DEFAULT`) ever failed to
+ * run (a crash, a dead connection, this very function's own old backstop
+ * path discarding mid-sequence), the leftover value could affect a
+ * COMPLETELY UNRELATED later request through the same pooled backend.
+ *
+ * Fix (also directly reproduced, same harness): wrapping the read in an
+ * explicit `BEGIN; SET LOCAL statement_timeout = X; <fn>; COMMIT;` and
+ * disconnecting cleanly produced ZERO leakage onto a subsequent, unrelated
+ * client -- `SET LOCAL`'s scope is a native PostgreSQL transaction
+ * boundary, enforced by Postgres itself independent of PgBouncer or any
+ * reset query, so it cannot leak past COMMIT/ROLLBACK even if some OTHER
+ * cleanup step never runs. This also means a crash/discard mid-transaction
+ * can never leave a session-level setting behind for the next borrower --
+ * at most the backend itself is discarded (see the dead-connection
+ * backstop below), never silently reused with stale state.
+ *
+ * Transaction-abort semantics (also directly reproduced): once any
+ * statement inside the transaction errors (including a `statement_timeout`
+ * cancellation, SQLSTATE 57014), Postgres marks the WHOLE transaction
+ * aborted -- any further statement on it, including a harmless read,
+ * fails immediately with SQLSTATE 25P02 ("current transaction is aborted")
+ * until `ROLLBACK` is issued. `ROLLBACK` itself was confirmed to both clear
+ * the aborted state AND correctly revert `SET LOCAL`'s value, leaving the
+ * connection fully healthy and reusable. This is why 57014 can no longer
+ * be handled by simply resetting the timeout and reusing the client (the
+ * pre-round-3 behavior): the transaction must be explicitly rolled back
+ * first. A caller whose `fn` needs to run a diagnostic read AFTER its own
+ * statement fails (claimStartup() does) must isolate that failure with its
+ * own `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` -- also directly reproduced to
+ * work correctly, keeping the diagnostic on the SAME pinned
+ * transaction/backend -- rather than relying on this function to expose a
+ * per-statement escape hatch.
  */
 export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
 
+/**
+ * Derives the real worst-case bound of a withRawStatementTimeout() call for
+ * a given statementTimeoutMs, for every caller's own outer JS-side
+ * defensive race (SESSION_QUERY_TIMEOUT_MS in auth.ts, DB_CHECK_TIMEOUT_MS/
+ * MIGRATION_READINESS_TIMEOUT_MS in startup-orchestrator.ts) to derive from
+ * -- a single shared formula instead of each call site hand-deriving its
+ * own and silently drifting out of sync with this function's real
+ * behavior, which is exactly what happened twice across santa-loop rounds
+ * 1-3. Accounts for BOTH backstops this function can hit in its worst
+ * case: once on the main BEGIN/SET LOCAL/fn/COMMIT sequence, and -- only on
+ * the error path -- once more on the ROLLBACK cleanup attempt.
+ */
+export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number): number {
+  return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
+}
+
 export class ClientSideExecutionTimeoutError extends Error {
-  constructor(label: string, timeoutMs: number) {
+  constructor(label: string, phase: "main" | "rollback", timeoutMs: number) {
     super(
-      `withRawStatementTimeout: client-side backstop fired after ${timeoutMs}ms for "${label}" -- ` +
-      `the connection never responded at all (not even to SET statement_timeout), so the ` +
-      `server-side cancellation this function normally relies on could never be delivered. ` +
+      `withRawStatementTimeout: client-side backstop fired during ${phase} after ${timeoutMs}ms for "${label}" -- ` +
+      `the connection never responded at all, so no server-side mechanism could ever fire. ` +
       `The connection has been discarded rather than left orphaned on the pool.`
     );
     this.name = "ClientSideExecutionTimeoutError";
   }
 }
 
+/**
+ * Races `promise` against a fresh timer of `ms`, rejecting with
+ * ClientSideExecutionTimeoutError if `promise` has not settled by then.
+ * Used for BOTH the main BEGIN/SET LOCAL/fn/COMMIT sequence and the
+ * ROLLBACK cleanup path below, so neither can hang the caller indefinitely
+ * on a connection that goes fully dead at any point (Phase 7: BEGIN never
+ * responding, SET LOCAL never responding, fn's query never responding,
+ * COMMIT never responding, and ROLLBACK never responding are all covered).
+ */
+function raceBackstop<R>(promise: Promise<R>, label: string, phase: "main" | "rollback", ms: number): { result: Promise<R>; clear: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const backstop = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new ClientSideExecutionTimeoutError(label, phase, ms)), ms);
+  });
+  return { result: Promise.race([promise, backstop]), clear: () => clearTimeout(timer) };
+}
+
+/**
+ * Runs `fn` against a single checked-out raw pg client, inside an explicit
+ * transaction with a bounded TRANSACTION-LOCAL statement_timeout (see the
+ * F-PGBOUNCER-TXN-SAFETY doc comment above for why this must be `SET
+ * LOCAL` inside `BEGIN`/`COMMIT`, not a plain session-level `SET`).
+ * Connection ACQUISITION is bounded by the pool's own connectionTimeoutMillis
+ * (a pre-existing, unchanged setting -- see withRawStatementTimeoutWorstCaseMs());
+ * query EXECUTION is bounded by a genuine Postgres-side statement_timeout,
+ * scoped to this transaction only. On success: COMMIT, then release() the
+ * client clean. On any error (including a 57014 cancellation, which leaves
+ * the transaction aborted): ROLLBACK -- itself bounded by its own backstop
+ * -- then release() clean if the rollback is confirmed, or release(err) to
+ * discard the connection if the rollback itself fails or never responds.
+ * The dead-connection backstop (CLIENT_SIDE_BACKSTOP_MARGIN_MS) exists only
+ * for a connection that never responds to ANYTHING -- proven to never fire
+ * on a live connection running a single-statement `fn` (every current
+ * caller); it discards the client and frees the pool slot immediately
+ * rather than leaving it orphaned until the OS's own TCP-level detection
+ * eventually notices.
+ */
 export async function withRawStatementTimeout<T>(
   pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
   timeoutMs: number,
@@ -567,23 +622,19 @@ export async function withRawStatementTimeout<T>(
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
-  const clientSideBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
-  let backstopTimer: ReturnType<typeof setTimeout> | undefined;
+  const mainBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
   const normalPath = (async () => {
-    await client.query(`SET statement_timeout = ${safeTimeoutMs}`);
+    await client.query("BEGIN");
+    await client.query(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
     const result = await fn(client);
-    await client.query(`SET statement_timeout = DEFAULT`);
+    await client.query("COMMIT");
     return result;
   })();
-  const backstop = new Promise<never>((_, reject) => {
-    backstopTimer = setTimeout(() => {
-      reject(new ClientSideExecutionTimeoutError(label, clientSideBackstopMs));
-    }, clientSideBackstopMs);
-  });
+  const { result: racedNormalPath, clear: clearMainBackstop } = raceBackstop(normalPath, label, "main", mainBackstopMs);
 
   try {
-    const result = await Promise.race([normalPath, backstop]);
-    clearTimeout(backstopTimer);
+    const result = await racedNormalPath;
+    clearMainBackstop();
     client.release();
     logger.debug("[db] withRawStatementTimeout completed", {
       label,
@@ -593,38 +644,60 @@ export async function withRawStatementTimeout<T>(
     });
     return result;
   } catch (err) {
-    clearTimeout(backstopTimer);
+    clearMainBackstop();
     const errorObj = err instanceof Error ? err : new Error(String(err));
-    const isBackstop = err instanceof ClientSideExecutionTimeoutError;
-    const sqlState = (err as { code?: unknown } | null)?.code;
-    const isQueryCancellation = !isBackstop && sqlState === POSTGRES_QUERY_CANCELED_SQLSTATE;
+    const isMainBackstop = err instanceof ClientSideExecutionTimeoutError;
 
-    if (isBackstop) {
-      // The connection never responded at all. The abandoned normalPath
-      // promise may still settle later (or never) -- silence it so it can
-      // never throw an unhandled rejection or attempt a second release()
-      // once this one has already discarded the client.
+    if (isMainBackstop) {
+      // The connection never responded at all, at some point in BEGIN/SET
+      // LOCAL/fn/COMMIT. The abandoned normalPath promise may still settle
+      // later (or never) -- silence it so it can never throw an unhandled
+      // rejection or attempt a release() once this one has already
+      // discarded the client.
       normalPath.catch(() => undefined);
       client.release(errorObj);
-      logger.warn("[db] withRawStatementTimeout client-side backstop fired -- connection discarded", {
+      logger.warn("[db] withRawStatementTimeout client-side backstop fired on main sequence -- connection discarded", {
         label,
-        clientSideBackstopMs,
+        mainBackstopMs,
       });
-    } else if (isQueryCancellation) {
-      try {
-        await client.query(`SET statement_timeout = DEFAULT`);
-        client.release();
-      } catch {
-        // Reset itself failed on a client we already know is in a
-        // questionable state -- discard rather than risk returning a
-        // poisoned connection to the shared pool.
-        client.release(errorObj);
-      }
-    } else {
-      // Connection-level or otherwise unclassified failure -- the
-      // session's state is not trustworthy; discard so pg.Pool
+      logger.debug("[db] withRawStatementTimeout completed", {
+        label,
+        acquireMs: acquiredAt - acquireStart,
+        executionMs: Date.now() - acquiredAt,
+        outcome: "error",
+        errorName: errorObj.name,
+        wasClientSideBackstop: true,
+        rollbackAttempted: false,
+      });
+      throw errorObj;
+    }
+
+    // fn (or BEGIN/SET LOCAL/COMMIT itself) threw a real error -- the
+    // transaction may be aborted (always true for a 57014 cancellation).
+    // Always attempt ROLLBACK, itself bounded by its own backstop, before
+    // trusting this connection enough to return it to the pool.
+    const rollbackPromise = client.query("ROLLBACK");
+    const { result: racedRollback, clear: clearRollbackBackstop } = raceBackstop(
+      rollbackPromise,
+      label,
+      "rollback",
+      CLIENT_SIDE_BACKSTOP_MARGIN_MS,
+    );
+    let rollbackConfirmed = false;
+    try {
+      await racedRollback;
+      clearRollbackBackstop();
+      rollbackConfirmed = true;
+      client.release();
+    } catch {
+      clearRollbackBackstop();
+      // Either ROLLBACK itself errored, or its own backstop fired (the
+      // connection never responded to ROLLBACK either). Either way the
+      // connection's state is untrustworthy -- discard so pg.Pool
       // establishes a fresh connection for the next caller instead of
-      // reusing a possibly-broken one.
+      // reusing a possibly-broken or still-aborted one. Silence a late
+      // rollback settlement for the same reason as the main-backstop path.
+      rollbackPromise.catch(() => undefined);
       client.release(errorObj);
     }
 
@@ -634,8 +707,9 @@ export async function withRawStatementTimeout<T>(
       executionMs: Date.now() - acquiredAt,
       outcome: "error",
       errorName: errorObj.name,
-      wasQueryCancellation: isQueryCancellation,
-      wasClientSideBackstop: isBackstop,
+      wasClientSideBackstop: false,
+      rollbackAttempted: true,
+      rollbackConfirmed,
     });
     throw errorObj;
   }

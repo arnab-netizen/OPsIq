@@ -287,16 +287,17 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
       const { DB_CHECK_STATEMENT_TIMEOUT_MS, DB_CHECK_TIMEOUT_MS, MIGRATION_READINESS_TIMEOUT_MS } = await import("@/infra/startup-orchestrator");
       const { SESSION_STATEMENT_TIMEOUT_MS, SESSION_QUERY_TIMEOUT_MS } = await import("@/services/auth");
       const { MIGRATION_QUERY_STATEMENT_TIMEOUT_MS } = await import("@/services/monitoring/migration-check");
-      const { POOL_CONNECTION_TIMEOUT_MS, CLIENT_SIDE_BACKSTOP_MARGIN_MS } = await import("@/lib/db");
+      const { withRawStatementTimeoutWorstCaseMs, POOL_CONNECTION_TIMEOUT_MS } = await import("@/lib/db");
 
-      // F-ROOT-ROUTE-300S santa-loop addition: withRawStatementTimeout()
-      // now carries its own client-side backstop (CLIENT_SIDE_BACKSTOP_MARGIN_MS)
-      // for a connection that never responds at all -- every outer race
-      // derived from this formula must account for it too, or the
-      // documented "outer race always exceeds the inner bound" invariant
-      // this test exists to pin would silently go false again.
-      const rawWorstCase = (statementTimeoutMs: number) =>
-        POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3_000;
+      // F-PGBOUNCER-TXN-SAFETY: withRawStatementTimeout() now runs an
+      // explicit BEGIN/SET LOCAL/fn/COMMIT-or-ROLLBACK, with a client-side
+      // backstop on BOTH the main sequence and the ROLLBACK cleanup path
+      // (two backstops in the worst case) -- every outer race derived from
+      // this formula must account for both, or the documented "outer race
+      // always exceeds the inner bound" invariant this test exists to pin
+      // would silently go false again (as it did twice already this
+      // session, each time caught by this exact test).
+      const rawWorstCase = (statementTimeoutMs: number) => withRawStatementTimeoutWorstCaseMs(statementTimeoutMs) + 3_000;
 
       // checkDatabase(): now bounded by the pool's own connection-timeout,
       // not Prisma's maxWait/acquisition-queue.
