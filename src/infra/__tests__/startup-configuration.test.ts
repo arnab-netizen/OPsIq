@@ -63,6 +63,10 @@ vi.mock("@/lib/db", () => ({
   // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS) — a full module mock
   // must provide every export the mocked module's callers use.
   POOL_CONNECTION_TIMEOUT_MS: 90_000,
+  // santa-loop round-3 (client-side execution backstop) added this constant
+  // to startup-orchestrator.ts's own module-scope formula derivation; this
+  // mock was never backfilled at the time.
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
 }));
 
 vi.mock("@/services/startup-status", () => ({

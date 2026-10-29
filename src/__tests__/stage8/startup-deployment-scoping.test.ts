@@ -182,6 +182,12 @@ vi.mock("@/lib/db", () => ({
   // behavior has its own real-Postgres hostile proof in
   // src/__tests__/lib/startup-coldstart-pool-contention-hostile.db.test.ts).
   POOL_CONNECTION_TIMEOUT_MS: 90_000,
+  // santa-loop round-3 (client-side execution backstop) added this constant
+  // to startup-orchestrator.ts's own module-scope formula derivation; this
+  // mock was never backfilled at the time, leaving every test in this file
+  // failing at import time with "No CLIENT_SIDE_BACKSTOP_MARGIN_MS export is
+  // defined on the @/lib/db mock".
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
 }));
 
 // checkMigrationReadiness is now called inside performStartupChecks().
