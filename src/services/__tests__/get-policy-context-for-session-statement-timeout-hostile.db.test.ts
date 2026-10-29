@@ -74,9 +74,12 @@ function assertLocalUrl(): void {
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() statement_timeout actually applies to this call site", () => {
   const stamp = randomUUID().substring(0, 8);
   const userId = randomUUID();
+  const otherUserId = randomUUID();
   const email = `pctsh-user-${stamp}@test.local`;
+  const otherEmail = `pctsh-other-user-${stamp}@test.local`;
   const workspaceId = randomUUID();
   const otherWorkspaceId = randomUUID();
+  const thirdWorkspaceId = randomUUID();
   const clientId = randomUUID();
   const engagementId = randomUUID();
   const otherEngagementId = randomUUID();
@@ -85,21 +88,61 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() stateme
 
   beforeAll(async () => {
     await db.user.create({ data: { id: userId, email, isActive: true, updatedAt: new Date() } });
+    await db.user.create({ data: { id: otherUserId, email: otherEmail, isActive: true, updatedAt: new Date() } });
     await db.workspace.create({ data: { id: workspaceId, name: "PCTSH WS", slug: `pctsh-${stamp}` } });
     await db.workspace.create({ data: { id: otherWorkspaceId, name: "PCTSH Other WS", slug: `pctsh-other-${stamp}` } });
-    await db.workspaceMembership.create({ data: { id: randomUUID(), workspaceId, userId, role: "owner" } });
+    await db.workspace.create({ data: { id: thirdWorkspaceId, name: "PCTSH Third WS", slug: `pctsh-third-${stamp}` } });
+    // santa-loop review finding (round 2, round 3 -- mutation-tested across
+    // three independent reviewers): the equivalence test below previously
+    // seeded only positive rows, and then only rows distinguishable by
+    // scope_id/workspace_id -- never by USER, by a non-'workspace' scope
+    // string, or by added_at ORDER BY/is_active on a SECOND real candidate
+    // row. Reviewers proved by directly breaking runPolicyContextReadsRaw's
+    // WHERE clauses that dropping the user_id filter on the
+    // membership-verify or role-assignment query, or the literal
+    // scope='workspace' filter, or is_active/ORDER BY on the
+    // default-workspace query, left every assertion in this file green,
+    // because nothing in the seeded data could tell the broken query apart
+    // from the correct one. The fixtures below close each of those
+    // specific, named gaps (see the comment directly above each negative
+    // row for which filter it targets).
+    //
+    // added_at ordering across workspaceId/otherWorkspaceId/thirdWorkspaceId
+    // is explicit and 1 minute apart so it can never depend on insertion
+    // order or clock-resolution ties: otherWorkspaceId (earliest, INACTIVE)
+    // < workspaceId (correct answer, ACTIVE) < thirdWorkspaceId (latest,
+    // ACTIVE). If is_active is dropped from the default-workspace query,
+    // otherWorkspaceId's row would be ordered first and wrongly returned.
+    // If ORDER BY is dropped or reversed, thirdWorkspaceId's row would be
+    // (wrongly) preferred over workspaceId's.
+    const now = Date.now();
+    await db.workspaceMembership.create({
+      data: { id: randomUUID(), workspaceId: otherWorkspaceId, userId, role: "inactive-earlier", isActive: false, addedAt: new Date(now - 60_000) },
+    });
+    // A second real user's OWN active membership in the SAME workspace,
+    // with a DIFFERENT role value -- targets: dropping the user_id filter
+    // from the membership-verify query (workspace_id=$1 AND user_id=$2).
+    // Inserted BEFORE the primary user's own membership row below
+    // deliberately: this test table has only a handful of rows, so
+    // Postgres's planner chooses a sequential scan (not an index scan) for
+    // `WHERE workspace_id = $1 LIMIT 1`, which returns rows in INSERTION
+    // order when no ORDER BY is present -- empirically confirmed by
+    // reproducing the exact "drop user_id from this query" mutation
+    // locally against real Postgres: inserting this row first made the
+    // equivalence test below genuinely catch the mutation (it silently
+    // passed when this row was inserted AFTER the correct one instead).
+    await db.workspaceMembership.create({
+      data: { id: randomUUID(), workspaceId, userId: otherUserId, role: "other-user-admin" },
+    });
+    await db.workspaceMembership.create({
+      data: { id: randomUUID(), workspaceId, userId, role: "owner", addedAt: new Date(now) },
+    });
+    await db.workspaceMembership.create({
+      data: { id: randomUUID(), workspaceId: thirdWorkspaceId, userId, role: "active-later", isActive: true, addedAt: new Date(now + 60_000) },
+    });
     await db.session.create({
       data: { id: randomUUID(), token: sessionToken, userId, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
     });
-    // santa-loop review finding (round 2, mutation-tested): the equivalence
-    // test below previously seeded ONLY positive rows -- an independent
-    // reviewer proved by directly breaking runPolicyContextReadsRaw's WHERE
-    // clauses (dropping the scope_id/workspace_id filters, the
-    // revoked_at/is_active checks, reversing ORDER BY) that every assertion
-    // in this file still passed. Negative rows below (wrong scope,
-    // revoked, inactive, wrong workspace) are seeded specifically so an
-    // EXACT-match assertion on `roles`/`engagementMemberships` actually
-    // fails if any of those filters regress.
     await db.userRoleAssignment.create({
       data: { id: randomUUID(), userId, role: "OWNER", scope: "workspace", scopeId: workspaceId, isActive: true },
     });
@@ -114,6 +157,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() stateme
     });
     await db.userRoleAssignment.create({
       data: { id: randomUUID(), userId, role: "WRONG_WORKSPACE_OWNER", scope: "workspace", scopeId: otherWorkspaceId, isActive: true },
+    });
+    // Targets: dropping the literal `scope = 'workspace'` filter. Same
+    // user, same scopeId as the correct row, but a DIFFERENT scope string
+    // -- if that filter is dropped, this leaks into `roles` alongside (or
+    // instead of) the real OWNER row.
+    await db.userRoleAssignment.create({
+      data: { id: randomUUID(), userId, role: "WRONG_SCOPE_STRING_OWNER", scope: "engagement", scopeId: workspaceId, isActive: true },
+    });
+    // Targets: dropping the user_id filter from the role-assignment query.
+    // A DIFFERENT user, SAME scope/scopeId/role shape as the real row.
+    await db.userRoleAssignment.create({
+      data: { id: randomUUID(), userId: otherUserId, role: "OTHER_USER_OWNER", scope: "workspace", scopeId: workspaceId, isActive: true },
     });
     await db.clientAccount.create({ data: { id: clientId, name: "PCTSH Client", workspaceId, updatedAt: new Date() } });
     await db.engagement.create({
@@ -149,18 +204,23 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() stateme
     await db.engagementMembership.create({
       data: { id: randomUUID(), userId, engagementId: otherEngagementId, role: "WRONG_WORKSPACE_LEAD", isActive: true },
     });
+    // Targets: dropping the user_id filter from the engagement-membership
+    // query. A DIFFERENT user, active, on the SAME engagement.
+    await db.engagementMembership.create({
+      data: { id: randomUUID(), userId: otherUserId, engagementId, role: "OTHER_USER_CONSULTANT", isActive: true },
+    });
   });
 
   afterAll(async () => {
     try {
-      await db.engagementMembership.deleteMany({ where: { userId } });
+      await db.engagementMembership.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
       await db.engagement.deleteMany({ where: { id: { in: [engagementId, otherEngagementId] } } });
       await db.clientAccount.deleteMany({ where: { id: clientId } });
-      await db.userRoleAssignment.deleteMany({ where: { userId } });
+      await db.userRoleAssignment.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
       await db.session.deleteMany({ where: { userId } });
-      await db.workspaceMembership.deleteMany({ where: { userId } });
-      await db.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId] } } });
-      await db.user.deleteMany({ where: { id: userId } });
+      await db.workspaceMembership.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+      await db.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId, thirdWorkspaceId] } } });
+      await db.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
     } catch {
       // best-effort cleanup (ephemeral CI database)
     }
@@ -276,6 +336,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() stateme
       expect(viaRaw?.roles).toEqual([{ role: "OWNER", scope: "workspace", scopeId: workspaceId }]);
       expect(viaRaw?.engagementMemberships).toEqual([{ engagementId, role: "CONSULTANT" }]);
       expect(viaRaw?.workspaceRole).toBe("owner");
+    },
+    20_000,
+  );
+
+  it(
+    "both paths agree the user has NO policy context for an explicit workspaceId where their own membership is inactive -- exercises the !membership.is_active guard on the EXPLICIT-workspaceId branch (never hit by the default-workspace-resolution tests above)",
+    async () => {
+      assertLocalUrl();
+      cookieHolder.token = sessionToken;
+      const session = await getSession();
+
+      const viaOrm = await getPolicyContextForSession(session!, otherWorkspaceId);
+      const viaRaw = await getPolicyContextForSession(session!, otherWorkspaceId, { statementTimeoutMs: POLICY_CONTEXT_STATEMENT_TIMEOUT_MS });
+
+      expect(viaOrm).toBeNull();
+      expect(viaRaw).toBeNull();
     },
     20_000,
   );
