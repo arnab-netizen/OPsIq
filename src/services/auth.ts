@@ -1,5 +1,5 @@
 import { db, getDbInstance, getRawPool, withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS } from "@/lib/db";
-import type { UserRoleAssignment } from "@/generated/prisma/client";
+import type { UserRoleAssignment, EngagementMembership } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { RoleName } from "@/domain/constants/roles";
@@ -251,7 +251,7 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
       scope: ra.scope,
       scopeId: ra.scopeId,
     })),
-    engagementMemberships: engagementMemberships.map((em: any) => ({
+    engagementMemberships: engagementMemberships.map((em: EngagementMembership) => ({
       engagementId: em.engagementId,
       role: em.role as RoleName,
     })),
