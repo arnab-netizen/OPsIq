@@ -157,15 +157,25 @@ describe("getPolicyContext() vs getPolicyContextForSession() — double session 
     expect(ctx).not.toBeNull();
   });
 
-  it("getPolicyContext() and getPolicyContextForSession() resolve the identical PolicyContext for the same session — behavior-preserving", async () => {
-    const session = await getSession();
-    const viaReuse = await getPolicyContextForSession(session!);
+  it(
+    "getPolicyContext() and getPolicyContextForSession() (both via the ORM path -- the raw-SQL path's equivalence to the ORM path is proven separately, against real Postgres, in get-policy-context-for-session-statement-timeout-hostile.db.test.ts) resolve the identical PolicyContext for the same session — behavior-preserving",
+    async () => {
+      // santa-loop review finding (round 2): this test's name previously
+      // implied it proves raw-SQL vs. ORM equivalence; it does not -- both
+      // calls below take the DEFAULT (no options) path, so both run
+      // through runPolicyContextReads(). It genuinely proves
+      // getPolicyContextForSession()'s double-fetch-removal is
+      // behavior-preserving relative to getPolicyContext(), which is its
+      // real purpose; it is not evidence about the raw-SQL path at all.
+      const session = await getSession();
+      const viaReuse = await getPolicyContextForSession(session!);
 
-    cookieHolder.token = "session-token-1";
-    const viaFullFetch = await getPolicyContext();
+      cookieHolder.token = "session-token-1";
+      const viaFullFetch = await getPolicyContext();
 
-    expect(viaReuse).toEqual(viaFullFetch);
-  });
+      expect(viaReuse).toEqual(viaFullFetch);
+    }
+  );
 
   it("getPolicyContextForSession() returns null, performing zero DB reads beyond what membership resolution needs, when the caller passes a session but the user has no workspace membership", async () => {
     workspaceMembershipFindFirst.mockResolvedValue(null);
@@ -223,4 +233,16 @@ describe("getPolicyContextForSession() — opt-in statementTimeoutMs, raw-SQL me
 
     await expect(getPolicyContextForSession(session!, undefined, { statementTimeoutMs: 4000 })).rejects.toThrow("statement timeout");
   });
+});
+
+describe("POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS — derivation drift guard", () => {
+  it(
+    "stays equal to 4 * the REAL db.ts CLIENT_SIDE_BACKSTOP_MARGIN_MS -- santa-loop review finding (both reviewers): this value is hard-coded in auth.ts (deliberately NOT a live import, to avoid widening auth.ts's module-load dependency surface onto every test that mocks @/lib/db -- see its own doc comment), so nothing else catches it silently drifting out of sync if db.ts's constant ever changes. vi.importActual bypasses this file's own @/lib/db and @/services/auth mocks to read the REAL values without adding a load-time dependency to the production module itself.",
+    async () => {
+      const realDb = await vi.importActual<typeof import("@/lib/db")>("@/lib/db");
+      const realAuth = await vi.importActual<typeof import("@/services/auth")>("@/services/auth");
+
+      expect(realAuth.POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS).toBe(4 * realDb.CLIENT_SIDE_BACKSTOP_MARGIN_MS);
+    }
+  );
 });

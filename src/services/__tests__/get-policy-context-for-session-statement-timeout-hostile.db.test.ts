@@ -76,26 +76,44 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() stateme
   const userId = randomUUID();
   const email = `pctsh-user-${stamp}@test.local`;
   const workspaceId = randomUUID();
+  const otherWorkspaceId = randomUUID();
   const clientId = randomUUID();
   const engagementId = randomUUID();
+  const otherEngagementId = randomUUID();
   const sessionToken = `pctsh-token-${stamp}`;
   let lockHolderPool: Pool | undefined;
 
   beforeAll(async () => {
     await db.user.create({ data: { id: userId, email, isActive: true, updatedAt: new Date() } });
     await db.workspace.create({ data: { id: workspaceId, name: "PCTSH WS", slug: `pctsh-${stamp}` } });
+    await db.workspace.create({ data: { id: otherWorkspaceId, name: "PCTSH Other WS", slug: `pctsh-other-${stamp}` } });
     await db.workspaceMembership.create({ data: { id: randomUUID(), workspaceId, userId, role: "owner" } });
     await db.session.create({
       data: { id: randomUUID(), token: sessionToken, userId, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
     });
-    // santa-loop review finding: both reviewers independently flagged that
-    // nothing proved the raw-SQL path (runPolicyContextReadsRaw) resolves
-    // the SAME roles/engagementMemberships/workspaceRole as the ORM path --
-    // every prior fixture had zero role assignments and zero engagement
-    // memberships, so a wrong scope/role filter in the raw SQL would have
-    // passed silently. Seeding real rows for both here closes that gap.
+    // santa-loop review finding (round 2, mutation-tested): the equivalence
+    // test below previously seeded ONLY positive rows -- an independent
+    // reviewer proved by directly breaking runPolicyContextReadsRaw's WHERE
+    // clauses (dropping the scope_id/workspace_id filters, the
+    // revoked_at/is_active checks, reversing ORDER BY) that every assertion
+    // in this file still passed. Negative rows below (wrong scope,
+    // revoked, inactive, wrong workspace) are seeded specifically so an
+    // EXACT-match assertion on `roles`/`engagementMemberships` actually
+    // fails if any of those filters regress.
     await db.userRoleAssignment.create({
       data: { id: randomUUID(), userId, role: "OWNER", scope: "workspace", scopeId: workspaceId, isActive: true },
+    });
+    await db.userRoleAssignment.create({
+      data: {
+        id: randomUUID(), userId, role: "REVOKED_ADMIN", scope: "workspace", scopeId: workspaceId,
+        isActive: true, revokedAt: new Date(),
+      },
+    });
+    await db.userRoleAssignment.create({
+      data: { id: randomUUID(), userId, role: "INACTIVE_VIEWER", scope: "workspace", scopeId: workspaceId, isActive: false },
+    });
+    await db.userRoleAssignment.create({
+      data: { id: randomUUID(), userId, role: "WRONG_WORKSPACE_OWNER", scope: "workspace", scopeId: otherWorkspaceId, isActive: true },
     });
     await db.clientAccount.create({ data: { id: clientId, name: "PCTSH Client", workspaceId, updatedAt: new Date() } });
     await db.engagement.create({
@@ -110,20 +128,38 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getPolicyContextForSession() stateme
         updatedAt: new Date(),
       },
     });
+    await db.engagement.create({
+      data: {
+        id: otherEngagementId,
+        code: `PCTSH-OTHER-ENG-${stamp}`,
+        title: "PCTSH Other-Workspace Engagement",
+        clientId,
+        workspaceId: otherWorkspaceId,
+        engagementMode: "consulting",
+        serviceTier: "standard",
+        updatedAt: new Date(),
+      },
+    });
     await db.engagementMembership.create({
       data: { id: randomUUID(), userId, engagementId, role: "CONSULTANT", isActive: true },
+    });
+    await db.engagementMembership.create({
+      data: { id: randomUUID(), userId, engagementId, role: "INACTIVE_ANALYST", isActive: false },
+    });
+    await db.engagementMembership.create({
+      data: { id: randomUUID(), userId, engagementId: otherEngagementId, role: "WRONG_WORKSPACE_LEAD", isActive: true },
     });
   });
 
   afterAll(async () => {
     try {
       await db.engagementMembership.deleteMany({ where: { userId } });
-      await db.engagement.deleteMany({ where: { id: engagementId } });
+      await db.engagement.deleteMany({ where: { id: { in: [engagementId, otherEngagementId] } } });
       await db.clientAccount.deleteMany({ where: { id: clientId } });
       await db.userRoleAssignment.deleteMany({ where: { userId } });
       await db.session.deleteMany({ where: { userId } });
       await db.workspaceMembership.deleteMany({ where: { userId } });
-      await db.workspace.deleteMany({ where: { id: workspaceId } });
+      await db.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId] } } });
       await db.user.deleteMany({ where: { id: userId } });
     } catch {
       // best-effort cleanup (ephemeral CI database)

@@ -514,10 +514,19 @@ export async function getPolicyContextForSession(
   // santa-loop review finding: every other exported auth read
   // (getSession, requireSession, getPolicyContext, requirePolicyContext)
   // calls this; this one, a new exported entry point, had been left out.
-  // Safe for the existing allowlist as-is: AUTH_READ_ALLOWLIST's
-  // "src/services/auth.ts:getPolicyContext" entry matches via
-  // functionName.includes("getPolicyContext"), which "getPolicyContextForSession"
-  // satisfies.
+  // AUTH_READ_ALLOWLIST's "src/services/auth.ts:getPolicyContext" entry
+  // matches this call's functionName via
+  // functionName.includes("getPolicyContext") -- but allowlist matching
+  // ALSO requires the stack-derived CALLER's file to include
+  // "src/services/auth.ts" (runtime-shadow-read-enforcer.ts). The one
+  // current caller, root-redirect.service.ts, does not satisfy that (same
+  // as page.tsx calling getPolicyContext() directly, pre-existing and
+  // unchanged by this diff). Harmless either way: the shadow-read enforcer
+  // is only ever active behind canonical-route-enforcement.ts, which this
+  // plain Next.js page route does not go through, so it is not active on
+  // this path at all today -- and even if it were, a disallowed caller
+  // means this throws, which is caught by root-redirect.service.ts's own
+  // outer race and fails closed to "/dashboard", never fails open.
   checkShadowRead("getPolicyContextForSession");
 
   // Ensure database is initialized (getSession does this too, but be explicit)
