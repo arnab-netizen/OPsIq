@@ -10,6 +10,12 @@ import { claimStartup, completeStartup, resolveInstanceId } from "@/services/sta
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 import { withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS, CLIENT_SIDE_BACKSTOP_MARGIN_MS, getRawPool } from "@/lib/db";
+import type { getDbInstance } from "@/lib/db";
+import type { logger as loggerSingleton } from "@/infra/logger";
+
+/** Erased at compile time -- the real values are still only obtained via the existing dynamic imports below, preserving this file's Edge-safe load pattern. */
+type DbInstance = Awaited<ReturnType<typeof getDbInstance>>;
+type Logger = typeof loggerSingleton;
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -256,7 +262,7 @@ async function performStartupChecks(): Promise<void> {
   }
 }
 
-async function checkDatabase(_dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabase(_dbInstance: DbInstance, logger: Logger): Promise<boolean> {
   try {
     const pool = await getRawPool();
     await Promise.race([
@@ -274,7 +280,7 @@ async function checkDatabase(_dbInstance: any, logger: any): Promise<boolean> {
   }
 }
 
-async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabaseSchema(dbInstance: DbInstance, logger: Logger): Promise<boolean> {
   try {
     // Schema validation: If database connectivity check passed (already verified above),
     // and Prisma client initialized successfully, schema is assumed valid.
@@ -335,7 +341,7 @@ export function checkStartupConfiguration(): StartupConfigCheck {
   };
 }
 
-function checkConfiguration(logger: any): boolean {
+function checkConfiguration(logger: Logger): boolean {
   const result = checkStartupConfiguration();
 
   for (const envVar of result.missing) {
@@ -353,7 +359,7 @@ function checkConfiguration(logger: any): boolean {
  * Checks both the workspaces table (Workspace.id) and the client_accounts table
  * (ClientAccount.id) — the private deployment uses the same UUID for both.
  */
-async function checkPrivateWorkspaceExists(dbInstance: any, workspaceId: string): Promise<boolean> {
+async function checkPrivateWorkspaceExists(dbInstance: DbInstance, workspaceId: string): Promise<boolean> {
   try {
     const workspace = await dbInstance.workspace.findUnique({
       where: { id: workspaceId },
