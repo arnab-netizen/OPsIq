@@ -135,6 +135,23 @@ describe("claimStartup() — fails closed when the database is unavailable", () 
 
     await expect(claimStartup()).rejects.toThrow(TypeError);
   });
+
+  it("claims successfully: issues SAVEPOINT, the INSERT, then RELEASE SAVEPOINT in that order (TypeScript review finding, F-PGBOUNCER-TXN-SAFETY)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
+    queryMock.mockResolvedValueOnce({
+      rows: [{ id: "row-1", claim_token: "token-1", started_at: new Date(), previous_status: null }],
+    }); // the INSERT itself
+    queryMock.mockResolvedValueOnce({ rows: [] }); // RELEASE SAVEPOINT claim_attempt
+
+    const result = await claimStartup();
+    expect(result.outcome).toBe("CLAIMED");
+
+    const sentSql = queryMock.mock.calls.map((call) => String(call[0]));
+    expect(sentSql[0]).toBe("SAVEPOINT claim_attempt");
+    expect(sentSql[1]).toContain("INSERT INTO");
+    expect(sentSql[2]).toBe("RELEASE SAVEPOINT claim_attempt");
+    expect(sentSql).toHaveLength(3);
+  });
 });
 
 describe("completeStartup() — degrades safely when the database is unavailable", () => {
@@ -209,6 +226,19 @@ describe("claimStartup() — startup-claim diagnostic (sanitized, best-effort, n
       }),
     );
     errorSpy.mockRestore();
+
+    // TypeScript review finding (F-PGBOUNCER-TXN-SAFETY): every other
+    // assertion in this file matches mocked responses by call POSITION, so
+    // it would pass identically even if the SAVEPOINT/ROLLBACK TO SAVEPOINT
+    // statements were silently deleted from startup-status.ts — the
+    // rejection meant for the INSERT would simply be consumed one call
+    // earlier. Assert the actual SQL text and order sent to the client so a
+    // regression that removes the SAVEPOINT wrapping fails this test.
+    const sentSql = queryMock.mock.calls.map((call) => String(call[0]));
+    expect(sentSql[0]).toBe("SAVEPOINT claim_attempt");
+    expect(sentSql[1]).toContain("INSERT INTO");
+    expect(sentSql[2]).toBe("ROLLBACK TO SAVEPOINT claim_attempt");
+    expect(sentSql).toHaveLength(4); // SAVEPOINT, INSERT, ROLLBACK TO SAVEPOINT, diagnostic read
   });
 
   it("2. the diagnostic query itself fails — the ORIGINAL claim error is still preserved and propagated unchanged", async () => {

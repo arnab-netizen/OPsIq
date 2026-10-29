@@ -532,8 +532,8 @@ export interface RawQueryClient {
  * until `ROLLBACK` is issued. `ROLLBACK` itself was confirmed to both clear
  * the aborted state AND correctly revert `SET LOCAL`'s value, leaving the
  * connection fully healthy and reusable. This is why 57014 can no longer
- * be handled by simply resetting the timeout and reusing the client (the
- * pre-round-3 behavior): the transaction must be explicitly rolled back
+ * be handled by simply resetting the timeout and reusing the client (round
+ * 3's own behavior, replaced by this fix): the transaction must be explicitly rolled back
  * first. A caller whose `fn` needs to run a diagnostic read AFTER its own
  * statement fails (claimStartup() does) must isolate that failure with its
  * own `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` -- also directly reproduced to
@@ -601,11 +601,15 @@ function raceBackstop<R>(promise: Promise<R>, label: string, phase: "main" | "ro
  * -- then release() clean if the rollback is confirmed, or release(err) to
  * discard the connection if the rollback itself fails or never responds.
  * The dead-connection backstop (CLIENT_SIDE_BACKSTOP_MARGIN_MS) exists only
- * for a connection that never responds to ANYTHING -- proven to never fire
- * on a live connection running a single-statement `fn` (every current
- * caller); it discards the client and frees the pool slot immediately
- * rather than leaving it orphaned until the OS's own TCP-level detection
- * eventually notices.
+ * for a connection that never responds to ANYTHING; it discards the client
+ * and frees the pool slot immediately rather than leaving it orphaned until
+ * the OS's own TCP-level detection eventually notices. Most current callers
+ * run a single-statement `fn`, where this can only fire on a genuinely dead
+ * connection. claimStartup()'s `fn` is multi-statement (SAVEPOINT, INSERT,
+ * and on error ROLLBACK TO SAVEPOINT plus a diagnostic read) -- still well
+ * within the margin for a live connection, but if the main backstop ever
+ * did fire mid-`fn` there, the caller would see ClientSideExecutionTimeoutError
+ * instead of whatever error `fn` was itself handling at that moment.
  */
 export async function withRawStatementTimeout<T>(
   pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
@@ -626,8 +630,31 @@ export async function withRawStatementTimeout<T>(
   const normalPath = (async () => {
     await client.query("BEGIN");
     await client.query(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
+    // Security review finding (F-PGBOUNCER-TXN-SAFETY): statement_timeout
+    // only bounds an in-flight statement -- it does nothing while the
+    // transaction is open but idle (e.g. the link to PgBouncer goes
+    // half-open between statements). Without this, the client-side backstop
+    // below discards the APPLICATION's reference to a hung connection, but
+    // the SERVER-side backend can stay idle-in-transaction indefinitely,
+    // holding whatever locks `fn` has taken (a row lock in claimStartup's
+    // case) until TCP keepalive or PgBouncer notices -- a real stall risk
+    // for any later caller that needs the same row/table. Bounding it to
+    // the same margin as the client-side backstop ensures the SERVER itself
+    // tears down the transaction at essentially the same time the client
+    // gives up, so a hung connection can never hold locks indefinitely.
+    await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS}`);
     const result = await fn(client);
-    await client.query("COMMIT");
+    const commitResult = await client.query("COMMIT");
+    // Database review finding (F-PGBOUNCER-TXN-SAFETY): if the transaction
+    // was already aborted without `fn` itself throwing (a state this
+    // function has not observed in practice, but Postgres's protocol
+    // allows), COMMIT replies with a ROLLBACK command tag and no error --
+    // silently discarding `fn`'s work while the caller believes it
+    // succeeded. Checking the reply's own command tag closes that gap.
+    const command = (commitResult as unknown as { command?: string }).command;
+    if (command !== "COMMIT") {
+      throw new Error(`withRawStatementTimeout: expected COMMIT, got ${command ?? "unknown"} -- transaction was not actually committed`);
+    }
     return result;
   })();
   const { result: racedNormalPath, clear: clearMainBackstop } = raceBackstop(normalPath, label, "main", mainBackstopMs);
@@ -636,12 +663,19 @@ export async function withRawStatementTimeout<T>(
     const result = await racedNormalPath;
     clearMainBackstop();
     client.release();
-    logger.debug("[db] withRawStatementTimeout completed", {
-      label,
-      acquireMs: acquiredAt - acquireStart,
-      executionMs: Date.now() - acquiredAt,
-      outcome: "success",
-    });
+    // Logging must never influence control flow: a throw here must not be
+    // mistaken for a real transaction failure by the catch below, which
+    // would attempt a ROLLBACK on a client already returned to the pool.
+    try {
+      logger.debug("[db] withRawStatementTimeout completed", {
+        label,
+        acquireMs: acquiredAt - acquireStart,
+        executionMs: Date.now() - acquiredAt,
+        outcome: "success",
+      });
+    } catch {
+      // Swallowed deliberately -- see comment above.
+    }
     return result;
   } catch (err) {
     clearMainBackstop();
@@ -676,28 +710,34 @@ export async function withRawStatementTimeout<T>(
     // transaction may be aborted (always true for a 57014 cancellation).
     // Always attempt ROLLBACK, itself bounded by its own backstop, before
     // trusting this connection enough to return it to the pool.
-    const rollbackPromise = client.query("ROLLBACK");
-    const { result: racedRollback, clear: clearRollbackBackstop } = raceBackstop(
-      rollbackPromise,
-      label,
-      "rollback",
-      CLIENT_SIDE_BACKSTOP_MARGIN_MS,
-    );
+    //
+    // TypeScript review finding (F-PGBOUNCER-TXN-SAFETY): `client.query(...)`
+    // must be called inside the try below, not before it -- a synchronous
+    // throw here (rather than a rejected promise) would otherwise escape
+    // this whole catch block and skip client.release() entirely, leaking
+    // the connection forever under production's max:1 pool.
+    let rollbackPromise: Promise<unknown> | undefined;
+    let clearRollbackBackstop: () => void = () => undefined;
     let rollbackConfirmed = false;
     try {
-      await racedRollback;
+      rollbackPromise = client.query("ROLLBACK");
+      const raced = raceBackstop(rollbackPromise, label, "rollback", CLIENT_SIDE_BACKSTOP_MARGIN_MS);
+      clearRollbackBackstop = raced.clear;
+      await raced.result;
       clearRollbackBackstop();
       rollbackConfirmed = true;
       client.release();
     } catch {
       clearRollbackBackstop();
-      // Either ROLLBACK itself errored, or its own backstop fired (the
-      // connection never responded to ROLLBACK either). Either way the
-      // connection's state is untrustworthy -- discard so pg.Pool
-      // establishes a fresh connection for the next caller instead of
-      // reusing a possibly-broken or still-aborted one. Silence a late
-      // rollback settlement for the same reason as the main-backstop path.
-      rollbackPromise.catch(() => undefined);
+      // Either `client.query("ROLLBACK")` threw/rejected synchronously or
+      // asynchronously, or its own backstop fired (the connection never
+      // responded to ROLLBACK either). Either way the connection's state is
+      // untrustworthy -- discard so pg.Pool establishes a fresh connection
+      // for the next caller instead of reusing a possibly-broken or
+      // still-aborted one. Silence a late rollback settlement for the same
+      // reason as the main-backstop path (rollbackPromise is only unset if
+      // the synchronous throw happened before it could be assigned).
+      rollbackPromise?.catch(() => undefined);
       client.release(errorObj);
     }
 

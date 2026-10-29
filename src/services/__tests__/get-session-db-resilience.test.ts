@@ -39,11 +39,6 @@ vi.mock("@/lib/db", () => {
       _timeoutMs: number,
       fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
     ) => fn(await pool.connect()),
-    // F-PROD-STARTUP-COLDSTART second-mechanism forensic: auth.ts now imports
-    // this named export at module scope (to derive SESSION_QUERY_TIMEOUT_MS)
-    // — a full module mock must provide every export the mocked module's
-    // callers use.
-    POOL_CONNECTION_TIMEOUT_MS: 90_000,
     // F-PGBOUNCER-TXN-SAFETY: auth.ts now derives SESSION_QUERY_TIMEOUT_MS
     // from this formula (src/lib/db.ts) instead of the raw constant above
     // directly — same reasoning, this mock must provide it too.

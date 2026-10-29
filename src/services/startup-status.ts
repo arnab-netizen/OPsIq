@@ -55,8 +55,10 @@ const CLAIM_STATEMENT_TIMEOUT_MS = 5000;
  * OWNER_ACTION_REQUIRED: this repository's actual configured Vercel function
  * execution ceiling (maxDuration) is not independently verified this round
  * (see the F-PROD-STARTUP-COLDSTART second-mechanism forensic report) — a
- * genuinely slow connection could in principle run this call up to the
- * pool's full ~90s+5s bound, which may or may not fit within the platform's
+ * genuinely slow connection could in principle run this call up to
+ * withRawStatementTimeoutWorstCaseMs()'s full bound (currently ~105s, after
+ * F-PGBOUNCER-TXN-SAFETY added the SAVEPOINT-wrapped INSERT and the
+ * ROLLBACK-cleanup backstop), which may or may not fit within the platform's
  * actual limit. A SAFE shorter bound (one that does not risk the orphaned-
  * write bug above) would require either confirming that limit, or a more
  * involved abandonment-safe design (tracking cancellation and having a
@@ -212,10 +214,14 @@ export interface StartupClaimDiagnostic {
  * Only bounded, non-secret fields are ever returned: never DATABASE_URL, a hostname, a password, the
  * connection string, query parameters, a token, or the original error's raw message (which can itself carry
  * connection details on some drivers) — only its SQLSTATE, validated against the 5-character Postgres
- * pattern. The query runs as a single implicit (non-BEGIN) statement, exactly like the INSERT it follows, so
- * it is always safe to issue on the same client regardless of why the INSERT failed: a single statement's
- * own failure is rolled back by Postgres itself before control returns, so no explicit transaction is ever
- * left open to clean up.
+ * pattern.
+ *
+ * F-PGBOUNCER-TXN-SAFETY: this read no longer runs as an implicit, standalone statement. The INSERT it
+ * follows is wrapped in its own `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` by the caller specifically so this
+ * diagnostic can run validly on the SAME pinned transaction/backend after the INSERT's own failure — `ROLLBACK
+ * TO SAVEPOINT` clears the aborted state locally without ending the outer transaction withRawStatementTimeout()
+ * itself owns. If that `ROLLBACK TO SAVEPOINT` itself fails, this read fails too (with SQLSTATE 25P02), which
+ * is caught and swallowed the same as any other failure here.
  *
  * Deliberately swallows its OWN failure: a diagnostic that cannot run must never replace, mask, or delay the
  * original claim failure the caller already needs to propagate — the caller rethrows `insertError` unchanged
@@ -584,8 +590,17 @@ export async function claimStartup(): Promise<StartupClaimResult> {
         // diagnostic read succeeds immediately afterward on the same
         // client.
         await client.query("SAVEPOINT claim_attempt");
+        // RELEASE SAVEPOINT deliberately sits OUTSIDE this try/catch: it is
+        // not part of what the catch below means by "claim INSERT failed" --
+        // a database/fresh-context review finding noted that nesting it
+        // inside the try would mislabel a RELEASE SAVEPOINT failure as an
+        // INSERT failure and attach an insertError diagnostic to the wrong
+        // statement.
+        let result: {
+          rows: { id: string; claim_token: string; started_at: Date; previous_status: string | null }[];
+        };
         try {
-          const result = await client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
+          result = await client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
             `
             WITH "previous" AS (
               SELECT "status" FROM "startup_status" WHERE "instance_id" = $1
@@ -610,8 +625,6 @@ export async function claimStartup(): Promise<StartupClaimResult> {
             `,
             [instanceId, now, version, claimToken, staleThreshold],
           );
-          await client.query("RELEASE SAVEPOINT claim_attempt");
-          return result;
         } catch (insertError) {
           // Undo just the failed INSERT's abort, keeping the OUTER
           // transaction/backend pinning intact, so the diagnostic read
@@ -631,6 +644,8 @@ export async function claimStartup(): Promise<StartupClaimResult> {
           });
           throw insertError;
         }
+        await client.query("RELEASE SAVEPOINT claim_attempt");
+        return result;
       },
       "claimStartup",
     );
