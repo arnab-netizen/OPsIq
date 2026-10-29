@@ -15,7 +15,10 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@/lib/db", () => ({
   getDbInstance: vi.fn().mockResolvedValue({}),
   getRawPool: vi.fn().mockResolvedValue({ connect: vi.fn(), query: vi.fn() }),
+  getPublicReadPool: vi.fn().mockResolvedValue({ connect: vi.fn(), query: vi.fn() }),
   withRawStatementTimeout: vi.fn(),
+  PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS: 3000,
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5000,
 }));
 
 const ORIGINAL_PUBLIC_BETA_ENABLED = process.env.PUBLIC_BETA_ENABLED;

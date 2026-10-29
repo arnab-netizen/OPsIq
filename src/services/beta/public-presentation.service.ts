@@ -1,5 +1,10 @@
 /** Server-side lookup of the public presentation. Fails closed to the INVITE_ONLY copy on any error. */
-import { getRawPool, withRawStatementTimeout } from "@/lib/db";
+import {
+  getPublicReadPool,
+  withRawStatementTimeout,
+  PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS,
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS,
+} from "@/lib/db";
 import { legacyEffectiveSettings, isAdmissionMode, type AdmissionMode } from "@/services/beta/platform-settings.service";
 import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/domain/beta/public-presentation";
 
@@ -46,8 +51,67 @@ import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/dom
  * explicit transaction is a native PostgreSQL transaction-scoping
  * guarantee, independent of PgBouncer or any reset query, and was
  * empirically confirmed not to leak under the same real-PgBouncer harness.
+ *
+ * F-ROOT-ROUTE-FAST-FAIL: the above made this read safe, but left it bounded
+ * by the SAME 90s shared-pool acquisition ceiling as every other DB caller
+ * (getSession()/checkDatabase()/checkMigrationReadiness()/claimStartup()),
+ * for a worst case of 105_000ms (POOL_CONNECTION_TIMEOUT_MS=90_000 +
+ * the old PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS=5000 +
+ * 2*CLIENT_SIDE_BACKSTOP_MARGIN_MS=10_000 -- see
+ * withRawStatementTimeoutWorstCaseMs() in db.ts) -- unacceptable for a
+ * public landing page. Fix: this read now runs against
+ * getPublicReadPool(), a fully separate, route-scoped pg.Pool (db.ts) with
+ * its own short PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS=3_000 acquisition
+ * bound, independent of the shared pool's 90s ceiling, which stays
+ * unchanged for the four shared callers above.
+ *
+ * A preferred <10_000ms total was investigated but is not achievable
+ * without also shrinking CLIENT_SIDE_BACKSTOP_MARGIN_MS (currently a fixed
+ * 5_000ms, applied TWICE in withRawStatementTimeout()'s worst case -- once
+ * on the main BEGIN/SET LOCAL/fn/COMMIT sequence, once on ROLLBACK cleanup
+ * -- for a fixed 10_000ms floor regardless of acquisition/execution
+ * tuning). That margin is a shared, already multiply-adversarially-
+ * reviewed (santa-loop rounds 1-3, F-PGBOUNCER-TXN-SAFETY) constant used
+ * unmodified by all four shared callers; shrinking it for this one
+ * low-stakes public read is not a worthwhile trade against re-reviewing a
+ * shared safety primitive. The justified target instead shrinks only the
+ * two genuinely route-specific, shrinkable components:
+ *   - acquisition: 3_000ms (30x smaller than the shared 90_000ms ceiling;
+ *     Neon's documented compute-wake latency is typically sub-second, so
+ *     this leaves real headroom for a cold dedicated-pool connection
+ *     without inheriting the shared pool's full 90s margin for genuine
+ *     unavailability);
+ *   - execution: reduced from 5000ms to 2000ms (still generous for a
+ *     single primary-key-indexed SELECT against a small table).
+ * Result: PUBLIC_ADMISSION_READ_WORST_CASE_MS = 3_000 + 2_000 + 2*5_000 =
+ * 15_000ms -- an 85.7% reduction from 105_000ms, derived from this file's
+ * and db.ts's own real constants, not chosen to make a test pass.
+ *
+ * Named trade-off (fresh-context review finding): the old 90_000ms
+ * acquisition bound was ALSO, incidentally, tolerant of a genuinely slow
+ * but eventually-successful cold connection (e.g. a sluggish Neon
+ * compute-wake taking longer than 3s but less than 90s) -- that request
+ * would previously have waited it out and shown the real admission mode.
+ * After this fix, that same slow-but-successful case now fails closed to
+ * the conservative INVITE_ONLY copy well before the connection would have
+ * succeeded. This is accepted deliberately: this value only controls
+ * which marketing copy an anonymous visitor sees (never an authorization
+ * decision), so bounded latency is worth more here than the small chance
+ * of briefly under-selling an open beta during a slow cold start.
  */
-export const PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS = 5000;
+export const PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS = 2_000;
+
+/**
+ * Canonical, code-derived worst-case bound for the anonymous `/` route's
+ * public-admission read, for any caller/test that needs to assert against
+ * it instead of hand-deriving its own copy that can silently drift out of
+ * sync (the exact failure mode withRawStatementTimeoutWorstCaseMs() in
+ * db.ts already guards against for the shared-pool case).
+ */
+export const PUBLIC_ADMISSION_READ_WORST_CASE_MS =
+  PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS +
+  PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS +
+  2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
 
 interface PlatformSettingAdmissionModeRow {
   admission_mode: string;
@@ -61,7 +125,7 @@ interface PlatformSettingAdmissionModeRow {
  * than readEffectiveSettings()'s other (admin/internal/lock-holding) callers.
  */
 async function readPublicAdmissionModeBounded(label: string): Promise<AdmissionMode> {
-  const pool = await getRawPool();
+  const pool = await getPublicReadPool();
   const result = await withRawStatementTimeout(
     pool,
     PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,

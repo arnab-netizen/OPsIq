@@ -296,3 +296,89 @@ describe.skipIf(SKIP)("[db][pgbouncer] withRawStatementTimeout() is safe under r
     );
   });
 });
+
+/**
+ * F-ROOT-ROUTE-FAST-FAIL: end-to-end wiring proof for getPublicReadPool()
+ * (db.ts) against a real PgBouncer transaction-pooled proxy. Does NOT
+ * re-prove the BEGIN/SET LOCAL/COMMIT-or-ROLLBACK transaction-safety
+ * mechanism itself -- that is already proven generically above (and this
+ * fix does not modify withRawStatementTimeout() at all, so every invariant
+ * proven above transfers unconditionally to any pool passed into it,
+ * including this one). What IS new here, and not covered above: that
+ * getPublicReadPool()'s own construction (env-URL resolution, pg.Pool
+ * config) actually produces a working pool when pointed at a real
+ * transaction-mode PgBouncer proxy, exercised through the real call site
+ * (getPublicAdmissionMode()), not a hand-constructed pool.
+ */
+describe.skipIf(SKIP)("[db][pgbouncer] getPublicReadPool() dedicated pool works end-to-end through real PgBouncer transaction pooling", () => {
+  let bouncer: PgBouncerHandle;
+  let originalDatabaseUrl: string | undefined;
+  const ORIGINAL_PUBLIC_BETA_ENABLED = process.env.PUBLIC_BETA_ENABLED;
+
+  beforeAll(() => {
+    const directUrl = directPostgresUrl();
+    assertLocalUrl(directUrl);
+    bouncer = startPgBouncer(directUrl, databaseNameFromUrl(directUrl));
+  });
+
+  afterAll(() => {
+    bouncer?.stop();
+  });
+
+  afterEach(async () => {
+    if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = originalDatabaseUrl;
+    if (ORIGINAL_PUBLIC_BETA_ENABLED === undefined) delete process.env.PUBLIC_BETA_ENABLED;
+    else process.env.PUBLIC_BETA_ENABLED = ORIGINAL_PUBLIC_BETA_ENABLED;
+    const globalForPrisma = globalThis as unknown as {
+      prisma: unknown;
+      prismaPromise: unknown;
+      pgPool: unknown;
+      pgPublicReadPool: { end?: () => Promise<void> } | undefined;
+      pgPublicReadPoolPromise: unknown;
+    };
+    // Santa-loop review finding: this pool was constructed against the
+    // bouncer proxy, which `afterAll` stops -- end() it explicitly here
+    // rather than leaking it, and clear BOTH the resolved-pool and
+    // in-flight-promise slots so a later test in a different file (or a
+    // re-run of this one) never silently inherits a pool pointed at an
+    // already-stopped proxy.
+    await globalForPrisma.pgPublicReadPool?.end?.().catch(() => undefined);
+    globalForPrisma.pgPublicReadPool = undefined;
+    globalForPrisma.pgPublicReadPoolPromise = undefined;
+    vi.resetModules();
+  });
+
+  it(
+    "getPublicAdmissionMode() succeeds through the dedicated pool routed via a real transaction-pooled PgBouncer proxy",
+    async () => {
+      originalDatabaseUrl = process.env.DATABASE_URL;
+      process.env.DATABASE_URL = bouncer.proxyUrl;
+      delete process.env.PUBLIC_BETA_ENABLED;
+      const globalForPrisma = globalThis as unknown as {
+        prisma: unknown;
+        prismaPromise: unknown;
+        pgPool: unknown;
+        pgPublicReadPool: unknown;
+        pgPublicReadPoolPromise: unknown;
+      };
+      globalForPrisma.pgPublicReadPool = undefined;
+      globalForPrisma.pgPublicReadPoolPromise = undefined;
+      vi.resetModules();
+
+      const { getPublicAdmissionMode } = await import("@/services/beta/public-presentation.service");
+      const mode = await getPublicAdmissionMode();
+      // No platform_settings row in this disposable DB / PUBLIC_BETA_ENABLED
+      // unset -- deterministic legacy fallback, proving a real query
+      // actually ran through the proxy rather than silently failing closed.
+      expect(mode).toBe("INVITE_ONLY");
+
+      // A second call reuses the same dedicated pool -- proves the
+      // connection PgBouncer handed back is reusable for a follow-up
+      // transaction-pooled statement, not a one-shot fluke.
+      const mode2 = await getPublicAdmissionMode();
+      expect(mode2).toBe("INVITE_ONLY");
+    },
+    15_000,
+  );
+});

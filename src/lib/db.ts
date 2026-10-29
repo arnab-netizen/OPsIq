@@ -9,6 +9,8 @@ const globalForPrisma = globalThis as unknown as {
   prisma: OpsDbClient | undefined;
   prismaPromise: Promise<OpsDbClient> | undefined;
   pgPool: RawPool | undefined;
+  pgPublicReadPool: RawPool | undefined;
+  pgPublicReadPoolPromise: Promise<RawPool> | undefined;
 };
 
 /**
@@ -180,6 +182,132 @@ export async function getRawPool(): Promise<RawPool> {
   // getDbInstance() constructs the pool before it resolves; a missing pool here is a broken init.
   if (!pool) throw new Error("Database pool is not initialised");
   return pool;
+}
+
+/**
+ * F-ROOT-ROUTE-FAST-FAIL: production connectionTimeoutMillis for the
+ * dedicated public-read pool below. A fully separate pg.Pool object from
+ * globalForPrisma.pgPool (the shared Prisma/getSession()/checkDatabase()/
+ * checkMigrationReadiness()/claimStartup() pool) -- so a materially shorter
+ * acquisition bound for the one low-stakes, anonymous-reachable public-
+ * admission read can never change those four callers' own acquisition
+ * bound (POOL_CONNECTION_TIMEOUT_MS, unchanged at 90_000 above, still
+ * governing only the shared pool they all still use). See
+ * public-presentation.service.ts's doc comment for the full worst-case
+ * bound this combines into.
+ *
+ * Database review finding (acknowledged trade-off, not changed): this pool
+ * is `max: 1`, same as the shared pool. A real burst of concurrent
+ * anonymous `/` traffic queues behind that one connection, and anyone
+ * still queued past this 3_000ms acquisition bound fails closed to
+ * INVITE_ONLY (a conservative display value, never a crash or an
+ * authorization effect) rather than a slightly higher `max` serving more
+ * of the burst directly. `max: 1` was kept deliberately: this read's
+ * underlying query is cheap enough that queuing behind one connection is
+ * normally sub-millisecond, and raising `max` would multiply this pool's
+ * own direct-connection count per function instance under concurrent cold
+ * starts -- precisely the failure mode createPrismaClient()'s own `max: 1`
+ * comment above (P0-15) already documents and fixed for the shared pool.
+ */
+export const PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS = 3_000;
+
+/**
+ * Dedicated pg.Pool accessor for the public-admission read only
+ * (readPublicAdmissionModeBounded() in public-presentation.service.ts).
+ * withRawStatementTimeout() itself is untouched by this: it already accepts
+ * any pool satisfying the RawPool contract, so this is a drop-in
+ * substitute for getRawPool() at exactly that one call site. Same
+ * connection-string/env-resolution logic as createPrismaClient() above
+ * (Neon-pooler rewrite for the local-direct-endpoint test convenience);
+ * duplicated rather than factored out, matching this file's own existing
+ * pattern (pingDatabase() below duplicates the same few lines for the same
+ * reason: an independently-constructed connection must not share
+ * construction-path state with the shared pool).
+ *
+ * Security review finding (F-ROOT-ROUTE-FAST-FAIL): promise-memoized the
+ * same way getDb()/getDbInstance() above already are, not just a
+ * synchronous `if (globalForPrisma.pgPublicReadPool) return ...` check.
+ * Without this, concurrent anonymous requests arriving during the `await
+ * import("pg")` gap (most likely right after a cold serverless start, which
+ * recurs routinely for a low-traffic landing page) would each construct
+ * and connect their own separate pool -- only the last one wins the global
+ * slot, and the others are orphaned, already-connected pools nothing
+ * closes. That defeats this fix's own "+1 connection only" design goal,
+ * and matches the exact defect class this codebase has already seen in
+ * production (P0-15 / F-PROD-STARTUP-COLDSTART). Storing the in-flight
+ * PROMISE first means every concurrent caller awaits the same
+ * construction instead of re-entering it, exactly like getDb() already
+ * does for the shared pool.
+ */
+export async function getPublicReadPool(): Promise<RawPool> {
+  if (globalForPrisma.pgPublicReadPool) {
+    return globalForPrisma.pgPublicReadPool;
+  }
+  if (globalForPrisma.pgPublicReadPoolPromise) {
+    return globalForPrisma.pgPublicReadPoolPromise;
+  }
+
+  globalForPrisma.pgPublicReadPoolPromise = (async (): Promise<RawPool> => {
+    const rawUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
+    if (!rawUrl) {
+      throw new Error(
+        "DATABASE_URL or TEST_DATABASE_URL environment variable is not set. " +
+        "For production: Set DATABASE_URL=postgresql://user:password@host/dbname"
+      );
+    }
+    const isTestEnv = !!(process.env.VITEST || process.env.NODE_ENV === "test");
+    const databaseUrl = isTestEnv && rawUrl.includes("-pooler.") ? rawUrl.replace("-pooler.", ".") : rawUrl;
+
+    const pg = await import("pg");
+    const pool = new pg.Pool({
+      connectionString: databaseUrl,
+      // Test envs get the same unlimited-wait convenience as the shared
+      // pool above (cold local/Neon test DB must never produce a flaky
+      // false timeout); production uses the real, short, route-specific
+      // bound.
+      connectionTimeoutMillis: isTestEnv ? 0 : PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS,
+      max: 1,
+      idleTimeoutMillis: isTestEnv ? 300000 : 120000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+    });
+
+    // Santa-loop review finding (F-ROOT-ROUTE-FAST-FAIL), HIGH: pg-pool
+    // re-emits 'error' on the POOL itself when an idle client's connection
+    // dies server-side (e.g. Neon/PgBouncer ending an idle backend during
+    // idleTimeoutMillis, or a network reset) -- an EventEmitter 'error'
+    // with no listener throws as an uncaught exception, which would crash
+    // the whole function instance (every in-flight request on it,
+    // authenticated ones included), not just this one anonymous read. The
+    // shared pool above only avoids this by accident: PrismaPg's own
+    // adapter attaches a pool-level 'error' listener internally
+    // (`new PrismaPg(pool)`); this pool is used directly via
+    // withRawStatementTimeout(), never passed through PrismaPg, so it had
+    // no equivalent protection. pg-pool has already discarded the broken
+    // client by the time this fires, so logging is sufficient here.
+    pool.on("error", (err: unknown) => {
+      logger.warn("[db] public-read pool idle client error", { error: String(err) });
+    });
+
+    globalForPrisma.pgPublicReadPool = pool as unknown as RawPool;
+
+    // TypeScript/database review finding (F-ROOT-ROUTE-FAST-FAIL): parity
+    // with createPrismaClient()'s P0-15 fix above -- without this, a
+    // Vercel function instance can freeze mid-connection on THIS pool too
+    // and later resume with a now-dead socket, reintroducing in miniature
+    // the exact failure class P0-15 fixed for the shared pool. No-op
+    // outside a Vercel function; failure here must never block
+    // construction of an otherwise-usable pool.
+    try {
+      const { attachDatabasePool } = await import("@vercel/functions");
+      attachDatabasePool(pool);
+    } catch (error) {
+      console.warn("[DB] attachDatabasePool unavailable for public-read pool (non-Vercel runtime?)", String(error));
+    }
+
+    return globalForPrisma.pgPublicReadPool;
+  })();
+  return globalForPrisma.pgPublicReadPoolPromise;
 }
 
 /**

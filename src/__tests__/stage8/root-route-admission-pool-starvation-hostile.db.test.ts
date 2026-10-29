@@ -56,7 +56,10 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { Pool } from "pg";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
-import { PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS } from "@/services/beta/public-presentation.service";
+import {
+  PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,
+  PUBLIC_ADMISSION_READ_WORST_CASE_MS,
+} from "@/services/beta/public-presentation.service";
 
 const SKIP = !SHOULD_RUN_DB_TESTS;
 
@@ -104,20 +107,35 @@ describe.skipIf(SKIP)("[db] root route admission-mode read under max:1 pool star
   });
 
   /**
-   * Injects a fresh pg.Pool (max:1, short connectionTimeoutMillis) as the
-   * module-global pool getRawPool() returns, then resets the module
-   * registry so a subsequent dynamic import of public-presentation.service
-   * picks it up via getRawPool()'s existing-pool fast path. Mirrors
-   * get-session-fresh-connection-hostile.db.test.ts's goColdWithPool().
+   * F-ROOT-ROUTE-FAST-FAIL: injects a fresh pg.Pool (max:1, short
+   * connectionTimeoutMillis) as the module-global pool getPublicReadPool()
+   * returns -- the public-admission read's own DEDICATED pool slot, not
+   * the shared getRawPool()/pgPool slot getSession() etc. use -- then
+   * resets the module registry so a subsequent dynamic import of
+   * public-presentation.service picks it up via getPublicReadPool()'s
+   * existing-pool fast path. Mirrors get-session-fresh-connection-hostile
+   * .db.test.ts's goColdWithPool(), retargeted to the new dedicated slot.
    */
   function goColdWithShortTimeoutPool(): Pool {
     const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
     const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: SHORT_CONNECTION_TIMEOUT_MS });
     pools.push(pool);
-    const globalForPrisma = globalThis as unknown as { prisma: unknown; prismaPromise: unknown; pgPool: unknown };
+    const globalForPrisma = globalThis as unknown as {
+      prisma: unknown;
+      prismaPromise: unknown;
+      pgPool: unknown;
+      pgPublicReadPool: unknown;
+      pgPublicReadPoolPromise: unknown;
+    };
     globalForPrisma.prisma = undefined;
     globalForPrisma.prismaPromise = undefined;
-    globalForPrisma.pgPool = pool;
+    globalForPrisma.pgPublicReadPool = pool;
+    // Also clears the promise slot: getPublicReadPool() checks
+    // pgPublicReadPool first, so this alone would still work, but leaving
+    // a stale resolved promise behind is inconsistent with every other
+    // reset point in this suite and risks silently reusing a prior
+    // describe block's pool if this helper's injection order ever changes.
+    globalForPrisma.pgPublicReadPoolPromise = undefined;
     vi.resetModules();
     return pool;
   }
@@ -209,19 +227,32 @@ describe.skipIf(SKIP)("[db] root route admission-mode read under max:1 pool star
  * connection so the admission read's own SELECT genuinely blocks on a live,
  * responsive backend (not a dead socket) until Postgres's statement_timeout
  * cancels it (SQLSTATE 57014), then releasing the lock and proving
- * recovery. Runs against the real, unmodified getRawPool()-managed pool
- * (no injected short-timeout pool here), so a fresh module state is forced
- * first to avoid picking up a prior test's injected pool from this file.
+ * recovery. Runs against the real, unmodified getPublicReadPool()-managed
+ * dedicated pool (no injected short-timeout pool here), so a fresh module
+ * state is forced first to avoid picking up a prior test's injected pool
+ * from this file.
  */
 describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level statement_timeout actually applies to this call site", () => {
   let lockHolderPool: Pool | undefined;
   const ORIGINAL_PUBLIC_BETA_ENABLED = process.env.PUBLIC_BETA_ENABLED;
 
   function goCold(): void {
-    const globalForPrisma = globalThis as unknown as { prisma: unknown; prismaPromise: unknown; pgPool: unknown };
+    const globalForPrisma = globalThis as unknown as {
+      prisma: unknown;
+      prismaPromise: unknown;
+      pgPool: unknown;
+      pgPublicReadPool: unknown;
+      pgPublicReadPoolPromise: unknown;
+    };
     globalForPrisma.prisma = undefined;
     globalForPrisma.prismaPromise = undefined;
     globalForPrisma.pgPool = undefined;
+    globalForPrisma.pgPublicReadPool = undefined;
+    // Also clears the promise slot -- getPublicReadPool() checks it before
+    // attempting real construction, so leaving a prior describe block's
+    // resolved promise here would silently reuse ITS pool instead of
+    // genuinely constructing a fresh one (santa-loop review finding).
+    globalForPrisma.pgPublicReadPoolPromise = undefined;
     vi.resetModules();
   }
 
@@ -244,7 +275,7 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
       delete process.env.PUBLIC_BETA_ENABLED;
       goCold();
       const { getPublicAdmissionMode } = await import("@/services/beta/public-presentation.service");
-      const { getRawPool, withRawStatementTimeout } = await import("@/lib/db");
+      const { getPublicReadPool, withRawStatementTimeout } = await import("@/lib/db");
 
       const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
       lockHolderPool = new Pool({ connectionString: url, max: 1 });
@@ -256,10 +287,11 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
       const mode = await getPublicAdmissionMode();
       const elapsed = Date.now() - start;
 
-      // PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS is 5000 -- cancelled
-      // close to that bound, not left waiting for the lock indefinitely.
-      expect(elapsed).toBeGreaterThan(4_000);
-      expect(elapsed).toBeLessThan(8_000);
+      // PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS is 2000 (F-ROOT-ROUTE-
+      // FAST-FAIL) -- cancelled close to that bound, not left waiting for
+      // the lock indefinitely.
+      expect(elapsed).toBeGreaterThan(1_500);
+      expect(elapsed).toBeLessThan(5_000);
       expect(mode).toBeNull();
 
       // Directly confirm the cancellation was the real, expected server-side
@@ -267,7 +299,7 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
       // same query, same timeout, against the still-locked table.
       let caught: unknown;
       try {
-        const pool = await getRawPool();
+        const pool = await getPublicReadPool();
         await withRawStatementTimeout(
           pool,
           PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,
@@ -293,5 +325,132 @@ describe.skipIf(SKIP)("[db] root route admission-mode read: execution-level stat
       expect(after).toBe("INVITE_ONLY");
     },
     20_000,
+  );
+});
+
+/**
+ * F-ROOT-ROUTE-FAST-FAIL (RED-before-fix / GREEN-after-fix proof).
+ *
+ * MISSION: today, the anonymous public-admission read has NO route-specific
+ * acquisition bound at all -- it is governed by the exact same single pool
+ * (globalForPrisma.pgPool / POOL_CONNECTION_TIMEOUT_MS = 90_000 in real
+ * Production) that getSession()/checkDatabase()/checkMigrationReadiness()/
+ * claimStartup() all share. A public landing page should fail closed to
+ * INVITE_ONLY far faster than that. This proves exactly that gap, before
+ * any fix: an acquisition delay well under Production's real 90s ceiling
+ * (20s here, representative, not the literal 90s -- waiting out 90s in a
+ * unit test is impractical) still blows straight through a reasonable
+ * public-page budget (PUBLIC_ADMISSION_READ_WORST_CASE_MS = 15_000, the
+ * bound this mission derives and implements -- see
+ * public-presentation.service.ts's doc comment for the full derivation and
+ * why a 15s bound is a mathematically justified target for this fix, not
+ * an arbitrary one).
+ *
+ * This test's assertions are written so that, run unchanged against the
+ * code both BEFORE and AFTER this mission's fix, they demonstrate exactly
+ * the RED-to-GREEN transition: BEFORE the fix, the call waits for the
+ * holder's full 20s (nothing today is route-specific) and the assertions
+ * FAIL (RED); AFTER the fix, the call succeeds near-instantly via its own
+ * dedicated, route-scoped pool, never waiting for the holder at all
+ * (starving the SHARED pool has no effect on a genuinely separate
+ * connection), and the SAME assertions PASS (GREEN). Same injection
+ * technique as the
+ * acquisition-starvation block above (`globalForPrisma.pgPool`): pre-fix,
+ * the public-admission call reads that exact slot; post-fix, it reads a
+ * DIFFERENT, dedicated slot instead, so this test deliberately starves
+ * `pgPool` (not the dedicated pool) to prove the public read no longer
+ * depends on it at all.
+ */
+describe.skipIf(SKIP)("[db] F-ROOT-ROUTE-FAST-FAIL: public-admission read must fail closed within a route-specific budget, not the shared pool's", () => {
+  const pools: Pool[] = [];
+  const ORIGINAL_PUBLIC_BETA_ENABLED = process.env.PUBLIC_BETA_ENABLED;
+  // Production's real shared-pool acquisition ceiling (POOL_CONNECTION_
+  // TIMEOUT_MS in db.ts) -- used here as-is, not shortened, since the
+  // holder below releases voluntarily well before this would ever fire;
+  // what actually keeps this test fast is HOLD_SECONDS, deliberately far
+  // shorter than this ceiling but still well above
+  // PUBLIC_ADMISSION_READ_WORST_CASE_MS, to prove the public read is not
+  // bounded by anything small today.
+  const SHARED_POOL_TIMEOUT_MS = 90_000;
+  const HOLD_SECONDS = 20;
+  const TEST_TIMEOUT_MS = 30_000;
+
+  afterEach(async () => {
+    if (ORIGINAL_PUBLIC_BETA_ENABLED === undefined) delete process.env.PUBLIC_BETA_ENABLED;
+    else process.env.PUBLIC_BETA_ENABLED = ORIGINAL_PUBLIC_BETA_ENABLED;
+    while (pools.length) {
+      const p = pools.pop()!;
+      await p.end().catch(() => undefined);
+    }
+  });
+
+  function goColdStarvingOnlyTheSharedPool(): Pool {
+    const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
+    const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: SHARED_POOL_TIMEOUT_MS });
+    pools.push(pool);
+    const globalForPrisma = globalThis as unknown as {
+      prisma: unknown;
+      prismaPromise: unknown;
+      pgPool: unknown;
+      pgPublicReadPool: unknown;
+      pgPublicReadPoolPromise: unknown;
+    };
+    globalForPrisma.prisma = undefined;
+    globalForPrisma.prismaPromise = undefined;
+    globalForPrisma.pgPool = pool;
+    // Clears BOTH the resolved-pool and in-flight-promise slots -- without
+    // clearing the promise too (santa-loop review finding), a prior
+    // describe block's already-resolved getPublicReadPool() promise would
+    // still be cached here, and this reset would silently reuse ITS pool
+    // instead of genuinely forcing fresh construction. With both cleared,
+    // this forces getPublicReadPool()'s own normal construction path
+    // (which, under Vitest, uses connectionTimeoutMillis: 0 -- the same
+    // test-env convenience the shared pool gets -- not Production's real
+    // 3_000ms value). That is fine here: this test exercises whether the
+    // public read depends on the STARVED SHARED pool at all, not the
+    // dedicated pool's own acquisition timing, which is exercised
+    // elsewhere in this file via a hand-constructed Pool injected directly
+    // into this same global slot.
+    globalForPrisma.pgPublicReadPool = undefined;
+    globalForPrisma.pgPublicReadPoolPromise = undefined;
+    vi.resetModules();
+    return pool;
+  }
+
+  it(
+    "fails closed well within the route-specific fast-fail budget even though the SHARED pool is starved for far longer than that budget",
+    async () => {
+      assertLocalUrl();
+      delete process.env.PUBLIC_BETA_ENABLED;
+      const pool = goColdStarvingOnlyTheSharedPool();
+      const { getPublicAdmissionMode } = await import("@/services/beta/public-presentation.service");
+
+      const holder = await pool.connect();
+      const holderDone = holder.query(`SELECT pg_sleep(${HOLD_SECONDS})`).finally(() => holder.release());
+
+      const start = Date.now();
+      const mode = await getPublicAdmissionMode();
+      const elapsed = Date.now() - start;
+
+      // Stronger than merely "fails closed within budget": the dedicated
+      // pool is a genuinely separate connection, so starving the SHARED
+      // pool has NO effect on it at all -- the read succeeds normally and
+      // fast (not merely under budget, but near-instant), returning the
+      // real deterministic legacy fallback, not a failure value. This is
+      // the actual GREEN behavior; a test asserting `mode` ends up `null`
+      // here would be testing the OLD (shared-pool-contending) behavior,
+      // not what this fix provides.
+      expect(elapsed).toBeLessThan(2_000);
+      // Imported from the implementation's own derived constant, not a
+      // hand-typed copy of "15_000" -- closes the exact drift risk
+      // withRawStatementTimeoutWorstCaseMs()'s own doc comment warns
+      // against, and a database-review finding flagged this constant as
+      // defined but previously unconsumed by any test.
+      expect(elapsed).toBeLessThan(PUBLIC_ADMISSION_READ_WORST_CASE_MS);
+      expect(mode).toBe("INVITE_ONLY");
+
+      await holderDone;
+    },
+    TEST_TIMEOUT_MS,
   );
 });
