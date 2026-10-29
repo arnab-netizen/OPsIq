@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue({}),
   getRawPool: vi.fn().mockResolvedValue({ connect: vi.fn(), query: vi.fn() }),
   withRawStatementTimeout: vi.fn(),
 }));
