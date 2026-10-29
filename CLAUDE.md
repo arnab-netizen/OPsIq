@@ -147,6 +147,8 @@ Claude must NEVER:
 - Weaken auth, workspace enforcement, or DTO redaction to make gates green
 - Merge PRs autonomously
 
+Claude Code auto-mode execution is additionally governed by `docs/opsiq-governance/AUTO_MODE_POLICY.md`. That policy narrows what may run automatically and does not supersede this file. Where both apply, follow both; on conflict, fail closed and apply the stricter rule unless the owner explicitly authorizes otherwise.
+
 ## Active execution harness
 
 Read `.claude/active-state.json` for the current factory stage, active bundle, blocking dependencies, and next target. Keep that file updated — it is the lightweight operating state. `execution_state.json` contains full historical record.
