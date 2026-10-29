@@ -84,14 +84,20 @@ export async function getSession(): Promise<SessionInfo | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getSession");
 
-  // CRITICAL: Ensure database is initialized before ANY db access
-  // This prevents the db Proxy from throwing "Database not initialized" errors
-  const pool = await getRawPool();
-
+  // F-ROOT-ROUTE-300S: cookie is read BEFORE any DB initialization. A request
+  // with no session cookie (every anonymous visitor, including the public
+  // landing page) has no session to look up, so it must never pay for pool
+  // construction/connection at all -- getRawPool() below is a raw pg.Pool
+  // accessor used only by the query that follows, not a general "warm the db
+  // Proxy" call: db.ts's exported `db` Proxy already lazily self-initializes
+  // on first property access for any OTHER caller that needs it.
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionToken) return null;
+
+  // CRITICAL: Ensure database is initialized before the session-lookup query below.
+  const pool = await getRawPool();
 
   // P0-15 forensic finding: this was the one real, user-facing DB query on
   // the root cold-start path with no bespoke timeout and no error handling —
