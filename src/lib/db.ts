@@ -688,8 +688,23 @@ export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
  * case: once on the main BEGIN/SET LOCAL/fn/COMMIT sequence, and -- only on
  * the error path -- once more on the ROLLBACK cleanup attempt.
  */
-export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number): number {
-  return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
+/**
+ * F-AUTH-ROOT-FAST-FAIL (database-review finding, round 3): the main
+ * backstop's margin -- how much slack beyond statementTimeoutMs the WHOLE
+ * BEGIN/SET LOCAL/fn/COMMIT sequence gets before the client gives up on a
+ * dead connection -- defaults to CLIENT_SIDE_BACKSTOP_MARGIN_MS, sized for
+ * this function's own documented single-statement assumption (see
+ * withRawStatementTimeout()'s doc comment). A caller whose `fn` issues
+ * SEVERAL sequential statements over the one checked-out connection needs a
+ * correspondingly larger margin, or a merely slow-but-healthy (never
+ * actually hung) sequence can trip the backstop and have its connection
+ * needlessly discarded. Optional and backward-compatible: every existing
+ * caller (getSession(), claimStartup(), checkDatabase(),
+ * checkMigrationReadiness(), the public-admission read) omits this and
+ * keeps its exact prior behavior.
+ */
+export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number, mainBackstopMarginMs: number = CLIENT_SIDE_BACKSTOP_MARGIN_MS): number {
+  return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + mainBackstopMarginMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
 }
 
 export class ClientSideExecutionTimeoutError extends Error {
@@ -748,7 +763,8 @@ export async function withRawStatementTimeout<T>(
   pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
   timeoutMs: number,
   fn: (client: RawQueryClient) => Promise<T>,
-  label = "unlabeled"
+  label = "unlabeled",
+  mainBackstopMarginMs: number = CLIENT_SIDE_BACKSTOP_MARGIN_MS
 ): Promise<T> {
   const safeTimeoutMs = Math.trunc(timeoutMs);
   if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
@@ -759,7 +775,12 @@ export async function withRawStatementTimeout<T>(
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
-  const mainBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
+  // F-AUTH-ROOT-FAST-FAIL (database-review finding, round 3): see
+  // withRawStatementTimeoutWorstCaseMs()'s doc comment -- mainBackstopMarginMs
+  // defaults to CLIENT_SIDE_BACKSTOP_MARGIN_MS (every existing caller's exact
+  // prior behavior, unchanged) but lets a multi-statement `fn` ask for more
+  // slack than the single-statement default assumes.
+  const mainBackstopMs = safeTimeoutMs + mainBackstopMarginMs;
   const normalPath = (async () => {
     await client.query("BEGIN");
     await client.query(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);

@@ -3,15 +3,25 @@ import { render, cleanup } from "@testing-library/react";
 
 // The root route is a server component that depends on session + redirect.
 // Mock both so we can exercise its routing decision deterministically.
+// F-AUTH-ROOT-FAST-FAIL: the policy/owner-login decision itself now lives in
+// resolveAuthenticatedRootDestination() (root-redirect.service.ts), not
+// inline in this page -- mocked directly here (rather than mocking
+// @/services/auth's getPolicyContext, which this page no longer imports at
+// all) so this suite exercises the REAL decision the page makes (call the
+// service, redirect to whatever it resolves) instead of accidentally
+// passing via an unrelated thrown-error fail-closed path.
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/services/auth", () => ({ getSession: vi.fn() }));
+vi.mock("@/services/root-redirect.service", () => ({ resolveAuthenticatedRootDestination: vi.fn() }));
 
 import HomePage, { metadata } from "@/app/page";
 import LandingPage from "@/components/landing/LandingPage";
 import { getSession } from "@/services/auth";
+import { resolveAuthenticatedRootDestination } from "@/services/root-redirect.service";
 import { redirect } from "next/navigation";
 
 const getSessionMock = vi.mocked(getSession);
+const resolveAuthenticatedRootDestinationMock = vi.mocked(resolveAuthenticatedRootDestination);
 const redirectMock = vi.mocked(redirect);
 
 beforeEach(() => {
@@ -38,16 +48,32 @@ describe("root route (/) landing behavior", () => {
     expect(types).toContain("script");
   });
 
-  it("still redirects authenticated visitors to /dashboard", async () => {
-    getSessionMock.mockResolvedValue({
+  it("redirects an authenticated visitor to whatever destination the root-redirect decision resolves", async () => {
+    const session = {
       user: { id: "u1" } as never,
       sessionId: "s1",
       expiresAt: new Date(Date.now() + 60_000),
-    });
+    };
+    getSessionMock.mockResolvedValue(session);
+    resolveAuthenticatedRootDestinationMock.mockResolvedValue("/dashboard");
 
     await HomePage();
 
+    expect(resolveAuthenticatedRootDestinationMock).toHaveBeenCalledWith(session);
     expect(redirectMock).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects a proven self-serve owner to the owner destination the decision resolves, not a hardcoded /dashboard", async () => {
+    getSessionMock.mockResolvedValue({
+      user: { id: "u2" } as never,
+      sessionId: "s2",
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    resolveAuthenticatedRootDestinationMock.mockResolvedValue("/owner/first-run");
+
+    await HomePage();
+
+    expect(redirectMock).toHaveBeenCalledWith("/owner/first-run");
   });
 });
 

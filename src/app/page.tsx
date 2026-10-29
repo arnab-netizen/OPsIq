@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession, getPolicyContext } from "@/services/auth";
-import { isSelfServeOwnerContext } from "@/policies/capability-check";
-import { resolveOwnerLoginHref } from "@/services/owner-first-run/first-run.service";
+import { getSession } from "@/services/auth";
+import { resolveAuthenticatedRootDestination } from "@/services/root-redirect.service";
 import { presentationForAdmissionMode } from "@/domain/beta/public-presentation";
 import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
 import LandingPage from "@/components/landing/LandingPage";
@@ -84,18 +83,11 @@ export default async function HomePage() {
   if (session) {
     // F4: a self-serve owner's canonical first-run/Home surface is /owner/cockpit (labeled "Home" in
     // the persona-sectioned nav — see sidebar-nav.tsx), not the consultant-oriented /dashboard
-    // (engagements/findings/actions — concepts a self-serve owner never has). Resolved from the SAME
-    // centralized policy check used everywhere else (isSelfServeOwnerContext); consultants, admins,
-    // and any actor this check cannot positively resolve keep the existing /dashboard redirect
-    // unchanged (fail closed to prior behavior on any error).
-    let ownerHome = false;
-    try {
-      const policy = await getPolicyContext();
-      ownerHome = policy ? isSelfServeOwnerContext(policy) : false;
-    } catch {
-      ownerHome = false;
-    }
-    redirect(ownerHome ? await resolveOwnerLoginHref(session.user.id) : "/dashboard");
+    // (engagements/findings/actions — concepts a self-serve owner never has). The policy check,
+    // owner-login-href resolution, and the fail-closed/bounded decision logic all live in
+    // resolveAuthenticatedRootDestination() (F-AUTH-ROOT-FAST-FAIL) -- this page only renders the
+    // decision, it makes none of it.
+    redirect(await resolveAuthenticatedRootDestination(session));
   }
 
   return (
