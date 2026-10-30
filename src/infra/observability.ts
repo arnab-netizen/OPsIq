@@ -88,7 +88,32 @@ export function categorizeError(error: unknown, route?: string): ObservabilityCa
  * directly against constructed Sentry-event-shaped objects, rather than
  * needing to stand up the real @sentry/nextjs SDK in a test.
  */
+const INTUIT_URL = /https?:\/\/[^\s"'<>]*intuit\.com[^\s"'<>]*/gi;
+const REALM_PATH = /\/company\/\d{6,}/g;
+/** Intuit hosts and company (realm) ids never leave the process: URLs of Intuit calls and /company/<realmId> paths are redacted from any text. */
+export function scrubIntuitText(s: string): string {
+  return s.replace(INTUIT_URL, "[intuit-url]").replace(REALM_PATH, "/company/[realm]");
+}
+function scrubDeep(v: unknown, depth = 0): unknown {
+  if (typeof v === "string") return scrubIntuitText(v);
+  if (depth > 6 || v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map((x) => scrubDeep(x, depth + 1));
+  return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, scrubDeep(x, depth + 1)]));
+}
+/** Breadcrumbs of calls to Intuit are dropped entirely; every other string in the event is redacted. */
+export function isIntuitBreadcrumb(b: Record<string, unknown> | null | undefined): boolean {
+  if (!b) return false;
+  return /intuit\.com|\/company\/\d{6,}/i.test(JSON.stringify([b.message, b.data]));
+}
+function scrubIntuitFromEvent(event: Record<string, unknown>): void {
+  const crumbs = event.breadcrumbs;
+  if (Array.isArray(crumbs)) event.breadcrumbs = crumbs.filter((b) => !isIntuitBreadcrumb(b as Record<string, unknown>));
+  for (const k of ["message", "exception", "request", "extra", "contexts", "tags", "breadcrumbs", "transaction"]) {
+    if (k in event) event[k] = scrubDeep(event[k]);
+  }
+}
 export function scrubEvent(event: Record<string, unknown>): Record<string, unknown> {
+  scrubIntuitFromEvent(event);
   const req = event.request as Record<string, unknown> | undefined;
   if (req) {
     delete req.cookies;
@@ -127,6 +152,8 @@ export async function initObservability(runtime: "server" | "client"): Promise<v
     Sentry.init({
       dsn,
       tracesSampleRate: 0,
+      sendDefaultPii: false,
+      beforeBreadcrumb: (b) => (isIntuitBreadcrumb(b as unknown as Record<string, unknown>) ? null : b),
       environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "production",
       release: process.env.VERCEL_GIT_COMMIT_SHA || undefined,
       beforeSend: (event) => scrubEvent(event as unknown as Record<string, unknown>) as never,

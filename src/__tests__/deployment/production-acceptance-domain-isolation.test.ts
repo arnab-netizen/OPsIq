@@ -58,9 +58,12 @@ describe("domain-business.ts helper -- correctness and evidence-safety", () => {
     expect(DOMAIN_BUSINESS_SRC).not.toMatch(/req(uest)?\.headers/i);
   });
 
-  it("creates the business via the real, capability-gated POST /api/owner/recovery/businesses endpoint", () => {
-    expect(DOMAIN_BUSINESS_SRC).toContain('page.request.post("/api/owner/recovery/businesses"');
+  it("creates the business via the real, capability-gated, fixture-only POST /api/admin/acceptance-fixtures/businesses endpoint", () => {
+    expect(DOMAIN_BUSINESS_SRC).toContain("page.request.post(ACCEPTANCE_FIXTURE_ENDPOINTS.business");
     expect(DOMAIN_BUSINESS_SRC).toContain("timedApiCall(");
+    // Never the ordinary owner route, and never a client-supplied fixture flag (fixture is hard-wired server-side).
+    expect(DOMAIN_BUSINESS_SRC).not.toContain('page.request.post("/api/owner/recovery/businesses"');
+    expect(DOMAIN_BUSINESS_SRC).not.toMatch(/isFixtureBusiness\s*:/);
   });
 
   it("never deletes or archives a business it creates (no deletion unless separately authorized)", () => {

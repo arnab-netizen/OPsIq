@@ -62,6 +62,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { claimStartup, completeStartup } from "@/services/startup-status";
+import { logger } from "@/infra/logger";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -150,5 +151,102 @@ describe("completeStartup() — degrades safely when the database is unavailable
         }),
       })
     );
+  });
+});
+
+describe("claimStartup() — startup-claim diagnostic (sanitized, best-effort, never masks the original failure)", () => {
+  it("1. INSERT fails with SQLSTATE 25006 (read-only) — the sanitized diagnostic is logged, and the ORIGINAL error still propagates", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+    const insertError = Object.assign(new Error("cannot execute INSERT in a read-only transaction"), { code: "25006" });
+    queryMock.mockRejectedValueOnce(insertError);
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          current_user: "opsiq_app",
+          session_user: "opsiq_app",
+          transaction_read_only: "on",
+          default_transaction_read_only: "off",
+          neon_branch_id: "br-purple-boat-ayjn6zl6",
+          neon_endpoint_id: "ep-empty-sky-ay1e6c27",
+        },
+      ],
+    });
+
+    await expect(claimStartup()).rejects.toThrow("cannot execute INSERT in a read-only transaction");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[STARTUP-STATUS] claim INSERT failed — sanitized diagnostic captured",
+      undefined,
+      expect.objectContaining({
+        diagnostic: expect.objectContaining({
+          currentUser: "opsiq_app",
+          sessionUser: "opsiq_app",
+          transactionReadOnly: "on",
+          defaultTransactionReadOnly: "off",
+          neonBranchId: "br-purple-boat-ayjn6zl6",
+          neonEndpointId: "ep-empty-sky-ay1e6c27",
+          insertSqlState: "25006",
+        }),
+      }),
+    );
+    errorSpy.mockRestore();
+  });
+
+  it("2. the diagnostic query itself fails — the ORIGINAL claim error is still preserved and propagated unchanged", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+    const insertError = Object.assign(new Error("Connection terminated unexpectedly"), { code: undefined });
+    queryMock.mockRejectedValueOnce(insertError);
+    queryMock.mockRejectedValueOnce(new Error("diagnostic query also failed"));
+
+    await expect(claimStartup()).rejects.toThrow("Connection terminated unexpectedly");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[STARTUP-STATUS] claim INSERT failed — sanitized diagnostic captured",
+      undefined,
+      expect.objectContaining({
+        diagnostic: expect.objectContaining({ diagnosticUnavailable: true }),
+      }),
+    );
+    errorSpy.mockRestore();
+  });
+
+  it("3. no secret ever enters the structured diagnostic payload, even when the original error message carries connection text", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+    const insertError = Object.assign(
+      new Error("password authentication failed for user \"opsiq_app\" at postgresql://opsiq_app:S3cr3t@ep-empty-sky.neon.tech/neondb"),
+      { code: "28P01" },
+    );
+    queryMock.mockRejectedValueOnce(insertError);
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          current_user: "opsiq_app",
+          session_user: "opsiq_app",
+          transaction_read_only: "off",
+          default_transaction_read_only: "off",
+          neon_branch_id: "br-purple-boat-ayjn6zl6",
+          neon_endpoint_id: "ep-empty-sky-ay1e6c27",
+        },
+      ],
+    });
+
+    await expect(claimStartup()).rejects.toThrow(/password authentication failed/);
+
+    // Isolate the diagnostic log call specifically — the pre-existing generic fail-closed catch
+    // (unrelated to this diagnostic) also logs once, using the raw error object, which this test does
+    // not exercise or need to touch.
+    const diagnosticCall = errorSpy.mock.calls.find((c) => c[0] === "[STARTUP-STATUS] claim INSERT failed — sanitized diagnostic captured");
+    expect(diagnosticCall).toBeTruthy();
+    const loggedPayload = JSON.stringify(diagnosticCall);
+    expect(loggedPayload).not.toContain("S3cr3t");
+    expect(loggedPayload).not.toContain("postgresql://");
+    expect(loggedPayload).not.toContain("ep-empty-sky.neon.tech");
+    // The diagnostic carries only the bounded, 5-character SQLSTATE — never the raw message.
+    expect(diagnosticCall?.[2]).toEqual(
+      expect.objectContaining({
+        diagnostic: expect.objectContaining({ insertSqlState: "28P01" }),
+      }),
+    );
+    errorSpy.mockRestore();
   });
 });

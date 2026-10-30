@@ -78,6 +78,152 @@ async function periodExistsConflict(
   return conflict;
 }
 
+/** Who an audit event is attributed to: a user, or the system (integration) with no actor id. */
+export interface CashflowWriteActor {
+  actorId?: string;
+  actorType?: "user" | "system";
+}
+
+/**
+ * The transactional core of createCashflowSnapshot (cash-position lock, period check, DB-clock stamp, insert, audit) on the
+ * CALLER's transaction client — extracted unchanged so an integration can create the row and its provenance atomically.
+ * Input must already be validated by cashflowSnapshotCreateSchema.
+ */
+export async function createCashflowSnapshotInTx(
+  tx: Prisma.TransactionClient,
+  p: {
+    businessId: string;
+    workspaceId: string;
+    input: CashflowSnapshotCreateInput;
+    confidence: ReturnType<typeof calculateDataConfidence>;
+    audit: CashflowWriteActor;
+  },
+) {
+  const { businessId, workspaceId, input, confidence } = p;
+  const periodStart = new Date(input.periodStart);
+  const periodEnd = new Date(input.periodEnd);
+  await lockCashPositionExclusive(tx, businessId);
+  const existing = await tx.ownerCashflowSnapshot.findFirst({
+    where: { workspaceId, businessId, periodStart, periodEnd },
+    select: { id: true },
+  });
+  if (existing) throw await periodExistsConflict(workspaceId, businessId, periodStart, periodEnd, tx);
+
+  // Stamped from the database clock INSIDE the exclusive lock (never the app clock, never the transaction start).
+  const stampedAt = await databaseNow(tx);
+  const snapshot = await tx.ownerCashflowSnapshot.create({
+    data: {
+      id: randomUUID(),
+      createdAt: stampedAt,
+      updatedAt: stampedAt,
+      workspaceId,
+      businessId,
+      periodStart,
+      periodEnd,
+      currency: input.currency,
+      businessModelType: input.businessModel ?? null,
+      industryTemplate: input.industryTemplate ?? null,
+      cashInHand: input.cashInHand ?? null,
+      bankBalance: input.bankBalance ?? null,
+      dailyCollections: input.dailyCollections ?? null,
+      receivables: input.receivables ?? null,
+      receivablesOverdue: input.receivablesOverdue ?? null,
+      payables: input.payables ?? null,
+      payablesOverdue: input.payablesOverdue ?? null,
+      upcomingEmi: input.upcomingEmi ?? null,
+      rentDue: input.rentDue ?? null,
+      salaryDue: input.salaryDue ?? null,
+      vendorDue: input.vendorDue ?? null,
+      taxDue: input.taxDue ?? null,
+      ownerWithdrawal: input.ownerWithdrawal ?? null,
+      notes: input.notes ?? null,
+      dataConfidenceScore: confidence.dataConfidenceScore,
+      missingCriticalData: confidence.missingCritical,
+    },
+  });
+
+  await emitAuditEvent(
+    {
+      eventName: AUDIT_EVENTS.OWNER_CASHFLOW_SNAPSHOT_RECORDED,
+      actorId: p.audit.actorId,
+      actorType: p.audit.actorType,
+      workspaceId,
+      entityType: "OwnerCashflowSnapshot",
+      entityId: snapshot.id,
+      payload: { businessId, periodStart: input.periodStart, periodEnd: input.periodEnd },
+    },
+    tx,
+  );
+  return snapshot;
+}
+
+/** The figures an integration may refresh on a Cashflow row it controls (all others are untouched). */
+export type IntegrationCashflowFigures = Partial<Record<"bankBalance" | "receivables" | "receivablesOverdue" | "payables" | "payablesOverdue", number | null>>;
+
+export type IntegrationCashflowUpdateResult =
+  | { ok: true; changed: boolean; snapshot: NonNullable<Awaited<ReturnType<typeof db.ownerCashflowSnapshot.findFirst>>>; changedFields: Record<string, { before: number | null; after: number | null }> }
+  | { ok: false; reason: "NOT_FOUND" | "EDITED_SINCE" };
+
+/**
+ * Refresh integration-controlled figures of an existing Cashflow row IN PLACE, on the caller's transaction. Compare-and-set on
+ * `expectedUpdatedAt`: if anyone (the owner) wrote the row since the integration last did, nothing is written and the caller
+ * must treat the period as owner-controlled. Only the supplied figures change; a no-op writes nothing and emits no audit event.
+ * The audit event records before/after per figure in the same transaction.
+ */
+export async function updateCashflowFiguresFromIntegrationInTx(
+  tx: Prisma.TransactionClient,
+  p: { snapshotId: string; workspaceId: string; expectedUpdatedAt: Date; figures: IntegrationCashflowFigures; audit: CashflowWriteActor; auditExtra?: Record<string, unknown> },
+): Promise<IntegrationCashflowUpdateResult> {
+  const owner = await tx.ownerCashflowSnapshot.findFirst({ where: { id: p.snapshotId, workspaceId: p.workspaceId }, select: { businessId: true } });
+  if (!owner) return { ok: false, reason: "NOT_FOUND" };
+  await lockCashPositionExclusive(tx, owner.businessId);
+  const locked = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM owner_cashflow_snapshots
+    WHERE id = ${p.snapshotId}::uuid AND workspace_id = ${p.workspaceId}::uuid
+    FOR UPDATE
+  `;
+  if (locked.length === 0) return { ok: false, reason: "NOT_FOUND" };
+  const current = await tx.ownerCashflowSnapshot.findFirst({ where: { id: p.snapshotId, workspaceId: p.workspaceId } });
+  if (!current) return { ok: false, reason: "NOT_FOUND" };
+  if (current.updatedAt.getTime() !== p.expectedUpdatedAt.getTime()) return { ok: false, reason: "EDITED_SINCE" };
+
+  const changedFields: Record<string, { before: number | null; after: number | null }> = {};
+  const data: Record<string, number | null> = {};
+  // A number sets the figure; null returns it to UNKNOWN (the integration no longer supplies it). The row is integration-authored
+  // here (the compare-and-set above proves nobody else wrote it), so a recorded value can only be the integration's own.
+  for (const [field, after] of Object.entries(p.figures) as Array<[keyof IntegrationCashflowFigures, number | null]>) {
+    const before = (current[field] as number | null) ?? null;
+    if (after === null ? before === null : before !== null && Math.round(before * 100) === Math.round(after * 100)) continue;
+    changedFields[field] = { before, after };
+    data[field] = after;
+  }
+  if (Object.keys(changedFields).length === 0) return { ok: true, changed: false, snapshot: current, changedFields };
+
+  const merged = { ...current, ...data };
+  const confidence = calculateDataConfidence(rowToCashflowInput(merged));
+  const nextUpdatedAt = new Date(Math.max((await databaseNow(tx)).getTime(), current.updatedAt.getTime() + 1));
+  const written = await tx.ownerCashflowSnapshot.updateMany({
+    where: { id: p.snapshotId, workspaceId: p.workspaceId, updatedAt: current.updatedAt },
+    data: { ...data, dataConfidenceScore: confidence.dataConfidenceScore, missingCriticalData: confidence.missingCritical, updatedAt: nextUpdatedAt },
+  });
+  if (written.count !== 1) return { ok: false, reason: "EDITED_SINCE" };
+  await emitAuditEvent(
+    {
+      eventName: AUDIT_EVENTS.CASHFLOW_SNAPSHOT_AMENDED,
+      actorId: p.audit.actorId,
+      actorType: p.audit.actorType,
+      workspaceId: p.workspaceId,
+      entityType: "OwnerCashflowSnapshot",
+      entityId: p.snapshotId,
+      payload: { snapshotId: p.snapshotId, businessId: current.businessId, changedFields, ...(p.auditExtra ?? {}) },
+    },
+    tx,
+  );
+  const snapshot = await tx.ownerCashflowSnapshot.findFirst({ where: { id: p.snapshotId, workspaceId: p.workspaceId } });
+  if (!snapshot) return { ok: false, reason: "NOT_FOUND" };
+  return { ok: true, changed: true, snapshot, changedFields };
+}
+
 export async function createCashflowSnapshot(
   businessId: string,
   input: CashflowSnapshotCreateInput,
@@ -96,65 +242,32 @@ export async function createCashflowSnapshot(
     // One transaction: the cash-position lock serialises this against every other Cashflow create/edit of the business
     // (and against "accept this read"), the period check and the insert see the same state, and the audit event is
     // written with the row or not at all. The unique (business, period) index remains the final guard.
-    return await db.$transaction(async (tx: Prisma.TransactionClient) => {
-      await lockCashPositionExclusive(tx, businessId);
-      const existing = await tx.ownerCashflowSnapshot.findFirst({
-        where: { workspaceId, businessId, periodStart, periodEnd },
-        select: { id: true },
-      });
-      if (existing) throw await periodExistsConflict(workspaceId, businessId, periodStart, periodEnd, tx);
-
-      // Stamped from the database clock INSIDE the exclusive lock (never the app clock, never the transaction start).
-      const stampedAt = await databaseNow(tx);
-      const snapshot = await tx.ownerCashflowSnapshot.create({
-        data: {
-          id: randomUUID(),
-          createdAt: stampedAt,
-          updatedAt: stampedAt,
-          workspaceId,
-          businessId,
-          periodStart,
-          periodEnd,
-          currency: input.currency,
-          businessModelType: input.businessModel ?? null,
-          industryTemplate: input.industryTemplate ?? null,
-          cashInHand: input.cashInHand ?? null,
-          bankBalance: input.bankBalance ?? null,
-          dailyCollections: input.dailyCollections ?? null,
-          receivables: input.receivables ?? null,
-          receivablesOverdue: input.receivablesOverdue ?? null,
-          payables: input.payables ?? null,
-          payablesOverdue: input.payablesOverdue ?? null,
-          upcomingEmi: input.upcomingEmi ?? null,
-          rentDue: input.rentDue ?? null,
-          salaryDue: input.salaryDue ?? null,
-          vendorDue: input.vendorDue ?? null,
-          taxDue: input.taxDue ?? null,
-          ownerWithdrawal: input.ownerWithdrawal ?? null,
-          notes: input.notes ?? null,
-          dataConfidenceScore: confidence.dataConfidenceScore,
-          missingCriticalData: confidence.missingCritical,
-        },
-      });
-
-      await emitAuditEvent(
-        {
-          eventName: AUDIT_EVENTS.OWNER_CASHFLOW_SNAPSHOT_RECORDED,
-          actorId,
-          workspaceId,
-          entityType: "OwnerCashflowSnapshot",
-          entityId: snapshot.id,
-          payload: { businessId, periodStart: input.periodStart, periodEnd: input.periodEnd },
-        },
-        tx
-      );
-      return snapshot;
-    });
+    return await db.$transaction((tx: Prisma.TransactionClient) =>
+      createCashflowSnapshotInTx(tx, { businessId, workspaceId, input, confidence, audit: { actorId } }),
+    );
   } catch (error) {
     // A create that lost to another connection on the unique index is the same "entry exists" answer.
     if (isUniqueViolation(error)) throw await periodExistsConflict(workspaceId, businessId, periodStart, periodEnd);
     throw error;
   }
+}
+
+/** The Cashflow row of ONE exact period, on the caller's transaction (write-path guard for integrations; never selects current evidence). */
+export async function findCashflowSnapshotForPeriodInTx(
+  tx: Prisma.TransactionClient,
+  scope: { workspaceId: string; businessId: string; periodStart: Date; periodEnd: Date },
+) {
+  return tx.ownerCashflowSnapshot.findFirst({
+    where: { workspaceId: scope.workspaceId, businessId: scope.businessId, periodStart: scope.periodStart, periodEnd: scope.periodEnd },
+  });
+}
+
+/** Recent Cashflow rows with their last-write stamp (to tell an integration-written row from an owner-edited one). Unordered; never selects current evidence. */
+export async function listCashflowSnapshotPeriodStamps(workspaceId: string, businessId: string, since: Date) {
+  return db.ownerCashflowSnapshot.findMany({
+    where: { workspaceId, businessId, periodStart: { gte: since } },
+    select: { id: true, periodStart: true, periodEnd: true, updatedAt: true },
+  }) as Promise<Array<{ id: string; periodStart: Date; periodEnd: Date; updatedAt: Date }>>;
 }
 
 export async function getCashflowSnapshot(snapshotId: string, workspaceId: string) {

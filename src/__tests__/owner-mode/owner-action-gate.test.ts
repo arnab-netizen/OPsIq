@@ -9,7 +9,7 @@ const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
 vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
 
-import { enforceOwnerActionGates, recordOwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { enforceOwnerActionGates, recordOwnerGateAssessment, assessOwnerActionGate } from "@/services/owner-mode/owner-action-gate.service";
 import { ConflictError } from "@/infra/errors";
 
 beforeEach(() => emitAuditEvent.mockClear());
@@ -312,5 +312,48 @@ describe("enforceOwnerActionGates", () => {
     const reprice = Object.values(BUDGET_MARGIN_REPAIR_TITLES)[0];
     expect(budgetActionIntent({ decisionType: "INCREASE", title: reprice })).toBe("REPAIR");
     await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "in_progress", intent: budgetActionIntent({ decisionType: "INCREASE", title: reprice }) }, d as never)).resolves.toBeDefined();
+  });
+
+  describe("assessOwnerActionGate -- the read-only assessment the acceptance gate-verdict endpoint reuses", () => {
+    it("is the SAME canonical calculation enforceOwnerActionGates uses: an allowed verdict matches", async () => {
+      const d = deps({ survivalState: "SAFE", cashflowState: "SAFE" });
+      const verdict = await assessOwnerActionGate({ ...base, domain: "sales", toStatus: "completed" }, d as never);
+      expect(verdict.allowed).toBe(true);
+      await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed" }, d as never)).resolves.toBeDefined();
+    });
+
+    it("is the SAME canonical calculation enforceOwnerActionGates uses: a blocked verdict (INSOLVENT_RISK cashflow) matches", async () => {
+      const d = deps({ cashflowState: "INSOLVENT_RISK", survivalState: "INSOLVENT_RISK" });
+      const verdict = await assessOwnerActionGate({ ...base, domain: "cashflow", toStatus: "in_progress" }, d as never);
+      expect(verdict.allowed).toBe(false);
+      expect(verdict.allowed === false && verdict.code).toBe("CASH_SAFETY_BLOCKED");
+      await expect(enforceOwnerActionGates({ ...base, domain: "cashflow", toStatus: "in_progress" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it("emits ZERO audit events on a blocked verdict (only enforceOwnerActionGates' own catch does that)", async () => {
+      const d = deps({ cashflowState: "INSOLVENT_RISK", survivalState: "INSOLVENT_RISK" });
+      await assessOwnerActionGate({ ...base, domain: "cashflow", toStatus: "in_progress" }, d as never);
+      expect(emitAuditEvent).not.toHaveBeenCalled();
+    });
+
+    it("emits ZERO audit events on an allowed verdict", async () => {
+      const d = deps({ survivalState: "SAFE", cashflowState: "SAFE" });
+      await assessOwnerActionGate({ ...base, domain: "sales", toStatus: "completed" }, d as never);
+      expect(emitAuditEvent).not.toHaveBeenCalled();
+    });
+
+    it("never calls a mutation DB method -- only the read methods loadOwnerGateConstraints uses", async () => {
+      const d = deps({ cashflowState: "INSOLVENT_RISK", survivalState: "INSOLVENT_RISK" });
+      const noWrite = (label: string) => vi.fn(async () => { throw new Error(`assessOwnerActionGate must never call ${label}`); });
+      const guarded = {
+        ...d.db,
+        clientAccount: { ...d.db.clientAccount, update: noWrite("clientAccount.update") },
+        ownerDoNotRepeatRule: { ...d.db.ownerDoNotRepeatRule, update: noWrite("ownerDoNotRepeatRule.update"), create: noWrite("ownerDoNotRepeatRule.create") },
+      };
+      await assessOwnerActionGate({ ...base, domain: "cashflow", toStatus: "in_progress" }, { db: guarded, now: d.now } as never);
+      expect(guarded.clientAccount.update).not.toHaveBeenCalled();
+      expect(guarded.ownerDoNotRepeatRule.update).not.toHaveBeenCalled();
+      expect(guarded.ownerDoNotRepeatRule.create).not.toHaveBeenCalled();
+    });
   });
 });

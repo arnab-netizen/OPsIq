@@ -46,6 +46,36 @@
   "capability": "governed_execution"
  },
  {
+  "method": "POST",
+  "route": "/api/admin/acceptance-fixtures/businesses",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/acceptance-fixtures/businesses/[businessId]/cashflow/actions/[actionId]/gate-verdict",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/admin/acceptance-fixtures/capability",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/acceptance-fixtures/startup-sessions",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/admin/acceptance-fixtures/startup-sessions/[sessionId]/blueprint",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
   "method": "GET",
   "route": "/api/admin/administration-audit",
   "classification": "NON_COMMERCIAL",
@@ -2294,6 +2324,24 @@
   "enforcement": "none"
  },
  {
+  "method": "POST",
+  "route": "/api/owner/integrations/quickbooks/disconnect",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
+  "method": "GET",
+  "route": "/api/owner/integrations/quickbooks/status",
+  "classification": "FREE_READ",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/owner/integrations/quickbooks/sync",
+  "classification": "FREE_FOUNDATION",
+  "enforcement": "none"
+ },
+ {
   "method": "GET",
   "route": "/api/owner/inventory/stock-items",
   "classification": "FREE_READ",
@@ -3960,6 +4008,12 @@
   "method": "POST",
   "route": "/api/webhooks/paddle",
   "classification": "ACCOUNT_LIFECYCLE",
+  "enforcement": "none"
+ },
+ {
+  "method": "POST",
+  "route": "/api/webhooks/quickbooks",
+  "classification": "NON_COMMERCIAL",
   "enforcement": "none"
  },
  {

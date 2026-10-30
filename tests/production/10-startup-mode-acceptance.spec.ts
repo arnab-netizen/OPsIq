@@ -23,6 +23,15 @@ import {
   finalizeEvidence,
   timedApiCall,
 } from "./helpers/evidence";
+import { assertFixtureCreationCapable, assertBusinessIsFixture, ACCEPTANCE_FIXTURE_ENDPOINTS } from "./helpers/fixture-isolation";
+import {
+  bindVerifiedFixtureStartupSession,
+  bindFixtureTarget,
+  fixtureMutate,
+  adoptStartupOwnedId,
+  type FixtureStartupTarget,
+} from "./helpers/fixture-target";
+import { readFixtureSnapshots } from "./helpers/fixture-domain-loop";
 
 const SPEC_NAME = "phase13-startup-mode";
 const ACCEPTANCE_TAG = `OPSIQ Production Acceptance - ${new Date().toISOString().slice(0, 19)}Z`;
@@ -47,11 +56,15 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   let context: BrowserContext;
   let page: Page;
   let handoffSessionId = "";
+  let startup: FixtureStartupTarget;
   let handoffIdeaId = "";
   let handoffBusinessId = "";
 
   test.beforeAll(async ({ browser }) => {
     mkdirSync("production-test-results/evidence", { recursive: true });
+    // This is the ONLY spec that logs in for itself: AUTH-04 revokes its session server-side (logout), which would
+    // break every other spec if it shared the run's single login (helpers/shared-auth.ts). Its own login and the
+    // AUTH-05 re-login are the only logins besides the one in global-setup.
     context = await browser.newContext();
     page = await context.newPage();
     watchPage(page);
@@ -109,8 +122,13 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   // ─── Phase 13: Startup Mode real browser handoff journey ──────────────
 
   test("13-01 — create a clearly-tagged Startup acceptance session + idea", async () => {
-    const created = await timedApiCall(context, "POST", "/api/owner/startup/sessions", () =>
-      page.request.post("/api/owner/startup/sessions", {
+    // Stop BEFORE creating anything if this actor cannot create fixtures.
+    await assertFixtureCreationCapable(context, page);
+    // Dedicated fixture-only route: the fixture flag is hard-wired server-side (not a request field),
+    // so this cannot create an ordinary session, and it requires the narrow ACCEPTANCE_FIXTURE_WRITE
+    // authority rather than SYSTEM_ADMIN. Without it the route answers 401/403 and creates nothing.
+    const created = await timedApiCall(context, "POST", ACCEPTANCE_FIXTURE_ENDPOINTS.startupSession, () =>
+      page.request.post(ACCEPTANCE_FIXTURE_ENDPOINTS.startupSession, {
         data: {
           sessionLabel: ACCEPTANCE_TAG,
           intake: {
@@ -121,19 +139,14 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
             skills: [],
           },
           ideas: [{ name: ACCEPTANCE_TAG, industry: "Automotive Services", structural: {} }],
-          // Marks this as synthetic acceptance data at creation time (see
-          // OwnerStartupSession.isFixtureBusiness), rather than relying on the "OPSIQ Production
-          // Acceptance - ..." label to keep it out of ordinary owners' Startup planning history —
-          // mirrors domain-business.ts's isFixtureBusiness flag for business creation. Requires
-          // the acceptance account to hold SYSTEM_ADMIN in the target environment; the route
-          // silently ignores this flag otherwise.
-          isFixtureBusiness: true,
         },
       })
     );
     expect(created.status()).toBe(201);
     handoffSessionId = (await created.json()).sessionId;
     expect(handoffSessionId).toBeTruthy();
+    // 201 alone is not proof of isolation: the session must be absent from the ordinary list.
+    startup = await bindVerifiedFixtureStartupSession(context, page, handoffSessionId);
 
     const sessionRes = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
       page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
@@ -141,87 +154,63 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     expect(sessionRes.status()).toBe(200);
     handoffIdeaId = (await sessionRes.json()).session.ideas[0].id;
     expect(handoffIdeaId).toBeTruthy();
+    // Proven by construction: this GET's path carries only the bound session id, so an idea in ITS OWN
+    // response belongs to this fixture session. Adopting it is what lets later mutation bodies (SCREEN
+    // analysis, the GO decision) reference it without the fail-closed body-id guard refusing them.
+    adoptStartupOwnedId(startup, handoffIdeaId);
   });
 
   test("13-02 — drive the session through screening and the required lifecycle statuses up to APPROVED", async () => {
     for (const status of ["CONTEXT_CAPTURE", "DISCOVERY", "IDEA_GENERATION", "SCREENING"]) {
-      const res = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
-        page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status } })
-      );
+      const res = await fixtureMutate(context, page, startup, "PATCH", `/api/owner/startup/sessions/${startup.sessionId}`, { status });
       expect(res.status()).toBe(200);
     }
 
-    const screenRes = await timedApiCall(
-      context,
-      "POST",
-      "/api/owner/startup/sessions/:sessionId/analysis",
-      () =>
-        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/analysis`, {
-          data: {
-            action: "SCREEN",
-            ideaId: handoffIdeaId,
-            profile: {
-              capitalAvailableCents: 5_000_000,
-              ownerHoursPerWeek: 20,
-              riskTolerance: "MEDIUM",
-              location: "Australia",
-              cashRunwayMonthsAvailable: 6,
-              minimumMonthlyIncomeNeededCents: 300_000,
-            },
-          },
-        })
-    );
+    const screenRes = await fixtureMutate(context, page, startup, "POST", `/api/owner/startup/sessions/${startup.sessionId}/analysis`, {
+      action: "SCREEN",
+      ideaId: handoffIdeaId,
+      profile: {
+        capitalAvailableCents: 5_000_000,
+        ownerHoursPerWeek: 20,
+        riskTolerance: "MEDIUM",
+        location: "Australia",
+        cashRunwayMonthsAvailable: 6,
+        minimumMonthlyIncomeNeededCents: 300_000,
+      },
+    });
     expect(screenRes.status()).toBe(200);
 
     for (const status of ["ECONOMICS_REVIEW", "READINESS_REVIEW", "OWNER_DECISION_REQUIRED"]) {
-      const res = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
-        page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status } })
-      );
+      const res = await fixtureMutate(context, page, startup, "PATCH", `/api/owner/startup/sessions/${startup.sessionId}`, { status });
       expect(res.status()).toBe(200);
     }
   });
 
   test("13-03 — record GO decision and create the execution blueprint", async () => {
-    const decisionRes = await timedApiCall(
-      context,
-      "POST",
-      "/api/owner/startup/sessions/:sessionId/decision",
-      () =>
-        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/decision`, {
-          data: { ideaId: handoffIdeaId, decisionType: "GO", rationale: `${ACCEPTANCE_TAG} approval` },
-        })
-    );
+    const decisionRes = await fixtureMutate(context, page, startup, "POST", `/api/owner/startup/sessions/${startup.sessionId}/decision`, {
+      ideaId: handoffIdeaId,
+      decisionType: "GO",
+      rationale: `${ACCEPTANCE_TAG} approval`,
+    });
     expect(decisionRes.status()).toBe(201);
     const ownerDecisionId = (await decisionRes.json()).ownerDecisionId;
     expect(ownerDecisionId).toBeTruthy();
+    // Proven by construction: this POST's path was already bound to the session (assertMutationBound), so
+    // the decision id it returns belongs to this fixture session. Adopting it lets the blueprint body below
+    // reference it without the fail-closed body-id guard refusing it.
+    adoptStartupOwnedId(startup, ownerDecisionId);
 
-    const approveRes = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
-      page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status: "APPROVED" } })
-    );
+    const approveRes = await fixtureMutate(context, page, startup, "PATCH", `/api/owner/startup/sessions/${startup.sessionId}`, { status: "APPROVED" });
     expect(approveRes.status()).toBe(200);
 
-    const bpRes = await timedApiCall(
-      context,
-      "POST",
-      "/api/owner/startup/sessions/:sessionId/blueprint",
-      () =>
-        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/blueprint`, {
-          data: {
-            ideaId: handoffIdeaId,
-            ownerDecisionId,
-            objectiveTitle: `Launch ${ACCEPTANCE_TAG}`,
-            objectiveDescription: "Live production acceptance execution blueprint",
-            targetMetricName: "monthly_revenue_cents",
-            targetValue: 500000,
-            // Marks every record this blueprint creates (objective, tasks, KPIs, risks,
-            // resource allocation, constraint) as a fixture at creation time — see
-            // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md. Requires the acceptance account to hold
-            // SYSTEM_ADMIN in the target environment; the route silently ignores this flag
-            // otherwise.
-            isFixtureRecord: true,
-          },
-        })
-    );
+    const bpRes = await fixtureMutate(context, page, startup, "POST", `/api/admin/acceptance-fixtures/startup-sessions/${startup.sessionId}/blueprint`, {
+      ideaId: handoffIdeaId,
+      ownerDecisionId,
+      objectiveTitle: `Launch ${ACCEPTANCE_TAG}`,
+      objectiveDescription: "Live production acceptance execution blueprint",
+      targetMetricName: "monthly_revenue_cents",
+      targetValue: 500000,
+    });
     expect(bpRes.status()).toBe(201);
     expect((await bpRes.json()).executionPlanId).toBeTruthy();
   });
@@ -235,11 +224,9 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   });
 
   test("13-05 — transition to EXECUTION_PLANNED and the Activate button becomes visible", async () => {
-    const res = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
-      page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
-        data: { status: "EXECUTION_PLANNED" },
-      })
-    );
+    const res = await fixtureMutate(context, page, startup, "PATCH", `/api/owner/startup/sessions/${startup.sessionId}`, {
+      status: "EXECUTION_PLANNED",
+    });
     expect(res.status()).toBe(200);
 
     await page.reload({ waitUntil: "networkidle" });
@@ -258,16 +245,31 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     expect(handoffBusinessId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
     await page.waitForLoadState("networkidle");
-    await expect(page.locator("body")).toContainText(ACCEPTANCE_TAG);
+    // The hand-off business is an ACCEPTANCE FIXTURE (the flag is carried from the fixture session), so ordinary
+    // owner surfaces deliberately do NOT list it: Owner Home shows the owner's own business instead. Production run
+    // #17's 13-06 expected the fixture's name on that fixture-free surface -- a visibility-contract mismatch, not a
+    // product defect. The contract is asserted as POSITIVE isolation: hidden from the ordinary lists, and the
+    // session record (governed, session-scoped read) links exactly this business.
+    await assertBusinessIsFixture(context, page, handoffBusinessId);
+    const ordinary = await timedApiCall(context, "GET", "/api/owner/businesses", () => page.request.get("/api/owner/businesses"));
+    expect(ordinary.status()).toBe(200);
+    expect(JSON.stringify(await ordinary.json()).toLowerCase()).not.toContain(handoffBusinessId.toLowerCase());
+    await expect(page.locator("body")).not.toContainText(ACCEPTANCE_TAG);
+    const linked = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get(`/api/owner/startup/sessions/${startup.sessionId}`)
+    );
+    expect((await linked.json()).session.businessId).toBe(handoffBusinessId);
     await checkpointScreenshot(context, page, SPEC_NAME, "activated-owner-home");
     expect(fatalErrors()).toHaveLength(0);
   });
 
-  test("13-07 — normal Owner Mode domain functionality operates against the new business (Finance opens without error)", async () => {
-    await page.goto(`/owner/finance?businessId=${handoffBusinessId}`, { waitUntil: "networkidle" });
-    const body = await page.textContent("body");
-    expect(body).toBeTruthy();
-    await checkpointScreenshot(context, page, SPEC_NAME, "finance-domain-opens");
+  test("13-07 — normal Owner Mode domain functionality operates against the new business (its Finance records are addressable by id)", async () => {
+    // No owner page reads ?businessId=, so loading /owner/finance?businessId=<fixture> proves nothing. Bind the
+    // hand-off business as a fixture target (hidden from the ordinary lists, addressable by id) and read its OWN
+    // Finance snapshot list by id instead.
+    const handoffFixture = await bindFixtureTarget(context, page, "finance", handoffBusinessId);
+    expect(Array.isArray(await readFixtureSnapshots(context, page, handoffFixture))).toBe(true);
+    expect(handoffFixture.serverErrors).toEqual([]);
     expect(fatalErrors()).toHaveLength(0);
   });
 

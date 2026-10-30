@@ -21,6 +21,7 @@ import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence"
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { CashSemantics } from "@/domain/owner-finance/liquidity";
 import { isEvidenceQuality, provenanceOf, resolveAmendedEvidenceQuality } from "@/domain/owner-finance/evidence-quality";
+import { qboSourcedFinancialSnapshotIds } from "@/services/quickbooks/qbo-provenance.service";
 import { LEAKAGE_COMPONENT_CONTRACT_V1, leakageColumns, resolveAmendedLeakage } from "./leakage-components";
 import type { FinancialSnapshotCreateInput, FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 
@@ -146,6 +147,97 @@ export async function listFinancialSnapshotVersions(
 const PERIOD_EXISTS_MESSAGE =
   "A financial snapshot for this business and reporting period already exists. Amend it instead of creating a duplicate.";
 
+/** Who an audit event is attributed to: a user, or the system (scheduler / integration) with no actor id. */
+export interface FinanceWriteActor {
+  actorId?: string;
+  actorType?: "user" | "system";
+}
+
+/**
+ * The transactional core of createFinancialSnapshot: advisory period lock, race re-check, insert and audit, all on the CALLER's
+ * transaction client. Extracted unchanged so integrations (QuickBooks materialization) can create a canonical snapshot and
+ * their own provenance row atomically. Input is expected to be already validated by financialSnapshotCreateSchema.
+ */
+export async function createFinancialSnapshotInTx(
+  tx: Prisma.TransactionClient,
+  p: {
+    businessId: string;
+    workspaceId: string;
+    input: FinancialSnapshotCreateInput;
+    currency: string;
+    confidence: ReturnType<typeof calculateDataConfidence>;
+    audit: FinanceWriteActor;
+    auditExtra?: Record<string, unknown>;
+  },
+) {
+  const { businessId, workspaceId, input, confidence } = p;
+  const periodStart = new Date(input.periodStart);
+  const periodEnd = new Date(input.periodEnd);
+  // Two simultaneous submits for the same period (double click, second tab, client retry) serialise on this lock, so the
+  // loser sees the winner's row and gets the same 409 as a sequential duplicate — never a unique-constraint 500.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner_financial_snapshot:${businessId}:${periodStart.toISOString()}:${periodEnd.toISOString()}`}))`;
+  const raced = await tx.ownerFinancialSnapshot.findFirst({
+    where: { businessId, periodStart, periodEnd, supersededById: null },
+    select: { id: true },
+  });
+  if (raced) {
+    throw new FinanceConflictError(FINANCE_CONFLICT_CODES.PERIOD_EXISTS, PERIOD_EXISTS_MESSAGE, { snapshotId: raced.id });
+  }
+  const created = await tx.ownerFinancialSnapshot.create({
+    data: {
+      id: randomUUID(),
+      workspaceId,
+      businessId,
+      periodStart,
+      periodEnd,
+      currency: p.currency,
+      evidenceQuality: input.evidenceQuality ?? null,
+      businessModelType: input.businessModel ?? null,
+      industryTemplate: input.industryTemplate ?? null,
+      revenue: input.revenue ?? null,
+      costOfGoods: input.costOfGoodsOrServices ?? null,
+      fixedCosts: input.fixedCosts ?? null,
+      variableCosts: input.variableCosts ?? null,
+      rent: input.rent ?? null,
+      payroll: input.salaryPayroll ?? null,
+      utilities: input.utilities ?? null,
+      deliveryCost: input.deliveryFulfilmentCost ?? null,
+      marketingSpend: input.marketingSpend ?? null,
+      discountAmount: input.discountAmount ?? null,
+      ...leakageColumns(input),
+      debtPayments: input.loanEmiDebtPayments ?? null,
+      totalDebtOutstanding: input.totalDebtOutstanding ?? null,
+      cashOnHand: input.cashOnHand ?? null,
+      receivables: input.receivables ?? null,
+      overdueReceivables: input.receivablesOverdue ?? null,
+      payables: input.payables ?? null,
+      overduePayables: input.payablesOverdue ?? null,
+      ownerWithdrawals: input.ownerWithdrawals ?? null,
+      inventoryCashLock: input.inventoryStockCashLock ?? null,
+      orderCount: input.orderCount ?? null,
+      customerCount: input.customerCount ?? null,
+      repeatCustomerCount: input.repeatCustomerCount ?? null,
+      b2bRevenue: input.b2bRevenue ?? null,
+      b2cRevenue: input.b2cRevenue ?? null,
+      notes: input.notes ?? null,
+      dataConfidenceScore: confidence.dataConfidenceScore,
+      missingCriticalData: confidence.missingCritical,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_RECORDED,
+    actorId: p.audit.actorId,
+    actorType: p.audit.actorType,
+    workspaceId,
+    entityType: "OwnerFinancialSnapshot",
+    entityId: created.id,
+    payload: { businessId, periodStart: input.periodStart, periodEnd: input.periodEnd, ...(p.auditExtra ?? {}) },
+  }, tx);
+
+  return created;
+}
+
 export async function createFinancialSnapshot(
   businessId: string,
   input: FinancialSnapshotCreateInput,
@@ -178,72 +270,59 @@ export async function createFinancialSnapshot(
 
   // D3-03: snapshot create and audit in a single transaction so an audit
   // failure prevents a partially-recorded snapshot with no audit trail.
-  const snapshot = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Two simultaneous submits for the same period (double click, second tab, client retry) serialise on this lock, so the
-    // loser sees the winner's row and gets the same 409 as a sequential duplicate — never a unique-constraint 500.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner_financial_snapshot:${businessId}:${periodStart.toISOString()}:${periodEnd.toISOString()}`}))`;
-    const raced = await tx.ownerFinancialSnapshot.findFirst({
-      where: { businessId, periodStart, periodEnd, supersededById: null },
-      select: { id: true },
-    });
-    if (raced) {
-      throw new FinanceConflictError(FINANCE_CONFLICT_CODES.PERIOD_EXISTS, PERIOD_EXISTS_MESSAGE, { snapshotId: raced.id });
-    }
-    const created = await tx.ownerFinancialSnapshot.create({
-      data: {
-        id: randomUUID(),
-        workspaceId,
-        businessId,
-        periodStart,
-        periodEnd,
-        currency: String(business.currency).toUpperCase(),
-        evidenceQuality: input.evidenceQuality ?? null,
-        businessModelType: input.businessModel ?? null,
-        industryTemplate: input.industryTemplate ?? null,
-        revenue: input.revenue ?? null,
-        costOfGoods: input.costOfGoodsOrServices ?? null,
-        fixedCosts: input.fixedCosts ?? null,
-        variableCosts: input.variableCosts ?? null,
-        rent: input.rent ?? null,
-        payroll: input.salaryPayroll ?? null,
-        utilities: input.utilities ?? null,
-        deliveryCost: input.deliveryFulfilmentCost ?? null,
-        marketingSpend: input.marketingSpend ?? null,
-        discountAmount: input.discountAmount ?? null,
-        ...leakageColumns(input),
-        debtPayments: input.loanEmiDebtPayments ?? null,
-        totalDebtOutstanding: input.totalDebtOutstanding ?? null,
-        cashOnHand: input.cashOnHand ?? null,
-        receivables: input.receivables ?? null,
-        overdueReceivables: input.receivablesOverdue ?? null,
-        payables: input.payables ?? null,
-        overduePayables: input.payablesOverdue ?? null,
-        ownerWithdrawals: input.ownerWithdrawals ?? null,
-        inventoryCashLock: input.inventoryStockCashLock ?? null,
-        orderCount: input.orderCount ?? null,
-        customerCount: input.customerCount ?? null,
-        repeatCustomerCount: input.repeatCustomerCount ?? null,
-        b2bRevenue: input.b2bRevenue ?? null,
-        b2cRevenue: input.b2cRevenue ?? null,
-        notes: input.notes ?? null,
-        dataConfidenceScore: confidence.dataConfidenceScore,
-        missingCriticalData: confidence.missingCritical,
-      },
-    });
-
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_RECORDED,
-      actorId,
-      workspaceId,
-      entityType: "OwnerFinancialSnapshot",
-      entityId: created.id,
-      payload: { businessId, periodStart: input.periodStart, periodEnd: input.periodEnd },
-    }, tx);
-
-    return created;
-  });
+  const snapshot = await db.$transaction((tx: Prisma.TransactionClient) =>
+    createFinancialSnapshotInTx(tx, { businessId, workspaceId, input, currency: String(business.currency).toUpperCase(), confidence, audit: { actorId } })
+  );
 
   return snapshot;
+}
+
+/**
+ * The CURRENT (un-superseded) version of ONE exact period, on the caller's transaction. A write-path guard for integrations that
+ * must decide create-vs-amend under the per-period advisory lock — it is keyed by the exact period, so it never selects "the
+ * current evidence" (that is currentEffectiveFinancialSnapshotQuery's job).
+ */
+export async function findCurrentFinancialSnapshotForPeriodInTx(
+  tx: Prisma.TransactionClient,
+  scope: { workspaceId: string; businessId: string; periodStart: Date; periodEnd: Date },
+) {
+  return tx.ownerFinancialSnapshot.findFirst({
+    where: { workspaceId: scope.workspaceId, businessId: scope.businessId, periodStart: scope.periodStart, periodEnd: scope.periodEnd, supersededById: null },
+  });
+}
+
+/**
+ * Ids of current Finance versions whose period overlaps (but is not identical to) the given period — QuickBooks uses it so a
+ * calendar-month import never becomes "newer evidence" next to an owner-entered quarter, year-to-date or custom range.
+ */
+export async function listOverlappingCurrentFinancialSnapshotIdsInTx(
+  tx: Prisma.TransactionClient,
+  scope: { workspaceId: string; businessId: string; periodStart: Date; periodEnd: Date },
+): Promise<string[]> {
+  const rows = await tx.ownerFinancialSnapshot.findMany({
+    where: {
+      workspaceId: scope.workspaceId, businessId: scope.businessId, supersededById: null,
+      periodStart: { lte: scope.periodEnd }, periodEnd: { gte: scope.periodStart },
+      NOT: { periodStart: scope.periodStart, periodEnd: scope.periodEnd },
+    },
+    select: { id: true },
+  });
+  return rows.map((r: { id: string }) => r.id);
+}
+
+/**
+ * Which recent periods hold a current Finance version, and who authored it (QuickBooks vs the owner) — for the QuickBooks
+ * connection status. A per-period listing, unordered: it never answers "which snapshot is current" (that is the selector's job).
+ */
+export async function listFinancialSnapshotPeriodSources(workspaceId: string, businessId: string, since: Date) {
+  const rows = await db.ownerFinancialSnapshot.findMany({
+    where: { workspaceId, businessId, supersededById: null, periodStart: { gte: since } },
+    select: { id: true, periodStart: true, periodEnd: true },
+  });
+  const qbo = await qboSourcedFinancialSnapshotIds(workspaceId, businessId, rows.map((r: { id: string }) => r.id));
+  return rows.map((r: { id: string; periodStart: Date; periodEnd: Date }) => ({
+    periodStart: r.periodStart, periodEnd: r.periodEnd, source: qbo.has(r.id) ? ("QUICKBOOKS" as const) : ("MANUAL" as const),
+  }));
 }
 
 export async function getFinancialSnapshot(snapshotId: string, workspaceId: string) {
@@ -259,10 +338,13 @@ export async function listFinancialSnapshots(businessId: string, workspaceId: st
   // HISTORICAL LIST: every current (non-superseded) version, newest period first — amended snapshots
   // are visible by their new ID. Deterministic order (same tie-break as the current-effective selector);
   // "the current snapshot" is never taken from this list (currentEffectiveFinancialSnapshotQuery).
-  return db.ownerFinancialSnapshot.findMany({
+  const rows = await db.ownerFinancialSnapshot.findMany({
     where: { businessId, workspaceId, supersededById: null },
     orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
   });
+  // Where each current version came from: QuickBooks (a provenance row points at exactly this version) or the owner.
+  const qbo = await qboSourcedFinancialSnapshotIds(workspaceId, businessId, rows.map((r: { id: string }) => r.id));
+  return rows.map((r: { id: string }) => ({ ...r, source: qbo.has(r.id) ? ("QUICKBOOKS" as const) : ("MANUAL" as const) }));
 }
 
 /**
@@ -323,9 +405,27 @@ export async function amendFinancialSnapshot(
   actorId: string,
   workspaceId: string
 ): Promise<{ snapshot: Awaited<ReturnType<typeof db.ownerFinancialSnapshot.findFirst>>; previousSnapshotId: string }> {
-  const newId = randomUUID();
+  const amended = await db.$transaction((tx: Prisma.TransactionClient) =>
+    amendFinancialSnapshotInTx(tx, snapshotId, input, { actorId }, workspaceId),
+  );
+  return { snapshot: amended, previousSnapshotId: snapshotId };
+}
 
-  const amended = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+/**
+ * The transactional core of amendFinancialSnapshot (row lock, merge, contradiction check, new version, supersession, audit) on
+ * the CALLER's transaction client — extracted unchanged so integrations can amend a canonical snapshot and write their own
+ * provenance row atomically. Input must already be validated by financialSnapshotAmendSchema.
+ */
+export async function amendFinancialSnapshotInTx(
+  tx: Prisma.TransactionClient,
+  snapshotId: string,
+  input: FinancialSnapshotAmendInput,
+  actor: FinanceWriteActor,
+  workspaceId: string,
+) {
+  const newId = randomUUID();
+  const actorId = actor.actorId;
+  {
     // Lock the row — prevents concurrent amendments from branching the version chain
     const guard = await tx.$queryRaw<
       Array<{ id: string; version: number; superseded_by_id: string | null; workspace_id: string }>
@@ -485,7 +585,7 @@ export async function amendFinancialSnapshot(
         supersededById: null,
         amendmentReason: input.amendmentReason,
         changedFields: changedFields as unknown as object,
-        amendedByActorId: actorId,
+        amendedByActorId: actorId ?? null,
       },
     });
 
@@ -499,6 +599,7 @@ export async function amendFinancialSnapshot(
       {
         eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_AMENDED,
         actorId,
+        actorType: actor.actorType,
         workspaceId,
         entityType: "OwnerFinancialSnapshot",
         entityId: created.id,
@@ -522,7 +623,5 @@ export async function amendFinancialSnapshot(
     );
 
     return created;
-  });
-
-  return { snapshot: amended, previousSnapshotId: snapshotId };
+  }
 }

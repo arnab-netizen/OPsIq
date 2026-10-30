@@ -171,6 +171,9 @@ describe("[db] cross-domain acceptance-business isolation", () => {
     const { resolveOrCreateDomainBusiness } = await import(
       "../../../tests/production/helpers/domain-business"
     );
+    const { resetFixtureCapabilityPreflight } = await import(
+      "../../../tests/production/helpers/fixture-isolation"
+    );
     const cacheFile = join(
       process.cwd(),
       "production-test-results/evidence/domain-business-__idempotency_test__.json"
@@ -178,15 +181,26 @@ describe("[db] cross-domain acceptance-business isolation", () => {
     if (existsSync(cacheFile)) unlinkSync(cacheFile);
 
     let postCallCount = 0;
+    let capabilityProbeCount = 0;
     const fakeBusinessId = randomUUID();
     const fakePage = {
       request: {
+        // The helper now preflights fixture authority (ACCEPTANCE_FIXTURE_WRITE capability probe) and verifies
+        // the created business is absent from the ordinary owner list before returning its id.
+        get: async (url: string) => {
+          if (url === "/api/admin/acceptance-fixtures/capability") {
+            capabilityProbeCount++;
+            return { ok: () => true, status: () => 200, json: async () => ({ acceptanceFixtureAuthority: true }) };
+          }
+          return { ok: () => true, status: () => 200, json: async () => [] };
+        },
         post: async () => {
           postCallCount++;
           return { ok: () => true, status: () => 201, json: async () => ({ id: fakeBusinessId }) };
         },
       },
     } as unknown as Page;
+    resetFixtureCapabilityPreflight();
     const testDomain = "__idempotency_test__" as unknown as Parameters<typeof resolveOrCreateDomainBusiness>[2];
 
     try {
@@ -195,6 +209,7 @@ describe("[db] cross-domain acceptance-business isolation", () => {
       expect(first).toBe(fakeBusinessId);
       expect(second).toBe(fakeBusinessId);
       expect(postCallCount).toBe(1);
+      expect(capabilityProbeCount).toBe(1);
 
       const record = JSON.parse(readFileSync(cacheFile, "utf-8"));
       expect(record.businessId).toBe(fakeBusinessId);

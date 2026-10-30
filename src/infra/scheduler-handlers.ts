@@ -17,6 +17,7 @@ import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
+import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler } from "@/services/quickbooks/qbo-sync-scheduling";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
@@ -166,5 +167,7 @@ export function getProductionTaskHandlers(): Map<string, TaskHandler> {
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
     [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
     [TASK_NAME_RISK_REVIEW_SCAN, riskReviewScanHandler],
+    // QuickBooks Online V1 read-only synchronisation (see src/services/quickbooks/qbo-sync-scheduling.ts).
+    [TASK_NAME_QBO_SYNC, createQboSyncTaskHandler(() => ({ env: process.env }))],
   ]);
 }

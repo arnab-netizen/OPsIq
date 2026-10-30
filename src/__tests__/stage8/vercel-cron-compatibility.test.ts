@@ -59,6 +59,10 @@ vi.mock("@/services/scheduler/scheduler-producers", () => ({
   enqueueDueRiskReviewScanTasks,
 }));
 
+vi.mock("@/services/quickbooks/qbo-sync-scheduling", () => ({
+  enqueueDueQboSyncTasks: vi.fn().mockResolvedValue({ considered: 0, enqueued: 0 }),
+}));
+
 vi.mock("@/infra/observability", () => ({ captureError: vi.fn() }));
 
 const ROUTE_SRC = readFileSync(
