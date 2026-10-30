@@ -58,11 +58,10 @@ vi.mock("@/lib/db", () => ({
     _timeoutMs: number,
     fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
   ) => fn(await pool.connect()),
-  // F-PROD-STARTUP-COLDSTART second-mechanism forensic: startup-orchestrator.ts
-  // now imports this named export at module scope (to derive
-  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS) — a full module mock
-  // must provide every export the mocked module's callers use.
-  POOL_CONNECTION_TIMEOUT_MS: 90_000,
+  // F-PGBOUNCER-TXN-SAFETY: startup-orchestrator.ts derives both outer-race
+  // constants from this formula now (src/lib/db.ts) instead of the raw
+  // constant above directly — same reasoning, this mock must provide it too.
+  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
 }));
 
 vi.mock("@/services/startup-status", () => ({

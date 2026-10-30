@@ -287,9 +287,26 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
       const { DB_CHECK_STATEMENT_TIMEOUT_MS, DB_CHECK_TIMEOUT_MS, MIGRATION_READINESS_TIMEOUT_MS } = await import("@/infra/startup-orchestrator");
       const { SESSION_STATEMENT_TIMEOUT_MS, SESSION_QUERY_TIMEOUT_MS } = await import("@/services/auth");
       const { MIGRATION_QUERY_STATEMENT_TIMEOUT_MS } = await import("@/services/monitoring/migration-check");
-      const { POOL_CONNECTION_TIMEOUT_MS } = await import("@/lib/db");
+      const { POOL_CONNECTION_TIMEOUT_MS, CLIENT_SIDE_BACKSTOP_MARGIN_MS } = await import("@/lib/db");
 
-      const rawWorstCase = (statementTimeoutMs: number) => POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 3_000;
+      // F-PGBOUNCER-TXN-SAFETY: withRawStatementTimeout() now runs an
+      // explicit BEGIN/SET LOCAL/fn/COMMIT-or-ROLLBACK, with a client-side
+      // backstop on BOTH the main sequence and the ROLLBACK cleanup path
+      // (two backstops in the worst case) -- every outer race derived from
+      // this formula must account for both, or the documented "outer race
+      // always exceeds the inner bound" invariant this test exists to pin
+      // would silently go false again (as it did twice already this
+      // session, each time caught by this exact test).
+      //
+      // TypeScript review finding: this must recompute the bound from the
+      // raw constants directly, NOT by calling the production
+      // withRawStatementTimeoutWorstCaseMs() helper -- calling the same
+      // helper the production code calls would make this check tautological
+      // (it would pass even if that helper's own internal formula were
+      // wrong, since both sides of the comparison would be wrong the same
+      // way).
+      const rawWorstCase = (statementTimeoutMs: number) =>
+        POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS + 3_000;
 
       // checkDatabase(): now bounded by the pool's own connection-timeout,
       // not Prisma's maxWait/acquisition-queue.
