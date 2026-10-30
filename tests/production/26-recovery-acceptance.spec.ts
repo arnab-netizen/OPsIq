@@ -53,7 +53,7 @@
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { writeFileSync } from "fs";
-import { authenticateProductionOwner } from "./helpers/production-auth";
+import { newSharedAuthenticatedContext } from "./helpers/shared-auth";
 import {
   startEvidenceCollection,
   captureOnFailure,
@@ -61,10 +61,17 @@ import {
   finalizeEvidence,
   timedApiCall,
 } from "./helpers/evidence";
-import { runDomainDiagnosisAndAwaitResult } from "./helpers/domain-diagnosis";
 import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
 import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
+import { bindFixtureTarget, type FixtureBusinessTarget } from "./helpers/fixture-target";
+import {
+  saveFixtureSnapshot,
+  runFixtureDiagnosis,
+  assertFixtureNotOnOwnerDashboard,
+  readFixtureCycle,
+  driveFixtureActionLifecycle,
+} from "./helpers/fixture-domain-loop";
 
 const SPEC_NAME = "phase26-recovery";
 const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
@@ -73,6 +80,8 @@ test.describe("PROD-26 — Recovery Owner journey live production acceptance", (
   let context: BrowserContext;
   let page: Page;
   let acceptanceBusinessId = "";
+  let fx: FixtureBusinessTarget;
+  let snapshotId = "";
   let trinityBusinessId: string | null = null;
   let trinityFound = false;
   // Non-null only when this suite must not proceed -- distinguishes a real
@@ -81,11 +90,10 @@ test.describe("PROD-26 — Recovery Owner journey live production acceptance", (
   let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
-    page = await context.newPage();
+    // One login for the whole run (global-setup); this spec never logs in again. See helpers/shared-auth.ts.
+    ({ context, page } = await newSharedAuthenticatedContext(browser));
     watchPage(page);
     registerActionDialogHandler(page);
-    await authenticateProductionOwner(page);
     await startEvidenceCollection(context, page, SPEC_NAME);
 
     // Recovery gets its OWN dedicated acceptance business -- never the
@@ -93,6 +101,8 @@ test.describe("PROD-26 — Recovery Owner journey live production acceptance", (
     // See helpers/domain-business.ts's header for the root cause this fixes.
     try {
       acceptanceBusinessId = await resolveOrCreateDomainBusiness(context, page, "recovery");
+      // Created-and-hidden is not enough: bind the id so every mutation can only target THIS fixture.
+      fx = await bindFixtureTarget(context, page, "recovery", acceptanceBusinessId);
     } catch (e) {
       blockedUpstreamReason = `BLOCKED_SETUP: could not create Recovery's dedicated acceptance business: ${
         e instanceof Error ? e.message : String(e)
@@ -155,138 +165,70 @@ test.describe("PROD-26 — Recovery Owner journey live production acceptance", (
       }
       expect(typeof body.latestCycle.healthScore, "must carry a numeric health score").toBe("number");
       expect(body.latestCycle.summary?.length ?? 0, "cycle summary must be substantive, not a stub").toBeGreaterThan(10);
-      await page.goto(`/owner/recovery?businessId=${trinityBusinessId}`, { waitUntil: "networkidle" });
+      // READ-ONLY: select Trinity in the page's own business selector (client-side state only) -- the page does not
+      // read ?businessId=, so a query parameter would not show Trinity.
+      await page.goto("/owner/recovery", { waitUntil: "networkidle" });
+      await page.locator('select[name="businessSelector"]').selectOption(trinityBusinessId!);
+      await page.waitForLoadState("networkidle");
       await checkpointScreenshot(context, page, SPEC_NAME, "trinity-recovery-cycle");
     });
   }); // end Trinity Services (read-only)
 
-  // ─── Acceptance business: full Recovery closed loop (real UI mutations) ──
-  test.describe("Recovery closed loop (acceptance business)", () => {
+  // ─── Acceptance fixture: full Recovery closed loop (governed API, bound to the verified fixture) ──
+  //
+  // Production run #17 root cause: the previous version drove the ordinary Recovery UI at
+  // /owner/recovery?businessId=<fixture>. The page ignores that parameter and takes its business from the
+  // fixture-free owner list, so every UI save/diagnosis hit an ORDINARY business. Every mutation below goes through
+  // fixture-domain-loop.ts, which is refused unless it targets the bound fixture (or one of its own actions). The UI
+  // is read-only here.
+  test.describe("Recovery closed loop (acceptance fixture)", () => {
     test.describe.configure({ mode: "serial" });
 
-    test("26-03 — navigate to Recovery for the dedicated acceptance business", async () => {
-      await page.goto(`/owner/recovery?businessId=${acceptanceBusinessId}`, { waitUntil: "networkidle" });
-      await expect(page.locator('select[name="businessSelector"]')).toBeVisible();
+    test("26-03 — the fixture is addressable by its own id and is NOT offered by the ordinary Recovery UI (positive isolation)", async () => {
+      await assertFixtureNotOnOwnerDashboard(context, page, fx);
+      // Hidden from ordinary owners: the page's own selector must not list it.
+      await page.goto("/owner/recovery", { waitUntil: "networkidle" });
+      const select = page.locator('select[name="businessSelector"]');
+      if ((await select.count()) > 0) {
+        const values = await select.locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+        expect(values, "a hidden fixture must never appear in the ordinary owner business selector").not.toContain(acceptanceBusinessId);
+      }
     });
 
-    test("26-04 — real UI: add a metric snapshot with deliberately stressed synthetic inputs", async () => {
-      await page.getByRole("button", { name: "+ Add metric snapshot" }).click();
-      const today = new Date();
-      const periodEnd = today.toISOString().slice(0, 10);
-      const periodStart = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-        .toISOString()
-        .slice(0, 10);
-      await page.locator('input[name="periodStart"]').fill(periodStart);
-      await page.locator('input[name="periodEnd"]').fill(periodEnd);
-      // Deliberately stressed inputs -- weak repeat-customer rate (30%,
-      // below the WEAK_REPEAT_RATE threshold) and high delivery-cost
-      // leakage (12% of revenue), matching the hostile DB test's own
-      // failingPeriod1() (db-persistence.db.test.ts), confirmed to produce
-      // WEAK_REPEAT_RATE + DELIVERY_COST_LEAKAGE findings. Synthetic data
-      // on the dedicated acceptance business only, never Trinity.
-      await page.locator('input[name="revenue"]').fill("100000");
-      await page.locator('input[name="totalCosts"]').fill("95000");
-      await page.locator('input[name="orderCount"]').fill("1000");
-      await page.locator('input[name="newCustomers"]').fill("70");
-      await page.locator('input[name="repeatCustomers"]').fill("30");
-      await page.locator('input[name="deliveryCost"]').fill("12000");
-      await page.getByRole("button", { name: /Save snapshot/ }).click();
-      await page.waitForLoadState("networkidle");
-      await checkpointScreenshot(context, page, SPEC_NAME, "snapshot-saved");
+    test("26-04 — governed API: save a metric snapshot with deliberately stressed synthetic inputs on the fixture", async () => {
+      // Deliberately stressed inputs -- weak repeat-customer rate (30%, below the WEAK_REPEAT_RATE threshold) and high delivery-cost leakage (12% of revenue). Synthetic data on the bound fixture only.
+      const saved = await saveFixtureSnapshot(context, page, fx, {
+        revenue: 100000,
+        totalCosts: 95000,
+        orderCount: 1000,
+        newCustomers: 70,
+        repeatCustomers: 30,
+        deliveryCost: 12000,
+      });
+      snapshotId = saved.id;
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("26-05 — real UI: run a diagnosis cycle and see a visible cycle result (not merely a 200 response)", async () => {
-      await runDomainDiagnosisAndAwaitResult(
-        page,
-        `/api/owner/recovery/businesses/${acceptanceBusinessId}/cycles`,
-        "Run diagnosis cycle",
-        /Latest cycle|Findings \(/
-      );
-      await checkpointScreenshot(context, page, SPEC_NAME, "cycle-result");
+    test("26-05 — governed API: run a diagnosis cycle on the fixture and see a real result on its own dashboard", async () => {
+      const cycle = await runFixtureDiagnosis(context, page, fx, snapshotId);
+      const stored = await readFixtureCycle(context, page, fx, String(cycle.id));
+      expect(stored.id, "the fixture's own cycle must read back by its id").toBe(cycle.id);
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("26-06 — action lifecycle: Assign -> Start -> Complete -> Verify outcome, each step's owner-visible status confirmed", async () => {
-      const actionCards = page.locator("section", { hasText: "Recovery actions" }).locator(".border.rounded.p-3");
-      const count = await actionCards.count();
-      test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this diagnosis produced zero findings/actions for the synthetic snapshot -- not a defect, but not exercisable this run.");
-      const card = actionCards.first();
-
-      // Capture this action's own id AND its baseline/target/direction
-      // before any mutation -- these determine the after-value the verify
-      // step below needs to deterministically reach target, and (once PR
-      // #344's reassessment fix lands) completing the action will create a
-      // new cycle whose fresh "proposed" actions become the dashboard's
-      // latestCycle, so verifying by exact id is the forward-compatible
-      // convention already used by every other domain spec.
-      const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/recovery/dashboard", () =>
-        page.request.get(`/api/owner/recovery/dashboard?businessId=${acceptanceBusinessId}`)
-      );
-      const firstAction = (await dashboardBefore.json()).latestCycle.actions[0];
-      const actionId: string = firstAction.id;
-      const { baselineValue, targetValue, direction } = firstAction as {
-        baselineValue: number;
-        targetValue: number | null;
-        direction: "up" | "down";
-      };
-
-      await card.getByRole("button", { name: "Assign" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(card).toContainText("assigned");
-
-      await card.getByRole("button", { name: "Start" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(card).toContainText("in_progress");
-
-      await card.getByRole("button", { name: "Complete" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(async () => {
-        const res = await timedApiCall(context, "GET", "/api/owner/recovery/actions/:actionId", () =>
-          page.request.get(`/api/owner/recovery/actions/${actionId}`)
-        );
-        expect(res.status()).toBe(200);
-        expect((await res.json()).status).toBe("completed");
-      }).toPass({ timeout: 15000 });
-      await checkpointScreenshot(context, page, SPEC_NAME, "action-completed");
-
-      // Verify directly against the API rather than the UI's "Verify
-      // outcome" prompt -- Recovery's verify body is just {afterValue}
-      // (baseline/target/direction already live on the action row), so an
-      // explicit after-value computed from this action's own target
-      // deterministically reaches it regardless of which finding produced
-      // the first action, unlike relying on the shared dialog handler's
-      // fixed "50" (tuned for other domains' beforeValue=100/down-direction
-      // shape, not guaranteed to reach an "up"-direction target here).
-      const target = targetValue ?? baselineValue;
-      const afterValue = direction === "up" ? target + 1 : target - 1;
-      const verifyRes = await timedApiCall(context, "POST", "/api/owner/recovery/actions/:actionId/verify", () =>
-        page.request.post(`/api/owner/recovery/actions/${actionId}/verify`, {
-          data: { afterValue },
-        })
-      );
-      expect(verifyRes.ok(), `Verify outcome request failed: ${verifyRes.status()}`).toBe(true);
-      const verifyBody = await verifyRes.json();
-      expect(verifyBody.result?.reachedTarget, `expected afterValue ${afterValue} to reach target ${target}`).toBe(true);
-
-      const verified = await timedApiCall(context, "GET", "/api/owner/recovery/actions/:actionId", () =>
-        page.request.get(`/api/owner/recovery/actions/${actionId}`)
-      );
-      const verifiedBody = await verified.json();
-      expect(verifiedBody.status).toBe("completed");
-      expect(
-        ["verified_improved", "verified_not_improved", "inconclusive", "disputed"]
-      ).toContain(verifiedBody.verifications?.[0]?.status);
-      await checkpointScreenshot(context, page, SPEC_NAME, "action-verified");
+    test("26-06 — action lifecycle on the fixture: Assign -> Start -> Complete -> Verify outcome, each step read back by the action's own id", async () => {
+      const outcome = await driveFixtureActionLifecycle(context, page, fx);
+      test.skip(outcome.skippedReason !== null, outcome.skippedReason ?? undefined);
       expect(fatalErrors()).toHaveLength(0);
     });
-  }); // end Recovery closed loop (acceptance business)
+  }); // end Recovery closed loop (acceptance fixture)
 
   // ─── Cross-cutting reporting: always runs, regardless of which section
   // above failed -- deliberately outside either serial block. ──
 
   test("26-07 — no 5xx responses were observed anywhere in this journey", () => {
     expect(networkFailures).toEqual([]);
+    expect(fx?.serverErrors ?? []).toEqual([]);
   });
 
   test("26-08 — record findings for the acceptance report", () => {

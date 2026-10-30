@@ -413,7 +413,7 @@ jobs:
     needs: classify
     if: needs.classify.outputs.db_required == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     services:
       postgres:
@@ -499,6 +499,21 @@ jobs:
           export DATABASE_URL='postgresql://opsiq_schema_owner:pw@localhost:5432/opsiq_erasure_test'
           npx prisma migrate deploy
           TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/privacy-erasure/qbo-erasure.db.test.ts
+
+      - name: Runtime least-privilege role DB proof (opsiq_app as the runtime login, non-superuser schema owner)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE opsiq_runtime_role_test OWNER opsiq_schema_owner"
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'opsiq_privacy_eraser') THEN GRANT opsiq_privacy_eraser TO opsiq_schema_owner WITH ADMIN OPTION; END IF; END \$\$"
+          export DATABASE_URL='postgresql://opsiq_schema_owner:pw@localhost:5432/opsiq_runtime_role_test'
+          npx prisma migrate deploy
+          # The suite's global setup connects AS opsiq_app before any test runs, so the role must already exist with a throwaway password: create it with the governed tool, then set the password.
+          OWNER_DATABASE_URL="$DATABASE_URL" npx tsx scripts/db/opsiq-role-cutover.ts apply --target ci
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE opsiq_app PASSWORD 'pw'"
+          export ROLE_TEST_OWNER_DATABASE_URL="$DATABASE_URL"
+          export DATABASE_URL='postgresql://opsiq_app:pw@localhost:5432/opsiq_runtime_role_test'
+          TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/privacy-erasure/runtime-role.db.test.ts
 
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing
