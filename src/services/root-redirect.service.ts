@@ -44,7 +44,7 @@ import { db } from "@/lib/db";
 import { validateSessionTokenInTransaction, runPolicyContextReads, getSessionCookieName } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import { getFirstRunContext } from "@/services/owner-first-run/first-run.service";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 /**
  * Acquisition budget for the one root-specific transaction below. Deliberately a direct
@@ -212,6 +212,19 @@ async function resolveAuthenticatedRootDecisionUnbounded(
       const href = (await getFirstRunContext(membership.workspaceId, undefined, tx)).loginHref;
       return { kind: "redirect" as const, href };
     },
-    { maxWait: ROOT_AUTH_MAX_WAIT_MS, timeout: ROOT_AUTH_TX_TIMEOUT_MS }
+    {
+      maxWait: ROOT_AUTH_MAX_WAIT_MS,
+      timeout: ROOT_AUTH_TX_TIMEOUT_MS,
+      // santa-loop review finding (rounds 2 and 3, two independent reviewers): under the default
+      // READ COMMITTED isolation, each statement above takes its OWN snapshot. The membership
+      // lookup inside runPolicyContextReads (proving ownerHome) and the second, separate
+      // membership lookup above (resolving which workspace to compute the owner href for) are two
+      // such snapshots -- a membership deactivated/changed in the sub-millisecond window between
+      // them could let the second lookup resolve a DIFFERENT workspace than the one ownerHome was
+      // actually proven for. REPEATABLE READ gives the whole read-only decision one consistent
+      // snapshot instead, closing that window; it cannot produce a serialization failure here
+      // (nothing in this transaction writes).
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+    }
   );
 }

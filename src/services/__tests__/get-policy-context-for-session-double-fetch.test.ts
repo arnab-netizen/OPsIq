@@ -35,17 +35,6 @@ vi.mock("next/headers", () => ({
 }));
 
 const sessionQueryMock = vi.hoisted(() => vi.fn());
-// F-AUTH-ROOT-FAST-FAIL round 2: the bounded (statementTimeoutMs) path now
-// runs as RAW SQL through withRawStatementTimeout() -- the same primitive
-// getSession() itself uses -- not through Prisma's withStatementTimeout()
-// (round 1 used that, but database review correctly rejected it: Prisma's
-// interactive $transaction() races connection ACQUISITION against its own
-// maxWait independent of the pool's real connectionTimeoutMillis, the exact
-// P2028-under-ordinary-contention class this codebase already diagnosed and
-// moved getSession() away from). This mock dispatches raw query text to the
-// right fixture, mirroring get-session-db-resilience.test.ts's style.
-const policyRawQueryMock = vi.hoisted(() => vi.fn());
-const withRawStatementTimeoutSpy = vi.hoisted(() => vi.fn());
 
 const workspaceMembershipFindFirst = vi.hoisted(() => vi.fn());
 const workspaceMembershipFindUnique = vi.hoisted(() => vi.fn());
@@ -62,21 +51,18 @@ vi.mock("@/lib/db", () => ({
   getDbInstance: vi.fn().mockResolvedValue({}),
   getRawPool: vi.fn().mockResolvedValue({
     connect: vi.fn().mockResolvedValue({
-      query: (text: string, values?: unknown[]) =>
-        text.includes("FROM sessions") ? sessionQueryMock(text, values) : policyRawQueryMock(text, values),
+      query: (text: string, values?: unknown[]) => sessionQueryMock(text, values),
     }),
   }),
   withRawStatementTimeout: async (
     pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
-    timeoutMs: number,
-    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown,
-    label: string,
-    mainBackstopMarginMs?: number
-  ) => {
-    withRawStatementTimeoutSpy(timeoutMs, label, mainBackstopMarginMs);
-    return fn(await pool.connect());
-  },
-  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number, mainBackstopMarginMs = 5_000) => 90_000 + statementTimeoutMs + mainBackstopMarginMs + 5_000,
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
+  // santa-loop review finding (round 3): withRawStatementTimeoutWorstCaseMs() dropped its
+  // mainBackstopMarginMs parameter (dead -- no production caller) -- this mock's signature
+  // follows.
+  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
   CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
 }));
 
@@ -109,23 +95,6 @@ function mockHealthyPolicyReads() {
   workspaceMembershipFindUnique.mockResolvedValue({ isActive: true, role: "ADMIN_OR_PORTFOLIO_MANAGER" });
   userRoleAssignmentFindMany.mockResolvedValue([{ role: "OWNER", scope: "workspace", scopeId: WORKSPACE_ID }]);
   engagementMembershipFindMany.mockResolvedValue([]);
-
-  // Raw-SQL equivalents for the opt-in statementTimeoutMs path (runPolicyContextReadsRaw).
-  policyRawQueryMock.mockImplementation(async (text: string) => {
-    if (text.includes("SELECT workspace_id FROM workspace_memberships")) {
-      return { rows: [{ workspace_id: WORKSPACE_ID }] };
-    }
-    if (text.includes("SELECT is_active, role FROM workspace_memberships")) {
-      return { rows: [{ is_active: true, role: "ADMIN_OR_PORTFOLIO_MANAGER" }] };
-    }
-    if (text.includes("FROM user_role_assignments")) {
-      return { rows: [{ role: "OWNER", scope: "workspace", scope_id: WORKSPACE_ID }] };
-    }
-    if (text.includes("FROM engagement_memberships")) {
-      return { rows: [] };
-    }
-    throw new Error(`Unexpected raw policy query in test: ${text}`);
-  });
 }
 
 beforeEach(() => {

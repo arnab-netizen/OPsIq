@@ -679,8 +679,8 @@ export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
 /**
  * Derives the real worst-case bound of a withRawStatementTimeout() call for
  * a given statementTimeoutMs, for every caller's own outer JS-side
- * defensive race (SESSION_QUERY_TIMEOUT_MS / POLICY_CONTEXT_QUERY_TIMEOUT_MS
- * in auth.ts, DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
+ * defensive race (SESSION_QUERY_TIMEOUT_MS in auth.ts,
+ * DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
  * startup-orchestrator.ts) to derive from -- a single shared formula
  * instead of each call site hand-deriving its own and silently drifting
  * out of sync with this function's real behavior, which is exactly what
@@ -689,22 +689,18 @@ export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
  * COMMIT sequence, and -- only on the error path -- once more on the
  * ROLLBACK cleanup attempt.
  *
- * F-AUTH-ROOT-FAST-FAIL (database-review finding, round 3): the optional
- * `mainBackstopMarginMs` is how much slack beyond statementTimeoutMs the
- * WHOLE BEGIN/SET LOCAL/fn/COMMIT sequence gets before the client gives up
- * on a dead connection -- defaults to CLIENT_SIDE_BACKSTOP_MARGIN_MS, sized
- * for withRawStatementTimeout()'s own documented single-statement
- * assumption (see its doc comment). A caller whose `fn` issues SEVERAL
- * sequential statements over the one checked-out connection needs a
- * correspondingly larger margin, or a merely slow-but-healthy
- * (never actually hung) sequence can trip the backstop and have its
- * connection needlessly discarded. Optional and backward-compatible: every
- * OTHER existing caller (getSession(), claimStartup(), checkDatabase(),
- * checkMigrationReadiness(), the public-admission read) omits this and
- * keeps its exact prior behavior.
+ * santa-loop review finding (round 3): a `mainBackstopMarginMs` parameter
+ * used to live here, added for a multi-statement caller (the authenticated
+ * root route's OLD raw-SQL policy path) that needed more slack than the
+ * single-statement default assumes. That caller was deleted (auth.ts) once
+ * the root route moved to a single Prisma transaction instead of
+ * withRawStatementTimeout() for policy resolution, leaving this parameter
+ * with zero remaining callers across every production call site (getSession,
+ * claimStartup, checkDatabase, checkMigrationReadiness, the public-admission
+ * read) -- removed as dead code rather than kept untested.
  */
-export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number, mainBackstopMarginMs: number = CLIENT_SIDE_BACKSTOP_MARGIN_MS): number {
-  return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + mainBackstopMarginMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
+export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number): number {
+  return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
 }
 
 export class ClientSideExecutionTimeoutError extends Error {
@@ -763,32 +759,18 @@ export async function withRawStatementTimeout<T>(
   pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
   timeoutMs: number,
   fn: (client: RawQueryClient) => Promise<T>,
-  label = "unlabeled",
-  mainBackstopMarginMs: number = CLIENT_SIDE_BACKSTOP_MARGIN_MS
+  label = "unlabeled"
 ): Promise<T> {
   const safeTimeoutMs = Math.trunc(timeoutMs);
   if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
     throw new Error(`withRawStatementTimeout: timeoutMs must be a positive finite number, got ${timeoutMs}`);
-  }
-  // santa-loop review finding (round 2): timeoutMs was validated but this
-  // sibling parameter was not -- a NaN or negative value here would make
-  // the main backstop fire almost immediately (mainBackstopMs below), a
-  // silent, hard-to-diagnose failure mode for whichever caller passed it.
-  const safeMainBackstopMarginMs = Math.trunc(mainBackstopMarginMs);
-  if (!Number.isFinite(safeMainBackstopMarginMs) || safeMainBackstopMarginMs <= 0) {
-    throw new Error(`withRawStatementTimeout: mainBackstopMarginMs must be a positive finite number, got ${mainBackstopMarginMs}`);
   }
 
   const acquireStart = Date.now();
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
-  // F-AUTH-ROOT-FAST-FAIL (database-review finding, round 3): see
-  // withRawStatementTimeoutWorstCaseMs()'s doc comment -- mainBackstopMarginMs
-  // defaults to CLIENT_SIDE_BACKSTOP_MARGIN_MS (every existing caller's exact
-  // prior behavior, unchanged) but lets a multi-statement `fn` ask for more
-  // slack than the single-statement default assumes.
-  const mainBackstopMs = safeTimeoutMs + safeMainBackstopMarginMs;
+  const mainBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
   const normalPath = (async () => {
     await client.query("BEGIN");
     await client.query(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
@@ -800,22 +782,10 @@ export async function withRawStatementTimeout<T>(
     // the SERVER-side backend can stay idle-in-transaction indefinitely,
     // holding whatever locks `fn` has taken (a row lock in claimStartup's
     // case) until TCP keepalive or PgBouncer notices -- a real stall risk
-    // for any later caller that needs the same row/table.
-    //
-    // santa-loop review finding (round 2): this is deliberately
-    // CLIENT_SIDE_BACKSTOP_MARGIN_MS (the single-statement default), NOT
-    // mainBackstopMs/safeMainBackstopMarginMs -- it bounds IDLE time
-    // between statements (e.g. a stalled PgBouncer link), not the
-    // cumulative EXECUTION time of a multi-statement `fn`, so it must not
-    // scale with a caller's enlarged main-backstop margin. For a caller
-    // using the default margin, the server tears down at essentially the
-    // same time the client gives up, as originally intended. For a
-    // multi-statement caller with a LARGER mainBackstopMarginMs, this is
-    // correspondingly SHORTER than that caller's own main backstop -- safe (strictly
-    // tighter, never looser: the server can only tear down an idle
-    // connection sooner than the client gives up, never later, so this can
-    // never mask a hang), just no longer "at essentially the same time".
-    await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS}`);
+    // for any later caller that needs the same row/table. Set to the same
+    // margin as the main client-side backstop below, so the server tears
+    // down at essentially the same time the client gives up.
+    await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${mainBackstopMs}`);
     const result = await fn(client);
     const commitResult = await client.query("COMMIT");
     // Database review finding (F-PGBOUNCER-TXN-SAFETY): if the transaction

@@ -218,14 +218,17 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
 }
 
 /**
- * The four reads below run as plain Prisma ORM calls with NO server-side statement_timeout at all
- * -- unlike getSession()'s own raw-SQL read. getPolicyContextForSession() and every other existing
- * caller (getPolicyContext, and the authenticated-root single transaction's own TransactionClient
- * below) runs through exactly this function, with its EXACT pre-existing behavior (santa-loop
- * review finding: a now-removed `options.statementTimeoutMs` opt-in bounded alternative,
- * runPolicyContextReadsRaw(), was added for the root route's OLD multi-domain implementation and
- * had no other caller left once the root route moved to the single-transaction path below --
- * deleted as dead code rather than kept untested).
+ * The four reads below run as plain Prisma ORM calls with NO statement_timeout of their own --
+ * unlike getSession()'s own raw-SQL read. Any bound comes only from whatever `client` the caller
+ * passes: getPolicyContextForSession() passes the plain `db` singleton (so getPolicyContext() and
+ * every other caller through it stays genuinely unbounded, its EXACT pre-existing behavior --
+ * santa-loop review finding: a now-removed `options.statementTimeoutMs` opt-in bounded
+ * alternative, runPolicyContextReadsRaw(), was added for the root route's OLD multi-domain
+ * implementation and had no other caller left once the root route moved to the single-transaction
+ * path below -- deleted as dead code rather than kept untested); the authenticated-root single
+ * transaction (root-redirect.service.ts) passes its own TransactionClient instead, which DOES run
+ * these reads under its 2s `SET LOCAL statement_timeout` -- a bound this function neither knows
+ * about nor sets itself.
  *
  * F-AUTH-ROOT-SINGLE-TX: exported so the authenticated-root single transaction
  * (root-redirect.service.ts) can reuse this EXACT canonical policy logic through its own
