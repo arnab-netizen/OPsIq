@@ -6,19 +6,28 @@
  *   R2_ENDPOINT=... R2_BUCKET=... \
  *   AWS_ACCESS_KEY_ID=<a READ-ONLY credential> AWS_SECRET_ACCESS_KEY=<...> \
  *   ERASURE_LEDGER_SIGNING_KEY=<the same key append-erasure-ledger.ts signs with> \
- *     npx tsx scripts/privacy/verify-erasure-ledger.ts [--backup-timestamp <ISO-8601>]
+ *     npx tsx scripts/privacy/verify-erasure-ledger.ts [--backup-timestamp <ISO-8601>] [--expect-erasure-request <uuid>]
  *
  * Prints `ERASURE_LEDGER_STATUS=VALID|INVALID|UNAVAILABLE` (suitable for
  * --erasure-ledger-status on scripts/privacy/qbo-erasure.ts, gating GLOBAL_SECURE_DELETE), and,
  * if --backup-timestamp is given, additionally prints `RESTORE_PROMOTION=PROMOTABLE|BLOCKED`
  * with the reason and every pending/unreconciled erasure. Exits non-zero on anything but
  * VALID (and, when a backup timestamp was supplied, PROMOTABLE too).
+ *
+ * --expect-erasure-request <uuid>: closes a gap a hostile review found -- a chain can be
+ * perfectly VALID (untampered) while still being INCOMPLETE, if an operator simply forgot to run
+ * append-erasure-ledger.ts after a real erasure. Pass the erasure's own request id (already
+ * printed by qbo-erasure.ts execute) to additionally require that SPECIFIC erasure be present in
+ * the chain, not just that the chain as a whole validates. Without this flag, ERASURE_LEDGER_STATUS
+ * only proves the existing chain is untampered -- it does NOT prove any particular erasure was
+ * recorded in it. The runbook's provisioning procedure should always pass this flag for a
+ * just-completed erasure before trusting --erasure-ledger-status VALID for it.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { reconcileRestoredBackup, validateLedgerChain, type ErasureLedgerRecord } from "../../src/services/privacy-erasure/erasure-ledger";
+import { chainRecordsErasure, reconcileRestoredBackup, validateLedgerChain, type ErasureLedgerRecord } from "../../src/services/privacy-erasure/erasure-ledger";
 
 const PREFIX = "erasure-ledger/";
 
@@ -90,6 +99,16 @@ async function main() {
     if (!validation.valid) {
       process.exitCode = 1;
       return;
+    }
+
+    if (opts["expect-erasure-request"]) {
+      const present = chainRecordsErasure(records, opts["expect-erasure-request"]);
+      console.log(`EXPECTED_ERASURE_PRESENT=${present ? "YES" : "NO"}`);
+      if (!present) {
+        console.error(`erasure request ${opts["expect-erasure-request"]} was not found in the ledger -- the chain is untampered but INCOMPLETE for this specific erasure; append it with append-erasure-ledger.ts before trusting ERASURE_LEDGER_STATUS=VALID for it`);
+        process.exitCode = 1;
+        return;
+      }
     }
 
     if (opts["backup-timestamp"]) {

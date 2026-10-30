@@ -318,6 +318,18 @@ governance infrastructure, not a recovery point. Two new tools, neither touching
   above) and, given `--backup-timestamp`, `RESTORE_PROMOTION=PROMOTABLE|BLOCKED` with every
   pending/unreconciled erasure named.
 
+**Honest gap found and closed: VALID is not the same as COMPLETE.** A chain can be perfectly
+untampered (`ERASURE_LEDGER_STATUS=VALID`) while still missing the one record that matters, if an
+operator simply forgets to run `append-erasure-ledger.ts` after a real erasure —
+`validateLedgerChain` has no way to detect an omission, only tampering. `chainRecordsErasure`
+(`erasure-ledger.ts`) plus a new `--expect-erasure-request <uuid>` flag on
+`verify-erasure-ledger.ts` closes this: given the erasure's own request id (already printed by
+`qbo-erasure.ts execute`), the verifier additionally confirms that SPECIFIC erasure is present
+before the operator should trust `VALID` for it. This remains a procedural reliance, not an
+automatic one — this closure does not wire the ledger append into `qbo-erasure.service.ts`'s own
+transaction (see the scope note above); the runbook's provisioning procedure must always pass
+this flag for a just-completed erasure.
+
 **Honest limitation on credential separation, now layered with a preventive control:**
 Cloudflare R2 API tokens are bucket-scoped, not prefix-scoped (Section 1). `backup-write`'s token
 could, in principle, be used to write into `erasure-ledger/` if it shares a bucket with

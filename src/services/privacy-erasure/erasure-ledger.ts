@@ -178,6 +178,21 @@ export function validateLedgerChain(records: readonly ErasureLedgerRecord[], sig
   return { valid: issues.length === 0, issues };
 }
 
+/**
+ * Closes a gap this closure's own review found: a chain can be perfectly VALID (no tampering)
+ * while still being INCOMPLETE -- an operator who forgets to run append-erasure-ledger.ts after
+ * a real erasure leaves the existing chain untouched and genuinely valid, so validateLedgerChain
+ * alone would never catch the omission, and GLOBAL_SECURE_DELETE_LEDGER_GATED could then be
+ * satisfied for an erasure that was never actually recorded. Callers that just completed a
+ * specific erasure (identified by its own erasureRequestId, already known from the execute
+ * command's own output -- not the ledger's separately-generated eventId) should pass it here
+ * alongside the validated chain before treating the ledger as sufficient evidence for THAT
+ * erasure specifically.
+ */
+export function chainRecordsErasure(records: readonly ErasureLedgerRecord[], erasureRequestId: string): boolean {
+  return records.some((r) => r.erasureRequestId === erasureRequestId);
+}
+
 export type RestorePromotionStatus = "PROMOTABLE" | "BLOCKED";
 
 export interface RestoreReconciliationResult {

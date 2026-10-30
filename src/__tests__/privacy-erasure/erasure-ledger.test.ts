@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildNextLedgerRecord,
+  chainRecordsErasure,
   computeRecordHash,
   reconcileRestoredBackup,
   signRecordHash,
@@ -260,5 +261,24 @@ describe("signRecordHash / low-level HMAC helper", () => {
     expect(h).toMatch(/^[0-9a-f]{64}$/);
     expect(signRecordHash("abc123", KEY)).toBe(h);
     expect(signRecordHash("abc123", WRONG_KEY)).not.toBe(h);
+  });
+});
+
+describe("chainRecordsErasure: closes the 'operator forgot to append' gap", () => {
+  it("returns true only when a record with the exact erasureRequestId is present", () => {
+    const c = chain(["2026-01-01T00:00:00Z", "2026-01-05T00:00:00Z"]); // erasureRequestId values "req-0", "req-1" (see the `record` helper above)
+    expect(chainRecordsErasure(c, "req-0")).toBe(true);
+    expect(chainRecordsErasure(c, "req-1")).toBe(true);
+  });
+
+  it("returns false for an erasure the chain never recorded -- a VALID chain is not automatically COMPLETE for a specific just-finished erasure", () => {
+    const c = chain(["2026-01-01T00:00:00Z"]); // only "req-0" exists
+    expect(chainRecordsErasure(c, "req-99-never-appended")).toBe(false);
+    // The chain itself is still perfectly valid -- the gap is completeness, not tampering.
+    expect(validateLedgerChain(c, KEY).valid).toBe(true);
+  });
+
+  it("returns false on an empty chain", () => {
+    expect(chainRecordsErasure([], "any-request-id")).toBe(false);
   });
 });
