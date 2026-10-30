@@ -1,0 +1,21 @@
+{
+  "_comment": "Bucket-Lock-as-code CANDIDATE definition (Section 15 of the R2 backup availability/erasure closure). Adopting a Bucket Lock at all is BUCKET_LOCK_DECISION=OWNER_POLICY_DECISION_REQUIRED (docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md section 3) -- this closure does not decide that question, and does not reverse R2_BACKUP_RUNBOOK.md's prior BUCKET_LOCK_DECISION=DO_NOT_USE, which remains the status quo. This file is the 'maximum protection' candidate an owner may choose to use if they decide to adopt a lock; it is NOT live-applied by any script or workflow in this repository, and copying it into Cloudflare is itself the owner's decision, not an action this repo's code takes. scripts/verify-r2-bucket-lock-config.ts checks a live configuration against whatever this file says, run manually and offline with the owner's own Cloudflare API token -- never from CI, never with a credential stored in any GitHub secret.",
+  "_decision_basis": "docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md section 3 (see the residual gate-bypass-exposure tradeoff table before choosing to apply this)",
+  "rules": [
+    {
+      "id": "backups-ransomware-protection",
+      "enabled": true,
+      "prefix": "backups/",
+      "condition": {
+        "type": "Age",
+        "maxAgeSeconds": 3024000
+      }
+    }
+  ],
+  "_notes": [
+    "Prefix is scoped to backups/ only -- a future erasure-ledger/ prefix (see closure doc section 10/14) must NOT be covered by this rule, since the ledger is append-only infrastructure, not a recovery point subject to the same retention duration decision.",
+    "3024000 seconds = 35 days, matching the existing RETENTION_DAYS=35 convention used for the GitHub-artifact backup domain and this bucket's own planned lifecycle rule (R2_BACKUP_RUNBOOK.md step 4).",
+    "This rule, once configured, applies to every object already under backups/ at the time it is enabled as well as every object created after -- per Cloudflare's own Bucket Lock documentation.",
+    "Removing or editing this rule requires a Cloudflare API token with bucket-configuration-edit permission (Admin Read & Write / Workers R2 Storage Write), which must never be stored in backup-write or backup-recovery -- see WRITER_CAN_EDIT_BUCKET_LOCK=NO in the closure doc."
+  ]
+}

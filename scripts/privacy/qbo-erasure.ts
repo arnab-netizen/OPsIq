@@ -16,11 +16,12 @@
  */
 import { Client } from "pg";
 import { readFileSync } from "node:fs";
-import { evaluateGlobalSecureDelete, attestationsFromOptions, neonWindowFromOptions, parseNeonInventory } from "../../src/services/privacy-erasure/deletion-domains";
+import { evaluateGlobalSecureDelete, attestationsFromOptions, neonWindowFromOptions, parseNeonInventory, r2BackupsStatusFromOptions } from "../../src/services/privacy-erasure/deletion-domains";
 function printGlobal(opts: Record<string, string>, db: string, executedAt: Date): string {
   const g = evaluateGlobalSecureDelete({ databaseVerification: db as "PASS" | "FAIL", executedAt, attestations: attestationsFromOptions(opts), neonHistoryWindowMs: neonWindowFromOptions(opts),
     neonInventory: opts["neon-inventory"] ? parseNeonInventory(readFileSync(opts["neon-inventory"], "utf8")) : undefined,
-    dataFirstImportedAt: opts["data-first-imported-at"] ? new Date(opts["data-first-imported-at"]) : undefined });
+    dataFirstImportedAt: opts["data-first-imported-at"] ? new Date(opts["data-first-imported-at"]) : undefined,
+    r2BackupsStatus: r2BackupsStatusFromOptions(opts) });
   console.log(`DATABASE_ERASURE=${g.databaseErasure}`);
   console.log(`GLOBAL_SECURE_DELETE=${g.globalSecureDelete}`);
   console.log(`PENDING_DELETION_DOMAINS=${g.pendingDomains.join(",") || "none"}`);
@@ -78,6 +79,11 @@ async function main() {
       return out({ command: cmd, requestId: opts.request, status: "APPROVED" });
     }
     if (cmd === "execute") {
+      // Validate --r2-backups-status (like --request/--confirm above, via need()) BEFORE the
+      // real erasure mutation below, not only when printGlobal is reached afterward -- a
+      // malformed value must fail fast, not crash the process only after the DB has already
+      // been mutated (database review finding, R2 availability/erasure closure).
+      r2BackupsStatusFromOptions(opts);
       let revoke: RevokeHook | undefined;
       if (opts["actor-user-id"]) {
         // The ordinary disconnect path (revoke at Intuit, drop tokens, stop processing) uses the application's own data client; point it at

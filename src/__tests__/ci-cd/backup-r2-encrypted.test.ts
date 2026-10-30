@@ -15,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, chmodSync, existsSync, readFileSync, readdirSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { createHmac } from "node:crypto";
 
 const BACKUP = resolve(process.cwd(), "scripts/backup-database-r2.sh");
 const RESTORE = resolve(process.cwd(), "scripts/restore-database-r2.sh");
@@ -175,6 +176,9 @@ const baseBackupEnv = {
   R2_BUCKET: "opsiq-production-backups",
   AWS_ACCESS_KEY_ID: "fake-key-id",
   AWS_SECRET_ACCESS_KEY: "fake-secret",
+  // A fake manifest-signing key, deliberately distinct from the R2 credential above -- this test
+  // fixture is NOT a real secret and is never reused as a real MANIFEST_SIGNING_KEY anywhere.
+  MANIFEST_SIGNING_KEY: "fake-manifest-signing-key-at-least-32-chars-long-for-tests",
 };
 
 function snapshotLeakedWorkdirs(): Set<string> {
@@ -252,6 +256,18 @@ describe("backup-database-r2.sh: pipeline-stage failures never reach upload", ()
 
   it("9. missing R2 credentials blocks before pg_dump even runs", () => {
     const r = run(BACKUP, { ...omit(baseBackupEnv, "AWS_ACCESS_KEY_ID"), FAKE_PSQL_OUT: "0" } as typeof baseBackupEnv);
+    expect(r.status).not.toBe(0);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  it("9c. missing MANIFEST_SIGNING_KEY blocks before pg_dump even runs", () => {
+    const r = run(BACKUP, { ...omit(baseBackupEnv, "MANIFEST_SIGNING_KEY"), FAKE_PSQL_OUT: "0" } as typeof baseBackupEnv);
+    expect(r.status).not.toBe(0);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  it("9d. a too-short MANIFEST_SIGNING_KEY is refused as a weak key before pg_dump runs", () => {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", MANIFEST_SIGNING_KEY: "short" });
     expect(r.status).not.toBe(0);
     expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
   });
@@ -415,7 +431,9 @@ describe("backup-database-r2.sh: manifest contains no secrets or customer data (
     const manifestBlockMatch = BACKUP_SCRIPT_SRC.match(/cat > "\$MANIFEST_FILE" <<EOF([\s\S]*?)EOF/);
     expect(manifestBlockMatch).not.toBeNull();
     const manifestBlock = manifestBlockMatch![1];
-    expect(manifestBlock).not.toMatch(/DATABASE_URL|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AGE_RECIPIENT|PASSWORD/);
+    expect(manifestBlock).not.toMatch(/DATABASE_URL|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AGE_RECIPIENT|PASSWORD|MANIFEST_SIGNING_KEY/);
+    // The manifest must reference the *computed signature*, never the raw signing key itself.
+    expect(manifestBlock).toMatch(/"manifest_signature": "\$MANIFEST_SIGNATURE"/);
   });
 
   it("an actual produced manifest (real run) contains no secret-shaped strings", () => {
@@ -430,8 +448,80 @@ describe("backup-database-r2.sh: manifest contains no secrets or customer data (
     const manifestContent = readFileSync(join(bucketDir, manifestKey), "utf8");
     expect(manifestContent).not.toContain(baseBackupEnv.AWS_SECRET_ACCESS_KEY);
     expect(manifestContent).not.toContain(baseBackupEnv.AGE_RECIPIENT);
+    expect(manifestContent).not.toContain(baseBackupEnv.MANIFEST_SIGNING_KEY);
     expect(manifestContent).not.toMatch(/ep-x\.neon\.tech/);
     expect(JSON.parse(manifestContent)).toHaveProperty("sha256");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Section 7: machine-readable QBO-gate evidence binding + manifest signature (not a timestamp
+// attestation; a structural, HMAC-verifiable claim independent of the R2 object credential).
+// ---------------------------------------------------------------------------------------------
+describe("backup-database-r2.sh: manifest binds the QBO gate's own result and is HMAC-signed", () => {
+  function realManifest(env: Record<string, string> = {}) {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", ...env });
+    expect(r.status).toBe(0);
+    const manifestKey = readFileSync(join(dir, "aws.calls"), "utf8")
+      .split("\n")
+      .filter((l) => l.includes("put-object"))
+      .map((l) => l.match(/--key (\S+)/)?.[1])
+      .find((k) => k?.endsWith(".manifest.json"))!;
+    return JSON.parse(readFileSync(join(bucketDir, manifestKey), "utf8"));
+  }
+
+  it.skipIf(!hasAge)("the manifest's qbo_backup_gate_result is the gate's own literal ALLOW line, not a hand-maintained string", () => {
+    const manifest = realManifest();
+    expect(manifest.qbo_backup_gate_result).toMatch(/^QBO_BACKUP_GATE=ALLOW \(flag='.*', qbo_\* rows=0\)$/);
+    expect(manifest).toHaveProperty("qbo_backup_gate_manifest_schema_version", "1");
+  });
+
+  it.skipIf(!hasAge)("the signature independently verifies against the exact signing-input fields using the same key", () => {
+    const manifest = realManifest();
+    expect(manifest.manifest_signature_algorithm).toBe("HMAC-SHA256");
+    const signingInput = [
+      manifest.encrypted_object_name,
+      manifest.timestamp_utc,
+      manifest.encrypted_object_size_bytes,
+      manifest.sha256,
+      manifest.qbo_backup_gate_result,
+      manifest.qbo_backup_gate_manifest_schema_version,
+    ].join("|");
+    const expected = createHmac("sha256", baseBackupEnv.MANIFEST_SIGNING_KEY).update(signingInput).digest("hex");
+    expect(manifest.manifest_signature).toBe(expected);
+  });
+
+  it.skipIf(!hasAge)("a DIFFERENT signing key never reproduces the same signature (the key, not just the algorithm, matters)", () => {
+    const manifest = realManifest();
+    const signingInput = [
+      manifest.encrypted_object_name,
+      manifest.timestamp_utc,
+      manifest.encrypted_object_size_bytes,
+      manifest.sha256,
+      manifest.qbo_backup_gate_result,
+      manifest.qbo_backup_gate_manifest_schema_version,
+    ].join("|");
+    const wrongKeySignature = createHmac("sha256", "a-completely-different-32-plus-char-signing-key").update(signingInput).digest("hex");
+    expect(manifest.manifest_signature).not.toBe(wrongKeySignature);
+  });
+
+  it.skipIf(!hasAge)("tampering with any signed field (without re-signing) is detectable: the recomputed signature no longer matches", () => {
+    // Simulates exactly the "attacker-created fake manifest" hostile case (Section 9, case 12):
+    // an attacker with R2 write access but NOT MANIFEST_SIGNING_KEY edits a field post-hoc.
+    const manifest = realManifest();
+    const tampered = { ...manifest, qbo_backup_gate_result: "QBO_BACKUP_GATE=ALLOW (flag='unset', qbo_* rows=0)".replace("0", "999") };
+    const signingInput = [
+      tampered.encrypted_object_name,
+      tampered.timestamp_utc,
+      tampered.encrypted_object_size_bytes,
+      tampered.sha256,
+      tampered.qbo_backup_gate_result,
+      tampered.qbo_backup_gate_manifest_schema_version,
+    ].join("|");
+    const recomputedWithRealKey = createHmac("sha256", baseBackupEnv.MANIFEST_SIGNING_KEY).update(signingInput).digest("hex");
+    // The attacker, lacking the real key, cannot reproduce this; comparing the ORIGINAL
+    // (unmodified) signature against the tampered content's expected signature must mismatch.
+    expect(tampered.manifest_signature).not.toBe(recomputedWithRealKey);
   });
 });
 
@@ -644,5 +734,23 @@ describe("static invariants: no plaintext on disk, no GitHub artifact of the dum
 
   it("BUCKET_LOCK / Object Lock is never referenced (Option B: ordinary lifecycle retention only)", () => {
     expect(WORKFLOW_BACKUP + BACKUP_SCRIPT_SRC).not.toMatch(/object.?lock|bucket.?lock|governance.?mode|compliance.?mode/i);
+  });
+
+  it("WRITER_CAN_EDIT_BUCKET_LOCK=NO: neither R2 workflow ever references a Cloudflare bucket-configuration-admin credential (CLOUDFLARE_API_TOKEN/ACCOUNT_ID) -- the writer only ever holds the S3-compatible object credential", () => {
+    expect(WORKFLOW_BACKUP + WORKFLOW_RESTORE + BACKUP_SCRIPT_SRC).not.toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
+  });
+
+  it("restore-rehearsal-r2.yml never wires up the real PRODUCTION_DATABASE_URL secret and always targets the disposable postgres:18 service container (anti-resurrection: it structurally cannot restore into Production)", () => {
+    // Matches an actual secret wiring (e.g. `${{ secrets.PRODUCTION_DATABASE_URL }}`), not this
+    // file's own prose explaining, in a comment, that no such wiring exists.
+    expect(WORKFLOW_RESTORE).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL/);
+    expect(WORKFLOW_RESTORE).toMatch(/OPSIQ_DB_TARGET:\s*local/);
+    expect(WORKFLOW_RESTORE).toMatch(/image:\s*postgres:18/);
+  });
+
+  it("the anti-resurrection gate is recorded as a hard, named precondition in the closure doc, not left implicit (RESTORE_NOT_SERVICEABLE_UNTIL_ERASURE_RECONCILED)", () => {
+    const closureDoc = readFileSync(resolve(process.cwd(), "docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md"), "utf8");
+    expect(closureDoc).toMatch(/RESTORE_NOT_SERVICEABLE_UNTIL_ERASURE_RECONCILED/);
+    expect(closureDoc).toMatch(/POST_BACKUP_ERASURE_LEDGER_REQUIRED=YES/);
   });
 });

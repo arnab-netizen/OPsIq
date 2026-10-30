@@ -7,6 +7,7 @@ import {
   parseNeonInventory,
   type NeonInventory,
   neonWindowFromOptions,
+  r2BackupsStatusFromOptions,
 } from "@/services/privacy-erasure/deletion-domains";
 
 const executedAt = new Date("2026-11-01T10:00:00Z");
@@ -16,7 +17,10 @@ const cleanInventory: NeonInventory = {
   capturedAt: "2026-11-01T12:00:00Z",
   entries: [{ kind: "BRANCH", id: "br-main", name: "production", isDefault: true, createdAt: "2026-01-01T00:00:00Z" }],
 };
-const evaluateGlobalSecureDelete = (i: Parameters<typeof evaluateRaw>[0]) => evaluateRaw({ neonInventory: cleanInventory, ...i });
+// R2_BACKUPS is a structural status, not a timestamp attestation -- supplied separately from `all`.
+// Pre-existing tests (predating R2_BACKUPS) default it to CLEAN so they keep testing what they
+// originally tested; the dedicated R2_BACKUPS describe block below overrides it per-case.
+const evaluateGlobalSecureDelete = (i: Parameters<typeof evaluateRaw>[0]) => evaluateRaw({ neonInventory: cleanInventory, r2BackupsStatus: "CLEAN", ...i });
 const all = {
   GITHUB_BACKUP_ARTIFACTS: "2026-11-01T11:00:00Z",
   NEON_HISTORY_WINDOW: "2026-12-02T00:00:00Z",
@@ -26,7 +30,9 @@ const all = {
 
 describe("global secure-delete boundary", () => {
   it("database erasure alone is INCOMPLETE, never total success", () => {
-    const r = evaluateGlobalSecureDelete({ databaseVerification: "PASS", executedAt, attestations: {}, now });
+    // evaluateRaw directly (not the CLEAN-defaulted wrapper): with truly nothing supplied for any
+    // domain -- including R2_BACKUPS -- every domain, in registry order, must be pending.
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: {}, neonInventory: cleanInventory, now });
     expect(r.databaseErasure).toBe("PASS");
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.pendingDomains).toEqual(EXTERNAL_DELETION_DOMAINS.map((d) => d.code));
@@ -91,25 +97,34 @@ describe("global secure-delete boundary", () => {
     expect(() => neonWindowFromOptions({ "neon-history-window-hours": "9999" })).toThrow();
   });
 
-  it("maps each CLI option to exactly one domain", () => {
+  it("maps each timestamp-attestation CLI option to exactly one domain (R2_BACKUPS excluded: it's a status enum, not a timestamp)", () => {
     const opts = Object.fromEntries(EXTERNAL_DELETION_DOMAINS.map((d) => [d.option, "2026-11-02T00:00:00Z"]));
     expect(Object.keys(attestationsFromOptions(opts)).sort()).toEqual(
-      EXTERNAL_DELETION_DOMAINS.map((d) => d.code).sort(),
+      EXTERNAL_DELETION_DOMAINS.filter((d) => d.code !== "R2_BACKUPS").map((d) => d.code).sort(),
     );
     expect(attestationsFromOptions({})).toEqual({});
+  });
+
+  it("r2BackupsStatusFromOptions parses CLEAN/NOT_APPLICABLE/PENDING/FAIL, fails closed on garbage, and is undefined when omitted", () => {
+    expect(r2BackupsStatusFromOptions({})).toBeUndefined();
+    for (const v of ["CLEAN", "NOT_APPLICABLE", "PENDING", "FAIL"]) {
+      expect(r2BackupsStatusFromOptions({ "r2-backups-status": v })).toBe(v);
+    }
+    expect(() => r2BackupsStatusFromOptions({ "r2-backups-status": "clean" })).toThrow(); // case-sensitive, no silent coercion
+    expect(() => r2BackupsStatusFromOptions({ "r2-backups-status": "YES" })).toThrow();
   });
 });
 
 describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
   const firstImport = new Date("2026-10-01T00:00:00Z");
   it("is never COMPLETE without an inventory, even with every attestation", () => {
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, r2BackupsStatus: "CLEAN" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.pendingDomains).toEqual(["NEON_BRANCHES"]);
   });
   it("is never COMPLETE with an inventory captured before the erasure", () => {
     const stale: NeonInventory = { ...cleanInventory, capturedAt: "2026-11-01T09:00:00Z" };
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: stale });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: stale, r2BackupsStatus: "CLEAN" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
   });
   it("a surviving restore branch from the Intuit-data window blocks PASS despite a NEON_BRANCHES attestation", () => {
@@ -121,7 +136,7 @@ describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
         { kind: "SNAPSHOT", id: "snap-1", createdAt: "2026-10-25T00:00:00Z" },
       ],
     };
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: inv, dataFirstImportedAt: firstImport });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: inv, dataFirstImportedAt: firstImport, r2BackupsStatus: "CLEAN" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.blockingCopies.map((c) => c.id).sort()).toEqual(["br-restore", "snap-1"]);
     expect(r.pendingDomains).toContain("NEON_BRANCHES");
@@ -150,7 +165,7 @@ describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
     expect(blockingNeonCopies(inv, undefined, executedAt).map((c) => c.id)).toEqual(["x"]);
   });
   it("passes once the copies are deleted and the inventory re-captured", () => {
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: cleanInventory, dataFirstImportedAt: firstImport });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: cleanInventory, dataFirstImportedAt: firstImport, r2BackupsStatus: "CLEAN" });
     expect(r.globalSecureDelete).toBe("COMPLETE");
     expect(r.blockingCopies).toEqual([]);
   });
@@ -159,5 +174,43 @@ describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
     expect(() => parseNeonInventory(JSON.stringify({ capturedAt: "nope", entries: [] }))).toThrow();
     expect(() => parseNeonInventory(JSON.stringify({ capturedAt: "2026-11-01T00:00:00Z", entries: [{ kind: "X", id: "a", createdAt: "2026-01-01" }] }))).toThrow();
     expect(parseNeonInventory(JSON.stringify(cleanInventory)).entries).toHaveLength(1);
+  });
+});
+
+describe("R2_BACKUPS domain: structural CLEAN/NOT_APPLICABLE/PENDING/FAIL, never a timestamp", () => {
+  const otherwiseClean = { databaseVerification: "PASS" as const, executedAt, now, attestations: all, neonInventory: cleanInventory };
+
+  it("UNKNOWN_R2_BACKUP (status omitted) always forces GLOBAL_SECURE_DELETE=INCOMPLETE, even with every other domain satisfied", () => {
+    const r = evaluateRaw({ ...otherwiseClean }); // r2BackupsStatus omitted entirely
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.pendingDomains).toEqual(["R2_BACKUPS"]);
+  });
+
+  it.each(["PENDING", "FAIL"] as const)("%s blocks GLOBAL_SECURE_DELETE even with every other domain satisfied", (status) => {
+    const r = evaluateRaw({ ...otherwiseClean, r2BackupsStatus: status });
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.pendingDomains).toEqual(["R2_BACKUPS"]);
+    expect(r.rejectedAttestations.some((x) => x.code === "R2_BACKUPS")).toBe(true);
+  });
+
+  it.each(["CLEAN", "NOT_APPLICABLE"] as const)("%s satisfies the domain and does not block GLOBAL_SECURE_DELETE", (status) => {
+    const r = evaluateRaw({ ...otherwiseClean, r2BackupsStatus: status });
+    expect(r.globalSecureDelete).toBe("COMPLETE");
+    expect(r.pendingDomains).toEqual([]);
+  });
+
+  it("R2_BACKUPS is independent of GITHUB_BACKUP_ARTIFACTS: neither renames nor substitutes for the other", () => {
+    const withoutGithubAttestation = { ...all } as Record<string, string>;
+    delete withoutGithubAttestation.GITHUB_BACKUP_ARTIFACTS;
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, now, attestations: withoutGithubAttestation, neonInventory: cleanInventory, r2BackupsStatus: "CLEAN" });
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.pendingDomains).toEqual(["GITHUB_BACKUP_ARTIFACTS"]); // R2_BACKUPS=CLEAN does not cover for a missing GITHUB_BACKUP_ARTIFACTS attestation
+    expect(EXTERNAL_DELETION_DOMAINS.some((d) => d.code === "GITHUB_BACKUP_ARTIFACTS")).toBe(true); // still present, not renamed
+  });
+
+  it("R2_BACKUPS appears in the canonical registry exactly once, distinct from GITHUB_BACKUP_ARTIFACTS", () => {
+    const r2Entries = EXTERNAL_DELETION_DOMAINS.filter((d) => d.code === "R2_BACKUPS");
+    expect(r2Entries).toHaveLength(1);
+    expect(EXTERNAL_DELETION_DOMAINS.filter((d) => d.code === "GITHUB_BACKUP_ARTIFACTS")).toHaveLength(1);
   });
 });

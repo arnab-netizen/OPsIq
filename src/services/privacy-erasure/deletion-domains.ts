@@ -21,7 +21,7 @@ export const EXTERNAL_DELETION_DOMAINS = [
   {
     code: "GITHUB_BACKUP_ARTIFACTS",
     option: "attest-github-backup-artifacts",
-    what: "every scheduled-backup pg_dump artifact created before the erasure (see scripts/privacy/purge-backup-artifacts.ts)",
+    what: "every scheduled-backup pg_dump artifact created before the erasure (see scripts/privacy/purge-backup-artifacts.ts). Historical: the GitHub-artifact backup path this covers is disabled_manually; this domain remains meaningful for any artifact created while it was active and is not renamed or removed when R2_BACKUPS is added below.",
   },
   {
     code: "NEON_HISTORY_WINDOW",
@@ -38,12 +38,29 @@ export const EXTERNAL_DELETION_DOMAINS = [
     option: "attest-operator-exports",
     what: "no operator-made dump, export or restore copy that contained the data still exists",
   },
+  {
+    code: "R2_BACKUPS",
+    // NOT a point-in-time purge attestation like the domains above: Option B's QBO backup gate
+    // (scripts/backup-qbo-gate.sh, #642) makes every successfully created R2 backup structurally
+    // incapable of containing QBO/Intuit User Data in the first place, so there is nothing to
+    // purge-by-date for this domain. Status is a CLEAN/NOT_APPLICABLE/PENDING/FAIL verdict from
+    // the R2 backup-domain verifier (scripts/privacy/verify-r2-backup-domain.ts), supplied via
+    // --r2-backups-status, not via this option (see r2BackupsStatusFromOptions below). The
+    // `option` field here is a documentation/registry placeholder only -- attestationsFromOptions
+    // deliberately excludes this domain from its generic timestamp handling.
+    option: "r2-backups-status",
+    what: "the R2 backup-domain verifier confirms every object under the private encrypted-backup bucket's backups/ prefix is CLEAN of QuickBooks/Intuit User Data (structural proof via the QBO backup gate, not a purge-by-date) or NOT_APPLICABLE; an unverifiable or unclassifiable object blocks this domain (see scripts/privacy/verify-r2-backup-domain.ts)",
+  },
 ] as const;
 
 /** Longest documented Neon history window (Scale plan, 30 days). */
 export const NEON_MAX_HISTORY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 export type ExternalDeletionDomainCode = (typeof EXTERNAL_DELETION_DOMAINS)[number]["code"];
+
+/** CLEAN/NOT_APPLICABLE satisfy the R2_BACKUPS domain; PENDING/FAIL (or omitted) block it. */
+const R2_BACKUP_STATUSES = ["CLEAN", "NOT_APPLICABLE", "PENDING", "FAIL"] as const;
+export type R2BackupDomainStatus = (typeof R2_BACKUP_STATUSES)[number];
 
 export type GlobalSecureDeleteStatus = "COMPLETE" | "INCOMPLETE";
 
@@ -79,12 +96,20 @@ export function evaluateGlobalSecureDelete(input: {
   neonInventory?: NeonInventory;
   /** When Intuit data first entered the database (earliest import). Omitted = assume always present. */
   dataFirstImportedAt?: Date;
+  /**
+   * Structural CLEAN/NOT_APPLICABLE/PENDING/FAIL verdict from the R2 backup-domain verifier.
+   * Omitted is treated the same as PENDING (uncertain = block): UNKNOWN_R2_BACKUP always forces
+   * GLOBAL_SECURE_DELETE=INCOMPLETE. This is never a timestamp -- see R2_BACKUPS in
+   * EXTERNAL_DELETION_DOMAINS for why a purge-by-date model does not apply to this domain.
+   */
+  r2BackupsStatus?: R2BackupDomainStatus;
 }): GlobalSecureDeleteReport {
   const now = input.now ?? new Date();
   const neonWindowMs = input.neonHistoryWindowMs ?? NEON_MAX_HISTORY_WINDOW_MS;
   const pending: ExternalDeletionDomainCode[] = [];
   const rejected: GlobalSecureDeleteReport["rejectedAttestations"] = [];
   for (const d of EXTERNAL_DELETION_DOMAINS) {
+    if (d.code === "R2_BACKUPS") continue; // structural status, handled below -- never a timestamp attestation
     const raw = input.attestations[d.code];
     if (raw === undefined || raw === "") { pending.push(d.code); continue; }
     const t = new Date(raw);
@@ -117,6 +142,17 @@ export function evaluateGlobalSecureDelete(input: {
       "known copies still exist: " + blockingCopies.map((c) => c.kind + ":" + c.id).join(", ") + " (delete them, then re-capture the inventory)",
     );
   }
+  // R2_BACKUPS: structural CLEAN/NOT_APPLICABLE/PENDING/FAIL verdict, not an attested date.
+  // UNKNOWN_R2_BACKUP (status omitted) always blocks -- same "uncertain = block" doctrine as
+  // every other domain here, just without a timestamp to compare against.
+  if (input.r2BackupsStatus === undefined) {
+    forcePending("R2_BACKUPS", "no R2 backup-domain verification supplied (--r2-backups-status); cannot claim R2 backups are clean");
+  } else if (input.r2BackupsStatus === "PENDING") {
+    forcePending("R2_BACKUPS", "R2 backup-domain verifier reported PENDING (uncertain = block)");
+  } else if (input.r2BackupsStatus === "FAIL") {
+    forcePending("R2_BACKUPS", "R2 backup-domain verifier reported FAIL");
+  }
+  // CLEAN / NOT_APPLICABLE: domain satisfied, no further action.
   return {
     blockingCopies,
     databaseErasure: input.databaseVerification,
@@ -129,8 +165,23 @@ export function evaluateGlobalSecureDelete(input: {
 /** Parses the per-domain CLI options (opts keyed by option name, without the leading dashes). */
 export function attestationsFromOptions(opts: Record<string, string>): Partial<Record<ExternalDeletionDomainCode, string>> {
   const out: Partial<Record<ExternalDeletionDomainCode, string>> = {};
-  for (const d of EXTERNAL_DELETION_DOMAINS) if (opts[d.option]) out[d.code] = opts[d.option];
+  for (const d of EXTERNAL_DELETION_DOMAINS) {
+    if (d.code === "R2_BACKUPS") continue; // status enum, not a timestamp -- see r2BackupsStatusFromOptions
+    if (opts[d.option]) out[d.code] = opts[d.option];
+  }
   return out;
+}
+
+/** `--r2-backups-status <CLEAN|NOT_APPLICABLE|PENDING|FAIL>`: the R2_BACKUPS structural verdict.
+ * Omitted returns undefined, which evaluateGlobalSecureDelete treats as PENDING (uncertain = block).
+ * A present-but-invalid value fails closed (throws) rather than being silently ignored. */
+export function r2BackupsStatusFromOptions(opts: Record<string, string>): R2BackupDomainStatus | undefined {
+  const raw = opts["r2-backups-status"];
+  if (raw === undefined || raw === "") return undefined;
+  if (!(R2_BACKUP_STATUSES as readonly string[]).includes(raw)) {
+    throw new Error(`--r2-backups-status must be one of ${R2_BACKUP_STATUSES.join("|")}, got '${raw}'`);
+  }
+  return raw as R2BackupDomainStatus;
 }
 
 /** `--neon-history-window-hours <n>`: the project's configured window; omitted means the 30 day fail-safe. */
