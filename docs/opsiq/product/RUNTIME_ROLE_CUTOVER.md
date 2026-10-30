@@ -28,8 +28,9 @@ below as operational reference.
   `permission denied`, or `read-only transaction` text; no runtime-role-mismatch or
   startup-failure error groups. The only two error groups in the window were already-known and
   unrelated to the role cutover: the Node/`pg` SSL-mode deprecation warning, and the `/` route's
-  300-second runtime timeout (tracked and fixed separately — see
-  `fix/root-route-300s-timeout` and follow-on branches).
+  300-second runtime timeout — a pre-existing, unrelated issue tracked separately (PRs #648–#652,
+  branch `fix/root-route-300s-timeout` and follow-ons); as of this writing those PRs are open and
+  unmerged, so this timeout is NOT yet fixed in Production.
 - **Not verified by this check:** Neon-side role metadata (no authenticated read-only Neon
   connector was available) and the separate question below of recovery-credential
   availability.

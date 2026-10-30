@@ -49,11 +49,23 @@ Known gaps (honest): action outcomes and learning candidates need a client-accou
 
 Threat model: the runtime database credential (`DATABASE_URL`) is compromised.
 
-**Current status update (2026-10-30):** the role-split required below has since been applied to
-Production and independently verified — see the "Current Production status" section at the top
-of `docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md` for the cited evidence (deployment ID, source
-SHA, release-gate build-log lines, GitHub acceptance run, and re-queried 24h observation window).
-`RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS` is accordingly `NO` as of that deployment. The
+**Current status update (2026-10-30, corrected):** current Production runtime identity is
+verified as `opsiq_app` — see the "Current Production status" section at the top of
+`docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md` for the cited evidence (deployment ID, source SHA,
+release-gate build-log lines, GitHub acceptance run, and re-queried 24h observation window). The
+historical `neondb_owner`-runtime finding below therefore no longer describes the current
+runtime login.
+
+However, that evidence is narrower than the full erasure-bypass question. The Vercel build-time
+release gate (`scripts/release/production-migration-gate.mjs`) proves only: the connection
+authenticates as `opsiq_app` (both `current_user` and `session_user`); the role carries none of
+`rolsuper` / `rolcreaterole` / `rolcreatedb` / `rolbypassrls` / `rolreplication`; it holds the
+expected table-level grants; and it can perform one no-op write with a confirmed rollback. It
+does **not** query table/function/schema ownership (`pg_class.relowner` or equivalent), and this
+audit did not separately connect to Neon to check it either (`NEON_RUNTIME_ROLE_METADATA
+=NOT_DIRECTLY_VERIFIED`). Therefore the stronger claim
+`RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS=NO` must not be inferred solely from the release-gate
+result and is corrected to `RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS=NOT_DIRECTLY_VERIFIED`. The
 paragraph below is the original hostile-review finding, preserved as-written for historical
 context; it described the state at the time of PR #637, before the cutover below was executed.
 
