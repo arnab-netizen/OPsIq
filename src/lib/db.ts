@@ -679,14 +679,25 @@ export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
 /**
  * Derives the real worst-case bound of a withRawStatementTimeout() call for
  * a given statementTimeoutMs, for every caller's own outer JS-side
- * defensive race (SESSION_QUERY_TIMEOUT_MS in auth.ts, DB_CHECK_TIMEOUT_MS/
- * MIGRATION_READINESS_TIMEOUT_MS in startup-orchestrator.ts) to derive from
- * -- a single shared formula instead of each call site hand-deriving its
- * own and silently drifting out of sync with this function's real
- * behavior, which is exactly what happened twice across santa-loop rounds
- * 1-3. Accounts for BOTH backstops this function can hit in its worst
- * case: once on the main BEGIN/SET LOCAL/fn/COMMIT sequence, and -- only on
- * the error path -- once more on the ROLLBACK cleanup attempt.
+ * defensive race (SESSION_QUERY_TIMEOUT_MS in auth.ts,
+ * DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
+ * startup-orchestrator.ts) to derive from -- a single shared formula
+ * instead of each call site hand-deriving its own and silently drifting
+ * out of sync with this function's real behavior, which is exactly what
+ * happened across santa-loop rounds 1-3. Accounts for BOTH backstops this
+ * function can hit in its worst case: once on the main BEGIN/SET LOCAL/fn/
+ * COMMIT sequence, and -- only on the error path -- once more on the
+ * ROLLBACK cleanup attempt.
+ *
+ * santa-loop review finding (round 3): a `mainBackstopMarginMs` parameter
+ * used to live here, added for a multi-statement caller (the authenticated
+ * root route's OLD raw-SQL policy path) that needed more slack than the
+ * single-statement default assumes. That caller was deleted (auth.ts) once
+ * the root route moved to a single Prisma transaction instead of
+ * withRawStatementTimeout() for policy resolution, leaving this parameter
+ * with zero remaining callers across every production call site (getSession,
+ * claimStartup, checkDatabase, checkMigrationReadiness, the public-admission
+ * read) -- removed as dead code rather than kept untested.
  */
 export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number): number {
   return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
@@ -771,11 +782,10 @@ export async function withRawStatementTimeout<T>(
     // the SERVER-side backend can stay idle-in-transaction indefinitely,
     // holding whatever locks `fn` has taken (a row lock in claimStartup's
     // case) until TCP keepalive or PgBouncer notices -- a real stall risk
-    // for any later caller that needs the same row/table. Bounding it to
-    // the same margin as the client-side backstop ensures the SERVER itself
-    // tears down the transaction at essentially the same time the client
-    // gives up, so a hung connection can never hold locks indefinitely.
-    await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS}`);
+    // for any later caller that needs the same row/table. Set to the same
+    // margin as the main client-side backstop below, so the server tears
+    // down at essentially the same time the client gives up.
+    await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${mainBackstopMs}`);
     const result = await fn(client);
     const commitResult = await client.query("COMMIT");
     // Database review finding (F-PGBOUNCER-TXN-SAFETY): if the transaction
