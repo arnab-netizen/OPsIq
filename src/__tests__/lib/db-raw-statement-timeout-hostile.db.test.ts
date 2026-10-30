@@ -11,6 +11,18 @@
  *   - RESET on success
  *   - RESET after a genuine SQLSTATE 57014 (query_canceled) cancellation
  *   - discard (not reuse) the connection for an unknown/connection-level error
+ *
+ *   F-PGBOUNCER-TXN-SAFETY update: the two bullets above describe the
+ *   pre-fix implementation's exact mechanism (a session-level SET/RESET,
+ *   discard-on-any-non-57014-error) -- kept here as the original owner
+ *   requirements this suite was built against, not as a description of the
+ *   current code. The current implementation satisfies the same INTENT
+ *   (timeout applied, no leaked state, connection trustworthy afterward)
+ *   through BEGIN/SET LOCAL/COMMIT-or-ROLLBACK instead: every error --
+ *   57014 included -- is rolled back rather than "reset", and the
+ *   connection is REUSED whenever that ROLLBACK succeeds (discarded only if
+ *   the ROLLBACK itself fails or the connection never responds at all). See
+ *   the updated test below for the current, accurate claim.
  *   - client.release() is called exactly once per invocation
  *   - no checked-out-client leak — the pool's connection count returns to
  *     baseline after every outcome (success, cancellation, unknown error)
@@ -133,14 +145,29 @@ describe.skipIf(SKIP)("[db] withRawStatementTimeout() shared-primitive hostile h
     expect(result.rows.length).toBeGreaterThan(0);
   });
 
-  it("discards (does not reuse) the connection for an unknown/connection-level error, and the pool remains healthy via a fresh connection", async () => {
+  it("rolls back and REUSES the connection for a plain SQL error whose ROLLBACK succeeds -- only a rollback failure or dead connection causes discard", async () => {
+    // Fresh-context review finding (F-PGBOUNCER-TXN-SAFETY): this test's
+    // name and comments used to claim this case is always DISCARDED. That
+    // was true of the pre-fix implementation, which had no explicit
+    // transaction and released(err) on any non-57014 error unconditionally.
+    // The current implementation ROLLBACKs on every error (required because
+    // BEGIN means any error aborts the transaction) and only discards if
+    // that ROLLBACK itself fails or times out -- a plain SQL error (missing
+    // table, as here) rolls back cleanly, so the connection is perfectly
+    // healthy and IS reused. Proven directly below via pg_backend_pid(),
+    // not merely inferred from "the pool stays healthy" (which would be
+    // true either way under max:1).
     const p = freshPool();
+
+    const pidBeforeError = await withRawStatementTimeout(
+      p,
+      5_000,
+      (client) => client.query<{ pid: number }>("SELECT pg_backend_pid() AS pid"),
+      "baseline",
+    );
 
     let caught: unknown;
     try {
-      // A genuine SQL error (not a timeout, not SQLSTATE 57014) -- the
-      // client's session state after this is not trusted, so the helper
-      // must release(err) to discard it rather than return it to the pool.
       await withRawStatementTimeout(p, 5_000, (client) => client.query("SELECT * FROM this_table_does_not_exist"), "unknown-error");
     } catch (err) {
       caught = err;
@@ -148,16 +175,13 @@ describe.skipIf(SKIP)("[db] withRawStatementTimeout() shared-primitive hostile h
     expect(caught).toBeDefined();
     expect((caught as { code?: unknown } | null)?.code).not.toBe("57014");
 
-    // Pool (max: 1) must still produce a healthy, working connection for the
-    // next caller -- proves the discarded connection didn't poison the pool
-    // or leave it exhausted.
-    const result = await withRawStatementTimeout(
+    const pidAfterError = await withRawStatementTimeout(
       p,
       5_000,
-      (client) => client.query<{ one: number }>("SELECT 1 AS one"),
-      "after-discard",
+      (client) => client.query<{ pid: number }>("SELECT pg_backend_pid() AS pid"),
+      "after-rollback",
     );
-    expect(result.rows).toEqual([{ one: 1 }]);
+    expect(pidAfterError.rows[0]?.pid).toBe(pidBeforeError.rows[0]?.pid);
   });
 
   it("client.release() is called exactly once per invocation, on every outcome", async () => {

@@ -30,6 +30,7 @@ vi.mock("@/lib/db", () => ({
   withStatementTimeout: vi.fn(),
   POOL_CONNECTION_TIMEOUT_MS: 90_000,
   CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
+  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
 }));
 
 vi.mock("@/lib/runtime-shadow-read-enforcer", () => ({

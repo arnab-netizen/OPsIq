@@ -1,20 +1,24 @@
 /** Server-side lookup of the public presentation. Fails closed to the INVITE_ONLY copy on any error. */
-import { getRawPool, withRawStatementTimeout } from "@/lib/db";
+import {
+  getPublicReadPool,
+  withRawStatementTimeout,
+  PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS,
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS,
+} from "@/lib/db";
 import { legacyEffectiveSettings, isAdmissionMode, type AdmissionMode } from "@/services/beta/platform-settings.service";
 import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/domain/beta/public-presentation";
 
 /**
- * F-ROOT-ROUTE-300S root cause, corrected twice over two rounds of santa-loop
- * adversarial review (four independent reviewers total):
+ * F-ROOT-ROUTE-300S root cause, corrected across two rounds of santa-loop
+ * adversarial review (four independent reviewers) plus a dedicated
+ * follow-up investigation (F-PGBOUNCER-TXN-SAFETY, src/lib/db.ts):
  *
  * readEffectiveSettings()'s default `client = db` path ran as a plain
  * (non-transactional) Prisma query with NO statement_timeout set anywhere.
  * Round-1 correction: connection ACQUISITION against production's `max: 1`
  * pg.Pool was NOT actually unbounded -- pg-pool applies
- * `connectionTimeoutMillis` (POOL_CONNECTION_TIMEOUT_MS, 90s in production)
- * to a queued waiter behind an already-busy connection, not only to a
- * brand-new connection attempt (verified both by reading pg-pool's own
- * source and by direct empirical test outside this suite). The real,
+ * `connectionTimeoutMillis` to a queued waiter behind an already-busy
+ * connection, not only to a brand-new connection attempt. The real,
  * unconditional gap was QUERY EXECUTION: once a connection was acquired, the
  * plain Prisma query had no Postgres-side statement_timeout and no
  * client-side bound at all, so a query that stalled after connecting (e.g.
@@ -24,53 +28,106 @@ import { presentationForAdmissionMode, type PublicBetaPresentation } from "@/dom
  * long enough to have gone stale) could run indefinitely, bounded only by
  * Vercel's platform-level 300-second function ceiling.
  *
- * Fix: read this one row with getRawPool()/withRawStatementTimeout() -- the
- * SAME raw-pg-client primitive getSession()'s own query actually uses (NOT
- * withStatementTimeout(), Prisma's `$transaction({maxWait})`, which a prior
- * version of this fix used and which carries its own, different, narrower
- * false-failure risk on a legitimately slow-but-healthy fresh connection --
- * see db.ts's F-PROD-STARTUP-COLDSTART forensic).
+ * Fix (F-ROOT-ROUTE-300S, since superseded below by F-ROOT-ROUTE-FAST-FAIL's
+ * getPublicReadPool() -- this paragraph is kept as history for the
+ * BEGIN/SET LOCAL/COMMIT-or-ROLLBACK mechanism it establishes, not as a
+ * description of the pool this call site reads today): read this one row
+ * with getRawPool()/withRawStatementTimeout() -- the SAME raw-pg-client
+ * primitive getSession()'s own query actually uses.
+ * withRawStatementTimeout() runs `fn` inside its own explicit
+ * BEGIN/SET LOCAL statement_timeout/COMMIT-or-ROLLBACK, bounded on every
+ * side by a client-side backstop (see its doc comment in db.ts for the
+ * full F-PGBOUNCER-TXN-SAFETY mechanism and the real-PgBouncer evidence
+ * behind it) -- acquisition, live-connection execution, AND a fully dead
+ * connection are all covered by that one shared primitive; no outer race
+ * is needed at this call site on top of it.
  *
- * Round-2 correction: an earlier version of this comment claimed
- * withRawStatementTimeout()'s Postgres-side `SET statement_timeout` alone
- * was sufficient and deliberately added NO outer bound on top of it, on the
- * theory that an outer race could only ever abandon the caller while
- * orphaning the connection. Two independent reviewers showed that reasoning
- * was itself wrong on both halves: a `SET`/query that never gets a server
- * response at all (a genuinely dead/half-open connection -- the exact
- * stale-Neon-connection mechanism this root cause names above) is a case
- * `SET statement_timeout` cannot cover, because the server-side cancel can
- * never be delivered over a dead socket; and removing the outer bound
- * didn't avoid orphaning the connection either way -- it just ALSO let this
- * specific request hang to Vercel's 300s ceiling again, the original
- * symptom. The actual fix for that gap belongs in the shared primitive
- * itself, not at this call site: withRawStatementTimeout() in src/lib/db.ts
- * now carries its own client-side backstop timer (see its doc comment)
- * that discards a connection that never responds at all and frees the pool
- * slot immediately, rather than leaving it orphaned until the OS's own TCP
- * detection eventually notices. That closes the gap for this call site AND
- * for every other existing caller (getSession(), claimStartup(), etc.)
- * without changing any of their call sites. No outer race is needed here
- * on top of that -- withRawStatementTimeout()'s own bound now covers
- * acquisition, live-connection execution, AND the dead-connection case.
+ * Previously-known risk, now fixed rather than merely flagged: production's
+ * DATABASE_URL is Neon's POOLED endpoint (PgBouncer transaction-mode
+ * pooling -- confirmed via Neon's own docs and reproduced directly against
+ * a real local PgBouncer instance in transaction-pool mode, see
+ * F-PGBOUNCER-TXN-SAFETY). A session-level `SET statement_timeout` sent as
+ * its own autocommit statement is NOT guaranteed by transaction-mode
+ * pooling to stay on the same backend as the following query -- empirically
+ * confirmed to leak an unrelated statement_timeout onto a COMPLETELY
+ * SEPARATE, later client connection through the same pooled backend.
+ * withRawStatementTimeout() no longer does this: `SET LOCAL` inside an
+ * explicit transaction is a native PostgreSQL transaction-scoping
+ * guarantee, independent of PgBouncer or any reset query, and was
+ * empirically confirmed not to leak under the same real-PgBouncer harness.
  *
- * Known, confirmed, explicitly out-of-scope risk (raised independently by
- * reviewers in both rounds, not fixed here): production's DATABASE_URL is
- * Neon's POOLED endpoint (PgBouncer-style transaction-mode pooling --
- * confirmed via docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md's own reference
- * to "the opsiq_app POOLED URL"). A session-level `SET statement_timeout`
- * sent as its own autocommit statement (not inside an explicit transaction)
- * is not guaranteed by transaction-mode pooling to land on the SAME backend
- * server connection as the following SELECT, which could weaken the bound
- * this fix relies on in production in a way no local Postgres test can
- * reproduce. This is a pre-existing characteristic of withRawStatementTimeout()
- * itself (getSession() already depends on the same guarantee today), not
- * something introduced by this PR, and fixing it (e.g. wrapping the
- * SET+query in an explicit transaction) is a change to that shared
- * primitive's core design warranting its own dedicated investigation --
- * flagged here as a follow-up, not silently assumed away.
+ * F-ROOT-ROUTE-FAST-FAIL: the above made this read safe, but left it bounded
+ * by the SAME 90s shared-pool acquisition ceiling as every other DB caller
+ * (getSession()/checkDatabase()/checkMigrationReadiness()/claimStartup()),
+ * for a worst case of 105_000ms (POOL_CONNECTION_TIMEOUT_MS=90_000 +
+ * the old PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS=5000 +
+ * 2*CLIENT_SIDE_BACKSTOP_MARGIN_MS=10_000 -- see
+ * withRawStatementTimeoutWorstCaseMs() in db.ts) -- unacceptable for a
+ * public landing page. Fix: this read now runs against
+ * getPublicReadPool(), a fully separate, route-scoped pg.Pool (db.ts) with
+ * its own short PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS=3_000 acquisition
+ * bound, independent of the shared pool's 90s ceiling, which stays
+ * unchanged for the four shared callers above.
+ *
+ * A preferred <10_000ms total was investigated but is not achievable
+ * without also shrinking CLIENT_SIDE_BACKSTOP_MARGIN_MS (currently a fixed
+ * 5_000ms, applied TWICE in withRawStatementTimeout()'s worst case -- once
+ * on the main BEGIN/SET LOCAL/fn/COMMIT sequence, once on ROLLBACK cleanup
+ * -- for a fixed 10_000ms floor regardless of acquisition/execution
+ * tuning). That margin is a shared, already multiply-adversarially-
+ * reviewed (santa-loop rounds 1-3, F-PGBOUNCER-TXN-SAFETY) constant used
+ * unmodified by all four shared callers; shrinking it for this one
+ * low-stakes public read is not a worthwhile trade against re-reviewing a
+ * shared safety primitive. The justified target instead shrinks only the
+ * two genuinely route-specific, shrinkable components:
+ *   - acquisition: 3_000ms (30x smaller than the shared 90_000ms ceiling).
+ *     Santa-loop review finding (round 3): this is NOT "comfortably above
+ *     typical Neon cold-wake latency" -- this codebase's own documented
+ *     figures (see db.ts's cold-compute-wake doc comment) are median
+ *     ~1.8s, p95 ~2.6s, and "several seconds" under a concurrent
+ *     cold-start burst. At p95 that leaves roughly 400ms of margin for
+ *     TCP+TLS+auth on TOP of the wake itself, and burst conditions can
+ *     exceed 3_000ms outright. 3_000ms is chosen deliberately short
+ *     despite this -- not because cold starts are rare, but because this
+ *     value only gates DISPLAY COPY on a low-traffic dedicated pool
+ *     (unlike the shared pool, most real visits hit a warm connection);
+ *     see the trade-off below for why that's an acceptable, and
+ *     non-trivially frequent, cost.
+ *   - execution: reduced from 5000ms to 2000ms (still generous for a
+ *     single primary-key-indexed SELECT against a small table).
+ * Result: PUBLIC_ADMISSION_READ_WORST_CASE_MS = 3_000 + 2_000 + 2*5_000 =
+ * 15_000ms -- an 85.7% reduction from 105_000ms, derived from this file's
+ * and db.ts's own real constants, not chosen to make a test pass.
+ *
+ * Named trade-off (fresh-context + santa-loop review findings): the old
+ * 90_000ms acquisition bound was ALSO, incidentally, tolerant of a
+ * genuinely slow but eventually-successful cold connection (e.g. a Neon
+ * compute-wake landing anywhere in its documented ~1.8s median / ~2.6s p95
+ * / multi-second-burst range) -- that request would previously have
+ * waited it out and shown the real admission mode. After this fix, a cold
+ * dedicated-pool connection that takes longer than 3_000ms (plausible at
+ * or past p95, not merely a rare tail event) now fails closed to the
+ * conservative INVITE_ONLY copy well before the connection would have
+ * succeeded. This is accepted deliberately, honestly stated as a
+ * meaningful-not-negligible frequency: this value only controls which
+ * marketing copy an anonymous visitor sees (never an authorization
+ * decision), so bounded latency on a low-traffic dedicated pool is worth
+ * more here than occasionally under-selling an open beta during a cold
+ * start.
  */
-export const PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS = 5000;
+export const PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS = 2_000;
+
+/**
+ * Canonical, code-derived worst-case bound for the anonymous `/` route's
+ * public-admission read, for any caller/test that needs to assert against
+ * it instead of hand-deriving its own copy that can silently drift out of
+ * sync (the exact failure mode withRawStatementTimeoutWorstCaseMs() in
+ * db.ts already guards against for the shared-pool case).
+ */
+export const PUBLIC_ADMISSION_READ_WORST_CASE_MS =
+  PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS +
+  PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS +
+  2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
 
 interface PlatformSettingAdmissionModeRow {
   admission_mode: string;
@@ -84,7 +141,7 @@ interface PlatformSettingAdmissionModeRow {
  * than readEffectiveSettings()'s other (admin/internal/lock-holding) callers.
  */
 async function readPublicAdmissionModeBounded(label: string): Promise<AdmissionMode> {
-  const pool = await getRawPool();
+  const pool = await getPublicReadPool();
   const result = await withRawStatementTimeout(
     pool,
     PUBLIC_ADMISSION_READ_STATEMENT_TIMEOUT_MS,

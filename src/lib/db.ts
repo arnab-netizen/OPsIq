@@ -9,6 +9,8 @@ const globalForPrisma = globalThis as unknown as {
   prisma: OpsDbClient | undefined;
   prismaPromise: Promise<OpsDbClient> | undefined;
   pgPool: RawPool | undefined;
+  pgPublicReadPool: RawPool | undefined;
+  pgPublicReadPoolPromise: Promise<RawPool> | undefined;
 };
 
 /**
@@ -180,6 +182,137 @@ export async function getRawPool(): Promise<RawPool> {
   // getDbInstance() constructs the pool before it resolves; a missing pool here is a broken init.
   if (!pool) throw new Error("Database pool is not initialised");
   return pool;
+}
+
+/**
+ * F-ROOT-ROUTE-FAST-FAIL: production connectionTimeoutMillis for the
+ * dedicated public-read pool below. A fully separate pg.Pool object from
+ * globalForPrisma.pgPool (the shared Prisma/getSession()/checkDatabase()/
+ * checkMigrationReadiness()/claimStartup() pool) -- so a materially shorter
+ * acquisition bound for the one low-stakes, anonymous-reachable public-
+ * admission read can never change those four callers' own acquisition
+ * bound (POOL_CONNECTION_TIMEOUT_MS, unchanged at 90_000 above, still
+ * governing only the shared pool they all still use). See
+ * public-presentation.service.ts's doc comment for the full worst-case
+ * bound this combines into.
+ *
+ * Database review finding (acknowledged trade-off, not changed): this pool
+ * is `max: 1`, same as the shared pool. A real burst of concurrent
+ * anonymous `/` traffic queues behind that one connection, and anyone
+ * still queued past this 3_000ms acquisition bound fails closed to
+ * INVITE_ONLY (a conservative display value, never a crash or an
+ * authorization effect) rather than a slightly higher `max` serving more
+ * of the burst directly. `max: 1` was kept deliberately: this read's
+ * underlying query itself is cheap (a single primary-key-indexed SELECT),
+ * but the full round trip under withRawStatementTimeout() is 5 sequential
+ * statements on that one connection -- BEGIN, two SET LOCAL, the SELECT,
+ * COMMIT -- so queuing behind an already-busy connection costs several
+ * network round trips, not sub-millisecond (santa-loop review finding).
+ * Raising `max` would multiply this pool's own direct-connection count
+ * per function instance under concurrent cold starts -- precisely the
+ * failure mode createPrismaClient()'s own `max: 1` comment above (P0-15)
+ * already documents and fixed for the shared pool -- which is the real
+ * reason `max: 1` was kept, not an assumption that queuing is free.
+ */
+export const PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS = 3_000;
+
+/**
+ * Dedicated pg.Pool accessor for the public-admission read only
+ * (readPublicAdmissionModeBounded() in public-presentation.service.ts).
+ * withRawStatementTimeout() itself is untouched by this: it already accepts
+ * any pool satisfying the RawPool contract, so this is a drop-in
+ * substitute for getRawPool() at exactly that one call site. Same
+ * connection-string/env-resolution logic as createPrismaClient() above
+ * (Neon-pooler rewrite for the local-direct-endpoint test convenience);
+ * duplicated rather than factored out, matching this file's own existing
+ * pattern (pingDatabase() below duplicates the same few lines for the same
+ * reason: an independently-constructed connection must not share
+ * construction-path state with the shared pool).
+ *
+ * Security review finding (F-ROOT-ROUTE-FAST-FAIL): promise-memoized the
+ * same way getDb()/getDbInstance() above already are, not just a
+ * synchronous `if (globalForPrisma.pgPublicReadPool) return ...` check.
+ * Without this, concurrent anonymous requests arriving during the `await
+ * import("pg")` gap (most likely right after a cold serverless start, which
+ * recurs routinely for a low-traffic landing page) would each construct
+ * and connect their own separate pool -- only the last one wins the global
+ * slot, and the others are orphaned, already-connected pools nothing
+ * closes. That defeats this fix's own "+1 connection only" design goal,
+ * and matches the exact defect class this codebase has already seen in
+ * production (P0-15 / F-PROD-STARTUP-COLDSTART). Storing the in-flight
+ * PROMISE first means every concurrent caller awaits the same
+ * construction instead of re-entering it, exactly like getDb() already
+ * does for the shared pool.
+ */
+export async function getPublicReadPool(): Promise<RawPool> {
+  if (globalForPrisma.pgPublicReadPool) {
+    return globalForPrisma.pgPublicReadPool;
+  }
+  if (globalForPrisma.pgPublicReadPoolPromise) {
+    return globalForPrisma.pgPublicReadPoolPromise;
+  }
+
+  globalForPrisma.pgPublicReadPoolPromise = (async (): Promise<RawPool> => {
+    const rawUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
+    if (!rawUrl) {
+      throw new Error(
+        "DATABASE_URL or TEST_DATABASE_URL environment variable is not set. " +
+        "For production: Set DATABASE_URL=postgresql://user:password@host/dbname"
+      );
+    }
+    const isTestEnv = !!(process.env.VITEST || process.env.NODE_ENV === "test");
+    const databaseUrl = isTestEnv && rawUrl.includes("-pooler.") ? rawUrl.replace("-pooler.", ".") : rawUrl;
+
+    const pg = await import("pg");
+    const pool = new pg.Pool({
+      connectionString: databaseUrl,
+      // Test envs get the same unlimited-wait convenience as the shared
+      // pool above (cold local/Neon test DB must never produce a flaky
+      // false timeout); production uses the real, short, route-specific
+      // bound.
+      connectionTimeoutMillis: isTestEnv ? 0 : PUBLIC_READ_POOL_ACQUISITION_TIMEOUT_MS,
+      max: 1,
+      idleTimeoutMillis: isTestEnv ? 300000 : 120000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+    });
+
+    // Santa-loop review finding (F-ROOT-ROUTE-FAST-FAIL), HIGH: pg-pool
+    // re-emits 'error' on the POOL itself when an idle client's connection
+    // dies server-side (e.g. Neon/PgBouncer ending an idle backend during
+    // idleTimeoutMillis, or a network reset) -- an EventEmitter 'error'
+    // with no listener throws as an uncaught exception, which would crash
+    // the whole function instance (every in-flight request on it,
+    // authenticated ones included), not just this one anonymous read. The
+    // shared pool above only avoids this by accident: PrismaPg's own
+    // adapter attaches a pool-level 'error' listener internally
+    // (`new PrismaPg(pool)`); this pool is used directly via
+    // withRawStatementTimeout(), never passed through PrismaPg, so it had
+    // no equivalent protection. pg-pool has already discarded the broken
+    // client by the time this fires, so logging is sufficient here.
+    pool.on("error", (err: unknown) => {
+      logger.warn("[db] public-read pool idle client error", { error: String(err) });
+    });
+
+    globalForPrisma.pgPublicReadPool = pool as unknown as RawPool;
+
+    // TypeScript/database review finding (F-ROOT-ROUTE-FAST-FAIL): parity
+    // with createPrismaClient()'s P0-15 fix above -- without this, a
+    // Vercel function instance can freeze mid-connection on THIS pool too
+    // and later resume with a now-dead socket, reintroducing in miniature
+    // the exact failure class P0-15 fixed for the shared pool. No-op
+    // outside a Vercel function; failure here must never block
+    // construction of an otherwise-usable pool.
+    try {
+      const { attachDatabasePool } = await import("@vercel/functions");
+      attachDatabasePool(pool);
+    } catch (error) {
+      console.warn("[DB] attachDatabasePool unavailable for public-read pool (non-Vercel runtime?)", String(error));
+    }
+
+    return globalForPrisma.pgPublicReadPool;
+  })();
+  return globalForPrisma.pgPublicReadPoolPromise;
 }
 
 /**
@@ -485,73 +618,143 @@ export async function withStatementTimeout<T>(
  * potentially leaving the connection in an unknown state and the client is
  * released with the error, telling pg.Pool to discard rather than reuse it.
  */
-const POSTGRES_QUERY_CANCELED_SQLSTATE = "57014";
-
 export interface RawQueryClient {
   query: <T = unknown>(text: string, values?: readonly unknown[]) => Promise<{ rows: T[] }>;
 }
 
 /**
- * F-ROOT-ROUTE-300S santa-loop finding (two independent adversarial reviews
- * converged on this, round 2): `SET statement_timeout` is a SERVER-side
- * bound -- it can only cancel a query the server actually received and can
- * respond to. If the connection is already dead (half-open socket, dropped
- * mid-handshake, a Neon compute that went away without closing cleanly)
- * neither the `SET` command nor the query itself will ever get a response,
- * and nothing server-side can ever fire. Without a client-side backstop,
- * `withRawStatementTimeout()` would then hang forever on that one `await
- * client.query(...)` call, and the checked-out client would sit on the
- * shared pool indefinitely -- under production's `max: 1` pool, that is
- * the exact pre-existing P0-15 pool-starvation failure mode this whole
- * primitive exists to prevent, just moved one layer down.
+ * F-PGBOUNCER-TXN-SAFETY root cause (proven against a real local PgBouncer
+ * 1.26.1 instance in `pool_mode = transaction`, matching Neon's own pooled
+ * endpoint -- Neon's docs state "Neon uses PgBouncer in transaction mode
+ * (`pool_mode=transaction`)" -- not against a mock):
  *
- * CLIENT_SIDE_BACKSTOP_MS exists ONLY for that dead-connection case. It is
- * sized to fire well after the server-side statement_timeout would have
- * settled on any LIVE connection running the SET/`fn`/reset sequence as a
- * SMALL, FIXED number of statements each individually bounded by
- * `timeoutMs` -- true for every current caller (getSession, the public-
- * admission read, checkDatabase, checkMigrationReadiness all run exactly
- * one statement in `fn`; claimStartup runs at most one insert plus one
- * trivial diagnostic query on error). A hypothetical future caller whose
- * `fn` runs enough sequential statements for their combined latency to
- * exceed CLIENT_SIDE_BACKSTOP_MARGIN_MS on a live connection would need a
- * larger margin or its own per-statement bound -- this is not a universal
- * guarantee for every imaginable `fn`. For every current, proven case it
- * never fires (every existing passing test of this function) -- the normal
- * success/57014-cancellation paths below are completely unchanged. If it
- * DOES fire, the client is released WITH an error, which tells pg.Pool to
- * discard/destroy the connection and free this pool slot immediately,
- * instead of leaving it orphaned until the OS's own TCP-level detection
- * eventually notices (which can be many minutes on default kernel
- * settings). The abandoned inner query is never cancelled server-side by
- * this -- it is only ever abandoned client-side -- but since the client
- * has already been discarded, nothing else can ever reuse it, so there is
- * no risk of a second caller racing against that abandoned query on the
- * same physical connection.
- */
-/**
- * Exported so every caller's own outer JS-side race (SESSION_QUERY_TIMEOUT_MS
- * in auth.ts, DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
- * startup-orchestrator.ts) can derive a margin guaranteed to exceed this
- * function's own real worst case, instead of an independently-chosen margin
- * silently drifting shorter than this one -- the exact failure mode
- * ACQUISITION_QUEUE_WAIT_MS's own doc comment above already guards against
- * for a different pair of constants.
+ * The version of this function santa-loop round 3 left in place issued a
+ * plain, SESSION-level `SET statement_timeout = X` with no surrounding
+ * transaction. Both Neon's and PgBouncer's own documentation say `SET`/
+ * `RESET` (session variables) are "Never" supported / "not supported" on a
+ * transaction-pooled connection -- session state is NOT guaranteed to
+ * follow the client to its next statement, because PgBouncer may hand that
+ * client an entirely DIFFERENT backend server connection for it. This was
+ * directly reproduced: with a clean backend, Client A's plain `SET
+ * statement_timeout = 300` followed by Client A fully disconnecting, then
+ * an unrelated Client B connecting and running an UNTIMED query, caused
+ * B's query to be wrongly cancelled at ~300ms -- A's session-level setting
+ * leaked onto a connection that never asked for it. This is not merely "my
+ * own protection might not apply"; it is cross-request interference: if
+ * ANY caller's cleanup (`SET statement_timeout = DEFAULT`) ever failed to
+ * run (a crash, a dead connection, this very function's own old backstop
+ * path discarding mid-sequence), the leftover value could affect a
+ * COMPLETELY UNRELATED later request through the same pooled backend.
+ *
+ * Fix (also directly reproduced, same harness): wrapping the read in an
+ * explicit `BEGIN; SET LOCAL statement_timeout = X; <fn>; COMMIT;` and
+ * disconnecting cleanly produced ZERO leakage onto a subsequent, unrelated
+ * client -- `SET LOCAL`'s scope is a native PostgreSQL transaction
+ * boundary, enforced by Postgres itself independent of PgBouncer or any
+ * reset query, so it cannot leak past COMMIT/ROLLBACK even if some OTHER
+ * cleanup step never runs. This also means a crash/discard mid-transaction
+ * can never leave a session-level setting behind for the next borrower --
+ * at most the backend itself is discarded (see the dead-connection
+ * backstop below), never silently reused with stale state.
+ *
+ * Transaction-abort semantics (also directly reproduced): once any
+ * statement inside the transaction errors (including a `statement_timeout`
+ * cancellation, SQLSTATE 57014), Postgres marks the WHOLE transaction
+ * aborted -- any further statement on it, including a harmless read,
+ * fails immediately with SQLSTATE 25P02 ("current transaction is aborted")
+ * until `ROLLBACK` is issued. `ROLLBACK` itself was confirmed to both clear
+ * the aborted state AND correctly revert `SET LOCAL`'s value, leaving the
+ * connection fully healthy and reusable. This is why 57014 can no longer
+ * be handled by simply resetting the timeout and reusing the client (round
+ * 3's own behavior, replaced by this fix): the transaction must be explicitly rolled back
+ * first. A caller whose `fn` needs to run a diagnostic read AFTER its own
+ * statement fails (claimStartup() does) must isolate that failure with its
+ * own `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` -- also directly reproduced to
+ * work correctly, keeping the diagnostic on the SAME pinned
+ * transaction/backend -- rather than relying on this function to expose a
+ * per-statement escape hatch.
  */
 export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
 
+/**
+ * Derives the real worst-case bound of a withRawStatementTimeout() call for
+ * a given statementTimeoutMs, for every caller's own outer JS-side
+ * defensive race (SESSION_QUERY_TIMEOUT_MS in auth.ts,
+ * DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS in
+ * startup-orchestrator.ts) to derive from -- a single shared formula
+ * instead of each call site hand-deriving its own and silently drifting
+ * out of sync with this function's real behavior, which is exactly what
+ * happened across santa-loop rounds 1-3. Accounts for BOTH backstops this
+ * function can hit in its worst case: once on the main BEGIN/SET LOCAL/fn/
+ * COMMIT sequence, and -- only on the error path -- once more on the
+ * ROLLBACK cleanup attempt.
+ *
+ * santa-loop review finding (round 3): a `mainBackstopMarginMs` parameter
+ * used to live here, added for a multi-statement caller (the authenticated
+ * root route's OLD raw-SQL policy path) that needed more slack than the
+ * single-statement default assumes. That caller was deleted (auth.ts) once
+ * the root route moved to a single Prisma transaction instead of
+ * withRawStatementTimeout() for policy resolution, leaving this parameter
+ * with zero remaining callers across every production call site (getSession,
+ * claimStartup, checkDatabase, checkMigrationReadiness, the public-admission
+ * read) -- removed as dead code rather than kept untested.
+ */
+export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number): number {
+  return POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 2 * CLIENT_SIDE_BACKSTOP_MARGIN_MS;
+}
+
 export class ClientSideExecutionTimeoutError extends Error {
-  constructor(label: string, timeoutMs: number) {
+  constructor(label: string, phase: "main" | "rollback", timeoutMs: number) {
     super(
-      `withRawStatementTimeout: client-side backstop fired after ${timeoutMs}ms for "${label}" -- ` +
-      `the connection never responded at all (not even to SET statement_timeout), so the ` +
-      `server-side cancellation this function normally relies on could never be delivered. ` +
+      `withRawStatementTimeout: client-side backstop fired during ${phase} after ${timeoutMs}ms for "${label}" -- ` +
+      `the connection never responded at all, so no server-side mechanism could ever fire. ` +
       `The connection has been discarded rather than left orphaned on the pool.`
     );
     this.name = "ClientSideExecutionTimeoutError";
   }
 }
 
+/**
+ * Races `promise` against a fresh timer of `ms`, rejecting with
+ * ClientSideExecutionTimeoutError if `promise` has not settled by then.
+ * Used for BOTH the main BEGIN/SET LOCAL/fn/COMMIT sequence and the
+ * ROLLBACK cleanup path below, so neither can hang the caller indefinitely
+ * on a connection that goes fully dead at any point (Phase 7: BEGIN never
+ * responding, SET LOCAL never responding, fn's query never responding,
+ * COMMIT never responding, and ROLLBACK never responding are all covered).
+ */
+function raceBackstop<R>(promise: Promise<R>, label: string, phase: "main" | "rollback", ms: number): { result: Promise<R>; clear: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const backstop = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new ClientSideExecutionTimeoutError(label, phase, ms)), ms);
+  });
+  return { result: Promise.race([promise, backstop]), clear: () => clearTimeout(timer) };
+}
+
+/**
+ * Runs `fn` against a single checked-out raw pg client, inside an explicit
+ * transaction with a bounded TRANSACTION-LOCAL statement_timeout (see the
+ * F-PGBOUNCER-TXN-SAFETY doc comment above for why this must be `SET
+ * LOCAL` inside `BEGIN`/`COMMIT`, not a plain session-level `SET`).
+ * Connection ACQUISITION is bounded by the pool's own connectionTimeoutMillis
+ * (a pre-existing, unchanged setting -- see withRawStatementTimeoutWorstCaseMs());
+ * query EXECUTION is bounded by a genuine Postgres-side statement_timeout,
+ * scoped to this transaction only. On success: COMMIT, then release() the
+ * client clean. On any error (including a 57014 cancellation, which leaves
+ * the transaction aborted): ROLLBACK -- itself bounded by its own backstop
+ * -- then release() clean if the rollback is confirmed, or release(err) to
+ * discard the connection if the rollback itself fails or never responds.
+ * The dead-connection backstop (CLIENT_SIDE_BACKSTOP_MARGIN_MS) exists only
+ * for a connection that never responds to ANYTHING; it discards the client
+ * and frees the pool slot immediately rather than leaving it orphaned until
+ * the OS's own TCP-level detection eventually notices. Most current callers
+ * run a single-statement `fn`, where this can only fire on a genuinely dead
+ * connection. claimStartup()'s `fn` is multi-statement (SAVEPOINT, INSERT,
+ * and on error ROLLBACK TO SAVEPOINT plus a diagnostic read) -- still well
+ * within the margin for a live connection, but if the main backstop ever
+ * did fire mid-`fn` there, the caller would see ClientSideExecutionTimeoutError
+ * instead of whatever error `fn` was itself handling at that moment.
+ */
 export async function withRawStatementTimeout<T>(
   pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
   timeoutMs: number,
@@ -567,64 +770,117 @@ export async function withRawStatementTimeout<T>(
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
-  const clientSideBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
-  let backstopTimer: ReturnType<typeof setTimeout> | undefined;
+  const mainBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
   const normalPath = (async () => {
-    await client.query(`SET statement_timeout = ${safeTimeoutMs}`);
+    await client.query("BEGIN");
+    await client.query(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
+    // Security review finding (F-PGBOUNCER-TXN-SAFETY): statement_timeout
+    // only bounds an in-flight statement -- it does nothing while the
+    // transaction is open but idle (e.g. the link to PgBouncer goes
+    // half-open between statements). Without this, the client-side backstop
+    // below discards the APPLICATION's reference to a hung connection, but
+    // the SERVER-side backend can stay idle-in-transaction indefinitely,
+    // holding whatever locks `fn` has taken (a row lock in claimStartup's
+    // case) until TCP keepalive or PgBouncer notices -- a real stall risk
+    // for any later caller that needs the same row/table. Set to the same
+    // margin as the main client-side backstop below, so the server tears
+    // down at essentially the same time the client gives up.
+    await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${mainBackstopMs}`);
     const result = await fn(client);
-    await client.query(`SET statement_timeout = DEFAULT`);
+    const commitResult = await client.query("COMMIT");
+    // Database review finding (F-PGBOUNCER-TXN-SAFETY): if the transaction
+    // was already aborted without `fn` itself throwing (a state this
+    // function has not observed in practice, but Postgres's protocol
+    // allows), COMMIT replies with a ROLLBACK command tag and no error --
+    // silently discarding `fn`'s work while the caller believes it
+    // succeeded. Checking the reply's own command tag closes that gap.
+    const command = (commitResult as unknown as { command?: string }).command;
+    if (command !== "COMMIT") {
+      throw new Error(`withRawStatementTimeout: expected COMMIT, got ${command ?? "unknown"} -- transaction was not actually committed`);
+    }
     return result;
   })();
-  const backstop = new Promise<never>((_, reject) => {
-    backstopTimer = setTimeout(() => {
-      reject(new ClientSideExecutionTimeoutError(label, clientSideBackstopMs));
-    }, clientSideBackstopMs);
-  });
+  const { result: racedNormalPath, clear: clearMainBackstop } = raceBackstop(normalPath, label, "main", mainBackstopMs);
 
   try {
-    const result = await Promise.race([normalPath, backstop]);
-    clearTimeout(backstopTimer);
+    const result = await racedNormalPath;
+    clearMainBackstop();
     client.release();
-    logger.debug("[db] withRawStatementTimeout completed", {
-      label,
-      acquireMs: acquiredAt - acquireStart,
-      executionMs: Date.now() - acquiredAt,
-      outcome: "success",
-    });
+    // Logging must never influence control flow: a throw here must not be
+    // mistaken for a real transaction failure by the catch below, which
+    // would attempt a ROLLBACK on a client already returned to the pool.
+    try {
+      logger.debug("[db] withRawStatementTimeout completed", {
+        label,
+        acquireMs: acquiredAt - acquireStart,
+        executionMs: Date.now() - acquiredAt,
+        outcome: "success",
+      });
+    } catch {
+      // Swallowed deliberately -- see comment above.
+    }
     return result;
   } catch (err) {
-    clearTimeout(backstopTimer);
+    clearMainBackstop();
     const errorObj = err instanceof Error ? err : new Error(String(err));
-    const isBackstop = err instanceof ClientSideExecutionTimeoutError;
-    const sqlState = (err as { code?: unknown } | null)?.code;
-    const isQueryCancellation = !isBackstop && sqlState === POSTGRES_QUERY_CANCELED_SQLSTATE;
+    const isMainBackstop = err instanceof ClientSideExecutionTimeoutError;
 
-    if (isBackstop) {
-      // The connection never responded at all. The abandoned normalPath
-      // promise may still settle later (or never) -- silence it so it can
-      // never throw an unhandled rejection or attempt a second release()
-      // once this one has already discarded the client.
+    if (isMainBackstop) {
+      // The connection never responded at all, at some point in BEGIN/SET
+      // LOCAL/fn/COMMIT. The abandoned normalPath promise may still settle
+      // later (or never) -- silence it so it can never throw an unhandled
+      // rejection or attempt a release() once this one has already
+      // discarded the client.
       normalPath.catch(() => undefined);
       client.release(errorObj);
-      logger.warn("[db] withRawStatementTimeout client-side backstop fired -- connection discarded", {
+      logger.warn("[db] withRawStatementTimeout client-side backstop fired on main sequence -- connection discarded", {
         label,
-        clientSideBackstopMs,
+        mainBackstopMs,
       });
-    } else if (isQueryCancellation) {
-      try {
-        await client.query(`SET statement_timeout = DEFAULT`);
-        client.release();
-      } catch {
-        // Reset itself failed on a client we already know is in a
-        // questionable state -- discard rather than risk returning a
-        // poisoned connection to the shared pool.
-        client.release(errorObj);
-      }
-    } else {
-      // Connection-level or otherwise unclassified failure -- the
-      // session's state is not trustworthy; discard so pg.Pool
-      // establishes a fresh connection for the next caller instead of
-      // reusing a possibly-broken one.
+      logger.debug("[db] withRawStatementTimeout completed", {
+        label,
+        acquireMs: acquiredAt - acquireStart,
+        executionMs: Date.now() - acquiredAt,
+        outcome: "error",
+        errorName: errorObj.name,
+        wasClientSideBackstop: true,
+        rollbackAttempted: false,
+      });
+      throw errorObj;
+    }
+
+    // fn (or BEGIN/SET LOCAL/COMMIT itself) threw a real error -- the
+    // transaction may be aborted (always true for a 57014 cancellation).
+    // Always attempt ROLLBACK, itself bounded by its own backstop, before
+    // trusting this connection enough to return it to the pool.
+    //
+    // TypeScript review finding (F-PGBOUNCER-TXN-SAFETY): `client.query(...)`
+    // must be called inside the try below, not before it -- a synchronous
+    // throw here (rather than a rejected promise) would otherwise escape
+    // this whole catch block and skip client.release() entirely, leaking
+    // the connection forever under production's max:1 pool.
+    let rollbackPromise: Promise<unknown> | undefined;
+    let clearRollbackBackstop: () => void = () => undefined;
+    let rollbackConfirmed = false;
+    try {
+      rollbackPromise = client.query("ROLLBACK");
+      const raced = raceBackstop(rollbackPromise, label, "rollback", CLIENT_SIDE_BACKSTOP_MARGIN_MS);
+      clearRollbackBackstop = raced.clear;
+      await raced.result;
+      clearRollbackBackstop();
+      rollbackConfirmed = true;
+      client.release();
+    } catch {
+      clearRollbackBackstop();
+      // Either `client.query("ROLLBACK")` threw/rejected synchronously or
+      // asynchronously, or its own backstop fired (the connection never
+      // responded to ROLLBACK either). Either way the connection's state is
+      // untrustworthy -- discard so pg.Pool establishes a fresh connection
+      // for the next caller instead of reusing a possibly-broken or
+      // still-aborted one. Silence a late rollback settlement for the same
+      // reason as the main-backstop path (rollbackPromise is only unset if
+      // the synchronous throw happened before it could be assigned).
+      rollbackPromise?.catch(() => undefined);
       client.release(errorObj);
     }
 
@@ -634,8 +890,9 @@ export async function withRawStatementTimeout<T>(
       executionMs: Date.now() - acquiredAt,
       outcome: "error",
       errorName: errorObj.name,
-      wasQueryCancellation: isQueryCancellation,
-      wasClientSideBackstop: isBackstop,
+      wasClientSideBackstop: false,
+      rollbackAttempted: true,
+      rollbackConfirmed,
     });
     throw errorObj;
   }
