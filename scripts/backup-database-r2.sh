@@ -29,6 +29,9 @@
 #                          only -- see R2_ENDPOINT_POLICY in docs/opsiq/product/R2_BACKUP_RUNBOOK.md)
 #   R2_BUCKET             private R2 bucket name (this script does not create or configure it)
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY   R2 Object Read & Write token, scoped to R2_BUCKET only
+#   MANIFEST_SIGNING_KEY  separate HMAC-SHA256 signing key (>=32 chars), NOT the R2 credential --
+#                          binds the manifest's QBO-gate-result claim so a reader with only the
+#                          R2 object credential cannot forge a compliant-looking manifest
 # Optional env:
 #   PRODUCTION_QBO_ENABLED   passed through to backup-qbo-gate.sh unchanged
 #   R2_OBJECT_PREFIX         default "backups/"
@@ -101,6 +104,18 @@ if [ "$GATE_RC" -ne 0 ]; then
   echo "ERROR: backup refused by the QBO backup gate" >&2
   exit 1
 fi
+# MACHINE-READABLE GATE EVIDENCE: extract the gate's own canonical ALLOW line (the exact,
+# unmodified vocabulary #642 emits on success -- see scripts/backup-qbo-gate.sh) for binding into
+# the manifest below. Even though GATE_RC=0 already proved the gate allowed this run, this is an
+# independent structural sanity check: if the gate ever exited 0 without actually emitting its own
+# documented ALLOW line (a hypothetical regression in #642, not caused by this script), refuse to
+# produce a manifest that would otherwise claim gate evidence that was never actually observed.
+QBO_GATE_RESULT_LINE=$(echo "$GATE_OUT" | grep -o '^QBO_BACKUP_GATE=ALLOW.*' | head -1)
+if [ -z "$QBO_GATE_RESULT_LINE" ]; then
+  echo "ERROR: QBO gate exited successfully but did not emit its documented QBO_BACKUP_GATE=ALLOW line -- refusing to produce a manifest without verifiable gate evidence" >&2
+  exit 1
+fi
+QBO_GATE_MANIFEST_SCHEMA_VERSION="1"
 
 # --- 2. target/environment safety ---
 if [ -z "${DATABASE_URL:-}" ]; then
@@ -127,12 +142,26 @@ if ! [[ "$AGE_RECIPIENT" =~ ^age1[a-z0-9]{20,}$ ]]; then
   exit 1
 fi
 
-for v in R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+for v in R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MANIFEST_SIGNING_KEY; do
   if [ -z "${!v:-}" ]; then
     echo "ERROR: $v not set" >&2
     exit 1
   fi
 done
+# MANIFEST_SIGNING_KEY is a SEPARATE secret from the R2 writer credential (AWS_ACCESS_KEY_ID /
+# AWS_SECRET_ACCESS_KEY): it is used only to HMAC-sign the manifest, never to read/write R2 or
+# decrypt anything. This is the defense against the specific threat this is designed for: an
+# attacker who has obtained ONLY the R2 object credential (e.g. a leaked/logged AWS-style key,
+# not a full backup-write environment compromise) can create arbitrary objects in the bucket, but
+# cannot produce a validly-signed manifest without also possessing this separate key -- so an
+# R2-domain verifier that checks the signature (see scripts/privacy/verify-r2-backup-domain.ts)
+# cannot be fooled by a self-authored "fake manifest" from that narrower credential-theft scenario.
+# This is NOT a defense against a full backup-write environment compromise (both secrets stolen
+# together) -- see the Failure Model section of docs/opsiq/product/R2_BACKUP_RUNBOOK.md.
+if [ ${#MANIFEST_SIGNING_KEY} -lt 32 ]; then
+  echo "ERROR: MANIFEST_SIGNING_KEY is too short (expected at least 32 characters) -- refusing to sign with a weak key" >&2
+  exit 1
+fi
 if ! [[ "$R2_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
   echo "ERROR: R2_BUCKET does not look like a valid bucket name" >&2
   exit 1
@@ -153,6 +182,10 @@ if ! command -v age >/dev/null 2>&1; then
 fi
 if ! command -v aws >/dev/null 2>&1; then
   echo "ERROR: aws CLI not found on PATH" >&2
+  exit 1
+fi
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "ERROR: openssl not found on PATH (required to sign the manifest)" >&2
   exit 1
 fi
 
@@ -208,15 +241,38 @@ echo "$CHECKSUM" > "$CHECKSUM_FILE"
 echo "Checksum (of the encrypted object): $CHECKSUM"
 
 # --- Non-sensitive manifest. Never contains a database URL, password, token, or customer data. ---
+TIMESTAMP_ISO="$(date -u -d "@$START_TIME" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -r "$START_TIME" +%Y-%m-%dT%H:%M:%SZ)"
+
+# QBO-GATE-RESULT BINDING (Section 7): the manifest commits to the gate's own canonical ALLOW
+# line and a manifest schema version, so a reader never has to trust a hand-maintained "PASS"
+# string divorced from what the gate actually printed. This is structurally bound by construction
+# (manifest-writing code is lexically unreachable unless GATE_RC=0 and the ALLOW line was
+# observed, above) -- but construction-binding alone does not stop someone who holds ONLY the R2
+# write credential from authoring an entirely separate, self-consistent fake object+manifest pair
+# from scratch. MANIFEST_SIGNATURE closes that gap: an HMAC-SHA256, using a key never exposed to
+# the R2 object credential, over the exact fields below. A reader (scripts/privacy/
+# verify-r2-backup-domain.ts) that does not hold MANIFEST_SIGNING_KEY can detect tampering or
+# fabrication; it cannot itself forge a new valid signature.
+SIGNING_INPUT="${OBJECT_NAME}|${TIMESTAMP_ISO}|${ENCRYPTED_SIZE}|${CHECKSUM}|${QBO_GATE_RESULT_LINE}|${QBO_GATE_MANIFEST_SCHEMA_VERSION}"
+MANIFEST_SIGNATURE=$(printf '%s' "$SIGNING_INPUT" | openssl dgst -sha256 -hmac "$MANIFEST_SIGNING_KEY" -r | awk '{print $1}')
+if ! [[ "$MANIFEST_SIGNATURE" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "ERROR: failed to compute a valid manifest signature" >&2
+  exit 1
+fi
+
 cat > "$MANIFEST_FILE" <<EOF
 {
   "backup_format_version": "1",
-  "timestamp_utc": "$(date -u -d "@$START_TIME" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -r "$START_TIME" +%Y-%m-%dT%H:%M:%SZ)",
+  "timestamp_utc": "$TIMESTAMP_ISO",
   "source_commit_sha": "${GITHUB_SHA:-unknown}",
   "postgres_client_version": "$PG_DUMP_VERSION",
   "encrypted_object_name": "$OBJECT_NAME",
   "encrypted_object_size_bytes": $ENCRYPTED_SIZE,
-  "sha256": "$CHECKSUM"
+  "sha256": "$CHECKSUM",
+  "qbo_backup_gate_result": "$QBO_GATE_RESULT_LINE",
+  "qbo_backup_gate_manifest_schema_version": "$QBO_GATE_MANIFEST_SCHEMA_VERSION",
+  "manifest_signature_algorithm": "HMAC-SHA256",
+  "manifest_signature": "$MANIFEST_SIGNATURE"
 }
 EOF
 echo "Manifest:"

@@ -61,9 +61,12 @@ jobs:
           R2_BUCKET: ${{ vars.R2_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # Separate from the R2 credential above -- see backup-database-r2.sh's own comment on
+          # MANIFEST_SIGNING_KEY for why this must never be the same secret as the R2 token.
+          MANIFEST_SIGNING_KEY: ${{ secrets.MANIFEST_SIGNING_KEY }}
         run: |
           MISSING=0
-          for v in DATABASE_URL AGE_RECIPIENT R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+          for v in DATABASE_URL AGE_RECIPIENT R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MANIFEST_SIGNING_KEY; do
             if [ -z "${!v:-}" ]; then
               echo "::error::$v is missing or empty"
               MISSING=1
@@ -116,6 +119,7 @@ jobs:
           R2_BUCKET: ${{ vars.R2_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          MANIFEST_SIGNING_KEY: ${{ secrets.MANIFEST_SIGNING_KEY }}
         run: bash scripts/backup-database-r2.sh
 
       - name: Summary
