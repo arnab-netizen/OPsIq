@@ -35,17 +35,6 @@ vi.mock("next/headers", () => ({
 }));
 
 const sessionQueryMock = vi.hoisted(() => vi.fn());
-// F-AUTH-ROOT-FAST-FAIL round 2: the bounded (statementTimeoutMs) path now
-// runs as RAW SQL through withRawStatementTimeout() -- the same primitive
-// getSession() itself uses -- not through Prisma's withStatementTimeout()
-// (round 1 used that, but database review correctly rejected it: Prisma's
-// interactive $transaction() races connection ACQUISITION against its own
-// maxWait independent of the pool's real connectionTimeoutMillis, the exact
-// P2028-under-ordinary-contention class this codebase already diagnosed and
-// moved getSession() away from). This mock dispatches raw query text to the
-// right fixture, mirroring get-session-db-resilience.test.ts's style.
-const policyRawQueryMock = vi.hoisted(() => vi.fn());
-const withRawStatementTimeoutSpy = vi.hoisted(() => vi.fn());
 
 const workspaceMembershipFindFirst = vi.hoisted(() => vi.fn());
 const workspaceMembershipFindUnique = vi.hoisted(() => vi.fn());
@@ -62,21 +51,18 @@ vi.mock("@/lib/db", () => ({
   getDbInstance: vi.fn().mockResolvedValue({}),
   getRawPool: vi.fn().mockResolvedValue({
     connect: vi.fn().mockResolvedValue({
-      query: (text: string, values?: unknown[]) =>
-        text.includes("FROM sessions") ? sessionQueryMock(text, values) : policyRawQueryMock(text, values),
+      query: (text: string, values?: unknown[]) => sessionQueryMock(text, values),
     }),
   }),
   withRawStatementTimeout: async (
     pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
-    timeoutMs: number,
-    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown,
-    label: string,
-    mainBackstopMarginMs?: number
-  ) => {
-    withRawStatementTimeoutSpy(timeoutMs, label, mainBackstopMarginMs);
-    return fn(await pool.connect());
-  },
-  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number, mainBackstopMarginMs = 5_000) => 90_000 + statementTimeoutMs + mainBackstopMarginMs + 5_000,
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
+  // santa-loop review finding (round 3): withRawStatementTimeoutWorstCaseMs() dropped its
+  // mainBackstopMarginMs parameter (dead -- no production caller) -- this mock's signature
+  // follows.
+  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
   CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
 }));
 
@@ -109,23 +95,6 @@ function mockHealthyPolicyReads() {
   workspaceMembershipFindUnique.mockResolvedValue({ isActive: true, role: "ADMIN_OR_PORTFOLIO_MANAGER" });
   userRoleAssignmentFindMany.mockResolvedValue([{ role: "OWNER", scope: "workspace", scopeId: WORKSPACE_ID }]);
   engagementMembershipFindMany.mockResolvedValue([]);
-
-  // Raw-SQL equivalents for the opt-in statementTimeoutMs path (runPolicyContextReadsRaw).
-  policyRawQueryMock.mockImplementation(async (text: string) => {
-    if (text.includes("SELECT workspace_id FROM workspace_memberships")) {
-      return { rows: [{ workspace_id: WORKSPACE_ID }] };
-    }
-    if (text.includes("SELECT is_active, role FROM workspace_memberships")) {
-      return { rows: [{ is_active: true, role: "ADMIN_OR_PORTFOLIO_MANAGER" }] };
-    }
-    if (text.includes("FROM user_role_assignments")) {
-      return { rows: [{ role: "OWNER", scope: "workspace", scope_id: WORKSPACE_ID }] };
-    }
-    if (text.includes("FROM engagement_memberships")) {
-      return { rows: [] };
-    }
-    throw new Error(`Unexpected raw policy query in test: ${text}`);
-  });
 }
 
 beforeEach(() => {
@@ -158,15 +127,15 @@ describe("getPolicyContext() vs getPolicyContextForSession() — double session 
   });
 
   it(
-    "getPolicyContext() and getPolicyContextForSession() (both via the ORM path -- the raw-SQL path's equivalence to the ORM path is proven separately, against real Postgres, in get-policy-context-for-session-statement-timeout-hostile.db.test.ts) resolve the identical PolicyContext for the same session — behavior-preserving",
+    "getPolicyContext() and getPolicyContextForSession() resolve the identical PolicyContext for the same session — behavior-preserving",
     async () => {
-      // santa-loop review finding (round 2): this test's name previously
-      // implied it proves raw-SQL vs. ORM equivalence; it does not -- both
-      // calls below take the DEFAULT (no options) path, so both run
-      // through runPolicyContextReads(). It genuinely proves
+      // santa-loop review finding (round 2): this test previously compared
+      // against a now-deleted opt-in raw-SQL path (statementTimeoutMs) that
+      // had no production caller left once the authenticated root route
+      // moved to its own single bounded transaction -- deleted along with
+      // that path. This test's real purpose, unchanged, is proving
       // getPolicyContextForSession()'s double-fetch-removal is
-      // behavior-preserving relative to getPolicyContext(), which is its
-      // real purpose; it is not evidence about the raw-SQL path at all.
+      // behavior-preserving relative to getPolicyContext().
       const session = await getSession();
       const viaReuse = await getPolicyContextForSession(session!);
 
@@ -190,59 +159,8 @@ describe("getPolicyContext() vs getPolicyContextForSession() — double session 
   });
 });
 
-describe("getPolicyContextForSession() — opt-in statementTimeoutMs, raw-SQL mechanism (F-AUTH-ROOT-FAST-FAIL database-review fix, round 2)", () => {
-  it("without options, issues no ADDITIONAL withRawStatementTimeout() call beyond the one getSession() itself already made -- every existing caller of getPolicyContext() keeps its exact unbounded (plain Prisma ORM) behavior", async () => {
-    const session = await getSession();
-    withRawStatementTimeoutSpy.mockClear(); // clear the one call getSession() itself just made
-
-    const ctx = await getPolicyContextForSession(session!);
-
-    expect(withRawStatementTimeoutSpy).not.toHaveBeenCalled();
-    expect(workspaceMembershipFindFirst).toHaveBeenCalled(); // took the plain-Prisma-ORM path, not raw SQL
-    expect(ctx).not.toBeNull();
-  });
-
-  it("with options.statementTimeoutMs, routes every read as raw SQL through withRawStatementTimeout() with that exact statement_timeout and a descriptive label", async () => {
-    const session = await getSession();
-    withRawStatementTimeoutSpy.mockClear();
-
-    const ctx = await getPolicyContextForSession(session!, undefined, { statementTimeoutMs: 4000 });
-
-    expect(withRawStatementTimeoutSpy).toHaveBeenCalledTimes(1);
-    // 20_000 = 4 * CLIENT_SIDE_BACKSTOP_MARGIN_MS (POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS) --
-    // database-review finding (round 3): the multi-statement fn needs a larger-than-default
-    // client-side backstop margin than withRawStatementTimeout()'s single-statement default.
-    expect(withRawStatementTimeoutSpy).toHaveBeenCalledWith(4000, "getPolicyContextForSession", 20_000);
-    expect(workspaceMembershipFindFirst).not.toHaveBeenCalled(); // took the raw-SQL path, not plain Prisma ORM
-    expect(ctx).not.toBeNull();
-    expect(ctx).toMatchObject({ userId: "user-1" });
-  });
-
-  it("the bounded path still reads the cookie zero times -- the double-fetch fix is preserved under the new options parameter", async () => {
-    const session = await getSession();
-    cookieGetSpy.mockClear();
-
-    await getPolicyContextForSession(session!, undefined, { statementTimeoutMs: 4000 });
-
-    expect(cookieGetSpy).not.toHaveBeenCalled();
-  });
-
-  it("propagates a raw-SQL read failure (e.g. a real statement_timeout cancellation) to the caller rather than silently swallowing it", async () => {
-    const session = await getSession();
-    policyRawQueryMock.mockRejectedValueOnce(new Error("statement timeout"));
-
-    await expect(getPolicyContextForSession(session!, undefined, { statementTimeoutMs: 4000 })).rejects.toThrow("statement timeout");
-  });
-});
-
-describe("POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS — derivation drift guard", () => {
-  it(
-    "stays equal to 4 * the REAL db.ts CLIENT_SIDE_BACKSTOP_MARGIN_MS -- santa-loop review finding (both reviewers): this value is hard-coded in auth.ts (deliberately NOT a live import, to avoid widening auth.ts's module-load dependency surface onto every test that mocks @/lib/db -- see its own doc comment), so nothing else catches it silently drifting out of sync if db.ts's constant ever changes. vi.importActual bypasses this file's own @/lib/db and @/services/auth mocks to read the REAL values without adding a load-time dependency to the production module itself.",
-    async () => {
-      const realDb = await vi.importActual<typeof import("@/lib/db")>("@/lib/db");
-      const realAuth = await vi.importActual<typeof import("@/services/auth")>("@/services/auth");
-
-      expect(realAuth.POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS).toBe(4 * realDb.CLIENT_SIDE_BACKSTOP_MARGIN_MS);
-    }
-  );
-});
+// santa-loop review finding (round 2): the opt-in statementTimeoutMs raw-SQL mechanism this file
+// used to test here (and the POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS drift guard below it) was
+// added for the authenticated root route's OLD multi-domain implementation and had no production
+// caller left once the root route moved to its own single bounded transaction (see
+// root-redirect.service.ts) -- deleted from auth.ts as dead code, so these tests are deleted too.

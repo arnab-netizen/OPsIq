@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession } from "@/services/auth";
-import { resolveAuthenticatedRootDestination } from "@/services/root-redirect.service";
+import { resolveAuthenticatedRootDecision } from "@/services/root-redirect.service";
 import { presentationForAdmissionMode } from "@/domain/beta/public-presentation";
 import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
 import LandingPage from "@/components/landing/LandingPage";
@@ -76,19 +75,21 @@ const organizationJsonLd = {
 };
 
 export default async function HomePage() {
-  const session = await getSession();
-  // Display-only: the offer wording follows the admission mode (fails closed to the invite-only wording).
-  const settingsMode = session ? null : await getPublicAdmissionMode();
-
-  if (session) {
-    // F4: a self-serve owner's canonical first-run/Home surface is /owner/cockpit (labeled "Home" in
-    // the persona-sectioned nav — see sidebar-nav.tsx), not the consultant-oriented /dashboard
-    // (engagements/findings/actions — concepts a self-serve owner never has). The policy check,
-    // owner-login-href resolution, and the fail-closed/bounded decision logic all live in
-    // resolveAuthenticatedRootDestination() (F-AUTH-ROOT-FAST-FAIL) -- this page only renders the
-    // decision, it makes none of it.
-    redirect(await resolveAuthenticatedRootDestination(session));
+  // F4/F-AUTH-ROOT-SINGLE-TX: the session validation, policy check, owner-login-href resolution, and
+  // the fail-closed/bounded decision logic all live in resolveAuthenticatedRootDecision() -- this
+  // page only renders the decision, it makes none of it. A self-serve owner's canonical
+  // first-run/Home surface is /owner/cockpit (labeled "Home" in the persona-sectioned nav — see
+  // sidebar-nav.tsx), not the consultant-oriented /dashboard (engagements/findings/actions —
+  // concepts a self-serve owner never has); which one a given redirect resolves to is the service's
+  // decision, never this page's.
+  const decision = await resolveAuthenticatedRootDecision();
+  if (decision.kind === "redirect") {
+    redirect(decision.href);
   }
+  // decision.kind === "anonymous": no positively-proven session (missing/invalid/revoked/expired
+  // cookie, or an inactive user) -- render the same public landing experience as any logged-out
+  // visitor, never a redirect.
+  const settingsMode = await getPublicAdmissionMode();
 
   return (
     <>

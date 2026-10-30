@@ -4,7 +4,6 @@ import {
   getRawPool,
   withRawStatementTimeout,
   withRawStatementTimeoutWorstCaseMs,
-  type RawQueryClient,
 } from "@/lib/db";
 import type { Prisma, UserRoleAssignment, EngagementMembership } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
@@ -52,62 +51,6 @@ export const SESSION_STATEMENT_TIMEOUT_MS = 4000;
  */
 export const SESSION_QUERY_TIMEOUT_MS = withRawStatementTimeoutWorstCaseMs(SESSION_STATEMENT_TIMEOUT_MS) + 3000;
 
-/**
- * F-AUTH-ROOT-FAST-FAIL (database-review findings C1/H1, round 2): the
- * Postgres-side statement_timeout getPolicyContextForSession() uses when a
- * caller opts into options.statementTimeoutMs via this exact value.
- *
- * Round-1 of this fix used withStatementTimeout() (Prisma's interactive
- * $transaction()) for this. Database review (round 2) correctly rejected
- * that: $transaction()'s own `maxWait` (TRANSACTION_ACQUIRE_MAX_WAIT_MS,
- * 10s) races CONNECTION ACQUISITION independent of whether the pool's own
- * much longer connectionTimeoutMillis would have succeeded -- this is the
- * EXACT P2028 false-failure class db.ts's own doc comments document in
- * detail (see withStatementTimeout()'s header and the
- * fresh-connection-acquisition-hostile/startup-coldstart-pool-contention
- * forensics it cites) and the reason getSession(), claimStartup(),
- * checkDatabase(), and checkMigrationReadiness() all deliberately moved
- * OFF this exact mechanism already. Reusing it here would have
- * reintroduced that same already-fixed-elsewhere defect class for this one
- * new caller. Fixed by using withRawStatementTimeout() instead (below) --
- * the SAME raw-pg primitive getSession() itself uses, whose acquisition is
- * bounded only by the pool's own connectionTimeoutMillis, with no separate
- * Prisma-imposed maxWait ceiling to race.
- */
-export const POLICY_CONTEXT_STATEMENT_TIMEOUT_MS = 4000;
-
-/**
- * F-AUTH-ROOT-FAST-FAIL (database-review finding, round 3): runPolicyContextReadsRaw()
- * issues up to 4 sequential statements over the one checked-out connection
- * (resolve-default-workspace, verify-membership, role-assignments,
- * engagement-memberships) -- withRawStatementTimeout()'s own doc comment is
- * explicit that its DEFAULT client-side backstop margin
- * (CLIENT_SIDE_BACKSTOP_MARGIN_MS) assumes a single-statement `fn`; reusing
- * that default here would let a merely slow-but-healthy (never actually
- * hung) run of ordinary statements trip the backstop and have its
- * connection needlessly discarded. Sized for 4 statements' worth of the
- * SAME per-statement margin the primitive already uses as its
- * single-statement default, rather than an independently hand-picked
- * number.
- *
- * santa-loop review finding: computing this as `4 * CLIENT_SIDE_BACKSTOP_MARGIN_MS`
- * would require importing that constant from db.ts into this module's
- * TOP-LEVEL scope -- a new load-time dependency this file never had before,
- * which broke every pre-existing test that mocks "@/lib/db" without
- * anticipating a brand-new export (reproduced: get-session-db-resilience.test.ts
- * failed to even load). Hard-coded instead, with the derivation stated here
- * for traceability: db.ts's CLIENT_SIDE_BACKSTOP_MARGIN_MS is 5_000 as of
- * this writing, so 4 * 5_000 = 20_000. If that constant ever changes, update
- * this value to match -- intentionally NOT re-wired to a live import, so
- * this module's load-time dependency surface never again silently widens
- * onto every test file that mocks "@/lib/db".
- */
-export const POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS = 20_000;
-
-/** withRawStatementTimeout()'s real worst case for POLICY_CONTEXT_STATEMENT_TIMEOUT_MS with the multi-statement margin above, plus the same 3s outer-race margin SESSION_QUERY_TIMEOUT_MS uses. */
-export const POLICY_CONTEXT_QUERY_TIMEOUT_MS =
-  withRawStatementTimeoutWorstCaseMs(POLICY_CONTEXT_STATEMENT_TIMEOUT_MS, POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS) + 3000;
-
 export interface AuthenticatedUser {
   id: string;
   email: string;
@@ -144,6 +87,54 @@ interface RawSessionRow {
   user_email: string;
   user_name: string | null;
   user_is_active: boolean;
+}
+
+/**
+ * F-AUTH-ROOT-SINGLE-TX: the single reusable session-lookup primitive. Both getSession() (via its
+ * own raw pg client, bounded by withRawStatementTimeout()) and the authenticated-root single
+ * transaction (via its Prisma TransactionClient, bounded by its own maxWait/timeout/statement_timeout
+ * — see root-redirect.service.ts) run this EXACT SQL text and the EXACT revoked/expiry/active checks
+ * through sessionInfoFromRow() below, so the two callers can never silently drift on authorization
+ * semantics despite using different execution primitives (raw pg vs. Prisma transaction client).
+ */
+export const SESSION_LOOKUP_SQL = `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
+                    u.id AS user_id, u.email AS user_email, u.name AS user_name, u.is_active AS user_is_active
+             FROM sessions s
+             JOIN users u ON u.id = s.user_id
+             WHERE s.token = $1`;
+
+/** Pure: the single authoritative revoked/expiry/active-user decision, shared by every session-lookup caller. */
+function sessionInfoFromRow(row: RawSessionRow | undefined): SessionInfo | null {
+  if (!row) return null;
+  if (row.revoked_at) return null;
+  if (row.expires_at < new Date()) return null;
+  if (!row.user_is_active) return null;
+  return {
+    user: {
+      id: row.user_id,
+      email: row.user_email,
+      name: row.user_name,
+      isActive: row.user_is_active,
+    },
+    sessionId: row.session_id,
+    expiresAt: row.expires_at,
+  };
+}
+
+/**
+ * F-AUTH-ROOT-SINGLE-TX: session validation through an already-open Prisma transaction client —
+ * for the authenticated-root single-transaction path only (root-redirect.service.ts). Runs the SAME
+ * SESSION_LOOKUP_SQL and sessionInfoFromRow() checks getSession() itself uses; the caller's own
+ * transaction-level `SET LOCAL statement_timeout` bounds this statement server-side, exactly as
+ * withRawStatementTimeout() bounds getSession()'s own raw-pg read. Does not call cookies() or
+ * getRawPool() — the caller already resolved the token and already holds the transaction client.
+ */
+export async function validateSessionTokenInTransaction(
+  tx: { $queryRawUnsafe: <T>(query: string, ...values: unknown[]) => Promise<T> },
+  token: string
+): Promise<SessionInfo | null> {
+  const rows = await tx.$queryRawUnsafe<RawSessionRow[]>(SESSION_LOOKUP_SQL, token);
+  return sessionInfoFromRow(rows[0]);
 }
 
 export async function getSession(): Promise<SessionInfo | null> {
@@ -188,15 +179,7 @@ export async function getSession(): Promise<SessionInfo | null> {
       withRawStatementTimeout(
         pool,
         SESSION_STATEMENT_TIMEOUT_MS,
-        (client) =>
-          client.query<RawSessionRow>(
-            `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
-                    u.id AS user_id, u.email AS user_email, u.name AS user_name, u.is_active AS user_is_active
-             FROM sessions s
-             JOIN users u ON u.id = s.user_id
-             WHERE s.token = $1`,
-            [sessionToken]
-          ),
+        (client) => client.query<RawSessionRow>(SESSION_LOOKUP_SQL, [sessionToken]),
         "getSession"
       ),
       new Promise<never>((_, reject) =>
@@ -210,30 +193,7 @@ export async function getSession(): Promise<SessionInfo | null> {
     return null;
   }
 
-  if (!row) return null;
-
-  if (row.revoked_at) {
-    return null;
-  }
-
-  if (row.expires_at < new Date()) {
-    return null;
-  }
-
-  if (!row.user_is_active) {
-    return null;
-  }
-
-  return {
-    user: {
-      id: row.user_id,
-      email: row.user_email,
-      name: row.user_name,
-      isActive: row.user_is_active,
-    },
-    sessionId: row.session_id,
-    expiresAt: row.expires_at,
-  };
+  return sessionInfoFromRow(row);
 }
 
 export async function requireSession(workspaceId?: string): Promise<SessionInfo> {
@@ -258,23 +218,23 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
 }
 
 /**
- * F-AUTH-ROOT-FAST-FAIL root-cause context (santa-loop review finding: this
- * comment previously, incorrectly, described THIS function as the bounded
- * one -- it is not). The four reads below run as plain Prisma ORM calls
- * with NO server-side statement_timeout at all -- unlike getSession()'s own
- * raw-SQL read. This is the UNBOUNDED default path: getPolicyContext() and
- * every other existing caller of getPolicyContextForSession() that omits
- * options.statementTimeoutMs runs through exactly this function, with its
- * EXACT pre-existing behavior (no new bound, no new failure mode) --
- * deliberately unchanged so this fix stays root-specific to the
- * authenticated root route rather than silently changing behavior for
- * every other authenticated route that resolves policy today (dashboard,
- * the authenticated layout, diagnosis-access, server-role...). The REAL,
- * server-cancelled, bounded equivalent is runPolicyContextReadsRaw() below,
- * reached only through getPolicyContextForSession()'s options.statementTimeoutMs
- * branch -- see that function's own doc comment for the actual fix.
+ * The four reads below run as plain Prisma ORM calls with NO statement_timeout of their own --
+ * unlike getSession()'s own raw-SQL read. Any bound comes only from whatever `client` the caller
+ * passes: getPolicyContextForSession() passes the plain `db` singleton (so getPolicyContext() and
+ * every other caller through it stays genuinely unbounded, its EXACT pre-existing behavior --
+ * santa-loop review finding: a now-removed `options.statementTimeoutMs` opt-in bounded
+ * alternative, runPolicyContextReadsRaw(), was added for the root route's OLD multi-domain
+ * implementation and had no other caller left once the root route moved to the single-transaction
+ * path below -- deleted as dead code rather than kept untested); the authenticated-root single
+ * transaction (root-redirect.service.ts) passes its own TransactionClient instead, which DOES run
+ * these reads under its 2s `SET LOCAL statement_timeout` -- a bound this function neither knows
+ * about nor sets itself.
+ *
+ * F-AUTH-ROOT-SINGLE-TX: exported so the authenticated-root single transaction
+ * (root-redirect.service.ts) can reuse this EXACT canonical policy logic through its own
+ * Prisma TransactionClient, rather than maintaining a second policy implementation.
  */
-async function runPolicyContextReads(
+export async function runPolicyContextReads(
   client: Pick<Prisma.TransactionClient, "workspaceMembership" | "userRoleAssignment" | "engagementMembership">,
   session: SessionInfo,
   workspaceId: string | undefined
@@ -347,137 +307,24 @@ async function runPolicyContextReads(
   };
 }
 
-interface RawPolicyWorkspaceRow {
-  workspace_id: string;
-}
-interface RawMembershipRow {
-  is_active: boolean;
-  role: string;
-}
-interface RawRoleAssignmentRow {
-  role: string;
-  scope: string | null;
-  scope_id: string | null;
-}
-interface RawEngagementMembershipRow {
-  engagement_id: string;
-  role: string;
-}
-
-/**
- * F-AUTH-ROOT-FAST-FAIL root-cause closure (database-review finding, CRITICAL/HIGH):
- * runPolicyContextReads()'s four Prisma ORM calls carry NO server-side
- * statement_timeout at all -- unlike getSession()'s own raw-SQL read. A
- * caller that only races that unbounded path with a JS-side timeout (as
- * the authenticated root route's outer decision does) can abandon the
- * promise when the race times out, but cannot stop the query itself: on
- * production's max:1 pool, an abandoned query that never completes
- * server-side pins the process's SOLE connection until it eventually
- * settles on its own -- and if the function instance freezes/resumes in
- * the meantime (the documented P0-15 failure mode, see
- * attachDatabasePool()'s doc comment in db.ts), that connection may never
- * be released at all, starving every subsequent request on that warm
- * instance.
- *
- * This function is the real fix: the raw-SQL equivalent of
- * runPolicyContextReads() above, reached only through
- * getPolicyContextForSession()'s opt-in options.statementTimeoutMs branch,
- * run inside withRawStatementTimeout() -- the SAME raw-pg primitive
- * getSession() itself uses (NOT Prisma's interactive $transaction(), which
- * round 2 of this fix rejected after reintroducing a P2028-under-ordinary-
- * contention regression -- see POLICY_CONTEXT_QUERY_TIMEOUT_MS's doc
- * comment above). Postgres itself cancels the statement after
- * statementTimeoutMs, guaranteeing the connection returns to the pool (or
- * is discarded cleanly) regardless of what any caller's own outer race
- * decides to do.
- *
- * Deliberately a SEPARATE implementation from the Prisma-ORM version above
- * rather than a shared helper -- matching this file's/db.ts's own
- * established pattern of duplicating a few lines rather than threading two
- * very different client shapes (Prisma model delegates vs. a raw pg
- * client) through one function. Every WHERE clause below is the exact SQL
- * equivalent of its ORM counterpart; see runPolicyContextReads() for the
- * field-selection rationale comments (schema-drift resilience, etc.),
- * which apply identically here.
- */
-async function runPolicyContextReadsRaw(
-  client: RawQueryClient,
-  session: SessionInfo,
-  workspaceId: string | undefined
-): Promise<PolicyContext | null> {
-  let resolvedWorkspaceId = workspaceId;
-  if (!resolvedWorkspaceId) {
-    const result = await client.query<RawPolicyWorkspaceRow>(
-      `SELECT workspace_id FROM workspace_memberships
-       WHERE user_id = $1 AND is_active = true
-       ORDER BY added_at ASC, workspace_id ASC
-       LIMIT 1`,
-      [session.user.id]
-    );
-    resolvedWorkspaceId = result.rows[0]?.workspace_id;
-  }
-
-  if (!resolvedWorkspaceId) return null;
-
-  const membershipResult = await client.query<RawMembershipRow>(
-    `SELECT is_active, role FROM workspace_memberships
-     WHERE workspace_id = $1 AND user_id = $2
-     LIMIT 1`,
-    [resolvedWorkspaceId, session.user.id]
-  );
-  const membership = membershipResult.rows[0];
-  if (!membership || !membership.is_active) return null;
-
-  const [roleResult, engagementResult] = await Promise.all([
-    client.query<RawRoleAssignmentRow>(
-      `SELECT role, scope, scope_id FROM user_role_assignments
-       WHERE user_id = $1 AND is_active = true AND revoked_at IS NULL AND scope = 'workspace' AND scope_id = $2`,
-      [session.user.id, resolvedWorkspaceId]
-    ),
-    client.query<RawEngagementMembershipRow>(
-      `SELECT em.engagement_id, em.role FROM engagement_memberships em
-       JOIN engagements e ON e.id = em.engagement_id
-       WHERE em.user_id = $1 AND em.is_active = true AND e.workspace_id = $2`,
-      [session.user.id, resolvedWorkspaceId]
-    ),
-  ]);
-
-  return {
-    userId: session.user.id,
-    roles: roleResult.rows.map((ra) => ({
-      role: ra.role as RoleName,
-      scope: ra.scope,
-      scopeId: ra.scope_id,
-    })),
-    engagementMemberships: engagementResult.rows.map((em) => ({
-      engagementId: em.engagement_id,
-      role: em.role as RoleName,
-    })),
-    workspaceRole: membership.role,
-  };
-}
-
-export interface GetPolicyContextForSessionOptions {
-  /**
-   * Opt-in: runs the four reads as raw SQL inside withRawStatementTimeout()
-   * with this Postgres-side statement_timeout (ms) -- the SAME primitive
-   * getSession() itself uses, guaranteeing real server-side cancellation
-   * with acquisition bounded only by the pool's own connectionTimeoutMillis
-   * (no separate Prisma-imposed maxWait ceiling to race under ordinary
-   * pool contention). Omitted (the default) preserves the exact
-   * pre-existing unbounded Prisma-ORM behavior for every caller that does
-   * not ask for a bound.
-   */
-  statementTimeoutMs?: number;
-}
+// santa-loop review finding: the raw-SQL bounded alternative to runPolicyContextReads() that used
+// to live here (runPolicyContextReadsRaw(), its four Raw*Row row types, and
+// GetPolicyContextForSessionOptions.statementTimeoutMs) was added for the authenticated root
+// route's OLD multi-domain implementation and had no other caller. The root route now runs
+// runPolicyContextReads() directly through its own single bounded transaction (see
+// root-redirect.service.ts) instead of through getPolicyContextForSession() at all, so this file
+// deleted the dead raw-SQL path rather than leave it untested and unreachable.
 
 /**
  * F-AUTH-ROOT-FAST-FAIL: identical to getPolicyContext() except it takes an
  * ALREADY-validated SessionInfo instead of calling getSession() itself.
- * Exists for a caller that has JUST fetched the session in the SAME request
- * (e.g. the authenticated root route) and would otherwise pay for a second,
- * fully redundant session-lookup query (cookie read + the same bounded
- * raw-SQL round trip getSession() already performed microseconds earlier).
+ * getPolicyContext() itself is built on exactly this split (getSession() then this). Also exists
+ * for any OTHER caller that has JUST fetched the session in the SAME request and would otherwise
+ * pay for a second, fully redundant session-lookup query (cookie read + the same bounded raw-SQL
+ * round trip getSession() already performed microseconds earlier) -- the authenticated root route
+ * used to be exactly that caller, but now runs runPolicyContextReads() directly through its own
+ * single bounded transaction instead (see root-redirect.service.ts), bypassing this function
+ * entirely.
  *
  * Safe to reuse rather than re-fetch: nothing between the two calls in a
  * single request can revoke/expire/deactivate the session or its user, so
@@ -508,42 +355,26 @@ export interface GetPolicyContextForSessionOptions {
  */
 export async function getPolicyContextForSession(
   session: SessionInfo,
-  workspaceId?: string,
-  options?: GetPolicyContextForSessionOptions
+  workspaceId?: string
 ): Promise<PolicyContext | null> {
   // santa-loop review finding: every other exported auth read
   // (getSession, requireSession, getPolicyContext, requirePolicyContext)
   // calls this; this one, a new exported entry point, had been left out.
   // AUTH_READ_ALLOWLIST's "src/services/auth.ts:getPolicyContext" entry
   // matches this call's functionName via
-  // functionName.includes("getPolicyContext") -- but allowlist matching
-  // ALSO requires the stack-derived CALLER's file to include
-  // "src/services/auth.ts" (runtime-shadow-read-enforcer.ts). The one
-  // current caller, root-redirect.service.ts, does not satisfy that (same
-  // as page.tsx calling getPolicyContext() directly, pre-existing and
-  // unchanged by this diff). Harmless either way: the shadow-read enforcer
-  // is only ever active behind canonical-route-enforcement.ts, which this
-  // plain Next.js page route does not go through, so it is not active on
-  // this path at all today -- and even if it were, a disallowed caller
-  // means this throws, which is caught by root-redirect.service.ts's own
-  // outer race and fails closed to "/dashboard", never fails open.
+  // functionName.includes("getPolicyContext"). santa-loop review finding
+  // (round 2): this function's only production caller is now getPolicyContext()
+  // itself, within this same file -- the authenticated root route it was
+  // originally written for no longer calls it at all (see the doc comment
+  // above). Harmless either way: the shadow-read enforcer is only ever
+  // active behind canonical-route-enforcement.ts, which neither
+  // getPolicyContext()'s callers nor the root route go through.
   checkShadowRead("getPolicyContextForSession");
 
   // Ensure database is initialized (getSession does this too, but be explicit)
   await getDbInstance();
 
-  if (options?.statementTimeoutMs === undefined) {
-    return runPolicyContextReads(db, session, workspaceId);
-  }
-
-  const pool = await getRawPool();
-  return withRawStatementTimeout(
-    pool,
-    options.statementTimeoutMs,
-    (client) => runPolicyContextReadsRaw(client, session, workspaceId),
-    "getPolicyContextForSession",
-    POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS
-  );
+  return runPolicyContextReads(db, session, workspaceId);
 }
 
 export async function requirePolicyContext(workspaceId?: string): Promise<PolicyContext> {
