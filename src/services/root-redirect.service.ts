@@ -2,9 +2,10 @@
  * F-AUTH-ROOT-SINGLE-TX: the authenticated `/` redirect decision — session validation, policy
  * resolution, and (only for a proven self-serve owner) owner-login-href resolution — now runs
  * inside ONE root-specific, bounded, cancellable Prisma interactive transaction, instead of three
- * separately-bounded DB domains (getSession()'s ~107s worst case, getPolicyContextForSession()'s
- * ~122s worst case, and an unprotected owner-first-run graph needing a further +30s margin —
- * together ~256s). Replacing that with one transaction removes the need to independently re-pay a
+ * separately-bounded DB domains (getSession()'s ~107s worst case, a now-deleted bounded
+ * getPolicyContextForSession() raw-SQL path's ~122s worst case this route used to opt into, and an
+ * unprotected owner-first-run graph needing a further +30s margin — together ~256s). Replacing
+ * that with one transaction removes the need to independently re-pay a
  * full cold-start acquisition tolerance three times for the SAME request: a genuine Neon
  * compute-wake can only happen once per request's first DB touch, and this route's first DB touch is
  * now the one transaction below.
@@ -19,7 +20,7 @@
  * Reuses canonical logic through dependency injection wherever possible, rather than a second
  * implementation: validateSessionTokenInTransaction() (auth.ts) runs the SAME SQL text and
  * revoked/expiry/active checks as getSession() itself; runPolicyContextReads() (auth.ts) is the
- * SAME canonical Prisma policy logic getPolicyContextForSession()'s default path already used, now
+ * SAME canonical Prisma policy logic getPolicyContextForSession() already used internally, now
  * exported for reuse; getFirstRunContext() (first-run.service.ts) is the SAME owner-first-run
  * function, now accepting an optional Prisma client (default: the global `db` singleton, so every
  * non-root caller is byte-for-byte unaffected). The ONE deliberate exception is the owner-login-href
@@ -30,10 +31,12 @@
  * resolveOwnerLoginHref() had no other caller left afterward, so it was deleted rather than kept as
  * untested dead code that could reintroduce the same swallow bug for some future caller.
  *
- * getSession()'s own timeouts (SESSION_QUERY_TIMEOUT_MS, ~107s) and
- * getPolicyContextForSession()'s generic raw-timeout path (POLICY_CONTEXT_QUERY_TIMEOUT_MS, ~122s)
- * are UNCHANGED for every other caller — this file no longer calls either of them at all for the
- * root route, but neither constant was touched.
+ * getSession()'s own timeout (SESSION_QUERY_TIMEOUT_MS, ~107s) is UNCHANGED for every other
+ * caller — this file no longer calls it at all for the root route, but the constant was not
+ * touched. getPolicyContextForSession()'s own now-deleted bounded raw-SQL path
+ * (POLICY_CONTEXT_QUERY_TIMEOUT_MS, ~122s) existed only for this route's OLD multi-domain
+ * implementation and had no other caller once this file stopped using it -- deleted as dead code
+ * (auth.ts), not left in place untested.
  */
 import { logger } from "@/infra/logger";
 import { cookies } from "next/headers";
@@ -41,7 +44,7 @@ import { db } from "@/lib/db";
 import { validateSessionTokenInTransaction, runPolicyContextReads, getSessionCookieName } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import { getFirstRunContext } from "@/services/owner-first-run/first-run.service";
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 /**
  * Acquisition budget for the one root-specific transaction below. Deliberately a direct
@@ -199,17 +202,14 @@ async function resolveAuthenticatedRootDecisionUnbounded(
         select: { workspaceId: true },
       });
       if (!membership) return { kind: "redirect" as const, href: "/owner/cockpit" };
-      // TypeScript-review finding: `as never` disabled type-checking on this call site permanently
-      // (never is assignable to anything). `as unknown as PrismaClient` is still a genuine type
-      // erasure, not a narrowing -- Prisma.TransactionClient is missing $connect/$disconnect/$on/
-      // $extends relative to PrismaClient, so this cast accepts call graphs that use those methods
-      // with no compile-time warning. It is verified safe TODAY by inspection: nothing reachable
-      // from getFirstRunContext() (prefetchOwnerDomainRows, loadFirstReadSufficiency,
-      // firstRunEvidence, trustedInteractionFacts) calls any of those four methods. The proper fix --
-      // typing OwnerDbProviderDeps.db and its dependents as Prisma.TransactionClient instead of
-      // PrismaClient -- is deliberately not done here: that type is shared owner-mode
-      // infrastructure well beyond this route, and widening it is out of scope for this fix.
-      const href = (await getFirstRunContext(membership.workspaceId, undefined, tx as unknown as PrismaClient)).loginHref;
+      // TypeScript-review finding: `as never` disabled type-checking on this call site
+      // permanently (never is assignable to anything). santa-loop round-2 review finding: fixed
+      // by retyping getFirstRunContext()'s `client` parameter as `Prisma.TransactionClient`
+      // (first-run.service.ts) instead of `PrismaClient` -- `tx` already IS one, so no cast is
+      // needed here at all. The one remaining erasure in that call graph (building
+      // OwnerDbProviderDeps.db, which IS still typed PrismaClient) stays where it already was,
+      // inside getFirstRunContext() itself -- see its own comment.
+      const href = (await getFirstRunContext(membership.workspaceId, undefined, tx)).loginHref;
       return { kind: "redirect" as const, href };
     },
     { maxWait: ROOT_AUTH_MAX_WAIT_MS, timeout: ROOT_AUTH_TX_TIMEOUT_MS }

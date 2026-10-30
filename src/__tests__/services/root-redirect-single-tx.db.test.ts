@@ -292,9 +292,11 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
 
     const pool = await getRawPool();
     const realConnect = pool.connect.bind(pool);
+    let connectCalls = 0;
     let beginCount = 0;
     let commitOrRollbackCount = 0;
     (pool as unknown as { connect: typeof pool.connect }).connect = (async (...args: unknown[]) => {
+      connectCalls++;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = await (realConnect as any)(...args);
       const realQuery = client.query.bind(client);
@@ -315,7 +317,14 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
     } finally {
       (pool as unknown as { connect: typeof pool.connect }).connect = realConnect;
     }
-    expect(result.kind).toBe("redirect");
+    // santa-loop review finding (round 2, both reviewers): a bare `kind === "redirect"` check is
+    // also satisfied by the fail-closed /dashboard outcome, so a regression where one read
+    // escaped to the global pool (deadlocking against this transaction's held connection until
+    // the 15s tx timeout) would still pass this assertion -- assert the exact owner destination
+    // this fixture resolves to (full evidence + diagnosis, no trusted interaction -> /owner/cockpit),
+    // and that connect() itself was called exactly once.
+    expect(result).toEqual({ kind: "redirect", href: "/owner/cockpit" });
+    expect(connectCalls).toBe(1);
     expect(beginCount).toBe(1);
     expect(commitOrRollbackCount).toBe(1);
   }, 15_000);
@@ -369,11 +378,16 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
       return client;
     }) as typeof pool.connect;
 
+    let result;
     try {
-      await resolveAuthenticatedRootDecision();
+      result = await resolveAuthenticatedRootDecision();
     } finally {
       (pool as unknown as { connect: typeof pool.connect }).connect = realConnect;
     }
+    // santa-loop review finding (round 2): the decision itself was discarded -- if either SET
+    // statement were issued but malformed/misordered, the decision would silently fail closed and
+    // this test would still pass on the control-statement text alone.
+    expect(result).toEqual({ kind: "redirect", href: "/owner/first-run" });
     expect(observedControlStatements.some((s) => /READ ONLY/i.test(s))).toBe(true);
     expect(observedControlStatements.some((s) => /statement_timeout\s*=\s*2000/i.test(s))).toBe(true);
   }, 15_000);
@@ -598,6 +612,11 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     // the exact destination this specific fixture (workspace + owner role, no business) resolves to.
     expect(results["3s"]).toEqual({ kind: "redirect", href: "/owner/first-run" });
     expect(results["8s"]).toEqual({ kind: "redirect", href: "/owner/first-run" });
+    // santa-loop review finding (round 2): without a lower bound, these would also pass if the
+    // root transaction happened to win the connection race before the blocker dispatched (an
+    // immediate success proves nothing about maxWait tolerating this contention at all).
+    expect(elapsed["3s"]).toBeGreaterThan(1_500);
+    expect(elapsed["8s"]).toBeGreaterThan(6_500);
     // Over maxWait: the transaction body never started (session never established) -> anonymous,
     // never /dashboard -- this is the P2028-acquisition-class fail-closed semantic from Part 17.
     // Elapsed must be bounded by ROOT_AUTH_MAX_WAIT_MS specifically, not the much longer 29s outer

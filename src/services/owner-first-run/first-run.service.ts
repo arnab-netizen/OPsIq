@@ -99,8 +99,15 @@ export interface FirstRunContext {
  * (owner dashboard, onboarding) is byte-for-byte unaffected. Only the authenticated-root single
  * transaction (root-redirect.service.ts) passes its own Prisma TransactionClient, so this read runs
  * on the SAME bounded, cancellable transaction/backend as the rest of that decision.
+ *
+ * Typed as `Prisma.TransactionClient` (a real structural subset of PrismaClient -- missing
+ * $connect/$disconnect/$on/$extends) rather than `PrismaClient`, so the root-redirect.service.ts
+ * call site passes its `tx` with no cast at all (santa-loop round-2 review finding: the previous
+ * `PrismaClient` typing forced an unnecessary `as unknown as PrismaClient` erasure there). `db`
+ * (declared `any` at its own export in db.ts) still satisfies this narrower type for every other
+ * caller with no change.
  */
-async function firstRealBusiness(workspaceId: string, businessId?: string, client: PrismaClient = db): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
+async function firstRealBusiness(workspaceId: string, businessId?: string, client: Prisma.TransactionClient = db): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
   const row = await client.ownerBusiness.findFirst({
     where: { workspaceId, isActive: true, isFixtureBusiness: false, ...(businessId ? { id: businessId } : {}) },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -119,8 +126,8 @@ async function firstRealBusiness(workspaceId: string, businessId?: string, clien
  * transaction), read through it instead, so this statement stays on that same transaction/backend
  * too; every other caller (client omitted) is unchanged.
  */
-async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string, client: PrismaClient = db): Promise<Date | null> {
-  const auditClient = client === db ? getAuditEventReadOnlyClient() : (client as unknown as { auditEvent: ReturnType<typeof getAuditEventReadOnlyClient> }).auditEvent;
+async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string, client: Prisma.TransactionClient = db): Promise<Date | null> {
+  const auditClient = client === db ? getAuditEventReadOnlyClient() : client.auditEvent;
   const row = await auditClient.findFirst({
     where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_AMENDED, payload: { path: ["businessId"], equals: businessId } },
     orderBy: { occurredAt: "asc" },
@@ -129,7 +136,7 @@ async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string,
   return row?.occurredAt ?? null;
 }
 
-async function trustedInteractionFacts(workspaceId: string, businessId: string, client: PrismaClient = db): Promise<TrustedInteractionFact[]> {
+async function trustedInteractionFacts(workspaceId: string, businessId: string, client: Prisma.TransactionClient = db): Promise<TrustedInteractionFact[]> {
   const [decision, amendment, improvement] = await Promise.all([
     client.ownerDecisionRecord.findFirst({
       where: { workspaceId, businessId, decisionState: { in: ["ACCEPTED", "MODIFIED"] } },
@@ -160,7 +167,7 @@ async function trustedInteractionFacts(workspaceId: string, businessId: string, 
  * unaffected); the authenticated-root single transaction passes its own Prisma TransactionClient so
  * the entire owner-first-run graph stays on that one bounded, cancellable transaction/backend.
  */
-export async function getFirstRunContext(workspaceId: string, businessId?: string, client: PrismaClient = db): Promise<FirstRunContext> {
+export async function getFirstRunContext(workspaceId: string, businessId?: string, client: Prisma.TransactionClient = db): Promise<FirstRunContext> {
   const [workspace, business] = await Promise.all([
     client.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } }),
     firstRealBusiness(workspaceId, businessId, client),
@@ -172,11 +179,16 @@ export async function getFirstRunContext(workspaceId: string, businessId?: strin
   let interactions: TrustedInteractionFact[] = [];
 
   if (business) {
+    // The one cast this graph still needs: OwnerDbProviderDeps.db (owner-db-providers.ts, shared
+    // owner-mode infrastructure well beyond this route) is typed PrismaClient, which
+    // Prisma.TransactionClient does not structurally satisfy (it's missing
+    // $connect/$disconnect/$on/$extends) -- verified safe by inspection: nothing reachable from
+    // prefetchOwnerDomainRows/loadFirstReadSufficiency uses those four methods.
     const deps = { db: client as unknown as PrismaClient, workspaceId, businessId: business.id, now: new Date() };
     const rows = await prefetchOwnerDomainRows(deps);
     firstReadSufficient = (await loadFirstReadSufficiency(deps, rows)).sufficient;
     const [ev, facts] = await Promise.all([
-      firstRunEvidence(workspaceId, business.id, deps.now, client as unknown as Prisma.TransactionClient, { cashStaleness: true }),
+      firstRunEvidence(workspaceId, business.id, deps.now, client, { cashStaleness: true }),
       trustedInteractionFacts(workspaceId, business.id, client),
     ]);
     evidence = ev;

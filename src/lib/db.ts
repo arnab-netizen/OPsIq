@@ -695,9 +695,8 @@ export const CLIENT_SIDE_BACKSTOP_MARGIN_MS = 5_000;
  * on a dead connection -- defaults to CLIENT_SIDE_BACKSTOP_MARGIN_MS, sized
  * for withRawStatementTimeout()'s own documented single-statement
  * assumption (see its doc comment). A caller whose `fn` issues SEVERAL
- * sequential statements over the one checked-out connection (e.g. auth.ts's
- * getPolicyContextForSession(), via POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS)
- * needs a correspondingly larger margin, or a merely slow-but-healthy
+ * sequential statements over the one checked-out connection needs a
+ * correspondingly larger margin, or a merely slow-but-healthy
  * (never actually hung) sequence can trip the backstop and have its
  * connection needlessly discarded. Optional and backward-compatible: every
  * OTHER existing caller (getSession(), claimStartup(), checkDatabase(),
@@ -811,9 +810,8 @@ export async function withRawStatementTimeout<T>(
     // scale with a caller's enlarged main-backstop margin. For a caller
     // using the default margin, the server tears down at essentially the
     // same time the client gives up, as originally intended. For a
-    // multi-statement caller with a LARGER mainBackstopMarginMs (e.g.
-    // auth.ts's getPolicyContextForSession()), this is correspondingly
-    // SHORTER than that caller's own main backstop -- safe (strictly
+    // multi-statement caller with a LARGER mainBackstopMarginMs, this is
+    // correspondingly SHORTER than that caller's own main backstop -- safe (strictly
     // tighter, never looser: the server can only tear down an idle
     // connection sooner than the client gives up, never later, so this can
     // never mask a hang), just no longer "at essentially the same time".
