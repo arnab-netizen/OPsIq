@@ -702,27 +702,3 @@ export async function submitFirstValueFeedback(
   });
   return { replayed: !created };
 }
-
-/**
- * Where a signed-in self-serve owner should land: an interrupted first run resumes, everyone else goes to
- * the Cockpit. Resolves the workspace exactly as the policy context does (first active membership,
- * deterministic order) and fails closed to the Cockpit — a lookup problem must never trap a sign-in.
- */
-/**
- * F-AUTH-ROOT-SINGLE-TX: `client` defaults to the global `db` singleton (every existing caller
- * unaffected); the authenticated-root single transaction passes its own Prisma TransactionClient so
- * this read, and everything getFirstRunContext() does beneath it, stays on that one transaction.
- */
-export async function resolveOwnerLoginHref(userId: string, client: PrismaClient = db): Promise<string> {
-  try {
-    const membership = await client.workspaceMembership.findFirst({
-      where: { userId, isActive: true },
-      orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
-      select: { workspaceId: true },
-    });
-    if (!membership) return "/owner/cockpit";
-    return (await getFirstRunContext(membership.workspaceId, undefined, client)).loginHref;
-  } catch {
-    return "/owner/cockpit";
-  }
-}

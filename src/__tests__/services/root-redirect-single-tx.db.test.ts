@@ -97,8 +97,25 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
   it("ANONYMOUS: no cookie resolves anonymous with zero DB queries", async () => {
     cookieHolder.token = undefined;
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
-    const result = await resolveAuthenticatedRootDecision();
+    // santa-loop review finding: the test's own name claimed "zero DB queries" with nothing
+    // actually counting them -- instrument the raw pool's connect() so a regression that touches
+    // the DB before the cookie check (or after a missing-cookie return) is caught.
+    const pool = await getRawPool();
+    const realConnect = pool.connect.bind(pool);
+    let connectCalls = 0;
+    (pool as unknown as { connect: typeof pool.connect }).connect = (async (...args: unknown[]) => {
+      connectCalls++;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (realConnect as any)(...args);
+    }) as typeof pool.connect;
+    let result;
+    try {
+      result = await resolveAuthenticatedRootDecision();
+    } finally {
+      (pool as unknown as { connect: typeof pool.connect }).connect = realConnect;
+    }
     expect(result).toEqual({ kind: "anonymous" });
+    expect(connectCalls).toBe(0);
   });
 
   it("ANONYMOUS: missing/revoked/expired session and inactive user all resolve anonymous, never /dashboard", async () => {
@@ -211,6 +228,11 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
     // amendment must never be read as A's trusted-interaction fact.
     const ctxA = await db.$transaction((tx) => getFirstRunContext(workspaceId, businessA.id, tx as never));
     expect(ctxA.firstTrustedInteractionAt).toBeNull();
+    // Positive control (santa-loop review finding): without this, a broken read that found NOTHING
+    // for either business would also satisfy the assertion above. Prove the amendment really is
+    // visible, through the exact same transaction-client path, for the business it actually belongs to.
+    const ctxB = await db.$transaction((tx) => getFirstRunContext(workspaceId, businessB.id, tx as never));
+    expect(ctxB.firstTrustedInteractionAt).not.toBeNull();
   }, 15_000);
 
   it("POLICY_EQUIVALENCE: runPolicyContextReads() resolves identically via the shared tx client vs. baseline db", async () => {
@@ -247,30 +269,55 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
     expect(policy).toBeNull();
   });
 
-  it("AUTH_ROOT_SINGLE_BACKEND + AUTH_ROOT_TRANSACTION_COUNT=1: exactly one backend covers session+policy+owner-first-run", async () => {
+  it("AUTH_ROOT_TRANSACTION_COUNT=1: the REAL resolveAuthenticatedRootDecision(), with a real business, opens exactly one transaction, never escapes to the global pool", async () => {
+    // santa-loop review finding: the prior version of this test (a) never called the real
+    // resolveAuthenticatedRootDecision() -- it hand-rolled its own db.$transaction with manual
+    // probes, so it proved nothing about production wiring; (b) used a workspace with no business,
+    // so the audit-event read inside getFirstRunContext's business-exists branch (first-run.service.ts's
+    // own doc comment calls this "the one real escape point in this graph") never ran; (c) sampled
+    // pg_backend_pid() through the SAME `tx` for every probe, so pids.size===1 held by construction,
+    // not because the code only ever used one transaction; (d) under this test harness's own max:1
+    // pool, EVERY connect() call hands back the identical physical client regardless of how many
+    // transactions the code opens, so counting distinct backend PIDs can never distinguish "one
+    // transaction" from "several" here either. What CAN distinguish them is counting BEGIN
+    // statements: more than one means the code opened a second transaction (or escaped to the
+    // global `db` outside this one) somewhere in the graph.
+    const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
     const { userId, token } = await makeUserAndSession();
     const workspaceId = await makeWorkspaceWithOwner(userId);
-    void token;
-    const pids = new Set<number>();
-    const { validateSessionTokenInTransaction } = await import("@/services/auth");
-    await db.$transaction(
-      async (tx) => {
-        const txAny = tx as unknown as { $queryRawUnsafe: <T>(q: string) => Promise<T> };
-        for (const probe of [
-          () => validateSessionTokenInTransaction(tx as never, (cookieHolder.token ??= randomUUID())!),
-          () => runPolicyContextReads(tx as never, { user: { id: userId, email: "x", name: null, isActive: true }, sessionId: "s", expiresAt: new Date() }, undefined),
-          () => getFirstRunContext(workspaceId, undefined, tx as never),
-        ]) {
-          const p = await txAny.$queryRawUnsafe<Array<{ pid: number }>>("SELECT pg_backend_pid() AS pid");
-          pids.add(p[0].pid);
-          await probe();
-        }
-        const pLast = await txAny.$queryRawUnsafe<Array<{ pid: number }>>("SELECT pg_backend_pid() AS pid");
-        pids.add(pLast[0].pid);
-      },
-      { maxWait: 10_000, timeout: 15_000 }
-    );
-    expect(pids.size).toBe(1);
+    const { business } = await createFirstBusiness(workspaceId, userId, { businessType: "laundry_local_service", currency: "gbp" });
+    const snap = (await createFinancialSnapshot(business.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(business.id, snap.id, userId, workspaceId);
+    cookieHolder.token = token;
+
+    const pool = await getRawPool();
+    const realConnect = pool.connect.bind(pool);
+    let beginCount = 0;
+    let commitOrRollbackCount = 0;
+    (pool as unknown as { connect: typeof pool.connect }).connect = (async (...args: unknown[]) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = await (realConnect as any)(...args);
+      const realQuery = client.query.bind(client);
+      client.query = (async (...qArgs: unknown[]) => {
+        const text = typeof qArgs[0] === "string" ? qArgs[0] : (qArgs[0] as { text?: string })?.text ?? "";
+        const trimmed = String(text).trim();
+        if (/^BEGIN/i.test(trimmed)) beginCount++;
+        if (/^(COMMIT|ROLLBACK)/i.test(trimmed)) commitOrRollbackCount++;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (realQuery as any)(...qArgs);
+      }) as typeof client.query;
+      return client;
+    }) as typeof pool.connect;
+
+    let result;
+    try {
+      result = await resolveAuthenticatedRootDecision();
+    } finally {
+      (pool as unknown as { connect: typeof pool.connect }).connect = realConnect;
+    }
+    expect(result.kind).toBe("redirect");
+    expect(beginCount).toBe(1);
+    expect(commitOrRollbackCount).toBe(1);
   }, 15_000);
 
   it("AUTH_ROOT_READ_ONLY_TX: SET TRANSACTION READ ONLY is compatible, blocks a write, legitimate reads still succeed", async () => {
@@ -284,8 +331,13 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
         let writeRejected = false;
         try {
           await (tx as unknown as { user: { update: (a: unknown) => Promise<unknown> } }).user.update({ where: { id: userId }, data: { name: "mutated" } });
-        } catch {
-          writeRejected = true;
+        } catch (e) {
+          // santa-loop review finding: any error used to count as "rejected" -- confirm it is
+          // specifically Postgres's read-only-transaction rejection (SQLSTATE 25006), not an
+          // unrelated failure (e.g. a Prisma validation error) that would also satisfy a bare
+          // catch. Prisma's @prisma/adapter-pg wraps the raw driver error without exposing the
+          // SQLSTATE on a `.code` field, but its message text is this exact, unambiguous string.
+          writeRejected = /cannot execute UPDATE in a read-only transaction/i.test(String((e as { message?: string })?.message ?? e));
         }
         return { ctxOk: !!ctx, writeRejected };
       },
@@ -359,7 +411,15 @@ function patchPool(injectAt: Record<number, number>) {
     return {
       restore: () => {
         (pool as unknown as { connect: typeof pool.connect }).connect = realConnect;
-        for (const { client, realQuery } of patched) client.query = realQuery as never;
+        // santa-loop review finding: under this test harness's max:1 pool, connect() can return
+        // the SAME physical client more than once while patched, nesting a second wrap on top of
+        // the first (each entry's "realQuery" is really just the PREVIOUS wrap, not necessarily
+        // the true original). Restoring in reverse (last-patched-first) correctly unwinds one
+        // level per step; forward order would leave the innermost wrapper installed.
+        for (let i = patched.length - 1; i >= 0; i--) {
+          const { client, realQuery } = patched[i];
+          client.query = realQuery as never;
+        }
       },
     };
   };
@@ -389,8 +449,15 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     expect(caught).toBeNull();
     expect(result).toEqual({ kind: "anonymous" });
     expect(performance.now() - start).toBeLessThan(6_000);
+    // santa-loop review finding: resolveAuthenticatedRootDecision() never throws, so
+    // `reuse.kind` is ALWAYS defined regardless of pool health -- assert the exact expected
+    // outcome (this session is still valid, no workspace -> /dashboard) within a tight elapsed
+    // bound, so a poisoned/abandoned connection that only limps to a result via the 29s outer
+    // backstop is still caught.
+    const reuseStart = performance.now();
     const reuse = await resolveAuthenticatedRootDecision();
-    expect(reuse.kind).toBeDefined();
+    expect(reuse).toEqual({ kind: "redirect", href: "/dashboard" });
+    expect(performance.now() - reuseStart).toBeLessThan(2_000);
   }, 15_000);
 
   it("POLICY_STATEMENT_CANCEL: a blocked statement during policy resolution fails closed to /dashboard, pool reusable", async () => {
@@ -401,14 +468,25 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     // Non-control call #1 = session query; #2+ = policy's reads. Block #2 (policy phase).
     const { restore } = await patchPool({ 2: 10_000 })();
     let result;
+    const start = performance.now();
     try {
       result = await resolveAuthenticatedRootDecision();
     } finally {
       restore();
     }
+    const elapsedMs = performance.now() - start;
     expect(result).toEqual({ kind: "redirect", href: "/dashboard" });
+    // santa-loop review finding: without this bound, a statement_timeout regression that let the
+    // blocked statement run to completion (well within the 15s tx budget) could coincidentally
+    // produce the SAME /dashboard result (e.g. a malformed row failing policy resolution) and still
+    // pass. A real 57014 cancellation lands near the 2s statement_timeout, not anywhere close to it.
+    expect(elapsedMs).toBeLessThan(6_000);
+    // santa-loop review finding: assert the exact expected result (owner, no business ->
+    // /owner/first-run) within a tight elapsed bound, not merely that SOME result came back.
+    const reuseStart = performance.now();
     const reuse = await resolveAuthenticatedRootDecision();
-    expect(reuse.kind).toBeDefined();
+    expect(reuse).toEqual({ kind: "redirect", href: "/owner/first-run" });
+    expect(performance.now() - reuseStart).toBeLessThan(2_000);
   }, 15_000);
 
   it("FIRST_RUN_STATEMENT_CANCEL (deep graph, real business): a blocked statement inside getFirstRunContext's business-exists fan-out fails closed to /dashboard -- NEVER /owner/cockpit -- not silently swallowed, pool reusable", async () => {
@@ -433,16 +511,26 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     const { restore } = await patchPool({ 9: 10_000 })();
     let result: unknown;
     let caughtOwnerCockpit = false;
+    const start = performance.now();
     try {
       result = await resolveAuthenticatedRootDecision();
     } finally {
       restore();
     }
+    const elapsedMs = performance.now() - start;
     if ((result as { href?: string })?.href === "/owner/cockpit") caughtOwnerCockpit = true;
     expect(caughtOwnerCockpit).toBe(false);
     expect(result).toEqual({ kind: "redirect", href: "/dashboard" });
+    // santa-loop review finding: bounds this to "cancelled near the 2s statement_timeout," not
+    // merely "eventually resolved somewhere under the 15s tx budget" -- the latter would also be
+    // satisfied by the blocked statement simply completing late but successfully.
+    expect(elapsedMs).toBeLessThan(6_000);
+    // santa-loop review finding: assert the exact expected result (full evidence + diagnosis, no
+    // trusted interaction -> FIRST_RESULT -> /owner/cockpit) within a tight elapsed bound.
+    const reuseStart = performance.now();
     const reuse = await resolveAuthenticatedRootDecision();
-    expect(reuse.kind).toBeDefined();
+    expect(reuse).toEqual({ kind: "redirect", href: "/owner/cockpit" });
+    expect(performance.now() - reuseStart).toBeLessThan(2_000);
   }, 15_000);
 
   it("AUTH_ROOT_TX_TIMEOUT: cumulative sub-statement-timeout delays exceed the 15s whole-transaction budget -> fails closed, pool reusable", async () => {
@@ -469,67 +557,93 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
       restore();
     }
     const elapsedMs = performance.now() - start;
-    // Session was established before the tx expired, so this fails closed to the authenticated
-    // default or the owner destination it had already reached -- never back to anonymous.
-    expect(result.kind).toBe("redirect");
+    // santa-loop review finding: this fixture's business has full evidence + diagnosis but no
+    // trusted interaction, so a LEGITIMATE, non-cancelled completion of the real graph would also
+    // resolve "/owner/cockpit" (FIRST_RESULT state) -- a bare `result.kind === "redirect"` check
+    // cannot tell that apart from the cumulative delays actually tripping the 15s tx timeout. Assert
+    // the exact fail-closed destination so a widened/broken inner timeout that merely lets the real
+    // graph finish within the elapsed-time window is still caught.
+    expect(result).toEqual({ kind: "redirect", href: "/dashboard" });
     expect(elapsedMs).toBeGreaterThan(14_000); // actually paid the cumulative delay, not a fast path
     // Tight upper bound: this must be caught by the INNER 15s db.$transaction `timeout`, not merely
     // by the outer 29s safety-net race (mutation-review finding: a 29_000ms bound alone does not
     // distinguish the two -- a widened/broken inner timeout still resolves "redirect" by ~29s via
     // the outer race, silently passing a loose assertion).
     expect(elapsedMs).toBeLessThan(ROOT_AUTH_TX_TIMEOUT_MS + ROOT_AUTH_STATEMENT_TIMEOUT_MS + 5_000);
+    // santa-loop review finding: assert the exact expected result within a tight elapsed bound,
+    // not merely that SOME result came back (true even on a poisoned pool, via the 29s backstop).
+    const reuseStart = performance.now();
     const reuse = await resolveAuthenticatedRootDecision();
-    expect(reuse.kind).toBeDefined();
+    expect(reuse).toEqual({ kind: "redirect", href: "/owner/cockpit" });
+    expect(performance.now() - reuseStart).toBeLessThan(2_000);
   }, 60_000);
 
   it("AUTH_ROOT_MAXWAIT: 3s/8s contention succeed, >10s contention fails closed to ANONYMOUS (transaction body never started)", async () => {
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
     const results: Record<string, unknown> = {};
+    const elapsed: Record<string, number> = {};
     for (const seconds of [3, 8, 12]) {
       const { userId, token } = await makeUserAndSession();
       await makeWorkspaceWithOwner(userId);
       cookieHolder.token = token;
       const blocker = (db as unknown as { $executeRawUnsafe: (q: string) => Promise<unknown> }).$executeRawUnsafe(`SELECT pg_sleep(${seconds})`).catch(() => undefined);
+      const start = performance.now();
       const result = await resolveAuthenticatedRootDecision();
+      elapsed[`${seconds}s`] = performance.now() - start;
       await blocker;
       results[`${seconds}s`] = result;
     }
-    expect((results["3s"] as { kind: string }).kind).toBe("redirect");
-    expect((results["8s"] as { kind: string }).kind).toBe("redirect");
+    // santa-loop review finding: a bare `kind === "redirect"` check is also satisfied by a
+    // transaction that failed mid-flight (policy/owner-first-run) for an unrelated reason -- assert
+    // the exact destination this specific fixture (workspace + owner role, no business) resolves to.
+    expect(results["3s"]).toEqual({ kind: "redirect", href: "/owner/first-run" });
+    expect(results["8s"]).toEqual({ kind: "redirect", href: "/owner/first-run" });
     // Over maxWait: the transaction body never started (session never established) -> anonymous,
     // never /dashboard -- this is the P2028-acquisition-class fail-closed semantic from Part 17.
+    // Elapsed must be bounded by ROOT_AUTH_MAX_WAIT_MS specifically, not the much longer 29s outer
+    // backstop -- otherwise a broken/removed maxWait could still resolve "anonymous" late via some
+    // other failure and silently pass.
     expect(results["12s"]).toEqual({ kind: "anonymous" });
+    expect(elapsed["12s"]).toBeGreaterThan(ROOT_AUTH_MAX_WAIT_MS - 1_000);
+    expect(elapsed["12s"]).toBeLessThan(ROOT_AUTH_MAX_WAIT_MS + 5_000);
   }, 40_000);
 });
 
 describe.skipIf(SKIP)("[db] root-redirect single-transaction: concurrency (4/4 required scenarios)", () => {
   it("scenario 1: two authenticated roots concurrently resolve correctly, no cross-contamination", async () => {
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
+    // santa-loop review finding: A and B must resolve to DIFFERENT destinations, or a swapped/
+    // cross-contaminated result would still satisfy a bare `kind === "redirect"` check for both.
     const a = await makeUserAndSession();
-    await makeWorkspaceWithOwner(a.userId);
-    const b = await makeUserAndSession();
-    await makeWorkspaceWithOwner(b.userId);
+    await makeWorkspaceWithOwner(a.userId); // owner, no business -> "/owner/first-run"
+    const b = await makeUserAndSession(); // no workspace at all -> "/dashboard"
 
     cookieHolder.token = a.token;
     const pA = resolveAuthenticatedRootDecision();
     cookieHolder.token = b.token;
     const pB = resolveAuthenticatedRootDecision();
     const [resA, resB] = await Promise.all([pA, pB]);
-    expect(resA.kind).toBe("redirect");
-    expect(resB.kind).toBe("redirect");
+    expect(resA).toEqual({ kind: "redirect", href: "/owner/first-run" });
+    expect(resB).toEqual({ kind: "redirect", href: "/dashboard" });
   }, 20_000);
 
-  it("scenario 2: authenticated root + anonymous root concurrently, anonymous makes zero DB queries", async () => {
+  it("scenario 2: authenticated root + anonymous root concurrently resolve correctly, no cross-contamination", async () => {
+    // santa-loop review finding: this test's own name previously claimed "anonymous makes zero DB
+    // queries," which nothing here verified, and under concurrency a per-call connect count can't
+    // be cleanly attributed to one call vs. the other anyway -- the dedicated single-call
+    // "ANONYMOUS: no cookie ... zero DB queries" test above instruments that claim precisely. This
+    // test's own job is just the concurrency outcome: two different fixtures, so a swapped or
+    // contaminated result is distinguishable.
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
     const { userId, token } = await makeUserAndSession();
-    await makeWorkspaceWithOwner(userId);
+    await makeWorkspaceWithOwner(userId); // owner, no business -> "/owner/first-run"
 
     cookieHolder.token = token;
     const pAuth = resolveAuthenticatedRootDecision();
     cookieHolder.token = undefined;
     const pAnon = resolveAuthenticatedRootDecision();
     const [resAuth, resAnon] = await Promise.all([pAuth, pAnon]);
-    expect(resAuth.kind).toBe("redirect");
+    expect(resAuth).toEqual({ kind: "redirect", href: "/owner/first-run" });
     expect(resAnon).toEqual({ kind: "anonymous" });
   }, 20_000);
 

@@ -16,13 +16,19 @@
  * for each of the three phases, whole-transaction-timeout proof, acquisition (`maxWait`) proof at
  * 3s/8s/>10s, and the deadline-alignment finding below.
  *
- * Reuses canonical logic verbatim through dependency injection, never a second implementation:
- * validateSessionTokenInTransaction() (auth.ts) runs the SAME SQL text and revoked/expiry/active
- * checks as getSession() itself; runPolicyContextReads() (auth.ts) is the SAME canonical Prisma
- * policy logic getPolicyContextForSession()'s default path already used, now exported for reuse;
- * resolveOwnerLoginHref()/getFirstRunContext() (first-run.service.ts) are the SAME owner-first-run
- * functions, each now accepting an optional Prisma client (default: the global `db` singleton, so
- * every non-root caller is byte-for-byte unaffected).
+ * Reuses canonical logic through dependency injection wherever possible, rather than a second
+ * implementation: validateSessionTokenInTransaction() (auth.ts) runs the SAME SQL text and
+ * revoked/expiry/active checks as getSession() itself; runPolicyContextReads() (auth.ts) is the
+ * SAME canonical Prisma policy logic getPolicyContextForSession()'s default path already used, now
+ * exported for reuse; getFirstRunContext() (first-run.service.ts) is the SAME owner-first-run
+ * function, now accepting an optional Prisma client (default: the global `db` singleton, so every
+ * non-root caller is byte-for-byte unaffected). The ONE deliberate exception is the owner-login-href
+ * membership lookup: it used to be reached through resolveOwnerLoginHref() (first-run.service.ts),
+ * but that function's own try/catch silently converted any internal failure into a fabricated
+ * "/owner/cockpit" success -- unsafe inside this shared transaction (see the security-review finding
+ * at its call site below). Fixed by inlining the same lookup without that catch;
+ * resolveOwnerLoginHref() had no other caller left afterward, so it was deleted rather than kept as
+ * untested dead code that could reintroduce the same swallow bug for some future caller.
  *
  * getSession()'s own timeouts (SESSION_QUERY_TIMEOUT_MS, ~107s) and
  * getPolicyContextForSession()'s generic raw-timeout path (POLICY_CONTEXT_QUERY_TIMEOUT_MS, ~122s)
@@ -32,7 +38,7 @@
 import { logger } from "@/infra/logger";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import { validateSessionTokenInTransaction, runPolicyContextReads, getSessionCookieName, type SessionInfo } from "@/services/auth";
+import { validateSessionTokenInTransaction, runPolicyContextReads, getSessionCookieName } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import { getFirstRunContext } from "@/services/owner-first-run/first-run.service";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
@@ -158,51 +164,51 @@ async function resolveAuthenticatedRootDecisionUnbounded(
 ): Promise<RootAuthDecision> {
   return db.$transaction(
     async (tx: RootAuthTransactionClient) => {
-      const txRaw = tx as unknown as { $executeRawUnsafe: (query: string) => Promise<unknown> };
       // Read-only invariant: the whole decision only ever reads. Proven (test-only) that a write
       // attempt inside this transaction is rejected by Postgres while legitimate reads still succeed.
-      await txRaw.$executeRawUnsafe("SET TRANSACTION READ ONLY");
+      await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");
       // Server-side kill switch for any single blocked statement in this transaction -- Postgres
       // cancels it (SQLSTATE 57014) and the transaction rolls back, independent of whatever the
       // outer race above decides.
-      await txRaw.$executeRawUnsafe(`SET LOCAL statement_timeout = ${ROOT_AUTH_STATEMENT_TIMEOUT_MS}`);
+      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${ROOT_AUTH_STATEMENT_TIMEOUT_MS}`);
 
-      const session = await validateSessionTokenInTransaction(tx as RootAuthTransactionClient, sessionToken);
+      const session = await validateSessionTokenInTransaction(tx, sessionToken);
       if (!session) return { kind: "anonymous" as const };
       // Positive proof established -- from here on, any later failure fails closed to
       // DEFAULT_DESTINATION (via the outer catch's phase check), never back to anonymous.
       phase.sessionEstablished = true;
 
-      const policy = await runPolicyContextReads(
-        tx as unknown as Pick<Prisma.TransactionClient, "workspaceMembership" | "userRoleAssignment" | "engagementMembership">,
-        session as SessionInfo,
-        undefined
-      );
+      const policy = await runPolicyContextReads(tx, session, undefined);
       const ownerHome = policy ? isSelfServeOwnerContext(policy) : false;
       if (!ownerHome) return { kind: "redirect" as const, href: DEFAULT_DESTINATION };
 
-      // F-AUTH-ROOT-SINGLE-TX (security-review finding): deliberately NOT calling
-      // resolveOwnerLoginHref() here, even though it is otherwise the canonical function for this
-      // exact lookup. Its own pre-existing try/catch (unchanged, correct for its OTHER potential
-      // callers) swallows any internal failure and returns the hardcoded "/owner/cockpit" --
-      // which, inside THIS shared transaction, would let a later-phase statement cancellation or
-      // transaction-abort be silently converted into a real owner-labeled destination instead of
-      // propagating to this function's own outer catch (which already correctly fails closed to
-      // DEFAULT_DESTINATION once `phase.sessionEstablished` is true). Inlining the SAME two reads
-      // resolveOwnerLoginHref() itself performs, without a catch, lets any failure here abort the
-      // transaction and reach that outer fail-closed path instead.
-      const membership = await (tx as RootAuthTransactionClient).workspaceMembership.findFirst({
+      // F-AUTH-ROOT-SINGLE-TX (security-review finding): this used to call resolveOwnerLoginHref()
+      // for this exact lookup. That function's own pre-existing try/catch swallowed any internal
+      // failure and returned the hardcoded "/owner/cockpit" -- which, inside THIS shared
+      // transaction, let a later-phase statement cancellation or transaction-abort be silently
+      // converted into a real owner-labeled destination instead of propagating to this function's
+      // own outer catch (which already correctly fails closed to DEFAULT_DESTINATION once
+      // `phase.sessionEstablished` is true). Fixed by inlining the SAME two reads
+      // resolveOwnerLoginHref() performed, without a catch, so any failure here aborts the
+      // transaction and reaches that outer fail-closed path instead. resolveOwnerLoginHref() had no
+      // other callers left after this change, so it was deleted rather than left as dead code that
+      // could reintroduce the same swallow bug for some future caller.
+      const membership = await tx.workspaceMembership.findFirst({
         where: { userId: session.user.id, isActive: true },
         orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
         select: { workspaceId: true },
       });
       if (!membership) return { kind: "redirect" as const, href: "/owner/cockpit" };
-      // TypeScript-review finding: `as never` disables type-checking on this call site permanently
-      // (never is assignable to anything); `as unknown as PrismaClient` keeps checking against the
-      // actual declared target type instead, so a future signature change on getFirstRunContext()
-      // is still caught here. Prisma.TransactionClient is a real structural subset of PrismaClient
-      // (missing $connect/$disconnect/$on/$extends, none of which this call graph uses), so this
-      // narrowing is safe today and remains checked going forward.
+      // TypeScript-review finding: `as never` disabled type-checking on this call site permanently
+      // (never is assignable to anything). `as unknown as PrismaClient` is still a genuine type
+      // erasure, not a narrowing -- Prisma.TransactionClient is missing $connect/$disconnect/$on/
+      // $extends relative to PrismaClient, so this cast accepts call graphs that use those methods
+      // with no compile-time warning. It is verified safe TODAY by inspection: nothing reachable
+      // from getFirstRunContext() (prefetchOwnerDomainRows, loadFirstReadSufficiency,
+      // firstRunEvidence, trustedInteractionFacts) calls any of those four methods. The proper fix --
+      // typing OwnerDbProviderDeps.db and its dependents as Prisma.TransactionClient instead of
+      // PrismaClient -- is deliberately not done here: that type is shared owner-mode
+      // infrastructure well beyond this route, and widening it is out of scope for this fix.
       const href = (await getFirstRunContext(membership.workspaceId, undefined, tx as unknown as PrismaClient)).loginHref;
       return { kind: "redirect" as const, href };
     },
