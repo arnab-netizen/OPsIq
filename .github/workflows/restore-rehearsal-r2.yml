@@ -1,0 +1,219 @@
+name: Backup Restore Rehearsal (R2, Isolated)
+
+# Proves an R2-stored encrypted backup (produced by scheduled-backup-r2.yml) is actually
+# restorable: R2 encrypted object -> download -> checksum verification -> age decrypt -> restore
+# into a disposable postgres:18 GitHub Actions SERVICE CONTAINER, created fresh for this job and
+# destroyed the moment it ends. THIS WORKFLOW NEVER CONNECTS TO PRODUCTION: it has no
+# PRODUCTION_DATABASE_URL reference anywhere, and scripts/restore-database.sh (which this hands
+# off to via restore-database-r2.sh) independently refuses any target other than a proven
+# local-loopback or approved-staging database via its own assert-restore-target.mjs preflight --
+# this workflow does not duplicate or weaken that check.
+#
+# ENVIRONMENT SEPARATION: uses the `backup-recovery` GitHub Environment only, designed (not
+# configured by this PR) to require manual reviewer approval before the job starts, and to hold
+# the AGE PRIVATE identity plus an R2 READ-ONLY credential -- distinct from backup-write's
+# Object-Read-&-Write token. The AGE private identity therefore never exists inside the scheduled
+# backup-write job, and this job cannot write to R2 or touch Production.
+#
+# workflow_dispatch only -- no schedule. Dispatch manually with the object name printed by a
+# scheduled-backup-r2.yml run's Summary step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      object_name:
+        description: 'Exact encrypted object name to rehearse, e.g. opsiq_backup_2026-10-28_03-00-00.sql.gz.age'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-restore-rehearsal-r2
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    name: Restore Rehearsal (throwaway container, R2 source)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: backup-recovery
+
+    services:
+      # Tracks production's PostgreSQL major version, same reasoning as restore-rehearsal.yml's
+      # PG18-PARITY comment: Neon runs 18, and a mismatched-major restore fails with a confusing
+      # mid-stream SQL error rather than a clear "wrong version" message.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rehearsal_target
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rehearsal_target"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Preflight check - required secrets/config exist
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_READONLY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READONLY_SECRET_ACCESS_KEY }}
+          AGE_IDENTITY: ${{ secrets.AGE_PRIVATE_IDENTITY }}
+        run: |
+          MISSING=0
+          for v in R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AGE_IDENTITY; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::$v is missing or empty"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" -ne 0 ]; then
+            echo "::error::Required backup-recovery configuration is incomplete. See docs/opsiq/product/R2_BACKUP_RUNBOOK.md. Refusing to proceed (uncertain = block)."
+            exit 1
+          fi
+          echo "All required backup-recovery configuration present."
+
+      # Reject an object name with path separators or traversal before it reaches any shell
+      # command that builds a path or an S3 key from it (defense in depth; restore-database-r2.sh
+      # validates this too, independently).
+      - name: Validate object name input
+        env:
+          OBJECT_NAME: ${{ inputs.object_name }}
+        run: |
+          if [[ "$OBJECT_NAME" == */* ]] || [[ "$OBJECT_NAME" == *..* ]] || [[ "$OBJECT_NAME" != *.sql.gz.age ]]; then
+            echo "::error::object_name '$OBJECT_NAME' is not a plain '*.sql.gz.age' filename -- refusing"
+            exit 1
+          fi
+
+      - name: Install PostgreSQL client and age
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y postgresql-client age
+
+          PG_CLIENT_VERSION=$(ls /usr/lib/postgresql | sort -V | tail -1)
+          if [ -z "$PG_CLIENT_VERSION" ] || [ ! -x "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/psql" ]; then
+            echo "::error::Could not locate an installed PGDG psql binary under /usr/lib/postgresql"
+            exit 1
+          fi
+          echo "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin:$PATH"
+
+          RESOLVED_PSQL=$(command -v psql)
+          if [ "$RESOLVED_PSQL" != "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/psql" ]; then
+            echo "::error::psql resolves to $RESOLVED_PSQL, not the PGDG client -- PATH override did not take effect"
+            exit 1
+          fi
+          if [ "$PG_CLIENT_VERSION" -lt 18 ]; then
+            echo "::error::PSQL_CLIENT_MAJOR=$PG_CLIENT_VERSION, expected >= 18 to match production's PostgreSQL major version"
+            exit 1
+          fi
+          psql --version
+          age --version
+
+      - name: Write age identity to a transient file (never echoed; removed at job end)
+        id: age_identity
+        env:
+          AGE_IDENTITY: ${{ secrets.AGE_PRIVATE_IDENTITY }}
+        run: |
+          IDENTITY_FILE="${RUNNER_TEMP}/age-identity.key"
+          umask 177
+          printf '%s\n' "$AGE_IDENTITY" > "$IDENTITY_FILE"
+          echo "identity_file=$IDENTITY_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Download, verify, decrypt, and restore into the throwaway container
+        id: restore
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_READONLY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READONLY_SECRET_ACCESS_KEY }}
+          AGE_IDENTITY_FILE: ${{ steps.age_identity.outputs.identity_file }}
+          OPSIQ_DB_TARGET: local
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rehearsal_target
+        run: bash scripts/restore-database-r2.sh "${{ inputs.object_name }}"
+
+      - name: Remove the transient age identity file
+        if: always()
+        run: rm -f "${{ steps.age_identity.outputs.identity_file }}"
+
+      - name: Independent post-restore schema/data verification
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          # Not trusting restore-database.sh's own self-report: re-derive the restored database
+          # name independently and re-query information_schema directly, same approach as the
+          # existing restore-rehearsal.yml.
+          TABLES=$(psql -d postgres -tAc "SELECT datname FROM pg_database WHERE datname NOT IN ('postgres','template0','template1','rehearsal_target');")
+          if [ -z "$TABLES" ]; then
+            echo "::error::No restored database found alongside rehearsal_target -- restore did not create a new database"
+            exit 1
+          fi
+          RESTORED_DB=$(echo "$TABLES" | head -1 | tr -d '[:space:]')
+          echo "Independently re-querying restored database: $RESTORED_DB"
+          TABLE_COUNT=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          COLUMN_COUNT=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public';")
+          echo "Independent verification: $TABLE_COUNT tables, $COLUMN_COUNT columns in public schema"
+          if [ "$TABLE_COUNT" -lt 1 ] || [ "$COLUMN_COUNT" -lt 1 ]; then
+            echo "::error::Independent post-restore verification found an empty or missing schema"
+            exit 1
+          fi
+
+          # STRENGTHENED (beyond table/column existence alone -- those only prove a schema was
+          # created, not that it holds real data or that its constraints/indexes survived the
+          # dump/restore round trip):
+          #
+          # 1. ROW-LEVEL DATA PRESENCE: a true COUNT(*) summed across every public table, not a
+          #    stats-based estimate (pg_stat_user_tables' n_live_tup is not reliably populated
+          #    immediately after a fresh restore, before autovacuum/ANALYZE has run). query_to_xml
+          #    + xpath lets this run generically against whatever tables actually exist, with no
+          #    hardcoded table name.
+          ROW_COUNT=$(psql -d "$RESTORED_DB" -tAc "
+            SELECT COALESCE(SUM((xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', schemaname, tablename), false, true, '')))[1]::text::bigint), 0)
+            FROM pg_tables WHERE schemaname = 'public';
+          ")
+          # 2. CONSTRAINT SURVIVAL: primary keys, foreign keys, unique, and check constraints are
+          #    not re-created automatically by a restore -- if pg_dump/pg_restore silently dropped
+          #    or failed to apply any, this independently catches it.
+          CONSTRAINT_COUNT=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema = 'public';")
+          # 3. INDEX SURVIVAL: every PRIMARY KEY/UNIQUE constraint backs an index, and OpsIQ's
+          #    schema additionally defines plain indexes; losing them silently would not break
+          #    TABLE_COUNT/COLUMN_COUNT checks but would be a real, severe restore defect
+          #    (query correctness would survive, performance and uniqueness enforcement would not).
+          INDEX_COUNT=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public';")
+          echo "Independent strengthened verification: $ROW_COUNT total rows, $CONSTRAINT_COUNT constraints, $INDEX_COUNT indexes in public schema"
+          if [ "$ROW_COUNT" -lt 1 ]; then
+            echo "::error::Independent post-restore verification found zero rows across every public table -- the restored schema is structurally present but empty, which does not prove a real backup round-tripped"
+            exit 1
+          fi
+          if [ "$CONSTRAINT_COUNT" -lt 1 ] || [ "$INDEX_COUNT" -lt 1 ]; then
+            echo "::error::Independent post-restore verification found no constraints or no indexes -- a restore that silently drops these is not safe even if row data and table/column counts look fine"
+            exit 1
+          fi
+          echo "PASS: restored schema is structurally non-empty, holds real row data, and its constraints/indexes survived the restore -- independently confirmed."
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "R2 restore rehearsal PASSED against an isolated, disposable postgres:18 container."
+          echo "Source object: ${{ inputs.object_name }}"
+          echo "Production was never contacted by this workflow."

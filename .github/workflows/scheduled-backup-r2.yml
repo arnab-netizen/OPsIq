@@ -1,0 +1,125 @@
+name: Production Database Backup (private, encrypted, Cloudflare R2)
+
+# Replaces GitHub Actions artifact storage (scheduled-backup.yml, now disabled_manually) as the
+# Production backup target. Runs scripts/backup-database-r2.sh, which: (1) checks the #642 QBO
+# backup gate FIRST (scripts/backup-qbo-gate.sh, unmodified -- fails closed on QBO data, an
+# unresolvable probe, or the PRODUCTION_QBO_ENABLED flag), (2) streams pg_dump | gzip | age
+# straight into an age-encrypted file (no plaintext SQL and no unencrypted gzip ever touch disk),
+# (3) uploads the encrypted object + checksum + a non-sensitive manifest to a PRIVATE Cloudflare R2
+# bucket, (4) verifies the upload via HEAD only (never downloads to "verify"), (5) cleans up its
+# own temp directory via an EXIT trap. GitHub receives NO database-backup payload: no `.sql`,
+# `.sql.gz`, `.age`, or dump directory is ever passed to actions/upload-artifact by this workflow
+# -- see src/__tests__/ci-cd/backup-r2-encrypted.test.ts for the static regression test proving it.
+#
+# NO SCHEDULE YET (deliberate). This workflow is workflow_dispatch-only until the owner has:
+# provisioned the real private R2 bucket, created the backup-write/backup-recovery GitHub
+# environments and their secrets (docs/opsiq/product/R2_BACKUP_RUNBOOK.md), and supervised a first
+# backup + a first restore rehearsal. Only then does a later, separate, owner-authorized change add
+# a `schedule:` trigger here. Pushing this workflow file itself never runs it and never touches
+# the pre-existing scheduled-backup.yml, which stays exactly as-is (disabled_manually).
+#
+# ENVIRONMENT SEPARATION: this job uses the `backup-write` GitHub Environment only. That
+# environment is designed (not configured by this PR) to hold the Production DB backup credential,
+# the R2 Object-Read-&-Write token (scoped to one bucket), and the AGE PUBLIC recipient -- never
+# the AGE PRIVATE identity needed to decrypt.
+#
+# PRECISE BOUNDARY (do not overstate this): the R2 Object-Read-&-Write token this job holds CAN
+# read back the raw ciphertext bytes it uploads (R2_WRITER_CAN_READ_CIPHERTEXT=YES -- "Read &
+# Write" includes read, per Cloudflare's own R2 API-token documentation; this job is not
+# read-blind). What it can never do is DECRYPT that ciphertext (R2_WRITER_CAN_DECRYPT=NO), because
+# the AGE PRIVATE identity required to decrypt only ever exists in the separate `backup-recovery`
+# environment (restore-rehearsal-r2.yml), never here. A compromised backup-write credential can
+# read ciphertext it cannot itself decrypt without also compromising the separate private-identity
+# secret that only the backup-recovery environment holds.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-backup-r2
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Encrypted Backup to R2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: backup-write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Preflight check - required secrets/config exist
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          MISSING=0
+          for v in DATABASE_URL AGE_RECIPIENT R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::$v is missing or empty"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" -ne 0 ]; then
+            echo "::error::Required backup-write configuration is incomplete. See docs/opsiq/product/R2_BACKUP_RUNBOOK.md. Refusing to proceed (uncertain = block)."
+            exit 1
+          fi
+          echo "All required backup-write configuration present."
+
+      # Same proven approach as scheduled-backup.yml (#371/#372): install the PGDG client and
+      # explicitly PATH-prepend it, because this runner image's bare pg_dump does not repoint at a
+      # newly-installed package, and Ubuntu's own default caps at a major version older than
+      # Neon's actual running server.
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y postgresql-client age
+
+          PG_CLIENT_VERSION=$(ls /usr/lib/postgresql | sort -V | tail -1)
+          if [ -z "$PG_CLIENT_VERSION" ] || [ ! -x "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/pg_dump" ]; then
+            echo "::error::Could not locate an installed PGDG pg_dump binary under /usr/lib/postgresql"
+            exit 1
+          fi
+          echo "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin:$PATH"
+
+          RESOLVED_PG_DUMP=$(command -v pg_dump)
+          if [ "$RESOLVED_PG_DUMP" != "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/pg_dump" ]; then
+            echo "::error::pg_dump resolves to $RESOLVED_PG_DUMP, not the PGDG client -- PATH override did not take effect"
+            exit 1
+          fi
+          pg_dump --version
+          age --version
+          aws --version
+
+      - name: Run encrypted backup to R2
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_QBO_ENABLED: ${{ vars.PRODUCTION_QBO_ENABLED }}
+          AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: bash scripts/backup-database-r2.sh
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "Encrypted Production backup completed and uploaded to the private R2 bucket."
+          echo "GitHub holds no copy of the dump. To restore-rehearse, dispatch restore-rehearsal-r2.yml with the object name printed above."
