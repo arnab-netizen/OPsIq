@@ -1,21 +1,30 @@
 {
-  "_comment": "Bucket-Lock-as-code CANDIDATE definition (Section 15 of the R2 backup availability/erasure closure). Adopting a Bucket Lock at all is BUCKET_LOCK_DECISION=OWNER_POLICY_DECISION_REQUIRED (docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md section 3) -- this closure does not decide that question, and does not reverse R2_BACKUP_RUNBOOK.md's prior BUCKET_LOCK_DECISION=DO_NOT_USE, which remains the status quo. This file is the 'maximum protection' candidate an owner may choose to use if they decide to adopt a lock; it is NOT live-applied by any script or workflow in this repository, and copying it into Cloudflare is itself the owner's decision, not an action this repo's code takes. scripts/verify-r2-bucket-lock-config.ts checks a live configuration against whatever this file says, run manually and offline with the owner's own Cloudflare API token -- never from CI, never with a credential stored in any GitHub secret.",
-  "_decision_basis": "docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md section 3 (see the residual gate-bypass-exposure tradeoff table before choosing to apply this)",
+  "_comment": "Bucket-Lock-as-code DECIDED definition (Section 1 of the final R2 activation-blocker closure; originally drafted as a candidate in an earlier revision of this file). BUCKET_LOCK_DECISION=USE: the owner has decided to adopt a 7-day immutability window on the backups/ prefix, layered under the existing 35-day ordinary lifecycle retention (RETENTION_DAYS=35, unchanged). This file is NOT live-applied by any script or workflow in this repository -- PROVIDER_BUCKET_LOCK_CONFIGURED=NO until the owner manually provisions it (see docs/opsiq/product/R2_BACKUP_RUNBOOK.md's owner provisioning sequence). scripts/verify-r2-bucket-lock-config.ts checks a live configuration against whatever this file says, run manually and offline with the owner's own Cloudflare API token -- never from CI, never with a credential stored in any GitHub secret.",
+  "_decision_basis": "docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md section 3 (R2_BUCKET_LOCK_POLICY=7_DAY_PREFIX_LOCK, owner decision)",
   "rules": [
     {
-      "id": "backups-ransomware-protection",
+      "id": "backups-7day-immutability-window",
       "enabled": true,
       "prefix": "backups/",
       "condition": {
         "type": "Age",
-        "maxAgeSeconds": 3024000
+        "maxAgeSeconds": 604800
+      }
+    },
+    {
+      "id": "erasure-ledger-indefinite-immutability",
+      "enabled": true,
+      "prefix": "erasure-ledger/",
+      "condition": {
+        "type": "Indefinite"
       }
     }
   ],
   "_notes": [
-    "Prefix is scoped to backups/ only -- a future erasure-ledger/ prefix (see closure doc section 10/14) must NOT be covered by this rule, since the ledger is append-only infrastructure, not a recovery point subject to the same retention duration decision.",
-    "3024000 seconds = 35 days, matching the existing RETENTION_DAYS=35 convention used for the GitHub-artifact backup domain and this bucket's own planned lifecycle rule (R2_BACKUP_RUNBOOK.md step 4).",
-    "This rule, once configured, applies to every object already under backups/ at the time it is enabled as well as every object created after -- per Cloudflare's own Bucket Lock documentation.",
-    "Removing or editing this rule requires a Cloudflare API token with bucket-configuration-edit permission (Admin Read & Write / Workers R2 Storage Write), which must never be stored in backup-write or backup-recovery -- see WRITER_CAN_EDIT_BUCKET_LOCK=NO in the closure doc."
+    "backups-7day-immutability-window is scoped to backups/ only. 604800 seconds = 7 days: the IMMUTABLE_RECOVERY_WINDOW_DAYS. This is DELIBERATELY SHORTER than the 35-day TOTAL_RETENTION_DAYS -- days 0-7 are protected by this Bucket Lock rule; days 7-35 are still retained by the ordinary lifecycle rule but are no longer Bucket-Lock-protected (an object-writer credential could delete them); after day 35 objects are eligible for lifecycle expiry as before. Do not describe all 35 days as immutable.",
+    "erasure-ledger-indefinite-immutability is scoped to erasure-ledger/ only and NEVER expires (Indefinite, not Age) -- this closes a real gap a hostile fresh-context review found: without it, a credential holding only erasure-ledger/ write/delete access (no ERASURE_LEDGER_SIGNING_KEY) could silently delete the most recent ledger record(s) (truncate the chain's tail) without needing to forge anything. The remaining, shorter chain would still pass validateLedgerChain (every link it still has is genuinely valid), silently defeating RESTORE_NOT_SERVICEABLE_UNTIL_ERASURE_RECONCILED for exactly the erasures that were deleted. An Indefinite Bucket Lock on this prefix makes every ledger record permanently undeletable by that credential, the same way backups-7day-immutability-window protects backups/ -- the ledger is append-only governance infrastructure with no analogous QBO/\"uncertain=block erasure\" conflict (it holds no customer/QBO payload, only opaque UUIDs/timestamps/hashes), so indefinite retention creates no new conflict the way an indefinite lock on backups/ would have.",
+    "Neither rule is subject to the 35-day backup lifecycle -- the erasure-ledger/ prefix is not covered by any lifecycle expiry rule at all; it is retained indefinitely by design (governance records, not backup payload).",
+    "Both rules, once configured, apply to every object already under their prefix at the time they are enabled as well as every object created after -- per Cloudflare's own Bucket Lock documentation.",
+    "Removing or editing either rule requires a Cloudflare API token with bucket-configuration-edit permission (Admin Read & Write / Workers R2 Storage Write), which must never be stored in backup-write, backup-recovery, or wherever append-erasure-ledger.ts/verify-erasure-ledger.ts run -- see WRITER_CAN_EDIT_BUCKET_LOCK=NO in the closure doc."
   ]
 }

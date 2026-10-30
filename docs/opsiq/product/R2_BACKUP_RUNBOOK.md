@@ -36,133 +36,170 @@ file, no log).
   target; this script does not duplicate or weaken it).
 - Two independent GitHub Environments (designed here, **not created by this PR**):
   - `backup-write`: Production DB backup credential, R2 **Object Read & Write** token scoped to
-    one bucket, and the **AGE PUBLIC recipient**. Never holds the AGE private identity — the
-    scheduled writer can never decrypt anything it has ever uploaded.
+    one bucket, the **AGE PUBLIC recipient**, and `MANIFEST_SIGNING_KEY` (manifest HMAC signing).
+    Never holds the AGE private identity, the bucket-configuration (Bucket Lock) credential, or
+    `ERASURE_LEDGER_SIGNING_KEY` — the scheduled writer can never decrypt anything it has ever
+    uploaded, edit the Bucket Lock, or forge an erasure-ledger record.
   - `backup-recovery`: AGE **PRIVATE** identity and an R2 **read-only** credential. Designed to
     require manual reviewer approval before a job in this environment runs.
+- A 7-day **Bucket Lock** on the `backups/` prefix (owner-decided, `BUCKET_LOCK_DECISION=USE` —
+  see below) sits underneath the unchanged 35-day lifecycle: the most recent 7 days of backups are
+  immutable against the writer credential, in addition to the create-once overwrite protection
+  above. Configured and verified entirely outside any GitHub Environment (see the provisioning
+  steps below) — never via a credential this repo's CI ever holds.
+- A **post-backup erasure ledger** (`erasure-ledger/` prefix, separate credential and signing key
+  from `backup-write`; `src/services/privacy-erasure/erasure-ledger.ts`,
+  `scripts/privacy/append-erasure-ledger.ts`/`verify-erasure-ledger.ts`) records every erasure
+  event outside the database and outside any backup, so a future restore of an older backup can
+  know which erasures happened after it.
 - No `schedule:` trigger yet on either new workflow — `workflow_dispatch` only, until the owner
   provisioning steps below are complete and a supervised first backup + restore rehearsal has
   passed.
 
 ## Owner provisioning steps (not done by this PR — exact order)
 
+No step below has been executed. This is a code/proof mission only.
+
 1. **Create the private R2 bucket.** Cloudflare dashboard → R2 → Create bucket. Leave it private
    (the default): no `r2.dev` public URL, no custom public domain, no anonymous access.
 2. **Verify public access is disabled.** Bucket → Settings → confirm "Public Access" is off and no
    custom domain is attached.
-3. **Create a bucket-scoped R2 API token for the writer**, type "Object Read & Write", scoped to
-   this ONE bucket only (not account-wide R2 Admin). Record the Access Key ID / Secret Access Key
-   and the account's R2 S3-compatible endpoint (`https://<account-id>.r2.cloudflarestorage.com`).
-4. **Configure a 35-day lifecycle rule** on the bucket: expire objects after 35 days, and expire
-   incomplete multipart uploads promptly (same intent as the existing GitHub-artifact retention,
-   `RETENTION_DAYS=35`). Scope the rule to the shared `backups/` prefix (not to a single suffix):
-   all three object types the backup script writes — the encrypted backup (`.sql.gz.age`), its
-   checksum sidecar (`.sha256`), and the manifest (`.manifest.json`) — share that one prefix, so a
-   single prefix-scoped rule covers all three with no orphaned object type.
-   `RETENTION_SCOPE_ALL_BACKUP_OBJECTS=YES` (by construction: one rule, one shared prefix, three
-   suffixes). Do **not** enable Object Lock / Bucket Lock on this bucket — see
-   "Why no Bucket Lock" below.
-5. **Generate an `age` keypair offline** (e.g. `age-keygen -o production-backup-identity.key`),
-   on a machine that is not this CI system. Record the public recipient line it prints
-   (`age1...`) — this is **not secret**.
-6. **Store only the public recipient** as the `backup-write` environment's `AGE_RECIPIENT`
-   variable (a GitHub Environment **variable**, not secret — it isn't sensitive).
-7. **Store the private identity file's contents only in `backup-recovery`**, as the
-   `AGE_PRIVATE_IDENTITY` **secret**. Never commit it, never place it in `backup-write`, the
-   Production environment, or ordinary repository secrets.
-8. **Configure GitHub environment protection**: create both `backup-write` and `backup-recovery`
-   environments (Settings → Environments). On `backup-recovery`, add a required-reviewers
-   protection rule so no restore rehearsal runs without a human approving it first.
-9. **Configure `backup-write` secrets/variables**: secret `R2_ACCESS_KEY_ID`, secret
-   `R2_SECRET_ACCESS_KEY`, variable `R2_ENDPOINT`, variable `R2_BUCKET`, variable `AGE_RECIPIENT`.
-   Reuse the existing repo secret `PRODUCTION_DATABASE_URL` for the DB credential — no new DB
-   secret is needed (same reuse the existing `scheduled-backup.yml` already documents).
-10. **Configure `backup-recovery` secrets/variables**: secret `AGE_PRIVATE_IDENTITY`, secret
-    `R2_READONLY_ACCESS_KEY_ID`, secret `R2_READONLY_SECRET_ACCESS_KEY` (a **separate**,
-    read-only-scoped R2 API token — not the writer's Read & Write token), plus the same
-    `R2_ENDPOINT` / `R2_BUCKET` variables.
-11. **Execute a supervised first backup**: manually dispatch `scheduled-backup-r2.yml` and watch
+3. **Configure the 35-day lifecycle rule** (`TOTAL_RETENTION_DAYS=35`, unchanged): expire objects
+   after 35 days, and expire incomplete multipart uploads promptly. Scope the rule to the shared
+   `backups/` prefix (not to a single suffix): the encrypted backup (`.sql.gz.age`), its checksum
+   sidecar (`.sha256`), and the manifest (`.manifest.json`) all share that one prefix, so a single
+   prefix-scoped rule covers all three with no orphaned object type.
+   `RETENTION_SCOPE_ALL_BACKUP_OBJECTS=YES` by construction. Do **not** scope this rule to
+   `erasure-ledger/` (step 8) — that prefix is governance infrastructure, not backup payload, and
+   is not subject to this 35-day decision.
+4. **Configure BOTH Bucket Lock rules**, exactly as declared in `scripts/r2-bucket-lock-config.json`:
+   (a) `BUCKET_LOCK_DECISION=USE`, owner-decided: id `backups-7day-immutability-window`, prefix
+   `backups/`, Age condition, `maxAgeSeconds: 604800`; (b) id
+   `erasure-ledger-indefinite-immutability`, prefix `erasure-ledger/`, **Indefinite** condition
+   (never expires) — this second rule closes a real gap found during review: without it, a
+   credential holding only `erasure-ledger/` write/delete access could silently delete the most
+   recent ledger record(s), and the remaining chain would still validate as clean. Use a
+   Cloudflare API token (or the dashboard) with bucket-configuration-edit permission — never an
+   S3-compatible object token, and never a credential later placed in `backup-write`,
+   `backup-recovery`, or wherever the erasure-ledger tools run (step 8 below).
+5. **Independently verify both locks**, before relying on either, using a *separate*
+   bucket-configuration-**read** credential (ideally distinct from the edit credential used in
+   step 4) and `scripts/verify-r2-bucket-lock-config.ts` (`CLOUDFLARE_API_TOKEN`,
+   `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET` env vars) — run from the owner's own machine, **never**
+   from CI. Confirm `BUCKET_LOCK_DRIFT_DETECTION` reports no drift against the as-code file.
+6. **Create the writer and recovery R2 API tokens**: a bucket-scoped "Object Read & Write" token
+   for `backup-write` (record Access Key ID / Secret Access Key and the R2 S3-compatible endpoint,
+   `https://<account-id>.r2.cloudflarestorage.com`), and a **separate**, bucket-scoped
+   "Object Read only" token for `backup-recovery`. Neither is the bucket-configuration token from
+   step 4/5 — the S3-compatible object API cannot reach the bucket-configuration REST API at all
+   (`WRITER_CAN_EDIT_BUCKET_LOCK=NO`, structurally).
+7. **Generate an `age` keypair offline** (e.g. `age-keygen -o production-backup-identity.key`), on
+   a machine that is not this CI system. Record the public recipient line it prints (`age1...`) —
+   this is **not secret**.
+8. **Create the erasure-ledger trust material**: generate `ERASURE_LEDGER_SIGNING_KEY` (32+
+   random characters, e.g. `openssl rand -hex 32`) and a **separate**, bucket-scoped
+   "Object Read & Write" R2 token for `ERASURE_LEDGER_ACCESS_KEY_ID`/`ERASURE_LEDGER_SECRET_ACCESS_KEY`
+   — distinct from `backup-write`'s token (see `scripts/privacy/append-erasure-ledger.ts`). The
+   ledger lives under the `erasure-ledger/` prefix of the **same** bucket (a separate bucket is
+   also acceptable and gives stronger isolation, since R2 tokens are bucket-scoped, not
+   prefix-scoped — this is a genuine, documented limitation, not an oversight; see the closure
+   doc's failure model).
+9. **Verify credential separation** before storing anything: `MANIFEST_SIGNING_KEY` (backup
+   manifest signing, #647), `ERASURE_LEDGER_SIGNING_KEY` (step 8), the writer R2 token, the
+   recovery R2 token, and the erasure-ledger R2 token must be five genuinely distinct secret
+   values — confirm none were accidentally reused before proceeding. Store: `backup-write` gets
+   secret `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`, secret `MANIFEST_SIGNING_KEY`, variable
+   `R2_ENDPOINT`, variable `R2_BUCKET`, variable `AGE_RECIPIENT` (reuse the existing repo secret
+   `PRODUCTION_DATABASE_URL` for the DB credential — no new DB secret is needed). `backup-recovery`
+   gets secret `AGE_PRIVATE_IDENTITY`, secret `R2_READONLY_ACCESS_KEY_ID`/`R2_READONLY_SECRET_ACCESS_KEY`,
+   plus the same `R2_ENDPOINT`/`R2_BUCKET` variables. `ERASURE_LEDGER_SIGNING_KEY` and the
+   erasure-ledger R2 token are stored only where the owner runs `append-erasure-ledger.ts`/
+   `verify-erasure-ledger.ts` — **never** in `backup-write` or `backup-recovery`.
+10. **Execute a supervised first backup**: manually dispatch `scheduled-backup-r2.yml` and watch
     it run. Confirm the Summary step's printed object name, and confirm in the Cloudflare
     dashboard that exactly one new object (plus its checksum and manifest) exists in the bucket.
-12. **Execute a supervised restore rehearsal**: manually dispatch `restore-rehearsal-r2.yml` with
+11. **Execute a supervised restore rehearsal**: manually dispatch `restore-rehearsal-r2.yml` with
     that object's name, approve the `backup-recovery` environment gate when prompted, and confirm
     it passes.
-13. **Only then**, in a separate, owner-authorized change, add a `schedule:` trigger to
+12. **Hostile delete/overwrite test against a disposable, non-Production object, while locked, if
+    safe to do so**: upload a throwaway test object under `backups/` (not a real backup), confirm
+    it is immediately locked, and confirm a direct delete/overwrite attempt against it with the
+    writer token fails with `ObjectLockedByBucketPolicy` — proving `LOCKED_DELETE_REFUSED`/
+    `LOCKED_OVERWRITE_REFUSED` against the real provider, not only the fake-provider simulation in
+    this repo's tests. Delete the throwaway object only after its own lock expires (do not attempt
+    to force it).
+13. **Verify lock drift** once more after steps 10-12 (re-run `verify-r2-bucket-lock-config.ts`) —
+    confirm nothing in the rehearsal/hostile-test steps altered the live configuration.
+14. **Only then**, in a separate, owner-authorized change, consider adding a `schedule:` trigger to
     `scheduled-backup-r2.yml` (same cadence as the disabled workflow, `17 6 * * *`, or a cadence
     the owner chooses) to re-enable automated backups.
 
-Steps 1-10 and the decision to add a schedule in step 13 require owner action; this PR does none
-of them.
+Every step above requires owner action; this PR/mission executes none of them (`PROVIDER_BUCKET_LOCK_CONFIGURED=NO`,
+`R2_RESOURCES_CREATED=NO`).
 
-## Why no Bucket Lock / Object Lock
+## Bucket Lock decision: USE, 7-day window (owner decision — supersedes the history below)
+
+**Current state, authoritative:** `BUCKET_LOCK_DECISION=USE`, `BUCKET_LOCK_PREFIX=backups/`,
+`BUCKET_LOCK_MAX_AGE_SECONDS=604800` (7 days), layered under the unchanged 35-day ordinary
+lifecycle (step 4 above). Full reasoning, the prior `DO_NOT_USE` analysis this reconciles with
+(not silently reverses), the residual risk the owner has explicitly accepted, and the full
+provider-fact citations live in
+`docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md` (sections 1-3) — this section only
+states the current decision so this runbook never contradicts it. **Do not re-derive or restate
+the Bucket Lock decision anywhere else; treat the closure doc as the single source of truth and
+link to it.**
+
+Two earlier analyses are kept below **only as historical record**, each now superseded:
+
+<details>
+<summary>Historical: original "why no Bucket Lock" rationale (#647) — superseded</summary>
 
 OpsIQ's Intuit secure-delete model (`docs/opsiq/product/QBO_ERASURE_DESIGN.md`) may require a
 recoverable copy — including a backup — to be deletable early, as part of an erasure incident or
-the governed erasure process's own backup-domain attestation
-(`--attest-github-backup-artifacts`-equivalent for R2, once that domain is retargeted here). A
-retention lock that prevents deletion before its own expiry would make that secure deletion step
-impossible to complete until the lock expires, which is incompatible with "uncertain = block" for
-privacy requests. Ordinary lifecycle-based expiry (step 4 above) achieves the retention goal
-(35 days) without that conflict.
+the governed erasure process's own backup-domain attestation. A retention lock that prevents
+deletion before its own expiry would make that secure deletion step impossible to complete until
+the lock expires, which is incompatible with "uncertain = block" for privacy requests. Ordinary
+lifecycle-based expiry (step 3 above) achieves the retention goal (35 days) without that conflict.
 
-## Re-evaluated: Bucket Lock decision (confirmed against current R2 capabilities)
+*(Superseded: the R2_BACKUPS structural proof — a correctly-functioning #642 gate makes an R2
+backup structurally incapable of containing QBO data — removes the normal-case version of this
+conflict; see the closure doc for the residual edge case the owner has now explicitly accepted.)*
+</details>
 
-`BUCKET_LOCK_DECISION=DO_NOT_USE`. Re-checked against Cloudflare's current, official Bucket Locks
-documentation (not re-derived from AWS S3 Object Lock, which R2 does not mirror exactly): R2
-Bucket Locks are bucket-level, prefix-scoped retention rules (age-based, date-based, or
-indefinite) that "prevent the deletion and overwriting of R2 objects for a set period or
-indefinitely," apply to existing and future objects under the rule's prefix, and — critically —
-the documentation describes no admin-bypass or early-release path once a rule is active; a bucket
-cannot even be emptied while lock rules exist. This *strengthens* rather than weakens the original
-rationale: a lock would make an object genuinely undeletable by anyone, including the owner, until
-expiry. That is incompatible with OpsIQ's own "uncertain = block" governed-erasure doctrine
-(`docs/opsiq/product/QBO_ERASURE_DESIGN.md`), which requires the ability to delete a backup copy
-on demand as part of an erasure incident or the (not-yet-built, see below) R2 backup-domain
-attestation. Ordinary lifecycle-based expiry (35 days, see step 4) achieves the stated retention
-goal without creating an undeletable copy.
+<details>
+<summary>Historical: "re-evaluated" DO_NOT_USE analysis (prior R2 hardening pass) — superseded</summary>
 
-- A: does the QBO backup gate already protect new backups from containing QuickBooks/Intuit User
-  Data? YES — `scripts/backup-qbo-gate.sh` (#642) fails closed before any backup this script
-  produces, independent of Bucket Lock.
-- B: is there a general (non-QBO) requirement to purge a backup before its 35-day lifecycle
-  expiry? NO — `docs/PRIVACY_REQUEST_RUNBOOK.md` states plainly that "retention outside the
-  database ... follows each provider's own retention and is not reached by this tool"; there is no
-  general early-purge requirement today.
-- C: would a 35-day lock conflict with QBO erasure attestation? YES, if it were ever needed — a
-  locked object cannot be deleted early even to satisfy an erasure incident's backup-domain
-  attestation, which is exactly the scenario B says does not exist today but could in a future
-  incident (e.g. the gate being bypassed, or a pre-gate-era object).
-- D: would a shorter lock (e.g. 7 days) resolve the conflict? NO, not cleanly — any nonzero lock
-  period creates a window in which "uncertain = block" governed erasure cannot complete, which is
-  the same category of conflict at a smaller scale, not a different one.
-- E: see the threat-model section immediately below — ruling out Bucket Lock has a real
-  availability cost that must be stated honestly, not minimized.
+`BUCKET_LOCK_DECISION=DO_NOT_USE` was the conclusion of a re-check against Cloudflare's Bucket
+Lock documentation: locks have no admin-bypass or early-release path once active, which strengthens
+rather than weakens the original conflict with "uncertain = block" governed erasure. Five
+sub-questions (A-E) were reasoned through; (C) a lock conflicts with QBO erasure attestation if
+ever needed (e.g. the gate being bypassed); (D) a shorter lock does not cleanly resolve this,
+only shrinks the window.
 
-## Threat model: writer-credential compromise (stated blocker, not resolved by this document)
+*(Superseded: the owner has since reviewed this exact analysis — including the gate-bypass
+residual risk named in (C)/(D) — and explicitly chosen to accept a bounded 7-day version of it in
+exchange for real ransomware/credential-theft protection. See the closure doc section 3 for the
+full, reconciled reasoning.)*
+</details>
 
-`WRITER_CREDENTIAL_COMPROMISE_CAN_DELETE=YES`. Cloudflare's current R2 API token permission tiers
-are only "Object Read & Write" (read + write + list) and "Object Read only" (read + list); the
-official token-permissions documentation does not describe a write-without-delete tier. A
-compromised `backup-write` R2 Object-Read-&-Write credential must therefore be assumed able to
-delete every object it can see in the bucket, including all historical backups, checksums, and
-manifests — the same credential class this workflow already uses, with no narrower alternative
-currently offered by R2.
+## Threat model: writer-credential compromise (partially resolved — see closure doc)
 
-`WRITER_CREDENTIAL_COMPROMISE_CAN_OVERWRITE=NO` as of this change: the create-once upload
-mechanism (`aws s3api put-object --if-none-match '*'`, see `backup-database-r2.sh`) makes R2
-itself reject any write to an already-existing key with `412 PreconditionFailed`. A compromised
-writer credential can still *delete-then-recreate* a given key (a different, still-live attack:
-deletion, not silent overwrite), but it can no longer silently corrupt an existing object in place.
+`WRITER_CREDENTIAL_COMPROMISE_CAN_DELETE=NO, for backups younger than 7 days` (protected by the
+now-decided Bucket Lock) `; YES, for backups 7-35 days old` (retained by lifecycle but no longer
+lock-protected — stated honestly, not overclaimed). Cloudflare's R2 API token permission tiers are
+only "Object Read & Write" and "Object Read only"; there is still no write-without-delete tier, so
+this remains the mechanism by which a compromised writer credential could delete an unlocked
+object.
 
-`BACKUP_AVAILABILITY_PROTECTION=NONE`. With Bucket Lock ruled out (above) and no narrower
-delete-excluding token tier available from R2 today, nothing in this design currently prevents a
-compromised writer credential from deleting the entire backup history. **This is an honest,
-unresolved blocker, not a gap this mission's scope permits fixing**: a durable fix would require
-either a Cloudflare-side capability this token model does not yet offer, or a separate
-write-once/delete-never architecture (e.g., a second, narrowly-scoped auditor credential that
-periodically copies new objects to a bucket the writer credential cannot reach) that is a real
-design change outside "code/architecture hardening of the existing PR." Flagged here for the
-owner's provisioning decision, not implemented.
+`WRITER_CREDENTIAL_COMPROMISE_CAN_OVERWRITE=NO`, unconditionally: the create-once upload mechanism
+(`aws s3api put-object --if-none-match '*'`, see `backup-database-r2.sh`) makes R2 itself reject
+any write to an already-existing key with `412 PreconditionFailed`, independent of the Bucket Lock
+decision.
+
+`BACKUP_AVAILABILITY_PROTECTION=PASS` (for the 7-day immutable window; **not** for the full 35-day
+retention — see the closure doc's failure-model table for every compromise scenario Bucket Lock
+does and does not protect against, including administrative compromise, which no token-tier
+change or lock can ever cover).
 
 ## R2 endpoint policy
 
@@ -177,18 +214,15 @@ not an oversight. If the owner later adopts a data-residency requirement, that i
 owner-authorized change to the endpoint regex in both `backup-database-r2.sh` and
 `restore-database-r2.sh`, not a change made silently alongside unrelated hardening.
 
-## R2 erasure-domain integration (activation blocker)
+## R2 erasure-domain integration
 
-`R2_ERASURE_DOMAIN_INTEGRATED=NO`. `docs/opsiq/product/QBO_ERASURE_DESIGN.md`'s external-retention
-domain table lists `DATABASE`, `GITHUB_BACKUP_ARTIFACTS`, `NEON_HISTORY_WINDOW`, `NEON_BRANCHES`,
-and `OPERATOR_EXPORTS`, each with its own attestation flag — there is no R2 entry. A
-`GLOBAL_SECURE_DELETE=COMPLETE` attestation produced today would not account for any object this
-R2 backup path ever creates. **This is an explicit activation blocker in addition to the owner
-provisioning steps above**: even after the bucket is provisioned and a schedule is enabled, R2
-must be added to that domain table (with its own attestation mechanism, mirroring
-`--attest-github-backup-artifacts`) before Production QuickBooks data may ever legitimately exist
-in a backup this path produces. This mission does not implement that addition or any Production
-deletion mechanism — it only records the gap so it cannot be missed.
+`R2_ERASURE_DOMAIN_INTEGRATED=YES`. `docs/opsiq/product/QBO_ERASURE_DESIGN.md`'s external-retention
+domain table now includes an `R2_BACKUPS` row, wired into `src/services/privacy-erasure/deletion-domains.ts`
+and `scripts/privacy/qbo-erasure.ts` (`--r2-backups-status`), additionally gated by the post-backup
+erasure ledger's own integrity (`--erasure-ledger-status`, `GLOBAL_SECURE_DELETE_LEDGER_GATED=YES`
+— see the closure doc sections 6-7). A `GLOBAL_SECURE_DELETE=COMPLETE` attestation now cannot be
+produced while any R2 backup object is unverifiable/unclassifiable, or while the erasure ledger
+itself is unavailable or fails integrity validation.
 
 ## Large-backup / multipart limitation (stated, not silently absorbed)
 
@@ -208,9 +242,9 @@ silently drop create-once protection for exactly the backups large enough to nee
 Even once the code is green and reviewed, do not create the real bucket, create real credentials,
 add live secrets, enable the schedule, or dispatch a Production backup until: the `opsiq_app`
 24-hour observation window has closed, the #642 merge decision has been made by the owner, this
-new PR has been hostile-audited and has green CI at an exact head SHA, the owner has personally
-completed the provisioning steps above, **and** R2 has been added to
-`QBO_ERASURE_DESIGN.md`'s external-retention domain table with its own attestation mechanism (see
-"R2 erasure-domain integration" above — `R2_ERASURE_DOMAIN_INTEGRATED=NO` today). The availability
-exposure described in "Threat model: writer-credential compromise" above is also not resolved by
-any step in this document and should be reviewed by the owner before authorizing live use.
+PR chain (#647/#655 and this closure) has been hostile-audited and has green CI at an exact head
+SHA, and the owner has personally completed all 14 provisioning steps above — including
+configuring and independently verifying the 7-day Bucket Lock (steps 4-5) and the erasure-ledger
+trust material (steps 8-9). `R2_ERASURE_DOMAIN_INTEGRATED=YES` in code; `PROVIDER_BUCKET_LOCK_CONFIGURED=NO`
+and `R2_RESOURCES_CREATED=NO` remain true until the owner actually performs the steps above —
+code readiness is not the same as live provisioning.

@@ -62,6 +62,11 @@ export type ExternalDeletionDomainCode = (typeof EXTERNAL_DELETION_DOMAINS)[numb
 const R2_BACKUP_STATUSES = ["CLEAN", "NOT_APPLICABLE", "PENDING", "FAIL"] as const;
 export type R2BackupDomainStatus = (typeof R2_BACKUP_STATUSES)[number];
 
+/** VALID satisfies the ledger half of the R2_BACKUPS gate; INVALID/UNAVAILABLE (or omitted) block
+ * it -- see erasureLedgerStatus below (GLOBAL_SECURE_DELETE_LEDGER_GATED). */
+const ERASURE_LEDGER_STATUSES = ["VALID", "INVALID", "UNAVAILABLE"] as const;
+export type ErasureLedgerDomainStatus = (typeof ERASURE_LEDGER_STATUSES)[number];
+
 export type GlobalSecureDeleteStatus = "COMPLETE" | "INCOMPLETE";
 
 export interface GlobalSecureDeleteReport {
@@ -103,6 +108,15 @@ export function evaluateGlobalSecureDelete(input: {
    * EXTERNAL_DELETION_DOMAINS for why a purge-by-date model does not apply to this domain.
    */
   r2BackupsStatus?: R2BackupDomainStatus;
+  /**
+   * GLOBAL_SECURE_DELETE_LEDGER_GATED: the post-backup erasure ledger's own integrity status
+   * (scripts/privacy/verify-erasure-ledger.ts). An unavailable or invalid ledger means no one can
+   * prove this erasure was durably recorded outside the database/backups for future restore
+   * reconciliation -- that blocks the R2_BACKUPS domain exactly like an unverifiable R2 object
+   * does (reusing the existing domain per this mission's own instruction, not inventing a new
+   * one). Omitted is treated the same as UNAVAILABLE (uncertain = block).
+   */
+  erasureLedgerStatus?: ErasureLedgerDomainStatus;
 }): GlobalSecureDeleteReport {
   const now = input.now ?? new Date();
   const neonWindowMs = input.neonHistoryWindowMs ?? NEON_MAX_HISTORY_WINDOW_MS;
@@ -152,7 +166,19 @@ export function evaluateGlobalSecureDelete(input: {
   } else if (input.r2BackupsStatus === "FAIL") {
     forcePending("R2_BACKUPS", "R2 backup-domain verifier reported FAIL");
   }
-  // CLEAN / NOT_APPLICABLE: domain satisfied, no further action.
+  // CLEAN / NOT_APPLICABLE: domain satisfied so far -- still subject to the ledger gate below.
+  //
+  // GLOBAL_SECURE_DELETE_LEDGER_GATED: the R2_BACKUPS domain additionally requires the post-backup
+  // erasure ledger to be VALID. An erasure that passed the database transaction and has clean R2
+  // backups is still not durably reconciliation-safe if nothing outside the database records that
+  // it happened -- a future restore of an OLDER backup would have no way to know. This check is
+  // independent of, and in addition to, the r2BackupsStatus check above.
+  if (input.erasureLedgerStatus === undefined || input.erasureLedgerStatus === "UNAVAILABLE") {
+    forcePending("R2_BACKUPS", "erasure ledger status not supplied or unavailable (--erasure-ledger-status); cannot prove this erasure was durably recorded for future restore reconciliation");
+  } else if (input.erasureLedgerStatus === "INVALID") {
+    forcePending("R2_BACKUPS", "erasure ledger failed integrity validation (ERASURE_LEDGER_FORGERY_DETECTED or chain corruption) -- uncertain = block");
+  }
+  // VALID: ledger gate satisfied.
   return {
     blockingCopies,
     databaseErasure: input.databaseVerification,
@@ -182,6 +208,19 @@ export function r2BackupsStatusFromOptions(opts: Record<string, string>): R2Back
     throw new Error(`--r2-backups-status must be one of ${R2_BACKUP_STATUSES.join("|")}, got '${raw}'`);
   }
   return raw as R2BackupDomainStatus;
+}
+
+/** `--erasure-ledger-status <VALID|INVALID|UNAVAILABLE>`: the post-backup erasure ledger's own
+ * integrity verdict (scripts/privacy/verify-erasure-ledger.ts). Same fail-closed shape as
+ * r2BackupsStatusFromOptions: omitted returns undefined (treated as UNAVAILABLE); a
+ * present-but-invalid value throws rather than being silently ignored. */
+export function erasureLedgerStatusFromOptions(opts: Record<string, string>): ErasureLedgerDomainStatus | undefined {
+  const raw = opts["erasure-ledger-status"];
+  if (raw === undefined || raw === "") return undefined;
+  if (!(ERASURE_LEDGER_STATUSES as readonly string[]).includes(raw)) {
+    throw new Error(`--erasure-ledger-status must be one of ${ERASURE_LEDGER_STATUSES.join("|")}, got '${raw}'`);
+  }
+  return raw as ErasureLedgerDomainStatus;
 }
 
 /** `--neon-history-window-hours <n>`: the project's configured window; omitted means the 30 day fail-safe. */

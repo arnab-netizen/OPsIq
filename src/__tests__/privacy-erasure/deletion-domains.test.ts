@@ -8,6 +8,7 @@ import {
   type NeonInventory,
   neonWindowFromOptions,
   r2BackupsStatusFromOptions,
+  erasureLedgerStatusFromOptions,
 } from "@/services/privacy-erasure/deletion-domains";
 
 const executedAt = new Date("2026-11-01T10:00:00Z");
@@ -18,9 +19,10 @@ const cleanInventory: NeonInventory = {
   entries: [{ kind: "BRANCH", id: "br-main", name: "production", isDefault: true, createdAt: "2026-01-01T00:00:00Z" }],
 };
 // R2_BACKUPS is a structural status, not a timestamp attestation -- supplied separately from `all`.
-// Pre-existing tests (predating R2_BACKUPS) default it to CLEAN so they keep testing what they
-// originally tested; the dedicated R2_BACKUPS describe block below overrides it per-case.
-const evaluateGlobalSecureDelete = (i: Parameters<typeof evaluateRaw>[0]) => evaluateRaw({ neonInventory: cleanInventory, r2BackupsStatus: "CLEAN", ...i });
+// Pre-existing tests (predating R2_BACKUPS / the erasure-ledger gate) default both to
+// satisfied so they keep testing what they originally tested; the dedicated describe blocks
+// below override them per-case.
+const evaluateGlobalSecureDelete = (i: Parameters<typeof evaluateRaw>[0]) => evaluateRaw({ neonInventory: cleanInventory, r2BackupsStatus: "CLEAN", erasureLedgerStatus: "VALID", ...i });
 const all = {
   GITHUB_BACKUP_ARTIFACTS: "2026-11-01T11:00:00Z",
   NEON_HISTORY_WINDOW: "2026-12-02T00:00:00Z",
@@ -113,18 +115,58 @@ describe("global secure-delete boundary", () => {
     expect(() => r2BackupsStatusFromOptions({ "r2-backups-status": "clean" })).toThrow(); // case-sensitive, no silent coercion
     expect(() => r2BackupsStatusFromOptions({ "r2-backups-status": "YES" })).toThrow();
   });
+
+  it("erasureLedgerStatusFromOptions parses VALID/INVALID/UNAVAILABLE, fails closed on garbage, and is undefined when omitted", () => {
+    expect(erasureLedgerStatusFromOptions({})).toBeUndefined();
+    for (const v of ["VALID", "INVALID", "UNAVAILABLE"]) {
+      expect(erasureLedgerStatusFromOptions({ "erasure-ledger-status": v })).toBe(v);
+    }
+    expect(() => erasureLedgerStatusFromOptions({ "erasure-ledger-status": "valid" })).toThrow();
+    expect(() => erasureLedgerStatusFromOptions({ "erasure-ledger-status": "COMPLETE" })).toThrow();
+  });
+});
+
+describe("GLOBAL_SECURE_DELETE_LEDGER_GATED: the erasure ledger's own integrity gates the R2_BACKUPS domain", () => {
+  const otherwiseClean = { databaseVerification: "PASS" as const, executedAt, now, attestations: all, neonInventory: cleanInventory, r2BackupsStatus: "CLEAN" as const };
+
+  it("UNAVAILABLE (status omitted) always forces GLOBAL_SECURE_DELETE=INCOMPLETE, even with a CLEAN r2BackupsStatus and every other domain satisfied", () => {
+    const r = evaluateRaw({ ...otherwiseClean }); // erasureLedgerStatus omitted entirely
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.pendingDomains).toEqual(["R2_BACKUPS"]);
+  });
+
+  it.each(["INVALID", "UNAVAILABLE"] as const)("%s blocks GLOBAL_SECURE_DELETE even with a CLEAN r2BackupsStatus and every other domain satisfied", (status) => {
+    const r = evaluateRaw({ ...otherwiseClean, erasureLedgerStatus: status });
+    expect(r.globalSecureDelete).toBe("INCOMPLETE");
+    expect(r.pendingDomains).toEqual(["R2_BACKUPS"]);
+    expect(r.rejectedAttestations.some((x) => x.code === "R2_BACKUPS")).toBe(true);
+  });
+
+  it("VALID, combined with a CLEAN r2BackupsStatus, satisfies R2_BACKUPS entirely", () => {
+    const r = evaluateRaw({ ...otherwiseClean, erasureLedgerStatus: "VALID" });
+    expect(r.globalSecureDelete).toBe("COMPLETE");
+    expect(r.pendingDomains).toEqual([]);
+  });
+
+  it("a CLEAN r2BackupsStatus does NOT substitute for an invalid ledger, and a VALID ledger does NOT substitute for a non-CLEAN r2BackupsStatus -- both gates are independently required", () => {
+    const rLedgerBad = evaluateRaw({ ...otherwiseClean, erasureLedgerStatus: "INVALID" });
+    expect(rLedgerBad.globalSecureDelete).toBe("INCOMPLETE");
+
+    const rR2Bad = evaluateRaw({ ...otherwiseClean, r2BackupsStatus: "FAIL", erasureLedgerStatus: "VALID" });
+    expect(rR2Bad.globalSecureDelete).toBe("INCOMPLETE");
+  });
 });
 
 describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
   const firstImport = new Date("2026-10-01T00:00:00Z");
   it("is never COMPLETE without an inventory, even with every attestation", () => {
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, r2BackupsStatus: "CLEAN" });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, r2BackupsStatus: "CLEAN", erasureLedgerStatus: "VALID" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.pendingDomains).toEqual(["NEON_BRANCHES"]);
   });
   it("is never COMPLETE with an inventory captured before the erasure", () => {
     const stale: NeonInventory = { ...cleanInventory, capturedAt: "2026-11-01T09:00:00Z" };
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: stale, r2BackupsStatus: "CLEAN" });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: stale, r2BackupsStatus: "CLEAN", erasureLedgerStatus: "VALID" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
   });
   it("a surviving restore branch from the Intuit-data window blocks PASS despite a NEON_BRANCHES attestation", () => {
@@ -136,7 +178,7 @@ describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
         { kind: "SNAPSHOT", id: "snap-1", createdAt: "2026-10-25T00:00:00Z" },
       ],
     };
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: inv, dataFirstImportedAt: firstImport, r2BackupsStatus: "CLEAN" });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: inv, dataFirstImportedAt: firstImport, r2BackupsStatus: "CLEAN", erasureLedgerStatus: "VALID" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.blockingCopies.map((c) => c.id).sort()).toEqual(["br-restore", "snap-1"]);
     expect(r.pendingDomains).toContain("NEON_BRANCHES");
@@ -165,7 +207,7 @@ describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
     expect(blockingNeonCopies(inv, undefined, executedAt).map((c) => c.id)).toEqual(["x"]);
   });
   it("passes once the copies are deleted and the inventory re-captured", () => {
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: cleanInventory, dataFirstImportedAt: firstImport, r2BackupsStatus: "CLEAN" });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, attestations: all, now, neonInventory: cleanInventory, dataFirstImportedAt: firstImport, r2BackupsStatus: "CLEAN", erasureLedgerStatus: "VALID" });
     expect(r.globalSecureDelete).toBe("COMPLETE");
     expect(r.blockingCopies).toEqual([]);
   });
@@ -178,7 +220,7 @@ describe("Neon branch/snapshot inventory blocks GLOBAL_SECURE_DELETE", () => {
 });
 
 describe("R2_BACKUPS domain: structural CLEAN/NOT_APPLICABLE/PENDING/FAIL, never a timestamp", () => {
-  const otherwiseClean = { databaseVerification: "PASS" as const, executedAt, now, attestations: all, neonInventory: cleanInventory };
+  const otherwiseClean = { databaseVerification: "PASS" as const, executedAt, now, attestations: all, neonInventory: cleanInventory, erasureLedgerStatus: "VALID" as const };
 
   it("UNKNOWN_R2_BACKUP (status omitted) always forces GLOBAL_SECURE_DELETE=INCOMPLETE, even with every other domain satisfied", () => {
     const r = evaluateRaw({ ...otherwiseClean }); // r2BackupsStatus omitted entirely
@@ -202,7 +244,7 @@ describe("R2_BACKUPS domain: structural CLEAN/NOT_APPLICABLE/PENDING/FAIL, never
   it("R2_BACKUPS is independent of GITHUB_BACKUP_ARTIFACTS: neither renames nor substitutes for the other", () => {
     const withoutGithubAttestation = { ...all } as Record<string, string>;
     delete withoutGithubAttestation.GITHUB_BACKUP_ARTIFACTS;
-    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, now, attestations: withoutGithubAttestation, neonInventory: cleanInventory, r2BackupsStatus: "CLEAN" });
+    const r = evaluateRaw({ databaseVerification: "PASS", executedAt, now, attestations: withoutGithubAttestation, neonInventory: cleanInventory, r2BackupsStatus: "CLEAN", erasureLedgerStatus: "VALID" });
     expect(r.globalSecureDelete).toBe("INCOMPLETE");
     expect(r.pendingDomains).toEqual(["GITHUB_BACKUP_ARTIFACTS"]); // R2_BACKUPS=CLEAN does not cover for a missing GITHUB_BACKUP_ARTIFACTS attestation
     expect(EXTERNAL_DELETION_DOMAINS.some((d) => d.code === "GITHUB_BACKUP_ARTIFACTS")).toBe(true); // still present, not renamed
