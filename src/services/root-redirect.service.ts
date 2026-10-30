@@ -34,10 +34,25 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { validateSessionTokenInTransaction, runPolicyContextReads, getSessionCookieName, type SessionInfo } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
-import { resolveOwnerLoginHref } from "@/services/owner-first-run/first-run.service";
-import type { Prisma } from "@/generated/prisma/client";
+import { getFirstRunContext } from "@/services/owner-first-run/first-run.service";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
-/** Acquisition budget for the one root-specific transaction below. */
+/**
+ * Acquisition budget for the one root-specific transaction below. Deliberately a direct
+ * `db.$transaction({maxWait})` call, not routed through `withStatementTimeout()`'s process-local
+ * acquisition queue (db.ts) built for OTHER same-process callers of that specific primitive —
+ * fresh-context review finding: this means ordinary same-process contention for the shared `max:1`
+ * pool (ANY other concurrent `db.$transaction()`/query in this Node instance holding the sole
+ * connection, not only a rare cold Neon wake) can make THIS 10s budget expire before session
+ * validation ever runs. That is the accepted, deliberate tradeoff for this one low-stakes redirect
+ * decision (far shorter than the generic pool's own `connectionTimeoutMillis`, ~90s, that
+ * getSession()/getPolicyContextForSession() still tolerate for every other caller): acquisition
+ * failure here happens BEFORE `phase.sessionEstablished` is ever set, so it always fails closed to
+ * `{kind: "anonymous"}` -- a signed-in user intermittently sees the public landing page instead of
+ * their dashboard under contention, never an authorization bypass. Widening this budget, or routing
+ * it through the shared acquisition queue, is a legitimate follow-up if that UX cost proves too
+ * frequent in production -- not done here because it was not a reproduced defect.
+ */
 export const ROOT_AUTH_MAX_WAIT_MS = 10_000;
 /** Whole-transaction execution budget (session + policy + owner-first-run together). */
 export const ROOT_AUTH_TX_TIMEOUT_MS = 15_000;
@@ -166,7 +181,29 @@ async function resolveAuthenticatedRootDecisionUnbounded(
       const ownerHome = policy ? isSelfServeOwnerContext(policy) : false;
       if (!ownerHome) return { kind: "redirect" as const, href: DEFAULT_DESTINATION };
 
-      const href = await resolveOwnerLoginHref(session.user.id, tx as RootAuthTransactionClient as never);
+      // F-AUTH-ROOT-SINGLE-TX (security-review finding): deliberately NOT calling
+      // resolveOwnerLoginHref() here, even though it is otherwise the canonical function for this
+      // exact lookup. Its own pre-existing try/catch (unchanged, correct for its OTHER potential
+      // callers) swallows any internal failure and returns the hardcoded "/owner/cockpit" --
+      // which, inside THIS shared transaction, would let a later-phase statement cancellation or
+      // transaction-abort be silently converted into a real owner-labeled destination instead of
+      // propagating to this function's own outer catch (which already correctly fails closed to
+      // DEFAULT_DESTINATION once `phase.sessionEstablished` is true). Inlining the SAME two reads
+      // resolveOwnerLoginHref() itself performs, without a catch, lets any failure here abort the
+      // transaction and reach that outer fail-closed path instead.
+      const membership = await (tx as RootAuthTransactionClient).workspaceMembership.findFirst({
+        where: { userId: session.user.id, isActive: true },
+        orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
+        select: { workspaceId: true },
+      });
+      if (!membership) return { kind: "redirect" as const, href: "/owner/cockpit" };
+      // TypeScript-review finding: `as never` disables type-checking on this call site permanently
+      // (never is assignable to anything); `as unknown as PrismaClient` keeps checking against the
+      // actual declared target type instead, so a future signature change on getFirstRunContext()
+      // is still caught here. Prisma.TransactionClient is a real structural subset of PrismaClient
+      // (missing $connect/$disconnect/$on/$extends, none of which this call graph uses), so this
+      // narrowing is safe today and remains checked going forward.
+      const href = (await getFirstRunContext(membership.workspaceId, undefined, tx as unknown as PrismaClient)).loginHref;
       return { kind: "redirect" as const, href };
     },
     { maxWait: ROOT_AUTH_MAX_WAIT_MS, timeout: ROOT_AUTH_TX_TIMEOUT_MS }

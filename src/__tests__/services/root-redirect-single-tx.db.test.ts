@@ -17,6 +17,8 @@ import { db, getRawPool } from "@/lib/db";
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { createFirstBusiness, getFirstRunContext } from "@/services/owner-first-run/first-run.service";
+import { createBusiness } from "@/services/founder-recovery/business.service";
+import { correctFirstResultEvidence } from "@/services/owner-first-run/first-run-actions.service";
 import { runPolicyContextReads } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -138,6 +140,79 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
     expect(await resolveAuthenticatedRootDecision()).toEqual({ kind: "redirect", href: baselineHref });
   }, 15_000);
 
+  it("OWNER REDIRECT: a fixture-only workspace is never mistaken for an established owner (fixture exclusion holds inside the shared tx)", async () => {
+    const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
+    const { userId, token } = await makeUserAndSession();
+    const workspaceId = await makeWorkspaceWithOwner(userId);
+    const fixture = await createBusiness(
+      { name: "OPSIQ Acceptance - root-redirect-mutation-check", businessType: "laundry_local_service", currency: "GBP", b2cSupported: true, b2bSupported: false },
+      userId,
+      workspaceId,
+      { isFixtureBusiness: true }
+    );
+    const snap = (await createFinancialSnapshot(fixture.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(fixture.id, snap.id, userId, workspaceId);
+
+    cookieHolder.token = token;
+    // If the fixture business were (incorrectly) counted, this workspace would look ESTABLISHED
+    // (full evidence + diagnosis) and resolve to the owner cockpit, not the first-run start.
+    expect(await resolveAuthenticatedRootDecision()).toEqual({ kind: "redirect", href: "/owner/first-run" });
+  }, 15_000);
+
+  it("OWNER REDIRECT: of two real businesses in one workspace, the OLDEST one governs the root decision, never the newest", async () => {
+    const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
+    const { userId, token } = await makeUserAndSession();
+    const workspaceId = await makeWorkspaceWithOwner(userId);
+    const older = await createBusiness(
+      { name: "Older Co", businessType: "laundry_local_service", currency: "GBP", b2cSupported: true, b2bSupported: false },
+      userId,
+      workspaceId
+    );
+    const snap = (await createFinancialSnapshot(older.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(older.id, snap.id, userId, workspaceId);
+    await createBusiness(
+      { name: "Newer Co", businessType: "laundry_local_service", currency: "GBP", b2cSupported: true, b2bSupported: false },
+      userId,
+      workspaceId
+    );
+
+    cookieHolder.token = token;
+    // The older business has full evidence + diagnosis (ESTABLISHED, owner cockpit); the newer one
+    // has none (NEEDS_EVIDENCE, first-run start). If ordering ever picked the newest business, this
+    // would resolve to "/owner/first-run" instead.
+    expect(await resolveAuthenticatedRootDecision()).toEqual({ kind: "redirect", href: "/owner/cockpit" });
+  }, 15_000);
+
+  it("OWNER: a snapshot-amendment trusted-interaction fact is scoped strictly to ITS OWN business, never leaks from a sibling business in the same workspace", async () => {
+    const { userId } = await makeUserAndSession();
+    const workspaceId = await makeWorkspaceWithOwner(userId);
+    const businessA = await createBusiness(
+      { name: "Business A", businessType: "laundry_local_service", currency: "GBP", b2cSupported: true, b2bSupported: false },
+      userId,
+      workspaceId
+    );
+    const snapA = (await createFinancialSnapshot(businessA.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(businessA.id, snapA.id, userId, workspaceId);
+
+    const businessB = await createBusiness(
+      { name: "Business B", businessType: "laundry_local_service", currency: "GBP", b2cSupported: true, b2bSupported: false },
+      userId,
+      workspaceId
+    );
+    const snapB = (await createFinancialSnapshot(businessB.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(businessB.id, snapB.id, userId, workspaceId);
+    await correctFirstResultEvidence(workspaceId, userId, businessB.id, snapB.id, {
+      amendmentReason: "Checked the bank statement",
+      cashOnHand: 999,
+      evidenceQuality: "ACTUAL",
+    } as never);
+
+    // Business A has its own full evidence + diagnosis but NO amendment of its own -- business B's
+    // amendment must never be read as A's trusted-interaction fact.
+    const ctxA = await db.$transaction((tx) => getFirstRunContext(workspaceId, businessA.id, tx as never));
+    expect(ctxA.firstTrustedInteractionAt).toBeNull();
+  }, 15_000);
+
   it("POLICY_EQUIVALENCE: runPolicyContextReads() resolves identically via the shared tx client vs. baseline db", async () => {
     const { userId } = await makeUserAndSession();
     await makeWorkspaceWithOwner(userId);
@@ -147,6 +222,29 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: semantic equivalen
     const viaTx = await db.$transaction((tx) => runPolicyContextReads(tx as never, session, undefined));
     expect(viaTx).toEqual(baseline);
     expect(baseline ? isSelfServeOwnerContext(baseline) : null).toBe(true);
+  });
+
+  it("POLICY: a role assignment scoped to a DIFFERENT workspace must not satisfy self-serve-owner for THIS workspace", async () => {
+    const { userId } = await makeUserAndSession();
+    // Workspace A: membership only, NO role assignment scoped to it.
+    const workspaceA = randomUUID();
+    await db.workspace.create({ data: { id: workspaceA, name: "WS A", slug: `ws-${workspaceA.slice(0, 8)}`, createdBy: userId } });
+    await db.workspaceMembership.create({ data: { id: randomUUID(), workspaceId: workspaceA, userId, isActive: true, addedAt: new Date(), role: "owner" } as never });
+    // Workspace B: a real role assignment scoped to B, unrelated to A.
+    const workspaceB = await makeWorkspaceWithOwner(userId);
+    void workspaceB;
+    const session = { user: { id: userId, email: "x@test", name: null, isActive: true }, sessionId: randomUUID(), expiresAt: new Date(Date.now() + 86_400_000) };
+    const policyForA = await db.$transaction((tx) => runPolicyContextReads(tx as never, session, workspaceA));
+    expect(policyForA ? isSelfServeOwnerContext(policyForA) : null).toBe(false);
+  });
+
+  it("POLICY: an inactive workspace membership resolves no policy context, never a role/scope match", async () => {
+    const { userId } = await makeUserAndSession();
+    const workspaceId = await makeWorkspaceWithOwner(userId);
+    await db.workspaceMembership.update({ where: { workspaceId_userId: { workspaceId, userId } }, data: { isActive: false } });
+    const session = { user: { id: userId, email: "x@test", name: null, isActive: true }, sessionId: randomUUID(), expiresAt: new Date(Date.now() + 86_400_000) };
+    const policy = await db.$transaction((tx) => runPolicyContextReads(tx as never, session, workspaceId));
+    expect(policy).toBeNull();
   });
 
   it("AUTH_ROOT_SINGLE_BACKEND + AUTH_ROOT_TRANSACTION_COUNT=1: exactly one backend covers session+policy+owner-first-run", async () => {
@@ -274,23 +372,28 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     cookieHolder.token = token;
     const { restore } = await patchPool({ 1: 10_000 })();
     let caught: unknown = null;
+    let result: { kind: string } | undefined;
     const start = performance.now();
     try {
-      await resolveAuthenticatedRootDecision();
+      result = await resolveAuthenticatedRootDecision();
     } catch (e) {
       caught = e;
     } finally {
       restore();
     }
     // resolveAuthenticatedRootDecision() itself fails closed (never throws) -- its OUTER catch
-    // absorbs the 57014/transaction failure and returns anonymous (session not yet established).
+    // absorbs the 57014/transaction failure. Session validation itself was cancelled before it
+    // could ever positively succeed, so this MUST be anonymous, never /dashboard -- a cancelled
+    // session-validation statement is exactly "session not proven," not "session proven, later
+    // step failed."
     expect(caught).toBeNull();
+    expect(result).toEqual({ kind: "anonymous" });
     expect(performance.now() - start).toBeLessThan(6_000);
     const reuse = await resolveAuthenticatedRootDecision();
     expect(reuse.kind).toBeDefined();
   }, 15_000);
 
-  it("POLICY_STATEMENT_CANCEL + FIRST_RUN_STATEMENT_CANCEL: a blocked statement later in the graph fails closed to /dashboard, pool reusable", async () => {
+  it("POLICY_STATEMENT_CANCEL: a blocked statement during policy resolution fails closed to /dashboard, pool reusable", async () => {
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
     const { userId, token } = await makeUserAndSession();
     await makeWorkspaceWithOwner(userId);
@@ -308,16 +411,55 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     expect(reuse.kind).toBeDefined();
   }, 15_000);
 
+  it("FIRST_RUN_STATEMENT_CANCEL (deep graph, real business): a blocked statement inside getFirstRunContext's business-exists fan-out fails closed to /dashboard -- NEVER /owner/cockpit -- not silently swallowed, pool reusable", async () => {
+    // Database/security-review finding: resolveOwnerLoginHref()'s own pre-existing try/catch used to
+    // swallow a mid-transaction statement cancellation here and return "/owner/cockpit" (a real
+    // owner-labeled destination) without ever reaching this function's outer fail-closed/logging
+    // path. Fixed by inlining the lookup in root-redirect.service.ts without that catch. This test
+    // specifically targets the business-exists branch (prefetchOwnerDomainRows' fan-out,
+    // firstRunEvidence, trustedInteractionFacts) that the swallow-bug actually lived in -- the
+    // `makeWorkspaceWithOwner`-only fixture used elsewhere in this file never reaches it.
+    const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
+    const { userId, token } = await makeUserAndSession();
+    const workspaceId = await makeWorkspaceWithOwner(userId);
+    const { business } = await createFirstBusiness(workspaceId, userId, { businessType: "laundry_local_service", currency: "gbp" });
+    const snap = (await createFinancialSnapshot(business.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(business.id, snap.id, userId, workspaceId);
+    cookieHolder.token = token;
+
+    // Non-control calls: #1 session, #2-5 policy's 4 reads, #6+ owner-first-run (membership, then
+    // getFirstRunContext's workspace+business parallel pair, then the business-exists fan-out).
+    // Block deep in the fan-out, well past where ownerHome is already proven true.
+    const { restore } = await patchPool({ 9: 10_000 })();
+    let result: unknown;
+    let caughtOwnerCockpit = false;
+    try {
+      result = await resolveAuthenticatedRootDecision();
+    } finally {
+      restore();
+    }
+    if ((result as { href?: string })?.href === "/owner/cockpit") caughtOwnerCockpit = true;
+    expect(caughtOwnerCockpit).toBe(false);
+    expect(result).toEqual({ kind: "redirect", href: "/dashboard" });
+    const reuse = await resolveAuthenticatedRootDecision();
+    expect(reuse.kind).toBeDefined();
+  }, 15_000);
+
   it("AUTH_ROOT_TX_TIMEOUT: cumulative sub-statement-timeout delays exceed the 15s whole-transaction budget -> fails closed, pool reusable", async () => {
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
     const { userId, token } = await makeUserAndSession();
-    await makeWorkspaceWithOwner(userId);
+    const workspaceId = await makeWorkspaceWithOwner(userId);
+    const { business } = await createFirstBusiness(workspaceId, userId, { businessType: "laundry_local_service", currency: "gbp" });
+    const snap = (await createFinancialSnapshot(business.id, quick() as never, userId, workspaceId)) as { id: string };
+    await runFinanceDiagnosis(business.id, snap.id, userId, workspaceId);
     cookieHolder.token = token;
-    // 1.9s/statement (well under the 2s statement_timeout) for up to 30 statements -- guaranteed to
-    // cross the 15s transaction budget by the 8th real statement regardless of the exact graph
-    // length for this fixture (session + policy + a no-business owner-first-run graph is already >=7).
+    // A real, fully-diagnosed business gives this transaction a long enough statement graph
+    // (session + policy + the full owner-first-run fan-out, well over 15 statements) that letting
+    // ALL of them run to completion -- which is what a widened/broken inner timeout would allow --
+    // takes meaningfully longer than being cut off at the real 15s budget. 1.9s/statement (well
+    // under the 2s statement_timeout) for up to 25 statements.
     const injectAt: Record<number, number> = {};
-    for (let i = 1; i <= 30; i++) injectAt[i] = 1_900;
+    for (let i = 1; i <= 25; i++) injectAt[i] = 1_900;
     const { restore } = await patchPool(injectAt)();
     let result;
     const start = performance.now();
@@ -331,10 +473,14 @@ describe.skipIf(SKIP)("[db] root-redirect single-transaction: statement-cancella
     // default or the owner destination it had already reached -- never back to anonymous.
     expect(result.kind).toBe("redirect");
     expect(elapsedMs).toBeGreaterThan(14_000); // actually paid the cumulative delay, not a fast path
-    expect(elapsedMs).toBeLessThan(29_000);
+    // Tight upper bound: this must be caught by the INNER 15s db.$transaction `timeout`, not merely
+    // by the outer 29s safety-net race (mutation-review finding: a 29_000ms bound alone does not
+    // distinguish the two -- a widened/broken inner timeout still resolves "redirect" by ~29s via
+    // the outer race, silently passing a loose assertion).
+    expect(elapsedMs).toBeLessThan(ROOT_AUTH_TX_TIMEOUT_MS + ROOT_AUTH_STATEMENT_TIMEOUT_MS + 5_000);
     const reuse = await resolveAuthenticatedRootDecision();
     expect(reuse.kind).toBeDefined();
-  }, 35_000);
+  }, 60_000);
 
   it("AUTH_ROOT_MAXWAIT: 3s/8s contention succeed, >10s contention fails closed to ANONYMOUS (transaction body never started)", async () => {
     const { resolveAuthenticatedRootDecision } = await freshDecisionModule();
