@@ -1,179 +1,174 @@
 /**
- * F-AUTH-ROOT-FAST-FAIL root cause: the authenticated `/` redirect decision
- * (policy-context resolution, then -- only for a proven self-serve owner --
- * owner-login-href resolution, which transitively reads the full
- * owner-first-run/diagnosis graph) had no caller-side bound at all. Unlike
- * getSession()'s own raw-SQL read (bounded by a genuine Postgres-side
- * statement_timeout, see SESSION_QUERY_TIMEOUT_MS in auth.ts),
- * getPolicyContext()'s four Prisma reads and the deep owner-first-run graph
- * beneath resolveOwnerLoginHref() carried NO server-side statement_timeout
- * at all -- a stalled read anywhere in either path could ride Vercel's 300s
- * function ceiling before this route ever resolved.
+ * F-AUTH-ROOT-SINGLE-TX: the authenticated `/` redirect decision — session validation, policy
+ * resolution, and (only for a proven self-serve owner) owner-login-href resolution — now runs
+ * inside ONE root-specific, bounded, cancellable Prisma interactive transaction, instead of three
+ * separately-bounded DB domains (getSession()'s ~107s worst case, getPolicyContextForSession()'s
+ * ~122s worst case, and an unprotected owner-first-run graph needing a further +30s margin —
+ * together ~256s). Replacing that with one transaction removes the need to independently re-pay a
+ * full cold-start acquisition tolerance three times for the SAME request: a genuine Neon
+ * compute-wake can only happen once per request's first DB touch, and this route's first DB touch is
+ * now the one transaction below.
  *
- * Database-review finding (CRITICAL/HIGH), fixed for the policy-context
- * portion: getPolicyContextForSession() now accepts options.statementTimeoutMs
- * (see auth.ts), which runs its reads as raw SQL inside
- * withRawStatementTimeout() -- the SAME primitive getSession() itself uses
- * -- for a REAL Postgres-side statement_timeout, with acquisition bounded
- * only by the pool's own connectionTimeoutMillis (round-2 database review:
- * an earlier draft of this fix used Prisma's interactive $transaction()
- * instead, which reintroduced the exact P2028-under-ordinary-contention
- * defect class this codebase already diagnosed and moved getSession()
- * itself away from -- see POLICY_CONTEXT_QUERY_TIMEOUT_MS's doc comment in
- * auth.ts). Postgres cancels the statement and the connection is guaranteed
- * back to the pool (or discarded cleanly), independent of whatever this
- * function's own outer race decides. This call site opts in; every OTHER
- * caller of getPolicyContext() is unaffected (the option is off by
- * default), keeping this fix root-specific.
+ * Proven via real local PostgreSQL + real PgBouncer transaction-mode spikes (test-only, not
+ * committed) before this implementation: session/policy/owner-first-run semantic equivalence against
+ * the prior three-domain path, exactly one backend/transaction for the whole decision, read-only
+ * transaction compatibility (a write attempt is rejected), independent statement-cancellation proof
+ * for each of the three phases, whole-transaction-timeout proof, acquisition (`maxWait`) proof at
+ * 3s/8s/>10s, and the deadline-alignment finding below.
  *
- * The owner-first-run graph beneath resolveOwnerLoginHref() still has no
- * server-side statement_timeout -- converting that graph onto the same
- * primitive spans dozens of files well outside this one route (owner-first-run,
- * owner-finance, diagnosis, audit...) and is out of scope for this slice;
- * see the KNOWN LIMITATION paragraph immediately below for the full,
- * precise statement of what that leaves unprotected.
+ * Reuses canonical logic verbatim through dependency injection, never a second implementation:
+ * validateSessionTokenInTransaction() (auth.ts) runs the SAME SQL text and revoked/expiry/active
+ * checks as getSession() itself; runPolicyContextReads() (auth.ts) is the SAME canonical Prisma
+ * policy logic getPolicyContextForSession()'s default path already used, now exported for reuse;
+ * resolveOwnerLoginHref()/getFirstRunContext() (first-run.service.ts) are the SAME owner-first-run
+ * functions, each now accepting an optional Prisma client (default: the global `db` singleton, so
+ * every non-root caller is byte-for-byte unaffected).
  *
- * KNOWN LIMITATION, stated precisely per database/TypeScript-review findings
- * (not the vaguer "can keep running" this file's first draft used): if the
- * outer race below times out while resolveOwnerLoginHref()'s unprotected
- * read is still in flight, that read is abandoned client-side, NOT cancelled
- * server-side. Production's Prisma pool is `max: 1` for the WHOLE
- * application (src/lib/db.ts) -- the same single connection getSession(),
- * every other getPolicyContext() caller, and virtually every other
- * DB-backed route shares. An abandoned, uncancelled read can hold that sole
- * connection until it eventually settles on its own, which can stall EVERY
- * OTHER request in the app needing a database connection, not merely this
- * one request -- and if the function instance freezes/resumes while that
- * read is still outstanding (the documented P0-15 freeze/dead-socket
- * failure mode, see attachDatabasePool()'s doc comment in db.ts), the
- * connection may never be released at all, pinning the pool until Vercel
- * recycles the instance. This fix stops the ROUTE from hanging the caller;
- * it does not reduce the probability or duration of this app-wide
- * pool-pressure risk for the unprotected owner-first-run graph specifically.
- * Closing that fully requires the same deeper, multi-file root-cause closure
- * described above.
+ * getSession()'s own timeouts (SESSION_QUERY_TIMEOUT_MS, ~107s) and
+ * getPolicyContextForSession()'s generic raw-timeout path (POLICY_CONTEXT_QUERY_TIMEOUT_MS, ~122s)
+ * are UNCHANGED for every other caller — this file no longer calls either of them at all for the
+ * root route, but neither constant was touched.
  */
 import { logger } from "@/infra/logger";
-import {
-  getPolicyContextForSession,
-  POLICY_CONTEXT_QUERY_TIMEOUT_MS,
-  POLICY_CONTEXT_STATEMENT_TIMEOUT_MS,
-  SESSION_QUERY_TIMEOUT_MS,
-  type SessionInfo,
-} from "@/services/auth";
+import { cookies } from "next/headers";
+import { db } from "@/lib/db";
+import { validateSessionTokenInTransaction, runPolicyContextReads, getSessionCookieName, type SessionInfo } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import { resolveOwnerLoginHref } from "@/services/owner-first-run/first-run.service";
+import type { Prisma } from "@/generated/prisma/client";
+
+/** Acquisition budget for the one root-specific transaction below. */
+export const ROOT_AUTH_MAX_WAIT_MS = 10_000;
+/** Whole-transaction execution budget (session + policy + owner-first-run together). */
+export const ROOT_AUTH_TX_TIMEOUT_MS = 15_000;
+/** Server-side `SET LOCAL statement_timeout` applied inside the transaction, bounding each statement. */
+export const ROOT_AUTH_STATEMENT_TIMEOUT_MS = 2_000;
 
 /**
- * Budget for the still-unprotected owner-first-run graph beneath
- * resolveOwnerLoginHref() -- covers both its own connection-ACQUISITION
- * wait under ordinary contention and its query EXECUTION time once
- * connected (many fast, indexed reads across owner-first-run/owner-finance/
- * diagnosis).
- *
- * Database-review finding (H1, round 1): this must not be an independently
- * hand-picked number. Database-review finding (H1, round 2): it also must
- * not simply re-add a SECOND full POOL_CONNECTION_TIMEOUT_MS (90s) on top
- * of POLICY_CONTEXT_QUERY_TIMEOUT_MS -- that formula (see auth.ts) ALREADY
- * bakes in one full POOL_CONNECTION_TIMEOUT_MS worth of cold-start/
- * contention tolerance for the policy-context reads that run moments
- * earlier in the SAME request; stacking a second independent 90s on top of
- * that for the owner-first-run graph double-counts the same risk (a fresh
- * Neon-compute wake can only genuinely happen once per request's first DB
- * touch) and, combined with getSession()'s own ~107s worst case, would
- * push this route's total past Vercel's 300s ceiling (see
- * TOTAL_AUTH_ROOT_WORST_CASE_MS and its module-load assertion below, which
- * verifies this arithmetic directly rather than by comment alone).
- *
- * Instead, sized from this codebase's own documented PRODUCTION EVIDENCE
- * for ordinary pool-queuing contention on an ALREADY-WARM connection (the
- * realistic case here, since getSession() and the policy-context reads
- * have both just succeeded moments earlier in this same request): db.ts's
- * own P0-15 forensic cites "several seconds" of queuing under a concurrent
- * cold-start burst in production. 30s is an order of magnitude above that
- * observed figure -- generous, but proportionate to real evidence rather
- * than an arbitrary number or a second full fresh-pool ceiling.
+ * Deadline-alignment finding (measured with real injected latency, not assumed): Prisma's
+ * interactive-transaction `timeout` is only checked before DISPATCHING the next statement — it does
+ * not preemptively cancel one already in flight. A statement that begins just before the transaction
+ * deadline therefore rides out its OWN `statement_timeout` before the transaction is reported expired
+ * (measured worst case: tx_timeout + statement_timeout, not tx_timeout alone). This margin accounts
+ * for exactly that straddling-statement overhang.
  */
-const OWNER_FIRST_RUN_GRAPH_MARGIN_MS = 30_000;
+const ROOT_AUTH_STATEMENT_OVERHANG_ALLOWANCE_MS = ROOT_AUTH_STATEMENT_TIMEOUT_MS;
+/** Measured/conservative allowance for the rollback and connection-cleanup that follow any of the above. */
+const ROOT_AUTH_CLEANUP_MARGIN_MS = 1_000;
+
+/** The legitimate worst case for the whole root transaction: acquisition, then execution, then the measured straddling-statement overhang, then cleanup. */
+export const ROOT_AUTH_INNER_WORST_CASE_MS =
+  ROOT_AUTH_MAX_WAIT_MS + ROOT_AUTH_TX_TIMEOUT_MS + ROOT_AUTH_STATEMENT_OVERHANG_ALLOWANCE_MS + ROOT_AUTH_CLEANUP_MARGIN_MS;
 
 /**
- * Outer JS-side bound on the whole policy-context + owner-login-href
- * decision. Derived from the SAME constants the rest of the
- * authenticated-route ecosystem already tolerates (database-review finding
- * H1):
- *   - POLICY_CONTEXT_QUERY_TIMEOUT_MS: the policy-context reads' own real,
- *     server-cancelled worst case (see auth.ts) -- itself derived from
- *     POOL_CONNECTION_TIMEOUT_MS, so that cold-start/contention tolerance
- *     is already accounted for once here.
- *   - OWNER_FIRST_RUN_GRAPH_MARGIN_MS: see above.
- *
- * This budget is paid AFTER getSession() (SESSION_QUERY_TIMEOUT_MS, ~107s
- * worst case, pre-existing and unchanged) has already succeeded in the same
- * request -- the two are sequential, not concurrent, so the ROUTE's own
- * total worst case is their SUM. Asserted explicitly (not just hoped) to
- * stay materially under Vercel's 300_000ms function ceiling.
+ * Pure defensive backstop around the whole transaction — strictly greater than
+ * ROOT_AUTH_INNER_WORST_CASE_MS so it can never fire while the transaction is still legitimately
+ * completing, and comfortably under Vercel's 300s function ceiling.
  */
-export const AUTH_ROOT_DECISION_TIMEOUT_MS = POLICY_CONTEXT_QUERY_TIMEOUT_MS + OWNER_FIRST_RUN_GRAPH_MARGIN_MS;
+export const ROOT_AUTH_OUTER_TIMEOUT_MS = 29_000;
 
-const VERCEL_FUNCTION_CEILING_MS = 300_000;
-/**
- * santa-loop review finding: "materially under" is a claim about MARGIN,
- * not mere non-equality -- a bare `>= VERCEL_FUNCTION_CEILING_MS` check
- * would let a total of 299_999ms pass despite being functionally AT the
- * ceiling (zero room for scheduler jitter, clock drift, or Vercel's own
- * overhead on top of this route's own code). Requires at least this much
- * headroom below the ceiling for the assertion to pass.
- */
-const REQUIRED_CEILING_HEADROOM_MS = 30_000;
-/** The authenticated root route's own full, sequential, end-to-end worst case: getSession() + this decision. */
-export const TOTAL_AUTH_ROOT_WORST_CASE_MS = SESSION_QUERY_TIMEOUT_MS + AUTH_ROOT_DECISION_TIMEOUT_MS;
-if (TOTAL_AUTH_ROOT_WORST_CASE_MS >= VERCEL_FUNCTION_CEILING_MS - REQUIRED_CEILING_HEADROOM_MS) {
-  // A module-load-time assertion, not a runtime check on the hot path: if
-  // either budget this derives from ever changes such that their sum would
-  // stop being materially faster than the platform ceiling, fail loudly at
-  // startup/build/test time rather than silently regressing Phase 0's
-  // "materially faster than Vercel's 300s ceiling" requirement.
+if (ROOT_AUTH_OUTER_TIMEOUT_MS <= ROOT_AUTH_INNER_WORST_CASE_MS) {
+  // Module-load assertion, not a runtime check on the hot path: catches constant drift at
+  // startup/build/test time rather than letting the outer backstop abandon still-legitimate work.
   throw new Error(
-    `[root-redirect] TOTAL_AUTH_ROOT_WORST_CASE_MS (${TOTAL_AUTH_ROOT_WORST_CASE_MS}ms) leaves less than ${REQUIRED_CEILING_HEADROOM_MS}ms of headroom under Vercel's ${VERCEL_FUNCTION_CEILING_MS}ms function ceiling -- re-derive AUTH_ROOT_DECISION_TIMEOUT_MS.`
+    `[root-redirect] ROOT_AUTH_OUTER_TIMEOUT_MS (${ROOT_AUTH_OUTER_TIMEOUT_MS}ms) must be strictly greater than ROOT_AUTH_INNER_WORST_CASE_MS (${ROOT_AUTH_INNER_WORST_CASE_MS}ms).`
   );
+}
+if (ROOT_AUTH_OUTER_TIMEOUT_MS > 30_000) {
+  throw new Error(`[root-redirect] ROOT_AUTH_OUTER_TIMEOUT_MS (${ROOT_AUTH_OUTER_TIMEOUT_MS}ms) exceeds the 30000ms target.`);
 }
 
 /** Pre-existing default destination for every authenticated actor this route cannot positively resolve as a self-serve owner. */
 const DEFAULT_DESTINATION = "/dashboard";
 
-export async function resolveAuthenticatedRootDestination(session: SessionInfo): Promise<string> {
+export type RootAuthDecision = { kind: "anonymous" } | { kind: "redirect"; href: string };
+
+type RootAuthTransactionClient = Prisma.TransactionClient;
+
+/**
+ * Mutated exactly once, the instant session validation positively succeeds inside the transaction
+ * below — read by the outer catch (never by the transaction itself) so a failure/timeout AFTER that
+ * point fails closed to DEFAULT_DESTINATION (an authenticated actor's safe default), while a
+ * failure/timeout BEFORE it (no cookie was ever proven to name a real session) fails closed to
+ * `anonymous` — this codebase must never infer owner authorization from DB uncertainty, but must
+ * also never discard a session that genuinely was proven, by silently sending an authenticated actor
+ * back to the anonymous public landing page.
+ */
+interface SessionPhaseTracker {
+  sessionEstablished: boolean;
+}
+
+export async function resolveAuthenticatedRootDecision(): Promise<RootAuthDecision> {
+  // Cookie read BEFORE any DB initialization — every anonymous visitor (the overwhelming majority of
+  // root-route traffic) must never pay for pool construction/connection at all.
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(getSessionCookieName())?.value;
+  if (!sessionToken) return { kind: "anonymous" };
+
+  const phase: SessionPhaseTracker = { sessionEstablished: false };
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      resolveAuthenticatedRootDestinationUnbounded(session),
+      resolveAuthenticatedRootDecisionUnbounded(sessionToken, phase),
       new Promise<never>((_, reject) => {
         timer = setTimeout(
-          () => reject(new Error(`Authenticated root redirect decision exceeded ${AUTH_ROOT_DECISION_TIMEOUT_MS}ms`)),
-          AUTH_ROOT_DECISION_TIMEOUT_MS
+          () => reject(new Error(`Authenticated root decision exceeded ${ROOT_AUTH_OUTER_TIMEOUT_MS}ms`)),
+          ROOT_AUTH_OUTER_TIMEOUT_MS
         );
-        // Must never keep the process/event loop alive on its own -- this is
-        // a pure defensive backstop, not real work the runtime should wait on.
+        // Must never keep the process/event loop alive on its own -- this is a pure defensive
+        // backstop that should never actually fire, not real work the runtime should wait on.
         if (typeof timer === "object" && timer.unref) timer.unref();
       }),
     ]);
   } catch (error) {
-    logger.warn("[root-redirect] authenticated root decision failed or timed out -- failing closed to the default destination", {
+    logger.warn("[root-redirect] authenticated root decision failed or timed out -- failing closed", {
       error: String(error),
+      sessionEstablished: phase.sessionEstablished,
     });
-    return DEFAULT_DESTINATION;
+    // No positive session proof yet: this request never authenticated, so it gets the SAME
+    // treatment as a missing/invalid cookie -- the public landing page, never a redirect.
+    // Session WAS positively proven: fail closed to the existing authenticated default, exactly as
+    // an authenticated actor this route cannot positively resolve as a self-serve owner already does.
+    return phase.sessionEstablished ? { kind: "redirect", href: DEFAULT_DESTINATION } : { kind: "anonymous" };
   } finally {
-    // TypeScript/fresh-context review finding: clear the backstop timer once
-    // the race settles on the common, fast-path win -- avoids leaving a
-    // dangling scheduled callback on every single successful request.
+    // Clear the backstop timer once the race settles on the common, fast-path win -- avoids leaving
+    // a dangling scheduled callback on every single successful request.
     clearTimeout(timer);
   }
 }
 
-async function resolveAuthenticatedRootDestinationUnbounded(session: SessionInfo): Promise<string> {
-  const policy = await getPolicyContextForSession(session, undefined, {
-    statementTimeoutMs: POLICY_CONTEXT_STATEMENT_TIMEOUT_MS,
-  });
-  const ownerHome = policy ? isSelfServeOwnerContext(policy) : false;
-  if (!ownerHome) return DEFAULT_DESTINATION;
-  return resolveOwnerLoginHref(session.user.id);
+async function resolveAuthenticatedRootDecisionUnbounded(
+  sessionToken: string,
+  phase: SessionPhaseTracker
+): Promise<RootAuthDecision> {
+  return db.$transaction(
+    async (tx: RootAuthTransactionClient) => {
+      const txRaw = tx as unknown as { $executeRawUnsafe: (query: string) => Promise<unknown> };
+      // Read-only invariant: the whole decision only ever reads. Proven (test-only) that a write
+      // attempt inside this transaction is rejected by Postgres while legitimate reads still succeed.
+      await txRaw.$executeRawUnsafe("SET TRANSACTION READ ONLY");
+      // Server-side kill switch for any single blocked statement in this transaction -- Postgres
+      // cancels it (SQLSTATE 57014) and the transaction rolls back, independent of whatever the
+      // outer race above decides.
+      await txRaw.$executeRawUnsafe(`SET LOCAL statement_timeout = ${ROOT_AUTH_STATEMENT_TIMEOUT_MS}`);
+
+      const session = await validateSessionTokenInTransaction(tx as RootAuthTransactionClient, sessionToken);
+      if (!session) return { kind: "anonymous" as const };
+      // Positive proof established -- from here on, any later failure fails closed to
+      // DEFAULT_DESTINATION (via the outer catch's phase check), never back to anonymous.
+      phase.sessionEstablished = true;
+
+      const policy = await runPolicyContextReads(
+        tx as unknown as Pick<Prisma.TransactionClient, "workspaceMembership" | "userRoleAssignment" | "engagementMembership">,
+        session as SessionInfo,
+        undefined
+      );
+      const ownerHome = policy ? isSelfServeOwnerContext(policy) : false;
+      if (!ownerHome) return { kind: "redirect" as const, href: DEFAULT_DESTINATION };
+
+      const href = await resolveOwnerLoginHref(session.user.id, tx as RootAuthTransactionClient as never);
+      return { kind: "redirect" as const, href };
+    },
+    { maxWait: ROOT_AUTH_MAX_WAIT_MS, timeout: ROOT_AUTH_TX_TIMEOUT_MS }
+  );
 }

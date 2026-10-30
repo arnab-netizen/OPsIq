@@ -146,6 +146,54 @@ interface RawSessionRow {
   user_is_active: boolean;
 }
 
+/**
+ * F-AUTH-ROOT-SINGLE-TX: the single reusable session-lookup primitive. Both getSession() (via its
+ * own raw pg client, bounded by withRawStatementTimeout()) and the authenticated-root single
+ * transaction (via its Prisma TransactionClient, bounded by its own maxWait/timeout/statement_timeout
+ * — see root-redirect.service.ts) run this EXACT SQL text and the EXACT revoked/expiry/active checks
+ * through sessionInfoFromRow() below, so the two callers can never silently drift on authorization
+ * semantics despite using different execution primitives (raw pg vs. Prisma transaction client).
+ */
+export const SESSION_LOOKUP_SQL = `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
+                    u.id AS user_id, u.email AS user_email, u.name AS user_name, u.is_active AS user_is_active
+             FROM sessions s
+             JOIN users u ON u.id = s.user_id
+             WHERE s.token = $1`;
+
+/** Pure: the single authoritative revoked/expiry/active-user decision, shared by every session-lookup caller. */
+function sessionInfoFromRow(row: RawSessionRow | undefined): SessionInfo | null {
+  if (!row) return null;
+  if (row.revoked_at) return null;
+  if (row.expires_at < new Date()) return null;
+  if (!row.user_is_active) return null;
+  return {
+    user: {
+      id: row.user_id,
+      email: row.user_email,
+      name: row.user_name,
+      isActive: row.user_is_active,
+    },
+    sessionId: row.session_id,
+    expiresAt: row.expires_at,
+  };
+}
+
+/**
+ * F-AUTH-ROOT-SINGLE-TX: session validation through an already-open Prisma transaction client —
+ * for the authenticated-root single-transaction path only (root-redirect.service.ts). Runs the SAME
+ * SESSION_LOOKUP_SQL and sessionInfoFromRow() checks getSession() itself uses; the caller's own
+ * transaction-level `SET LOCAL statement_timeout` bounds this statement server-side, exactly as
+ * withRawStatementTimeout() bounds getSession()'s own raw-pg read. Does not call cookies() or
+ * getRawPool() — the caller already resolved the token and already holds the transaction client.
+ */
+export async function validateSessionTokenInTransaction(
+  tx: { $queryRawUnsafe: <T>(query: string, ...values: unknown[]) => Promise<T> },
+  token: string
+): Promise<SessionInfo | null> {
+  const rows = await tx.$queryRawUnsafe<RawSessionRow[]>(SESSION_LOOKUP_SQL, token);
+  return sessionInfoFromRow(rows[0]);
+}
+
 export async function getSession(): Promise<SessionInfo | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getSession");
@@ -188,15 +236,7 @@ export async function getSession(): Promise<SessionInfo | null> {
       withRawStatementTimeout(
         pool,
         SESSION_STATEMENT_TIMEOUT_MS,
-        (client) =>
-          client.query<RawSessionRow>(
-            `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
-                    u.id AS user_id, u.email AS user_email, u.name AS user_name, u.is_active AS user_is_active
-             FROM sessions s
-             JOIN users u ON u.id = s.user_id
-             WHERE s.token = $1`,
-            [sessionToken]
-          ),
+        (client) => client.query<RawSessionRow>(SESSION_LOOKUP_SQL, [sessionToken]),
         "getSession"
       ),
       new Promise<never>((_, reject) =>
@@ -210,30 +250,7 @@ export async function getSession(): Promise<SessionInfo | null> {
     return null;
   }
 
-  if (!row) return null;
-
-  if (row.revoked_at) {
-    return null;
-  }
-
-  if (row.expires_at < new Date()) {
-    return null;
-  }
-
-  if (!row.user_is_active) {
-    return null;
-  }
-
-  return {
-    user: {
-      id: row.user_id,
-      email: row.user_email,
-      name: row.user_name,
-      isActive: row.user_is_active,
-    },
-    sessionId: row.session_id,
-    expiresAt: row.expires_at,
-  };
+  return sessionInfoFromRow(row);
 }
 
 export async function requireSession(workspaceId?: string): Promise<SessionInfo> {
@@ -274,7 +291,13 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
  * reached only through getPolicyContextForSession()'s options.statementTimeoutMs
  * branch -- see that function's own doc comment for the actual fix.
  */
-async function runPolicyContextReads(
+/**
+ * F-AUTH-ROOT-SINGLE-TX: exported so the authenticated-root single transaction
+ * (root-redirect.service.ts) can reuse this EXACT canonical policy logic through its own
+ * Prisma TransactionClient, rather than maintaining a second policy implementation. Every
+ * other caller (getPolicyContextForSession's default, non-raw-timeout branch) is unchanged.
+ */
+export async function runPolicyContextReads(
   client: Pick<Prisma.TransactionClient, "workspaceMembership" | "userRoleAssignment" | "engagementMembership">,
   session: SessionInfo,
   workspaceId: string | undefined
