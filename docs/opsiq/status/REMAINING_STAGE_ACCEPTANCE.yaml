@@ -665,3 +665,9 @@ completion_factory:
       status: COMPLETE
       path: src/__tests__/completion-factory/
       verification: "235/235 tests PASS — 2026-07-25"
+    - id: opsiq_app_runtime_role_production_cutover
+      artifact_type: infrastructure_component
+      status: COMPLETE
+      path: docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md
+      notes: "Least-privilege opsiq_app Production runtime-role cutover (PR #646, docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md §7). Recovery-credential (OLD_RUNTIME_URL) availability not proven; see doc."
+      verification: "deployment dpl_47wGjp5bof8TbVx3GB91EJ6a1wMu @ commit a47b7be8e521677cafd1b869da81479d7b63d101, target=production; release-gate PASS in that deployment's build log; GitHub Actions run 40700407912 (Production Owner Acceptance LIVE) conclusion=success; 24h observation window 2026-10-28T13:33:41Z-2026-10-29T13:33:41Z re-queried via Vercel runtime logs/errors, 0 occurrences of 42501/25006/permission denied/read-only/role-mismatch — verified 2026-10-30"
