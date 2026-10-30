@@ -177,7 +177,39 @@ jobs:
             echo "::error::Independent post-restore verification found an empty or missing schema"
             exit 1
           fi
-          echo "PASS: restored schema is structurally non-empty and independently confirmed."
+
+          # STRENGTHENED (beyond table/column existence alone -- those only prove a schema was
+          # created, not that it holds real data or that its constraints/indexes survived the
+          # dump/restore round trip):
+          #
+          # 1. ROW-LEVEL DATA PRESENCE: a true COUNT(*) summed across every public table, not a
+          #    stats-based estimate (pg_stat_user_tables' n_live_tup is not reliably populated
+          #    immediately after a fresh restore, before autovacuum/ANALYZE has run). query_to_xml
+          #    + xpath lets this run generically against whatever tables actually exist, with no
+          #    hardcoded table name.
+          ROW_COUNT=$(psql -d "$RESTORED_DB" -tAc "
+            SELECT COALESCE(SUM((xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', schemaname, tablename), false, true, '')))[1]::text::bigint), 0)
+            FROM pg_tables WHERE schemaname = 'public';
+          ")
+          # 2. CONSTRAINT SURVIVAL: primary keys, foreign keys, unique, and check constraints are
+          #    not re-created automatically by a restore -- if pg_dump/pg_restore silently dropped
+          #    or failed to apply any, this independently catches it.
+          CONSTRAINT_COUNT=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema = 'public';")
+          # 3. INDEX SURVIVAL: every PRIMARY KEY/UNIQUE constraint backs an index, and OpsIQ's
+          #    schema additionally defines plain indexes; losing them silently would not break
+          #    TABLE_COUNT/COLUMN_COUNT checks but would be a real, severe restore defect
+          #    (query correctness would survive, performance and uniqueness enforcement would not).
+          INDEX_COUNT=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public';")
+          echo "Independent strengthened verification: $ROW_COUNT total rows, $CONSTRAINT_COUNT constraints, $INDEX_COUNT indexes in public schema"
+          if [ "$ROW_COUNT" -lt 1 ]; then
+            echo "::error::Independent post-restore verification found zero rows across every public table -- the restored schema is structurally present but empty, which does not prove a real backup round-tripped"
+            exit 1
+          fi
+          if [ "$CONSTRAINT_COUNT" -lt 1 ] || [ "$INDEX_COUNT" -lt 1 ]; then
+            echo "::error::Independent post-restore verification found no constraints or no indexes -- a restore that silently drops these is not safe even if row data and table/column counts look fine"
+            exit 1
+          fi
+          echo "PASS: restored schema is structurally non-empty, holds real row data, and its constraints/indexes survived the restore -- independently confirmed."
 
       - name: Summary
         if: success()

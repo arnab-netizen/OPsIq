@@ -21,8 +21,16 @@ name: Production Database Backup (private, encrypted, Cloudflare R2)
 # ENVIRONMENT SEPARATION: this job uses the `backup-write` GitHub Environment only. That
 # environment is designed (not configured by this PR) to hold the Production DB backup credential,
 # the R2 Object-Read-&-Write token (scoped to one bucket), and the AGE PUBLIC recipient -- never
-# the AGE PRIVATE identity needed to decrypt. The scheduled writer can therefore never read back
-# anything it has ever uploaded.
+# the AGE PRIVATE identity needed to decrypt.
+#
+# PRECISE BOUNDARY (do not overstate this): the R2 Object-Read-&-Write token this job holds CAN
+# read back the raw ciphertext bytes it uploads (R2_WRITER_CAN_READ_CIPHERTEXT=YES -- "Read &
+# Write" includes read, per Cloudflare's own R2 API-token documentation; this job is not
+# read-blind). What it can never do is DECRYPT that ciphertext (R2_WRITER_CAN_DECRYPT=NO), because
+# the AGE PRIVATE identity required to decrypt only ever exists in the separate `backup-recovery`
+# environment (restore-rehearsal-r2.yml), never here. A compromised backup-write credential can
+# read ciphertext it cannot itself decrypt without also compromising the separate private-identity
+# secret that only the backup-recovery environment holds.
 
 on:
   workflow_dispatch: {}

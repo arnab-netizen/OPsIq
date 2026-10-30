@@ -54,8 +54,12 @@ beforeEach(() => {
       "exit 0",
     ].join("\n"),
   );
-  // fake aws: shims `aws s3 cp` (both directions) and `aws s3api head-object` against
-  // $FAKE_BUCKET_DIR, which stands in for the private R2 bucket. No network is ever used.
+  // fake aws: shims `aws s3 cp` (restore-side downloads only), `aws s3api put-object
+  // --if-none-match` (create-once uploads), and `aws s3api head-object` against
+  // $FAKE_BUCKET_DIR, which stands in for the private R2 bucket. No network is ever used. The
+  // put-object branch mirrors real R2/S3 412 PreconditionFailed semantics for an existing key
+  // under --if-none-match, so the script's own PreconditionFailed-detection logic is exercised
+  // against realistic stderr text, not an invented sentinel.
   writeFileSync(
     join(dir, "aws"),
     [
@@ -70,7 +74,6 @@ beforeEach(() => {
       '    KEY="${DST#s3://*/}";',
       '    mkdir -p "$(dirname "$FAKE_BUCKET_DIR/$KEY")";',
       '    cp "$SRC" "$FAKE_BUCKET_DIR/$KEY";',
-      '    if [ "${FAKE_AWS_CORRUPT_UPLOAD:-0}" = "1" ]; then SZ=$(wc -c < "$SRC" | tr -d " "); head -c $((SZ - 1)) "$SRC" > "$FAKE_BUCKET_DIR/$KEY"; fi',
       "    exit 0;",
       '  elif [[ "$SRC" == s3://* ]]; then',
       '    KEY="${SRC#s3://*/}";',
@@ -79,6 +82,34 @@ beforeEach(() => {
       "    exit 0;",
       "  fi",
       '  echo "fake aws: unrecognized cp args: $*" >&2; exit 1;',
+      'elif [ "$1" = "s3api" ] && [ "$2" = "put-object" ]; then',
+      '  shift 2;',
+      '  KEY=""; BODY=""; IFNONEMATCH="0";',
+      '  while [ $# -gt 0 ]; do',
+      '    case "$1" in',
+      '      --key) KEY="$2"; shift 2;;',
+      '      --body) BODY="$2"; shift 2;;',
+      '      --if-none-match) IFNONEMATCH="1"; shift 2;;',
+      '      --bucket|--endpoint-url) shift 2;;',
+      '      *) shift;;',
+      "    esac;",
+      "  done;",
+      '  if [ "$IFNONEMATCH" = "1" ] && [ -f "$FAKE_BUCKET_DIR/$KEY" ]; then',
+      '    echo "An error occurred (PreconditionFailed) when calling the PutObject operation: At least one of the pre-conditions you specified did not hold" >&2;',
+      "    exit 1;",
+      "  fi;",
+      '  mkdir -p "$(dirname "$FAKE_BUCKET_DIR/$KEY")";',
+      '  cp "$BODY" "$FAKE_BUCKET_DIR/$KEY";',
+      // FAKE_AWS_CORRUPT_UPLOAD corrupts EVERY put-object indiscriminately (used by the
+      // pre-existing backup-object HEAD-check test). FAKE_AWS_CORRUPT_KEY_SUFFIX corrupts ONLY
+      // the object whose key ends with the given suffix, so a test can isolate corruption to one
+      // specific object (e.g. the manifest) and prove that object's own HEAD check -- not an
+      // earlier one in upload order -- is what catches it.
+      '  if [ "${FAKE_AWS_CORRUPT_UPLOAD:-0}" = "1" ] || { [ -n "${FAKE_AWS_CORRUPT_KEY_SUFFIX:-}" ] && [[ "$KEY" == *"${FAKE_AWS_CORRUPT_KEY_SUFFIX}" ]]; }; then',
+      '    SZ=$(wc -c < "$BODY" | tr -d " "); head -c $((SZ - 1)) "$BODY" > "$FAKE_BUCKET_DIR/$KEY";',
+      "  fi;",
+      '  echo "{}";',
+      "  exit 0;",
       'elif [ "$1" = "s3api" ] && [ "$2" = "head-object" ]; then',
       '  KEY="";',
       '  shift 2;',
@@ -93,6 +124,29 @@ beforeEach(() => {
   );
   for (const bin of ["psql", "pg_dump", "aws"]) chmodSync(join(dir, bin), 0o755);
 });
+
+// Resolves the REAL `date` binary's absolute path once (used by the fixed-timestamp `date` shim
+// below, so that shim can delegate every call shape it doesn't special-case to the genuine
+// binary instead of re-implementing `date`'s own argument parsing).
+const REAL_DATE = spawnSync("bash", ["-c", "command -v date"], { encoding: "utf8" }).stdout.trim();
+
+/** Installs a `date` shim on PATH that returns a FIXED value for the TIMESTAMP-construction call
+ * shape (`date -u +%Y-%m-%d_%H-%M-%S`) only, delegating every other call (e.g. the manifest's own
+ * `date -u -d "@$START_TIME" ...`) to the real binary. Lets a test force two separate script
+ * invocations to compute the identical TIMESTAMP component of OBJECT_NAME, so a real collision
+ * (same GITHUB_RUN_ID too) can be deterministically forced and observed -- real wall-clock
+ * second-boundary timing would make this flaky otherwise. */
+function installFixedDateShim(fixedTimestamp: string) {
+  writeFileSync(
+    join(dir, "date"),
+    [
+      "#!/usr/bin/env bash",
+      `if [ "$1" = "-u" ] && [ "$2" = "+%Y-%m-%d_%H-%M-%S" ]; then echo "${fixedTimestamp}"; exit 0; fi`,
+      `exec "${REAL_DATE}" "$@"`,
+    ].join("\n"),
+  );
+  chmodSync(join(dir, "date"), 0o755);
+}
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -217,6 +271,12 @@ describe("backup-database-r2.sh: pipeline-stage failures never reach upload", ()
     expect(r.stdout).not.toMatch(/BACKUP_COMPLETE/);
   });
 
+  it("a non-numeric GITHUB_RUN_ID is rejected before pg_dump runs (GitHub's own documented shape is always a positive integer)", () => {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", GITHUB_RUN_ID: "../../etc/passwd" });
+    expect(r.status).not.toBe(0);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
   it("18. malformed R2_BUCKET / R2_ENDPOINT is rejected before pg_dump runs", () => {
     const r1 = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", R2_BUCKET: "Invalid_Bucket_Name!" });
     expect(r1.status).not.toBe(0);
@@ -241,6 +301,137 @@ describe("backup-database-r2.sh: pipeline-stage failures never reach upload", ()
     const out = r.stdout + r.stderr;
     expect(out).not.toContain(baseBackupEnv.AWS_SECRET_ACCESS_KEY);
     expect(out).not.toContain("ep-x.neon.tech"); // DATABASE_URL host never printed unredacted
+  });
+
+  // SECRETS_IN_LOGS (Section 18): hostile secret-shaped strings across every distinct failure
+  // path this script has, not just the QBO-blocked case above.
+  it.each([
+    ["pg_dump failure", { FAKE_PSQL_OUT: "0", FAKE_PG_DUMP_RC: "1" }],
+    ["R2 upload failure", { FAKE_PSQL_OUT: "0", FAKE_AWS_RC: "1" }],
+    ["corrupted upload / verification failure", { FAKE_PSQL_OUT: "0", FAKE_AWS_CORRUPT_UPLOAD: "1" }],
+    ["malformed R2_BUCKET", { FAKE_PSQL_OUT: "0", R2_BUCKET: "Invalid_Bucket_Name!" }],
+    ["malformed R2_ENDPOINT", { FAKE_PSQL_OUT: "0", R2_ENDPOINT: "https://not-an-r2-endpoint.example.com" }],
+  ])("18b. no secret-shaped string leaks on failure path: %s", (_label, env) => {
+    if (!hasAge && _label.includes("upload")) return;
+    const AWS_SECRET_SHAPED = "AKIAFAKEEXAMPLE1234567890ABCDEFSECRET";
+    const r = run(BACKUP, { ...baseBackupEnv, AWS_SECRET_ACCESS_KEY: AWS_SECRET_SHAPED, ...env } as typeof baseBackupEnv);
+    const out = r.stdout + r.stderr;
+    expect(out).not.toContain(AWS_SECRET_SHAPED);
+    expect(out).not.toContain("ep-x.neon.tech");
+    expect(out).not.toMatch(/AGE-SECRET-KEY-1[A-Z0-9]+/); // an age private identity, if one ever leaked in, has this exact prefix shape
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Create-once uploads, manifest HEAD verification, object-key uniqueness, endpoint policy,
+// manifest secret scan (hostile-audit hardening).
+// ---------------------------------------------------------------------------------------------
+describe("backup-database-r2.sh: create-once uploads are overwrite-proof", () => {
+  it("a second backup run never overwrites an existing object at the same key; the original bytes are unchanged", () => {
+    if (!hasAge) return;
+    installFixedDateShim("2026-01-01_00-00-00"); // forces an identical TIMESTAMP component across both runs below
+    const r1 = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", GITHUB_RUN_ID: "999999999001" });
+    expect(r1.status).toBe(0);
+    const uploadedKeys = Object.keys(
+      Object.fromEntries(
+        readFileSync(join(dir, "aws.calls"), "utf8")
+          .split("\n")
+          .filter((l) => l.includes("put-object"))
+          .map((l) => {
+            const m = l.match(/--key (\S+)/);
+            return [m ? m[1] : "", true];
+          }),
+      ),
+    );
+    const backupKey = uploadedKeys.find((k) => k.endsWith(".sql.gz.age"))!;
+    const originalBytes = readFileSync(join(bucketDir, backupKey));
+
+    // Second run with the SAME GITHUB_RUN_ID (simulating a retry/race producing an identical key).
+    const r2 = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", GITHUB_RUN_ID: "999999999001" });
+    expect(r2.status).not.toBe(0);
+    expect(r2.stdout + r2.stderr).toMatch(/already exists.*refusing to overwrite|create-once violated/i);
+    expect(r2.stdout).not.toMatch(/BACKUP_COMPLETE/);
+
+    const bytesAfter = readFileSync(join(bucketDir, backupKey));
+    expect(bytesAfter.equals(originalBytes)).toBe(true); // original object is byte-for-byte unchanged
+  });
+
+  it("two runs without a shared GITHUB_RUN_ID produce distinct object keys (random-suffix uniqueness)", () => {
+    if (!hasAge) return;
+    const r1 = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0" });
+    expect(r1.status).toBe(0);
+    const key1 = r1.stdout.match(/BACKUP_COMPLETE object=(\S+)/)![1];
+    const r2 = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0" });
+    expect(r2.status).toBe(0);
+    const key2 = r2.stdout.match(/BACKUP_COMPLETE object=(\S+)/)![1];
+    expect(key1).not.toBe(key2); // never a non-secret-derived collision even in the same second
+  });
+});
+
+describe("backup-database-r2.sh: manifest is HEAD-verified after upload (was previously unverified)", () => {
+  it("a successful run reports the manifest's verified size (sanity check for the assertion below)", () => {
+    if (!hasAge) return;
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0" });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/manifest size \d+ bytes/);
+  });
+
+  // Corrupts ONLY the manifest object's upload (not the backup or checksum, which are uploaded
+  // and HEAD-verified earlier). If the manifest-specific HEAD-verification block were ever
+  // deleted, this is the one test that would start failing to catch it -- the test above alone
+  // would not, since it never corrupts anything.
+  it("a manifest-ONLY corrupted upload fails verification, even though the backup and checksum objects (verified earlier) are untouched and fine", () => {
+    if (!hasAge) return;
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", FAKE_AWS_CORRUPT_KEY_SUFFIX: ".manifest.json" });
+    expect(r.status).not.toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/manifest size.*does not match|verification failed/i);
+    expect(r.stdout).not.toMatch(/BACKUP_COMPLETE/);
+  });
+});
+
+describe("backup-database-r2.sh: R2_ENDPOINT_POLICY=DEFAULT_ONLY is enforced (jurisdiction endpoints rejected by policy, not oversight)", () => {
+  it.each([
+    "https://abc123.eu.r2.cloudflarestorage.com",
+    "https://abc123.fedramp.r2.cloudflarestorage.com",
+    "https://abc123.fake.r2.cloudflarestorage.com",
+  ])("rejects a jurisdiction-suffixed or spoofed-jurisdiction endpoint ('%s')", (endpoint) => {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", R2_ENDPOINT: endpoint });
+    expect(r.status).not.toBe(0);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  it("accepts the default-jurisdiction endpoint shape", () => {
+    // Fails later (forced pg_dump failure); this only proves endpoint validation itself passed.
+    run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", FAKE_PG_DUMP_RC: "1" });
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(true);
+  });
+});
+
+describe("backup-database-r2.sh: manifest contains no secrets or customer data (MANIFEST_SECRET_SCAN)", () => {
+  it("the manifest JSON schema in source never includes DATABASE_URL, credentials, or row-level content", () => {
+    expect(BACKUP_SCRIPT_SRC).toMatch(/"backup_format_version"/);
+    expect(BACKUP_SCRIPT_SRC).toMatch(/"sha256": "\$CHECKSUM"/);
+    // The manifest heredoc block itself must never reference these variables.
+    const manifestBlockMatch = BACKUP_SCRIPT_SRC.match(/cat > "\$MANIFEST_FILE" <<EOF([\s\S]*?)EOF/);
+    expect(manifestBlockMatch).not.toBeNull();
+    const manifestBlock = manifestBlockMatch![1];
+    expect(manifestBlock).not.toMatch(/DATABASE_URL|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AGE_RECIPIENT|PASSWORD/);
+  });
+
+  it("an actual produced manifest (real run) contains no secret-shaped strings", () => {
+    if (!hasAge) return;
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0" });
+    expect(r.status).toBe(0);
+    const manifestKey = readFileSync(join(dir, "aws.calls"), "utf8")
+      .split("\n")
+      .filter((l) => l.includes("put-object"))
+      .map((l) => l.match(/--key (\S+)/)?.[1])
+      .find((k) => k?.endsWith(".manifest.json"))!;
+    const manifestContent = readFileSync(join(bucketDir, manifestKey), "utf8");
+    expect(manifestContent).not.toContain(baseBackupEnv.AWS_SECRET_ACCESS_KEY);
+    expect(manifestContent).not.toContain(baseBackupEnv.AGE_RECIPIENT);
+    expect(manifestContent).not.toMatch(/ep-x\.neon\.tech/);
+    expect(JSON.parse(manifestContent)).toHaveProperty("sha256");
   });
 });
 
@@ -415,7 +606,7 @@ describe("restore-database-r2.sh: hostile input and failure handling", () => {
 // ---------------------------------------------------------------------------------------------
 describe("static invariants: no plaintext on disk, no GitHub artifact of the dump", () => {
   it("15. the backup script never writes a bare .sql or unencrypted .sql.gz file path", () => {
-    expect(BACKUP_SCRIPT_SRC).toMatch(/OBJECT_NAME="opsiq_backup_\$\{TIMESTAMP\}\.sql\.gz\.age"/);
+    expect(BACKUP_SCRIPT_SRC).toMatch(/OBJECT_NAME="opsiq_backup_\$\{TIMESTAMP\}_\$\{UNIQUE_SUFFIX\}\.sql\.gz\.age"/);
     expect(BACKUP_SCRIPT_SRC).not.toMatch(/>\s*"\$WORKDIR\/[^"]*\.sql"/);
     expect(BACKUP_SCRIPT_SRC).not.toMatch(/>\s*"\$WORKDIR\/[^"]*\.sql\.gz"\s*$/m);
   });

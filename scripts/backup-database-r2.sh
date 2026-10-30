@@ -25,7 +25,8 @@
 # Required env:
 #   DATABASE_URL          direct (non-pooler) Production Postgres connection string
 #   AGE_RECIPIENT         age public recipient (age1...); NOT secret -- the decrypt key is not here
-#   R2_ENDPOINT           https://<account-id>.r2.cloudflarestorage.com
+#   R2_ENDPOINT           https://<account-id>.r2.cloudflarestorage.com (default R2 jurisdiction
+#                          only -- see R2_ENDPOINT_POLICY in docs/opsiq/product/R2_BACKUP_RUNBOOK.md)
 #   R2_BUCKET             private R2 bucket name (this script does not create or configure it)
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY   R2 Object Read & Write token, scoped to R2_BUCKET only
 # Optional env:
@@ -33,6 +34,7 @@
 #   R2_OBJECT_PREFIX         default "backups/"
 #   AWS_DEFAULT_REGION       default "auto" (R2 has no real regions; the AWS SDK/CLI still requires one)
 #   GITHUB_SHA               recorded in the manifest if present; never required
+#   GITHUB_RUN_ID            used as the object-name uniqueness suffix when present; never required
 #
 # Usage: ./backup-database-r2.sh
 set -euo pipefail
@@ -42,9 +44,30 @@ R2_OBJECT_PREFIX="${R2_OBJECT_PREFIX:-backups/}"
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-auto}"
 
 TIMESTAMP=$(date -u +%Y-%m-%d_%H-%M-%S)
-OBJECT_NAME="opsiq_backup_${TIMESTAMP}.sql.gz.age"
+# UNIQUENESS SUFFIX: a second-granularity timestamp alone collides if two runs start in the same
+# second (two concurrent manual workflow_dispatch invocations, or a retry racing the original run).
+# GITHUB_RUN_ID is GitHub's own non-secret per-run identifier -- not a credential, host, username,
+# or any customer data -- and is unique per workflow run. Outside CI, fall back to a random hex
+# suffix. Neither path ever derives this value from DATABASE_URL, QBO data, or any secret.
+UNIQUE_SUFFIX="${GITHUB_RUN_ID:-}"
+# GITHUB_RUN_ID is documented by GitHub as always a positive integer; every other externally-
+# influenced value in this script is validated before use, so this one is too, even though it is
+# only ever folded into a quoted object-name string (never shell-interpreted) and the operational
+# risk of an unvalidated value is low.
+if [ -n "$UNIQUE_SUFFIX" ] && ! [[ "$UNIQUE_SUFFIX" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: GITHUB_RUN_ID does not look like a GitHub run id (expected a positive integer)" >&2
+  exit 1
+fi
+if [ -z "$UNIQUE_SUFFIX" ]; then
+  UNIQUE_SUFFIX="$(od -An -N8 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')"
+fi
+if [ -z "$UNIQUE_SUFFIX" ]; then
+  echo "ERROR: could not generate a uniqueness suffix for the backup object name" >&2
+  exit 1
+fi
+OBJECT_NAME="opsiq_backup_${TIMESTAMP}_${UNIQUE_SUFFIX}.sql.gz.age"
 CHECKSUM_NAME="${OBJECT_NAME}.sha256"
-MANIFEST_NAME="opsiq_backup_${TIMESTAMP}.manifest.json"
+MANIFEST_NAME="opsiq_backup_${TIMESTAMP}_${UNIQUE_SUFFIX}.manifest.json"
 
 # --- LOCAL FILE HYGIENE: secure temp dir, EXIT trap cleanup. Runner teardown is not relied on as
 # the only cleanup mechanism -- this removes everything itself, on success, on failure, and on
@@ -199,24 +222,69 @@ EOF
 echo "Manifest:"
 cat "$MANIFEST_FILE"
 
-# --- 5. Private R2 upload (S3-compatible API). Credentials are read by the aws CLI from the
-# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY environment only -- never placed on the command line,
-# never printed. Endpoint and bucket are always explicit. Any failure here is non-zero and aborts
-# (set -e); a failed upload never proceeds to verification or is reported as success. ---
+# --- 5. Private R2 upload (S3-compatible API), CREATE-ONCE. Credentials are read by the aws CLI
+# from the AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY environment only -- never placed on the
+# command line, never printed. Endpoint and bucket are always explicit.
+#
+# CREATE-ONCE MECHANISM: `aws s3api put-object --if-none-match '*'` is a Cloudflare-confirmed,
+# officially supported S3-compatible conditional-write primitive -- not an invented header. Per
+# Cloudflare's own S3-compatibility documentation, conditional headers on PutObject (If-Match,
+# If-None-Match, If-Modified-Since, If-Unmodified-Since) "are evaluated atomically against the
+# committed bucket state, as part of the same write that commits the object," and when multiple
+# clients concurrently PutObject the same previously-absent key with `If-None-Match: *`, "at most
+# one write succeeds and the others fail with 412 PreconditionFailed." This gives true
+# create-once/overwrite-proof semantics: a second write to an already-existing key is rejected by
+# R2 itself, atomically, not by a racy read-then-write check in this script.
+#
+# TRADEOFF (see Section 17 / MULTIPART_BACKUP_SAFE in the final audit): `s3api put-object` is a
+# single, non-multipart PUT, capped by R2 at 5 GiB per object (Cloudflare's documented single-PUT
+# limit). The higher-level `aws s3 cp` used previously auto-switches to multipart for large files,
+# but multipart uploads cannot carry the same simple, Cloudflare-confirmed If-None-Match semantics
+# used here, so switching back to `aws s3 cp` would silently drop create-once protection for large
+# backups. This script deliberately keeps create-once protection and accepts that an
+# encrypted backup exceeding 5 GiB fails closed (a non-zero aws exit under `set -e`) rather than
+# uploading without overwrite protection. Do not reintroduce `aws s3 cp` here to "fix" that without
+# an explicit, owner-reviewed design change for multipart + conditional writes.
+upload_create_once() {
+  local local_file="$1"
+  local key="$2"
+  local stderr_file="$WORKDIR/put-object-stderr-$$-${RANDOM}.log"
+  if ! aws s3api put-object \
+    --endpoint-url "$R2_ENDPOINT" \
+    --bucket "$R2_BUCKET" \
+    --key "$key" \
+    --body "$local_file" \
+    --if-none-match '*' \
+    >/dev/null 2>"$stderr_file"; then
+    # Match the actual AWS/S3-compatible error code text only (AWS CLI's real stderr for this
+    # case already contains the literal string "PreconditionFailed") -- a bare "412" substring
+    # was previously also matched and is too loose: an unrelated failure (AccessDenied, a request
+    # ID, a timestamp) could coincidentally contain "412" and be misreported as a create-once
+    # violation instead of surfacing its real cause.
+    if grep -qi 'PreconditionFailed' "$stderr_file"; then
+      echo "ERROR: object already exists at s3://${R2_BUCKET}/${key} -- refusing to overwrite (create-once violated)" >&2
+    else
+      echo "ERROR: upload failed for s3://${R2_BUCKET}/${key}" >&2
+      cat "$stderr_file" >&2 || true
+    fi
+    return 1
+  fi
+  return 0
+}
+
 UPLOAD_KEY_BACKUP="${R2_OBJECT_PREFIX}${OBJECT_NAME}"
 UPLOAD_KEY_CHECKSUM="${R2_OBJECT_PREFIX}${CHECKSUM_NAME}"
 UPLOAD_KEY_MANIFEST="${R2_OBJECT_PREFIX}${MANIFEST_NAME}"
 
-aws s3 cp "$ENCRYPTED_FILE" "s3://${R2_BUCKET}/${UPLOAD_KEY_BACKUP}" \
-  --endpoint-url "$R2_ENDPOINT" --only-show-errors
-aws s3 cp "$CHECKSUM_FILE" "s3://${R2_BUCKET}/${UPLOAD_KEY_CHECKSUM}" \
-  --endpoint-url "$R2_ENDPOINT" --only-show-errors
-aws s3 cp "$MANIFEST_FILE" "s3://${R2_BUCKET}/${UPLOAD_KEY_MANIFEST}" \
-  --endpoint-url "$R2_ENDPOINT" --only-show-errors
-echo "Uploaded encrypted backup, checksum, and manifest to s3://${R2_BUCKET}/${R2_OBJECT_PREFIX}"
+upload_create_once "$ENCRYPTED_FILE" "$UPLOAD_KEY_BACKUP"
+upload_create_once "$CHECKSUM_FILE" "$UPLOAD_KEY_CHECKSUM"
+upload_create_once "$MANIFEST_FILE" "$UPLOAD_KEY_MANIFEST"
+echo "Uploaded encrypted backup, checksum, and manifest to s3://${R2_BUCKET}/${R2_OBJECT_PREFIX} (create-once)"
 
-# --- 6. Post-upload verification via HEAD only. Never downloads the object to "verify" it;
-# that would recreate exactly the readable-payload-in-transit risk this design avoids. ---
+# --- 6. Post-upload verification via HEAD only, for ALL THREE objects (backup, checksum, AND
+# manifest -- the manifest was previously never verified after upload). Never downloads the object
+# to "verify" it; that would recreate exactly the readable-payload-in-transit risk this design
+# avoids. ---
 HEAD_JSON=$(aws s3api head-object --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --key "$UPLOAD_KEY_BACKUP")
 REMOTE_SIZE=$(echo "$HEAD_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{console.log(JSON.parse(d).ContentLength)}catch{console.log("")}})')
 if [ -z "$REMOTE_SIZE" ] || [ "$REMOTE_SIZE" != "$ENCRYPTED_SIZE" ]; then
@@ -227,5 +295,12 @@ if ! aws s3api head-object --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" -
   echo "ERROR: post-upload verification failed -- checksum object not found at s3://${R2_BUCKET}/${UPLOAD_KEY_CHECKSUM}" >&2
   exit 1
 fi
-echo "POST_UPLOAD_VERIFICATION=PASS (remote size $REMOTE_SIZE bytes matches local, checksum object present)"
+MANIFEST_SIZE=$(wc -c < "$MANIFEST_FILE" | tr -d ' ')
+MANIFEST_HEAD_JSON=$(aws s3api head-object --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --key "$UPLOAD_KEY_MANIFEST")
+REMOTE_MANIFEST_SIZE=$(echo "$MANIFEST_HEAD_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{console.log(JSON.parse(d).ContentLength)}catch{console.log("")}})')
+if [ -z "$REMOTE_MANIFEST_SIZE" ] || [ "$REMOTE_MANIFEST_SIZE" != "$MANIFEST_SIZE" ]; then
+  echo "ERROR: post-upload verification failed -- remote manifest size '$REMOTE_MANIFEST_SIZE' does not match local manifest size '$MANIFEST_SIZE'" >&2
+  exit 1
+fi
+echo "POST_UPLOAD_VERIFICATION=PASS (backup size $REMOTE_SIZE bytes, manifest size $REMOTE_MANIFEST_SIZE bytes, checksum object present -- all three verified)"
 echo "BACKUP_COMPLETE object=${UPLOAD_KEY_BACKUP} size=${ENCRYPTED_SIZE} sha256=${CHECKSUM}"
