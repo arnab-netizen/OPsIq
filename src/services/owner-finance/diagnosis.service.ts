@@ -41,11 +41,22 @@ interface EngagedPriorAction {
   cycle: { snapshot: { periodEnd: Date | string } | null } | null;
 }
 
+export interface RunFinanceDiagnosisOptions {
+  /**
+   * The AUTOMATIC first read. Under the same per-business lock that allocates the cycle sequence, if the business already has
+   * ANY cycle the existing latest one is returned and nothing is created, audited or counted against the diagnosis allowance.
+   * This is what makes the automatic first diagnosis safe under double submit, two tabs, a retry after a lost response, and a
+   * sync finishing while the owner is on the page. An owner-initiated re-run never sets it and always creates a new cycle.
+   */
+  firstDiagnosisOnly?: boolean;
+}
+
 export async function runFinanceDiagnosis(
   businessId: string,
   snapshotId: string,
   actorId: string,
-  workspaceId: string
+  workspaceId: string,
+  options: RunFinanceDiagnosisOptions = {},
 ) {
   const business = await getBusiness(businessId, workspaceId);
   const snapshotRow = await getFinancialSnapshot(snapshotId, workspaceId);
@@ -124,6 +135,7 @@ export async function runFinanceDiagnosis(
 
     let carriedForwardIds: string[] = [];
     let createdActionCount = 0;
+    let reusedCycleId: string | null = null;
     await db.$transaction(async (tx: any) => {
       // SERIALISATION with Cashflow writes. The shared cash-position lock is held from here THROUGH the commit that persists
       // the cycle; Cashflow creates/edits take it exclusively, so any bank-balance change either committed before this point
@@ -138,8 +150,14 @@ export async function runFinanceDiagnosis(
       const previousCycle = await tx.ownerFinanceCycle.findFirst({
         where: { businessId, workspaceId },
         orderBy: { sequenceNumber: "desc" },
-        select: { sequenceNumber: true },
+        select: { id: true, sequenceNumber: true },
       });
+      if (options.firstDiagnosisOnly && previousCycle) {
+        // The latest cycle, read under the lock above, is the existing one. Checked BEFORE the allowance gate and before anything is
+        // written: a replayed first read neither spends allowance nor creates a cycle.
+        reusedCycleId = previousCycle.id;
+        return;
+      }
       sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1;
       const evidenceAsOf = await databaseNow(tx);
       const bankNow = selectUsableBankBalance({
@@ -283,7 +301,7 @@ export async function runFinanceDiagnosis(
         });
       }
     });
-  return { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount };
+  return { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount, reusedCycleId };
   };
 
   let persisted: Awaited<ReturnType<typeof persist>> | undefined;
@@ -297,6 +315,7 @@ export async function runFinanceDiagnosis(
       }
     }
   }
+  if (persisted.reusedCycleId) return getFinanceDiagnosis(persisted.reusedCycleId, workspaceId);
   const { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount } = persisted;
 
   const previousCycleForDrift = await db.ownerFinanceCycle.findFirst({

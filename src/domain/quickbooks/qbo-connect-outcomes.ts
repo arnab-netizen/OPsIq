@@ -101,9 +101,23 @@ export function isQboOutcomeToken(v: unknown): v is QboOutcomeToken {
   return typeof v === "string" && OUTCOME_SET.has(v);
 }
 
+/** Where an owner whose first read is still pending is returned after Intuit (the existing first-run surface). */
+export const QBO_FIRST_RUN_LANDING_PATH = "/owner/first-run" as const;
+
+/** The two fixed landings. The server decides which from persisted first-run state; the browser never chooses a path. */
+export type QboLanding = "data" | "first_run";
+
+/** Closed read of the callback API's `landing` field: anything but exactly "first_run" is the existing My Business landing. */
+export function qboLandingFromCallbackResponse(httpStatus: number, body: unknown): QboLanding {
+  if (httpStatus !== 200) return "data";
+  const b = (typeof body === "object" && body !== null ? body : {}) as { status?: unknown; landing?: unknown };
+  return b.status === "CONNECTED" && b.landing === "first_run" ? "first_run" : "data";
+}
+
 /** Relative redirect target for a callback outcome. Fixed path + one closed token: no provider text can enter the URL. */
-export function qboOutcomeRedirectPath(token: QboOutcomeToken): string {
-  return `${QBO_OWNER_LANDING_PATH}?${QBO_OUTCOME_QUERY_KEY}=${token}`;
+export function qboOutcomeRedirectPath(token: QboOutcomeToken, landing: QboLanding = "data"): string {
+  const base = landing === "first_run" ? QBO_FIRST_RUN_LANDING_PATH : QBO_OWNER_LANDING_PATH;
+  return `${base}?${QBO_OUTCOME_QUERY_KEY}=${token}`;
 }
 
 /** Owner wording for an outcome token shown on the owner surface (fixed sentences only). */
