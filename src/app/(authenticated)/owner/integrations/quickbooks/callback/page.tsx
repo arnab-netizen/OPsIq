@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { qboOutcomeRedirectPath, qboOutcomeTokenFromCallbackResponse, type QboOutcomeToken } from "@/domain/quickbooks/qbo-connect-outcomes";
+import { qboLandingFromCallbackResponse, qboOutcomeRedirectPath, qboOutcomeTokenFromCallbackResponse, type QboLanding, type QboOutcomeToken } from "@/domain/quickbooks/qbo-connect-outcomes";
 
 const API_PATH = "/api/owner/integrations/quickbooks/callback";
 const started = new Set<string>(); // survives a dev-mode double effect for the same query string
@@ -31,17 +31,19 @@ export default function QuickBooksCallbackPage() {
     const abort = setTimeout(() => controller.abort(), 45_000);
     void (async () => {
       let token: QboOutcomeToken = "unavailable";
+      let landing: QboLanding = "data";
       try {
         const res = await fetch(`${API_PATH}${search}`, { headers: { Accept: "application/json" }, cache: "no-store", signal: controller.signal });
         const body: unknown = await res.json().catch(() => null);
         token = qboOutcomeTokenFromCallbackResponse(res.status, body);
+        landing = qboLandingFromCallbackResponse(res.status, body);
       } catch {
         token = "unavailable";
       } finally {
         clearTimeout(slowTimer);
         clearTimeout(abort);
       }
-      router.replace(qboOutcomeRedirectPath(token));
+      router.replace(qboOutcomeRedirectPath(token, landing));
     })();
     return () => {
       clearTimeout(slowTimer);
@@ -52,7 +54,7 @@ export default function QuickBooksCallbackPage() {
     <main className="mx-auto max-w-md p-6" aria-busy="true">
       <h1 className="text-xl font-semibold text-foreground">Finishing your QuickBooks connection…</h1>
       <p role="status" className="mt-2 text-sm text-muted-foreground">
-        {slow ? "This is taking longer than usual. Please keep this page open." : "One moment — you will be taken back to My Business."}
+        {slow ? "This is taking longer than usual. Please keep this page open." : "One moment — you will be taken back to OpsIQ."}
       </p>
     </main>
   );
