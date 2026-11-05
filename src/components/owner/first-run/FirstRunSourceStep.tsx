@@ -16,11 +16,16 @@ export function FirstRunSourceStep({
   business,
   sources,
   onEvidenceSaved,
+  importWindowEnded = false,
+  onRecheckImport,
 }: {
   business: { id: string; name: string; currency: string };
   sources: FirstRunSourceView;
   /** The manual route saved enough for a first read: re-read the persisted state. */
   onEvidenceSaved: () => void;
+  /** The automatic progress checks ran out while the import is still running (a persisted fact is NOT implied: only that we stopped looking). */
+  importWindowEnded?: boolean;
+  onRecheckImport?: () => void;
 }) {
   const role = sources.quickBooks;
   // Manual is the whole step when QuickBooks is not part of it, and the fallback when QuickBooks needs the owner.
@@ -61,10 +66,23 @@ export function FirstRunSourceStep({
               </p>
             </>
           )}
-          {role === "IN_PROGRESS" && (
+          {role === "IN_PROGRESS" && !importWindowEnded && (
             <p className="text-sm text-foreground" role="status" data-testid="first-run-quickbooks-progress">
               Getting your numbers from QuickBooks. Your first read will start by itself &mdash; you don&rsquo;t need to do anything. You can leave this page; it will pick up where it left off.
             </p>
+          )}
+          {role === "IN_PROGRESS" && importWindowEnded && (
+            <div role="status" data-testid="first-run-quickbooks-slow">
+              <p className="text-sm text-foreground">
+                This is taking longer than usual. OpsIQ still shows the QuickBooks import as in progress and nothing is lost &mdash; your first read starts as soon as enough has arrived, even if you close this page.
+                You can check again now, or enter a few numbers instead.
+              </p>
+              {onRecheckImport && (
+                <Button type="button" variant="outline" className="mt-2 min-h-11 w-full sm:w-auto" onClick={onRecheckImport} data-testid="first-run-recheck-import">
+                  Check again
+                </Button>
+              )}
+            </div>
           )}
           {role === "ATTENTION" && (
             <p className="text-sm text-foreground" data-testid="first-run-quickbooks-attention">

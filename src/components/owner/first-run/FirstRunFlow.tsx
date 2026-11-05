@@ -78,15 +78,19 @@ export function FirstRunFlow() {
   const inFlight = useRef(false);
   const acceptKey = useRef(newIdempotencyKey());
 
+  /** Only the NEWEST load may update the screen: a slow earlier response (or one for a previously active business) is dropped. */
+  const ctxSeq = useRef(0);
   const loadContext = useCallback(async (): Promise<FirstRunContext | null> => {
+    const seq = ++ctxSeq.current;
     setLoadError(null);
     try {
       // The flow is about the ACTIVE business (the header's), never an independently chosen one.
       const next = await firstRunApi.context(activeBusinessId);
+      if (seq !== ctxSeq.current) return next;
       setCtx(next);
       return next;
     } catch (err) {
-      setLoadError(`We couldn't load your setup. Nothing was lost. ${friendly(err, "load")}`);
+      if (seq === ctxSeq.current) setLoadError(`We couldn't load your setup. Nothing was lost. ${friendly(err, "load")}`);
       return null;
     }
   }, [activeBusinessId]);
@@ -127,15 +131,28 @@ export function FirstRunFlow() {
   // QuickBooks import in progress: re-read the PERSISTED state (bounded). When the import has produced enough evidence the router
   // moves to NEEDS_DIAGNOSIS and the automatic first read below runs; nothing here decides sufficiency.
   const qboPoll = ctx?.state === "NEEDS_EVIDENCE" && ctx.evidenceSources?.poll === true;
+  /** The bounded window ended while the import was still running: say so, and let the owner look again (restarts the window). */
+  const [windowEndedFor, setWindowEndedFor] = useState<string | null>(null);
+  const importWindowEnded = windowEndedFor !== null && windowEndedFor === businessId;
+  const [recheckRound, setRecheckRound] = useState(0);
   useEffect(() => {
     if (!qboPoll) return;
     let polls = 0;
     const id = setInterval(() => {
-      if (++polls > FIRST_RUN_IMPORT_MAX_POLLS) return clearInterval(id);
+      if (++polls > FIRST_RUN_IMPORT_MAX_POLLS) {
+        clearInterval(id);
+        setWindowEndedFor(businessId);
+        return;
+      }
       void loadContext();
     }, FIRST_RUN_IMPORT_POLL_MS);
     return () => clearInterval(id);
-  }, [qboPoll, loadContext]);
+  }, [qboPoll, loadContext, recheckRound, businessId]);
+  const recheckImport = useCallback(() => {
+    setWindowEndedFor(null);
+    setRecheckRound((n) => n + 1);
+    void loadContext();
+  }, [loadContext]);
 
   const runDiagnosis = useCallback(async () => {
     if (!businessId || inFlight.current) return;
@@ -159,6 +176,9 @@ export function FirstRunFlow() {
         await loadResult();
       } else {
         setDiagnosing("failed");
+        // The refusal may be "the figures moved / a read already exists": re-read the persisted state so the screen shows what is
+        // true (e.g. the ordinary "update my read"), instead of only a retry button for a request that can never succeed.
+        await loadContext();
       }
     } finally {
       inFlight.current = false;
@@ -166,13 +186,16 @@ export function FirstRunFlow() {
   }, [businessId, ctx?.currentSnapshotId, ctx?.state, loadContext, loadResult]);
 
   // State C: the evidence is enough, the read is missing — produce it through the canonical diagnosis path.
-  const autoRan = useRef(false);
+  // One automatic attempt per (business, figures): switching to another business that also needs its first read - or new figures
+  // for the same one - gets its own attempt, while a remount/refresh simply asks again (the server replays a committed read).
+  const autoRanFor = useRef<string | null>(null);
   useEffect(() => {
-    if (ctx?.state === "NEEDS_DIAGNOSIS" && !autoRan.current) {
-      autoRan.current = true;
-      void runDiagnosis();
-    }
-  }, [ctx?.state, runDiagnosis]);
+    if (ctx?.state !== "NEEDS_DIAGNOSIS") return;
+    const attempt = `${businessId ?? ""}:${ctx.currentSnapshotId ?? ""}`;
+    if (autoRanFor.current === attempt) return;
+    autoRanFor.current = attempt;
+    void runDiagnosis();
+  }, [ctx?.state, ctx?.currentSnapshotId, businessId, runDiagnosis]);
 
   async function onBusinessCreated(business: { id: string }) {
     await refreshBusinesses();
@@ -331,7 +354,7 @@ export function FirstRunFlow() {
         )}
 
         {ctx?.state === "NEEDS_EVIDENCE" && ctx.business && ctx.evidenceSources && (
-          <FirstRunSourceStep business={ctx.business} sources={ctx.evidenceSources} onEvidenceSaved={() => void loadContext()} />
+          <FirstRunSourceStep business={ctx.business} sources={ctx.evidenceSources} onEvidenceSaved={() => void loadContext()} importWindowEnded={importWindowEnded} onRecheckImport={recheckImport} />
         )}
 
         {ctx?.state === "NEEDS_DIAGNOSIS" && (

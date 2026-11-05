@@ -20,7 +20,7 @@ import { diagnoseFinanceSnapshot } from "@/domain/owner-finance/diagnosis";
 import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
-import { loadFinanceEngineInput } from "./liquidity.service";
+import { cashPositionChangedSince, loadFinanceEngineInput } from "./liquidity.service";
 import { databaseNow, loadEffectiveCashflowCandidates, lockCashPositionShared } from "@/services/owner-cashflow/effective-cashflow.service";
 import { pickEffectiveCashflowRow, selectUsableBankBalance, type CashflowSelectionRow } from "@/domain/owner-finance/liquidity";
 import { getFinancialSnapshot } from "./snapshot.service";
@@ -150,11 +150,18 @@ export async function runFinanceDiagnosis(
       const previousCycle = await tx.ownerFinanceCycle.findFirst({
         where: { businessId, workspaceId },
         orderBy: { sequenceNumber: "desc" },
-        select: { id: true, sequenceNumber: true },
+        select: { id: true, sequenceNumber: true, snapshotId: true, generatedAt: true },
       });
       if (options.firstDiagnosisOnly && previousCycle) {
-        // The latest cycle, read under the lock above, is the existing one. Checked BEFORE the allowance gate and before anything is
-        // written: a replayed first read neither spends allowance nor creates a cycle.
+        // REPLAY, never substitution. The latest cycle (read under the lock above) may be handed back only if it is the read of
+        // EXACTLY these figures and the bank balance it rests on has not moved since (the same two tests first-run uses to call a
+        // read current). Anything else is advice about different evidence: refuse, write nothing, spend nothing, and let the
+        // caller reload - the owner is then offered the ordinary "update my read".
+        const sameFigures = previousCycle.snapshotId === snapshotId;
+        const cashMoved = sameFigures && (await cashPositionChangedSince(workspaceId, businessId, snapshotRow.periodEnd, previousCycle.generatedAt, tx));
+        if (!sameFigures || cashMoved) {
+          throw new ConflictError("A read already exists for earlier figures. Reload to update it rather than repeating the first read.");
+        }
         reusedCycleId = previousCycle.id;
         return;
       }
