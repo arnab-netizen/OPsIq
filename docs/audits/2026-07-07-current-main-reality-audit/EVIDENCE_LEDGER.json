@@ -1,0 +1,154 @@
+{
+  "audit": "OpsIQ current-main reality audit — Claude operating layer + product capability gap map",
+  "date": "2026-07-07",
+  "branch": "claude/current-main-reality-audit-bqkz4q",
+  "head_before": "a14fae157ee4623bba55ae82a295bbdfdd10812b",
+  "head_subject": "Long running business timeline simulation (#179)",
+  "origin_main_head": "a14fae157ee4623bba55ae82a295bbdfdd10812b",
+  "working_tree_at_start": "clean",
+  "product_logic_changed": false,
+  "note_on_branch": "The audit prompt requested branch 'claude/current-main-reality-audit-operating-layer'. The session's Git Development Branch Requirements mandate 'claude/current-main-reality-audit-bqkz4q' and forbid pushing elsewhere without explicit permission. The mandated branch was used; it was already even with origin/main at a14fae15.",
+  "environment_constraints": {
+    "node_modules_installed": false,
+    "reason": "Fresh container; dependency install is forbidden by audit rule 4.",
+    "dynamic_gates_status": "DEFERRED_ENV — npx tsc/eslint/vitest/prisma cannot resolve 'next','@playwright/test','@prisma/client' etc. without node_modules. These gates run in CI (.github/workflows/ci.yml, db-verification.yml, owner-e2e.yml, ai-live-smoke.yml). Validation for this audit is static (search + file read + config inspection)."
+  },
+  "repo_scale": {
+    "prisma_models": 174,
+    "prisma_schema_lines": 4750,
+    "prisma_migrations": 113,
+    "api_route_files": 328,
+    "page_files": 69,
+    "playwright_specs": 53,
+    "active_unit_test_files_approx": 926,
+    "ignored_quarantined_test_files": 91,
+    "github_workflows": 78
+  },
+  "commands_run": [
+    "git status / git branch --show-current / git rev-parse HEAD / git log --oneline -5",
+    "git fetch origin main; git rev-list --left-right --count origin/main...HEAD  => 0 0 (even)",
+    "find/ls of .claude, .governance, opsiq_claude_low_usage_pack/.claude",
+    "cat package.json, playwright.config.ts, .github/workflows/ai-live-smoke.yml, .claude/commands/continue-build.md",
+    "find src/app -name route.ts|page.tsx (counts)",
+    "wc -l prisma/schema.prisma; grep -c '^model ' prisma/schema.prisma; ls prisma/migrations",
+    "ls src/services src/domain src/policies src/engines",
+    "rg searches for anthropic|openai|connector|tender|churn|local mode|waste|skill (evidence per capability)",
+    "npx tsc --noEmit  => fails: 'Cannot find module next' (node_modules absent), confirms DEFERRED_ENV",
+    "[ -d node_modules ] => NO",
+    "rg verification of connector throws, base64 token encoding, private-mode header trust, in-memory Maps, __ignored_tests__ count"
+  ],
+  "verified_hostile_findings": [
+    {
+      "id": "H-CONN-01",
+      "claim": "Live connectors do not connect to anything — every network op throws 'not implemented'.",
+      "evidence": [
+        "src/services/external-systems/google-sheets-oauth.service.ts:134 throw new Error(\"Token exchange not implemented in this service layer\")",
+        "google-sheets-oauth.service.ts:149 'Sheet data extraction not implemented'",
+        "google-sheets-oauth.service.ts:271 'Token refresh not implemented'",
+        "google-sheets-oauth.service.ts:290 'Token revocation not implemented'",
+        "token-lifecycle.service.ts:187 'Token refresh ... not implemented in this service layer'",
+        "No connector API routes exist under src/app/api (only decisions/submit-external + generic webhooks)"
+      ],
+      "severity": "CRITICAL if surfaced as live"
+    },
+    {
+      "id": "H-CONN-02",
+      "claim": "OAuth token 'encryption' is base64 encoding, not encryption.",
+      "evidence": [
+        "src/services/external-systems/oauth-token.service.ts:94 comment 'returns a placeholder that indicates encryption is needed'",
+        "oauth-token.service.ts:102 accessToken: Buffer.from(token.accessToken).toString(\"base64\")",
+        "Header comment lines 4-9 claim 'All tokens are encrypted ... workspace-scoped keys' — contradicted by implementation"
+      ],
+      "severity": "HIGH — false security label"
+    },
+    {
+      "id": "H-PRIV-01",
+      "claim": "private-mode-gate middleware trusts spoofable client headers.",
+      "evidence": [
+        "src/middleware/private-mode-gate.ts:53 '// This is a placeholder implementation.'",
+        "lines 61-63 read x-user-id / x-workspace-id / x-private-mode-role from request headers",
+        "Real Prisma-backed service exists (src/services/private-mode/role-access.service.ts, PrivateModeAccess model) but the gate is not wired to it"
+      ],
+      "severity": "HIGH — spoofable authz if used"
+    },
+    {
+      "id": "H-GROWTH-01",
+      "claim": "Pricing and Retention/Churn persist to in-memory static Maps, not the DB.",
+      "evidence": [
+        "src/services/growth/pricing-engine.ts:24 private static tiersStore = new Map<string, PriceTier[]>()",
+        "src/services/growth/retention-engine.ts:24 private static metricsStore = new Map<...>()",
+        "retention-engine.ts:25 private static churnStore = new Map<...>()",
+        "No PriceTier / Retention / Churn / Cohort Prisma models exist",
+        "No emitAuditEvent in src/services/growth/*"
+      ],
+      "severity": "HIGH — data loss on restart, not multi-instance safe, no audit"
+    },
+    {
+      "id": "H-TEST-01",
+      "claim": "91 test files (incl. diagnostic-core engine tests + integration/determinism) are quarantined in src/__ignored_tests__ and never run.",
+      "evidence": [
+        "find src -path '*__ignored_tests__*' -name '*.test.ts' | wc -l => 91",
+        "src/__ignored_tests__/services/diagnostic-core/__tests__/{archetype,root-cause,maturity,bottleneck}-engine.test.ts",
+        "src/__ignored_tests__/services/visibility.placeholder.test.ts"
+      ],
+      "severity": "MEDIUM — core inference engines untested in CI"
+    },
+    {
+      "id": "H-AI-01",
+      "claim": "Governed LLM path is real and fail-closed, but the live network path is skip-gated and never exercised in default CI.",
+      "evidence": [
+        "src/services/ai/openai-provider.ts POSTs https://api.openai.com/v1/chat/completions, gated on OPENAI_API_KEY, returns AI_UNAVAILABLE if absent",
+        "src/__tests__/services/ai/openai-live-smoke.test.ts uses describe.skipIf(!RUN_LIVE_AI) — SKIPS by default",
+        ".github/workflows/ai-live-smoke.yml is workflow_dispatch only (manual), skips if OPENAI_API_KEY unset",
+        "No AiCallLedger Prisma model — AI calls persist only via AuditEvent mirror (src/services/ai/ledger-persistence.ts)"
+      ],
+      "severity": "MEDIUM — advisory-only governance is sound; live path unproven in automated CI"
+    },
+    {
+      "id": "H-SMOKE-01",
+      "claim": "Production smoke scripts are inert unless env is wired; some swallow failures.",
+      "evidence": [
+        "scripts/smoke-tests.ts default baseUrl 'https://yourdomain.com'; auth-boundary check counts non-timeout network errors as pass",
+        "scripts/production-smoke.mjs exits PARTIAL/1 in 'offline mode' when BASE_URL unset",
+        "playwright.config.ts sets webServer undefined in CI — Playwright does not boot the app; a stale server would pass against the wrong build"
+      ],
+      "severity": "MEDIUM — proof theatre risk"
+    },
+    {
+      "id": "H-SKILL-01",
+      "claim": "No Claude Code skills/agents/hooks exist; the operating layer is CLAUDE.md + two slash commands + JSON state/baselines.",
+      "evidence": [
+        "find .claude -type d => only .claude and .claude/commands (no skills/agents/hooks, no settings.json)",
+        ".claude/commands/continue-build.md and continue-post-owner-build.md are the only operating-layer commands",
+        "~85 other .claude/*.json|*.md files are audit OUTPUT, not operating config",
+        "opsiq_claude_low_usage_pack/.claude/commands/*.md is an orphaned, un-merged extracted starter pack (its USAGE.md step 1: 'Add all files from this pack to the repo. Commit them.')",
+        "grep -rli skill .claude => none; every 'skill' hit in src is business staff-skill modeling (e.g. src/domain/owner-mode/staff-training.ts SkillRecord)"
+      ],
+      "severity": "INFORMATIONAL — accurate current state"
+    }
+  ],
+  "capability_classifications": {
+    "1_owner_mode": "COMPLETE",
+    "2_manual_entry": "COMPLETE",
+    "3_diagnosis_recommendation_action": "PARTIAL (COMPLETE surface; diagnostic-core engine tests quarantined)",
+    "4_evidence_audit": "COMPLETE",
+    "5_finance_budget_cash_profit": "COMPLETE (DUPLICATED across finance/cashflow/budget stacks)",
+    "6_staff_operator_execution_proof": "COMPLETE",
+    "7_sop_training": "COMPLETE (no dedicated browser E2E)",
+    "8_customer_retention_reactivation": "BACKEND_ONLY (in-memory Map, no persistence/audit/UI/E2E)",
+    "9_marketing_roi": "COMPLETE",
+    "10_opportunity_wealth_external": "COMPLETE",
+    "11_tender_application_assistance": "PARTIAL (screening/intake only; no drafting or submission)",
+    "12_startup_mode": "BACKEND_ONLY (stateless service, no UI, no E2E)",
+    "13_pricing": "STUBBED (in-memory Map, non-canonical auth, no persistence/UI/audit)",
+    "14_vendor_procurement": "BACKEND_ONLY (persisted + audited service, no API route, no UI)",
+    "15_compliance_risk": "PARTIAL (compliance API+backend real, no UI, boundary-test only; 'risk' fragmented)",
+    "16_capacity_bottleneck": "COMPLETE (thin direct UI proof)",
+    "17_waste_leakage": "PARTIAL (COPQ + complaint-rework; no named leakage module/dashboard)",
+    "18_local_mode": "PARTIAL/STUBBED (real role-access service; header-trusting gate stub; no true offline/local runtime)",
+    "19_llm_nlp_governed": "COMPLETE (advisory-only, fail-closed; live path untested in CI)",
+    "20_live_connectors": "PLACEHOLDER_ONLY (DB + contracts; zero live network; no routes)",
+    "21_simulation": "DUPLICATED (toy /scenario engine + internal fixture packs; no simulation engine/model)",
+    "22_learning_outcome_review": "COMPLETE"
+  }
+}
