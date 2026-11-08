@@ -1,0 +1,138 @@
+{
+  "audit_commit": "fab9ecfff32515be93356d8d16d0f4b77d31d8d1",
+  "branch": "main",
+  "overall_classification": "OWNER_MODE_ARCHITECTURE_PRESENT_RUNTIME_INCOMPLETE",
+  "environment_notes": "DB unreachable (P1001) — all DB-backed runtime proof UNPROVEN locally; relies on DB-gated CI. tsc exit 0. prisma validate ok. eslint raw: 2152 errors / 1263 warnings (CI uses ratchet). Full local vitest run time-boxed (690 test files); 3 new layers = 442 tests pass locally + in CI.",
+  "capabilities": [
+    {
+      "capability": "Owner command center (single business: see what's wrong, what matters, what to do, proof, completion, outcome)",
+      "classification": "PARTIAL",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/app/(authenticated)/owner/*/page.tsx", "src/app/api/owner/*/route.ts withCanonicalEnforcement", "src/services/owner-*"],
+      "missing_evidence": ["DB-backed persistence proof (P1001)", "collective arbitration not wired into this path"],
+      "runtime_wired": true, "ui_visible": true, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": false, "multi_location_relevant": false,
+      "notes": "Per-function product is wired; cross-domain collective command-and-control is NOT wired into it."
+    },
+    {
+      "capability": "Collective cross-domain command-and-control (runCollective decision packet)",
+      "classification": "MOCKED_OR_STUBBED",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/domain/collective-training/collective-engine.ts", "src/__tests__/domain/collective-training/* (360 cases)"],
+      "missing_evidence": ["no import from src/app/src/services/src/engines", "no API route", "no UI", "no persistence"],
+      "runtime_wired": false, "ui_visible": false, "db_backed": false, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": false, "multi_location_relevant": false,
+      "notes": "Logic-complete, test-proven, RUNTIME-UNREACHABLE. Owner cannot use it."
+    },
+    {
+      "capability": "Remote operations (dispatch, proof, attendance, supervisor/manager/owner terminals)",
+      "classification": "DOCUMENTED_ONLY",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/domain/remote-operations/* (28 modules)", "src/__tests__/domain/remote-operations/* (162 tests)"],
+      "missing_evidence": ["no Prisma models", "no routes", "no UI", "not imported by runtime"],
+      "runtime_wired": false, "ui_visible": false, "db_backed": false, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "Governed logic only; no working remote system exists at runtime."
+    },
+    {
+      "capability": "Multiple locations (model separation, isolation, routing, per-location financials/proof, aggregate+drilldown)",
+      "classification": "MISSING",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/domain/remote-operations/remote-types.ts LocationScope (type only)"],
+      "missing_evidence": ["no Location/Site/Property Prisma model", "0 runtime files use locationId", "no location routes/pages", "only optional 'location String?' column at schema line 1354"],
+      "runtime_wired": false, "ui_visible": false, "db_backed": false, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "No multi-location runtime exists. Capability is a type, not a system."
+    },
+    {
+      "capability": "Diagnosis and root-cause reasoning (single business per-function)",
+      "classification": "PARTIAL",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/engines/DiagnosisOrchestrator.ts", "src/domain/owner-* diagnosis", "owner UI pages"],
+      "missing_evidence": ["DB proof (P1001)", "collective arbitration not unifying per-function diagnoses"],
+      "runtime_wired": true, "ui_visible": true, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": false, "multi_location_relevant": false,
+      "notes": "Per-function diagnosis wired; cross-domain unification only in unwired collective layer."
+    },
+    {
+      "capability": "Guided execution (action -> steps -> proof -> verify -> outcome) single business",
+      "classification": "PARTIAL",
+      "severity_if_missing": "HIGH",
+      "evidence": ["src/app/(authenticated)/owner/execution/page.tsx", "src/app/api/owner/*/actions/[actionId]/verify/route.ts", "src/domain/execution/*"],
+      "missing_evidence": ["DB proof (P1001)", "remote guided execution unwired"],
+      "runtime_wired": true, "ui_visible": true, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": false, "multi_location_relevant": false,
+      "notes": "Single-business execution wired; remote execution logic-only."
+    },
+    {
+      "capability": "Evidence / proof / verification / confidence ledger",
+      "classification": "PARTIAL",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/domain/evidence/evidence.ts", "prisma Evidence/Finding models", "src/domain/domain-training/evidence-hierarchy.ts"],
+      "missing_evidence": ["remote proof model has no persistence", "DB proof (P1001)"],
+      "runtime_wired": true, "ui_visible": true, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": false,
+      "notes": "Pre-existing evidence ledger wired; remote proof authenticity is pure-function, unpersisted."
+    },
+    {
+      "capability": "Learning / reliability loop (outcome capture, safe promotion, isolation)",
+      "classification": "MOCKED_OR_STUBBED",
+      "severity_if_missing": "HIGH",
+      "evidence": ["src/domain/domain-training/learning-quarantine.ts", "src/domain/remote-operations/outcome-learning.ts", "prisma ControlledLearningCandidate model"],
+      "missing_evidence": ["new learning fns not wired to outcome capture/persistence", "no runtime loop feeding them"],
+      "runtime_wired": false, "ui_visible": false, "db_backed": false, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": false,
+      "notes": "A ControlledLearning persistence model exists in schema; the NEW learning admission functions are not wired to it."
+    },
+    {
+      "capability": "Input/data guidance (what files/data owner must provide)",
+      "classification": "PARTIAL",
+      "severity_if_missing": "MEDIUM",
+      "evidence": ["src/domain/data-intake/*", "src/domain/owner-intake/*", "src/app/(authenticated)/owner/intake/page.tsx"],
+      "missing_evidence": ["DB proof (P1001)", "no remote/location-specific input requests at runtime"],
+      "runtime_wired": true, "ui_visible": true, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "Intake exists for single business; location/remote-proof intake not wired."
+    },
+    {
+      "capability": "Simulation / adversarial testing (archetypes, fake proof, missing/contradictory data, reassessment)",
+      "classification": "WORKING_BUT_INSUFFICIENTLY_TESTED",
+      "severity_if_missing": "HIGH",
+      "evidence": ["domain 504 scored cases", "collective 360 scored cases", "remote-ops 24-scenario integration test", "tests/owner-mode/real-world-* workflows"],
+      "missing_evidence": ["simulations are library-level, not against persistence/UI/runtime"],
+      "runtime_wired": false, "ui_visible": false, "db_backed": false, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "Strong logic-level adversarial coverage; not system-level."
+    },
+    {
+      "capability": "Security / workspace isolation enforcement",
+      "classification": "PARTIAL",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["src/lib/canonical-route-enforcement", "src/domain/workspace/isolation-contracts.ts", "src/infra/errors.ts"],
+      "missing_evidence": ["DB-level isolation tests not run locally (P1001)", "new scope guards not enforced by any route"],
+      "runtime_wired": true, "ui_visible": false, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "Workspace isolation enforced on existing routes; location isolation has no runtime."
+    },
+    {
+      "capability": "Database / migrations integrity",
+      "classification": "WORKING_BUT_INSUFFICIENTLY_TESTED",
+      "severity_if_missing": "CRITICAL",
+      "evidence": ["prisma validate ok", "170 models", "77 migrations"],
+      "missing_evidence": ["migrate status P1001 (unreachable)", "no new migrations for remote/location"],
+      "runtime_wired": true, "ui_visible": false, "db_backed": true, "tested": false, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "Schema valid; applied-state and drift unverifiable in this environment."
+    },
+    {
+      "capability": "CI / verification pipeline",
+      "classification": "WORKING_BUT_INSUFFICIENTLY_TESTED",
+      "severity_if_missing": "HIGH",
+      "evidence": [".github/workflows/ci.yml vitest+lint+build+prisma", "post-merge main run 28267080873 green"],
+      "missing_evidence": ["lint ratchet hides 2152 errors", "CI green does not prove runtime wiring of new layers"],
+      "runtime_wired": true, "ui_visible": false, "db_backed": true, "tested": true, "ci_covered": true,
+      "owner_mode_relevant": true, "remote_ops_relevant": true, "multi_location_relevant": true,
+      "notes": "CI is real but can pass with unwired capabilities and large lint debt."
+    }
+  ]
+}
