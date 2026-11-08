@@ -1,0 +1,25 @@
+{
+  "workspace_model_found": true,
+  "reusable_models": {
+    "Workspace": "id, name, slug, isActive, createdAt, updatedAt",
+    "Engagement": "id, code, title, clientId, serviceTier, engagementMode, metadata (JSON store for setup data)"
+  },
+  "reusable_services": [
+    "toOperatorSafeError() — error transformation",
+    "withCanonicalEnforcement() — auth wrapper",
+    "enforceWorkspaceScoping() — scope middleware"
+  ],
+  "route_convention": "src/app/api/owner/[feature]/route.ts with GET/POST handlers",
+  "ui_convention": "src/app/(authenticated)/owner/[feature]/page.tsx with useState hooks",
+  "auth_convention": "requireServiceContext(ctx, workspaceId) + enforceWorkspaceScoping()",
+  "test_convention": "vitest with db mocks, [db] prefix for database-dependent tests",
+  "chosen_minimal_path": "Store setup data in Engagement.metadata (JSON). No schema changes. No external services.",
+  "intentionally_not_built": [
+    "Email/SMS notifications",
+    "OAuth integrations",
+    "Payment processing (Stripe)",
+    "Google Sheets sync",
+    "Audit event emission (ready for integration)",
+    "Setup wizard multi-step UI (form is linear)"
+  ]
+}
