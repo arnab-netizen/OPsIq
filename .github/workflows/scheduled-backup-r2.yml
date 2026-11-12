@@ -55,8 +55,9 @@ jobs:
 
       - name: Preflight check - required secrets/config exist
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
           AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+          AGE_ESCROW_RECIPIENT: ${{ vars.AGE_ESCROW_RECIPIENT }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -66,7 +67,7 @@ jobs:
           MANIFEST_SIGNING_KEY: ${{ secrets.MANIFEST_SIGNING_KEY }}
         run: |
           MISSING=0
-          for v in DATABASE_URL AGE_RECIPIENT R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MANIFEST_SIGNING_KEY; do
+          for v in DATABASE_URL AGE_RECIPIENT AGE_ESCROW_RECIPIENT R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MANIFEST_SIGNING_KEY; do
             if [ -z "${!v:-}" ]; then
               echo "::error::$v is missing or empty"
               MISSING=1
@@ -110,11 +111,22 @@ jobs:
           age --version
           aws --version
 
+      # F-LEAST-PRIVILEGE-BACKUP / F-BACKUP-CREDENTIAL-CHECK: prove, before any dump, that the backup
+      # credential (the dedicated read-only opsiq_backup role -- NOT the schema-owner login) can read
+      # every table and sequence, can dump the schema, and can write/create/administer nothing. Prints
+      # counts and booleans only; fails closed (an owner-level credential is refused).
+      - name: Credential preflight (read-only; counts only, no data)
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          REQUIRE_LEAST_PRIVILEGE: '1'
+        run: bash scripts/backup-credential-check.sh
+
       - name: Run encrypted backup to R2
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
           PRODUCTION_QBO_ENABLED: ${{ vars.PRODUCTION_QBO_ENABLED }}
           AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+          AGE_ESCROW_RECIPIENT: ${{ vars.AGE_ESCROW_RECIPIENT }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -126,4 +138,4 @@ jobs:
         if: success()
         run: |
           echo "Encrypted Production backup completed and uploaded to the private R2 bucket."
-          echo "GitHub holds no copy of the dump. To restore-rehearse, dispatch restore-rehearsal-r2.yml with the object name printed above."
+          echo "GitHub holds no copy of the dump. To verify the stored ciphertext, dispatch restore-rehearsal-r2.yml (no decryption). To prove a RESTORE, run scripts/restore-database-r2.sh locally (see the runbook)."

@@ -40,8 +40,10 @@ file, no log).
     Never holds the AGE private identity, the bucket-configuration (Bucket Lock) credential, or
     `ERASURE_LEDGER_SIGNING_KEY` — the scheduled writer can never decrypt anything it has ever
     uploaded, edit the Bucket Lock, or forge an erasure-ledger record.
-  - `backup-recovery`: AGE **PRIVATE** identity and an R2 **read-only** credential. Designed to
-    require manual reviewer approval before a job in this environment runs.
+  - `backup-recovery`: an R2 **read-only** credential ONLY (amended, F-PRIVATE-KEY-CUSTODY: the AGE
+    private identities are **not** stored in GitHub at all). Used by `restore-rehearsal-r2.yml`, which
+    verifies the stored **ciphertext** (checksum + age header with >= 2 recipient stanzas) and decrypts
+    nothing. Designed to require manual reviewer approval before a job in this environment runs.
 - A 7-day **Bucket Lock** on the `backups/` prefix (owner-decided, `BUCKET_LOCK_DECISION=USE` —
   see below) sits underneath the unchanged 35-day lifecycle: the most recent 7 days of backups are
   immutable against the writer credential, in addition to the create-once overwrite protection
@@ -93,7 +95,7 @@ No step below has been executed. This is a code/proof mission only.
    "Object Read only" token for `backup-recovery`. Neither is the bucket-configuration token from
    step 4/5 — the S3-compatible object API cannot reach the bucket-configuration REST API at all
    (`WRITER_CAN_EDIT_BUCKET_LOCK=NO`, structurally).
-7. **Generate an `age` keypair offline** (e.g. `age-keygen -o production-backup-identity.key`), on
+7. **Generate TWO independent `age` keypairs offline** (primary + escrow; see "Key custody" below) (e.g. `age-keygen -o production-backup-identity.key`), on
    a machine that is not this CI system. Record the public recipient line it prints (`age1...`) —
    this is **not secret**.
 8. **Create the erasure-ledger trust material**: generate `ERASURE_LEDGER_SIGNING_KEY` (32+
@@ -109,18 +111,21 @@ No step below has been executed. This is a code/proof mission only.
    recovery R2 token, and the erasure-ledger R2 token must be five genuinely distinct secret
    values — confirm none were accidentally reused before proceeding. Store: `backup-write` gets
    secret `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`, secret `MANIFEST_SIGNING_KEY`, variable
-   `R2_ENDPOINT`, variable `R2_BUCKET`, variable `AGE_RECIPIENT` (reuse the existing repo secret
-   `PRODUCTION_DATABASE_URL` for the DB credential — no new DB secret is needed). `backup-recovery`
-   gets secret `AGE_PRIVATE_IDENTITY`, secret `R2_READONLY_ACCESS_KEY_ID`/`R2_READONLY_SECRET_ACCESS_KEY`,
-   plus the same `R2_ENDPOINT`/`R2_BUCKET` variables. `ERASURE_LEDGER_SIGNING_KEY` and the
+   `R2_ENDPOINT`, variable `R2_BUCKET`, variables `AGE_RECIPIENT` **and** `AGE_ESCROW_RECIPIENT`
+   (both PUBLIC), and secret `BACKUP_DATABASE_URL` — the **dedicated read-only `opsiq_backup` role**
+   (see "Backup database role" below), **never** the schema-owner `PRODUCTION_DATABASE_URL`.
+   `backup-recovery` gets secret `R2_READONLY_ACCESS_KEY_ID`/`R2_READONLY_SECRET_ACCESS_KEY` plus the
+   same `R2_ENDPOINT`/`R2_BUCKET` variables. **No AGE private identity is ever stored in GitHub.** `ERASURE_LEDGER_SIGNING_KEY` and the
    erasure-ledger R2 token are stored only where the owner runs `append-erasure-ledger.ts`/
    `verify-erasure-ledger.ts` — **never** in `backup-write` or `backup-recovery`.
 10. **Execute a supervised first backup**: manually dispatch `scheduled-backup-r2.yml` and watch
     it run. Confirm the Summary step's printed object name, and confirm in the Cloudflare
     dashboard that exactly one new object (plus its checksum and manifest) exists in the bucket.
-11. **Execute a supervised restore rehearsal**: manually dispatch `restore-rehearsal-r2.yml` with
-    that object's name, approve the `backup-recovery` environment gate when prompted, and confirm
-    it passes.
+11. **Execute a supervised restore proof, LOCALLY** (see "Local restore" below): dispatch
+    `restore-rehearsal-r2.yml` with that object's name to verify the ciphertext in GitHub
+    (`CIPHERTEXT_VERIFIED ... recipient_stanzas=2`), then restore it on your own machine into a
+    disposable loopback database, then run the erasure reconciliation gate. Do not enable a
+    `schedule:` until both have passed.
 12. **Hostile delete/overwrite test against a disposable, non-Production object, while locked, if
     safe to do so**: upload a throwaway test object under `backups/` (not a real backup), confirm
     it is immediately locked, and confirm a direct delete/overwrite attempt against it with the
@@ -248,3 +253,68 @@ configuring and independently verifying the 7-day Bucket Lock (steps 4-5) and th
 trust material (steps 8-9). `R2_ERASURE_DOMAIN_INTEGRATED=YES` in code; `PROVIDER_BUCKET_LOCK_CONFIGURED=NO`
 and `R2_RESOURCES_CREATED=NO` remain true until the owner actually performs the steps above —
 code readiness is not the same as live provisioning.
+
+
+## Key custody, backup database role, and local restore (supersedes the earlier "AGE_PRIVATE_IDENTITY in `backup-recovery`" design)
+
+Added by the recovery-readiness closure. Each item below is implemented and tested in this branch;
+none of it provisions anything or touches Production — every step that does is an owner action.
+
+### Key custody (two independent keys, neither in GitHub)
+- `scripts/backup-database-r2.sh` encrypts every backup to **two** age recipients: `AGE_RECIPIENT`
+  (primary) and `AGE_ESCROW_RECIPIENT` (independent escrow). It refuses a missing, malformed or
+  duplicate escrow recipient, and refuses to store any object whose age **header** carries fewer than
+  two recipient stanzas (`ESCROW_RECIPIENTS_VERIFIED=2`).
+- **Primary identity**: generated offline on the operator's machine (`age-keygen`), protected with a
+  passphrase (`age-keygen | age -p -o primary.key.age`), backed up by the operator's own means.
+- **Escrow identity**: generated on a *different* device, printed/exported to offline media (paper
+  or an encrypted USB), stored in a *different physical location* (e.g. a safe), together with the
+  Cloudflare account recovery codes and the R2 read-only credential. Not in GitHub, not in a password
+  manager that syncs to the same account as the MacBook.
+- **Loss matrix**: MacBook lost → escrow decrypts. GitHub account lost → bucket + escrow + offline R2
+  credential still recover. Both identities lost → the backups are unrecoverable by design; this is
+  the accepted residual, so test the escrow key at least annually (decrypt the latest backup locally).
+- GitHub never holds a private identity: `restore-database-r2.sh` **refuses to run on a GitHub
+  Actions runner**, and `restore-rehearsal-r2.yml` decrypts nothing.
+
+### Backup database role (least privilege)
+- `scripts/backup/opsiq-backup-role.sql` creates `opsiq_backup`: LOGIN, `pg_read_all_data` only, no
+  superuser/createdb/createrole/replication/bypassrls, connection limit 2, read-only default,
+  60s idle-in-transaction timeout. Owner action, with approval: apply with the owner login, set the
+  password with `\password opsiq_backup`, store the **direct** (non-pooler) URL as `BACKUP_DATABASE_URL`
+  in `backup-write`. Rollback: `DROP OWNED BY opsiq_backup; DROP ROLE opsiq_backup;`.
+- `scripts/backup-credential-check.sh` (run by the workflow before every backup, and by hand before
+  the first one) proves — printing counts and booleans only — that the credential can read every table
+  and sequence, can dump the schema, and cannot write, create or administer anything. It classifies a
+  failure as `AUTH_FAILED | PRIVILEGE_DENIED | CONNECT_FAILED | OTHER` without printing raw error
+  text, so the next failure's cause is recorded (the 2026-10-28 failure's was lost with its artifact).
+
+### Local restore (never on GitHub; loopback database only)
+1. Download the encrypted object and its `.sha256` from R2 with the **read-only** credential into a
+   directory, e.g. `aws s3 cp s3://<bucket>/backups/<object> <dir>/ --endpoint-url <endpoint>` (same for `.sha256`).
+2. Start a disposable local Postgres (e.g. a `postgres:16`/`postgres:18` container on loopback) and
+   create an empty database.
+3. `OPSIQ_DB_TARGET=local DATABASE_URL=postgresql://…@localhost:…/<empty-db> AGE_IDENTITY_FILE=<identity file>
+   RESTORE_SOURCE_DIR=<dir> bash scripts/restore-database-r2.sh <object>` — checksum is verified before
+   decryption; `restore-database.sh` independently refuses any non-loopback/non-approved target.
+4. The script ends with `RESTORE_SERVICEABLE=NO_UNTIL_ERASURE_RECONCILED`: **the copy is quarantined.**
+
+### Post-erasure reconciliation (what lifts the quarantine)
+`ERASURE_LEDGER_SIGNING_KEY=… RESTORED_DATABASE_URL=<loopback restored copy> npx tsx scripts/privacy/verify-erasure-ledger.ts
+--ledger-dir <local copy of erasure-ledger/> --backup-timestamp <manifest timestamp_utc> [--reconciled-event-ids id,id]`
+- Chain invalid or unreadable → `INVALID`/`UNAVAILABLE`, exit 1 (uncertain = block).
+- Any erasure completed after the backup that is not in `--reconciled-event-ids` → `PENDING_ERASURE …`,
+  `RESTORE_PROMOTION=BLOCKED`, exit 1. Re-apply each one to the restored copy (`qbo-erasure.ts execute`
+  for QBO scope) and list its event id; only then does it exit 0 with `RESTORE_PROMOTION=PROMOTABLE`.
+- The restored copy's own `privacy_erasure_requests` tombstones are cross-checked against the ledger; a
+  contradiction is BLOCKED.
+- Nothing in this repo promotes a restore; a Production recovery workflow does not exist
+  (`GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED`) and must be a separate, owner-approved change.
+
+### Proof
+`src/__tests__/ci-cd/backup-restore-local-proof.db.test.ts` drives all of the above against real
+disposable databases with real `age`/`pg_dump`/`psql` (13 tests; skipped where `age` is not installed —
+the CI DB job does not ship it, so it is a local/owner-run proof): role provisioning from the real SQL,
+credential-check pass/fail matrix, backup as `opsiq_backup` with two recipients, restore with EITHER
+identity alone producing identical per-table row counts and content digests, wrong key / tampered
+ciphertext / production target all refused, and every reconciliation outcome above.

@@ -172,6 +172,8 @@ const baseBackupEnv = {
   // be real because `age` validates the bech32 checksum -- a made-up string fails at the
   // encryption stage with "malformed recipient", not at any stage this suite means to test.
   AGE_RECIPIENT: "age1a5yjvntjqll0mlu8cdwzx0zh3sc8vlxm3tcrkmgthkjk9l5f53lsmprz5z",
+  // Independent ESCROW recipient (second public key; its private half was discarded at generation).
+  AGE_ESCROW_RECIPIENT: "age1gqhrcpuugznjhwfngzus4na6pk07h727jp3m2fw73r2kk3yf6qeq0n0kwd",
   R2_ENDPOINT: "https://abc123.r2.cloudflarestorage.com",
   R2_BUCKET: "opsiq-production-backups",
   AWS_ACCESS_KEY_ID: "fake-key-id",
@@ -740,17 +742,156 @@ describe("static invariants: no plaintext on disk, no GitHub artifact of the dum
     expect(WORKFLOW_BACKUP + WORKFLOW_RESTORE + BACKUP_SCRIPT_SRC).not.toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
   });
 
-  it("restore-rehearsal-r2.yml never wires up the real PRODUCTION_DATABASE_URL secret and always targets the disposable postgres:18 service container (anti-resurrection: it structurally cannot restore into Production)", () => {
-    // Matches an actual secret wiring (e.g. `${{ secrets.PRODUCTION_DATABASE_URL }}`), not this
-    // file's own prose explaining, in a comment, that no such wiring exists.
-    expect(WORKFLOW_RESTORE).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL/);
-    expect(WORKFLOW_RESTORE).toMatch(/OPSIQ_DB_TARGET:\s*local/);
-    expect(WORKFLOW_RESTORE).toMatch(/image:\s*postgres:18/);
+  it("restore-rehearsal-r2.yml verifies CIPHERTEXT only: no private identity, no decryption, no database, no Production secret (F-PRIVATE-KEY-CUSTODY)", () => {
+    // Executable lines only: the file's own comments legitimately explain what it does NOT do.
+    const body = WORKFLOW_RESTORE.split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
+    expect(body).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL|secrets\.BACKUP_DATABASE_URL/);
+    expect(body).not.toMatch(/AGE_PRIVATE_IDENTITY|AGE_IDENTITY|age\s+(-d|--decrypt)|services:|image:\s*postgres|OPSIQ_DB_TARGET|restore-database/);
+    expect(body).toMatch(/CIPHERTEXT_VERIFIED/);
+    expect(body).toMatch(/recipient stanza|ESCROW_RECIPIENTS_MISSING/);
+    expect(body).toMatch(/R2_READONLY_ACCESS_KEY_ID/);
   });
 
   it("the anti-resurrection gate is recorded as a hard, named precondition in the closure doc, not left implicit (RESTORE_NOT_SERVICEABLE_UNTIL_ERASURE_RECONCILED)", () => {
     const closureDoc = readFileSync(resolve(process.cwd(), "docs/opsiq/product/R2_BACKUP_AVAILABILITY_ERASURE_CLOSURE.md"), "utf8");
     expect(closureDoc).toMatch(/RESTORE_NOT_SERVICEABLE_UNTIL_ERASURE_RECONCILED/);
     expect(closureDoc).toMatch(/POST_BACKUP_ERASURE_LEDGER_REQUIRED=YES/);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// KEY CUSTODY / ESCROW (F-AGE-ESCROW, F-PRIVATE-KEY-CUSTODY): a backup must be decryptable by TWO
+// independently held private keys (neither of which is ever in GitHub), a single-recipient object is
+// refused BEFORE anything is stored, and decryption is refused on a GitHub runner.
+// ---------------------------------------------------------------------------------------------
+describe("backup-database-r2.sh: independent age escrow recipient is mandatory and verified from the ciphertext", () => {
+  const stdoutOf = (r: ReturnType<typeof run>) => `${r.stdout}\n${r.stderr}`;
+
+  it("refuses to run without AGE_ESCROW_RECIPIENT, before pg_dump", () => {
+    const r = run(BACKUP, { ...omit(baseBackupEnv, "AGE_ESCROW_RECIPIENT"), FAKE_PSQL_OUT: "0" });
+    expect(r.status).not.toBe(0);
+    expect(stdoutOf(r)).toMatch(/AGE_ESCROW_RECIPIENT not set/);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  it("refuses an escrow recipient identical to the primary (no hidden single point of failure)", () => {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", AGE_ESCROW_RECIPIENT: baseBackupEnv.AGE_RECIPIENT });
+    expect(r.status).not.toBe(0);
+    expect(stdoutOf(r)).toMatch(/identical/);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  it("refuses a malformed escrow recipient", () => {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", AGE_ESCROW_RECIPIENT: "not-an-age-key" });
+    expect(r.status).not.toBe(0);
+    expect(stdoutOf(r)).toMatch(/AGE_ESCROW_RECIPIENT does not look like an age public recipient/);
+  });
+
+  it.skipIf(!hasAge)("a stored object decrypts with EITHER private identity alone, and not with an unrelated one", () => {
+    const primary = ephemeralKeypair();
+    const escrow = ephemeralKeypair();
+    const stranger = ephemeralKeypair();
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", AGE_RECIPIENT: primary.recipient, AGE_ESCROW_RECIPIENT: escrow.recipient });
+    expect(r.status).toBe(0);
+    expect(stdoutOf(r)).toMatch(/ESCROW_RECIPIENTS_VERIFIED=2/);
+
+    const objects = readdirSync(join(bucketDir, "backups")).filter((n) => n.endsWith(".sql.gz.age"));
+    expect(objects).toHaveLength(1);
+    const objectPath = join(bucketDir, "backups", objects[0]);
+    const decryptWith = (identity: string) => {
+      const f = join(dir, `id-${Math.random().toString(36).slice(2)}.key`);
+      writeFileSync(f, identity);
+      return spawnSync("bash", ["-c", `age -d -i "${f}" "${objectPath}" | gzip -dc`], { encoding: "utf8" });
+    };
+    const viaPrimary = decryptWith(primary.identity);
+    const viaEscrow = decryptWith(escrow.identity);
+    expect(viaPrimary.status).toBe(0);
+    expect(viaEscrow.status).toBe(0);
+    expect(viaPrimary.stdout).toContain("some stable deterministic content for the fake dump");
+    expect(viaEscrow.stdout).toBe(viaPrimary.stdout);
+    expect(decryptWith(stranger.identity).status).not.toBe(0);
+  });
+
+  it.skipIf(!hasAge)("a ciphertext carrying only ONE recipient stanza is refused before upload (verified from the header, not from intent)", () => {
+    const realAge = spawnSync("bash", ["-c", "command -v age"], { encoding: "utf8" }).stdout.trim();
+    // A hostile/buggy `age` that silently drops the second recipient.
+    writeFileSync(
+      join(dir, "age"),
+      ["#!/usr/bin/env bash", 'first=""; for a in "$@"; do if [ "$prev" = "-r" ] && [ -z "$first" ]; then first="$a"; fi; prev="$a"; done', `exec "${realAge}" -r "$first"`].join("\n"),
+    );
+    chmodSync(join(dir, "age"), 0o755);
+    const primary = ephemeralKeypair();
+    const escrow = ephemeralKeypair();
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", AGE_RECIPIENT: primary.recipient, AGE_ESCROW_RECIPIENT: escrow.recipient });
+    expect(r.status).not.toBe(0);
+    expect(stdoutOf(r)).toMatch(/recipient stanza\(s\); at least 2/);
+    expect(readdirSync(join(bucketDir, "backups"))).toHaveLength(0);
+  });
+});
+
+describe("backup-database-r2.sh / restore-database-r2.sh: local-only seams cannot reach Production", () => {
+  it.skipIf(!hasAge)("BACKUP_LOCAL_ONLY_DIR writes the encrypted object + checksum + manifest locally and never touches R2", () => {
+    const out = join(dir, "local-out");
+    const env = {
+      ...omit(omit(omit(omit(baseBackupEnv, "R2_ENDPOINT"), "R2_BUCKET"), "AWS_ACCESS_KEY_ID"), "AWS_SECRET_ACCESS_KEY"),
+      DATABASE_URL: "postgresql://u:p@localhost:5432/disposable",
+      BACKUP_LOCAL_ONLY_DIR: out,
+      FAKE_PSQL_OUT: "0",
+    };
+    const r = run(BACKUP, env);
+    expect(r.status).toBe(0);
+    expect(`${r.stdout}`).toMatch(/BACKUP_LOCAL_ONLY_COMPLETE/);
+    const names = readdirSync(out);
+    expect(names.some((n) => n.endsWith(".sql.gz.age"))).toBe(true);
+    expect(names.some((n) => n.endsWith(".sql.gz.age.sha256"))).toBe(true);
+    expect(names.some((n) => n.endsWith(".manifest.json"))).toBe(true);
+    expect(existsSync(join(dir, "aws.called"))).toBe(false);
+  });
+
+  it("BACKUP_LOCAL_ONLY_DIR is refused for any non-loopback DATABASE_URL (it can never pull a Production dump to a workstation)", () => {
+    const r = run(BACKUP, { ...baseBackupEnv, FAKE_PSQL_OUT: "0", BACKUP_LOCAL_ONLY_DIR: join(dir, "x"), DATABASE_URL: "postgresql://u:p@ep-x.neon.tech/db" });
+    expect(r.status).not.toBe(0);
+    expect(`${r.stderr}`).toMatch(/only permitted with a loopback DATABASE_URL/);
+    expect(existsSync(join(dir, "pg_dump.called"))).toBe(false);
+  });
+
+  it("restore refuses to decrypt on a GitHub Actions runner (the private identity must never be in GitHub)", () => {
+    const identityFile = join(dir, "identity.key");
+    writeFileSync(identityFile, "AGE-SECRET-KEY-1FAKE\n");
+    const r = run(RESTORE, { GITHUB_ACTIONS: "true", AGE_IDENTITY_FILE: identityFile, OPSIQ_DB_TARGET: "local", RESTORE_SOURCE_DIR: dir }, ["opsiq_backup_x.sql.gz.age"]);
+    expect(r.status).not.toBe(0);
+    expect(`${r.stderr}`).toMatch(/refusing to decrypt a backup on a GitHub Actions runner/);
+  });
+
+  it("RESTORE_SOURCE_DIR is only permitted with OPSIQ_DB_TARGET=local", () => {
+    const identityFile = join(dir, "identity.key");
+    writeFileSync(identityFile, "AGE-SECRET-KEY-1FAKE\n");
+    for (const target of ["production", "staging", ""]) {
+      const r = run(RESTORE, { AGE_IDENTITY_FILE: identityFile, OPSIQ_DB_TARGET: target, RESTORE_SOURCE_DIR: dir }, ["opsiq_backup_x.sql.gz.age"]);
+      expect(r.status, target).not.toBe(0);
+      expect(`${r.stderr}`, target).toMatch(/RESTORE_SOURCE_DIR is only permitted with OPSIQ_DB_TARGET=local/);
+    }
+  });
+});
+
+describe("scheduled-backup-r2.yml: dedicated read-only credential, escrow recipient, credential preflight", () => {
+  const body = WORKFLOW_BACKUP.split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
+
+  it("uses the dedicated BACKUP_DATABASE_URL (opsiq_backup role) and never the schema-owner PRODUCTION_DATABASE_URL", () => {
+    expect(body).toMatch(/secrets\.BACKUP_DATABASE_URL/);
+    expect(body).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL/);
+  });
+
+  it("requires and passes the independent escrow recipient", () => {
+    expect(body).toMatch(/vars\.AGE_ESCROW_RECIPIENT/);
+    expect(body).toMatch(/for v in DATABASE_URL AGE_RECIPIENT AGE_ESCROW_RECIPIENT/);
+  });
+
+  it("runs the read-only credential preflight (least-privilege required) BEFORE the backup step", () => {
+    const credIdx = body.indexOf("scripts/backup-credential-check.sh");
+    const backupIdx = body.indexOf("bash scripts/backup-database-r2.sh");
+    expect(credIdx).toBeGreaterThan(0);
+    expect(backupIdx).toBeGreaterThan(credIdx);
+    expect(body).toMatch(/REQUIRE_LEAST_PRIVILEGE:\s*'1'/);
   });
 });

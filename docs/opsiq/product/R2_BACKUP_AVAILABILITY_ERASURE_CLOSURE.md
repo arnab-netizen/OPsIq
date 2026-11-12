@@ -1,5 +1,13 @@
 # R2 backup availability + erasure-domain closure
 
+> **Amendment (recovery-readiness closure).** The AGE private identity is no longer stored in the
+> `backup-recovery` GitHub Environment (or anywhere in GitHub): backups carry two independent recipients
+> (primary + escrow), decryption is refused on GitHub runners, and `backup-recovery` holds only an R2
+> read-only credential. Failure-model rows below that mention `backup-recovery`'s AGE private identity
+> are therefore moot (row C is now "cannot occur: no private identity exists in GitHub"). The backup
+> uses a dedicated read-only `opsiq_backup` database role, and the restore-reconciliation gate is wired
+> into the local restore procedure. See `R2_BACKUP_RUNBOOK.md`, "Key custody, backup database role, and local restore".
+
 Status: DRAFT, branch-only, stacked on PR #647 (`claude/private-encrypted-r2-backup`), itself
 stacked on PR #642, both unmerged. Nothing in this document or the code it describes has been
 provisioned, enabled, or run against Production — `PROVIDER_BUCKET_LOCK_CONFIGURED=NO`,

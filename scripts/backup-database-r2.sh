@@ -25,6 +25,8 @@
 # Required env:
 #   DATABASE_URL          direct (non-pooler) Production Postgres connection string
 #   AGE_RECIPIENT         age public recipient (age1...); NOT secret -- the decrypt key is not here
+#   AGE_ESCROW_RECIPIENT  SECOND, independent age public recipient (escrow key held offline); REQUIRED,
+#                         must differ from AGE_RECIPIENT (see KEY CUSTODY below)
 #   R2_ENDPOINT           https://<account-id>.r2.cloudflarestorage.com (default R2 jurisdiction
 #                          only -- see R2_ENDPOINT_POLICY in docs/opsiq/product/R2_BACKUP_RUNBOOK.md)
 #   R2_BUCKET             private R2 bucket name (this script does not create or configure it)
@@ -41,6 +43,12 @@
 #
 # Usage: ./backup-database-r2.sh
 set -euo pipefail
+
+# Portable SHA-256 (GNU coreutils `sha256sum` on Linux/CI; `shasum -a 256` on macOS, where a
+# MacBook is the expected local-restore machine).
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'; else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 R2_OBJECT_PREFIX="${R2_OBJECT_PREFIX:-backups/}"
@@ -133,16 +141,50 @@ if echo "$DATABASE_URL" | grep -q -- '-pooler'; then
   exit 1
 fi
 
+# KEY CUSTODY (F-AGE-ESCROW): every backup is encrypted to TWO independent age recipients so that
+# losing either private identity (laptop loss, GitHub account loss, a forgotten passphrase) never
+# makes a backup unrecoverable: AGE_RECIPIENT (the operator's day-to-day key) and
+# AGE_ESCROW_RECIPIENT (an independently generated key whose private half lives only offline, in a
+# different physical location -- see docs/opsiq/product/R2_BACKUP_RUNBOOK.md "Key custody").
+# Neither private identity ever exists in GitHub: this script receives PUBLIC recipients only.
+# A single-recipient backup is refused, and the two recipients must differ (a copy-pasted
+# duplicate would silently reintroduce a single point of failure).
 if [ -z "${AGE_RECIPIENT:-}" ]; then
   echo "ERROR: AGE_RECIPIENT not set -- refusing to produce a backup with no encryption recipient" >&2
   exit 1
 fi
-if ! [[ "$AGE_RECIPIENT" =~ ^age1[a-z0-9]{20,}$ ]]; then
-  echo "ERROR: AGE_RECIPIENT does not look like an age public recipient (expected 'age1...')" >&2
+if [ -z "${AGE_ESCROW_RECIPIENT:-}" ]; then
+  echo "ERROR: AGE_ESCROW_RECIPIENT not set -- refusing to produce a single-recipient backup (a lost key would make it unrecoverable)" >&2
+  exit 1
+fi
+for v in AGE_RECIPIENT AGE_ESCROW_RECIPIENT; do
+  if ! [[ "${!v}" =~ ^age1[a-z0-9]{20,}$ ]]; then
+    echo "ERROR: $v does not look like an age public recipient (expected 'age1...')" >&2
+    exit 1
+  fi
+done
+if [ "$AGE_RECIPIENT" = "$AGE_ESCROW_RECIPIENT" ]; then
+  echo "ERROR: AGE_RECIPIENT and AGE_ESCROW_RECIPIENT are identical -- the escrow key must be independent" >&2
   exit 1
 fi
 
-for v in R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MANIFEST_SIGNING_KEY; do
+# LOCAL-ONLY SEAM (F-LOCAL-RESTORE-PROOF): with BACKUP_LOCAL_ONLY_DIR set, the encrypted object,
+# checksum and manifest are written to that directory instead of R2 (no R2/aws credentials are
+# read). Used only to prove the backup -> restore round trip against a disposable database; it is
+# refused for any non-loopback DATABASE_URL so it can never become a way to pull a Production dump
+# onto a workstation or runner.
+LOCAL_ONLY="${BACKUP_LOCAL_ONLY_DIR:-}"
+if [ -n "$LOCAL_ONLY" ]; then
+  if ! echo "$DATABASE_URL" | grep -qE '@(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?/'; then
+    echo "ERROR: BACKUP_LOCAL_ONLY_DIR is only permitted with a loopback DATABASE_URL" >&2
+    exit 1
+  fi
+  mkdir -p "$LOCAL_ONLY"
+fi
+
+REQUIRED_VARS="MANIFEST_SIGNING_KEY"
+[ -z "$LOCAL_ONLY" ] && REQUIRED_VARS="R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MANIFEST_SIGNING_KEY"
+for v in $REQUIRED_VARS; do
   if [ -z "${!v:-}" ]; then
     echo "ERROR: $v not set" >&2
     exit 1
@@ -162,15 +204,17 @@ if [ ${#MANIFEST_SIGNING_KEY} -lt 32 ]; then
   echo "ERROR: MANIFEST_SIGNING_KEY is too short (expected at least 32 characters) -- refusing to sign with a weak key" >&2
   exit 1
 fi
-if ! [[ "$R2_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
-  echo "ERROR: R2_BUCKET does not look like a valid bucket name" >&2
-  exit 1
+if [ -z "$LOCAL_ONLY" ]; then
+  if ! [[ "$R2_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
+    echo "ERROR: R2_BUCKET does not look like a valid bucket name" >&2
+    exit 1
+  fi
+  if ! [[ "$R2_ENDPOINT" =~ ^https://[a-z0-9]+\.r2\.cloudflarestorage\.com/?$ ]]; then
+    echo "ERROR: R2_ENDPOINT does not look like a Cloudflare R2 account endpoint" >&2
+    exit 1
+  fi
+  R2_ENDPOINT="${R2_ENDPOINT%/}"
 fi
-if ! [[ "$R2_ENDPOINT" =~ ^https://[a-z0-9]+\.r2\.cloudflarestorage\.com/?$ ]]; then
-  echo "ERROR: R2_ENDPOINT does not look like a Cloudflare R2 account endpoint" >&2
-  exit 1
-fi
-R2_ENDPOINT="${R2_ENDPOINT%/}"
 
 if ! command -v pg_dump >/dev/null 2>&1; then
   echo "ERROR: pg_dump not found on PATH" >&2
@@ -180,7 +224,7 @@ if ! command -v age >/dev/null 2>&1; then
   echo "ERROR: age not found on PATH" >&2
   exit 1
 fi
-if ! command -v aws >/dev/null 2>&1; then
+if [ -z "$LOCAL_ONLY" ] && ! command -v aws >/dev/null 2>&1; then
   echo "ERROR: aws CLI not found on PATH" >&2
   exit 1
 fi
@@ -204,7 +248,7 @@ if pg_dump \
   --blobs \
   2> "$PG_DUMP_STDERR" \
   | gzip -9 \
-  | age -r "$AGE_RECIPIENT" \
+  | age -r "$AGE_RECIPIENT" -r "$AGE_ESCROW_RECIPIENT" \
   > "$ENCRYPTED_FILE"; then
   # ROOT-CAUSE: $PIPESTATUS is overwritten by bash after EVERY pipeline it runs -- including a
   # trivial single-command one. Reading it on a line AFTER this if/else (once per branch, as
@@ -235,8 +279,18 @@ if [ "$ENCRYPTED_SIZE" -eq 0 ]; then
 fi
 echo "Backup pipeline completed in ${DURATION}s, encrypted size ${ENCRYPTED_SIZE} bytes"
 
+# Independent escrow proof, from the ciphertext itself (not from this script's own intent): the age
+# header must carry at least TWO recipient stanzas before anything is stored. The header is plain
+# text up to the first '---' MAC line, so this reads only the header, never any payload.
+RECIPIENT_STANZAS=$(head -c 8192 "$ENCRYPTED_FILE" | LC_ALL=C awk '/^---/{exit} /^-> /{n++} END{print n+0}')
+if [ "$RECIPIENT_STANZAS" -lt 2 ]; then
+  echo "ERROR: encrypted object carries $RECIPIENT_STANZAS recipient stanza(s); at least 2 (primary + escrow) are required -- refusing to store it" >&2
+  exit 1
+fi
+echo "ESCROW_RECIPIENTS_VERIFIED=$RECIPIENT_STANZAS"
+
 # --- 4. SHA-256 over the FINAL ENCRYPTED object only ---
-CHECKSUM=$(sha256sum "$ENCRYPTED_FILE" | awk '{print $1}')
+CHECKSUM=$(sha256_of "$ENCRYPTED_FILE")
 echo "$CHECKSUM" > "$CHECKSUM_FILE"
 echo "Checksum (of the encrypted object): $CHECKSUM"
 
@@ -327,6 +381,14 @@ upload_create_once() {
   fi
   return 0
 }
+
+if [ -n "$LOCAL_ONLY" ]; then
+  cp "$ENCRYPTED_FILE" "$LOCAL_ONLY/$OBJECT_NAME"
+  cp "$CHECKSUM_FILE" "$LOCAL_ONLY/${OBJECT_NAME}.sha256"
+  cp "$MANIFEST_FILE" "$LOCAL_ONLY/$MANIFEST_NAME"
+  echo "BACKUP_LOCAL_ONLY_COMPLETE object=$OBJECT_NAME dir=$LOCAL_ONLY (no R2 upload performed)"
+  exit 0
+fi
 
 UPLOAD_KEY_BACKUP="${R2_OBJECT_PREFIX}${OBJECT_NAME}"
 UPLOAD_KEY_CHECKSUM="${R2_OBJECT_PREFIX}${CHECKSUM_NAME}"
