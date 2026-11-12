@@ -477,7 +477,9 @@ describe("A3 governance: restore-database.sh cannot be an ad-hoc production rest
     for (const line of code(wrapper)) {
       const t = line.trim();
       if (t.startsWith("#")) continue;
-      expect(/(^|\s)(export\s+)?OPSIQ_DB_TARGET=/.test(t), `restore-database-r2.sh must never set the restore target itself: ${t}`).toBe(false);
+      // Quoted text (error messages, usage hints) may NAME the variable; only a real assignment/export counts.
+      const unquoted = t.replace(/"[^"]*"|'[^']*'/g, "");
+      expect(/(^|\s)(export\s+)?OPSIQ_DB_TARGET=/.test(unquoted), `restore-database-r2.sh must never set the restore target itself: ${t}`).toBe(false);
     }
   });
 
