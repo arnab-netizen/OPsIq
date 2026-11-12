@@ -494,8 +494,24 @@ jobs:
       - name: Install and verify real age (restore-proof prerequisite; fail-closed)
         run: |
           set -euo pipefail
+          . /etc/os-release
+          echo "::notice title=runner-os::$PRETTY_NAME default_pg_dump=$(pg_dump --version 2>/dev/null || echo none) installed_pg_majors=$(ls /usr/lib/postgresql 2>/dev/null | tr '\n' ' ')"
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends age postgresql-client-16
+          # Ubuntu archive first; on ANY failure surface the real apt error as an annotation (job logs
+          # are not readable from tooling) and retry once via the PGDG archive, the same proven
+          # approach as scheduled-backup-r2.yml. Both failing is a hard, explained failure.
+          if ! sudo apt-get install -y --no-install-recommends age postgresql-client-16 > "$RUNNER_TEMP/apt1.log" 2>&1; then
+            echo "::warning title=apt-archive-install-failed::$(tail -5 "$RUNNER_TEMP/apt1.log" | tr '\n' ' ' | cut -c1-700)"
+            sudo apt-get install -y --no-install-recommends curl ca-certificates
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+            sudo apt-get update
+            if ! sudo apt-get install -y --no-install-recommends age postgresql-client-16 > "$RUNNER_TEMP/apt2.log" 2>&1; then
+              echo "::error title=apt-pgdg-install-failed::$(tail -5 "$RUNNER_TEMP/apt2.log" | tr '\n' ' ' | cut -c1-700)"
+              exit 1
+            fi
+          fi
           # Root cause F-RESTORE-PROOF-PG-MAJOR-MISMATCH (found by the first real CI execution of the
           # proof, PR #660 run 43274968678): the runner's default pg_dump is newer than the postgres:16
           # service container; a newer pg_dump emits `SET transaction_timeout = 0;` which a PG16 server

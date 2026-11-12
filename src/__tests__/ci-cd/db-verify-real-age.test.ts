@@ -90,4 +90,14 @@ describe("DB job runs the real-age restore proof (F-RESTORE-PROOF-SILENT-SKIP)",
     expect(run).toContain("::notice title=restore-proof-test::");
     expect(run).not.toMatch(/\|\|\s*true/);
   });
+
+  it("apt failures are diagnosable (annotations) and retried once via PGDG, then fail hard", () => {
+    const run = steps[installIdx].run ?? "";
+    expect(run).toContain("::notice title=runner-os::");
+    expect(run).toContain("::warning title=apt-archive-install-failed::");
+    expect(run).toContain("apt.postgresql.org");
+    expect(run).toContain("::error title=apt-pgdg-install-failed::");
+    expect(run).toMatch(/apt-pgdg-install-failed::[^\n]*\n\s+exit 1/);
+    expect(run).not.toMatch(/\|\|\s*true/);
+  });
 });
