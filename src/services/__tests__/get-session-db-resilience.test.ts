@@ -39,11 +39,10 @@ vi.mock("@/lib/db", () => {
       _timeoutMs: number,
       fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
     ) => fn(await pool.connect()),
-    // F-PROD-STARTUP-COLDSTART second-mechanism forensic: auth.ts now imports
-    // this named export at module scope (to derive SESSION_QUERY_TIMEOUT_MS)
-    // — a full module mock must provide every export the mocked module's
-    // callers use.
-    POOL_CONNECTION_TIMEOUT_MS: 90_000,
+    // F-PGBOUNCER-TXN-SAFETY: auth.ts now derives SESSION_QUERY_TIMEOUT_MS
+    // from this formula (src/lib/db.ts) instead of the raw constant above
+    // directly — same reasoning, this mock must provide it too.
+    withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
     getDbInstance: vi.fn().mockResolvedValue({}),
   };
 });
@@ -74,14 +73,16 @@ describe("getSession() — DB-failure resilience (P0-15)", () => {
     const result = await getSession();
     expect(result).toBeNull();
     // Test timeout (not an assertion) intentionally exceeds auth.ts's real
-    // SESSION_QUERY_TIMEOUT_MS. F-PROD-STARTUP-COLDSTART second-mechanism
-    // forensic: getSession() now derives this from
-    // POOL_CONNECTION_TIMEOUT_MS(90s)+SESSION_STATEMENT_TIMEOUT_MS(4s)+3s = 97s,
-    // matching the raw-client bound already used by claimStartup()/
-    // checkDatabase()/checkMigrationReadiness() — so this test actually
-    // observes the real race settle instead of vitest's own runner cutting
-    // it off first.
-  }, 100_000);
+    // SESSION_QUERY_TIMEOUT_MS. F-PGBOUNCER-TXN-SAFETY: withRawStatementTimeout()
+    // now runs an explicit BEGIN/SET LOCAL/fn/COMMIT-or-ROLLBACK with a
+    // client-side backstop on BOTH the main sequence and the ROLLBACK
+    // cleanup path, so SESSION_QUERY_TIMEOUT_MS is derived from
+    // withRawStatementTimeoutWorstCaseMs(SESSION_STATEMENT_TIMEOUT_MS) + 3000
+    // = POOL_CONNECTION_TIMEOUT_MS(90s) + SESSION_STATEMENT_TIMEOUT_MS(4s) +
+    // 2*CLIENT_SIDE_BACKSTOP_MARGIN_MS(10s) + 3s = 107s -- so this test
+    // actually observes the real race settle instead of vitest's own runner
+    // cutting it off first.
+  }, 115_000);
 
   it("never returns an authenticated session on DB failure, even for a token that would otherwise be valid", async () => {
     // Sanity: prove the mock CAN return a valid session when the query succeeds,
