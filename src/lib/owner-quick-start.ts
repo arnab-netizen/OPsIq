@@ -89,11 +89,11 @@ function snapshotIdOf(body: unknown): string | null {
 }
 
 /** Run the first diagnosis on an ALREADY SAVED snapshot (the retry path — never re-posts the snapshot). */
-export async function retryDiagnosis(api: QuickStartApi, businessId: string, snapshotId: string): Promise<QuickStartResult> {
+export async function retryDiagnosis(api: QuickStartApi, businessId: string, snapshotId: string, opts: { firstDiagnosisOnly?: boolean } = {}): Promise<QuickStartResult> {
   try {
     await api(`/api/owner/finance/businesses/${encodeURIComponent(businessId)}/diagnoses`, {
       method: "POST",
-      body: JSON.stringify({ snapshotId }),
+      body: JSON.stringify(opts.firstDiagnosisOnly ? { snapshotId, firstDiagnosisOnly: true } : { snapshotId }),
     });
     return { status: "diagnosed", snapshotId };
   } catch (error) {
