@@ -620,6 +620,16 @@ export async function withStatementTimeout<T>(
  */
 export interface RawQueryClient {
   query: <T = unknown>(text: string, values?: readonly unknown[]) => Promise<{ rows: T[] }>;
+  /**
+   * F-IDLE-TXN-CLIENT-ERROR: node-postgres' real Client/PoolClient is an
+   * EventEmitter and pg-pool REMOVES its own 'error' listener from a client
+   * for as long as it is checked out. withRawStatementTimeout() therefore
+   * attaches (and later detaches) its own listener -- see that function.
+   * Optional so lightweight test doubles that only implement query()/release()
+   * keep satisfying this contract.
+   */
+  on?: (event: "error", listener: (err: Error) => void) => unknown;
+  removeListener?: (event: "error", listener: (err: Error) => void) => unknown;
 }
 
 /**
@@ -704,6 +714,15 @@ export function withRawStatementTimeoutWorstCaseMs(statementTimeoutMs: number): 
 }
 
 export class ClientSideExecutionTimeoutError extends Error {
+  /**
+   * SQLSTATE (or undefined) of a connection-level error the checked-out
+   * client emitted BEFORE this backstop fired -- e.g. 25P03 when the
+   * server's own idle_in_transaction_session_timeout (set below to the same
+   * margin as this backstop) terminated the backend first. Attribution only;
+   * the error name and message are unchanged.
+   */
+  public connectionErrorCode?: string;
+
   constructor(label: string, phase: "main" | "rollback", timeoutMs: number) {
     super(
       `withRawStatementTimeout: client-side backstop fired during ${phase} after ${timeoutMs}ms for "${label}" -- ` +
@@ -770,6 +789,52 @@ export async function withRawStatementTimeout<T>(
   const client = await pool.connect();
   const acquiredAt = Date.now();
 
+  // F-IDLE-TXN-CLIENT-ERROR root cause (reproduced against a real local
+  // PostgreSQL; see db-raw-statement-timeout-hostile.db.test.ts): pg-pool
+  // REMOVES its own 'error' listener from a client at checkout and only
+  // re-adds it on release, so a checked-out client has ZERO 'error'
+  // listeners. node-postgres emits 'error' on the client whenever the
+  // backend sends a FATAL/terminates the connection while no query is
+  // active -- and an EventEmitter 'error' with no listener THROWS, i.e. it
+  // becomes a process-level uncaughtException that takes down the whole
+  // function instance and every request on it. This function itself makes
+  // that event deterministic: `SET LOCAL idle_in_transaction_session_timeout`
+  // below is set to the SAME margin as the client-side backstop, so a
+  // stalled `fn` on a still-live connection gets a server-side
+  // "terminating connection due to idle-in-transaction timeout" (SQLSTATE
+  // 25P03) racing the backstop by a few milliseconds. A pool-level
+  // pool.on('error') cannot help: it only ever sees idle clients.
+  //
+  // The listener below owns that event for exactly the span this function
+  // holds the client. It does NOT swallow it: every connection error is
+  // logged with its SQLSTATE and, if the backstop later fires, attached to
+  // ClientSideExecutionTimeoutError.connectionErrorCode. Control flow is
+  // unchanged (the in-flight query rejects through its own callback, or the
+  // backstop still bounds a `fn` that never settles), and a client that
+  // emitted a connection error is never returned to the pool as healthy
+  // (it is not queryable, so ROLLBACK fails and release(err) discards it).
+  const connectionErrors: Error[] = [];
+  const onClientError = (err: Error): void => {
+    connectionErrors.push(err);
+    try {
+      logger.warn("[db] withRawStatementTimeout checked-out client emitted a connection error", {
+        label,
+        sqlstate: (err as { code?: string }).code,
+        errorName: err.name,
+      });
+    } catch {
+      // Logging must never throw out of an EventEmitter listener.
+    }
+  };
+  client.on?.("error", onClientError);
+  // Detach only on the paths that hand the client BACK to the pool for reuse,
+  // so a reused client never accumulates listeners (MaxListenersExceeded).
+  // A discarded client (release(err)) is destroyed and never reused; it keeps
+  // the listener so a late FATAL still has an owner.
+  const detachClientErrorListener = (): void => {
+    client.removeListener?.("error", onClientError);
+  };
+
   const mainBackstopMs = safeTimeoutMs + CLIENT_SIDE_BACKSTOP_MARGIN_MS;
   const normalPath = (async () => {
     await client.query("BEGIN");
@@ -805,6 +870,7 @@ export async function withRawStatementTimeout<T>(
   try {
     const result = await racedNormalPath;
     clearMainBackstop();
+    detachClientErrorListener();
     client.release();
     // Logging must never influence control flow: a throw here must not be
     // mistaken for a real transaction failure by the catch below, which
@@ -832,10 +898,15 @@ export async function withRawStatementTimeout<T>(
       // rejection or attempt a release() once this one has already
       // discarded the client.
       normalPath.catch(() => undefined);
+      const lostConnectionCode = (connectionErrors[0] as { code?: string } | undefined)?.code;
+      if (errorObj instanceof ClientSideExecutionTimeoutError && connectionErrors.length > 0) {
+        errorObj.connectionErrorCode = lostConnectionCode;
+      }
       client.release(errorObj);
       logger.warn("[db] withRawStatementTimeout client-side backstop fired on main sequence -- connection discarded", {
         label,
         mainBackstopMs,
+        connectionErrorSqlstate: lostConnectionCode,
       });
       logger.debug("[db] withRawStatementTimeout completed", {
         label,
@@ -869,6 +940,7 @@ export async function withRawStatementTimeout<T>(
       await raced.result;
       clearRollbackBackstop();
       rollbackConfirmed = true;
+      detachClientErrorListener();
       client.release();
     } catch {
       clearRollbackBackstop();
