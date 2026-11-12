@@ -54,7 +54,8 @@ export const POST = withCanonicalEnforcement(
       params.businessId,
       body.snapshotId,
       ctx.verifiedActorId,
-      ctx.verifiedWorkspaceId
+      ctx.verifiedWorkspaceId,
+      { firstDiagnosisOnly: body.firstDiagnosisOnly === true },
     );
     // The diagnosis changed the evidence: retire generated data-gap tasks it has resolved (best-effort, own errors).
     await reconcileDataGapTasksAfterDiagnosis(ctx.verifiedWorkspaceId, params.businessId, ctx.verifiedActorId);
