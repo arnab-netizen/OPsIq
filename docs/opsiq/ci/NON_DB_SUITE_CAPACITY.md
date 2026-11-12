@@ -77,3 +77,53 @@ so moving Node-only files off jsdom reduces the dominant term directly.
 below 30, if the job cap stops exceeding the step cap, if the step stops being
 blocking, if `continue-on-error` is introduced, if the test command is narrowed,
 or if `branch-protection` stops depending on `build-and-test`.
+
+## 2026-11 addendum — 30 → 45 minute step cap, 40 → 55 minute job cap
+
+Status: **headroom restored a second time; underlying inefficiency still deferred** (the
+`NON_DB_SUITE_TIMEOUT_HEADROOM_EXHAUSTED` class recurred, as the section above predicted).
+
+### Evidence
+
+| Source | Suite step / duration | vs 1800s cap |
+|---|---|---|
+| PR #658 run 43212944581 (passed) | step 11:58:20 → 12:28:02 = **1782s** | **+18s** |
+| local run, identical suite on PR #647 head (`3e867e7f`), no cap | vitest `Duration` **1858.30s** (environment 972s, tests 434s) | −58s (would have been killed on CI) |
+| PR #657 run 43203570990, PR #642 run 43205174093 | killed at 1800s, **zero test failures** | — |
+| fast-mode runs of the same suite | ~1415–1441s | +360s |
+
+The suite is now ~37,142 tests / 1,488 files. Runner speed is bimodal (fast ≈1415–1441s,
+slow ≈1771–1782s); ~53% of the time is environment instantiation. The old cap sat ~1% above the
+slow mode, so passing runs were being killed on runner luck.
+
+### Job timing (run 43212944581, `build-and-test`)
+
+| Phase | Seconds |
+|---|---|
+| job start → suite step start (npm ci 31, tsc 51, lint 101, build 91, gates) | 306 |
+| suite step | 1782 |
+| post steps | ~3 |
+| job total | 2151 (of the 2400 cap) |
+
+At a 45-minute step cap the worst case is 306 + 2700 + 3 = **3009s ≈ 50.2 min**, so the job cap is
+**55 minutes** (≈4.8 min margin). Setup is ~5.1 min, not the ~2 min recorded above.
+
+### What changed
+
+| Setting | Before | After |
+|---|---|---|
+| step *Run non-DB test suite* `timeout-minutes` | 30 | **45** |
+| job `build-and-test` `timeout-minutes` | 40 | **55** |
+
+Plus diagnostics only: a *Record job step start time* step, a *Record non-DB suite start time* step
+and an `always()` *Non-DB suite timing diagnostics* step that prints
+`NON_DB_SUITE_TIMING setup_s= suite_s= total_s= step_cap_s= suite_headroom_s=` and a job summary
+table (also on timeout). They never fail the job and do not touch the suite command, selection,
+`continue-on-error: false`, exit handling or the `branch-protection` dependency. No test, assertion
+or governance check was removed or narrowed.
+
+### Cost note
+
+A hung suite can now consume up to 55 runner-minutes instead of 40 (+15). Healthy runs are unchanged
+in duration. The deferred package above (Node-only environment, sharding, environment reuse) remains
+the actual fix; revisit when `suite_headroom_s` in the new diagnostics drops below ~300s.
