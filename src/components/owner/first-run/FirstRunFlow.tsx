@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button, PageContainer, PageHeader } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
-import { QuickFinancialPicture } from "@/components/owner/QuickFinancialPicture";
+import { FirstRunSourceStep } from "@/components/owner/first-run/FirstRunSourceStep";
 import { FirstRunBusinessStep } from "@/components/owner/first-run/FirstRunBusinessStep";
 import { FirstMoneyReadCard } from "@/components/owner/first-run/FirstMoneyReadCard";
 import { FirstResultCorrection } from "@/components/owner/first-run/FirstResultCorrection";
@@ -41,6 +41,10 @@ const diagnosisApi: QuickStartApi = async (path, init) => {
   if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
   return data;
 };
+
+/** Import progress is re-read from the server this often, at most this many times (~4 minutes), then the owner is left on a resumable screen. */
+const FIRST_RUN_IMPORT_POLL_MS = 6_000;
+const FIRST_RUN_IMPORT_MAX_POLLS = 40;
 
 type Mode = "result" | "correcting" | "improving";
 
@@ -74,15 +78,19 @@ export function FirstRunFlow() {
   const inFlight = useRef(false);
   const acceptKey = useRef(newIdempotencyKey());
 
+  /** Only the NEWEST load may update the screen: a slow earlier response (or one for a previously active business) is dropped. */
+  const ctxSeq = useRef(0);
   const loadContext = useCallback(async (): Promise<FirstRunContext | null> => {
+    const seq = ++ctxSeq.current;
     setLoadError(null);
     try {
       // The flow is about the ACTIVE business (the header's), never an independently chosen one.
       const next = await firstRunApi.context(activeBusinessId);
+      if (seq !== ctxSeq.current) return next;
       setCtx(next);
       return next;
     } catch (err) {
-      setLoadError(`We couldn't load your setup. Nothing was lost. ${friendly(err, "load")}`);
+      if (seq === ctxSeq.current) setLoadError(`We couldn't load your setup. Nothing was lost. ${friendly(err, "load")}`);
       return null;
     }
   }, [activeBusinessId]);
@@ -120,6 +128,32 @@ export function FirstRunFlow() {
     if (hasResult && !ctx?.diagnosisStale) void loadResult();
   }, [hasResult, ctx?.diagnosisStale, loadResult]);
 
+  // QuickBooks import in progress: re-read the PERSISTED state (bounded). When the import has produced enough evidence the router
+  // moves to NEEDS_DIAGNOSIS and the automatic first read below runs; nothing here decides sufficiency.
+  const qboPoll = ctx?.state === "NEEDS_EVIDENCE" && ctx.evidenceSources?.poll === true;
+  /** The bounded window ended while the import was still running: say so, and let the owner look again (restarts the window). */
+  const [windowEndedFor, setWindowEndedFor] = useState<string | null>(null);
+  const importWindowEnded = windowEndedFor !== null && windowEndedFor === businessId;
+  const [recheckRound, setRecheckRound] = useState(0);
+  useEffect(() => {
+    if (!qboPoll) return;
+    let polls = 0;
+    const id = setInterval(() => {
+      if (++polls > FIRST_RUN_IMPORT_MAX_POLLS) {
+        clearInterval(id);
+        setWindowEndedFor(businessId);
+        return;
+      }
+      void loadContext();
+    }, FIRST_RUN_IMPORT_POLL_MS);
+    return () => clearInterval(id);
+  }, [qboPoll, loadContext, recheckRound, businessId]);
+  const recheckImport = useCallback(() => {
+    setWindowEndedFor(null);
+    setRecheckRound((n) => n + 1);
+    void loadContext();
+  }, [loadContext]);
+
   const runDiagnosis = useCallback(async () => {
     if (!businessId || inFlight.current) return;
     if (!ctx?.currentSnapshotId) {
@@ -129,7 +163,11 @@ export function FirstRunFlow() {
     inFlight.current = true;
     setDiagnosing("running");
     try {
-      const result = await retryDiagnosis(diagnosisApi, businessId, ctx.currentSnapshotId);
+      // The FIRST read is requested as "first only": a double submit, a second tab or a retry after a lost response reuses the one
+      // cycle instead of creating (and charging for) another. Re-runs on an existing read always create a new cycle.
+      const result = ctx.state === "NEEDS_DIAGNOSIS"
+        ? await retryDiagnosis(diagnosisApi, businessId, ctx.currentSnapshotId, { firstDiagnosisOnly: true })
+        : await retryDiagnosis(diagnosisApi, businessId, ctx.currentSnapshotId);
       if (result.status === "diagnosed") {
         setDiagnosing("idle");
         setActionError(null);
@@ -138,20 +176,26 @@ export function FirstRunFlow() {
         await loadResult();
       } else {
         setDiagnosing("failed");
+        // The refusal may be "the figures moved / a read already exists": re-read the persisted state so the screen shows what is
+        // true (e.g. the ordinary "update my read"), instead of only a retry button for a request that can never succeed.
+        await loadContext();
       }
     } finally {
       inFlight.current = false;
     }
-  }, [businessId, ctx?.currentSnapshotId, loadContext, loadResult]);
+  }, [businessId, ctx?.currentSnapshotId, ctx?.state, loadContext, loadResult]);
 
   // State C: the evidence is enough, the read is missing — produce it through the canonical diagnosis path.
-  const autoRan = useRef(false);
+  // One automatic attempt per (business, figures): switching to another business that also needs its first read - or new figures
+  // for the same one - gets its own attempt, while a remount/refresh simply asks again (the server replays a committed read).
+  const autoRanFor = useRef<string | null>(null);
   useEffect(() => {
-    if (ctx?.state === "NEEDS_DIAGNOSIS" && !autoRan.current) {
-      autoRan.current = true;
-      void runDiagnosis();
-    }
-  }, [ctx?.state, runDiagnosis]);
+    if (ctx?.state !== "NEEDS_DIAGNOSIS") return;
+    const attempt = `${businessId ?? ""}:${ctx.currentSnapshotId ?? ""}`;
+    if (autoRanFor.current === attempt) return;
+    autoRanFor.current = attempt;
+    void runDiagnosis();
+  }, [ctx?.state, ctx?.currentSnapshotId, businessId, runDiagnosis]);
 
   async function onBusinessCreated(business: { id: string }) {
     await refreshBusinesses();
@@ -295,7 +339,7 @@ export function FirstRunFlow() {
 
   return (
     <PageContainer>
-      <PageHeader title="Your first read" description="A few answers, then OpsIQ shows you where to look first." />
+      <PageHeader title="Your first read" description="Give OpsIQ a few business numbers, then it shows you where to look first." />
       <div className="mx-auto w-full max-w-2xl space-y-4 px-0" data-testid="first-run-flow">
         {loadError && (
           <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" data-testid="first-run-load-error">
@@ -309,21 +353,8 @@ export function FirstRunFlow() {
           <FirstRunBusinessStep suggestedName={ctx.suggestedBusinessName} onCreated={(b) => void onBusinessCreated(b)} onConflict={() => void loadContext()} />
         )}
 
-        {ctx?.state === "NEEDS_EVIDENCE" && ctx.business && (
-          <div data-testid="first-run-evidence-step">
-            <p className="mb-2 text-sm text-muted-foreground">
-              Revenue, one cost and your cash for <span className="font-medium text-foreground">{ctx.business.name}</span> are enough. Estimates are fine — and you will say how reliable they are.
-            </p>
-            <QuickFinancialPicture
-              key={ctx.business.id}
-              businessId={ctx.business.id}
-              currency={ctx.business.currency}
-              omitMoneyLink
-              requireEvidenceQuality
-              onFirstRead={() => void loadContext()}
-              onSaved={() => undefined}
-            />
-          </div>
+        {ctx?.state === "NEEDS_EVIDENCE" && ctx.business && ctx.evidenceSources && (
+          <FirstRunSourceStep business={ctx.business} sources={ctx.evidenceSources} onEvidenceSaved={() => void loadContext()} importWindowEnded={importWindowEnded} onRecheckImport={recheckImport} />
         )}
 
         {ctx?.state === "NEEDS_DIAGNOSIS" && (

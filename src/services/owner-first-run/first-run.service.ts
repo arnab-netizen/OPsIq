@@ -49,6 +49,10 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { listOwnerDecisions } from "@/services/owner-outcome/owner-decision.service";
 import { logger } from "@/infra/logger";
+import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
+import { qboFirstRunOffer } from "@/domain/quickbooks/qbo-first-run-offer";
+import { getQboOwnerStatus } from "@/services/quickbooks/qbo-status.service";
+import { resolveFirstRunSources, type FirstRunSourceView } from "@/domain/owner-first-run/first-run-source";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { NEW_GOAL_TARGET_TYPES } from "@/services/owner-strategy/goal.service";
 import { recordProductEvent } from "@/services/analytics/product-events.service";
@@ -92,6 +96,28 @@ export interface FirstRunContext {
   businessTypes: readonly string[];
   /** The goal families the product supports today (never invented in the UI). */
   goalFamilies: readonly string[];
+  /**
+   * Which evidence routes the NEEDS_EVIDENCE step shows (server-decided from the persisted QuickBooks connection and the
+   * fail-closed first-run offer). Null in every other state. Both routes converge on the same canonical evidence + diagnosis.
+   */
+  evidenceSources: FirstRunSourceView | null;
+}
+
+/**
+ * The persisted QuickBooks state + the fail-closed offer, reduced to what the first-run step shows. Any failure to read QuickBooks
+ * status hides the QuickBooks route (the manual route is always there) — never an error screen, never a guessed connection.
+ */
+async function loadEvidenceSources(workspaceId: string, businessId: string): Promise<FirstRunSourceView> {
+  try {
+    const status = await getQboOwnerStatus({ workspaceId, businessId }, { env: process.env });
+    const offer = qboFirstRunOffer(resolveQboConfig(process.env), process.env);
+    // Offered only when the deployment offers it AND the existing Sandbox/real-business isolation allows THIS business to connect
+    // (a Sandbox deployment never takes a real business; a Production one never a test business). That rule is not restated here.
+    return resolveFirstRunSources({ quickBooksOffered: offer.offered && status.available && status.connectBlockedReason === null, quickBooksState: status.state });
+  } catch (error) {
+    logger.warn("First-run evidence sources: QuickBooks status unavailable; offering the manual route only", { reason: describeFailure(error) });
+    return resolveFirstRunSources({ quickBooksOffered: false, quickBooksState: "NOT_CONNECTED" });
+  }
 }
 
 /**
@@ -221,6 +247,7 @@ export async function getFirstRunContext(workspaceId: string, businessId?: strin
     firstTrustedInteractionAt: first?.at ?? null,
     businessTypes: BUSINESS_TYPES,
     goalFamilies: NEW_GOAL_TARGET_TYPES,
+    evidenceSources: business && state === "NEEDS_EVIDENCE" ? await loadEvidenceSources(workspaceId, business.id) : null,
   };
 }
 
