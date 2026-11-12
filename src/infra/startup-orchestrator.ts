@@ -9,7 +9,13 @@
 import { claimStartup, completeStartup, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
-import { withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS, getRawPool } from "@/lib/db";
+import { withRawStatementTimeout, withRawStatementTimeoutWorstCaseMs, getRawPool } from "@/lib/db";
+import type { getDbInstance } from "@/lib/db";
+import type { logger as loggerSingleton } from "@/infra/logger";
+
+/** Erased at compile time -- the real values are still only obtained via the existing dynamic imports below, preserving this file's Edge-safe load pattern. */
+type DbInstance = Awaited<ReturnType<typeof getDbInstance>>;
+type Logger = typeof loggerSingleton;
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -22,25 +28,25 @@ const STARTUP_TIMEOUT_MS = 30000;
 export const DB_CHECK_STATEMENT_TIMEOUT_MS = 4000;
 /**
  * F-PROD-STARTUP-COLDSTART second-mechanism forensic: checkDatabase() now
- * uses withRawStatementTimeout() (a bounded raw pg client, no Prisma
- * interactive transaction — see src/lib/db.ts's own doc comment for why),
- * so its worst case is bounded by the pool's own POOL_CONNECTION_TIMEOUT_MS
- * to acquire a connection, plus its own statement execution timeout — not
- * by ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS, which no
+ * uses withRawStatementTimeout() (a bounded raw pg client inside its own
+ * explicit transaction — see src/lib/db.ts's F-PGBOUNCER-TXN-SAFETY doc
+ * comment for why), so its worst case is withRawStatementTimeoutWorstCaseMs() —
+ * not ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS, which no
  * longer apply to this call site. This outer JS-side race MUST stay longer
  * than that worst case, or it fires first on a slow-but-legitimate cold
  * start and reports the exact same false "unexpected error" outcome the
  * inner fix was meant to prevent, silently undoing it. Derived from the
- * shared constant, not an independent guess, so the two can never drift
- * out of sync again.
+ * shared formula, not a hand-rolled copy, so the two can never silently
+ * drift out of sync again (as happened twice already, caught both times by
+ * santa-loop adversarial review).
  */
-export const DB_CHECK_TIMEOUT_MS = POOL_CONNECTION_TIMEOUT_MS + DB_CHECK_STATEMENT_TIMEOUT_MS + 3000;
+export const DB_CHECK_TIMEOUT_MS = withRawStatementTimeoutWorstCaseMs(DB_CHECK_STATEMENT_TIMEOUT_MS) + 3000;
 /**
  * Same reasoning as DB_CHECK_TIMEOUT_MS above, sized against
  * checkMigrationReadiness()'s own MIGRATION_QUERY_STATEMENT_TIMEOUT_MS
  * (src/services/monitoring/migration-check.ts, currently 5000ms).
  */
-export const MIGRATION_READINESS_TIMEOUT_MS = POOL_CONNECTION_TIMEOUT_MS + 5000 + 3000;
+export const MIGRATION_READINESS_TIMEOUT_MS = withRawStatementTimeoutWorstCaseMs(5000) + 3000;
 
 /**
  * Orchestrate startup checks (runs ONCE per instance).
@@ -252,7 +258,7 @@ async function performStartupChecks(): Promise<void> {
   }
 }
 
-async function checkDatabase(_dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabase(_dbInstance: DbInstance, logger: Logger): Promise<boolean> {
   try {
     const pool = await getRawPool();
     await Promise.race([
@@ -270,7 +276,7 @@ async function checkDatabase(_dbInstance: any, logger: any): Promise<boolean> {
   }
 }
 
-async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabaseSchema(dbInstance: DbInstance, logger: Logger): Promise<boolean> {
   try {
     // Schema validation: If database connectivity check passed (already verified above),
     // and Prisma client initialized successfully, schema is assumed valid.
@@ -331,7 +337,7 @@ export function checkStartupConfiguration(): StartupConfigCheck {
   };
 }
 
-function checkConfiguration(logger: any): boolean {
+function checkConfiguration(logger: Logger): boolean {
   const result = checkStartupConfiguration();
 
   for (const envVar of result.missing) {
@@ -349,7 +355,7 @@ function checkConfiguration(logger: any): boolean {
  * Checks both the workspaces table (Workspace.id) and the client_accounts table
  * (ClientAccount.id) — the private deployment uses the same UUID for both.
  */
-async function checkPrivateWorkspaceExists(dbInstance: any, workspaceId: string): Promise<boolean> {
+async function checkPrivateWorkspaceExists(dbInstance: DbInstance, workspaceId: string): Promise<boolean> {
   try {
     const workspace = await dbInstance.workspace.findUnique({
       where: { id: workspaceId },
