@@ -123,6 +123,14 @@ beforeEach(() => {
       'echo "fake aws: unrecognized command: $*" >&2; exit 1',
     ].join("\n"),
   );
+  // Where the real `age` binary is absent (e.g. the GitHub runner), a stub keeps the script's own
+  // "age on PATH" precondition satisfied so the tests that only exercise validation ORDER (before
+  // pg_dump) still run instead of failing on the missing tool. Tests about real cryptography are
+  // guarded with it.skipIf(!hasAge) and never use this stub.
+  if (!hasAge) {
+    writeFileSync(join(dir, "age"), "#!/usr/bin/env bash\ncat >/dev/null\nexit 0\n");
+    chmodSync(join(dir, "age"), 0o755);
+  }
   for (const bin of ["psql", "pg_dump", "aws"]) chmodSync(join(dir, bin), 0o755);
 });
 

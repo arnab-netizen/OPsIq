@@ -468,7 +468,17 @@ describe("A3 governance: restore-database.sh cannot be an ad-hoc production rest
       }
     }
     // The classifier/backup comments name the script; only executable invocations count, and there are none.
-    expect(offenders.filter((o) => !/ci-risk-classifier|backup-database/.test(o))).toEqual([]);
+    // The ONE sanctioned wrapper is restore-database-r2.sh (encrypted-backup restore): it hands the decrypted
+    // dump to restore-database.sh UNCHANGED, so restore-database.sh's own target gate (assert-restore-target.mjs)
+    // still decides. That is only true while the wrapper never chooses the target itself, which the
+    // next assertion pins: if it ever assigns/exports OPSIQ_DB_TARGET it stops being an exception.
+    expect(offenders.filter((o) => !/ci-risk-classifier|backup-database|^restore-database-r2\.sh:/.test(o))).toEqual([]);
+    const wrapper = readFileSync(join(dir, "restore-database-r2.sh"), "utf8");
+    for (const line of code(wrapper)) {
+      const t = line.trim();
+      if (t.startsWith("#")) continue;
+      expect(/(^|\s)(export\s+)?OPSIQ_DB_TARGET=/.test(t), `restore-database-r2.sh must never set the restore target itself: ${t}`).toBe(false);
+    }
   });
 
   it("no document instructs a restore without naming a local or staging target, and none names production", () => {
