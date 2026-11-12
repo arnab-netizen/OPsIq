@@ -63,4 +63,31 @@ describe("DB job runs the real-age restore proof (F-RESTORE-PROOF-SILENT-SKIP)",
     expect(proof).toContain("primary");
     expect(proof).toContain("escrow");
   });
+
+  it("pg_dump major is pinned to the service container's major and a mismatch fails closed (F-RESTORE-PROOF-PG-MAJOR-MISMATCH)", () => {
+    const run = steps[installIdx].run ?? "";
+    expect(run).toContain("postgresql-client-16");
+    expect(run).toContain('echo "$PGBIN" >> "$GITHUB_PATH"');
+    expect(run).toContain("show server_version_num");
+    expect(run).toMatch(/pg_dump major .* != PostgreSQL server major/);
+    expect(run).toMatch(/\[ "\$DUMP_MAJOR" != "\$SRV_MAJOR" \]/);
+    const image = (ci.jobs["db-verify"] as unknown as { services: { postgres: { image: string } } }).services.postgres.image;
+    expect(image, "client pin (postgresql-client-16) must track the service image").toBe("postgres:16");
+  });
+
+  it("an evidence step re-runs the proof after the DB suite and fails on any skip or missing identity", () => {
+    const evIdx = idx("Restore-proof evidence");
+    expect(evIdx).toBeGreaterThan(dbSuiteIdx);
+    const step = steps[evIdx];
+    expect(step.env?.OPSIQ_REQUIRE_RESTORE_PROOF).toBe("1");
+    expect(step["continue-on-error"] ?? false).toBe(false);
+    const run = step.run ?? "";
+    expect(run).toContain("backup-restore-local-proof.db.test.ts");
+    expect(run).toContain("--reporter=json");
+    expect(run).toContain("skipped === 0");
+    expect(run).toContain("primary identity ALONE");
+    expect(run).toContain("escrow identity ALONE");
+    expect(run).toContain("::notice title=restore-proof-test::");
+    expect(run).not.toMatch(/\|\|\s*true/);
+  });
 });
