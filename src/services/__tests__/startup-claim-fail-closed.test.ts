@@ -69,16 +69,31 @@ beforeEach(() => {
   connectMock.mockResolvedValue({
     query: (...args: unknown[]) => queryMock(...args),
   });
+  // F-PGBOUNCER-TXN-SAFETY: claimStartup()'s fn now issues SAVEPOINT/RELEASE
+  // SAVEPOINT/ROLLBACK TO SAVEPOINT statements around the INSERT
+  // (src/services/startup-status.ts). This default lets any of those calls
+  // this test doesn't specifically care about resolve harmlessly, so a test
+  // only needs to queue mockOnce() responses for the statement(s) it's
+  // actually simulating -- without this, those untouched calls would fall
+  // through to vi.fn()'s bare default (returning undefined, not a Promise),
+  // breaking `.catch()` on the ROLLBACK TO SAVEPOINT call with an unrelated
+  // TypeError.
+  queryMock.mockResolvedValue({ rows: [] });
 });
 
 describe("claimStartup() — fails closed when the database is unavailable", () => {
   it("throws (never CLAIMED, never IN_PROGRESS) when the claim query throws a connection error", async () => {
+    // F-PGBOUNCER-TXN-SAFETY: claimStartup()'s fn now issues `SAVEPOINT
+    // claim_attempt` before the INSERT (src/services/startup-status.ts), so
+    // the first queued mock response is for THAT statement, not the INSERT.
+    queryMock.mockResolvedValueOnce({ rows: [] });
     queryMock.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
 
     await expect(claimStartup()).rejects.toThrow("Connection terminated unexpectedly");
   });
 
   it("throws (never CLAIMED, never IN_PROGRESS) when the claim query throws an auth-timeout error", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
     queryMock.mockRejectedValueOnce(new Error("DriverAdapterError: Authentication timed out"));
 
     await expect(claimStartup()).rejects.toThrow(/Authentication timed out/);
@@ -91,6 +106,7 @@ describe("claimStartup() — fails closed when the database is unavailable", () 
   });
 
   it("returns IN_PROGRESS (never CLAIMED) when the claim_token column is missing (deploy-before-migrate)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
     queryMock.mockRejectedValueOnce(
       new Error('column "claim_token" of relation "startup_status" does not exist')
     );
@@ -102,6 +118,7 @@ describe("claimStartup() — fails closed when the database is unavailable", () 
   });
 
   it("throws — not IN_PROGRESS — on an unrecognized error message (e.g. a pg-pool acquisition timeout string this classifier doesn't know)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
     queryMock.mockRejectedValueOnce(new Error("some genuinely unrecognized driver error"));
 
     await expect(claimStartup()).rejects.toThrow("some genuinely unrecognized driver error");
@@ -117,6 +134,23 @@ describe("claimStartup() — fails closed when the database is unavailable", () 
     });
 
     await expect(claimStartup()).rejects.toThrow(TypeError);
+  });
+
+  it("claims successfully: issues SAVEPOINT, the INSERT, then RELEASE SAVEPOINT in that order (TypeScript review finding, F-PGBOUNCER-TXN-SAFETY)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
+    queryMock.mockResolvedValueOnce({
+      rows: [{ id: "row-1", claim_token: "token-1", started_at: new Date(), previous_status: null }],
+    }); // the INSERT itself
+    queryMock.mockResolvedValueOnce({ rows: [] }); // RELEASE SAVEPOINT claim_attempt
+
+    const result = await claimStartup();
+    expect(result.outcome).toBe("CLAIMED");
+
+    const sentSql = queryMock.mock.calls.map((call) => String(call[0]));
+    expect(sentSql[0]).toBe("SAVEPOINT claim_attempt");
+    expect(sentSql[1]).toContain("INSERT INTO");
+    expect(sentSql[2]).toBe("RELEASE SAVEPOINT claim_attempt");
+    expect(sentSql).toHaveLength(3);
   });
 });
 
@@ -158,7 +192,9 @@ describe("claimStartup() — startup-claim diagnostic (sanitized, best-effort, n
   it("1. INSERT fails with SQLSTATE 25006 (read-only) — the sanitized diagnostic is logged, and the ORIGINAL error still propagates", async () => {
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
     const insertError = Object.assign(new Error("cannot execute INSERT in a read-only transaction"), { code: "25006" });
-    queryMock.mockRejectedValueOnce(insertError);
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
+    queryMock.mockRejectedValueOnce(insertError); // the INSERT itself
+    queryMock.mockResolvedValueOnce({ rows: [] }); // ROLLBACK TO SAVEPOINT claim_attempt
     queryMock.mockResolvedValueOnce({
       rows: [
         {
@@ -190,12 +226,27 @@ describe("claimStartup() — startup-claim diagnostic (sanitized, best-effort, n
       }),
     );
     errorSpy.mockRestore();
+
+    // TypeScript review finding (F-PGBOUNCER-TXN-SAFETY): every other
+    // assertion in this file matches mocked responses by call POSITION, so
+    // it would pass identically even if the SAVEPOINT/ROLLBACK TO SAVEPOINT
+    // statements were silently deleted from startup-status.ts — the
+    // rejection meant for the INSERT would simply be consumed one call
+    // earlier. Assert the actual SQL text and order sent to the client so a
+    // regression that removes the SAVEPOINT wrapping fails this test.
+    const sentSql = queryMock.mock.calls.map((call) => String(call[0]));
+    expect(sentSql[0]).toBe("SAVEPOINT claim_attempt");
+    expect(sentSql[1]).toContain("INSERT INTO");
+    expect(sentSql[2]).toBe("ROLLBACK TO SAVEPOINT claim_attempt");
+    expect(sentSql).toHaveLength(4); // SAVEPOINT, INSERT, ROLLBACK TO SAVEPOINT, diagnostic read
   });
 
   it("2. the diagnostic query itself fails — the ORIGINAL claim error is still preserved and propagated unchanged", async () => {
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
     const insertError = Object.assign(new Error("Connection terminated unexpectedly"), { code: undefined });
-    queryMock.mockRejectedValueOnce(insertError);
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
+    queryMock.mockRejectedValueOnce(insertError); // the INSERT itself
+    queryMock.mockResolvedValueOnce({ rows: [] }); // ROLLBACK TO SAVEPOINT claim_attempt
     queryMock.mockRejectedValueOnce(new Error("diagnostic query also failed"));
 
     await expect(claimStartup()).rejects.toThrow("Connection terminated unexpectedly");
@@ -216,7 +267,9 @@ describe("claimStartup() — startup-claim diagnostic (sanitized, best-effort, n
       new Error("password authentication failed for user \"opsiq_app\" at postgresql://opsiq_app:S3cr3t@ep-empty-sky.neon.tech/neondb"),
       { code: "28P01" },
     );
-    queryMock.mockRejectedValueOnce(insertError);
+    queryMock.mockResolvedValueOnce({ rows: [] }); // SAVEPOINT claim_attempt
+    queryMock.mockRejectedValueOnce(insertError); // the INSERT itself
+    queryMock.mockResolvedValueOnce({ rows: [] }); // ROLLBACK TO SAVEPOINT claim_attempt
     queryMock.mockResolvedValueOnce({
       rows: [
         {

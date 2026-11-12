@@ -182,6 +182,10 @@ vi.mock("@/lib/db", () => ({
   // behavior has its own real-Postgres hostile proof in
   // src/__tests__/lib/startup-coldstart-pool-contention-hostile.db.test.ts).
   POOL_CONNECTION_TIMEOUT_MS: 90_000,
+  // F-PGBOUNCER-TXN-SAFETY: startup-orchestrator.ts derives both outer-race
+  // constants from this formula now (src/lib/db.ts) instead of the raw
+  // constant above directly — same reasoning, this mock must provide it too.
+  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
 }));
 
 // checkMigrationReadiness is now called inside performStartupChecks().
