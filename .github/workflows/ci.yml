@@ -484,8 +484,44 @@ jobs:
         env:
           DATABASE_URL: ${{ env.MIGRATION_DATABASE_URL }}
 
+      # Real-age restore proof prerequisites. The runner image (ubuntu-24.04) ships neither
+      # `age` nor guarantees the PostgreSQL client matches the server; without `age` the
+      # backup-restore-local-proof.db.test.ts suite SKIPPED silently (describe.skipIf), so a green
+      # DB job proved nothing about restore. Installed from the distro archive (apt verifies the
+      # package signature chain); the step then FAILS CLOSED unless the binaries run, are the
+      # expected major.minor, can do a real encrypt/decrypt round trip with TWO recipients (each
+      # identity alone), and pg_dump / psql are present. No secret, no network beyond apt.
+      - name: Install and verify real age (restore-proof prerequisite; fail-closed)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends age
+          AGE_V="$(age --version)"
+          KG_V="$(age-keygen --version)"
+          echo "age=$AGE_V age-keygen=$KG_V"
+          case "$AGE_V" in 1.1.*|1.2.*|1.3.*) ;; *) echo "::error::unexpected age version: $AGE_V"; exit 1 ;; esac
+          case "$KG_V" in 1.1.*|1.2.*|1.3.*) ;; *) echo "::error::unexpected age-keygen version: $KG_V"; exit 1 ;; esac
+          pg_dump --version
+          psql --version
+          T="$(mktemp -d)"
+          age-keygen -o "$T/a.key" 2> "$T/a.pub"
+          age-keygen -o "$T/b.key" 2> "$T/b.pub"
+          RA="$(sed -n 's/^Public key: //p' "$T/a.pub")"
+          RB="$(sed -n 's/^Public key: //p' "$T/b.pub")"
+          test -n "$RA" && test -n "$RB" && test "$RA" != "$RB"
+          printf 'restore-proof-smoke' | age -r "$RA" -r "$RB" -o "$T/o.age"
+          test "$(age -d -i "$T/a.key" "$T/o.age")" = "restore-proof-smoke"
+          test "$(age -d -i "$T/b.key" "$T/o.age")" = "restore-proof-smoke"
+          if age -d -i "$T/a.key" "$T/o.age" | grep -q wrong; then exit 1; fi
+          rm -rf "$T"
+          echo "real age verified: two independent identities each decrypt a two-recipient object"
+
       - name: Run DB test suite (*.db.test.ts only)
         run: npm test -- '.db.test.ts' --maxWorkers=1
+        env:
+          # Makes backup-restore-local-proof.db.test.ts MANDATORY: if it cannot run (age or
+          # pg_dump missing, DB gate off) the suite fails instead of skipping.
+          OPSIQ_REQUIRE_RESTORE_PROOF: '1'
         continue-on-error: false
 
       - name: QBO erasure DB proof (disposable database, non-superuser schema owner)
