@@ -39,8 +39,8 @@ describe("production-owner-acceptance.yml — live-production safety controls", 
     expect(src).not.toContain("github.head_ref");
   });
 
-  it("4. Runs under the production GitHub Environment", () => {
-    expect(src).toContain("environment: production");
+  it("4. Runs under the protected production-operator GitHub Environment", () => {
+    expect(src).toMatch(/^\s{4}environment: production-operator$/m);
   });
 
   it("5. Fails closed when either acceptance credential secret is missing or empty", () => {

@@ -43,8 +43,8 @@ describe("production-db-status.yml — read-only safety controls", () => {
     expect(src).not.toContain("pull_request");
   });
 
-  it("5. Runs under the production GitHub Environment (reuses existing protection rules)", () => {
-    expect(src).toContain("environment: production");
+  it("5. Runs under the protected production-operator GitHub Environment (main-only + owner approval; never the Vercel-shared one)", () => {
+    expect(src).toMatch(/^\s{4}environment: production-operator$/m);
   });
 
   it("6. Rejects empty PRODUCTION_DATABASE_URL secret", () => {

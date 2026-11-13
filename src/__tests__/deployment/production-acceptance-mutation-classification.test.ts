@@ -303,7 +303,7 @@ describe("the LIVE workflow executes only the SAFE manifest", () => {
 
   it("the existing safety controls are all still present", () => {
     expect(src).toContain("workflow_dispatch:");
-    expect(src).toContain("environment: production");
+    expect(src).toMatch(/^\s{4}environment: production-operator$/m);
     expect(src).toContain("RUN PRODUCTION ACCEPTANCE");
     expect(src).toMatch(/ref:\s*main\b/);
     expect(src).toContain("verify-no-secret-leak.sh");

@@ -29,8 +29,8 @@ describe("provision-administration-operator.yml — safety controls", () => {
     expect(src).not.toContain("schedule:");
   });
 
-  it("2. Runs under the production GitHub Environment", () => {
-    expect(src).toMatch(/environment:\s*production/);
+  it("2. Runs under the protected production-operator GitHub Environment", () => {
+    expect(src).toMatch(/^\s{4}environment: production-operator$/m);
   });
 
   it("3. Has exactly two modes: DRY_RUN and APPLY", () => {

@@ -146,9 +146,10 @@ describe("Bootable Production: production migration gate workflow", () => {
     expect(content).not.toMatch(/^\s*push:/m);
   });
 
-  it("targets the production environment with a concurrency guard", () => {
+  it("targets the protected production-operator environment (not the Vercel-shared one) with a concurrency guard", () => {
     const content = fs.readFileSync(wfPath, "utf-8");
-    expect(content).toContain("environment: production");
+    expect(content).toMatch(/^\s{4}environment: production-operator$/m);
+    expect(content).not.toMatch(/^\s*environment:\s*production\s*$/im);
     expect(content).toContain("concurrency");
     expect(content).toContain("migrate-production");
   });

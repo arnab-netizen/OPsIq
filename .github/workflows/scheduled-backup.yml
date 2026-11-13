@@ -56,9 +56,32 @@ jobs:
     name: Backup Production Database
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: production
+    environment: production-operator
 
     steps:
+      # ── Workflow-origin guard (fail-closed; FIRST step, before anything that references a secret) ───────────
+      # `ref: main` on a later checkout only selects which repository CONTENT is built. The steps that run -- and
+      # the secrets they reference -- come from the workflow FILE of the ref this run was dispatched from. This
+      # step fails the job unless the trigger, the ref and the workflow definition are all main. It is defence in
+      # depth against an accidental off-main dispatch; the ENFORCING control is the `production-operator`
+      # environment's deployment-branch rule (main only) -- see docs/opsiq/ci/PRODUCTION_SECRET_ISOLATION.md.
+      - name: Assert workflow origin is main (fail-closed)
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch|schedule) ;;
+            *) echo "::error::refusing to run: unexpected trigger '${GITHUB_EVENT_NAME}'"; exit 1 ;;
+          esac
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::refusing to run: ref is '${GITHUB_REF}', must be refs/heads/main"
+            exit 1
+          fi
+          case "${GITHUB_WORKFLOW_REF}" in
+            *"@refs/heads/main") ;;
+            *) echo "::error::refusing to run: the workflow definition is not from refs/heads/main"; exit 1 ;;
+          esac
+          echo "Workflow origin verified: ${GITHUB_WORKFLOW_REF}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 

@@ -55,9 +55,9 @@ describe("provision-acceptance-fixture-operator.yml — trigger, environment, pe
     expect(functionalSrc).not.toMatch(/^\s*(push|pull_request|pull_request_target|schedule|workflow_run|repository_dispatch|workflow_call):/m);
   });
 
-  it("2. a single job that runs under the production GitHub Environment", () => {
+  it("2. a single job that runs under the protected production-operator GitHub Environment", () => {
     expect(Object.keys(doc.jobs)).toEqual(["provision"]);
-    expect(job.environment).toBe("production");
+    expect(job.environment).toBe("production-operator");
   });
 
   it("29. contents permission is read-only, set at the workflow level and never widened by the job", () => {
@@ -84,10 +84,11 @@ describe("provision-acceptance-fixture-operator.yml — inputs: modes, no arbitr
     expect(inputs.mode.default).toBe("DISCOVER");
   });
 
-  it("4. the mode is checked against an explicit allow-list by the very first step", () => {
-    expect(steps[0].name).toBe("Validate mode input");
-    expect(steps[0].run).toMatch(/DISCOVER\|DRY_RUN\|APPLY\)/);
-    expect(steps[0].run).toContain("exit 1");
+  it("4. the workflow-origin guard is the very first step and the mode is checked against an explicit allow-list by the next one", () => {
+    expect(steps[0].name).toBe("Assert workflow origin is main (fail-closed)");
+    expect(steps[1].name).toBe("Validate mode input");
+    expect(steps[1].run).toMatch(/DISCOVER\|DRY_RUN\|APPLY\)/);
+    expect(steps[1].run).toContain("exit 1");
   });
 
   it("8. there is no target email input and no input that could select an account or a role", () => {
