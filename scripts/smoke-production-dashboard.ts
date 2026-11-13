@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { createDiagnosticClient } from "../src/lib/security/diagnostic-destination";
 /**
  * Production Dashboard Smoke Test
@@ -17,7 +16,7 @@ const OPSIQ_DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY || "not-set";
 // Destination guard: the diagnostic key / credentials are only ever sent to an approved origin, as a header,
 // and redirects are never followed (see src/lib/security/diagnostic-destination.ts).
 const __client = createDiagnosticClient(BASE_URL_INPUT, OPSIQ_DIAGNOSTIC_KEY);
-const safeFetch = (url: string, init?: any) => {
+const safeFetch = (url: string, init?: Omit<RequestInit, "redirect"> & { headers?: Record<string, string> }) => {
   if (!url.startsWith(`${__client.origin}/`)) throw new Error("refusing request outside the approved origin");
   return __client.fetch(url.slice(__client.origin.length), init);
 };
@@ -26,11 +25,17 @@ const BASE_URL = __client.origin;
 // Get GitHub SHA from environment (set by workflow)
 const GITHUB_SHA = process.env.GITHUB_SHA || "unknown";
 
-interface DashboardResponse {
-  activeEngagements?: number;
-  criticalFindings?: number;
-  openActions?: number;
-  blockedActions?: number;
+interface SchemaDriftInfo {
+  table?: string;
+  column?: string;
+  introducedByMigration?: string;
+  summary?: string;
+}
+
+interface ProbeResult {
+  name: string;
+  status?: string;
+  [key: string]: unknown;
 }
 
 async function smokeTest(): Promise<void> {
@@ -239,7 +244,7 @@ async function smokeTest(): Promise<void> {
       // Classify honestly from the response body so the smoke reports SCHEMA_DRIFT/BLOCKED
       // instead of a misleading generic failure. This NEVER passes on drift: it exits
       // non-zero. It only tells the truth about WHY the run is not green.
-      let proofBody: any = {};
+      let proofBody: { classification?: string; schemaDrift?: SchemaDriftInfo } = {};
       try {
         proofBody = await permissionProofResponse.json();
       } catch {
@@ -737,10 +742,10 @@ async function smokeTest(): Promise<void> {
           if (Array.isArray(data)) {
             console.log(`   rootArrayLength: ${data.length}`);
           } else if (typeof data === "object" && data !== null) {
-            const dataArray = data.data as any;
-            const engagementsArray = data.engagements as any;
-            const itemsArray = data.items as any;
-            const resultsArray = data.results as any;
+            const dataArray = data.data as unknown;
+            const engagementsArray = data.engagements as unknown;
+            const itemsArray = data.items as unknown;
+            const resultsArray = data.results as unknown;
 
             if (Array.isArray(dataArray)) console.log(`   dataArrayLength: ${dataArray.length}`);
             if (Array.isArray(engagementsArray)) console.log(`   dataEngagementsLength: ${engagementsArray.length}`);
@@ -757,9 +762,11 @@ async function smokeTest(): Promise<void> {
             console.log(`   detectedArrayPath: ${detectedPath}`);
 
             // First item keys if any
-            const arrayToInspect = Array.isArray(data) ? data : engagementsArray || dataArray || itemsArray || resultsArray || [];
-            if (arrayToInspect.length > 0 && typeof arrayToInspect[0] === "object") {
-              const firstItemKeys = Object.keys(arrayToInspect[0]).sort();
+            const chosen: unknown = Array.isArray(data) ? data : engagementsArray || dataArray || itemsArray || resultsArray || [];
+            const arrayToInspect: unknown[] = Array.isArray(chosen) ? chosen : [];
+            const firstItem = arrayToInspect[0];
+            if (arrayToInspect.length > 0 && typeof firstItem === "object" && firstItem !== null) {
+              const firstItemKeys = Object.keys(firstItem).sort();
               console.log(`   firstItemKeys: [${firstItemKeys.slice(0, 5).join(", ")}${firstItemKeys.length > 5 ? ", ..." : ""}]`);
             }
           }
@@ -942,7 +949,7 @@ async function smokeTest(): Promise<void> {
 
                 if (probeResponse.status === 200) {
                   const probeData = await probeResponse.json();
-                  const probes = probeData.probes || [];
+                  const probes: ProbeResult[] = Array.isArray(probeData.probes) ? probeData.probes : [];
 
                   console.log("P2007 Probe Results:");
                   console.log("");
@@ -961,7 +968,7 @@ async function smokeTest(): Promise<void> {
                       }
                       if (probe.safeMessage) {
                         console.log(
-                          `│   └─ message: ${probe.safeMessage.substring(0, 40)}`
+                          `│   └─ message: ${String(probe.safeMessage).substring(0, 40)}`
                         );
                       }
                       if (probe.driverAdapterErrorName) {
