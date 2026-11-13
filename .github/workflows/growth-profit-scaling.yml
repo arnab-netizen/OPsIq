@@ -55,7 +55,7 @@ jobs:
             if(d.count!==150||pass!==150){console.error("GRW DB not 150/150:",d.count,pass);process.exit(1);}
             console.log("GRW DB 150/150 OK");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: grw-db-ledger
@@ -148,7 +148,7 @@ jobs:
         run: npx playwright test tests/browser/33-growth-desktop.spec.ts --project=chromium
       - name: Growth mobile shard ${{ matrix.shard }}/2
         run: npx playwright test tests/browser/34-growth-mobile.spec.ts --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: grw-browser-shard-${{ matrix.shard }}
