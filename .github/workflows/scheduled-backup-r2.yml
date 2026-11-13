@@ -19,18 +19,21 @@ name: Production Database Backup (private, encrypted, Cloudflare R2)
 # the pre-existing scheduled-backup.yml, which stays exactly as-is (disabled_manually).
 #
 # ENVIRONMENT SEPARATION: this job uses the `backup-write` GitHub Environment only. That
-# environment is designed (not configured by this PR) to hold the Production DB backup credential,
-# the R2 Object-Read-&-Write token (scoped to one bucket), and the AGE PUBLIC recipient -- never
-# the AGE PRIVATE identity needed to decrypt.
+# environment is designed (not configured by this PR) to hold the Production DB backup credential
+# (a least-privilege opsiq_backup role, see scripts/backup/opsiq-backup-role.sql), the R2
+# Object-Read-&-Write token (scoped to one bucket), the HMAC manifest-signing key, and the TWO AGE
+# PUBLIC recipients (primary + independent escrow) -- never any AGE PRIVATE identity.
 #
 # PRECISE BOUNDARY (do not overstate this): the R2 Object-Read-&-Write token this job holds CAN
 # read back the raw ciphertext bytes it uploads (R2_WRITER_CAN_READ_CIPHERTEXT=YES -- "Read &
 # Write" includes read, per Cloudflare's own R2 API-token documentation; this job is not
 # read-blind). What it can never do is DECRYPT that ciphertext (R2_WRITER_CAN_DECRYPT=NO), because
-# the AGE PRIVATE identity required to decrypt only ever exists in the separate `backup-recovery`
-# environment (restore-rehearsal-r2.yml), never here. A compromised backup-write credential can
-# read ciphertext it cannot itself decrypt without also compromising the separate private-identity
-# secret that only the backup-recovery environment holds.
+# NO AGE PRIVATE identity (primary or escrow) exists anywhere in GitHub -- not in this environment,
+# not in `backup-recovery` (restore-rehearsal-r2.yml verifies ciphertext only and decrypts nothing),
+# not in repository secrets or variables. The private identities are held offline by the owner, and
+# restore is a controlled LOCAL operation (scripts/restore-database-r2.sh refuses to run on a
+# GitHub Actions runner; runbook: "Key custody, backup database role, and local restore"). A
+# compromised GitHub credential therefore yields, at most, ciphertext that cannot be decrypted.
 
 on:
   workflow_dispatch: {}
