@@ -30,8 +30,9 @@
  */
 
 export {};
+import { createDiagnosticClient } from "../src/lib/security/diagnostic-destination";
 
-const baseUrl = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
+const baseUrlInput = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
 
 // Production write guard: abort if pointing at known production URLs without explicit opt-in.
 const PRODUCTION_URL_PATTERNS = [
@@ -39,7 +40,7 @@ const PRODUCTION_URL_PATTERNS = [
   /opsiq\.app/i,
   /opsiq\.com/i,
 ];
-const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrl));
+const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrlInput));
 if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
   console.error("ERROR: BASE_URL matches a production pattern.");
   console.error("This script creates permanent user/workspace records.");
@@ -47,6 +48,15 @@ if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
   console.error("Ensure you have a cleanup plan before proceeding.");
   process.exit(1);
 }
+
+// Destination guard: the diagnostic key is only ever sent to an approved origin, as a header, and redirects are
+// never followed (see src/lib/security/diagnostic-destination.ts).
+const __client = createDiagnosticClient(baseUrlInput, process.env.OPSIQ_DIAGNOSTIC_KEY);
+const baseUrl = __client.origin;
+const safeFetch = (url: string, init?: RequestInit & { headers?: Record<string, string> }) => {
+  if (!url.startsWith(`${__client.origin}/`)) throw new Error("refusing request outside the approved origin");
+  return __client.fetch(url.slice(__client.origin.length), init);
+};
 
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
@@ -77,7 +87,7 @@ async function smokeTest(): Promise<void> {
   try {
     // STEP 0: Verify deployment is healthy
     console.log("0️⃣  GET /api/internal/build-info (verify deployment)");
-    const buildInfoResponse = await fetch(`${baseUrl}/api/internal/build-info`);
+    const buildInfoResponse = await safeFetch(`${baseUrl}/api/internal/build-info`);
     console.log(`   Status: ${buildInfoResponse.status}`);
 
     if (buildInfoResponse.status !== 200) {
@@ -99,7 +109,7 @@ async function smokeTest(): Promise<void> {
     if (diagnosticKey) {
       signupHeaders["x-opsiq-diagnostic-key"] = diagnosticKey;
     }
-    const signupResponse = await fetch(`${baseUrl}/api/auth/signup`, {
+    const signupResponse = await safeFetch(`${baseUrl}/api/auth/signup`, {
       method: "POST",
       headers: signupHeaders,
       body: JSON.stringify({
@@ -136,7 +146,7 @@ async function smokeTest(): Promise<void> {
       console.log("\n🔍 CALLING DIAGNOSTIC ENDPOINT");
       console.log("GET /api/internal/signup-proof");
 
-      const diagnosticResponse = await fetch(`${baseUrl}/api/internal/signup-proof`, {
+      const diagnosticResponse = await safeFetch(`${baseUrl}/api/internal/signup-proof`, {
         method: "GET",
         headers: { "x-opsiq-diagnostic-key": diagnosticKey || "not-set" },
       });
