@@ -19,6 +19,7 @@
 # The intended source is OpsIQ's own trusted backup pipeline: a dump executes SQL on restore, so never restore an
 # untrusted dump.
 # Optional: verify checksum against the accompanying .sha256 file.
+# PORTABILITY: runs on Linux and stock macOS (bash 3.2): SHA-256 via sha256sum or shasum; no grep -P.
 # WARNING: this restores a `pg_dump --create` dump, which embeds
 # `DROP DATABASE IF EXISTS <name>` / `CREATE DATABASE <name>` /
 # `\connect <name>` statements for the SOURCE database's own name. The
@@ -65,6 +66,33 @@ if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.
   exit 1
 fi
 
+# Portability (stock macOS): nothing below may depend on GNU-only tools. macOS ships neither `sha256sum` nor a
+# grep that supports -P, so the SHA-256 and the three extractions (restored database name, query suffix, total
+# row count) use POSIX tools only (shasum / sed / awk / parameter expansion). Linux behavior is unchanged.
+# Defined here, after target authorization, so no helper runs before the restore target is verified.
+#
+# sha256_of FILE -> prints the lowercase hex SHA-256 of FILE, or fails closed (non-zero, prints nothing) when no
+# SHA-256 tool exists or the tool's output is not a 64-hex digest. Never prints an empty value on success.
+sha256_of() {
+  _sha_out=""
+  if command -v sha256sum >/dev/null 2>&1; then
+    _sha_out=$(sha256sum "$1" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    _sha_out=$(shasum -a 256 "$1" | awk '{print $1}')
+  else
+    echo "ERROR: neither sha256sum nor shasum is available; cannot verify the backup checksum" >&2
+    return 1
+  fi
+  case "$_sha_out" in
+    *[!0-9a-f]*|"") echo "ERROR: could not compute a SHA-256 digest for the backup file" >&2; return 1 ;;
+  esac
+  if [ "${#_sha_out}" -ne 64 ]; then
+    echo "ERROR: could not compute a SHA-256 digest for the backup file" >&2
+    return 1
+  fi
+  printf '%s\n' "$_sha_out"
+}
+
 echo "Starting database restore..." | tee "$LOG_FILE"
 echo "Backup file: $BACKUP_FILE" | tee -a "$LOG_FILE"
 echo "RESTORE_TARGET=${OPSIQ_DB_TARGET}" | tee -a "$LOG_FILE"
@@ -75,7 +103,10 @@ if [ "$VERIFY" = "verify" ] || [ -f "${BACKUP_FILE}.sha256" ]; then
 
   if [ -f "${BACKUP_FILE}.sha256" ]; then
     STORED_CHECKSUM=$(cat "${BACKUP_FILE}.sha256")
-    COMPUTED_CHECKSUM=$(sha256sum "$BACKUP_FILE" | awk '{print $1}')
+    if ! COMPUTED_CHECKSUM=$(sha256_of "$BACKUP_FILE"); then
+      echo "ERROR: checksum verification could not be performed; nothing was restored." | tee -a "$LOG_FILE"
+      exit 1
+    fi
 
     if [ "$STORED_CHECKSUM" = "$COMPUTED_CHECKSUM" ]; then
       echo "Checksum verified: $COMPUTED_CHECKSUM" | tee -a "$LOG_FILE"
@@ -125,7 +156,7 @@ if gunzip -c "$BACKUP_FILE" | psql \
   # header note), so re-derive it from the dump text itself rather than
   # from DATABASE_URL, then connect to it on the same server to inspect
   # what actually landed.
-  RESTORED_DB=$(zgrep -m1 -oP '(?<=\\connect )\S+' "$BACKUP_FILE" || true)
+  RESTORED_DB=$(gzip -dc "$BACKUP_FILE" 2>/dev/null | awk '/^\\connect /{print $2; exit}' || true)
   if [ -z "$RESTORED_DB" ]; then
     echo "WARNING: could not determine restored database name from dump; skipping schema/data verification" | tee -a "$LOG_FILE"
     exit 0
@@ -136,7 +167,10 @@ if gunzip -c "$BACKUP_FILE" | psql \
   # substituting only the path component of DATABASE_URL.
   SERVER_BASE=$(echo "$DATABASE_URL" | sed -E 's#(://[^/]+/)[^?]*(\?.*)?$#\1#')
   RESTORED_DB_URL="${SERVER_BASE}${RESTORED_DB}"
-  QUERY_SUFFIX=$(echo "$DATABASE_URL" | grep -oP '\?.*$' || true)
+  case "$DATABASE_URL" in
+    *\?*) QUERY_SUFFIX="?${DATABASE_URL#*\?}" ;;
+    *) QUERY_SUFFIX="" ;;
+  esac
   RESTORED_DB_URL="${RESTORED_DB_URL}${QUERY_SUFFIX}"
 
   TABLE_COUNT=$(psql "$RESTORED_DB_URL" -t -c \
@@ -169,7 +203,9 @@ if gunzip -c "$BACKUP_FILE" | psql \
       END LOOP;
       RAISE NOTICE 'TOTAL_ROWS=%', total;
     END \$\$;
-  " 2>&1 | grep -oP '(?<=TOTAL_ROWS=)[0-9]+' || echo "0")
+  " 2>&1 | sed -n 's/.*TOTAL_ROWS=\([0-9][0-9]*\).*/\1/p' | head -n 1 || true)
+  # Unparseable / missing count fails safe to 0 (the existing zero-row warning path), exactly as `|| echo "0"` did.
+  TOTAL_ROWS="${TOTAL_ROWS:-0}"
   echo "Total rows across all public-schema tables: $TOTAL_ROWS" | tee -a "$LOG_FILE"
 
   if [ "$TOTAL_ROWS" -eq 0 ]; then
