@@ -299,6 +299,18 @@ none of it provisions anything or touches Production — every step that does is
    decryption; `restore-database.sh` independently refuses any non-loopback/non-approved target.
 4. The script ends with `RESTORE_SERVICEABLE=NO_UNTIL_ERASURE_RECONCILED`: **the copy is quarantined.**
 
+#### Running the local restore on a MacBook (stock macOS)
+
+`scripts/restore-database.sh` (called by `restore-database-r2.sh`) is portable: SHA-256 uses `sha256sum` or
+`shasum -a 256`, and the restored-database name, query suffix and row count use POSIX tools only (no `grep -P`).
+It runs on the stock macOS bash 3.2 with no GNU coreutils/grep. Requirements: `age`, `psql` and `pg_dump` whose
+**major version equals the recovery database's major (18 for Production)** — e.g. `brew install age postgresql@18` and put
+`$(brew --prefix postgresql@18)/bin` first on `PATH`; and a disposable loopback PostgreSQL 18 (Docker Desktop:
+`docker run --rm -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD=<throwaway> postgres:18`).
+Native-macOS proof: run `npx vitest run src/__tests__/scripts/restore-database-portability.test.ts` on the Mac (it uses
+the Mac's real tools). CI proves Linux only (PostgreSQL 18 client+server pair and a simulated stock-macOS tool
+environment); it cannot prove a native macOS run.
+
 ### Post-erasure reconciliation (what lifts the quarantine)
 `ERASURE_LEDGER_SIGNING_KEY=… RESTORED_DATABASE_URL=<loopback restored copy> npx tsx scripts/privacy/verify-erasure-ledger.ts
 --ledger-dir <local copy of erasure-ledger/> --backup-timestamp <manifest timestamp_utc> [--reconciled-event-ids id,id]`

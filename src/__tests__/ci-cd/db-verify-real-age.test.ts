@@ -100,4 +100,26 @@ describe("DB job runs the real-age restore proof (F-RESTORE-PROOF-SILENT-SKIP)",
     expect(run).toMatch(/apt-pgdg-install-failed::[^\n]*\n\s+exit 1/);
     expect(run).not.toMatch(/\|\|\s*true/);
   });
+
+  it("a real PostgreSQL 18 server + client pair runs the restore portability proof, fail-closed (F-RESTORE-SCRIPT-MACOS-PORTABILITY)", () => {
+    const job = ci.jobs["db-verify"] as unknown as { services: Record<string, { image: string; ports: string[] }> };
+    expect(job.services.postgres18.image).toBe("postgres:18");
+    expect(job.services.postgres18.ports).toContain("5433:5432");
+    const i = idx("Restore portability proof on PostgreSQL 18");
+    expect(i).toBeGreaterThan(idx("Restore-proof evidence"));
+    const step = steps[i];
+    expect(step.env?.OPSIQ_REQUIRE_RESTORE_PORTABILITY).toBe("1");
+    expect(step.env?.RESTORE_PORTABILITY_EXPECT_MAJOR).toBe("18");
+    expect(step.env?.RESTORE_PORTABILITY_DATABASE_URL).toContain("localhost:5433");
+    expect(step["continue-on-error"] ?? false).toBe(false);
+    const run = step.run ?? "";
+    expect(run).toContain("set -euo pipefail");
+    expect(run).toContain("pg_dump is not PostgreSQL 18");
+    expect(run).toContain("psql is not PostgreSQL 18");
+    expect(run).toContain("server major is $SRV_MAJOR, expected 18");
+    expect(run).toContain("restore-database-portability.db.test.ts");
+    expect(run).toContain("skipped === 0");
+    expect(run).not.toMatch(/\|\|\s*true/);
+    expect(steps[dbSuiteIdx].env?.OPSIQ_REQUIRE_RESTORE_PORTABILITY).toBe("1");
+  });
 });

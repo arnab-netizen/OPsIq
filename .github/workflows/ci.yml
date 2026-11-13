@@ -483,6 +483,22 @@ jobs:
           --health-start-period 10s
         ports:
           - 5432:5432
+      # Disposable PostgreSQL 18 server (production's major) used ONLY by the restore-portability proof below, with
+      # the runner's matching PostgreSQL 18 client. Separate from the postgres:16 app-test database above.
+      postgres18:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5433:5432
 
     env:
       OPSIQ_DB_TARGET: ci
@@ -608,6 +624,8 @@ jobs:
           # Makes backup-restore-local-proof.db.test.ts MANDATORY: if it cannot run (age or
           # pg_dump missing, DB gate off) the suite fails instead of skipping.
           OPSIQ_REQUIRE_RESTORE_PROOF: '1'
+          # Same for the restore-database.sh portability proof (real pg_dump | gzip | script; PG client == server major).
+          OPSIQ_REQUIRE_RESTORE_PORTABILITY: '1'
         continue-on-error: false
 
       # Evidence + fail-closed assertion for the restore proof: re-runs ONLY the proof file (a few
@@ -630,6 +648,54 @@ jobs:
             const has = (re) => t.some((x) => re.test(x.title) && x.status === "passed");
             const ok = t.length >= 14 && failed === 0 && skipped === 0 && has(/primary identity ALONE/) && has(/escrow identity ALONE/);
             if (!ok) { console.log("::error::restore proof incomplete: every test must pass (none skipped) and both identity-alone restores must run"); process.exit(1); }
+          '
+        continue-on-error: false
+
+      # Restore portability proof on production's PostgreSQL major: real PG18 client (runner image; PGDG fallback) +
+      # real postgres:18 server container, majors asserted equal and equal to 18. Runs restore-database.sh end to end
+      # (real pg_dump --create | gzip, checksum sidecar, restore, verification) natively AND under a simulated stock-macOS
+      # tool environment. Linux proof: native macOS proof needs a run on a Mac (see the test header / owner checklist).
+      - name: Restore portability proof on PostgreSQL 18 (real client + real server; fail-closed)
+        env:
+          OPSIQ_REQUIRE_RESTORE_PORTABILITY: '1'
+          RESTORE_PORTABILITY_EXPECT_MAJOR: '18'
+          RESTORE_PORTABILITY_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/postgres
+        run: |
+          set -euo pipefail
+          PG18BIN=/usr/lib/postgresql/18/bin
+          if [ ! -x "$PG18BIN/pg_dump" ] || [ ! -x "$PG18BIN/psql" ]; then
+            . /etc/os-release
+            echo "::warning title=pg18-client-missing::no PostgreSQL 18 client on $PRETTY_NAME; installing via PGDG"
+            sudo apt-get install -y --no-install-recommends curl ca-certificates
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg18.list > /dev/null
+            sudo apt-get update
+            if ! sudo apt-get install -y --no-install-recommends postgresql-client-18 > "$RUNNER_TEMP/apt18.log" 2>&1; then
+              echo "::error title=pg18-client-install-failed::$(tail -5 "$RUNNER_TEMP/apt18.log" | tr '\n' ' ' | cut -c1-700)"
+              exit 1
+            fi
+          fi
+          export PATH="$PG18BIN:$PATH"
+          DUMP_V="$(pg_dump --version)"
+          PSQL_V="$(psql --version)"
+          SRV_NUM="$(PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d postgres -tAc 'show server_version_num')"
+          SRV_MAJOR=$((SRV_NUM / 10000))
+          echo "::notice title=pg18-proof-env::$DUMP_V | $PSQL_V | server_major=$SRV_MAJOR"
+          case "$DUMP_V" in "pg_dump (PostgreSQL) 18."*) ;; *) echo "::error::pg_dump is not PostgreSQL 18: $DUMP_V"; exit 1 ;; esac
+          case "$PSQL_V" in "psql (PostgreSQL) 18."*) ;; *) echo "::error::psql is not PostgreSQL 18: $PSQL_V"; exit 1 ;; esac
+          [ "$SRV_MAJOR" = "18" ] || { echo "::error::server major is $SRV_MAJOR, expected 18"; exit 1; }
+          npx vitest run src/__tests__/scripts/restore-database-portability.db.test.ts --reporter=json --outputFile="$RUNNER_TEMP/restore-portability-pg18.json"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/restore-portability-pg18.json", "utf8"));
+            const t = r.testResults.flatMap((f) => f.assertionResults);
+            const by = (s) => t.filter((x) => x.status === s).length;
+            const passed = by("passed"), failed = by("failed"), skipped = t.length - passed - failed;
+            console.log("::notice title=pg18-portability-results::tests=" + t.length + " passed=" + passed + " failed=" + failed + " skipped_or_pending=" + skipped);
+            for (const x of t) console.log("::notice title=pg18-portability-test::" + x.status + " | " + x.title.slice(0, 150));
+            const has = (re) => t.some((x) => re.test(x.title) && x.status === "passed");
+            const ok = t.length >= 7 && failed === 0 && skipped === 0 && has(/client and server majors match/) && has(/simulated stock macOS/) && has(/native tool environment/) && has(/tampered/);
+            if (!ok) { console.log("::error::PG18 restore portability proof incomplete: every test must pass (none skipped)"); process.exit(1); }
           '
         continue-on-error: false
 

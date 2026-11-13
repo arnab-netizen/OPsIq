@@ -446,19 +446,24 @@ describe("D4: Backup/Restore Procedure - Script Testing", () => {
       expect(stepBody).toContain("RESTORED_DB=$(zgrep -m1 -oP '(?<=\\\\connect )\\S+' \"$BACKUP_FILE\" || true)");
     });
 
-    it("RECURRENCE GUARD: every zgrep -m1 extraction in the repo is followed by || true", () => {
-      const files = [
-        WORKFLOW_PATH,
-        path.join(SCRIPT_DIR, "restore-database.sh"),
-      ];
-      for (const file of files) {
-        const content = fs.readFileSync(file, "utf-8");
-        const matches = content.match(/zgrep -m1 -oP[^\n]*/g) ?? [];
-        expect(matches.length).toBeGreaterThan(0);
-        for (const line of matches) {
-          expect(line, `${file}: "${line}" is missing || true`).toContain("|| true");
-        }
+    it("RECURRENCE GUARD: every zgrep -m1 extraction in the workflow is followed by || true", () => {
+      // (restore-database.sh no longer uses zgrep -m1 -oP at all: it was GNU-only and broke on stock macOS. Its
+      // replacement extraction is guarded by the next test, which keeps the same broken-pipe tolerance.)
+      const content = fs.readFileSync(WORKFLOW_PATH, "utf-8");
+      const matches = content.match(/zgrep -m1 -oP[^\n]*/g) ?? [];
+      expect(matches.length).toBeGreaterThan(0);
+      for (const line of matches) {
+        expect(line, `${WORKFLOW_PATH}: "${line}" is missing || true`).toContain("|| true");
       }
+    });
+
+    it("RECURRENCE GUARD: restore-database.sh's RESTORED_DB extraction is POSIX-portable AND tolerates a benign SIGPIPE (|| true)", () => {
+      const content = fs.readFileSync(path.join(SCRIPT_DIR, "restore-database.sh"), "utf-8");
+      const lines = content.split("\n").filter((l) => /^\s*RESTORED_DB=/.test(l));
+      expect(lines.length).toBe(1);
+      expect(lines[0], "extraction must tolerate awk closing the pipe early").toContain("|| true");
+      expect(lines[0], "must not use GNU-only grep -P").not.toMatch(/grep\s+-[a-zA-Z]*P|zgrep\s+[^|]*-[a-zA-Z]*P/);
+      expect(lines[0]).toContain("awk");
     });
   });
 
