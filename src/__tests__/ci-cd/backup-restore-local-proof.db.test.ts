@@ -76,6 +76,22 @@ async function digest(db: string): Promise<Record<string, { rows: number; md5: s
   });
 }
 
+/**
+ * FAIL-CLOSED: in CI (OPSIQ_REQUIRE_RESTORE_PROOF=1) the real-age + real-PostgreSQL restore proof below
+ * is mandatory. Without this, a runner lacking `age` made every test in the suite SKIP and the DB job
+ * stayed green while proving nothing about restore.
+ */
+describe("restore proof is mandatory in CI (cannot silently skip)", () => {
+  it("OPSIQ_REQUIRE_RESTORE_PROOF=1 requires real age, age-keygen, pg_dump, psql and TEST_WITH_DB=true", () => {
+    if (process.env.OPSIQ_REQUIRE_RESTORE_PROOF !== "1") return;
+    expect(SHOULD_RUN_DB_TESTS, "TEST_WITH_DB must be true when the restore proof is required").toBe(true);
+    for (const bin of ["age", "age-keygen", "pg_dump", "psql"]) {
+      expect(have(bin), `required binary missing or not runnable: ${bin}`).toBe(true);
+    }
+    expect(CAN_RUN, "restore proof would be skipped").toBe(true);
+  });
+});
+
 describe.skipIf(!CAN_RUN)("local backup → restore proof, least-privilege role, erasure reconciliation (real PostgreSQL + real age)", () => {
   let work: string;
   let primary: ReturnType<typeof keypair>;

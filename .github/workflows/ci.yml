@@ -537,8 +537,100 @@ jobs:
         env:
           DATABASE_URL: ${{ env.MIGRATION_DATABASE_URL }}
 
+      # Real-age restore proof prerequisites. The runner image (ubuntu-24.04) ships neither
+      # `age` nor guarantees the PostgreSQL client matches the server; without `age` the
+      # backup-restore-local-proof.db.test.ts suite SKIPPED silently (describe.skipIf), so a green
+      # DB job proved nothing about restore. Installed from the distro archive (apt verifies the
+      # package signature chain); the step then FAILS CLOSED unless the binaries run, are the
+      # expected major.minor, can do a real encrypt/decrypt round trip with TWO recipients (each
+      # identity alone), and pg_dump / psql are present. No secret, no network beyond apt.
+      - name: Install and verify real age (restore-proof prerequisite; fail-closed)
+        run: |
+          set -euo pipefail
+          . /etc/os-release
+          echo "::notice title=runner-os::$PRETTY_NAME default_pg_dump=$(pg_dump --version 2>/dev/null || echo none) installed_pg_majors=$(ls /usr/lib/postgresql 2>/dev/null | tr '\n' ' ')"
+          sudo apt-get update
+          # Ubuntu archive first; on ANY failure surface the real apt error as an annotation (job logs
+          # are not readable from tooling) and retry once via the PGDG archive, the same proven
+          # approach as scheduled-backup-r2.yml. Both failing is a hard, explained failure.
+          if ! sudo apt-get install -y --no-install-recommends age postgresql-client-16 > "$RUNNER_TEMP/apt1.log" 2>&1; then
+            echo "::warning title=apt-archive-install-failed::$(tail -5 "$RUNNER_TEMP/apt1.log" | tr '\n' ' ' | cut -c1-700)"
+            sudo apt-get install -y --no-install-recommends curl ca-certificates
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+            sudo apt-get update
+            if ! sudo apt-get install -y --no-install-recommends age postgresql-client-16 > "$RUNNER_TEMP/apt2.log" 2>&1; then
+              echo "::error title=apt-pgdg-install-failed::$(tail -5 "$RUNNER_TEMP/apt2.log" | tr '\n' ' ' | cut -c1-700)"
+              exit 1
+            fi
+          fi
+          # Root cause F-RESTORE-PROOF-PG-MAJOR-MISMATCH (found by the first real CI execution of the
+          # proof, PR #660 run 43274968678): the runner's default pg_dump is newer than the postgres:16
+          # service container; a newer pg_dump emits `SET transaction_timeout = 0;` which a PG16 server
+          # rejects, so every runner-made dump failed to restore. Use the client whose major matches the
+          # server, and FAIL CLOSED if it does not.
+          PGBIN=/usr/lib/postgresql/16/bin
+          test -x "$PGBIN/pg_dump" && test -x "$PGBIN/psql"
+          export PATH="$PGBIN:$PATH"
+          echo "$PGBIN" >> "$GITHUB_PATH"
+          SRV_NUM="$(PGPASSWORD=postgres psql -h localhost -U postgres -d opsiq_test -tAc 'show server_version_num')"
+          SRV_MAJOR=$((SRV_NUM / 10000))
+          DUMP_MAJOR="$(pg_dump --version | sed -E 's/^pg_dump \(PostgreSQL\) ([0-9]+).*/\1/')"
+          if [ "$DUMP_MAJOR" != "$SRV_MAJOR" ]; then
+            echo "::error::pg_dump major $DUMP_MAJOR != PostgreSQL server major $SRV_MAJOR; dumps would not restore"
+            exit 1
+          fi
+          AGE_V="$(age --version)"
+          KG_V="$(age-keygen --version)"
+          echo "age=$AGE_V age-keygen=$KG_V"
+          case "$AGE_V" in 1.1.*|1.2.*|1.3.*) ;; *) echo "::error::unexpected age version: $AGE_V"; exit 1 ;; esac
+          case "$KG_V" in 1.1.*|1.2.*|1.3.*) ;; *) echo "::error::unexpected age-keygen version: $KG_V"; exit 1 ;; esac
+          pg_dump --version
+          psql --version
+          T="$(mktemp -d)"
+          age-keygen -o "$T/a.key" 2> "$T/a.pub"
+          age-keygen -o "$T/b.key" 2> "$T/b.pub"
+          RA="$(sed -n 's/^Public key: //p' "$T/a.pub")"
+          RB="$(sed -n 's/^Public key: //p' "$T/b.pub")"
+          test -n "$RA" && test -n "$RB" && test "$RA" != "$RB"
+          printf 'restore-proof-smoke' | age -r "$RA" -r "$RB" -o "$T/o.age"
+          test "$(age -d -i "$T/a.key" "$T/o.age")" = "restore-proof-smoke"
+          test "$(age -d -i "$T/b.key" "$T/o.age")" = "restore-proof-smoke"
+          if age -d -i "$T/a.key" "$T/o.age" | grep -q wrong; then exit 1; fi
+          rm -rf "$T"
+          echo "real age verified: two independent identities each decrypt a two-recipient object"
+          echo "::notice title=restore-proof-env::age=$AGE_V age-keygen=$KG_V pg_dump_major=$DUMP_MAJOR server_major=$SRV_MAJOR"
+
       - name: Run DB test suite (*.db.test.ts only)
         run: npm test -- '.db.test.ts' --maxWorkers=1
+        env:
+          # Makes backup-restore-local-proof.db.test.ts MANDATORY: if it cannot run (age or
+          # pg_dump missing, DB gate off) the suite fails instead of skipping.
+          OPSIQ_REQUIRE_RESTORE_PROOF: '1'
+        continue-on-error: false
+
+      # Evidence + fail-closed assertion for the restore proof: re-runs ONLY the proof file (a few
+      # seconds) with the JSON reporter and publishes the per-test outcome as annotations (readable
+      # without the raw log). Fails unless EVERY test passed, none skipped, and BOTH identity-alone
+      # restores ran.
+      - name: Restore-proof evidence (per-test results; fail-closed on any skip)
+        env:
+          OPSIQ_REQUIRE_RESTORE_PROOF: '1'
+        run: |
+          set -euo pipefail
+          npx vitest run src/__tests__/ci-cd/backup-restore-local-proof.db.test.ts --reporter=json --outputFile="$RUNNER_TEMP/restore-proof.json"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/restore-proof.json", "utf8"));
+            const t = r.testResults.flatMap((f) => f.assertionResults);
+            const by = (s) => t.filter((x) => x.status === s).length;
+            const passed = by("passed"), failed = by("failed"), skipped = t.length - passed - failed;
+            console.log("::notice title=restore-proof-results::tests=" + t.length + " passed=" + passed + " failed=" + failed + " skipped_or_pending=" + skipped);
+            for (const x of t) console.log("::notice title=restore-proof-test::" + x.status + " | " + x.title.slice(0, 160));
+            const has = (re) => t.some((x) => re.test(x.title) && x.status === "passed");
+            const ok = t.length >= 14 && failed === 0 && skipped === 0 && has(/primary identity ALONE/) && has(/escrow identity ALONE/);
+            if (!ok) { console.log("::error::restore proof incomplete: every test must pass (none skipped) and both identity-alone restores must run"); process.exit(1); }
+          '
         continue-on-error: false
 
       - name: QBO erasure DB proof (disposable database, non-superuser schema owner)
