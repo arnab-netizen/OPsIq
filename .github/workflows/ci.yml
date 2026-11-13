@@ -87,11 +87,13 @@ jobs:
     needs: classify
     runs-on: ubuntu-latest
     # Must stay strictly greater than the non-DB suite step cap below plus setup.
-    # A step timeout is only reachable if the job outlives it: with a 25-minute job
-    # cap, raising the step to 30 would change nothing, because the job would be
-    # killed at 25 first and the step would never report its own timeout.
-    # Observed: setup through step start costs ~2 minutes, so 40 leaves real room.
-    timeout-minutes: 40
+    # A step timeout is only reachable if the job outlives it: a job cap at or below
+    # step cap + setup kills the job first and the step never reports its own timeout.
+    # Observed (run 43212944581): job start through suite-step start = 306s (5.1 min:
+    # npm ci, tsc, lint, build), post-steps ~3s. Worst case at the 45-minute step cap
+    # = 306s + 2700s + 3s = ~50.2 min, so 55 leaves ~4.8 min of real room.
+    # See docs/opsiq/ci/NON_DB_SUITE_CAPACITY.md (2026-11 addendum).
+    timeout-minutes: 55
 
     env:
       TEST_WITH_DB: "false"
@@ -103,6 +105,11 @@ jobs:
         node-version: [20.x]
 
     steps:
+      # Timing diagnostics only (no effect on pass/fail): records the wall-clock start of
+      # the job's own steps so the always() report below can split setup / suite / total.
+      - name: Record job step start time (diagnostic)
+        run: echo "OPSIQ_JOB_T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -343,6 +350,10 @@ jobs:
           TEST_WITH_DB: "false"
           NODE_ENV: test
 
+      - name: Record non-DB suite start time (diagnostic)
+        if: needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
+        run: echo "OPSIQ_SUITE_T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Run non-DB test suite (blocking; DB tests and quarantine excluded)
         if: needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
         # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
@@ -378,7 +389,18 @@ jobs:
         # Nothing about what is asserted changed. Same command, same selection, same
         # blocking behaviour, same exit-code handling. The tests were already passing;
         # they were being denied the time to say so.
-        timeout-minutes: 30
+        #
+        # ─── 2026-11 addendum: 30 -> 45 ───────────────────────────────────────
+        # The suite grew to ~37,142 tests / 1,488 files. Passing runs now sit within
+        # ~1% of the old 1800s cap on slow runners (run 43212944581: step 1782s, 18s
+        # of headroom; a local run of the identical suite took 1858s). Runner speed is
+        # bimodal (fast ~1415-1441s, slow ~1771-1782s) and ~53% of the time is
+        # environment instantiation, so passing-and-killed with zero failures recurred
+        # (PR #657 run 43203570990, PR #642 run 43205174093). 45 min = 1.5x the slowest
+        # observed. Same command, selection, blocking behaviour and exit handling; the
+        # always() report step below records setup / suite / total so the next
+        # headroom decision uses data. This does NOT fix the underlying cost.
+        timeout-minutes: 45
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
@@ -387,6 +409,37 @@ jobs:
           TEST_WITH_DB: "false"
           NODE_ENV: test
         continue-on-error: false
+
+      # Diagnostics only: always() so it also reports when the suite step is killed by its
+      # timeout (the case the numbers matter most). It never fails the job (it only prints),
+      # never changes the suite step's outcome and has no continue-on-error masking of it.
+      - name: Non-DB suite timing diagnostics (setup / suite / total)
+        if: always() && needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
+        run: |
+          NOW=$(date +%s)
+          T0="${OPSIQ_JOB_T0:-}"
+          S0="${OPSIQ_SUITE_T0:-}"
+          STEP_CAP_S=2700
+          if [ -z "$T0" ] || [ -z "$S0" ]; then
+            echo "NON_DB_SUITE_TIMING unavailable (start markers not recorded; an earlier step failed before the suite started)"
+            exit 0
+          fi
+          SETUP=$((S0 - T0))
+          SUITE=$((NOW - S0))
+          TOTAL=$((NOW - T0))
+          HEADROOM=$((STEP_CAP_S - SUITE))
+          echo "NON_DB_SUITE_TIMING setup_s=$SETUP suite_s=$SUITE total_s=$TOTAL step_cap_s=$STEP_CAP_S suite_headroom_s=$HEADROOM"
+          {
+            echo "### Non-DB suite timing"
+            echo "| phase | seconds |"
+            echo "|---|---|"
+            echo "| setup (npm ci, tsc, lint, build, gates) | $SETUP |"
+            echo "| suite step (vitest, incl. environment instantiation) | $SUITE |"
+            echo "| total (job steps so far) | $TOTAL |"
+            echo "| suite step cap / headroom | $STEP_CAP_S / $HEADROOM |"
+            echo ""
+            echo "vitest's own transform / setup / import / tests / environment split is in the suite step's final \`Duration\` line."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # CI-MIN-01 owner correction: DB validation now runs INSIDE ci.yml (the
   # one required PR gate) instead of db-verification.yml's own pull_request
