@@ -2,6 +2,35 @@
 
 Status: **proposed by PR `claude/production-secret-isolation`; nothing in GitHub or Vercel is changed by it.** Owner actions are listed in section 6 and must be done **before** the PR is merged.
 
+> **UPDATE (supersedes the secret names in §2, §5 and §6 below).** The seven `production-operator` jobs now read **uniquely named, environment-only** secrets, and the three diagnostic smoke workflows run in a new protected environment `production-smoke`. Reason: GitHub resolves `secrets.X` environment-first and then falls back to a repo-level secret of the same name, so an environment secret that is missing or misspelled silently resolves to the older, unprotected repo-level copy. With unique names there is no repo-level target to fall back to, and every job additionally fails closed (empty check, `exit 1`) before use.
+
+## 0. Secret names, scopes and exact owner setup (nothing here is done by Claude)
+
+| Environment | Secret (name only) | Used by |
+|---|---|---|
+| `production-operator` | `OPERATOR_DATABASE_URL` | migrate-production, production-db-status, provision-administration-operator, provision-acceptance-fixture-operator, scheduled-backup (legacy, disabled) |
+| `production-operator` | `OPERATOR_ACCEPTANCE_EMAIL` | production-owner-acceptance, production-root-probe, provision-acceptance-fixture-operator |
+| `production-operator` | `OPERATOR_ACCEPTANCE_PASSWORD` | production-owner-acceptance, production-root-probe |
+| `production-smoke` | `SMOKE_DIAGNOSTIC_KEY` | smoke-production-dashboard / -diagnosis-dashboard / -signup-dashboard |
+
+The old names `PRODUCTION_DATABASE_URL`, `PRODUCTION_ACCEPTANCE_EMAIL`, `PRODUCTION_ACCEPTANCE_PASSWORD` are no longer referenced by the seven jobs (only `stage7-capture*` in `stage7-evidence-signing` still uses them). `OPSIQ_DIAGNOSTIC_KEY` is no longer referenced by any workflow. Tests forbid any `production-operator`/`production-smoke` job from referencing a non-unique secret.
+
+**Owner steps, in order (before any dispatch of the changed workflows):**
+1. Create `production-operator`: deployment branches = `main` only; required reviewer = the owner (prevent-self-review OFF for a sole owner); disallow admin bypass if offered. Add secrets `OPERATOR_DATABASE_URL`, `OPERATOR_ACCEPTANCE_EMAIL`, `OPERATOR_ACCEPTANCE_PASSWORD` (values copied from the current ones; nothing is rotated by this PR).
+2. Create `production-smoke` with the same protections; add `SMOKE_DIAGNOSTIC_KEY` (same value the Vercel runtime accepts).
+3. Merge only after the owner has confirmed 1-2; then dispatch each workflow once and approve the environment gate to verify.
+4. Only after verification: delete repo-level `OPSIQ_DIAGNOSTIC_KEY`, the Production-environment copies and later the other old-name copies per §5. Never earlier.
+A job dispatched before its environment exists would auto-create an unprotected environment and fail at its preflight; do not dispatch first.
+
+## 0.1 Diagnostic-key exfiltration (smoke workflows)
+
+Findings: `base_url` was free text, so a dispatcher could aim the key (`x-opsiq-diagnostic-key`) at any host; Node `fetch` follows redirects and re-sends custom headers cross-origin; `smoke-production-dashboard.ts` also had a fallback that put the key in a query string (`?key=`; the server already ignores query keys). Controls: `base_url` is a `choice` of three canonical origins; the workflow validates it in shell before any secret-bearing step; the scripts use `src/lib/security/diagnostic-destination.ts` (exact-origin allow-list, relative paths only, `redirect: "manual"` so a 3xx is never followed, key header-only, key never logged); the `curl` wait steps use `--proto '=https' --max-redirs 0`. Tests: `src/__tests__/security/diagnostic-destination.test.ts` (real loopback servers prove the key never reaches an unapproved or redirect-target host) and mutation tests M10-M18 in the isolation test.
+Not changed (follow-up): other key users (`scripts/validate-deployment.ts`, `deployment-preflight.mjs`, stage7 probes) and `smoke-production-login.ts` (sends demo credentials to `BASE_URL`). Pre-existing: the signup/diagnosis smoke scripts abort on a production URL unless `SMOKE_ALLOW_PRODUCTION_WRITES=true`, which the workflows do not set.
+
+## 0.2 `MIGRATION_DATABASE_URL` classification (metadata only; never read, decoded or used)
+
+Evidence: it exists at repo level and in the `Production` environment, created 18 s apart on 2026-09-27 (a copy of one value, or two values set in one sitting); 12 workflow consumers read the repo-level copy with no protected environment (matrix in §4); module-migration jobs fall back to it unless `staging` defines its own. Scope cannot be proven from metadata, so it is classified **POTENTIALLY PRODUCTION-PRIVILEGED**. Consequence: treat the repo-level copy as exposed to anyone who can push a workflow branch; do not use it for any new job; migrate consumers per §5 stages 2-3 and have the owner confirm (from the Neon console, not from CI) which role/database it targets before deciding on rotation.
+
 ## 1. Problem
 
 * The seven Production-grade Actions jobs below ran in the GitHub environment `production`. That is also the environment name **Vercel** records its Production deployments under (GitHub environment names are case-insensitive), it has **no deployment-branch rule and no reviewer**, and it cannot safely get reviewers while Vercel shares it (GitHub's docs do not say how reviewers interact with deployments created by integrations).
@@ -24,7 +53,7 @@ Preserved unchanged: every typed-confirmation gate, `if:` condition, input valid
 
 **Workflow-origin guard** (`Assert workflow origin is main (fail-closed)`): the first step of each of the seven jobs, before any step that references a secret. It fails the job unless the trigger is `workflow_dispatch`/`schedule`, `GITHUB_REF` is `refs/heads/main`, **and** `GITHUB_WORKFLOW_REF` ends in `@refs/heads/main`. Honest limit: a workflow author can edit the guard out of a branch copy, so the guard is **defence in depth against accidental off-main dispatch**. The **enforcing** control is the `production-operator` environment's deployment-branch rule (section 6, step 2).
 
-**Tests** (`src/__tests__/ci-cd/production-secret-isolation.test.ts`, 18): the seven jobs use `production-operator` with the verbatim guard as step 1; no job may use the shared `production` environment; Production-grade secrets (`PRODUCTION_DATABASE_URL`, `VERCEL_PRODUCTION_DEPLOY_HOOK_URL`, `PRODUCTION_ACCEPTANCE_*`, `VERCEL_TOKEN`, `EVIDENCE_SIGNING_KEY`, backup/R2 secrets) may only be used in their listed protected environments, with zero exemptions; `MIGRATION_DATABASE_URL` and `OPSIQ_DIAGNOSTIC_KEY` may be read without a protected environment **only** by an exact, shrinking allowlist (a new consumer fails; a migrated consumer must be deleted from the list); module migrations can only target `staging`; no age private identity is referenced; 9 mutation tests prove each rule fails on its violation. Seven older tests that pinned the old environment name by substring were tightened to the exact new name.
+**Tests** (`src/__tests__/ci-cd/production-secret-isolation.test.ts`, now 27): the seven jobs use `production-operator` with the verbatim guard as step 1; no job may use the shared `production` environment; Production-grade secrets (`PRODUCTION_DATABASE_URL`, `VERCEL_PRODUCTION_DEPLOY_HOOK_URL`, `PRODUCTION_ACCEPTANCE_*`, `VERCEL_TOKEN`, `EVIDENCE_SIGNING_KEY`, backup/R2 secrets) may only be used in their listed protected environments, with zero exemptions; `MIGRATION_DATABASE_URL` and `OPSIQ_DIAGNOSTIC_KEY` may be read without a protected environment **only** by an exact, shrinking allowlist (a new consumer fails; a migrated consumer must be deleted from the list); module migrations can only target `staging`; no age private identity is referenced; 9 mutation tests prove each rule fails on its violation. Seven older tests that pinned the old environment name by substring were tightened to the exact new name.
 
 ## 3. Audit scope
 

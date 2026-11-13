@@ -154,9 +154,9 @@ describe("Bootable Production: production migration gate workflow", () => {
     expect(content).toContain("migrate-production");
   });
 
-  it("uses the PRODUCTION_DATABASE_URL secret and guards against placeholders", () => {
+  it("uses the OPERATOR_DATABASE_URL secret and guards against placeholders", () => {
     const content = fs.readFileSync(wfPath, "utf-8");
-    expect(content).toContain("PRODUCTION_DATABASE_URL");
+    expect(content).toContain("OPERATOR_DATABASE_URL");
     expect(content).toMatch(/PLACEHOLDER|REPLACE_|example\.com/);
   });
 

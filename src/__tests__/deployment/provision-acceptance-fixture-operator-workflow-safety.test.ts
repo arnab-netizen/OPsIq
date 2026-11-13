@@ -98,10 +98,10 @@ describe("provision-acceptance-fixture-operator.yml — inputs: modes, no arbitr
   });
 
   it("9. the account is fixed by the PRODUCTION_ACCEPTANCE_EMAIL secret, wired only into env", () => {
-    const withEmail = steps.filter((s) => JSON.stringify(s.env ?? {}).includes("secrets.PRODUCTION_ACCEPTANCE_EMAIL"));
+    const withEmail = steps.filter((s) => JSON.stringify(s.env ?? {}).includes("secrets.OPERATOR_ACCEPTANCE_EMAIL"));
     expect(withEmail.length).toBeGreaterThanOrEqual(4);
     for (const s of withEmail) {
-      const uses = Object.entries(s.env ?? {}).filter(([, v]) => String(v).includes("secrets.PRODUCTION_ACCEPTANCE_EMAIL")).map(([k]) => k);
+      const uses = Object.entries(s.env ?? {}).filter(([, v]) => String(v).includes("secrets.OPERATOR_ACCEPTANCE_EMAIL")).map(([k]) => k);
       expect(uses.every((k) => k === "PRODUCTION_ACCEPTANCE_EMAIL" || k === "TARGET_EMAIL"), s.name).toBe(true);
     }
     // never interpolated into script text
@@ -189,14 +189,14 @@ describe("provision-acceptance-fixture-operator.yml — input validation order a
 });
 
 describe("provision-acceptance-fixture-operator.yml — secrets and the wrong-database gate", () => {
-  it("13. the only secrets referenced are PRODUCTION_DATABASE_URL and PRODUCTION_ACCEPTANCE_EMAIL", () => {
+  it("13. the only secrets referenced are OPERATOR_DATABASE_URL and PRODUCTION_ACCEPTANCE_EMAIL", () => {
     const refs = new Set((src.match(/secrets\.[A-Za-z0-9_]+/g) ?? []).map((r) => r.replace("secrets.", "")));
-    expect(refs).toEqual(new Set(["PRODUCTION_DATABASE_URL", "PRODUCTION_ACCEPTANCE_EMAIL"]));
+    expect(refs).toEqual(new Set(["OPERATOR_DATABASE_URL", "OPERATOR_ACCEPTANCE_EMAIL"]));
     expect(src).not.toMatch(/postgres(?:ql)?:\/\/[^$\s]/);
   });
 
   it("14. no secret or connection string is ever logged", () => {
-    expect(functionalSrc).not.toMatch(/echo\s+"?\$\{?(DATABASE_URL|PRODUCTION_DATABASE_URL|TARGET_EMAIL|PRODUCTION_ACCEPTANCE_EMAIL)\}?"?/);
+    expect(functionalSrc).not.toMatch(/echo\s+"?\$\{?(DATABASE_URL|OPERATOR_DATABASE_URL|TARGET_EMAIL|PRODUCTION_ACCEPTANCE_EMAIL)\}?"?/);
     expect(functionalSrc).not.toMatch(/\bprintenv\b|\benv\s*$|\bset -x\b|\bcat\s+\.env|\bdeclare -p\b/m);
     expect(functionalSrc).not.toMatch(/console\.log\([^)]*DATABASE_URL[^)]*\)/);
   });
@@ -205,7 +205,7 @@ describe("provision-acceptance-fixture-operator.yml — secrets and the wrong-da
     const s = steps[idx("Run summary")];
     // no secret in its env, and its script never expands an email / connection-string variable
     expect(JSON.stringify(s.env ?? {})).not.toMatch(/secrets\.|TARGET_EMAIL|PRODUCTION_ACCEPTANCE_EMAIL|DATABASE_URL/);
-    expect(s.run ?? "").not.toMatch(/\$\{?(TARGET_EMAIL|PRODUCTION_ACCEPTANCE_EMAIL|DATABASE_URL|PRODUCTION_DATABASE_URL)\b/);
+    expect(s.run ?? "").not.toMatch(/\$\{?(TARGET_EMAIL|PRODUCTION_ACCEPTANCE_EMAIL|DATABASE_URL|OPERATOR_DATABASE_URL)\b/);
     expect(s.run ?? "").not.toMatch(/secrets\./);
     expect(s.if).toBe("always()");
     expect(s.run).toContain("never printed");
@@ -221,7 +221,7 @@ describe("provision-acceptance-fixture-operator.yml — secrets and the wrong-da
   it("16/35. the workflow-level host gate precedes every step that opens a database connection", () => {
     const gate = idx("Verify exact production database host matches");
     expect(steps[gate].run).toContain("node scripts/validate-expected-db-host.mjs");
-    expect(steps[gate].env?.DATABASE_URL).toContain("secrets.PRODUCTION_DATABASE_URL");
+    expect(steps[gate].env?.DATABASE_URL).toContain("secrets.OPERATOR_DATABASE_URL");
     expect(steps[gate].env?.EXPECTED_DATABASE_HOST).toContain("inputs.expected_database_host");
     steps.forEach((s, i) => {
       if (/\btsx\b/.test(s.run ?? "")) expect(i, s.name).toBeGreaterThan(gate);

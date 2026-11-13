@@ -234,15 +234,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+      - name: Preflight check - OPERATOR_DATABASE_URL secret exists
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            echo "::error::OPERATOR_DATABASE_URL secret is missing or empty"
             exit 1
           fi
-          echo "✓ PRODUCTION_DATABASE_URL secret is configured"
+          echo "✓ OPERATOR_DATABASE_URL secret is configured"
 
       - name: Remove local environment files
         run: |
@@ -251,14 +251,14 @@ jobs:
 
       - name: Verify exact production database host matches owner-pinned expectation (workflow-level gate)
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
         run: node scripts/validate-expected-db-host.mjs
 
       - name: Run provisioning script (DRY_RUN preview)
         if: inputs.mode == 'DRY_RUN'
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           TARGET_EMAIL: ${{ inputs.target_email }}
           WORKSPACE_ID: ${{ inputs.workspace_id }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
@@ -272,7 +272,7 @@ jobs:
       - name: Run provisioning script (APPLY — grants the role)
         if: inputs.mode == 'APPLY'
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           TARGET_EMAIL: ${{ inputs.target_email }}
           WORKSPACE_ID: ${{ inputs.workspace_id }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}

@@ -27,7 +27,7 @@ name: Production Owner Acceptance (LIVE)
 # login limiter is a real security control and is not weakened. The shared login state lives outside the
 # uploaded artifact and is deleted below before the upload step.
 #
-# Fails closed if PRODUCTION_ACCEPTANCE_EMAIL/PASSWORD secrets are absent, if
+# Fails closed if OPERATOR_ACCEPTANCE_EMAIL/PASSWORD secrets are absent, if
 # BASE_URL does not resolve to the exact checked-out main commit in the
 # production environment, or if production is unhealthy/not ready. Retries
 # are disabled in playwright.production.config.ts -- a flaky first run is a
@@ -99,8 +99,8 @@ jobs:
 
       - name: Preflight check - production acceptance credentials exist
         run: |
-          if [ -z "${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}" ] || [ -z "${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}" ]; then
-            echo "::error::PRODUCTION_ACCEPTANCE_EMAIL and/or PRODUCTION_ACCEPTANCE_PASSWORD secret is missing or empty. Refusing to run (fail-closed)."
+          if [ -z "${{ secrets.OPERATOR_ACCEPTANCE_EMAIL }}" ] || [ -z "${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}" ]; then
+            echo "::error::OPERATOR_ACCEPTANCE_EMAIL and/or OPERATOR_ACCEPTANCE_PASSWORD secret is missing or empty. Refusing to run (fail-closed)."
             exit 1
           fi
           echo "Production acceptance credentials are configured"
@@ -158,8 +158,8 @@ jobs:
       - name: Run live production acceptance suite
         env:
           BASE_URL: ${{ env.BASE_URL }}
-          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
-          PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.OPERATOR_ACCEPTANCE_EMAIL }}
+          PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}
         run: |
           set -euo pipefail
           mapfile -t SAFE_SPECS < <(node scripts/production-safe-specs.cjs)
@@ -170,7 +170,7 @@ jobs:
       - name: Verify no credential/session leakage in captured evidence (fail-closed)
         if: always()
         env:
-          LEAK_CHECK_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          LEAK_CHECK_PASSWORD: ${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}
         run: bash scripts/verify-no-secret-leak.sh production-test-results /tmp/.opsiq-acceptance-session-tokens
 
       - name: Remove session-token scratch file and the shared login state (never part of the uploaded artifact)

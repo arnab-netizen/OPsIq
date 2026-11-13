@@ -194,7 +194,7 @@ describe("13/15. the default CI database target is a throwaway local Postgres", 
   it("the production migration workflow stays separately governed (its own exact-host gate)", () => {
     const t = text("migrate-production.yml");
     expect(t).toMatch(/expected_database_host/);
-    expect(t).toContain("PRODUCTION_DATABASE_URL");
+    expect(t).toContain("OPERATOR_DATABASE_URL");
   });
 });
 

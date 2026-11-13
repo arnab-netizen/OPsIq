@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // @ts-nocheck
+import { createDiagnosticClient } from "../src/lib/security/diagnostic-destination";
 /**
  * Production Dashboard Smoke Test
  * Tests that dashboard loads with demo data after login
@@ -8,10 +9,19 @@
  *   BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-dashboard.ts
  */
 
-const BASE_URL = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
+const BASE_URL_INPUT = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
 const DEMO_EMAIL = process.env.DEMO_EMAIL || "operator@demo.local";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "";
 const OPSIQ_DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY || "not-set";
+
+// Destination guard: the diagnostic key / credentials are only ever sent to an approved origin, as a header,
+// and redirects are never followed (see src/lib/security/diagnostic-destination.ts).
+const __client = createDiagnosticClient(BASE_URL_INPUT, OPSIQ_DIAGNOSTIC_KEY);
+const safeFetch = (url: string, init?: any) => {
+  if (!url.startsWith(`${__client.origin}/`)) throw new Error("refusing request outside the approved origin");
+  return __client.fetch(url.slice(__client.origin.length), init);
+};
+const BASE_URL = __client.origin;
 
 // Get GitHub SHA from environment (set by workflow)
 const GITHUB_SHA = process.env.GITHUB_SHA || "unknown";
@@ -33,7 +43,7 @@ async function smokeTest(): Promise<void> {
   try {
     // Step 0A: Verify deployment commit matches GitHub SHA
     console.log("0️⃣ A GET /api/internal/build-info (verify deployment)");
-    const buildInfoResponse = await fetch(`${BASE_URL}/api/internal/build-info`);
+    const buildInfoResponse = await safeFetch(`${BASE_URL}/api/internal/build-info`);
     console.log(`   Status: ${buildInfoResponse.status}`);
 
     if (buildInfoResponse.status !== 200) {
@@ -68,7 +78,7 @@ async function smokeTest(): Promise<void> {
       process.exit(1);
     }
 
-    const routeProofResponse = await fetch(
+    const routeProofResponse = await safeFetch(
       `${BASE_URL}/api/internal/engagements-route-proof`,
       {
         headers: {
@@ -125,7 +135,7 @@ async function smokeTest(): Promise<void> {
 
     // Step 1: Login to get session
     console.log("1️⃣  POST /api/auth/login");
-    const loginResponse = await fetch(`${BASE_URL}/api/auth/login`, {
+    const loginResponse = await safeFetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -162,7 +172,7 @@ async function smokeTest(): Promise<void> {
 
     // Step 2: Load dashboard (GET / which serves dashboard page)
     console.log("2️⃣  GET / (dashboard page)");
-    const dashboardResponse = await fetch(`${BASE_URL}/`, {
+    const dashboardResponse = await safeFetch(`${BASE_URL}/`, {
       method: "GET",
       headers: {
         Cookie: sessionCookie,
@@ -205,7 +215,7 @@ async function smokeTest(): Promise<void> {
 
     // Step 2.5: Verify and backfill demo user permission
     console.log("2️⃣ ·5️⃣  GET /api/internal/demo-permission-proof (verify permissions)");
-    const permissionProofResponse = await fetch(
+    const permissionProofResponse = await safeFetch(
       `${BASE_URL}/api/internal/demo-permission-proof`,
       {
         method: "GET",
@@ -278,7 +288,7 @@ async function smokeTest(): Promise<void> {
     // If role assignment is missing, attempt backfill
     if (permissionProof.classification === "role_assignment_missing") {
       console.log("\n   Attempting to backfill missing role assignment...");
-      const backfillResponse = await fetch(
+      const backfillResponse = await safeFetch(
         `${BASE_URL}/api/internal/demo-permission-proof`,
         {
           method: "POST",
@@ -316,7 +326,7 @@ async function smokeTest(): Promise<void> {
 
     // Step 2.6: Verify demo engagement data is accessible and backfill if needed
     console.log("2️⃣.6️⃣ GET /api/internal/demo-engagement-proof (verify demo data)");
-    const engagementProofResponse = await fetch(
+    const engagementProofResponse = await safeFetch(
       `${BASE_URL}/api/internal/demo-engagement-proof`,
       {
         method: "GET",
@@ -355,7 +365,7 @@ async function smokeTest(): Promise<void> {
       engagementProof.classification === "demo_engagement_membership_wrong_workspace"
     ) {
       console.log("\n   🔧 Demo data missing, mislinked, or access insufficient - backfilling...");
-      const engagementBackfillResponse = await fetch(
+      const engagementBackfillResponse = await safeFetch(
         `${BASE_URL}/api/internal/demo-engagement-proof`,
         {
           method: "POST",
@@ -384,7 +394,7 @@ async function smokeTest(): Promise<void> {
       console.log(`   Action: ${backfillResult.backfillAction}`);
 
       // Verify again after backfill
-      const verifyResponse = await fetch(
+      const verifyResponse = await safeFetch(
         `${BASE_URL}/api/internal/demo-engagement-proof`,
         {
           method: "GET",
@@ -418,7 +428,7 @@ async function smokeTest(): Promise<void> {
 
     // Step 3: Verify demo data is accessible via API
     console.log("3️⃣  GET /api/engagements (verify demo data via API)");
-    const engagementsResponse = await fetch(`${BASE_URL}/api/engagements`, {
+    const engagementsResponse = await safeFetch(`${BASE_URL}/api/engagements`, {
       method: "GET",
       headers: {
         Cookie: sessionCookie,
@@ -454,7 +464,7 @@ async function smokeTest(): Promise<void> {
         const maskedId = firstEngagementId.substring(0, 4) + "..." + firstEngagementId.substring(firstEngagementId.length - 4);
         console.log(`4️⃣  GET /api/engagements/{${maskedId}}/dashboard (Phase 2 fixed route)`);
 
-        const dashboardResponse = await fetch(`${BASE_URL}/api/engagements/${firstEngagementId}/dashboard`, {
+        const dashboardResponse = await safeFetch(`${BASE_URL}/api/engagements/${firstEngagementId}/dashboard`, {
           method: "GET",
           headers: {
             Cookie: sessionCookie,
@@ -472,7 +482,7 @@ async function smokeTest(): Promise<void> {
 
           // TASK B: Call diagnostic endpoint before exiting
           try {
-            const diagnosticResponse = await fetch(
+            const diagnosticResponse = await safeFetch(
               `${BASE_URL}/api/internal/engagement-dashboard-route-proof`,
               {
                 headers: {
@@ -561,7 +571,7 @@ async function smokeTest(): Promise<void> {
         // Test drift route
         console.log(`5️⃣  GET /api/engagements/{${maskedId}}/drift (Phase 2 fixed route)`);
 
-        const driftResponse = await fetch(`${BASE_URL}/api/engagements/${firstEngagementId}/drift`, {
+        const driftResponse = await safeFetch(`${BASE_URL}/api/engagements/${firstEngagementId}/drift`, {
           method: "GET",
           headers: {
             Cookie: sessionCookie,
@@ -579,8 +589,8 @@ async function smokeTest(): Promise<void> {
 
           // Call drift-specific diagnostic endpoint (not dashboard diagnostic)
           try {
-            const diagnosticResponse = await fetch(
-              `${BASE_URL}/api/internal/engagement-drift-route-proof?key=${encodeURIComponent(OPSIQ_DIAGNOSTIC_KEY)}`,
+            const diagnosticResponse = await safeFetch(
+              `${BASE_URL}/api/internal/engagement-drift-route-proof`,
               {
                 method: "GET",
               }
@@ -657,7 +667,7 @@ async function smokeTest(): Promise<void> {
 
         // TASK C: Optional safe 404 check for dashboard route
         console.log("6️⃣  GET /api/engagements/00000000-0000-0000-0000-000000000000/dashboard (404 safety check)");
-        const notFoundResponse = await fetch(`${BASE_URL}/api/engagements/00000000-0000-0000-0000-000000000000/dashboard`, {
+        const notFoundResponse = await safeFetch(`${BASE_URL}/api/engagements/00000000-0000-0000-0000-000000000000/dashboard`, {
           method: "GET",
           headers: {
             Cookie: sessionCookie,
@@ -757,7 +767,7 @@ async function smokeTest(): Promise<void> {
 
           // Auto-call runtime trace to identify exact filter point
           console.log("\n🔍 AUTO-CALLING RUNTIME TRACE...");
-          const traceResponse = await fetch(`${BASE_URL}/api/internal/engagements-api-runtime-trace`, {
+          const traceResponse = await safeFetch(`${BASE_URL}/api/internal/engagements-api-runtime-trace`, {
             method: "GET",
             headers: {
               "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
@@ -921,7 +931,7 @@ async function smokeTest(): Promise<void> {
               console.log("");
 
               try {
-                const probeResponse = await fetch(
+                const probeResponse = await safeFetch(
                   `${BASE_URL}/api/internal/debug-engagements-p2007`,
                   {
                     headers: {

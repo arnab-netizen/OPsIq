@@ -107,8 +107,8 @@ describe("provision-administration-operator.yml — safety controls", () => {
     expect(block).toContain("exit 1");
   });
 
-  it("12. Uses the protected production database secret (PRODUCTION_DATABASE_URL), never a hard-coded credential", () => {
-    expect(src).toContain("secrets.PRODUCTION_DATABASE_URL");
+  it("12. Uses the protected production database secret (OPERATOR_DATABASE_URL), never a hard-coded credential", () => {
+    expect(src).toContain("secrets.OPERATOR_DATABASE_URL");
     // No literal postgres:// connection string anywhere in the file.
     expect(src).not.toMatch(/postgres(?:ql)?:\/\/[^$\s]/);
   });
@@ -122,13 +122,13 @@ describe("provision-administration-operator.yml — safety controls", () => {
     expect(gateIdx).toBeLessThan(applyIdx);
     const gateBlock = src.slice(gateIdx, dryRunIdx);
     expect(gateBlock).toContain("node scripts/validate-expected-db-host.mjs");
-    expect(gateBlock).toContain("secrets.PRODUCTION_DATABASE_URL");
+    expect(gateBlock).toContain("secrets.OPERATOR_DATABASE_URL");
     expect(gateBlock).toContain("inputs.expected_database_host");
   });
 
   it("14. Never echoes the secret to logs", () => {
     expect(src).not.toMatch(/echo\s+"\$DATABASE_URL"/);
-    expect(src).not.toMatch(/echo\s+"\$\{\{\s*secrets\.PRODUCTION_DATABASE_URL\s*\}\}"/);
+    expect(src).not.toMatch(/echo\s+"\$\{\{\s*secrets\.OPERATOR_DATABASE_URL\s*\}\}"/);
     expect(src).not.toMatch(/console\.log\([^)]*DATABASE_URL[^)]*\)/);
   });
 
@@ -206,7 +206,7 @@ describe("provision-administration-operator.yml — safety controls", () => {
     const summaryIdx = src.indexOf("Run summary");
     expect(summaryIdx).toBeGreaterThan(-1);
     const summaryBlock = src.slice(summaryIdx);
-    expect(summaryBlock).not.toContain("PRODUCTION_DATABASE_URL");
+    expect(summaryBlock).not.toContain("OPERATOR_DATABASE_URL");
   });
 });
 
@@ -513,11 +513,11 @@ describe("provision-administration-operator.yml — checkout occurs before every
     }
   });
 
-  it("50. PRODUCTION_DATABASE_URL is never referenced by any step before checkout and SHA verification succeed", () => {
+  it("50. OPERATOR_DATABASE_URL is never referenced by any step before checkout and SHA verification succeed", () => {
     const shaIdx = steps.findIndex((s) => s.name === SHA_VERIFY_STEP);
     expect(shaIdx).toBeGreaterThan(-1);
     for (const step of steps.slice(0, shaIdx + 1)) {
-      expect(step.body).not.toContain("PRODUCTION_DATABASE_URL");
+      expect(step.body).not.toContain("OPERATOR_DATABASE_URL");
     }
   });
 

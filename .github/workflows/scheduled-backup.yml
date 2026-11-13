@@ -25,7 +25,7 @@ name: Scheduled Production Database Backup
 # target with a persistent mount) where a local retention sweep would
 # actually have something to prune.
 #
-# SECRET REUSE, NOT A NEW SECRET: uses secrets.PRODUCTION_DATABASE_URL,
+# SECRET REUSE, NOT A NEW SECRET: uses secrets.OPERATOR_DATABASE_URL,
 # the same secret migrate-production.yml already uses -- confirmed by
 # that workflow's own preflight comment to be the DIRECT (non-pooler)
 # production endpoint, which is exactly what pg_dump needs (Neon's own
@@ -85,13 +85,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+      - name: Preflight check - OPERATOR_DATABASE_URL secret exists
         run: |
-          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
-            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+          if [ -z "${{ secrets.OPERATOR_DATABASE_URL }}" ]; then
+            echo "::error::OPERATOR_DATABASE_URL secret is missing or empty"
             exit 1
           fi
-          echo "PRODUCTION_DATABASE_URL secret is configured"
+          echo "OPERATOR_DATABASE_URL secret is configured"
 
       # ROOT-CAUSE FIX (2026-08-28): the first real dispatch of this workflow
       # failed instantly with "pg_dump: error: aborting because of server
@@ -162,7 +162,7 @@ jobs:
       - name: Run backup
         id: backup
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           # Governed flag, set in the GitHub "production" environment when QBO is enabled. The backup
           # script ALSO probes the database for qbo_* rows, so the flag is not the only protection.
           PRODUCTION_QBO_ENABLED: ${{ vars.PRODUCTION_QBO_ENABLED }}

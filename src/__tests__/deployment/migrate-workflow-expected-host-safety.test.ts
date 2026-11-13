@@ -40,11 +40,11 @@ describe("migrate-production.yml — PINNED_PREDEPLOY exact-host gate", () => {
     expect(src).toContain("node scripts/validate-expected-db-host.mjs");
   });
 
-  it("5. The exact-host step passes both PRODUCTION_DATABASE_URL and expected_database_host to the script", () => {
+  it("5. The exact-host step passes both OPERATOR_DATABASE_URL and expected_database_host to the script", () => {
     const stepIdx = src.indexOf("Verify exact production database host matches owner-pinned expectation");
     const nextStepIdx = src.indexOf("- name:", stepIdx + 10);
     const stepBlock = src.slice(stepIdx, nextStepIdx);
-    expect(stepBlock).toContain("secrets.PRODUCTION_DATABASE_URL");
+    expect(stepBlock).toContain("secrets.OPERATOR_DATABASE_URL");
     expect(stepBlock).toContain("inputs.expected_database_host");
   });
 

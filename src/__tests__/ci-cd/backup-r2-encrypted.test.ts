@@ -753,7 +753,7 @@ describe("static invariants: no plaintext on disk, no GitHub artifact of the dum
   it("restore-rehearsal-r2.yml verifies CIPHERTEXT only: no private identity, no decryption, no database, no Production secret (F-PRIVATE-KEY-CUSTODY)", () => {
     // Executable lines only: the file's own comments legitimately explain what it does NOT do.
     const body = WORKFLOW_RESTORE.split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
-    expect(body).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL|secrets\.BACKUP_DATABASE_URL/);
+    expect(body).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL|secrets\.OPERATOR_DATABASE_URL|secrets\.BACKUP_DATABASE_URL/);
     expect(body).not.toMatch(/AGE_PRIVATE_IDENTITY|AGE_IDENTITY|age\s+(-d|--decrypt)|services:|image:\s*postgres|OPSIQ_DB_TARGET|restore-database/);
     expect(body).toMatch(/CIPHERTEXT_VERIFIED/);
     expect(body).toMatch(/recipient stanza|ESCROW_RECIPIENTS_MISSING/);
@@ -887,7 +887,7 @@ describe("scheduled-backup-r2.yml: dedicated read-only credential, escrow recipi
 
   it("uses the dedicated BACKUP_DATABASE_URL (opsiq_backup role) and never the schema-owner PRODUCTION_DATABASE_URL", () => {
     expect(body).toMatch(/secrets\.BACKUP_DATABASE_URL/);
-    expect(body).not.toMatch(/secrets\.PRODUCTION_DATABASE_URL/);
+    expect(body).not.toMatch(/secrets\.(PRODUCTION|OPERATOR)_DATABASE_URL/);
   });
 
   it("requires and passes the independent escrow recipient", () => {

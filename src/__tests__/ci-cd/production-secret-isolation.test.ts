@@ -50,14 +50,20 @@ const SEVEN: Array<[string, string]> = [
 ];
 
 /** Environments that carry a deployment-branch rule and/or reviewer (configured by the owner; see the staged-migration doc). */
-const PROTECTED_ENVS = new Set(["production-operator", "backup-write", "backup-recovery", "stage7-evidence-signing"]);
+const PROTECTED_ENVS = new Set(["production-operator", "production-smoke", "backup-write", "backup-recovery", "stage7-evidence-signing"]);
 
 /** Production-grade secrets that must NEVER be referenced outside a protected environment (zero exemptions). */
 const STRICT: Record<string, Set<string>> = {
-  PRODUCTION_DATABASE_URL: new Set(["production-operator", "stage7-evidence-signing"]),
+  // The old repo-level snapshot names: the seven operator jobs no longer reference them (fallback hazard); only Stage 7 does.
+  PRODUCTION_DATABASE_URL: new Set(["stage7-evidence-signing"]),
+  PRODUCTION_ACCEPTANCE_EMAIL: new Set(["stage7-evidence-signing"]),
+  PRODUCTION_ACCEPTANCE_PASSWORD: new Set(["stage7-evidence-signing"]),
+  // Unique, environment-only names: no repo-level secret of these names may be relied on (no fallback target exists).
+  OPERATOR_DATABASE_URL: new Set(["production-operator"]),
+  OPERATOR_ACCEPTANCE_EMAIL: new Set(["production-operator"]),
+  OPERATOR_ACCEPTANCE_PASSWORD: new Set(["production-operator"]),
+  SMOKE_DIAGNOSTIC_KEY: new Set(["production-smoke"]),
   VERCEL_PRODUCTION_DEPLOY_HOOK_URL: new Set(["production-operator"]),
-  PRODUCTION_ACCEPTANCE_EMAIL: new Set(["production-operator", "stage7-evidence-signing"]),
-  PRODUCTION_ACCEPTANCE_PASSWORD: new Set(["production-operator", "stage7-evidence-signing"]),
   VERCEL_TOKEN: new Set(["stage7-evidence-signing"]),
   EVIDENCE_SIGNING_KEY: new Set(["stage7-evidence-signing"]),
   BACKUP_DATABASE_URL: new Set(["backup-write"]),
@@ -82,12 +88,30 @@ const TRANSITIONAL: Record<string, Array<[string, string, string]>> = {
       (m) => [`${m}-migrate`, "migrate", "environment from input `target` (staging only); falls back to the repo-level copy unless `staging` defines its own (stage 2)"] as [string, string, string],
     ),
   ],
-  OPSIQ_DIAGNOSTIC_KEY: [
-    ["smoke-production-dashboard", "smoke", "no environment; repo-level copy (stage 4: move to a protected environment)"],
-    ["smoke-production-diagnosis-dashboard", "smoke-test", "no environment; repo-level copy (stage 4: move to a protected environment)"],
-    ["smoke-production-signup-dashboard", "smoke-test", "no environment; repo-level copy (stage 4: move to a protected environment)"],
-  ],
 };
+
+/** Secrets that no workflow may reference at all (the legacy repo-level diagnostic key was replaced by SMOKE_DIAGNOSTIC_KEY). */
+const FORBIDDEN_SECRETS = new Set(["OPSIQ_DIAGNOSTIC_KEY"]);
+
+/** Environments whose jobs may reference ONLY their own uniquely named secrets (so a missing env secret can never fall back to a repo-level one). */
+const UNIQUE_PREFIX: Record<string, RegExp> = { "production-operator": /^OPERATOR_/, "production-smoke": /^SMOKE_/ };
+/** The one optional, intentionally-absent deploy-hook secret (not invented; see the doc). */
+const UNIQUE_EXCEPTIONS = new Set(["VERCEL_PRODUCTION_DEPLOY_HOOK_URL"]);
+
+/** The three diagnostic-key smoke workflows: [workflow, job]. */
+const SMOKE: Array<[string, string]> = [
+  ["smoke-production-dashboard", "smoke"],
+  ["smoke-production-diagnosis-dashboard", "smoke-test"],
+  ["smoke-production-signup-dashboard", "smoke-test"],
+];
+const APPROVED_SMOKE_ORIGINS = ["https://o-ps-iq.vercel.app", "https://opsiq.solutions", "https://www.opsiq.solutions"];
+
+/** A fail-closed preflight: a step that references the secret, tests emptiness and exits 1. */
+function hasFailClosedPreflight(job: Job, secret: string): boolean {
+  return (job.steps ?? []).some((st) => JSON.stringify(st.env ?? {}).includes(`secrets.${secret}`) || (st.run ?? "").includes(`secrets.${secret}`)
+    ? /exit 1/.test(st.run ?? "") && /(-z|-n)\b/.test(st.run ?? "")
+    : false);
+}
 
 /** Canonical fail-closed workflow-origin guard: EXACT text, FIRST step of each of the seven jobs. */
 const GUARD_NAME = "Assert workflow origin is main (fail-closed)";
@@ -121,6 +145,10 @@ function findViolations(wfs: Workflows): string[] {
         if (opts.length === 0 || opts.some((o) => /^production$/i.test(String(o)) || String(o).toLowerCase().includes("prod"))) v.push(`${id}: environment is an expression whose \`target\` options are missing or include production`);
       }
       for (const s of secretsIn(job)) {
+        if (FORBIDDEN_SECRETS.has(s)) v.push(`${id}: references forbidden secret ${s} (use the environment-scoped replacement)`);
+        const uniq = env ? UNIQUE_PREFIX[env] : undefined;
+        if (uniq && !uniq.test(s) && !UNIQUE_EXCEPTIONS.has(s)) v.push(`${id}: '${env}' job references non-unique secret ${s} (repo-level fallback hazard; only ${uniq} names allowed)`);
+        if (uniq && uniq.test(s) && !hasFailClosedPreflight(job, s)) v.push(`${id}: no fail-closed preflight (empty check + exit 1) for ${s}`);
         if (STRICT[s]) {
           if (!env || !STRICT[s].has(env)) v.push(`${id}: Production-grade secret ${s} used in environment '${env ?? "(none)"}' (allowed: ${[...STRICT[s]].join(", ")})`);
         } else if (TRANSITIONAL[s] && !(env && PROTECTED_ENVS.has(env)) && !allow.has(`${s}|${wn}|${jn}`)) {
@@ -143,6 +171,25 @@ function findViolations(wfs: Workflows): string[] {
     const first = job.steps?.[0];
     if (first?.name !== GUARD_NAME || (first.run ?? "") !== GUARD_RUN) v.push(`${wn}:${j}: the FIRST step must be the canonical workflow-origin guard, verbatim`);
     if (JSON.stringify(first ?? {}).includes("secrets.")) v.push(`${wn}:${j}: the origin guard must not reference any secret`);
+  }
+  for (const [wn, j] of SMOKE) {
+    const wf = wfs[wn];
+    const job = wf?.jobs?.[j];
+    if (!job) { v.push(`${wn}:${j}: missing`); continue; }
+    if (envOf(job) !== "production-smoke") v.push(`${wn}:${j}: must run in production-smoke (got '${envOf(job) ?? "(none)"}')`);
+    const on = (wf.on ?? wf.true) as { workflow_dispatch?: { inputs?: Record<string, { type?: string; options?: string[] }> } } | undefined;
+    const input = on?.workflow_dispatch?.inputs?.base_url;
+    if (input?.type !== "choice" || !Array.isArray(input.options) || input.options.length === 0 || input.options.some((o) => !APPROVED_SMOKE_ORIGINS.includes(o))) v.push(`${wn}:${j}: base_url must be a \`choice\` input restricted to the approved origins (free-text base_url allows key exfiltration)`);
+    const steps = job.steps ?? [];
+    if (steps[0]?.name !== GUARD_NAME || !(steps[0].run ?? "").includes("GITHUB_WORKFLOW_REF")) v.push(`${wn}:${j}: the FIRST step must be the workflow-origin guard`);
+    const validate = steps.findIndex((st) => /approved origins/i.test(st.name ?? "") && /Destination approved/.test(st.run ?? "") && APPROVED_SMOKE_ORIGINS.every((o) => (st.run ?? "").includes(o)));
+    const firstSecret = steps.findIndex((st) => JSON.stringify(st).includes("secrets."));
+    if (validate < 0) v.push(`${wn}:${j}: missing the approved-origin validation step`);
+    else if (firstSecret >= 0 && validate > firstSecret) v.push(`${wn}:${j}: the approved-origin validation must run BEFORE any step that references a secret`);
+    steps.forEach((st) => {
+      if (/\$\{\{\s*(github\.event\.inputs|inputs)\./.test(st.run ?? "")) v.push(`${wn}:${j}: step '${st.name}' interpolates a dispatch input directly into a shell script (use env)`);
+      if (/curl\b/.test(st.run ?? "") && !/--max-redirs 0/.test(st.run ?? "")) v.push(`${wn}:${j}: step '${st.name}' uses curl without --max-redirs 0`);
+    });
   }
   return v;
 }
@@ -224,7 +271,7 @@ describe("mutation tests — each rule fails on the violation it exists to preve
   });
 
   it("M2: a job with PRODUCTION_DATABASE_URL and NO environment is rejected", () => {
-    expect(mut((w) => { delete w["provision-administration-operator"].jobs!.provision.environment; }).join("\n")).toMatch(/PRODUCTION_DATABASE_URL used in environment '\(none\)'/);
+    expect(mut((w) => { delete w["provision-administration-operator"].jobs!.provision.environment; }).join("\n")).toMatch(/OPERATOR_DATABASE_URL used in environment '\(none\)'/);
   });
 
   it("M3: moving the origin guard from first position is rejected", () => {
@@ -248,17 +295,67 @@ describe("mutation tests — each rule fails on the violation it exists to preve
   });
 
   it("M7: a stale transitional allowlist entry (consumer migrated) is rejected so the list can only shrink", () => {
-    const v = mut((w) => { w["smoke-production-dashboard"].jobs!.smoke.environment = "production-operator"; });
-    expect(v.join("\n")).toMatch(/STALE transitional allowlist entry for OPSIQ_DIAGNOSTIC_KEY/);
+    const v = mut((w) => { const j = w["migrate-neon-test"].jobs!["migrate-neon-test"]; j.environment = "production-operator"; });
+    expect(v.join("\n")).toMatch(/STALE transitional allowlist entry for MIGRATION_DATABASE_URL/);
   });
 
   it("M8: the origin guard referencing a secret is rejected", () => {
-    const v = mut((w) => { const g = w["production-owner-acceptance"].jobs!.acceptance.steps![0]; g.env = { X: "${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}" }; });
+    const v = mut((w) => { const g = w["production-owner-acceptance"].jobs!.acceptance.steps![0]; g.env = { X: "${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}" }; });
     expect(v.join("\n")).toMatch(/origin guard must not reference any secret|FIRST step must be/);
   });
 
   it("M9: an R2 writer secret in the recovery environment is rejected", () => {
     const v = mut((w) => { w["restore-rehearsal-r2"].jobs!.verify.steps!.push({ run: "echo ${{ secrets.R2_SECRET_ACCESS_KEY }}" }); });
     expect(v.join("\n")).toMatch(/R2_SECRET_ACCESS_KEY used in environment 'backup-recovery'/);
+  });
+
+  it("M10 (no repo-secret fallback): a production-operator job referencing the OLD repo-level PRODUCTION_DATABASE_URL is rejected", () => {
+    const v = mut((w) => { w["production-db-status"].jobs!.status.steps!.push({ name: "x", run: "echo ${{ secrets.PRODUCTION_DATABASE_URL }}" }); });
+    expect(v.join("\n")).toMatch(/non-unique secret PRODUCTION_DATABASE_URL/);
+  });
+
+  it("M11 (no repo-secret fallback): a production-operator job referencing the repo-level MIGRATION_DATABASE_URL or OPSIQ_DIAGNOSTIC_KEY is rejected", () => {
+    const v = mut((w) => { w["migrate-production"].jobs!.migrate.steps!.push({ name: "x", env: { A: "${{ secrets.MIGRATION_DATABASE_URL }}", B: "${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}" } }); }).join("\n");
+    expect(v).toMatch(/non-unique secret MIGRATION_DATABASE_URL/);
+    expect(v).toMatch(/forbidden secret OPSIQ_DIAGNOSTIC_KEY/);
+  });
+
+  it("M12: OPERATOR_* secrets outside production-operator are rejected", () => {
+    const v = mut((w) => { w["ci"].jobs!["rogue"] = { environment: "backup-write", steps: [{ run: "echo ${{ secrets.OPERATOR_DATABASE_URL }}" }] }; });
+    expect(v.join("\n")).toMatch(/OPERATOR_DATABASE_URL used in environment 'backup-write'/);
+  });
+
+  it("M13: removing the fail-closed preflight for an OPERATOR secret is rejected", () => {
+    const v = mut((w) => { const s = w["production-owner-acceptance"].jobs!.acceptance.steps!; for (const st of s) if (/exit 1/.test(st.run ?? "") && JSON.stringify(st).includes("secrets.OPERATOR_ACCEPTANCE_EMAIL") && !JSON.stringify(st.env ?? {}).includes("PASSWORD_ONLY")) st.run = (st.run ?? "").replace(/exit 1/g, "true"); });
+    expect(v.join("\n")).toMatch(/no fail-closed preflight/);
+  });
+
+  it("M14 (diagnostic key): a free-text base_url input on a smoke workflow is rejected", () => {
+    const v = mut((w) => { const on = (w["smoke-production-signup-dashboard"].on ?? w["smoke-production-signup-dashboard"].true) as { workflow_dispatch: { inputs: { base_url: { type?: string } } } }; delete on.workflow_dispatch.inputs.base_url.type; });
+    expect(v.join("\n")).toMatch(/base_url must be a `choice` input/);
+  });
+
+  it("M15 (diagnostic key): an attacker origin added to the choice options is rejected", () => {
+    const v = mut((w) => { const on = (w["smoke-production-dashboard"].on ?? w["smoke-production-dashboard"].true) as { workflow_dispatch: { inputs: { base_url: { options: string[] } } } }; on.workflow_dispatch.inputs.base_url.options.push("https://evil.example"); });
+    expect(v.join("\n")).toMatch(/base_url must be a `choice` input/);
+  });
+
+  it("M16 (diagnostic key): moving the destination validation after the secret-bearing step is rejected", () => {
+    const v = mut((w) => { const s = w["smoke-production-diagnosis-dashboard"].jobs!["smoke-test"].steps!; const i = s.findIndex((x) => /approved origins/i.test(x.name ?? "")); const [val] = s.splice(i, 1); s.push(val); });
+    expect(v.join("\n")).toMatch(/validation must run BEFORE any step that references a secret/);
+  });
+
+  it("M17 (diagnostic key): the smoke key referenced outside production-smoke, or the legacy repo-level name, is rejected", () => {
+    const a = mut((w) => { delete w["smoke-production-dashboard"].jobs!.smoke.environment; }).join("\n");
+    expect(a).toMatch(/must run in production-smoke/);
+    expect(a).toMatch(/SMOKE_DIAGNOSTIC_KEY used in environment '\(none\)'/);
+    const b = mut((w) => { const st = w["smoke-production-dashboard"].jobs!.smoke.steps!.find((x) => x.env?.OPSIQ_DIAGNOSTIC_KEY)!; st.env!.OPSIQ_DIAGNOSTIC_KEY = "${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}"; }).join("\n");
+    expect(b).toMatch(/forbidden secret OPSIQ_DIAGNOSTIC_KEY/);
+  });
+
+  it("M18 (diagnostic key): interpolating a dispatch input into a smoke shell script, or curl without --max-redirs 0, is rejected", () => {
+    const a = mut((w) => { w["smoke-production-dashboard"].jobs!.smoke.steps!.push({ name: "leak", run: "curl https://x/${{ inputs.base_url }}" }); }).join("\n");
+    expect(a).toMatch(/interpolates a dispatch input/);
+    expect(a).toMatch(/curl without --max-redirs 0/);
   });
 });

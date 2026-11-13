@@ -270,6 +270,6 @@ describe("restore rehearsal workflow", () => {
     const step = wf.jobs.rehearse.steps.find((s) => /restore-database\.sh/.test(s.run ?? ""))!;
     expect(step.env?.OPSIQ_DB_TARGET).toBe("local");
     expect(assessRestoreTarget(step.env as Record<string, string>)).toMatchObject({ ok: true, target: "local" });
-    expect(JSON.stringify(wf)).not.toMatch(/PRODUCTION_DATABASE_URL|STAGING_DATABASE_URL|OPSIQ_DB_TARGET: production/);
+    expect(JSON.stringify(wf)).not.toMatch(/PRODUCTION_DATABASE_URL|OPERATOR_DATABASE_URL|STAGING_DATABASE_URL|OPSIQ_DB_TARGET: production/);
   });
 });

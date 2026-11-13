@@ -87,13 +87,13 @@ jobs:
       - name: Install postgresql-client
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
 
-      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+      - name: Preflight check - OPERATOR_DATABASE_URL secret exists
         run: |
-          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
-            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+          if [ -z "${{ secrets.OPERATOR_DATABASE_URL }}" ]; then
+            echo "::error::OPERATOR_DATABASE_URL secret is missing or empty"
             exit 1
           fi
-          echo "PRODUCTION_DATABASE_URL secret is configured"
+          echo "OPERATOR_DATABASE_URL secret is configured"
 
       - name: Remove local environment files
         run: |
@@ -102,7 +102,7 @@ jobs:
 
       - name: Validate DATABASE_URL safety (metadata only, no secret printed)
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: |
           if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
             echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
@@ -116,7 +116,7 @@ jobs:
 
       - name: Query production migration history (SELECT only)
         env:
-          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PROD_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           # Enforce read-only at the Postgres session level: Postgres itself
           # rejects any write attempt regardless of what a query contains.
           PGOPTIONS: "-c default_transaction_read_only=on"
@@ -153,7 +153,7 @@ jobs:
 
       - name: Query live schema state (SELECT only)
         env:
-          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PROD_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           PGOPTIONS: "-c default_transaction_read_only=on"
         run: |
           set -euo pipefail
@@ -302,7 +302,7 @@ jobs:
         # Read-only, single hardcoded statement per query (no arbitrary SQL), same pattern as
         # every other query in this file.
         env:
-          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PROD_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           PGOPTIONS: "-c default_transaction_read_only=on"
         run: |
           set -euo pipefail
@@ -406,7 +406,7 @@ jobs:
         # closure proof. Read-only, single hardcoded statement per query (no arbitrary SQL), same
         # pattern as every other query in this file.
         env:
-          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PROD_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           PGOPTIONS: "-c default_transaction_read_only=on"
         run: |
           set -euo pipefail
@@ -531,7 +531,7 @@ jobs:
         env:
           OPSIQ_DB_TARGET: production
           OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
-          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: npx prisma migrate status
 
       - name: Status summary

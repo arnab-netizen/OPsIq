@@ -5,7 +5,7 @@ name: Production Authenticated Root Probe (read-only)
 # error signature, and is that session really revoked by logout?
 #
 # It is NOT part of production-owner-acceptance.yml and never runs that suite. It uses the existing authorized
-# acceptance identity (PRODUCTION_ACCEPTANCE_EMAIL / PRODUCTION_ACCEPTANCE_PASSWORD in the `production`
+# acceptance identity (OPERATOR_ACCEPTANCE_EMAIL / OPERATOR_ACCEPTANCE_PASSWORD in the `production-operator`
 # environment) and nothing else.
 #
 # Side effects: exactly one login (one session row + audit events) and one logout (revokes it). No fixture, no
@@ -72,11 +72,11 @@ jobs:
 
       - name: Preflight check - acceptance identity secrets exist
         env:
-          PROBE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
-          PROBE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          PROBE_EMAIL: ${{ secrets.OPERATOR_ACCEPTANCE_EMAIL }}
+          PROBE_PASSWORD: ${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}
         run: |
           if [ -z "$PROBE_EMAIL" ] || [ -z "$PROBE_PASSWORD" ]; then
-            echo "::error::PRODUCTION_ACCEPTANCE_EMAIL and/or PRODUCTION_ACCEPTANCE_PASSWORD is missing or empty. Refusing to run (fail-closed)."
+            echo "::error::OPERATOR_ACCEPTANCE_EMAIL and/or OPERATOR_ACCEPTANCE_PASSWORD is missing or empty. Refusing to run (fail-closed)."
             exit 1
           fi
           echo "Acceptance identity secrets are configured"
@@ -103,8 +103,8 @@ jobs:
 
       - name: Run read-only authenticated root probe
         env:
-          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
-          PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.OPERATOR_ACCEPTANCE_EMAIL }}
+          PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}
         run: |
           set -euo pipefail
           node scripts/production-root-probe.mjs | tee /tmp/root-probe-output.jsonl
@@ -112,8 +112,8 @@ jobs:
       - name: Verify the probe output holds no credential or session material (fail-closed)
         if: always()
         env:
-          LEAK_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
-          LEAK_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          LEAK_EMAIL: ${{ secrets.OPERATOR_ACCEPTANCE_EMAIL }}
+          LEAK_PASSWORD: ${{ secrets.OPERATOR_ACCEPTANCE_PASSWORD }}
         run: |
           [ -f /tmp/root-probe-output.jsonl ] || exit 0
           for needle in "$LEAK_EMAIL" "$LEAK_PASSWORD"; do
