@@ -1,0 +1,121 @@
+name: Production Authenticated Root Probe (read-only)
+
+# Minimal, SEPARATE evidence lane for ONE question: does a valid session reaching `/` on the LIVE production
+# deployment get redirected to an authenticated destination within a bounded time, with no database/runtime
+# error signature, and is that session really revoked by logout?
+#
+# It is NOT part of production-owner-acceptance.yml and never runs that suite. It uses the existing authorized
+# acceptance identity (PRODUCTION_ACCEPTANCE_EMAIL / PRODUCTION_ACCEPTANCE_PASSWORD in the `production`
+# environment) and nothing else.
+#
+# Side effects: exactly one login (one session row + audit events) and one logout (revokes it). No fixture, no
+# business, no customer data is read or written; no artifact is uploaded; the script prints only step names,
+# status codes, timings and a redirect path class (never a cookie, credential, email, query string or body).
+#
+# Manual only (workflow_dispatch, explicit confirmation phrase). No schedule, push or pull_request trigger.
+# Fails closed if the credentials are absent or BASE_URL is not serving the exact checked-out main commit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "RUN ROOT PROBE" to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-root-probe
+  cancel-in-progress: false
+
+env:
+  BASE_URL: https://o-ps-iq.vercel.app
+
+jobs:
+  probe:
+    name: Authenticated root probe (live production, read-only)
+    if: github.event.inputs.confirm == 'RUN ROOT PROBE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Preflight check - acceptance identity secrets exist
+        env:
+          PROBE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PROBE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+        run: |
+          if [ -z "$PROBE_EMAIL" ] || [ -z "$PROBE_PASSWORD" ]; then
+            echo "::error::PRODUCTION_ACCEPTANCE_EMAIL and/or PRODUCTION_ACCEPTANCE_PASSWORD is missing or empty. Refusing to run (fail-closed)."
+            exit 1
+          fi
+          echo "Acceptance identity secrets are configured"
+
+      - name: Verify BASE_URL serves the exact checked-out main commit in production (BLOCKED_STALE_PRODUCTION_TARGET otherwise)
+        run: |
+          set -euo pipefail
+          CHECKED_OUT_SHA=$(git rev-parse HEAD)
+          BUILD_INFO=$(curl -sS --max-time 15 "$BASE_URL/api/internal/build-info")
+          DEPLOYED_SHA=$(node -e "try{console.log(JSON.parse(process.argv[1]).commit)}catch(e){console.log('unparseable')}" "$BUILD_INFO")
+          DEPLOYED_ENV=$(node -e "try{console.log(JSON.parse(process.argv[1]).environment)}catch(e){console.log('unparseable')}" "$BUILD_INFO")
+          echo "Checked-out (expected) SHA: $CHECKED_OUT_SHA"
+          echo "Deployed (actual) SHA:      $DEPLOYED_SHA"
+          echo "Deployed environment:       $DEPLOYED_ENV"
+          if [ "$DEPLOYED_ENV" != "production" ] || [ "$DEPLOYED_SHA" != "$CHECKED_OUT_SHA" ]; then
+            echo "::error::BLOCKED_STALE_PRODUCTION_TARGET -- not serving the exact checked-out main commit in production. Aborting."
+            exit 1
+          fi
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run read-only authenticated root probe
+        env:
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          node scripts/production-root-probe.mjs | tee /tmp/root-probe-output.jsonl
+
+      - name: Verify the probe output holds no credential or session material (fail-closed)
+        if: always()
+        env:
+          LEAK_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          LEAK_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+        run: |
+          [ -f /tmp/root-probe-output.jsonl ] || exit 0
+          for needle in "$LEAK_EMAIL" "$LEAK_PASSWORD"; do
+            if [ -n "$needle" ] && grep -qF -- "$needle" /tmp/root-probe-output.jsonl; then
+              echo "::error::probe output contains credential material"
+              exit 1
+            fi
+          done
+          if grep -qiE 'opsiq_session|set-cookie|cookie:' /tmp/root-probe-output.jsonl; then
+            echo "::error::probe output contains cookie material"
+            exit 1
+          fi
+          echo "No credential/session material in probe output"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Authenticated root probe (read-only)"
+            echo ""
+            echo "BASE_URL: \`$BASE_URL\`"
+            echo "Checked-out SHA: \`$(git rev-parse HEAD)\`"
+            echo ""
+            echo '```json'
+            [ -f /tmp/root-probe-output.jsonl ] && cat /tmp/root-probe-output.jsonl || echo '{"step":"no-output"}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f /tmp/root-probe-output.jsonl
