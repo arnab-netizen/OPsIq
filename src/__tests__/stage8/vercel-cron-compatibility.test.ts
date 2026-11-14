@@ -119,20 +119,60 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("[stage8] 1. cron configuration is deployable on the current plan", () => {
+// Production cron contract (explicit, reviewed). The OpsIQ Vercel team is on the Pro plan (Pro billing
+// credit + spend management; Hobby has no such controls), where a cron may run as often as once per
+// minute. The repository's intended contract is a 15 minute scheduler (QuickBooks freshness). If the
+// plan is ever downgraded to Hobby, change `plan` here and the daily ceiling below applies again.
+// The contract is a FLOOR on the interval: the scheduler may never be configured more often than this.
+const PRODUCTION_CRON_CONTRACT = { plan: "pro" as "pro" | "hobby", minIntervalMinutes: 15 };
+
+/** Smallest interval, in minutes, between runs for the simple expression shapes we allow; NaN if unsupported. */
+function cronIntervalMinutes(expression: string): number {
+  const f = expression.trim().split(/\s+/);
+  if (f.length !== 5 || f[2] !== "*" || f[3] !== "*" || f[4] !== "*") return Number.NaN;
+  const [minute, hour] = f;
+  const step = /^\*\/(\d{1,2})$/.exec(minute);
+  if (hour === "*" && step) return Number(step[1]);
+  if (hour === "*" && minute === "*") return 1;
+  if (hour === "*" && /^\d{1,2}$/.test(minute)) return 60;
+  if (/^\d{1,2}$/.test(minute) && /^\d{1,2}$/.test(hour)) return 1440;
+  return Number.NaN;
+}
+
+describe("[stage8] 1. cron configuration follows the Production cron contract", () => {
   it("declares exactly one cron pointing at the scheduler endpoint", () => {
     expect(Array.isArray(VERCEL_JSON.crons)).toBe(true);
     expect(VERCEL_JSON.crons).toHaveLength(1);
     expect(VERCEL_JSON.crons[0].path).toBe("/api/internal/cron/scheduler");
   });
 
-  it("uses a schedule that runs at most once per day (Hobby ceiling)", () => {
+  it("uses a supported expression no more frequent than the contract allows", () => {
     const schedule: string = VERCEL_JSON.crons[0].schedule;
+    const interval = cronIntervalMinutes(schedule);
+    expect(Number.isFinite(interval)).toBe(true);
     expect(schedule).not.toBe("* * * * *");
-    expect(runsAtMostOncePerDay(schedule)).toBe(true);
+    expect(interval).toBeGreaterThanOrEqual(PRODUCTION_CRON_CONTRACT.minIntervalMinutes);
   });
 
-  it("rejects the expressions Vercel refuses on Hobby", () => {
+  it("on a Hobby plan the schedule must also be at most once per day", () => {
+    if (PRODUCTION_CRON_CONTRACT.plan === "hobby") {
+      expect(runsAtMostOncePerDay(VERCEL_JSON.crons[0].schedule)).toBe(true);
+    } else {
+      expect(PRODUCTION_CRON_CONTRACT.plan).toBe("pro");
+    }
+  });
+
+  it("rejects expressions more frequent than the contract and accepts conforming ones", () => {
+    for (const bad of ["* * * * *", "*/5 * * * *", "*/1 * * * *", "*/14 * * * *"]) {
+      expect(cronIntervalMinutes(bad)).toBeLessThan(PRODUCTION_CRON_CONTRACT.minIntervalMinutes);
+    }
+    for (const good of ["*/15 * * * *", "*/30 * * * *", "0 * * * *", "0 3 * * *", "15 0 * * *"]) {
+      expect(cronIntervalMinutes(good)).toBeGreaterThanOrEqual(PRODUCTION_CRON_CONTRACT.minIntervalMinutes);
+    }
+    expect(Number.isNaN(cronIntervalMinutes("0 3 * * 1"))).toBe(true);
+  });
+
+  it("the Hobby helper still rejects sub-daily expressions (guards a downgrade)", () => {
     for (const bad of ["* * * * *", "*/5 * * * *", "0 * * * *", "*/30 * * * *"]) {
       expect(runsAtMostOncePerDay(bad)).toBe(false);
     }

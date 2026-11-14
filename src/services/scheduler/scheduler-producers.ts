@@ -35,6 +35,15 @@ import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NA
 import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mapping";
 
 const EMAIL_MAX_ATTEMPTS = 3;
+/**
+ * Minimum gap between two delivery attempts of the SAME alert email. The cron
+ * cadence must never decide retry spacing: when the scheduler ran once a day the
+ * producer implicitly gave one attempt per day; moving the cron to every 15
+ * minutes (for QuickBooks freshness) would otherwise burn all attempts in
+ * ~45 minutes. 23h (not 24h) so a daily tick that fires slightly early still
+ * qualifies. Email delivery semantics are independent of QBO freshness.
+ */
+export const EMAIL_RETRY_MIN_SPACING_MS = 23 * 60 * 60 * 1000;
 const BRIDGEABLE_STATUSES = ["verified_improved", "verified_not_improved", "disputed"] as const;
 
 /** Bound on how many gaps one producer scan enqueues per invocation. */
@@ -57,6 +66,10 @@ export async function enqueueDueEmailRetryTasks(): Promise<ProducerScanResult> {
     where: {
       emailDeliveryStatus: "FAILED",
       emailAttemptCount: { lt: EMAIL_MAX_ATTEMPTS },
+      OR: [
+        { emailLastAttemptAt: null },
+        { emailLastAttemptAt: { lte: new Date(Date.now() - EMAIL_RETRY_MIN_SPACING_MS) } },
+      ],
     },
     select: { id: true, workspaceId: true, emailAttemptCount: true },
     take: MAX_ENQUEUE_PER_SCAN,
