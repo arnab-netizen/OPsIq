@@ -271,9 +271,9 @@ describe("production root probe — workflow safety", () => {
     expect(wf.jobs.probe.if).toContain("RUN ROOT PROBE");
   });
 
-  it("is least-privilege, runs in the production environment, and uploads no artifact", () => {
+  it("is least-privilege, runs in the protected production-operator environment (never the Vercel-shared one), and uploads no artifact", () => {
     expect(wf.permissions).toEqual({ contents: "read" });
-    expect(wf.jobs.probe.environment).toBe("production");
+    expect(wf.jobs.probe.environment).toBe("production-operator");
     expect(wf.jobs.probe.steps.some((s) => (s.uses ?? "").startsWith("actions/upload-artifact"))).toBe(false);
   });
 

@@ -136,7 +136,7 @@ describe("A3 governance: workflows", () => {
     expect(d.stepEnv.OPSIQ_DB_TARGET).toBe("production");
     expect(String(d.stepEnv.OPSIQ_ALLOW_PRODUCTION_DB_COMMAND)).toBe("true");
     expect(d.stepEnv.OPSIQ_PRODUCTION_OPERATION).toBe("migrate deploy");
-    expect(String(d.stepEnv.MIGRATION_DATABASE_URL)).toMatch(/secrets\.PRODUCTION_DATABASE_URL/);
+    expect(String(d.stepEnv.MIGRATION_DATABASE_URL)).toMatch(/secrets\.OPERATOR_DATABASE_URL/);
     expect(d.stepEnv.DATABASE_URL, "no ambient DATABASE_URL fallback on the deploy step").toBeUndefined();
     // Least privilege: the production authorization is never set at workflow or job scope, in any workflow.
     for (const file of workflows) {
