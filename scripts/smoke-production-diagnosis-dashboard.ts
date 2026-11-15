@@ -28,8 +28,9 @@
  */
 
 export {};
+import { createDiagnosticClient } from "../src/lib/security/diagnostic-destination";
 
-const baseUrl = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
+const baseUrlInput = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
 
 // Production write guard: abort if pointing at known production URLs without explicit opt-in.
 const PRODUCTION_URL_PATTERNS = [
@@ -37,7 +38,7 @@ const PRODUCTION_URL_PATTERNS = [
   /opsiq\.app/i,
   /opsiq\.com/i,
 ];
-const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrl));
+const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrlInput));
 if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
   console.error("ERROR: BASE_URL matches a production pattern.");
   console.error("This script creates permanent user/workspace/diagnosis records.");
@@ -45,6 +46,15 @@ if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
   console.error("Ensure you have a cleanup plan before proceeding.");
   process.exit(1);
 }
+
+// Destination guard: the diagnostic key is only ever sent to an approved origin, as a header, and redirects are
+// never followed (see src/lib/security/diagnostic-destination.ts).
+const __client = createDiagnosticClient(baseUrlInput, process.env.OPSIQ_DIAGNOSTIC_KEY);
+const baseUrl = __client.origin;
+const safeFetch = (url: string, init?: RequestInit & { headers?: Record<string, string> }) => {
+  if (!url.startsWith(`${__client.origin}/`)) throw new Error("refusing request outside the approved origin");
+  return __client.fetch(url.slice(__client.origin.length), init);
+};
 
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
@@ -131,7 +141,7 @@ async function smokeTest(): Promise<void> {
   try {
     // STEP 0: Verify deployment
     console.log("0️⃣  GET /api/internal/build-info (verify deployment)");
-    const buildInfoResponse = await fetch(`${baseUrl}/api/internal/build-info`);
+    const buildInfoResponse = await safeFetch(`${baseUrl}/api/internal/build-info`);
     console.log(`   Status: ${buildInfoResponse.status}`);
 
     if (buildInfoResponse.status !== 200) {
@@ -182,7 +192,7 @@ async function smokeTest(): Promise<void> {
 
     // STEP 1: Signup
     console.log("1️⃣  POST /api/auth/signup");
-    const signupResponse = await fetch(`${baseUrl}/api/auth/signup`, {
+    const signupResponse = await safeFetch(`${baseUrl}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -235,7 +245,7 @@ async function smokeTest(): Promise<void> {
       console.log("   ⚠️  No diagnostic key in request");
     }
 
-    const diagnosisResponse = await fetch(`${baseUrl}/api/diagnosis`, {
+    const diagnosisResponse = await safeFetch(`${baseUrl}/api/diagnosis`, {
       method: "POST",
       headers: diagnosisHeaders,
       body: JSON.stringify({
@@ -373,7 +383,7 @@ async function smokeTest(): Promise<void> {
 
     // STEP 3: Get engagements
     console.log("3️⃣  GET /api/engagements (verify engagement)");
-    const engagementsResponse = await fetch(`${baseUrl}/api/engagements`, {
+    const engagementsResponse = await safeFetch(`${baseUrl}/api/engagements`, {
       method: "GET",
       headers: { Cookie: sessionCookie },
     });
@@ -390,7 +400,7 @@ async function smokeTest(): Promise<void> {
 
     // STEP 4: Get owner dashboard
     console.log("4️⃣  GET /api/owner/dashboard (real recommendations)");
-    const dashboardResponse = await fetch(`${baseUrl}/api/owner/dashboard`, {
+    const dashboardResponse = await safeFetch(`${baseUrl}/api/owner/dashboard`, {
       method: "GET",
       headers: { Cookie: sessionCookie },
     });

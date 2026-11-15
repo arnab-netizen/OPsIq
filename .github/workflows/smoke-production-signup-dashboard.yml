@@ -4,17 +4,53 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Base URL to test (default: production)"
-        required: false
+        description: "Approved Production origin to test (fixed allow-list; free-text URLs are not accepted)"
+        required: true
+        type: choice
         default: "https://o-ps-iq.vercel.app"
+        options:
+          - "https://o-ps-iq.vercel.app"
+          - "https://opsiq.solutions"
+          - "https://www.opsiq.solutions"
 
 jobs:
   smoke-test:
     name: Signup → Real Dashboard
+    environment: production-smoke
+    permissions:
+      contents: read
+    env:
+      BASE_URL: ${{ inputs.base_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
+      - name: Assert workflow origin is main (fail-closed)
+        run: |
+          set -euo pipefail
+          [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] || { echo "::error::refusing to run: unexpected trigger '${GITHUB_EVENT_NAME}'"; exit 1; }
+          [ "${GITHUB_REF}" = "refs/heads/main" ] || { echo "::error::refusing to run: ref is '${GITHUB_REF}', must be refs/heads/main"; exit 1; }
+          case "${GITHUB_WORKFLOW_REF}" in
+            *"@refs/heads/main") ;;
+            *) echo "::error::refusing to run: the workflow definition is not from refs/heads/main"; exit 1 ;;
+          esac
+
+      - name: Validate smoke destination (approved origins only; fail-closed)
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+        run: |
+          set -euo pipefail
+          case "${BASE_URL}" in
+            "https://o-ps-iq.vercel.app"|"https://opsiq.solutions"|"https://www.opsiq.solutions") echo "Destination approved: ${BASE_URL}" ;;
+            *) echo "::error::refusing to run: base_url is not an approved origin"; exit 1 ;;
+          esac
+
+      - name: Require smoke diagnostic key (fail-closed, no repository-level fallback)
+        env:
+          SMOKE_DIAGNOSTIC_KEY: ${{ secrets.SMOKE_DIAGNOSTIC_KEY }}
+        run: |
+          [ -n "${SMOKE_DIAGNOSTIC_KEY:-}" ] || { echo "::error::SMOKE_DIAGNOSTIC_KEY is not set in the production-smoke environment"; exit 1; }
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -34,7 +70,6 @@ jobs:
 
       - name: Wait for Vercel deployment
         run: |
-          BASE_URL="${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}"
           TARGET_COMMIT="${{ steps.commit.outputs.sha }}"
           MAX_RETRIES=30
           RETRY_INTERVAL=10
@@ -44,7 +79,7 @@ jobs:
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Attempt $i/$MAX_RETRIES..."
 
-            RESPONSE=$(curl -s "$BASE_URL/api/internal/build-info" 2>/dev/null || echo '{}')
+            RESPONSE=$(curl -s --proto '=https' --max-redirs 0 "$BASE_URL/api/internal/build-info" 2>/dev/null || echo '{}')
             DEPLOYED_COMMIT=$(echo "$RESPONSE" | jq -r '.commit // "unknown"' 2>/dev/null)
 
             if [ "$DEPLOYED_COMMIT" = "$TARGET_COMMIT" ]; then
@@ -64,8 +99,8 @@ jobs:
 
       - name: Run smoke test
         env:
-          BASE_URL: ${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}
-          OPSIQ_DIAGNOSTIC_KEY: ${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}
+          BASE_URL: ${{ inputs.base_url }}
+          OPSIQ_DIAGNOSTIC_KEY: ${{ secrets.SMOKE_DIAGNOSTIC_KEY }}
         run: npx tsx scripts/smoke-production-signup-dashboard.ts
         timeout-minutes: 2
 
@@ -83,7 +118,7 @@ jobs:
           echo "❌ Production smoke test FAILED"
           echo ""
           echo "Smoke Test: Signup → Owner Dashboard"
-          echo "Base URL: ${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}"
+          echo "Base URL: ${BASE_URL}"
           echo "Target Commit: ${{ steps.commit.outputs.sha }}"
           echo ""
           echo "What this means:"
