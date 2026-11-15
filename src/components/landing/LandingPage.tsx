@@ -71,7 +71,7 @@ const HOW_IT_WORKS = [
 const GETTING_STARTED_STEPS = [
   {
     title: "Set up your business",
-    body: "Tell OpsIQ your business's name and a few basics. Takes under a minute.",
+    body: "Tell OpsIQ your business's name and a few basics.",
   },
   {
     title: "Bring your numbers",

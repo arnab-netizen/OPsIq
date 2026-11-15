@@ -35,7 +35,7 @@ const INVITE_ONLY_PRESENTATION: PublicBetaPresentation = {
 const OPEN_BETA_PRESENTATION: PublicBetaPresentation = {
   openRegistration: true,
   primaryCtaLabel: "Start free",
-  heroBadge: "Free beta · no credit card · sign up in a minute",
+  heroBadge: "Free beta · no credit card · sign up now",
   offerDescription: "Free beta, no credit card required",
   aboutSentence: "Currently free, in beta, no credit card required.",
   resourceLine: "Free during the beta, no credit card required.",
