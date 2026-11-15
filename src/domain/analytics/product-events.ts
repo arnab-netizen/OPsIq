@@ -30,6 +30,10 @@ export const PRODUCT_EVENTS = {
   returning_owner: AUDIT_EVENTS.PRODUCT_RETURNING_OWNER,
   outcome_verification_started: AUDIT_EVENTS.PRODUCT_OUTCOME_VERIFICATION_STARTED,
   outcome_verified: AUDIT_EVENTS.PRODUCT_OUTCOME_VERIFIED,
+  quickbooks_offered: AUDIT_EVENTS.PRODUCT_QUICKBOOKS_OFFERED,
+  quickbooks_selected: AUDIT_EVENTS.PRODUCT_QUICKBOOKS_SELECTED,
+  manual_entry_selected: AUDIT_EVENTS.PRODUCT_MANUAL_ENTRY_SELECTED,
+  quickbooks_connected: AUDIT_EVENTS.PRODUCT_QUICKBOOKS_CONNECTED,
 } as const satisfies Record<string, AuditEventName>;
 
 export type ProductEventName = keyof typeof PRODUCT_EVENTS;

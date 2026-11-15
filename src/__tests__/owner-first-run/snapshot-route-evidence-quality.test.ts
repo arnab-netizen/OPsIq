@@ -20,9 +20,10 @@ vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}
 const order: string[] = [];
 const assertStated = vi.hoisted(() => vi.fn());
 const createSnapshot = vi.hoisted(() => vi.fn());
+const recordOnce = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 vi.mock("@/services/owner-first-run/first-run.service", () => ({
   assertEvidenceQualityStatedForFirstEvidence: assertStated,
-  recordProductEventOnce: vi.fn().mockResolvedValue(true),
+  recordProductEventOnce: recordOnce,
 }));
 vi.mock("@/services/owner-finance/snapshot.service", () => ({
   createFinancialSnapshot: createSnapshot,
@@ -47,6 +48,7 @@ beforeEach(() => {
   order.length = 0;
   assertStated.mockReset().mockImplementation(async () => { order.push("assert"); });
   createSnapshot.mockReset().mockImplementation(async () => { order.push("create"); return { id: "s1" }; });
+  recordOnce.mockClear();
 });
 
 describe("snapshot POST enforces evidence quality server-side", () => {
@@ -61,6 +63,16 @@ describe("snapshot POST enforces evidence quality server-side", () => {
     assertStated.mockRejectedValue(new Error("Tell OpsIQ how reliable these numbers are"));
     await expect(call(body())).rejects.toThrow(/how reliable/);
     expect(createSnapshot).not.toHaveBeenCalled();
+  });
+  it("records manual_entry_selected alongside first_evidence_saved once the snapshot is actually created", async () => {
+    await call(body({ evidenceQuality: "GOOD_ESTIMATE" }));
+    expect(recordOnce).toHaveBeenCalledWith(expect.objectContaining({ name: "first_evidence_saved", workspaceId: WS, businessId: BIZ }));
+    expect(recordOnce).toHaveBeenCalledWith(expect.objectContaining({ name: "manual_entry_selected", workspaceId: WS, actorId: ACTOR, businessId: BIZ }));
+  });
+  it("never records manual_entry_selected when the quality refusal blocks creation", async () => {
+    assertStated.mockRejectedValue(new Error("Tell OpsIQ how reliable these numbers are"));
+    await expect(call(body())).rejects.toThrow();
+    expect(recordOnce).not.toHaveBeenCalled();
   });
   it("an invalid quality value is rejected by validation before either runs", async () => {
     await expect(call(body({ evidenceQuality: "VERIFIED" }))).rejects.toBeDefined();
