@@ -13,7 +13,7 @@
  * its real landmark/heading structure.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, within } from "@testing-library/react";
 import LandingPage from "@/components/landing/LandingPage";
 
 afterEach(() => cleanup());
@@ -289,5 +289,35 @@ describe("LandingPage — real-product proof art direction", () => {
     expect(decodeURIComponent(source?.getAttribute("srcset") ?? "")).toContain("opsiq-owner-priority-demo-mobile.png");
     expect(decodeURIComponent(block.querySelector("img")?.getAttribute("src") ?? "")).toContain("opsiq-owner-priority-demo.png");
     expect(block.textContent).toMatch(/Fictional demo business · no customer data/);
+  });
+});
+
+describe("LandingPage — resources teaser", () => {
+  const RESOURCES = [
+    { slug: "revenue-up-profit-down", title: "Revenue Up, Profit Down?", description: "Find out why.", path: "/resources/revenue-up-profit-down" },
+    { slug: "agency-utilization-rate-denominator", title: "Agency Utilization Rate", description: "Pick the denominator.", path: "/resources/agency-utilization-rate-denominator" },
+    { slug: "hours-logged-vs-hours-scoped-overservicing", title: "Hours Logged vs Hours Scoped", description: "Spot overservicing.", path: "/resources/hours-logged-vs-hours-scoped-overservicing" },
+  ];
+
+  it("renders no resources section at all when none are passed (default empty list)", () => {
+    const { queryByTestId } = render(<LandingPage />);
+    expect(queryByTestId("landing-resources-teaser")).toBeNull();
+  });
+
+  it("links each passed resource by its own title and real path, with no invented performance claim", () => {
+    const { getByTestId } = render(<LandingPage recentResources={RESOURCES} />);
+    const section = getByTestId("landing-resources-teaser");
+    for (const r of RESOURCES) {
+      const link = within(section).getByRole("link", { name: r.title });
+      expect(link).toHaveAttribute("href", r.path);
+      expect(section.textContent).toContain(r.description);
+    }
+    expect(section.textContent ?? "").not.toMatch(/most popular|best-selling|most read|readers love/i);
+  });
+
+  it("links to the full resources index", () => {
+    const { getByTestId } = render(<LandingPage recentResources={RESOURCES} />);
+    const section = getByTestId("landing-resources-teaser");
+    expect(within(section).getByRole("link", { name: /see all resources/i })).toHaveAttribute("href", "/resources");
   });
 });
