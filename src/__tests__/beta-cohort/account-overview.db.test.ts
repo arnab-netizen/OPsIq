@@ -8,7 +8,7 @@
  *
  * Run: TEST_WITH_DB=true npx vitest run src/__tests__/beta-cohort/account-overview.db.test.ts
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { randomUUID, randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
@@ -18,6 +18,14 @@ import { assignCohortOwner, getAccountClassificationOverview } from "@/services/
 import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
 
 const tag = () => randomBytes(5).toString("hex");
+
+// assignCohortOwner's actorId is a real FK into users (audit_events.actor_id) -- see cohort-evidence.db.test.ts's
+// identical pattern. One operator user, seeded once, reused by every classify() call below.
+const OPERATOR_ID = randomUUID();
+beforeAll(async () => {
+  if (!SHOULD_RUN_DB_TESTS) return;
+  await db.user.create({ data: { id: OPERATOR_ID, email: `overview-operator-${OPERATOR_ID}@example.com`, isActive: true, updatedAt: new Date() } });
+});
 
 interface SeededAccount { userId: string; workspaceId: string; email: string; betaRequestId: string }
 
@@ -42,7 +50,7 @@ async function seedAccount(opts: {
 async function classify(a: SeededAccount, cohortId: string, n: number) {
   await assignCohortOwner(
     { betaRequestId: a.betaRequestId, cohortId, ownerCode: `${cohortId}-${String(n).padStart(3, "0")}`, kind: "REAL_OWNER", idempotencyKey: `key-${randomUUID()}` },
-    randomUUID(),
+    OPERATOR_ID,
   );
 }
 
