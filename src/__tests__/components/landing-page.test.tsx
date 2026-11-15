@@ -20,7 +20,11 @@ afterEach(() => cleanup());
 
 const PROHIBITED_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
   { label: "churn/retention intelligence", pattern: /churn|retention (score|intelligence)|concentration risk/i },
-  { label: "live integrations", pattern: /quickbooks|hubspot|connect(ed)? to your (bank|accounting)|integrat(es?|ion)/i },
+  // "quickbooks" is intentionally NOT in this alternation: a correctly-qualified QuickBooks mention is
+  // required by product truth (see the dedicated "QuickBooks mention stays qualified" test below), which
+  // pins that every occurrence carries its own "not yet turned on" disclosure. This pattern still blocks
+  // any OTHER unqualified integration/connection claim.
+  { label: "live integrations (other than the qualified QuickBooks disclosure)", pattern: /hubspot|connect(ed)? to your (bank|accounting)|integrat(es?|ion)/i },
   { label: "AI advisor/chat capability", pattern: /ask (opsiq|ai)|ai (chat|advisor|copilot)|chat with/i },
   { label: "autonomous execution", pattern: /automatically (sends|executes|runs|applies)|autonomous/i },
   { label: "forecasts/predictions", pattern: /forecast|predicts?\b/i },
@@ -138,6 +142,58 @@ describe("LandingPage — structure and CTAs", () => {
   });
 });
 
+describe("LandingPage — getting-started sequence", () => {
+  it("has exactly 6 numbered steps: account/beta-access, then the 5 real first-run steps", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const steps = getByTestId("landing-getting-started").querySelectorAll("li h3");
+    expect(steps).toHaveLength(6);
+    expect(steps[1].textContent).toBe("Set up your business");
+    expect(steps[2].textContent).toBe("Bring your numbers");
+    expect(steps[5].textContent).toBe("See what to do, then verify it");
+  });
+
+  it("step 1 is admission-mode-aware: beta request by default, account creation under OPEN_BETA", () => {
+    const inviteOnly = render(<LandingPage />);
+    expect(inviteOnly.getByTestId("landing-getting-started").querySelector("li h3")?.textContent).toBe("Request beta access");
+    inviteOnly.unmount();
+    const openBeta = render(<LandingPage admissionMode="OPEN_BETA" />);
+    expect(openBeta.getByTestId("landing-getting-started").querySelector("li h3")?.textContent).toBe("Create a free account");
+  });
+
+  it("adds no new CTA buttons or links (purely informational)", () => {
+    const { getByTestId } = render(<LandingPage />);
+    const section = getByTestId("landing-getting-started");
+    expect(section.querySelectorAll("button, a").length).toBe(0);
+  });
+});
+
+describe("LandingPage — QuickBooks mention stays qualified", () => {
+  it("every mention of QuickBooks carries its own 'not yet' disclosure in the same sentence", () => {
+    const { container } = render(<LandingPage />);
+    const text = container.textContent ?? "";
+    const matches = text.match(/[^.]*QuickBooks[^.]*\./gi) ?? [];
+    expect(matches.length).toBeGreaterThan(0);
+    for (const sentence of matches) {
+      expect(sentence).toMatch(/not yet turned on|not yet available|sandbox/i);
+    }
+  });
+
+  it("never claims QuickBooks is certified, partnered, or generally available", () => {
+    const { container } = render(<LandingPage />);
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/certified|partner(ed|ship)|officially (supports?|integrates?)/i);
+  });
+
+  it("never renders an Intuit/QuickBooks logo image", () => {
+    const { container } = render(<LandingPage />);
+    const imgs = Array.from(container.querySelectorAll("img"));
+    for (const img of imgs) {
+      expect((img.getAttribute("src") ?? "").toLowerCase()).not.toMatch(/quickbooks|intuit/);
+      expect((img.getAttribute("alt") ?? "").toLowerCase()).not.toMatch(/quickbooks logo|intuit logo/);
+    }
+  });
+});
+
 describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
   it("states the PwC population, caveat, and no endorsement", () => {
     const { getByTestId } = render(<LandingPage />);
@@ -161,9 +217,9 @@ describe("LandingPage — PwC-backed 'why now' and OpsIQ response", () => {
   });
 
   it("shows the Evidence → Diagnose → Prioritize → Act → Verify order", () => {
-    const { container } = render(<LandingPage />);
-    const titles = Array.from(container.querySelectorAll("li h3")).map((h) => h.textContent);
-    expect(titles.slice(0, 5)).toEqual(["Evidence", "Diagnose", "Prioritize", "Act", "Verify"]);
+    const { getByTestId } = render(<LandingPage />);
+    const titles = Array.from(getByTestId("landing-how-it-works").querySelectorAll("li h3")).map((h) => h.textContent);
+    expect(titles).toEqual(["Evidence", "Diagnose", "Prioritize", "Act", "Verify"]);
   });
 });
 

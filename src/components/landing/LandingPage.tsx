@@ -2,7 +2,7 @@ import { getImageProps } from "next/image";
 import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
 import { Badge } from "@/ui/primitives";
-import { PublicBetaCta, PublicBetaText } from "@/components/landing/PublicBetaCta";
+import { PublicBetaCta, PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
 import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
 import { PublicSiteFooter } from "@/components/landing/PublicSiteFooter";
 
@@ -52,6 +52,42 @@ const HOW_IT_WORKS = [
   {
     title: "Verify",
     body: "Mark an action's real outcome afterward. What happened stays separate from what was predicted.",
+  },
+];
+
+/**
+ * Getting started — the real, shipped first-run sequence (first-run-router.ts: NEEDS_BUSINESS ->
+ * NEEDS_EVIDENCE -> NEEDS_DIAGNOSIS), steps 2-6. Step 1 (account vs. beta request) is admission-mode-aware
+ * and rendered separately via PublicBetaSwitch, never hardcoded here.
+ *
+ * The QuickBooks line is deliberately qualified: QuickBooks Online connectivity is built and exercised in
+ * OpsIQ's own sandbox/acceptance environment (see docs/opsiq/product/QBO_V1_SANDBOX_ACCEPTANCE_RUNBOOK.md),
+ * but no QuickBooks configuration of any kind exists in Production today (verified directly against the
+ * Vercel project's environment variables: every QUICKBOOKS_* value is git-branch-scoped to a Preview
+ * deployment; QUICKBOOKS_FIRST_RUN_OFFER_ENABLED does not exist at all) -- so it is never offered to a new
+ * sign-up yet. "Built and tested in our own sandbox, not yet turned on for sign-ups" is the honest claim;
+ * see landing-page.test.tsx's "QuickBooks mention stays qualified" test, which pins this wording.
+ */
+const GETTING_STARTED_STEPS = [
+  {
+    title: "Set up your business",
+    body: "Tell OpsIQ your business's name and a few basics. Takes under a minute.",
+  },
+  {
+    title: "Bring your numbers",
+    body: "Today that means entering the few figures OpsIQ needs yourself. OpsIQ can also read QuickBooks Online automatically — that's built and tested in our own sandbox, not yet turned on for sign-ups.",
+  },
+  {
+    title: "Say how reliable they are",
+    body: "Estimates are fine. You flag which numbers are solid and which are a guess, so a guess is never treated as proof.",
+  },
+  {
+    title: "Get your first diagnosis",
+    body: "OpsIQ reads what you gave it and runs your first diagnosis itself — no extra step from you, even if you close the tab.",
+  },
+  {
+    title: "See what to do, then verify it",
+    body: "Review the prioritized finding and its recommended action, then come back later and record what actually happened.",
   },
 ];
 
@@ -279,6 +315,38 @@ export default function LandingPage({ admissionMode = null }: { admissionMode?: 
         </ul>
       </section>
 
+      {/* Getting started — the real first-run sequence, not the ongoing diagnosis loop below. Purely
+          informational: no buttons here, so CTA counts elsewhere on the page are unaffected. */}
+      <section className="mx-auto w-full max-w-6xl px-6 py-12" data-testid="landing-getting-started">
+        <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          How you get started
+        </h2>
+        <ol className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <li className="rounded-lg border border-border bg-background p-6 text-left shadow-sm">
+            <span className="font-display text-sm font-semibold text-muted-foreground">01</span>
+            <h3 className="mt-1 text-base font-semibold">
+              <PublicBetaSwitch open="Create a free account" invite="Request beta access" initialMode={admissionMode} />
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              <PublicBetaSwitch
+                open="No credit card required."
+                invite="We'll set you up once a spot opens — no credit card required."
+                initialMode={admissionMode}
+              />
+            </p>
+          </li>
+          {GETTING_STARTED_STEPS.map((item, i) => (
+            <li key={item.title} className="rounded-lg border border-border bg-background p-6 text-left shadow-sm">
+              <span className="font-display text-sm font-semibold text-muted-foreground">
+                {String(i + 2).padStart(2, "0")}
+              </span>
+              <h3 className="mt-1 text-base font-semibold">{item.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{item.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       {/* Why now: independent context, clearly separated from OpsIQ's own interpretation. */}
       <section className="mx-auto w-full max-w-4xl px-6 py-12" data-testid="landing-why-now">
         <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
@@ -318,7 +386,7 @@ export default function LandingPage({ admissionMode = null }: { admissionMode?: 
       </section>
 
       {/* How OpsIQ works — the real loop, in order. Four short steps, not a feature grid. */}
-      <section className="mx-auto w-full max-w-6xl px-6 py-12">
+      <section className="mx-auto w-full max-w-6xl px-6 py-12" data-testid="landing-how-it-works">
         <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
           How OpsIQ works
         </h2>
