@@ -105,9 +105,32 @@ jobs:
     name: Provision ADMINISTRATION_OPERATOR
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
+    environment: production-operator
 
     steps:
+      # ── Workflow-origin guard (fail-closed; FIRST step, before anything that references a secret) ───────────
+      # `ref: main` on a later checkout only selects which repository CONTENT is built. The steps that run -- and
+      # the secrets they reference -- come from the workflow FILE of the ref this run was dispatched from. This
+      # step fails the job unless the trigger, the ref and the workflow definition are all main. It is defence in
+      # depth against an accidental off-main dispatch; the ENFORCING control is the `production-operator`
+      # environment's deployment-branch rule (main only) -- see docs/opsiq/ci/PRODUCTION_SECRET_ISOLATION.md.
+      - name: Assert workflow origin is main (fail-closed)
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch|schedule) ;;
+            *) echo "::error::refusing to run: unexpected trigger '${GITHUB_EVENT_NAME}'"; exit 1 ;;
+          esac
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::refusing to run: ref is '${GITHUB_REF}', must be refs/heads/main"
+            exit 1
+          fi
+          case "${GITHUB_WORKFLOW_REF}" in
+            *"@refs/heads/main") ;;
+            *) echo "::error::refusing to run: the workflow definition is not from refs/heads/main"; exit 1 ;;
+          esac
+          echo "Workflow origin verified: ${GITHUB_WORKFLOW_REF}"
+
       # ---- Group 1: input-only validation, no repository content needed ----
 
       - name: Validate mode input
@@ -211,15 +234,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+      - name: Preflight check - OPERATOR_DATABASE_URL secret exists
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            echo "::error::OPERATOR_DATABASE_URL secret is missing or empty"
             exit 1
           fi
-          echo "✓ PRODUCTION_DATABASE_URL secret is configured"
+          echo "✓ OPERATOR_DATABASE_URL secret is configured"
 
       - name: Remove local environment files
         run: |
@@ -228,14 +251,14 @@ jobs:
 
       - name: Verify exact production database host matches owner-pinned expectation (workflow-level gate)
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
         run: node scripts/validate-expected-db-host.mjs
 
       - name: Run provisioning script (DRY_RUN preview)
         if: inputs.mode == 'DRY_RUN'
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           TARGET_EMAIL: ${{ inputs.target_email }}
           WORKSPACE_ID: ${{ inputs.workspace_id }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
@@ -249,7 +272,7 @@ jobs:
       - name: Run provisioning script (APPLY — grants the role)
         if: inputs.mode == 'APPLY'
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           TARGET_EMAIL: ${{ inputs.target_email }}
           WORKSPACE_ID: ${{ inputs.workspace_id }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}

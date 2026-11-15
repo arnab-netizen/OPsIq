@@ -16,7 +16,7 @@ name: Migrate Production Database
 #                      column the current schema lacks). The unmerged
 #                      commit's application code and scripts are NEVER
 #                      checked out or executed while this workflow holds
-#                      PRODUCTION_DATABASE_URL -- only the single named
+#                      OPERATOR_DATABASE_URL -- only the single named
 #                      migration.sql file is read, via a git-object-level
 #                      read (git show), verified against a GitHub-API
 #                      provenance check and a caller-supplied checksum, then
@@ -27,7 +27,7 @@ name: Migrate Production Database
 #                      node_modules/prisma installation. Additionally, the
 #                      caller must pin the exact expected production DB
 #                      hostname (expected_database_host, bare hostname
-#                      only); the workflow parses PRODUCTION_DATABASE_URL's
+#                      only); the workflow parses OPERATOR_DATABASE_URL's
 #                      actual hostname at runtime and aborts before any
 #                      migration deploy on any mismatch -- a syntactically
 #                      valid direct Neon URL belonging to the wrong
@@ -48,7 +48,7 @@ name: Migrate Production Database
 # EXACT-HOST GATE (both modes): the owner-pinned expected_database_host
 # comparison originally shipped as a PINNED_PREDEPLOY-only control. Both
 # modes mutate the same production database via the same
-# PRODUCTION_DATABASE_URL secret and are equally exposed to a syntactically
+# OPERATOR_DATABASE_URL secret and are equally exposed to a syntactically
 # valid direct (non-pooler) Neon URL that happens to point at the wrong
 # project/branch -- MAIN mode had no more protection against that than
 # PINNED_PREDEPLOY did before this control existed. expected_database_host
@@ -128,9 +128,32 @@ jobs:
     name: Run Prisma Migrations on Production
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: production
+    environment: production-operator
 
     steps:
+      # ── Workflow-origin guard (fail-closed; FIRST step, before anything that references a secret) ───────────
+      # `ref: main` on a later checkout only selects which repository CONTENT is built. The steps that run -- and
+      # the secrets they reference -- come from the workflow FILE of the ref this run was dispatched from. This
+      # step fails the job unless the trigger, the ref and the workflow definition are all main. It is defence in
+      # depth against an accidental off-main dispatch; the ENFORCING control is the `production-operator`
+      # environment's deployment-branch rule (main only) -- see docs/opsiq/ci/PRODUCTION_SECRET_ISOLATION.md.
+      - name: Assert workflow origin is main (fail-closed)
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch|schedule) ;;
+            *) echo "::error::refusing to run: unexpected trigger '${GITHUB_EVENT_NAME}'"; exit 1 ;;
+          esac
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::refusing to run: ref is '${GITHUB_REF}', must be refs/heads/main"
+            exit 1
+          fi
+          case "${GITHUB_WORKFLOW_REF}" in
+            *"@refs/heads/main") ;;
+            *) echo "::error::refusing to run: the workflow definition is not from refs/heads/main"; exit 1 ;;
+          esac
+          echo "Workflow origin verified: ${GITHUB_WORKFLOW_REF}"
+
       - name: Validate mode input
         run: |
           case "${{ inputs.mode }}" in
@@ -343,13 +366,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+      - name: Preflight check - OPERATOR_DATABASE_URL secret exists
         run: |
-          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
-            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+          if [ -z "${{ secrets.OPERATOR_DATABASE_URL }}" ]; then
+            echo "::error::OPERATOR_DATABASE_URL secret is missing or empty"
             exit 1
           fi
-          echo "✓ PRODUCTION_DATABASE_URL secret is configured"
+          echo "✓ OPERATOR_DATABASE_URL secret is configured"
 
       - name: Remove local environment files
         run: |
@@ -358,17 +381,17 @@ jobs:
 
       - name: Prisma generate
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: npx prisma generate
 
       - name: Validate Prisma schema
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: npx prisma validate
 
       - name: Validate DATABASE_URL safety
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: |
           # Reject obvious placeholder values.
           if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
@@ -381,7 +404,7 @@ jobs:
           # Reject Neon pooler URL — migrations require a direct connection (no pgbouncer/advisory-lock issues).
           if echo "$DB_HOST" | grep -q '\-pooler\.'; then
             echo "::error::DATABASE_URL hostname contains '-pooler.' — migrations require a DIRECT (non-pooler) Neon URL."
-            echo "::error::Set PRODUCTION_DATABASE_URL in GitHub Secrets to the direct endpoint (without '-pooler' in the hostname)."
+            echo "::error::Set OPERATOR_DATABASE_URL in GitHub Secrets to the direct endpoint (without '-pooler' in the hostname)."
             exit 1
           fi
           echo "✓ DATABASE_URL safety checks passed (host: $DB_HOST)"
@@ -389,7 +412,7 @@ jobs:
 
       - name: Verify exact production database host matches owner-pinned expectation
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
         run: node scripts/validate-expected-db-host.mjs
 
@@ -397,7 +420,7 @@ jobs:
         env:
           OPSIQ_DB_TARGET: production
           OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
-          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: |
           echo "=== Pre-deploy migration status ==="
           # `prisma migrate status` exits non-zero whenever migrations are
@@ -426,7 +449,7 @@ jobs:
         env:
           OPSIQ_DB_TARGET: production
           OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
-          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           OPSIQ_PRODUCTION_OPERATION: migrate deploy
         run: |
           echo "DEPLOY_STARTED=true" >> "$GITHUB_ENV"
@@ -437,7 +460,7 @@ jobs:
         env:
           OPSIQ_DB_TARGET: production
           OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
-          MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
         run: |
           echo "=== Post-deploy migration status ==="
           # Same errexit hazard as the pre-deploy check above -- a failed
@@ -459,7 +482,7 @@ jobs:
       - name: Structural post-migration verification (version-controlled, parameterized query — no arbitrary SQL)
         if: inputs.mode == 'PINNED_PREDEPLOY'
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           MIGRATION_NAME: ${{ inputs.migration_name }}
         run: node scripts/verify-pinned-migration.mjs
 

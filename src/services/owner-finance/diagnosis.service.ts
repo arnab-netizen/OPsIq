@@ -20,7 +20,7 @@ import { diagnoseFinanceSnapshot } from "@/domain/owner-finance/diagnosis";
 import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
-import { loadFinanceEngineInput } from "./liquidity.service";
+import { cashPositionChangedSince, loadFinanceEngineInput } from "./liquidity.service";
 import { databaseNow, loadEffectiveCashflowCandidates, lockCashPositionShared } from "@/services/owner-cashflow/effective-cashflow.service";
 import { pickEffectiveCashflowRow, selectUsableBankBalance, type CashflowSelectionRow } from "@/domain/owner-finance/liquidity";
 import { getFinancialSnapshot } from "./snapshot.service";
@@ -41,11 +41,22 @@ interface EngagedPriorAction {
   cycle: { snapshot: { periodEnd: Date | string } | null } | null;
 }
 
+export interface RunFinanceDiagnosisOptions {
+  /**
+   * The AUTOMATIC first read. Under the same per-business lock that allocates the cycle sequence, if the business already has
+   * ANY cycle the existing latest one is returned and nothing is created, audited or counted against the diagnosis allowance.
+   * This is what makes the automatic first diagnosis safe under double submit, two tabs, a retry after a lost response, and a
+   * sync finishing while the owner is on the page. An owner-initiated re-run never sets it and always creates a new cycle.
+   */
+  firstDiagnosisOnly?: boolean;
+}
+
 export async function runFinanceDiagnosis(
   businessId: string,
   snapshotId: string,
   actorId: string,
-  workspaceId: string
+  workspaceId: string,
+  options: RunFinanceDiagnosisOptions = {},
 ) {
   const business = await getBusiness(businessId, workspaceId);
   const snapshotRow = await getFinancialSnapshot(snapshotId, workspaceId);
@@ -124,6 +135,7 @@ export async function runFinanceDiagnosis(
 
     let carriedForwardIds: string[] = [];
     let createdActionCount = 0;
+    let reusedCycleId: string | null = null;
     await db.$transaction(async (tx: any) => {
       // SERIALISATION with Cashflow writes. The shared cash-position lock is held from here THROUGH the commit that persists
       // the cycle; Cashflow creates/edits take it exclusively, so any bank-balance change either committed before this point
@@ -138,8 +150,21 @@ export async function runFinanceDiagnosis(
       const previousCycle = await tx.ownerFinanceCycle.findFirst({
         where: { businessId, workspaceId },
         orderBy: { sequenceNumber: "desc" },
-        select: { sequenceNumber: true },
+        select: { id: true, sequenceNumber: true, snapshotId: true, generatedAt: true },
       });
+      if (options.firstDiagnosisOnly && previousCycle) {
+        // REPLAY, never substitution. The latest cycle (read under the lock above) may be handed back only if it is the read of
+        // EXACTLY these figures and the bank balance it rests on has not moved since (the same two tests first-run uses to call a
+        // read current). Anything else is advice about different evidence: refuse, write nothing, spend nothing, and let the
+        // caller reload - the owner is then offered the ordinary "update my read".
+        const sameFigures = previousCycle.snapshotId === snapshotId;
+        const cashMoved = sameFigures && (await cashPositionChangedSince(workspaceId, businessId, snapshotRow.periodEnd, previousCycle.generatedAt, tx));
+        if (!sameFigures || cashMoved) {
+          throw new ConflictError("A read already exists for earlier figures. Reload to update it rather than repeating the first read.");
+        }
+        reusedCycleId = previousCycle.id;
+        return;
+      }
       sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1;
       const evidenceAsOf = await databaseNow(tx);
       const bankNow = selectUsableBankBalance({
@@ -283,7 +308,7 @@ export async function runFinanceDiagnosis(
         });
       }
     });
-  return { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount };
+  return { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount, reusedCycleId };
   };
 
   let persisted: Awaited<ReturnType<typeof persist>> | undefined;
@@ -297,6 +322,7 @@ export async function runFinanceDiagnosis(
       }
     }
   }
+  if (persisted.reusedCycleId) return getFinanceDiagnosis(persisted.reusedCycleId, workspaceId);
   const { cycleId, sequenceNumber, diagnosis, confidence, carriedForwardIds, createdActionCount } = persisted;
 
   const previousCycleForDrift = await db.ownerFinanceCycle.findFirst({
