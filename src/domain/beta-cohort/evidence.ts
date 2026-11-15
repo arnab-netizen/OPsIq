@@ -521,6 +521,109 @@ export interface ExpansionGate {
   unmet: string[];
 }
 
+// ─── Account classification overview (read-only, aggregate-only) ───────────
+
+/**
+ * One admitted account's facts, already resolved by the caller (the service does the DB joins and the
+ * signupSource/internal-address/classified lookups). Deliberately carries NOTHING that could identify the
+ * account — no id, no email, no email hint, no name — because this feeds an AGGREGATE view only: see
+ * buildAccountOverview below, which turns a list of these into counts and nothing else.
+ */
+export interface AccountOverviewRow {
+  signupSource: "PUBLIC_BETA" | "CONTROLLED_BETA_INVITE";
+  verified: boolean;
+  internalAddress: boolean;
+  /** True iff this account's BetaRequest (by email) already has a BETA_COHORT_OWNER_ASSIGNED entry in ANY cohort. */
+  classified: boolean;
+  firstRunStarted: boolean;
+  firstEvidenceSaved: boolean;
+  firstDiagnosisCompleted: boolean;
+  firstResultViewed: boolean;
+}
+
+export interface AccountOverviewBucket {
+  count: number;
+  emailVerified: number;
+  firstRunStarted: number;
+  firstEvidenceSaved: number;
+  firstDiagnosisCompleted: number;
+  firstResultViewed: number;
+}
+
+export interface CohortAccountOverview {
+  generatedAt: Date;
+  totalAccounts: number;
+  bySignupSource: { publicBeta: number; controlledBetaInvite: number };
+  verified: number;
+  unverified: number;
+  /** Accounts on an internal (@opsiq.solutions) address: can only ever be QA_MECHANICS, never REAL_OWNER. */
+  internalAddressAccounts: number;
+  classified: number;
+  unclassified: number;
+  /** Deliberately part of the payload, not just a UI string: UNCLASSIFIED is UNKNOWN, never "not a customer". */
+  unclassifiedNote: string;
+  classifiedMilestones: AccountOverviewBucket;
+  unclassifiedMilestones: AccountOverviewBucket;
+  /** True when the account scan hit its row bound; counts below are then a lower bound, not exact. */
+  truncated: boolean;
+}
+
+const UNCLASSIFIED_NOTE =
+  "Unclassified means this account's cohort status is UNKNOWN -- it is not evidence that the account is QA, " +
+  "and it is not evidence that it is a genuine external owner. Classify it in the table below to find out which.";
+
+function emptyBucket(): AccountOverviewBucket {
+  return { count: 0, emailVerified: 0, firstRunStarted: 0, firstEvidenceSaved: 0, firstDiagnosisCompleted: 0, firstResultViewed: 0 };
+}
+
+function addToBucket(bucket: AccountOverviewBucket, row: AccountOverviewRow): void {
+  bucket.count += 1;
+  if (row.verified) bucket.emailVerified += 1;
+  if (row.firstRunStarted) bucket.firstRunStarted += 1;
+  if (row.firstEvidenceSaved) bucket.firstEvidenceSaved += 1;
+  if (row.firstDiagnosisCompleted) bucket.firstDiagnosisCompleted += 1;
+  if (row.firstResultViewed) bucket.firstResultViewed += 1;
+}
+
+/** Pure aggregation: turns already-resolved rows into counts only. No identity of any kind ever appears here. */
+export function buildAccountOverview(rows: readonly AccountOverviewRow[], now: Date, truncated: boolean): CohortAccountOverview {
+  const classifiedMilestones = emptyBucket();
+  const unclassifiedMilestones = emptyBucket();
+  let publicBeta = 0;
+  let controlledBetaInvite = 0;
+  let verified = 0;
+  let internalAddressAccounts = 0;
+  let classified = 0;
+
+  for (const row of rows) {
+    if (row.signupSource === "PUBLIC_BETA") publicBeta += 1;
+    else controlledBetaInvite += 1;
+    if (row.verified) verified += 1;
+    if (row.internalAddress) internalAddressAccounts += 1;
+    if (row.classified) {
+      classified += 1;
+      addToBucket(classifiedMilestones, row);
+    } else {
+      addToBucket(unclassifiedMilestones, row);
+    }
+  }
+
+  return {
+    generatedAt: now,
+    totalAccounts: rows.length,
+    bySignupSource: { publicBeta, controlledBetaInvite },
+    verified,
+    unverified: rows.length - verified,
+    internalAddressAccounts,
+    classified,
+    unclassified: rows.length - classified,
+    unclassifiedNote: UNCLASSIFIED_NOTE,
+    classifiedMilestones,
+    unclassifiedMilestones,
+    truncated,
+  };
+}
+
 export function evaluateExpansionGate(views: readonly CohortOwnerView[], required = MIN_REAL_OWNERS_FOR_GATE): ExpansionGate {
   const counted = views.filter((v) => v.countedInGate);
   const open = counted.flatMap((v) => v.evidence.openIssues);

@@ -17,10 +17,11 @@ import { emitAuditEvent, getAuditEventReadOnlyClient } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
+import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
 import {
-  buildOwnerView, emptyAutomaticFacts, evaluateExpansionGate, storedAssignmentSchema, storedEvidenceSchema,
-  STORED_SCHEMA_VERSION, type AssignmentInput, type CohortAssignment, type CohortAutomaticFacts, type CohortOwnerView,
-  type EvidenceInput, type ExpansionGate, type LedgerEntry,
+  buildAccountOverview, buildOwnerView, emptyAutomaticFacts, evaluateExpansionGate, storedAssignmentSchema, storedEvidenceSchema,
+  STORED_SCHEMA_VERSION, type AccountOverviewRow, type AssignmentInput, type CohortAccountOverview, type CohortAssignment,
+  type CohortAutomaticFacts, type CohortOwnerView, type EvidenceInput, type ExpansionGate, type LedgerEntry,
 } from "@/domain/beta-cohort/evidence";
 
 const ENTITY_TYPE = "BetaCohortOwner";
@@ -343,4 +344,90 @@ export async function getCohortView(cohortId: string, now: Date = new Date()): P
     }));
 
   return { cohortId, generatedAt: now, owners, gate: evaluateExpansionGate(owners), candidates };
+}
+
+// ─── Account classification overview (read-only, aggregate-only, no cohort write) ──────────
+
+const ACCOUNT_OVERVIEW_MILESTONE_EVENTS = [
+  AUDIT_EVENTS.PRODUCT_FIRST_RUN_STARTED,
+  AUDIT_EVENTS.PRODUCT_FIRST_EVIDENCE_SAVED,
+  AUDIT_EVENTS.PRODUCT_FIRST_DIAGNOSIS_COMPLETED,
+  AUDIT_EVENTS.PRODUCT_FIRST_RESULT_VIEWED,
+] as const;
+const MAX_OVERVIEW_ACCOUNTS = 500;
+
+/**
+ * Read-only aggregate: of every admitted account (the same signupSource-tagged set
+ * countExternalBetaWorkspaces() counts), how many are already classified into a beta cohort (any cohort, by
+ * BetaRequest email match) vs not, and what milestones each bucket has reached -- counts only, see
+ * buildAccountOverview's doc comment for why no identity ever crosses that boundary.
+ *
+ * Does NOT write anything, does NOT classify anything, and does NOT change evaluateExpansionGate's criteria,
+ * capacity, or any account's permissions.
+ */
+export async function getAccountClassificationOverview(now: Date = new Date()): Promise<CohortAccountOverview> {
+  const workspaces = await db.workspace.findMany({
+    where: { signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] } },
+    select: { id: true, createdBy: true, signupSource: true },
+    take: MAX_OVERVIEW_ACCOUNTS + 1,
+  });
+  const truncated = workspaces.length > MAX_OVERVIEW_ACCOUNTS;
+  const scoped = truncated ? workspaces.slice(0, MAX_OVERVIEW_ACCOUNTS) : workspaces;
+
+  const createdByValues: Array<string | null> = scoped.map((w: { createdBy: string | null }) => w.createdBy);
+  const creatorIds = [...new Set(createdByValues.filter((id): id is string => Boolean(id)))];
+  const creators: Array<{ id: string; email: string; emailVerifiedAt: Date | null }> = creatorIds.length
+    ? await db.user.findMany({ where: { id: { in: creatorIds } }, select: { id: true, email: true, emailVerifiedAt: true } })
+    : [];
+  const creatorById = new Map(creators.map((c) => [c.id, c]));
+
+  const workspaceIds = scoped.map((w: { id: string }) => w.id);
+  const audit = getAuditEventReadOnlyClient();
+  const milestoneRows: Array<{ workspaceId: string | null; eventName: string }> = workspaceIds.length
+    ? await audit.findMany({
+        where: { workspaceId: { in: workspaceIds }, eventName: { in: [...ACCOUNT_OVERVIEW_MILESTONE_EVENTS] } },
+        select: { workspaceId: true, eventName: true },
+        take: 20_000,
+      })
+    : [];
+  const reached = new Set(milestoneRows.map((r) => `${r.workspaceId}:${r.eventName}`));
+  const has = (workspaceId: string, name: string) => reached.has(`${workspaceId}:${name}`);
+
+  // Classified = this account's email has a BetaRequest with a BETA_COHORT_OWNER_ASSIGNED entry, in ANY cohort
+  // (not just the one default cohort getCohortView happens to be called with) -- email, not id, is the only link
+  // between "an account" and "a BetaRequest", exactly as the rest of this file already relies on (loadAutomaticFacts).
+  // Emails here are already canonical (lowercased at signup/request time, same assumption isBetaRequestInvited makes).
+  const emails = [...new Set(creators.map((c) => c.email.toLowerCase()))];
+  const requestsByEmail: Array<{ id: string; email: string }> = emails.length
+    ? await db.betaRequest.findMany({ where: { email: { in: emails } }, select: { id: true, email: true } })
+    : [];
+  const requestIdByEmail = new Map(requestsByEmail.map((r) => [r.email.toLowerCase(), r.id]));
+  const requestIds = requestsByEmail.map((r) => r.id);
+  const assignedRows: Array<{ entityId: string | null }> = requestIds.length
+    ? await audit.findMany({ where: { eventName: AUDIT_EVENTS.BETA_COHORT_OWNER_ASSIGNED, workspaceId: null, entityId: { in: requestIds } }, select: { entityId: true } })
+    : [];
+  const assignedRequestIds = new Set(assignedRows.map((r) => r.entityId));
+
+  const rows: AccountOverviewRow[] = [];
+  for (const w of scoped) {
+    const creator = w.createdBy ? creatorById.get(w.createdBy) : undefined;
+    // No resolvable creator user: cannot be verified, classified or milestone-checked without guessing -- excluded
+    // rather than reported as a false "unverified/unclassified" fact. Should not occur for a real signup (the
+    // account graph is created atomically), so this never silently hides a real account in practice.
+    if (!creator) continue;
+    const email = creator.email.toLowerCase();
+    const requestId = requestIdByEmail.get(email);
+    rows.push({
+      signupSource: w.signupSource === PUBLIC_BETA_SIGNUP_SOURCE ? "PUBLIC_BETA" : "CONTROLLED_BETA_INVITE",
+      verified: creator.emailVerifiedAt !== null,
+      internalAddress: isInternalAddress(email),
+      classified: requestId !== undefined && assignedRequestIds.has(requestId),
+      firstRunStarted: has(w.id, AUDIT_EVENTS.PRODUCT_FIRST_RUN_STARTED),
+      firstEvidenceSaved: has(w.id, AUDIT_EVENTS.PRODUCT_FIRST_EVIDENCE_SAVED),
+      firstDiagnosisCompleted: has(w.id, AUDIT_EVENTS.PRODUCT_FIRST_DIAGNOSIS_COMPLETED),
+      firstResultViewed: has(w.id, AUDIT_EVENTS.PRODUCT_FIRST_RESULT_VIEWED),
+    });
+  }
+
+  return buildAccountOverview(rows, now, truncated);
 }

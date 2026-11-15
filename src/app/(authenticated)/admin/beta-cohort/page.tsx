@@ -45,6 +45,20 @@ interface OwnerRow {
   countedInGate: boolean;
 }
 
+interface AccountOverviewBucket {
+  count: number; emailVerified: number; firstRunStarted: number; firstEvidenceSaved: number;
+  firstDiagnosisCompleted: number; firstResultViewed: number;
+}
+
+interface AccountOverview {
+  totalAccounts: number;
+  bySignupSource: { publicBeta: number; controlledBetaInvite: number };
+  verified: number; unverified: number; internalAddressAccounts: number;
+  classified: number; unclassified: number; unclassifiedNote: string;
+  classifiedMilestones: AccountOverviewBucket; unclassifiedMilestones: AccountOverviewBucket;
+  truncated: boolean;
+}
+
 interface CohortView {
   cohortId: string;
   generatedAt: string;
@@ -54,6 +68,7 @@ interface CohortView {
     p2TrustBlockersOpen: number; criteria: Record<string, string>; unmet: string[];
   };
   candidates: Array<{ betaRequestId: string; firstName: string | null; emailHint: string; invitedAt: string | null; internalAddress: boolean }>;
+  accountOverview: AccountOverview;
 }
 
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "—");
@@ -167,6 +182,34 @@ export default function BetaCohortPage() {
         <p className="text-gray-600">Observed milestones are automatic. Understanding, trust, real-world action and outcome are only what a person told us — they start UNKNOWN.</p>
         <p className="mt-1 text-sm font-medium text-amber-700">Never type an owner&rsquo;s financial figures, names or contact details into any field.</p>
       </div>
+
+      <section className="rounded-lg border border-border p-4" data-testid="account-overview">
+        <h2 className="text-lg font-semibold">All registered accounts: classified vs unclassified</h2>
+        <p className="text-sm text-gray-700">
+          {view.accountOverview.totalAccounts} admitted account(s) — {view.accountOverview.bySignupSource.publicBeta} direct OPEN_BETA signup(s),
+          {" "}{view.accountOverview.bySignupSource.controlledBetaInvite} invited. Verified: {view.accountOverview.verified} · Unverified: {view.accountOverview.unverified}
+          {view.accountOverview.internalAddressAccounts > 0 && ` · Internal address (QA-only): ${view.accountOverview.internalAddressAccounts}`}
+          {view.accountOverview.truncated && " · (truncated — counts below are a lower bound)"}
+        </p>
+        <p className="mt-2 text-sm text-gray-700" data-testid="account-overview-classified">
+          Classified in a cohort: <strong>{view.accountOverview.classified}</strong> · Unclassified: <strong data-testid="account-overview-unclassified">{view.accountOverview.unclassified}</strong>
+        </p>
+        {view.accountOverview.unclassified > 0 && <p className="mt-1 text-sm text-amber-700">{view.accountOverview.unclassifiedNote}</p>}
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          {([["Classified", view.accountOverview.classifiedMilestones], ["Unclassified", view.accountOverview.unclassifiedMilestones]] as const).map(([label, b]) => (
+            <div key={label} className="rounded border border-border p-3 text-xs">
+              <p className="font-medium text-gray-800">{label} ({b.count})</p>
+              <ul className="mt-1 space-y-0.5 text-gray-600">
+                <li>Email verified: {b.emailVerified}</li>
+                <li>First run started: {b.firstRunStarted}</li>
+                <li>First evidence saved: {b.firstEvidenceSaved}</li>
+                <li>First diagnosis completed: {b.firstDiagnosisCompleted}</li>
+                <li>First result viewed: {b.firstResultViewed}</li>
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="rounded-lg border border-border p-4" data-testid="cohort-gate" aria-live="polite">
         <h2 className="text-lg font-semibold">Expansion gate: <span data-testid="cohort-gate-value">{view.gate.gate}</span></h2>

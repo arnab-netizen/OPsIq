@@ -7,9 +7,9 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  assignmentInputSchema, buildOwnerView, computeFirstTrustedValue, DAY_MS, emptyAutomaticFacts, evaluateExpansionGate,
-  evidenceEntrySchema, evidenceInputSchema, reduceLedger, sanitiseCohortText, type CohortAssignment, type CohortAutomaticFacts,
-  type CohortKind, type EvidenceEntry, type LedgerEntry,
+  assignmentInputSchema, buildAccountOverview, buildOwnerView, computeFirstTrustedValue, DAY_MS, emptyAutomaticFacts,
+  evaluateExpansionGate, evidenceEntrySchema, evidenceInputSchema, reduceLedger, sanitiseCohortText, type AccountOverviewRow,
+  type CohortAssignment, type CohortAutomaticFacts, type CohortKind, type EvidenceEntry, type LedgerEntry,
 } from "@/domain/beta-cohort/evidence";
 
 const T0 = new Date("2026-10-20T09:00:00.000Z");
@@ -317,5 +317,64 @@ describe("expansion gate", () => {
     expect(g.gate).toBe("CLOSED");
     expect(g.criteria.REAL_OWNER_UNDERSTANDING).toBe("NOT_YET");
     expect(g.criteria.REAL_OWNER_ACTION).toBe("NOT_YET");
+  });
+});
+
+describe("buildAccountOverview — aggregate account classification (counts only, no identity)", () => {
+  const row = (over: Partial<AccountOverviewRow> = {}): AccountOverviewRow => ({
+    signupSource: "PUBLIC_BETA", verified: false, internalAddress: false, classified: false,
+    firstRunStarted: false, firstEvidenceSaved: false, firstDiagnosisCompleted: false, firstResultViewed: false, ...over,
+  });
+
+  it("splits totals by signupSource, verification and internal-address, independent of classification", () => {
+    const rows = [
+      row({ signupSource: "PUBLIC_BETA", verified: true }),
+      row({ signupSource: "PUBLIC_BETA", verified: false }),
+      row({ signupSource: "CONTROLLED_BETA_INVITE", verified: true, internalAddress: true }),
+    ];
+    const o = buildAccountOverview(rows, at(0), false);
+    expect(o.totalAccounts).toBe(3);
+    expect(o.bySignupSource).toEqual({ publicBeta: 2, controlledBetaInvite: 1 });
+    expect(o.verified).toBe(2);
+    expect(o.unverified).toBe(1);
+    expect(o.internalAddressAccounts).toBe(1);
+    expect(o.truncated).toBe(false);
+  });
+
+  it("buckets milestone counts by classified vs unclassified, never mixing the two", () => {
+    const rows = [
+      row({ classified: true, firstRunStarted: true, firstResultViewed: true }),
+      row({ classified: true, firstRunStarted: true }),
+      row({ classified: false, firstDiagnosisCompleted: true }),
+    ];
+    const o = buildAccountOverview(rows, at(0), false);
+    expect(o.classified).toBe(2);
+    expect(o.unclassified).toBe(1);
+    expect(o.classifiedMilestones).toEqual({ count: 2, emailVerified: 0, firstRunStarted: 2, firstEvidenceSaved: 0, firstDiagnosisCompleted: 0, firstResultViewed: 1 });
+    expect(o.unclassifiedMilestones).toEqual({ count: 1, emailVerified: 0, firstRunStarted: 0, firstEvidenceSaved: 0, firstDiagnosisCompleted: 1, firstResultViewed: 0 });
+  });
+
+  it("an unclassified account is reported as UNKNOWN, never implied to be QA or a confirmed real owner", () => {
+    const o = buildAccountOverview([row({ classified: false })], at(0), false);
+    const note = o.unclassifiedNote.toLowerCase();
+    expect(note).toMatch(/unknown/);
+    // Must explicitly disclaim both readings, not just assert one of them as fact.
+    expect(note).toMatch(/not evidence that (the|this) account is qa/);
+    expect(note).toMatch(/not evidence that it is a genuine/);
+  });
+
+  it("zero rows is a valid, empty result — not an error", () => {
+    const o = buildAccountOverview([], at(0), false);
+    expect(o).toMatchObject({ totalAccounts: 0, verified: 0, unverified: 0, classified: 0, unclassified: 0, truncated: false });
+  });
+
+  it("carries the truncated flag through unchanged — a caller signal that counts are a lower bound", () => {
+    expect(buildAccountOverview([row()], at(0), true).truncated).toBe(true);
+  });
+
+  it("never exposes any field beyond counts — the row shape itself carries no id, email or name", () => {
+    const o = buildAccountOverview([row({ classified: true })], at(0), false);
+    const keys = Object.keys(o);
+    expect(keys).toEqual(["generatedAt", "totalAccounts", "bySignupSource", "verified", "unverified", "internalAddressAccounts", "classified", "unclassified", "unclassifiedNote", "classifiedMilestones", "unclassifiedMilestones", "truncated"]);
   });
 });
