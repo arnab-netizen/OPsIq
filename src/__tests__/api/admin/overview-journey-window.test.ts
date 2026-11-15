@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
     betaRequest: { count: vi.fn().mockResolvedValue(0) },
     user: { count: vi.fn().mockResolvedValue(0) },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("@/services/beta/platform-settings.service", () => ({
   readEffectiveSettings: vi.fn().mockResolvedValue({ capacityLimit: 100, admissionMode: "OPEN_BETA", source: "db" }),
