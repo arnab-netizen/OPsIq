@@ -6,7 +6,7 @@
  * readiness — reusing existing, reliable data sources only (no new
  * observability platform). Gated on CUSTOMER_ACCESS_MANAGE.
  */
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { readEffectiveSettings, countCapacityUsage } from "@/services/beta/platform-settings.service";
@@ -16,8 +16,18 @@ import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/
 import { ensureCriticalReadiness } from "@/infra/critical-readiness";
 import { getQboAdminHealth } from "@/services/quickbooks/qbo-admin-health.service";
 
+/** Operator-chosen presets only -- never an arbitrary caller-supplied number of days. */
+const JOURNEY_WINDOW_PRESETS = [7, 30, 90] as const;
+
+function resolveJourneyWindowDays(ctx: CanonicalAuthContext): number {
+  const raw = ctx.request ? new URL(ctx.request.url).searchParams.get("windowDays") : null;
+  const parsed = raw !== null ? Number(raw) : NaN;
+  return (JOURNEY_WINDOW_PRESETS as readonly number[]).includes(parsed) ? parsed : 7;
+}
+
 export const GET = withCanonicalEnforcement(
-  async () => {
+  async (ctx) => {
+    const windowDays = resolveJourneyWindowDays(ctx);
     const settings = await readEffectiveSettings();
     const usage = await countCapacityUsage();
 
@@ -54,7 +64,7 @@ export const GET = withCanonicalEnforcement(
     ]);
 
     // Aggregates only (no payloads, emails or money). A failure here must not hide the admission/capacity controls.
-    const journey = await getJourneyFunnel(7).catch(() => null);
+    const journey = await getJourneyFunnel(windowDays).catch(() => null);
 
     // QuickBooks sync health: counts only (no tenant ids, tokens or values). A failure here must not hide the admission controls.
     const quickbooks = await getQboAdminHealth().catch(() => null);
