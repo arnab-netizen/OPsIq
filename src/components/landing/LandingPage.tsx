@@ -170,7 +170,17 @@ const { props: proofMobile } = getImageProps({
   sizes: "100vw",
 });
 
-export default function LandingPage({ admissionMode = null }: { admissionMode?: string | null } = {}) {
+export interface LandingPageResource {
+  slug: string;
+  title: string;
+  description: string;
+  path: string;
+}
+
+export default function LandingPage({
+  admissionMode = null,
+  recentResources = [],
+}: { admissionMode?: string | null; recentResources?: LandingPageResource[] } = {}) {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
       <PublicSiteHeader admissionMode={admissionMode} />
@@ -402,6 +412,36 @@ export default function LandingPage({ admissionMode = null }: { admissionMode?: 
           ))}
         </ul>
       </section>
+
+      {/* Resources — compact, newest-first teaser; no performance/popularity claims, just the
+          guide's own title and description. Full list and canonical URLs live at /resources. */}
+      {recentResources.length > 0 && (
+        <section className="mx-auto w-full max-w-4xl px-6 py-12" data-testid="landing-resources-teaser">
+          <h2 className="text-center font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            Resources for business owners
+          </h2>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Free, plain-language guides on reading your own numbers and deciding what to do next.
+          </p>
+          <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {recentResources.map((resource) => (
+              <li key={resource.slug} className="rounded-lg border border-border bg-background p-5 text-left shadow-sm">
+                <h3 className="text-base font-semibold">
+                  <Link href={resource.path} className="text-foreground hover:text-[var(--primary-text)] hover:underline">
+                    {resource.title}
+                  </Link>
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">{resource.description}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-center text-sm">
+            <Link href="/resources" className="text-[var(--primary-text)] hover:underline">
+              See all resources &rarr;
+            </Link>
+          </p>
+        </section>
+      )}
 
       {/* Evidence & trust — concrete, verifiable product behavior, not generic assurance copy. */}
       <section className="mx-auto w-full max-w-6xl px-6 py-12">

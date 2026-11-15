@@ -36,7 +36,7 @@ Keep the cost figure honest. Use loaded delivery cost per hour, not salary alone
 
 ## Where this sits among your other numbers
 
-Overservicing is a delivery-margin problem, and delivery margin limits everything below it: overhead, utilization, and cash. That is why [Which Agency Number Should You Fix First?](/resources/which-agency-number-to-fix-first) puts delivery margin at the top of its working order of checks, and why a cash squeeze can follow from a margin problem, as described in [Profitable but Short on Cash?](/resources/profitable-but-short-on-cash).
+Overservicing is a delivery-margin problem, and delivery margin limits everything below it: overhead, [utilization](/resources/agency-utilization-rate-denominator), and cash. That is why [Which Agency Number Should You Fix First?](/resources/which-agency-number-to-fix-first) puts delivery margin at the top of its working order of checks, and why a cash squeeze can follow from a margin problem, as described in [Profitable but Short on Cash?](/resources/profitable-but-short-on-cash).
 
 If you want to see which of your own numbers deserves attention first, the [free Agency Decision Diagnostic](/agency) takes ten inputs, runs in your browser, needs no signup, and returns one prioritized issue and a next step.
 
