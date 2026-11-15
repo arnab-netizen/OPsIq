@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
 import { PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
+import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Beta Notice | OpsIQ",
@@ -9,7 +12,10 @@ export const metadata = {
 
 const POLICY_VERSION = "2026-09-17";
 
-export default function BetaNoticePage() {
+export default async function BetaNoticePage() {
+  // Resolved server-side, exactly like the homepage (src/app/page.tsx), so this notice never
+  // flashes the stricter INVITE_ONLY wording while the real mode is OPEN_BETA (or vice versa).
+  const admissionMode = await getPublicAdmissionMode();
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-6 py-12 text-foreground">
       <PublicLink href="/" className="text-sm text-[var(--primary-text)] hover:underline">
@@ -24,9 +30,10 @@ export default function BetaNoticePage() {
 
       <div className="mt-8 space-y-5 text-sm leading-relaxed text-muted-foreground">
         <section>
-          <h2 className="font-semibold text-foreground"><PublicBetaText field="betaNoticeHeading" /></h2>
+          <h2 className="font-semibold text-foreground"><PublicBetaText field="betaNoticeHeading" initialMode={admissionMode} /></h2>
           <p className="mt-1">
             <PublicBetaSwitch
+              initialMode={admissionMode}
               open={
                 <>
                   You can create an account at{" "}
