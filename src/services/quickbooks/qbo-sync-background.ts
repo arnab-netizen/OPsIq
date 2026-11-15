@@ -13,6 +13,7 @@ import { logger } from "@/infra/logger";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
 import { toIsoDate } from "@/domain/quickbooks/qbo-report-model";
 import { enqueueQboSync, qboSyncKey } from "./qbo-sync-scheduling";
+import { TASK_NAME_FIRST_DIAGNOSIS } from "@/services/owner-first-run/first-diagnosis-scheduling";
 
 export const QBO_BACKGROUND_BUDGET_MS = 50_000;
 /** A further pass is started only if the slowest pass seen so far, times this factor, still fits inside the remaining budget. */
@@ -54,6 +55,25 @@ export async function processQboSyncChain(
       }, scheduler);
       if (next.taskId === taskId) break; // the same task cannot be re-run (it already finished or is held)
       taskId = next.taskId;
+    }
+    // The first read that those passes made possible. The daily cron would run it, but an owner who has closed the page must not wait
+    // until tomorrow: ask the SAME scheduler to run the (already enqueued, keyed) first-read tasks of THIS connection's business now,
+    // through exactly the claim/lease/retry path - never inline in the callback, and only while the time budget allows. Whatever is
+    // left (or fails) is picked up by the next drain; correctness never depends on this.
+    if (clock() < deadline) {
+      const conn = await db.qboConnection.findFirst({ where: { id: input.connectionId, workspaceId: input.workspaceId }, select: { businessId: true } });
+      if (conn) {
+        const pending = await db.scheduledTask.findMany({
+          where: { workspaceId: input.workspaceId, taskName: TASK_NAME_FIRST_DIAGNOSIS, status: "pending", idempotencyKey: { startsWith: `first-diagnosis:${conn.businessId}:` } },
+          orderBy: { createdAt: "asc" },
+          take: 3,
+          select: { id: true },
+        });
+        for (const t of pending) {
+          if (clock() >= deadline) break;
+          await scheduler.processTaskById(t.id, handlers);
+        }
+      }
     }
   } catch (e) {
     // Best-effort accelerator only; the scheduler's retry and the daily cron own correctness. Never leak details.

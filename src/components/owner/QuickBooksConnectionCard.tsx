@@ -77,7 +77,7 @@ function formatWhen(iso: string | null): string {
   return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-export function QuickBooksConnectionCard({ businessId }: { businessId: string }) {
+export function QuickBooksConnectionCard({ businessId, firstRun = false }: { businessId: string; /** Shown inside the first-run step: the first read starts by itself, so no "run it again" wording. */ firstRun?: boolean }) {
   const [status, setStatus] = useState<QboStatusView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "connect" | "disconnect" | "refresh">(null);
@@ -170,9 +170,13 @@ export function QuickBooksConnectionCard({ businessId }: { businessId: string })
       const r = (await call("/api/owner/integrations/quickbooks/sync", { method: "POST", body: JSON.stringify({ businessId }) })) as { alreadyRequested?: boolean };
       setNotice({
         tone: "info",
-        text: r.alreadyRequested
-          ? "A refresh was requested a moment ago, so no second one was started. New figures will appear here; your last analysis is not changed until you run it again."
-          : "Refreshing from QuickBooks. New figures will appear here; your last analysis is not changed until you run it again.",
+        text: firstRun
+          ? r.alreadyRequested
+            ? "A refresh was requested a moment ago, so no second one was started. Your first read will start by itself."
+            : "Refreshing from QuickBooks. Your first read will start by itself."
+          : r.alreadyRequested
+            ? "A refresh was requested a moment ago, so no second one was started. New figures will appear here; your last analysis is not changed until you run it again."
+            : "Refreshing from QuickBooks. New figures will appear here; your last analysis is not changed until you run it again.",
       });
       polls.current = 0;
       window.setTimeout(() => void load(), 4_000);
@@ -259,7 +263,7 @@ export function QuickBooksConnectionCard({ businessId }: { businessId: string })
           <summary className="cursor-pointer text-sm text-muted-foreground">Where your recent figures come from</summary>
           <p className="mt-1 text-sm text-muted-foreground">
             {fromQbo} recent month{fromQbo === 1 ? "" : "s"} from QuickBooks{fromOwner > 0 ? `, ${fromOwner} entered or changed by you (QuickBooks will not overwrite those)` : ""}.
-            After new figures arrive, run your analysis again to include them.
+            {firstRun ? "Your first read starts by itself once enough has arrived." : "After new figures arrive, run your analysis again to include them."}
           </p>
         </details>
       )}

@@ -190,6 +190,8 @@ export type FinancialSnapshotAmendInput = z.infer<typeof financialSnapshotAmendS
 
 export const runFinanceDiagnosisSchema = z.object({
   snapshotId: z.string().uuid(),
+  /** The automatic first read: reuse the business's existing cycle instead of creating a second one (see runFinanceDiagnosis). */
+  firstDiagnosisOnly: z.boolean().optional(),
 });
 export type RunFinanceDiagnosisInput = z.infer<typeof runFinanceDiagnosisSchema>;
 

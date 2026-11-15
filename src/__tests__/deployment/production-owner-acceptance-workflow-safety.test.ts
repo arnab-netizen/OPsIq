@@ -39,16 +39,16 @@ describe("production-owner-acceptance.yml — live-production safety controls", 
     expect(src).not.toContain("github.head_ref");
   });
 
-  it("4. Runs under the production GitHub Environment", () => {
-    expect(src).toContain("environment: production");
+  it("4. Runs under the protected production-operator GitHub Environment", () => {
+    expect(src).toMatch(/^\s{4}environment: production-operator$/m);
   });
 
   it("5. Fails closed when either acceptance credential secret is missing or empty", () => {
     const idx = src.indexOf("Preflight check - production acceptance credentials exist");
     expect(idx).toBeGreaterThan(-1);
     const block = src.slice(idx, idx + 500);
-    expect(block).toContain("secrets.PRODUCTION_ACCEPTANCE_EMAIL");
-    expect(block).toContain("secrets.PRODUCTION_ACCEPTANCE_PASSWORD");
+    expect(block).toContain("secrets.OPERATOR_ACCEPTANCE_EMAIL");
+    expect(block).toContain("secrets.OPERATOR_ACCEPTANCE_PASSWORD");
     expect(block).toContain("exit 1");
   });
 
@@ -94,7 +94,7 @@ describe("production-owner-acceptance.yml — live-production safety controls", 
     // (independently unit-tested in verify-no-secret-leak-script.test.ts
     // against synthetic fixtures) -- this step only needs to invoke it with
     // the password wired in as an env var.
-    expect(block).toContain("secrets.PRODUCTION_ACCEPTANCE_PASSWORD");
+    expect(block).toContain("secrets.OPERATOR_ACCEPTANCE_PASSWORD");
     expect(block).toContain("scripts/verify-no-secret-leak.sh");
     const scriptSrc = readFileSync(
       join(process.cwd(), "scripts/verify-no-secret-leak.sh"),
@@ -137,7 +137,7 @@ describe("production-owner-acceptance.yml — live-production safety controls", 
   });
 
   it("17. Contains no destructive or unrelated production-secret usage (no DATABASE_URL, no migrate deploy)", () => {
-    expect(src).not.toContain("PRODUCTION_DATABASE_URL");
+    expect(src).not.toContain("OPERATOR_DATABASE_URL");
     expect(src).not.toContain("prisma migrate deploy");
     expect(src).not.toContain("prisma migrate resolve");
   });
