@@ -41,7 +41,19 @@ export function PublicBetaText({ field, initialMode = null }: { field: PublicBet
   return <>{presentationForAdmissionMode(usePublicAdmissionMode(initialMode))[field]}</>;
 }
 
-/** Renders `open` under OPEN_BETA and `invite` otherwise (initial render, INVITE_ONLY, CLOSED, WAITLIST, fetch failure). */
-export function PublicBetaSwitch({ open, invite }: { open: React.ReactNode; invite: React.ReactNode }) {
-  return <>{presentationForAdmissionMode(usePublicAdmissionMode(null)).openRegistration ? open : invite}</>;
+/**
+ * Renders `open` under OPEN_BETA and `invite` otherwise (initial render, INVITE_ONLY, CLOSED, WAITLIST, fetch
+ * failure). `initialMode` lets a server-rendered page pass down its already-resolved mode for the first
+ * paint, exactly like PublicBetaCta/PublicBetaText above — omitted, it behaves exactly as before.
+ */
+export function PublicBetaSwitch({
+  open,
+  invite,
+  initialMode = null,
+}: {
+  open: React.ReactNode;
+  invite: React.ReactNode;
+  initialMode?: string | null;
+}) {
+  return <>{presentationForAdmissionMode(usePublicAdmissionMode(initialMode)).openRegistration ? open : invite}</>;
 }
