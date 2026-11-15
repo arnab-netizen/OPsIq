@@ -14,9 +14,10 @@ import { after } from "next/server";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { mapConnectFailure } from "@/domain/quickbooks/qbo-connect-outcomes";
 import { completeQboCallback } from "@/services/quickbooks/qbo-connect-callback.service";
-import { getFirstRunContext } from "@/services/owner-first-run/first-run.service";
+import { getFirstRunContext, recordProductEventOnce } from "@/services/owner-first-run/first-run.service";
 import { landingForFirstRunState } from "@/domain/owner-first-run/first-run-source";
 import { processQboSyncChain, requestQboSyncNow } from "@/services/quickbooks/qbo-sync-background";
 
@@ -35,6 +36,16 @@ export const GET = withCanonicalEnforcement(
       const failure = mapConnectFailure(result.code);
       return canonicalJson(failure.body, { status: failure.httpStatus, headers: { "cache-control": "no-store" } });
     }
+    // "Connected": the OAuth callback actually finalized an ACTIVE connection (never fired on a selection alone,
+    // a denial, or an exchange/finalize failure). Deduped once per (workspace, business) — a later reconnect
+    // never re-fires it.
+    await recordProductEventOnce({
+      name: "quickbooks_connected",
+      eventName: AUDIT_EVENTS.PRODUCT_QUICKBOOKS_CONNECTED,
+      workspaceId: ctx.verifiedWorkspaceId,
+      actorId: ctx.verifiedActorId,
+      businessId: result.businessId,
+    });
     // Start the first (or refreshed) import now rather than at tomorrow's cron: enqueue durably, run after the response.
     try {
       const task = await requestQboSyncNow({ workspaceId: ctx.verifiedWorkspaceId, connectionId: result.connectionId });

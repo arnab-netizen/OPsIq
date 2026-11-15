@@ -8,7 +8,12 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
-import { isDocumentNavigationRequired, SERVER_REDIRECTING_PUBLIC_PATHS } from "@/lib/analytics/clarity-policy";
+import {
+  isClarityEligiblePath,
+  isDocumentNavigationRequired,
+  CLARITY_FORBIDDEN_PREFIXES,
+  SERVER_REDIRECTING_PUBLIC_PATHS,
+} from "@/lib/analytics/clarity-policy";
 
 const ROOT = process.cwd();
 const rel = (p: string) => relative(ROOT, p).replace(/\\/g, "/");
@@ -42,6 +47,47 @@ const PUBLIC_SURFACE = [
 ].flatMap((entry) => {
   const abs = join(ROOT, entry);
   return statSync(abs).isDirectory() ? walk(abs, (p) => /\.(ts|tsx)$/.test(p) && !/\.test\.tsx?$/.test(p)) : [abs];
+});
+
+/**
+ * Public, unauthenticated routes that are deliberately NOT on the Clarity eligibility allowlist (so a link to
+ * one of them is still, by design, a full-document navigation per clarity-policy.ts) but that are not private or
+ * auth-gated pages. The content-link scan below exists to catch an accidental link into /login, /owner, /api,
+ * etc — not to forbid a legitimate public tool just because it was never added to the Clarity allowlist.
+ *
+ * This set changes neither ELIGIBLE_EXACT_PATHS/ELIGIBLE_PREFIXES nor CLARITY_FORBIDDEN_PREFIXES in
+ * clarity-policy.ts, and does not make the route Clarity-eligible. Adding an entry here requires the
+ * verification test immediately below to keep passing for it.
+ */
+const PUBLIC_NON_CLARITY_ROUTES: ReadonlySet<string> = new Set(["/agency"]);
+
+describe("verified exception: public, non-Clarity-eligible routes content may still link to", () => {
+  it("every entry is a genuinely public page, not Clarity-eligible, not forbidden, and still forces full-document navigation", () => {
+    for (const route of PUBLIC_NON_CLARITY_ROUTES) {
+      // Not on the Clarity allowlist (this exception never expands Clarity recording).
+      expect(isClarityEligiblePath(route)).toBe(false);
+      // Not on the private/auth forbidden list either — this is a distinct, third bucket.
+      expect(CLARITY_FORBIDDEN_PREFIXES.some((p) => route === p || route.startsWith(`${p}/`))).toBe(false);
+      // Regression guard: a link to it must still be a full-document navigation. If this ever flips to false
+      // it means the route silently became Clarity-eligible without a deliberate allowlist review.
+      expect(isDocumentNavigationRequired(route)).toBe(true);
+
+      // The route's own page must carry the same public chrome as the rest of the public surface and no
+      // auth/session gate, confirming it is public rather than merely unlisted.
+      const src = read(join(ROOT, "src/app", route.slice(1), "page.tsx"));
+      expect(src).toMatch(/<PublicSiteHeader\s*\/>/);
+      expect(src).toMatch(/<PublicSiteFooter\s*\/>/);
+      expect(src).not.toMatch(/getServerSession|requireAuth|requireSession|getCurrentUser|redirect\(\s*["'`]\/login/);
+    }
+  });
+
+  it("known private/auth routes are unaffected: still forbidden, still not in the exception set", () => {
+    for (const route of ["/login", "/signup", "/owner", "/admin", "/api"]) {
+      expect(PUBLIC_NON_CLARITY_ROUTES.has(route)).toBe(false);
+      expect(CLARITY_FORBIDDEN_PREFIXES.some((p) => route === p || route.startsWith(`${p}/`))).toBe(true);
+      expect(isDocumentNavigationRequired(route)).toBe(true);
+    }
+  });
 });
 
 describe("public surface: no client-side navigation into private/auth routes", () => {
@@ -103,6 +149,9 @@ describe("public surface: no client-side navigation into private/auth routes", (
     for (const f of walk(contentDir, (p) => /\.(md|mdx|json|ts|tsx)$/.test(p))) {
       for (const m of read(f).matchAll(/\]\((\/[^)\s]*)\)|href=["'](\/[^"']*)["']/g)) {
         const href = m[1] ?? m[2];
+        const hrefPathOnly = href.split(/[?#]/)[0];
+        // Verified public, non-Clarity-eligible exception (see above) — not a private/auth route.
+        if (PUBLIC_NON_CLARITY_ROUTES.has(hrefPathOnly)) continue;
         if (isDocumentNavigationRequired(href)) bad.push(`${rel(f)}: ${href}`);
       }
     }
