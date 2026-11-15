@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { resolveAuthenticatedRootDecision } from "@/services/root-redirect.service";
 import { presentationForAdmissionMode } from "@/domain/beta/public-presentation";
 import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
+import { listVisibleResources } from "@/services/resources/resource-repository";
+import { resourcePath } from "@/services/resources/resource-seo";
 import LandingPage from "@/components/landing/LandingPage";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +92,17 @@ export default async function HomePage() {
   // cookie, or an inactive user) -- render the same public landing experience as any logged-out
   // visitor, never a redirect.
   const settingsMode = await getPublicAdmissionMode();
+  // Newest-first (listVisibleResources()'s own ordering): surfaces the most recently published
+  // guides on the homepage without hardcoding which ones, so a new resource becomes linkable from
+  // the homepage the moment its content file is published, with no second edit here.
+  const recentResources = listVisibleResources()
+    .slice(0, 3)
+    .map((doc) => ({
+      slug: doc.slug,
+      title: doc.frontmatter.title,
+      description: doc.frontmatter.description,
+      path: resourcePath(doc.slug),
+    }));
 
   return (
     <>
@@ -101,7 +114,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <LandingPage admissionMode={settingsMode ?? "INVITE_ONLY"} />
+      <LandingPage admissionMode={settingsMode ?? "INVITE_ONLY"} recentResources={recentResources} />
     </>
   );
 }
